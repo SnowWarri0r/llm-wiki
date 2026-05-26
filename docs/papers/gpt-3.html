@@ -1,0 +1,1073 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>GPT-3 · Language Models are Few-Shot Learners</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6;
+  --paper-2: #e8e0c8;
+  --paper-3: #faf4e1;
+  --paper-card: #f7f1de;
+  --ink: #181410;
+  --ink-2: #3a3128;
+  --muted: #7a6f5d;
+  --rule: #bfb398;
+  --brick: #9b2c2c;
+  --brick-soft: #efd6c8;
+  --ochre: #b8841c;
+  --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a;
+  --moss-soft: #d8e6ce;
+  --deep: #1f3a5f;
+  --deep-soft: #c8d4e2;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body {
+  font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(31,58,95,0.045) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(155,44,44,0.025) 0%, transparent 40%);
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply; opacity: 0.5;
+}
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+
+.masthead {
+  border-top: 4px double var(--ink);
+  border-bottom: 1px solid var(--rule);
+  padding: 14px 0;
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ink-2);
+  margin-bottom: 48px;
+}
+.masthead .l { font-weight: 700; }
+.masthead .r { color: var(--muted); }
+
+.hero { margin-bottom: 64px; }
+.hero .issue {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--deep); font-weight: 700;
+  margin-bottom: 18px;
+  display: flex; align-items: center; gap: 12px;
+}
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+
+h1.title {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1;
+  font-weight: 700;
+  font-size: clamp(56px, 9vw, 96px);
+  line-height: 0.92;
+  letter-spacing: -0.035em;
+  margin: 0 0 12px;
+}
+h1.title .em {
+  font-style: italic;
+  font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+  color: var(--deep);
+}
+
+.byline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  margin: 18px 0 6px;
+}
+.hero .dek {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-variation-settings: "opsz" 36;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(20px, 2.2vw, 26px);
+  line-height: 1.4;
+  color: var(--ink-2);
+  max-width: 720px;
+  margin: 16px 0 16px;
+}
+
+.tldr {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--deep);
+  padding: 22px 26px;
+  margin: 32px 0;
+  border-radius: 0 4px 4px 0;
+}
+.tldr .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--deep); font-weight: 700;
+  display: block; margin-bottom: 8px;
+}
+.tldr p { margin: 6px 0; }
+
+h2 {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1;
+  font-weight: 700;
+  font-size: 38px;
+  letter-spacing: -0.02em;
+  margin: 72px 0 20px;
+  display: flex; align-items: baseline; gap: 18px;
+}
+h2 .num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--brick); font-weight: 700;
+  min-width: 56px;
+}
+
+h3 {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-size: 22px;
+  font-weight: 600;
+  margin: 36px 0 12px;
+  letter-spacing: -0.01em;
+}
+
+p { margin: 12px 0; }
+strong { font-weight: 700; color: var(--ink); }
+code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.88em;
+  background: var(--paper-3);
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid var(--rule);
+}
+
+a { color: var(--brick); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { color: var(--deep); }
+
+.jr {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  vertical-align: super;
+  background: var(--ochre-soft);
+  color: var(--ink-2);
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid var(--ochre);
+  text-decoration: none !important;
+  margin: 0 2px;
+  cursor: pointer;
+}
+.jr:hover { background: var(--ochre); color: var(--paper); }
+
+figure {
+  margin: 40px 0;
+  padding: 28px;
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+}
+figcaption {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--rule);
+  display: flex; justify-content: space-between; align-items: center;
+}
+figcaption .fnum { color: var(--deep); font-weight: 700; }
+
+.note {
+  background: var(--paper-3);
+  border-left: 3px solid var(--brick);
+  padding: 14px 18px;
+  margin: 18px 0;
+  font-size: 16px;
+  color: var(--ink-2);
+}
+.note.deep { border-left-color: var(--deep); }
+.note.moss { border-left-color: var(--moss); }
+.note.ochre { border-left-color: var(--ochre); }
+.note .l {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--brick); font-weight: 700;
+  display: block; margin-bottom: 4px;
+}
+.note.deep .l { color: var(--deep); }
+.note.moss .l { color: var(--moss); }
+.note.ochre .l { color: var(--ochre); }
+
+/* Fig 01: GPT scale 8 sizes + ancestor reference */
+.scale-fig {}
+.scale-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 8px;
+  align-items: end;
+  margin: 12px 0 16px;
+}
+.scale-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.scale-bar {
+  width: 100%;
+  background: var(--brick-soft);
+  border-top: 2px solid var(--brick);
+  border-radius: 2px 2px 0 0;
+  height: 0;
+  transition: height 1.0s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+.scale-col.xl .scale-bar { background: var(--deep-soft); border-top-color: var(--deep); }
+.scale-col .name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-2);
+  margin-top: 6px;
+  letter-spacing: 0.5px;
+}
+.scale-col.xl .name { color: var(--deep); }
+.scale-col .params {
+  font-family: 'Fraunces', serif;
+  font-size: 13px;
+  font-style: italic;
+  font-weight: 700;
+  color: var(--ink);
+  margin-top: 2px;
+}
+.scale-col.xl .params { color: var(--deep); font-size: 16px; }
+.scale-col .meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.scale-ancestor {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--rule);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+.scale-ancestor .anc {
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 8px 10px;
+}
+.scale-ancestor .anc strong {
+  font-family: 'Fraunces', serif;
+  font-size: 14px;
+  font-style: italic;
+  color: var(--ink);
+}
+.scale-ancestor .anc .lbl {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+.scale-ancestor .anc.gpt1 { border-left: 3px solid var(--brick); }
+.scale-ancestor .anc.gpt2 { border-left: 3px solid var(--ochre); }
+.scale-ancestor .anc.bert { border-left: 3px solid var(--moss); }
+
+/* Fig 02: ICL zero/one/few-shot */
+.icl-fig {}
+.icl-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.icl-card {
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.6s, transform 0.6s;
+}
+.icl-fig.play .icl-card.show-1 { opacity: 1; transform: translateY(0); transition-delay: 0.2s; }
+.icl-fig.play .icl-card.show-2 { opacity: 1; transform: translateY(0); transition-delay: 0.6s; }
+.icl-fig.play .icl-card.show-3 { opacity: 1; transform: translateY(0); transition-delay: 1.0s; }
+.icl-card h5 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+.icl-card.zero h5 { color: var(--brick); }
+.icl-card.one h5 { color: var(--ochre); }
+.icl-card.few h5 { color: var(--deep); }
+.icl-card .sub {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 10px;
+}
+.icl-prompt {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--ink-2);
+  border-radius: 2px;
+  padding: 8px 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  white-space: pre-wrap;
+  color: var(--ink-2);
+  line-height: 1.55;
+  flex: 1;
+}
+.icl-arrow {
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--ink-2);
+  letter-spacing: 1px;
+  margin: 8px 0 4px;
+}
+.icl-score {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-align: center;
+  padding: 6px 10px;
+  border-radius: 2px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+.icl-card.zero .icl-score { background: var(--brick-soft); color: var(--brick); border: 1px solid var(--brick); }
+.icl-card.one .icl-score { background: var(--ochre-soft); color: var(--ochre); border: 1px solid var(--ochre); }
+.icl-card.few .icl-score { background: var(--deep-soft); color: var(--deep); border: 1px solid var(--deep); }
+.icl-card .ex {
+  background: var(--moss-soft);
+  border-left: 2px solid var(--moss);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+/* Fig 03: emergence hockey stick */
+.em-fig {}
+.em-chart {
+  position: relative;
+  height: 360px;
+  margin: 12px 0;
+}
+.em-chart svg { width: 100%; height: 100%; }
+.em-axis line, .em-axis path {
+  stroke: var(--rule);
+  stroke-width: 1;
+  fill: none;
+}
+.em-axis text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  fill: var(--muted);
+}
+.em-axis .axis-label {
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  fill: var(--ink-2);
+  font-weight: 700;
+}
+.em-line {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1200;
+  stroke-dashoffset: 1200;
+  transition: stroke-dashoffset 2s ease-out;
+}
+.em-fig.play .em-line { stroke-dashoffset: 0; }
+.em-line.add { stroke: var(--brick); }
+.em-line.mul { stroke: var(--ochre); }
+.em-line.unscram { stroke: var(--moss); }
+.em-line.wic { stroke: var(--deep); }
+.em-marker {
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+.em-fig.play .em-marker { opacity: 1; transition-delay: 1.8s; }
+.em-marker circle {
+  stroke: var(--ink);
+  stroke-width: 1;
+}
+.em-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--rule);
+}
+.em-legend .item { display: flex; align-items: center; gap: 6px; }
+.em-legend .sw { display: inline-block; width: 14px; height: 2.5px; }
+.em-thresh {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  fill: var(--deep);
+  font-weight: 700;
+}
+
+/* Fig 04: Compute-optimal · Chinchilla 修正 */
+.co-fig {}
+.co-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 12px 0;
+}
+.co-card {
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 18px;
+}
+.co-card.gpt3 { border-left: 4px solid var(--brick); }
+.co-card.chinchilla { border-left: 4px solid var(--moss); }
+.co-card h5 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+.co-card.gpt3 h5 { color: var(--brick); }
+.co-card.chinchilla h5 { color: var(--moss); }
+.co-card .sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+.co-bar-row {
+  display: flex;
+  align-items: center;
+  margin: 10px 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+}
+.co-bar-label {
+  width: 60px;
+  color: var(--ink-2);
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.co-bar-track {
+  flex: 1;
+  height: 18px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.co-bar-fill {
+  height: 100%;
+  background: var(--brick);
+  width: 0;
+  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+  color: var(--paper);
+  font-weight: 700;
+}
+.co-card.chinchilla .co-bar-fill { background: var(--moss); }
+.co-ratio {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-align: center;
+}
+.co-ratio .num {
+  font-family: 'Fraunces', serif;
+  font-size: 24px;
+  font-style: italic;
+  font-weight: 700;
+  display: block;
+  color: var(--ink);
+}
+.co-card.gpt3 .co-ratio .num { color: var(--brick); }
+.co-card.chinchilla .co-ratio .num { color: var(--moss); }
+.co-ratio .lbl {
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  display: block;
+  margin-top: 2px;
+}
+
+/* Glossary */
+.gloss {
+  margin-top: 64px;
+  padding-top: 32px;
+  border-top: 2px solid var(--rule);
+}
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li {
+  counter-increment: g;
+  padding: 14px 0 14px 50px;
+  position: relative;
+  border-bottom: 1px dashed var(--rule);
+  font-size: 16px;
+}
+.gloss li::before {
+  content: counter(g, decimal-leading-zero);
+  position: absolute; left: 0; top: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--deep);
+  font-weight: 700;
+}
+.gloss li:target {
+  background: var(--ochre-soft);
+  border-radius: 4px;
+  animation: glossPulse 1.8s ease-out;
+}
+@keyframes glossPulse {
+  0% { background: var(--brick-soft); }
+  100% { background: var(--ochre-soft); }
+}
+.gloss .term {
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--ink);
+}
+
+.colophon {
+  margin-top: 80px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  display: flex; justify-content: space-between;
+}
+
+@media (max-width: 720px) {
+  .scale-grid { grid-template-columns: repeat(4, 1fr); }
+  .scale-ancestor { grid-template-columns: 1fr; }
+  .icl-grid { grid-template-columns: 1fr; }
+  .co-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · gpt-3</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · OpenAI · 2020-06</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 2020 · OpenAI · 175B · in-context learning</div>
+  <h1 class="title">Language Models are<br /><span class="em">Few-Shot Learners.</span></h1>
+  <div class="byline">Brown · Mann · Ryder · Subbiah · ... · Amodei · 31 作者 · NeurIPS 2020</div>
+  <p class="dek">同架构再放大 <strong>116 倍</strong> 到 175B，发现一件之前没人预见到的事：<strong>prompt 里给几个例子，模型就能现学新任务</strong>。这是 in-context learning，整个 ChatGPT 时代由此开始。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>GPT-2 1.5B 展示 zero-shot 触发任务可行，但准确度不够。OpenAI 押更大的注：<strong>scale 推到 175B + 在 prompt 里给几个示例</strong>，看会怎样。</p>
+  <p>结果发现 3 件大事：</p>
+  <ul style="margin:8px 0; padding-left:20px;">
+    <li><strong>In-context learning</strong><a class="jr" href="#g-01">1</a> · 不改一个权重，prompt 里给 K 个例子就能让模型现学任务</li>
+    <li><strong>Emergent abilities</strong><a class="jr" href="#g-02">2</a> · 算术 / 推理 / 复杂任务在小模型 ≈ 0 分，13B-175B 之间突然抬头</li>
+    <li><strong>Scaling laws 实证</strong><a class="jr" href="#g-03">3</a> · 8 个 size 的系统数据证明 LM loss 满足 power law · 模型大小可以"算"出来</li>
+  </ul>
+  <p>论文当时没引爆 —— benchmark 不及 finetune SOTA。<strong>2 年后 ChatGPT 引爆了它</strong>。GPT-1 的 thesis 一路演化到这里完成闭环。</p>
+</div>
+
+<h2><span class="num">§ 01</span>把同架构再放 100 倍 · 175B 是怎么来的</h2>
+<p>架构上 GPT-3 跟 GPT-2 几乎一样 —— 同款 Transformer decoder + causal LM。唯一架构改动：部分层用 sparse attention<a class="jr" href="#g-04">4</a>（dense / sparse 交替）省算力。</p>
+
+<p>真正的变化在 size —— 一次性训了 <strong>8 个 size 系列</strong><a class="jr" href="#g-07">7</a> 从 125M 到 175B 全套跑 benchmark：</p>
+
+<figure class="scale-fig" id="scale-fig">
+  <figcaption>
+    <span>Fig 01 · GPT-3 八个 size · 1400 倍跨度</span>
+    <span class="fnum">125M → 175B · 同架构 · 同训练目标 · 不同参数量</span>
+  </figcaption>
+  <div class="scale-grid">
+    <div class="scale-col">
+      <div class="scale-bar" data-h="2"></div>
+      <div class="name">SMALL</div>
+      <div class="params">125M</div>
+      <div class="meta">12 L · 768 d</div>
+    </div>
+    <div class="scale-col">
+      <div class="scale-bar" data-h="3"></div>
+      <div class="name">MEDIUM</div>
+      <div class="params">350M</div>
+      <div class="meta">24 L · 1024 d</div>
+    </div>
+    <div class="scale-col">
+      <div class="scale-bar" data-h="5"></div>
+      <div class="name">LARGE</div>
+      <div class="params">760M</div>
+      <div class="meta">24 L · 1536 d</div>
+    </div>
+    <div class="scale-col">
+      <div class="scale-bar" data-h="8"></div>
+      <div class="name">XL</div>
+      <div class="params">1.3B</div>
+      <div class="meta">24 L · 2048 d</div>
+    </div>
+    <div class="scale-col">
+      <div class="scale-bar" data-h="15"></div>
+      <div class="name">2.7B</div>
+      <div class="params">2.7B</div>
+      <div class="meta">32 L · 2560 d</div>
+    </div>
+    <div class="scale-col">
+      <div class="scale-bar" data-h="32"></div>
+      <div class="name">6.7B</div>
+      <div class="params">6.7B</div>
+      <div class="meta">32 L · 4096 d</div>
+    </div>
+    <div class="scale-col">
+      <div class="scale-bar" data-h="55"></div>
+      <div class="name">13B</div>
+      <div class="params">13B</div>
+      <div class="meta">40 L · 5140 d</div>
+    </div>
+    <div class="scale-col xl">
+      <div class="scale-bar" data-h="100"></div>
+      <div class="name">GPT-3</div>
+      <div class="params">175B</div>
+      <div class="meta">96 L · 12288 d<br/>96 head</div>
+    </div>
+  </div>
+
+  <div class="scale-ancestor">
+    <div class="anc gpt1">
+      <strong>GPT-1 · 117M</strong>
+      <span class="lbl">2018-06 · ≈ GPT-3 small</span>
+    </div>
+    <div class="anc gpt2">
+      <strong>GPT-2 · 1.5B</strong>
+      <span class="lbl">2019-02 · ≈ GPT-3 XL</span>
+    </div>
+    <div class="anc bert">
+      <strong>BERT-large · 340M</strong>
+      <span class="lbl">2018-10 · ≈ GPT-3 medium</span>
+    </div>
+  </div>
+</figure>
+
+<p>历史镜头里：GPT-1 (117M) 跟 GPT-3 small 一档，GPT-2 (1.5B) 跟 GPT-3 XL 一档。**OpenAI 把 GPT-2 当 "下限" 测试了系列，往上推到 175B 看天花板**。这是 scaling laws 当时押的赌：参数翻 100×，能力质变。</p>
+
+<div class="note deep">
+  <span class="l">训练规模 · 不是普通研究者能复现的</span>
+  <p>GPT-3 175B 训练数据：<strong>~300B token</strong>（Common Crawl 过滤 + WebText2 + Books + Wikipedia）。单次训练算力 <strong>$4.6M</strong><a class="jr" href="#g-06">6</a>（按 2020 v100 价格估算）。"普通研究者训不动" 时代正式开始 —— 这给后来 Llama / Mistral / DeepSeek 等开源模型路线创造了反弹空间。</p>
+</div>
+
+<h2><span class="num">§ 02</span>In-context learning · 论文真正的 surprise</h2>
+<p>175B 模型预训练完后，OpenAI 发现一个之前没预见到的能力：<strong>在 prompt 里给几个 (input, output) 示例，模型能从中"抽规则"应用到新输入</strong>。不需要 finetune，不需要任何梯度更新。</p>
+
+<figure class="icl-fig" id="icl-fig">
+  <figcaption>
+    <span>Fig 02 · KEY · Zero-shot / One-shot / Few-shot · 三档形态</span>
+    <span class="fnum">英→法翻译 · 同一个 175B 模型 · 不同 prompt</span>
+  </figcaption>
+  <div class="icl-grid">
+
+    <div class="icl-card zero show-1">
+      <h5>Zero-shot</h5>
+      <div class="sub">仅描述任务 · 无示例</div>
+      <div class="icl-prompt">Translate English to French.
+
+English: Thank you.
+French:</div>
+      <div class="icl-arrow">↓ 模型续写</div>
+      <div class="icl-score">BLEU ~ 22 · Mediocre</div>
+    </div>
+
+    <div class="icl-card one show-2">
+      <h5>One-shot</h5>
+      <div class="sub">给 1 个示例</div>
+      <div class="icl-prompt">Translate English to French.
+
+<span class="ex">English: Hello.
+French: Bonjour.</span>
+
+English: Thank you.
+French:</div>
+      <div class="icl-arrow">↓ 模型续写</div>
+      <div class="icl-score">BLEU ~ 28 · Better</div>
+    </div>
+
+    <div class="icl-card few show-3">
+      <h5>Few-shot · K = 3-30</h5>
+      <div class="sub">给 K 个示例 · 接近 finetune</div>
+      <div class="icl-prompt">Translate English to French.
+
+<span class="ex">English: Hello.
+French: Bonjour.
+
+English: Goodbye.
+French: Au revoir.
+
+English: Good morning.
+French: Bonjour.</span>
+
+English: Thank you.
+French:</div>
+      <div class="icl-arrow">↓ 模型续写</div>
+      <div class="icl-score">BLEU ~ 32 · ≈ finetune SOTA</div>
+    </div>
+
+  </div>
+</figure>
+
+<p>关键观察：<strong>权重一个不动</strong>。zero → one → few-shot 的性能提升完全来自<strong>prompt 里多了几个例子</strong>。模型在 forward 过程中从这些例子里"现学"了任务规则。</p>
+
+<div class="note">
+  <span class="l">为什么这能 work · 至今没完全理解</span>
+  <p>主流假设：</p>
+  <ul style="margin:6px 0; padding-left:20px;">
+    <li><strong>Pattern matching</strong> · 模型在 attention 里识别 prompt 里的 (x, y) 对，在新 x 出现时去 attend 已有 (x, y) 推断答案</li>
+    <li><strong>Implicit gradient descent</strong><a class="jr" href="#g-05">5</a> · attention layer 内部相当于在做小规模的 "meta-learning"</li>
+    <li><strong>Function approximation</strong> · transformer 学到的不是具体任务，是"从示例里抽函数"的元能力</li>
+  </ul>
+  <p>无论哪种解释，<strong>实证现象</strong>都是：scale 上去后 ICL 能力浮现，prompt 里给例子能稳定提升性能。</p>
+</div>
+
+<div class="note ochre">
+  <span class="l">⚠ 不及 finetune 极致 SOTA · 但赢在工程门槛</span>
+  <p>GPT-3 few-shot 不是全面碾压 finetune 模型。很多任务 finetune 仍领先 5-15 个点。但<strong>开发成本</strong>差异巨大：</p>
+  <ul style="margin:6px 0; padding-left:20px;">
+    <li>finetune · 标几千条数据 + 训练 + 部署 · 工程一周</li>
+    <li>few-shot · 写几个例子塞 prompt · <strong>5 分钟</strong></li>
+  </ul>
+  <p><strong>"够好 + 极快" 赢了 "最好 + 极慢"</strong><a class="jr" href="#g-08">8</a>。这是 LLM 时代的真正颠覆点 —— BERT 系 finetune 范式从此在工业界退场，因为 ROI 不如 prompt。</p>
+</div>
+
+<h2><span class="num">§ 03</span>Emergence · 小模型 ≈ 0 大模型突然能</h2>
+<p>论文里另一个重要观察：某些任务的性能曲线<strong>不是平滑上涨</strong>，而是"hockey stick" —— 小模型接近随机，到某个 size 阈值后突然跳到高分。</p>
+
+<figure class="em-fig" id="em-fig">
+  <figcaption>
+    <span>Fig 03 · Emergent abilities · 在 13B-175B 突然抬头的任务</span>
+    <span class="fnum">x 轴 log scale · y 轴 accuracy</span>
+  </figcaption>
+  <div class="em-chart">
+    <svg viewBox="0 0 600 360" preserveAspectRatio="none">
+      <!-- axes -->
+      <g class="em-axis">
+        <line x1="60" y1="320" x2="570" y2="320"/>
+        <line x1="60" y1="20" x2="60" y2="320"/>
+        <!-- x labels (log scale: 125M / 1B / 13B / 175B) -->
+        <text x="60" y="338" text-anchor="start">125M</text>
+        <text x="170" y="338" text-anchor="middle">1B</text>
+        <text x="320" y="338" text-anchor="middle">13B</text>
+        <text x="560" y="338" text-anchor="end">175B</text>
+        <text class="axis-label" x="315" y="356" text-anchor="middle">model size · log scale</text>
+        <!-- y labels -->
+        <text x="54" y="324" text-anchor="end">0%</text>
+        <text x="54" y="170" text-anchor="end">50%</text>
+        <text x="54" y="22" text-anchor="end">100%</text>
+        <text class="axis-label" x="14" y="170" text-anchor="middle" transform="rotate(-90 14 170)">accuracy</text>
+        <!-- threshold band -->
+        <rect x="280" y="20" width="60" height="300" fill="rgba(31,58,95,0.08)"/>
+        <text class="em-thresh" x="310" y="14" text-anchor="middle">~13B 拐点</text>
+      </g>
+
+      <!-- curves: 4 tasks -->
+      <!-- 3-digit addition: 0% until 6.7B (~270), then jumps to 80% at 175B -->
+      <path class="em-line add" d="M 60 320 L 100 320 L 140 319 L 180 318 L 220 316 L 270 310 L 320 280 L 400 180 L 480 70 L 560 50"/>
+      <!-- 2-digit mul: 0% until 13B, jumps to 60% -->
+      <path class="em-line mul" d="M 60 320 L 100 320 L 140 320 L 180 320 L 220 318 L 270 316 L 320 300 L 400 220 L 480 130 L 560 100"/>
+      <!-- phrase unscram -->
+      <path class="em-line unscram" d="M 60 318 L 100 316 L 140 312 L 180 305 L 220 290 L 270 270 L 320 240 L 400 170 L 480 100 L 560 70"/>
+      <!-- WiC -->
+      <path class="em-line wic" d="M 60 250 L 100 240 L 140 230 L 180 220 L 220 210 L 270 200 L 320 190 L 400 170 L 480 150 L 560 130"/>
+
+      <!-- 175B markers -->
+      <g class="em-marker">
+        <circle cx="560" cy="50" r="4" fill="var(--brick)"/>
+        <circle cx="560" cy="100" r="4" fill="var(--ochre)"/>
+        <circle cx="560" cy="70" r="4" fill="var(--moss)"/>
+        <circle cx="560" cy="130" r="4" fill="var(--deep)"/>
+      </g>
+    </svg>
+  </div>
+  <div class="em-legend">
+    <span class="item"><span class="sw" style="background:var(--brick)"></span>3-digit 加法 · 6.7B+ 浮现</span>
+    <span class="item"><span class="sw" style="background:var(--ochre)"></span>2-digit 乘法 · 13B+ 浮现</span>
+    <span class="item"><span class="sw" style="background:var(--moss)"></span>Phrase unscrambling · 缓涨</span>
+    <span class="item"><span class="sw" style="background:var(--deep)"></span>Word-in-Context · 平滑爬升</span>
+  </div>
+</figure>
+
+<div class="note deep">
+  <span class="l">为什么 emergence 这事重要</span>
+  <p><strong>它意味着你不能从小模型外推到大模型能力</strong>。13B 跑不通的任务 → 175B 可能能跑通。LLM 路线图很大程度上变成"凑齐 size 解锁新能力"，这是为什么 Anthropic / OpenAI / Google 仍在不停烧钱做更大模型。</p>
+  <p>2023 Anthropic 提出反驳：用错了 metric（exact-match）让平滑曲线看着像突变。改用 log-scale 或 token-level metric 后 emergence 变平滑。但<strong>reasoning / tool-use / 长上下文记忆</strong>这类复合能力仍表现出真正的非线性 jump，不只是 metric artifact。</p>
+</div>
+
+<h2><span class="num">§ 04</span>Scaling laws · 算出来的 175B</h2>
+<p>175B 不是拍脑袋拍的数字。它来自 OpenAI 自己 2020-01 发布的 <strong>scaling laws</strong> 论文（Kaplan et al.），用大量训练实验拟合出的经验公式：</p>
+
+<pre style="background:var(--paper-3); border:1px solid var(--rule); padding:14px; border-radius:3px; font-family:'JetBrains Mono', monospace; font-size:13px; overflow-x:auto;">loss = a / (params)^α + b / (tokens)^β + c
+
+→ 给定算力预算 C，最优 (params, tokens) 组合是固定比例</pre>
+
+<div style="background:var(--ochre-soft); border:1px solid var(--ochre); border-left:3px solid var(--ochre); border-radius:3px; padding:12px 16px; margin:12px 0 22px; font-size:14px;">
+  <span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ochre); font-weight:700; display:block; margin-bottom:8px;">📐 公式拆解 · power law</span>
+  <p style="margin:4px 0; line-height:1.7;"><code style="background:var(--paper); border:1px solid var(--rule); padding:1px 5px; border-radius:2px;">loss</code> = 语言模型预训练 loss（perplexity 取 log）· 越低越好<br/>
+  <code style="background:var(--paper); border:1px solid var(--rule); padding:1px 5px; border-radius:2px;">params</code> = 模型参数量 · <code style="background:var(--paper); border:1px solid var(--rule); padding:1px 5px; border-radius:2px;">tokens</code> = 训练数据 token 数<br/>
+  <code style="background:var(--paper); border:1px solid var(--rule); padding:1px 5px; border-radius:2px;">α, β</code> = power law 指数 · 实验拟合出大约 0.05-0.1 之间<br/>
+  <code style="background:var(--paper); border:1px solid var(--rule); padding:1px 5px; border-radius:2px;">a, b, c</code> = 拟合常数 · 跟数据集和架构有关<br/>
+  <strong>→ loss 跟 1/params 和 1/tokens 都呈幂律下降</strong>（不是线性，是 sub-linear，但永远在跌）。意思是<strong>模型越大 + 数据越多 = loss 一定会再降一点</strong>，没看到上限。<br/>
+  <em>什么是幂律 / 指数 / sub-linear？查 <a href="../concepts/math-symbols.html" style="color:var(--brick); font-weight:700;">math-symbols</a>。</em></p>
+</div>
+
+<p>OpenAI 用这个公式算出：在 GPT-3 那个时间点的算力预算下，<strong>175B 参数 / 300B token</strong> 是最划算的配置。然后照着做。</p>
+
+<p>2 年后 DeepMind 重新跑了实验（Hoffmann et al. 2022, "Chinchilla"<a class="jr" href="#g-09">9</a>），发现 OpenAI 原版 scaling laws<strong>低估了数据需求</strong>：</p>
+
+<figure class="co-fig" id="co-fig">
+  <figcaption>
+    <span>Fig 04 · GPT-3 vs Chinchilla · compute-optimal 配比修正</span>
+    <span class="fnum">同算力 · 不同 (参数, 数据) 配比 · 谁更优</span>
+  </figcaption>
+  <div class="co-grid">
+
+    <div class="co-card gpt3">
+      <h5>GPT-3 (OpenAI 配方)</h5>
+      <div class="sub">参数压满 · 数据相对少</div>
+
+      <div class="co-bar-row">
+        <div class="co-bar-label">params</div>
+        <div class="co-bar-track">
+          <div class="co-bar-fill" data-w="100">175B</div>
+        </div>
+      </div>
+      <div class="co-bar-row">
+        <div class="co-bar-label">tokens</div>
+        <div class="co-bar-track">
+          <div class="co-bar-fill" data-w="20">300B</div>
+        </div>
+      </div>
+
+      <div class="co-ratio">
+        <span class="num">1 : 1.7</span>
+        <span class="lbl">每 1 参数配 1.7 token · 数据严重不足</span>
+      </div>
+    </div>
+
+    <div class="co-card chinchilla">
+      <h5>Chinchilla (DeepMind 2022)</h5>
+      <div class="sub">参数少一半 · 数据多 4 倍 · 同算力</div>
+
+      <div class="co-bar-row">
+        <div class="co-bar-label">params</div>
+        <div class="co-bar-track">
+          <div class="co-bar-fill" data-w="40">70B</div>
+        </div>
+      </div>
+      <div class="co-bar-row">
+        <div class="co-bar-label">tokens</div>
+        <div class="co-bar-track">
+          <div class="co-bar-fill" data-w="93">1.4T</div>
+        </div>
+      </div>
+
+      <div class="co-ratio">
+        <span class="num">1 : 20</span>
+        <span class="lbl">每 1 参数配 20 token · compute-optimal</span>
+      </div>
+    </div>
+
+  </div>
+</figure>
+
+<p>Chinchilla 70B 在同算力下<strong>跑赢了 GPT-3 175B</strong>。结论：之前所有大模型（包括 GPT-3）都数据不足。</p>
+
+<p>2022 之后所有大模型（Llama / Claude / GPT-4）都按 Chinchilla 配比训练：<strong>先定参数量，再配 20× 的 token 数据</strong>。GPT-3 留下了 scaling 思路，但具体的"最优配比"被 Chinchilla 修正了一次。</p>
+
+<h2><span class="num">§ 05</span>真正的遗产</h2>
+<p>GPT-3 当年的论文没引爆。benchmark 不及 finetune SOTA，业界看了觉得"挺大但好像没什么用"。<strong>真正的爆炸点在 2 年后</strong>：</p>
+
+<ol>
+  <li>2022-03 · OpenAI 用 RLHF 把 GPT-3 调成<strong>InstructGPT</strong>（能听指令）<a class="jr" href="#g-10">10</a></li>
+  <li>2022-11 · 在 InstructGPT 之上加 chat template + 优化对话体验 = <strong>ChatGPT</strong></li>
+  <li>2022-12 · ChatGPT 一周破百万用户。<strong>普通人第一次意识到 GPT-3 的威力</strong></li>
+</ol>
+
+<p>这条引爆路径的<strong>所有交互</strong>本质上都是 in-context learning —— "system prompt + user message + assistant continues" 就是个三段式 prompt 模板。GPT-3 的 ICL 是这一切的<strong>根基能力</strong>。</p>
+
+<div class="note deep">
+  <span class="l">把 GPT-3 放进 trajectory</span>
+  <p>GPT-1 论证 pretrain+finetune 可行 → GPT-2 论证 scale 有效 + thesis 清晰 → <strong>GPT-3 论证 ICL emerges at scale</strong> → ChatGPT 把 ICL 产品化引爆全球。</p>
+  <p>同样的<strong>看 paper 看不出重要性 · 看 trajectory 才看得到</strong>：</p>
+  <ul style="margin:6px 0; padding-left:20px;">
+    <li>GPT-1 2018 当时 9/12 SOTA 不算震撼</li>
+    <li>GPT-2 2019 当时 zero-shot 不及 finetune</li>
+    <li>GPT-3 2020 当时 few-shot 仍不及 finetune SOTA</li>
+  </ul>
+  <p>三篇都被当时低估，但 trajectory 在: <strong>finetune → zero-shot → few-shot ICL → product</strong>。每一步看似小幅改进，组合起来是范式革命。<strong>BERT 系没立这种长期 trajectory</strong>，所以方向感弱，最终输了。这就是 trajectory 视角 vs snapshot 视角的差别<a class="jr" href="#g-11">11</a>。</p>
+</div>
+
+<div class="note moss">
+  <span class="l">2026 视角 · ICL 还在演化</span>
+  <p>GPT-3 的 ICL 是<strong>静态 few-shot</strong> —— 你给几个例子，模型现学。今天的 LLM 在此基础上加了：</p>
+  <ul style="margin:6px 0; padding-left:20px;">
+    <li><strong>Chain-of-thought</strong> · 在 prompt 里让模型"先思考再回答"，激活更深的 reasoning 能力</li>
+    <li><strong>Tool use / function calling</strong> · prompt 里描述工具，模型决定调用 → 把"现学"扩展到"现用工具"</li>
+    <li><strong>Long-context ICL</strong> · 100K-1M token 上下文里塞下整本书 + 多任务示例</li>
+    <li><strong>Reasoning models (o1 / Claude 3.7 thinking)</strong> · 在 ICL 之上嵌套 chain-of-thought + RL 训练 → 内化"思考"过程</li>
+  </ul>
+  <p>每代都是<strong>ICL 的扩展</strong><a class="jr" href="#g-12">12</a>，不是替代。GPT-3 立的范式至今没被打破。</p>
+</div>
+
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">In-context learning · ICL · 上下文内学习</span> · 模型权重不变，在 prompt 里给 K 个 (input, output) 示例，模型从示例里抽规则应用到新输入。GPT-3 的核心 contribution。详见 <a href="../concepts/in-context-learning.html">in-context-learning</a>。</li>
+    <li id="g-02"><span class="term">Emergent abilities · 涌现能力</span> · 某些任务在小模型上接近 0 分，到某个 size 阈值后突然跳到接近完美。论文用 hockey stick 曲线展示。后续 Anthropic 2023 反驳部分 emergence 是 metric artifact。详见 <a href="../concepts/emergent-abilities.html">emergent-abilities</a>。</li>
+    <li id="g-03"><span class="term">Scaling laws · 标度律</span> · Kaplan et al. 2020 · LM loss 跟参数 / 数据 / 算力满足 power law。给出"模型大小可以算出来"的经验公式。175B 这个数字是公式推算的最优配置。后被 Chinchilla 修正。详见 <a href="../concepts/scaling-laws.html">scaling-laws</a>。</li>
+    <li id="g-04"><span class="term">Sparse attention · 稀疏注意力</span> · GPT-3 用 alternating dense/sparse layers 节省算力。奇数层 full attention，偶数层 strided sparse attention。后来被 FlashAttention 部分取代。详见 <a href="../concepts/sparse-attention.html">sparse-attention</a>。</li>
+    <li id="g-05"><span class="term">Implicit gradient descent</span> · ICL 的一种理论解释 · attention layer 内部相当于在做小规模 in-weight optimization · 形式上有证明（Akyürek et al. 2022, von Oswald et al. 2023）· 工程上待充分验证。</li>
+    <li id="g-06"><span class="term">$4.6M 训练成本</span> · GPT-3 单次训练用 v100 GPU 按 2020 价格估算的成本。"普通研究者训不动" 时代的标志性数字。给后续开源大模型（Llama / Mistral / DeepSeek）的"低成本路线"创造了反弹空间。</li>
+    <li id="g-07"><span class="term">8 size 系列</span> · GPT-3 训了 125M / 350M / 760M / 1.3B / 2.7B / 6.7B / 13B / 175B 八个尺寸，系统验证 scaling laws。每个 size 都跑全套 benchmark。这是为什么 emergence 曲线能画出来 —— 没有连续的 size 数据点，"涌现"看不到。</li>
+    <li id="g-08"><span class="term">"够好 + 极快"赢"最好 + 极慢"</span> · finetune 可能性能更高，但工程门槛是几天/几周；few-shot ICL 性能略低，但门槛是 5 分钟。在<strong>有效市场</strong>下，ROI 更优的赢。这是 LLM 时代取代 BERT 时代的根本商业逻辑。</li>
+    <li id="g-09"><span class="term">Chinchilla 修正 · Hoffmann et al. 2022</span> · DeepMind 重新跑 scaling 实验，发现 OpenAI 原版公式低估了数据需求。新结论：每 1 参数配 ~20 token 才是 compute-optimal。GPT-3 175B/300B = 1/1.7 严重不足。Llama / Claude / GPT-4 都按 Chinchilla 比例训。详见 <a href="../concepts/scaling-laws.html">scaling-laws</a>。</li>
+    <li id="g-10"><span class="term">RLHF 引爆链 · 2022 InstructGPT → ChatGPT</span> · GPT-3 + RLHF + chat template = ChatGPT。GPT-3 是<strong>能力</strong>，RLHF 是<strong>对齐</strong>，chat template 是<strong>产品形态</strong>。三者缺一不可。论文 GPT-3 是这条引爆链的第一块基石。</li>
+    <li id="g-11"><span class="term">Trajectory 视角 vs Snapshot 视角</span> · 单看 GPT-1/2/3 任意一篇 paper 的 benchmark 都看不出它有多重要。三篇连起来看一条 trajectory（finetune → zero-shot → few-shot ICL）才能看到范式革命。BERT 系单点 paper 当时分数都高，但缺乏长期 trajectory，最终方向感不如 GPT 系。这是判断长期 thesis 是否有 staying power 的关键视角。</li>
+    <li id="g-12"><span class="term">ICL 的扩展 · CoT / 工具 / 长上下文 / reasoning</span> · 2022-2026 LLM 演化全部建立在 GPT-3 的 ICL 之上 · Chain-of-thought 让 ICL 触发深思考 · Function calling 让 ICL 触发工具调用 · Long-context 让 ICL 容纳更多信息 · Reasoning models 在 ICL 之上加 RL 训练。GPT-3 立的范式至今没被打破，只是被层层扩展。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>Authored / Brown et al. (31 authors) · OpenAI · 2020-06</span>
+  <span>Index / <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+
+<script>
+// ===== Fig 01: scale bars =====
+{
+  const fig = document.getElementById('scale-fig');
+  const bars = fig.querySelectorAll('.scale-bar');
+  function animate() {
+    bars.forEach((b, i) => {
+      const h = parseFloat(b.dataset.h);
+      // scale max to ~240px (175B at h=100 → 240px tall)
+      setTimeout(() => { b.style.height = (h * 2.4) + 'px'; }, 100 + i * 80);
+    });
+  }
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting) { animate(); obs.disconnect(); }
+    });
+  }, { threshold: 0.25 });
+  obs.observe(fig);
+}
+
+// ===== Fig 02: ICL cards =====
+{
+  const fig = document.getElementById('icl-fig');
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting) { fig.classList.add('play'); obs.disconnect(); }
+    });
+  }, { threshold: 0.25 });
+  obs.observe(fig);
+}
+
+// ===== Fig 03: emergence curves =====
+{
+  const fig = document.getElementById('em-fig');
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting) { fig.classList.add('play'); obs.disconnect(); }
+    });
+  }, { threshold: 0.3 });
+  obs.observe(fig);
+}
+
+// ===== Fig 04: compute-optimal bars =====
+{
+  const fig = document.getElementById('co-fig');
+  const fills = fig.querySelectorAll('.co-bar-fill');
+  function animate() {
+    fills.forEach((f, i) => {
+      const w = parseFloat(f.dataset.w);
+      setTimeout(() => { f.style.width = w + '%'; }, 200 + i * 200);
+    });
+  }
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting) { animate(); obs.disconnect(); }
+    });
+  }, { threshold: 0.3 });
+  obs.observe(fig);
+}
+</script>
+
+</body>
+</html>

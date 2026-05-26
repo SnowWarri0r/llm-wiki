@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Micro-Turn · 200ms 微回合 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · micro-turn</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Micro-Turn · 200ms 微回合</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把时间切成 200ms 一片，每片里<strong>输入和输出同时发生</strong>，模型看到的是一条单一交错 token 流。</p>
+<h2>直觉</h2>
+<p>传统 chat：你说一段完整的 → 模型生成一段完整的 → 你再说一段。时间被切成"两个回合"。</p>
+<p>TML：把回合切到 200ms 这个尺度，每个 200ms chunk 里<strong>输入 token 和输出 token 同时入流</strong>：</p>
+<pre><code>input₀  output₀  input₁  output₁  input₂  output₂  ...
+</code></pre>
+<p>对模型：一条单一交错序列（标准 transformer 吃这种没难度）。
+对人：感受到的是真正的"同时在线"。</p>
+<h2>为什么是 200ms</h2>
+<p>工程妥协点：</p>
+<ul>
+<li>太小（如 50ms）→ <a href="../concepts/prefill-decode.html">prefill-decode</a> 调用太频繁，GPU 元数据开销吃掉算力</li>
+<li>太大（如 1s）→ 用户感知到延迟，听觉感知阈值大约就是 200-300ms</li>
+<li>200ms ≈ 听觉阈值 + GPU prefill 摊薄成本的最低可接受值</li>
+</ul>
+<h2>它替代了什么</h2>
+<p>传统语音助手 pipeline：</p>
+<ul>
+<li><strong><a href="../concepts/vad.html">vad</a></strong>（Voice Activity Detection）判断"用户说完了没"</li>
+<li><strong>end-of-turn</strong> 启发式决定"该模型说话了"</li>
+<li>这些都是比主模型笨得多的外挂规则</li>
+</ul>
+<p>Micro-turn 把"什么时候该说话 / 什么时候听 / 什么时候插嘴"全交给主模型自己学。符合 bitter lesson —— 见 <a href="../topics/replace-heuristics-with-weights.html">replace-heuristics-with-weights</a>。</p>
+<h2>工程支撑</h2>
+<ul>
+<li>客户端按 200ms 一个 chunk 发请求</li>
+<li>推理服务器维持持久 <a href="../concepts/kv-cache.html">kv-cache</a>，每个 chunk 追加进去，不重分配</li>
+<li>自定义 kernel（<a href="../concepts/grouped-gemm-vs-gemv.html">grouped-gemm-vs-gemv</a> / <a href="../concepts/nvls.html">nvls</a> / <a href="../concepts/split-kv.html">split-kv</a>）针对极低延迟小 batch 优化</li>
+</ul>
+<h2>跟 fish-speech 流式的对照</h2>
+<p>fish-speech 也吐流式音频 token（TTFA ~100ms），但形态不同：</p>
+<ul>
+<li>fish-speech：单向流，模型在"说"，用户在"等"</li>
+<li>TML micro-turn：双向交错流，两边都在动</li>
+</ul>
+<p>fish-speech 解决的是"低延迟生成"；TML 解决的是"低延迟双向并发"。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/interaction-models-tml.html">interaction-models-tml</a> · 论文</li>
+<li><a href="../concepts/dual-model-architecture.html">dual-model-architecture</a> · 前台模型跑的就是这条 micro-turn 流</li>
+<li><a href="../concepts/early-fusion.html">early-fusion</a> · 各模态进同一 token 流的前提</li>
+<li><a href="../concepts/kv-cache.html">kv-cache</a> · 流式会话的内存账本</li>
+<li><a href="../concepts/vad.html">vad</a> · 被替代的启发式</li>
+<li><a href="../topics/replace-heuristics-with-weights.html">replace-heuristics-with-weights</a> · 这条范式</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 10 处</span>
+  <ul><li><a href="../papers/interaction-models-tml.html"><span class="cat">paper</span>Interaction Models · Thinking Machines Lab</a></li><li><a href="../topics/replace-heuristics-with-weights.html"><span class="cat">topic</span>把外挂规则吃进模型权重</a></li><li><a href="../concepts/dual-model-architecture.html"><span class="cat">concept</span>Dual-Model Architecture · 双模型架构</a></li><li><a href="../concepts/grouped-gemm-vs-gemv.html"><span class="cat">concept</span>Grouped GEMM vs GEMV</a></li><li><a href="../concepts/kv-cache.html"><span class="cat">concept</span>KV Cache</a></li><li><a href="../concepts/moe.html"><span class="cat">concept</span>MoE · Mixture of Experts</a></li><li><a href="../concepts/nvls.html"><span class="cat">concept</span>NVLS · NVIDIA Low-Latency SHARP</a></li><li><a href="../concepts/prefill-decode.html"><span class="cat">concept</span>Prefill / Decode</a></li><li><a href="../concepts/split-kv.html"><span class="cat">concept</span>Split-KV · 沿 KV 序列切分 attention</a></li><li><a href="../concepts/vad.html"><span class="cat">concept</span>VAD · Voice Activity Detection</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/micro-turn.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

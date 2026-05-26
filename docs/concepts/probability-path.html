@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Probability Path · 概率路径 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · probability-path</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Probability Path · 概率路径</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>一族随时间 t ∈ [0, 1] 变化的概率密度 p_t(x)，从 p_0（噪声分布，如标准高斯）连续演化到 p_1（数据分布）。</p>
+<h2>直觉</h2>
+<p>想象数据分布是一坨复杂形状（如手写数字 MNIST 集合）。噪声分布是一坨简单形状（标准高斯）。</p>
+<p>概率路径是 "<strong>怎么把简单形状变形成复杂形状</strong>" 的逐帧动画：t=0 是高斯，t=0.5 是中间形态，t=1 是数据分布。</p>
+<p>flow matching 训练就是<strong>学怎么沿这条路径走</strong>。</p>
+<h2>路径的设计自由</h2>
+<p>diffusion 限定了 path —— 必须是 OU 过程（高斯过程），形式是：</p>
+<pre><code>p_t(x | x_1) = N(α(t) · x_1, σ(t)²)
+</code></pre>
+<p>flow matching 解放了这个约束 —— <strong>你可以选任意 path</strong>。常见选择：</p>
+<p><strong>1 · 线性插值（最简单）</strong>：</p>
+<pre><code>x_t = (1 - t) · x_0 + t · x_1
+</code></pre>
+<p>样本沿直线从 x_0 走到 x_1。</p>
+<p><strong>2 · OT 路径（理论最优）</strong>：
+等价于线性插值（在合适的参数化下）。直线意味着<strong>最短路径</strong>，对应 OT（最优传输）解。</p>
+<p><strong>3 · VP-SDE 路径（diffusion 兼容）</strong>：
+跟 diffusion 一样的 OU 过程，flow matching 用 ODE 求解。</p>
+<p><strong>4 · 自定义路径</strong>：
+比如想让 t=0.5 时刻经过某个中间状态，可以设计 p_t 反映这个。</p>
+<h2>OT 路径为什么特别</h2>
+<p>OT (Optimal Transport) 视角下，从 p_0 到 p_1 的"成本最小"路径是<strong>直线</strong> —— 每个 x_0 沿直线到对应的 x_1。</p>
+<p>这有两个好处：</p>
+<ul>
+<li><strong>少步推理</strong>：理论上 1 步 ODE 就够（沿直线一步到位）</li>
+<li><strong>训练目标清晰</strong>：conditional velocity = x_1 - x_0，简单常数</li>
+</ul>
+<p>实际选 OT 路径的 flow matching 通常 4-20 步达到 diffusion 50-1000 步的质量。</p>
+<h2>反例 · 弯路 path</h2>
+<p>如果 path 设计不好（如 OU 过程），样本要走<strong>弯路</strong>：</p>
+<ul>
+<li>先朝某个方向走</li>
+<li>再回头</li>
+<li>最后到 target</li>
+</ul>
+<p>这意味着 velocity 频繁变化，ODE 解不准（需要更多步数补偿）。Diffusion 之所以要 50-1000 步，部分原因就是 OU 路径不是直线。</p>
+<h2>数学约束</h2>
+<p>任何 path 都必须满足：</p>
+<ul>
+<li>t=0 时 p_0 是先验分布（如 N(0, I)）</li>
+<li>t=1 时 p_1 是数据分布</li>
+<li>中间 p_t 处处可微（保证 velocity field 存在）</li>
+</ul>
+<p>满足这些约束的 path 有无穷多个。<strong>flow matching 让你自由挑</strong>。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · 提出</li>
+<li><a href="../concepts/velocity-field.html">velocity-field</a> · 跟 path 对应</li>
+<li><a href="../concepts/optimal-transport.html">optimal-transport</a> · OT path 的来源</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 7 处</span>
+  <ul><li><a href="../papers/flow-matching.html"><span class="cat">paper</span>Flow Matching · 流匹配</a></li><li><a href="../concepts/conditional-flow-matching.html"><span class="cat">concept</span>Conditional Flow Matching · 条件流匹配</a></li><li><a href="../concepts/continuity-equation.html"><span class="cat">concept</span>Continuity Equation · 连续性方程</a></li><li><a href="../concepts/math-symbols.html"><span class="cat">concept</span>数学符号速查</a></li><li><a href="../concepts/ode-vs-sde.html"><span class="cat">concept</span>ODE vs SDE · 确定性 vs 随机性流</a></li><li><a href="../concepts/optimal-transport.html"><span class="cat">concept</span>Optimal Transport · 最优传输</a></li><li><a href="../concepts/velocity-field.html"><span class="cat">concept</span>Velocity Field · 速度场 · v(x, t)</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/probability-path.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

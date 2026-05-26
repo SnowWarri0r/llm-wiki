@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Grouped GEMM vs GEMV · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · grouped-gemm-vs-gemv</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Grouped GEMM vs GEMV</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>MoE 推理里，小 batch 常像很多个 GEMV；把同 expert 的 token 凑起来可变成 grouped GEMM，吞吐更好但会增加调度等待。</p>
+<h2>直觉</h2>
+<p>GEMV 是"一个向量乘一个矩阵"，适合单请求低延迟，但 GPU 吃不饱。GEMM 是"一批向量乘矩阵"，吞吐高。MoE 每个 token 只去少数 expert，天然把 batch 打散，所以系统要决定：马上算一个 token，还是等一等把同 expert 的 token 凑成小批。</p>
+<p>这就是实时交互里的经典 trade-off：低延迟 vs 高吞吐。</p>
+<h2>怎么做的</h2>
+<ul>
+<li><strong>GEMV 路线</strong>：token 到 expert 就立刻算，排队少，GPU 利用率低</li>
+<li><strong>Grouped GEMM 路线</strong>：按 expert 聚合 token，一次跑多个小矩阵乘，GPU 更满</li>
+<li><strong>TML 的痛点</strong>：<a href="../concepts/micro-turn.html">micro-turn</a> 只有 200ms 级预算，过度凑批会伤手感</li>
+<li><strong>确定性问题</strong>：凑批顺序改变也可能影响 <a href="../concepts/bitwise-determinism.html">bitwise-determinism</a></li>
+</ul>
+<h2>代码出处</h2>
+<p>当前是 TML 文章级系统设计点；没有公开实现。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/moe.html">moe</a> · 为什么会有 expert 分流</li>
+<li><a href="../concepts/batch-invariant-kernel.html">batch-invariant-kernel</a> · batch composition 不能改变结果</li>
+<li><a href="../concepts/nvls.html">nvls</a> · 多 GPU expert 通信的低延迟组件</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 5 处</span>
+  <ul><li><a href="../papers/interaction-models-tml.html"><span class="cat">paper</span>Interaction Models · Thinking Machines Lab</a></li><li><a href="../concepts/batch-invariant-kernel.html"><span class="cat">concept</span>Batch-Invariant Kernel · 批大小不变算子</a></li><li><a href="../concepts/micro-turn.html"><span class="cat">concept</span>Micro-Turn · 200ms 微回合</a></li><li><a href="../concepts/moe.html"><span class="cat">concept</span>MoE · Mixture of Experts</a></li><li><a href="../concepts/nvls.html"><span class="cat">concept</span>NVLS · NVIDIA Low-Latency SHARP</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/grouped-gemm-vs-gemv.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

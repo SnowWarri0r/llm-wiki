@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Split-KV · 沿 KV 序列切分 attention · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · split-kv</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Split-KV · 沿 KV 序列切分 attention</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把 attention 里的 Key/Value 缓存按序列维切成几段并行算，再用稳定归约合回来。</p>
+<h2>直觉</h2>
+<p>decode 时当前 Query 只有一个或少数几个 token，但它要看很长的 <a href="../concepts/kv-cache.html">kv-cache</a>。如果一个 kernel 串着扫完整 KV，长上下文会慢；把 KV 切段并行扫，就像多人分头查同一本账本，最后汇总最相关的结果。</p>
+<p>难点在"最后汇总"：softmax attention 不是简单相加，切段后要保证数值稳定，还要让切分策略在 prefill/decode 中尽量一致。</p>
+<h2>怎么做的</h2>
+<ol>
+<li>将 KV cache 沿 context length 切成固定 chunk</li>
+<li>每个 chunk 独立算局部 attention score、局部 max、局部加权和</li>
+<li>用 log-sum-exp 风格的稳定合并得到全局 softmax 结果</li>
+<li>固定 chunk 和归约顺序，服务 <a href="../concepts/bitwise-determinism.html">bitwise-determinism</a></li>
+</ol>
+<h2>代码出处</h2>
+<p>当前是 TML kernel 设计描述；没有公开实现可指行号。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/kv-cache.html">kv-cache</a> · 被切分的数据结构</li>
+<li><a href="../concepts/prefill-decode.html">prefill-decode</a> · 两阶段都要考虑切分一致</li>
+<li><a href="../concepts/batch-invariant-kernel.html">batch-invariant-kernel</a> · 保 bit 的更大目标</li>
+<li><a href="../concepts/micro-turn.html">micro-turn</a> · 长上下文流式交互的低延迟需求</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 7 处</span>
+  <ul><li><a href="../papers/interaction-models-tml.html"><span class="cat">paper</span>Interaction Models · Thinking Machines Lab</a></li><li><a href="../concepts/batch-invariant-kernel.html"><span class="cat">concept</span>Batch-Invariant Kernel · 批大小不变算子</a></li><li><a href="../concepts/bitwise-determinism.html"><span class="cat">concept</span>Bitwise Determinism · 位级确定性</a></li><li><a href="../concepts/kv-cache.html"><span class="cat">concept</span>KV Cache</a></li><li><a href="../concepts/micro-turn.html"><span class="cat">concept</span>Micro-Turn · 200ms 微回合</a></li><li><a href="../concepts/nvls.html"><span class="cat">concept</span>NVLS · NVIDIA Low-Latency SHARP</a></li><li><a href="../concepts/prefill-decode.html"><span class="cat">concept</span>Prefill / Decode</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/split-kv.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

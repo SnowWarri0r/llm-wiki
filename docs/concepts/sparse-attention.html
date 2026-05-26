@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Sparse Attention · 稀疏注意力 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · sparse-attention</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Sparse Attention · 稀疏注意力</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>不让每个 token 看序列里所有其他 token（O(N²) 太贵），而是<strong>限制只看部分位置</strong>（如局部窗口 / 跨步采样），把复杂度降到 O(N·√N) 或 O(N·log N)。</p>
+<h2>直觉</h2>
+<p>标准 self-attention 的 O(N²) 在长序列下吃不消：</p>
+<ul>
+<li>N=1024 · 100 万次 attention 计算 / 层</li>
+<li>N=8192 · 6700 万次</li>
+<li>N=32768 · 10.7 亿次</li>
+</ul>
+<p>要训长上下文模型必须省 attention 计算。Sparse attention 的思路：<strong>大多数 token 对其实不重要</strong>，只关注少数关键位置就够。</p>
+<p>类比：你看一本书理解某段时，主要参考前文几页 + 章节摘要，不需要每读一行都回头扫整本书。Sparse attention 就是给 transformer 装这种"有重点的扫读"。</p>
+<h2>GPT-3 用的方案</h2>
+<p>GPT-3 论文里没给详细架构，但提了 "use alternating dense and locally banded sparse attention layers, similar to the Sparse Transformer"。</p>
+<p>具体来说，GPT-3 的 96 层 attention 里：</p>
+<ul>
+<li><strong>奇数层</strong>：标准 full attention（O(N²)）</li>
+<li><strong>偶数层</strong>：strided sparse attention（只看 stride 步长上的 token）</li>
+</ul>
+<p>这相当于"局部精看 + 跨层全局联系"的折中。</p>
+<h2>主流 sparse 方案</h2>
+<ol>
+<li><strong>Strided / Sparse Transformer</strong> (Child et al. 2019) —— GPT-3 用的。token i 看 i-1, i-stride, i-2*stride, ...</li>
+<li><strong>Local window</strong> (Longformer) —— token i 只看 [i-w, i+w] 窗口</li>
+<li><strong>Sliding window + dilated</strong> (Longformer / BigBird) —— 局部 + 跨步 + 几个 global token</li>
+<li><strong>Random</strong> (BigBird) —— 随机选 k 个位置当 attention key</li>
+<li><strong>Linear attention</strong> (Performer / Linformer) —— 用核技巧把 softmax 近似成线性</li>
+</ol>
+<p>不同方案 trade-off 不同 expressivity / efficiency。GPT-3 用最简单的 strided 方案，因为 Sparse Transformer 已经验证它够用。</p>
+<h2>为什么不能全用 sparse</h2>
+<p>sparse attention 损失一些表达力。GPT-3 用 alternating 而不是全 sparse —— 至少一半层保留 full attention，让模型在<strong>关键层</strong>能看到任意位置。这是个常见折中。</p>
+<h2>后来的发展</h2>
+<ul>
+<li><strong>2022 FlashAttention</strong> —— 不改架构，直接优化标准 attention 的 GPU 实现（memory-aware tiling）。让 dense attention 在长序列上也快起来 → sparse 的实用价值下降</li>
+<li><strong>2023 sliding window + ROPE 长上下文</strong> —— Claude / GPT-4 转向"标准 attention + 工程优化 + 位置编码改良"</li>
+<li><strong>2024 状态空间模型（Mamba）</strong> —— 用 RNN-style state space 替代 attention，本质上线性复杂度</li>
+</ul>
+<p>GPT-3 当年用 sparse 的工程动机被 FlashAttention 部分消解了 —— 现代 LLM 多数回到 standard attention + GPU optimization。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/gpt-3.html">gpt-3</a> · 用 alternating dense/sparse</li>
+<li><a href="../concepts/self-attention.html">self-attention</a> · 标准版的复杂度问题</li>
+<li><a href="../concepts/transformer-architecture.html">transformer-architecture</a> · 框架</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/gpt-3.html"><span class="cat">paper</span>GPT-3 · Language Models are Few-Shot Learners</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/sparse-attention.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

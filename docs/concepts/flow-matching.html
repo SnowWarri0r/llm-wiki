@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Flow Matching · 流匹配 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · flow-matching</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Flow Matching · 流匹配</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>不直接预测音频样本，而是学一个<strong>速度场</strong>，从噪声出发沿场积分若干步到目标音频。</p>
+<h2>直觉</h2>
+<p>跟 diffusion 是近亲：</p>
+<ul>
+<li><strong>Diffusion</strong>：学"去噪"，每步把噪声减一点</li>
+<li><strong>Flow matching</strong>：学"速度场" <code>v(x, t)</code>，从 <code>x₀ = noise</code> 出发解 ODE <code>dx/dt = v(x, t)</code> 到 <code>x₁ = target</code></li>
+</ul>
+<p>类比：</p>
+<ul>
+<li>Diffusion 是离散的"一步一步擦掉雾气"</li>
+<li>Flow matching 是连续的"沿河道漂下去"</li>
+</ul>
+<p>数学根源是 <strong>Continuous Normalizing Flow (CNF) + Conditional Flow Matching</strong>（Lipman et al. 2022）。</p>
+<h2>TML 为什么用它做音频输出</h2>
+<ul>
+<li><strong>连续值</strong> → 可微，端到端跟主 transformer 联合训练</li>
+<li><strong>可控步数</strong> → 推理时步数可调，质量/延迟可 trade</li>
+<li><strong>比 VQ codec 平滑</strong> → 不需要量化误差恢复</li>
+<li><strong>跟 transformer 接口干净</strong> → flow head 拼在 transformer 输出上</li>
+</ul>
+<h2>跟 RVQ 的对比</h2>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>RVQ codec</th>
+<th>Flow matching</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>输出类型</td>
+<td>离散 token（多 codebook）</td>
+<td>连续向量（每步细化）</td>
+</tr>
+<tr>
+<td>训练目标</td>
+<td>cross-entropy on token</td>
+<td>conditional flow matching loss</td>
+</tr>
+<tr>
+<td>推理</td>
+<td>AR 吐 token + decoder 重建</td>
+<td>ODE 求解 N 步</td>
+</tr>
+<tr>
+<td>延迟</td>
+<td>单 step 出 N token</td>
+<td>N step ODE，每 step 是矩阵乘</td>
+</tr>
+<tr>
+<td>端到端联训</td>
+<td>麻烦（VQ 不可微 → straight-through）</td>
+<td>干净</td>
+</tr>
+<tr>
+<td>表达力</td>
+<td>受 codebook 大小约束</td>
+<td>连续，无量化误差</td>
+</tr>
+</tbody>
+</table>
+<p>详见 <a href="../topics/audio-tokenization-rvq-vs-flow.html">audio-tokenization-rvq-vs-flow</a>。</p>
+<h2>开放问题</h2>
+<ul>
+<li>ODE 推理需要多步，怎么在 200ms 预算里跑完？步数？</li>
+<li>跟传统 vocoder（HiFi-GAN）比是不是更好？</li>
+<li>训练时用什么 prior 路径（OT / VP / VE）？</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/interaction-models-tml.html">interaction-models-tml</a> · 论文</li>
+<li><a href="../concepts/rvq-codec.html">rvq-codec</a> · 离散对照</li>
+<li><a href="../topics/audio-tokenization-rvq-vs-flow.html">audio-tokenization-rvq-vs-flow</a> · 横向对比</li>
+<li><a href="../concepts/early-fusion.html">early-fusion</a> · flow head 接在主 transformer 后</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 14 处</span>
+  <ul><li><a href="../papers/attention-is-all-you-need.html"><span class="cat">paper</span>Attention Is All You Need · Transformer 始祖</a></li><li><a href="../papers/fish-speech-s2-pro.html"><span class="cat">paper</span>Fish Audio S2 Pro</a></li><li><a href="../papers/interaction-models-tml.html"><span class="cat">paper</span>Interaction Models · Thinking Machines Lab</a></li><li><a href="../topics/audio-tokenization-rvq-vs-flow.html"><span class="cat">topic</span>音频 token 化：RVQ vs Flow Matching</a></li><li><a href="../concepts/conditional-flow-matching.html"><span class="cat">concept</span>Conditional Flow Matching · 条件流匹配</a></li><li><a href="../concepts/continuity-equation.html"><span class="cat">concept</span>Continuity Equation · 连续性方程</a></li><li><a href="../concepts/dmel.html"><span class="cat">concept</span>dMel · 离散 Mel 频谱</a></li><li><a href="../concepts/early-fusion.html"><span class="cat">concept</span>Early Fusion · 无独立编码器的早融合</a></li><li><a href="../concepts/ode-vs-sde.html"><span class="cat">concept</span>ODE vs SDE · 确定性 vs 随机性流</a></li><li><a href="../concepts/optimal-transport.html"><span class="cat">concept</span>Optimal Transport · 最优传输</a></li><li><a href="../concepts/probability-path.html"><span class="cat">concept</span>Probability Path · 概率路径</a></li><li><a href="../concepts/rvq-codec.html"><span class="cat">concept</span>RVQ Codec · 残差向量量化</a></li><li><a href="../concepts/score-function.html"><span class="cat">concept</span>Score Function · ∇log p(x) · 对数概率梯度</a></li><li><a href="../concepts/velocity-field.html"><span class="cat">concept</span>Velocity Field · 速度场 · v(x, t)</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/flow-matching.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

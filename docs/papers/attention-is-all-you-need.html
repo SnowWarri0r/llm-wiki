@@ -1,0 +1,1576 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Attention Is All You Need · 中文讲解</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f0e9d6;
+    --paper-2: #e8e0c8;
+    --paper-3: #faf4e1;
+    --paper-card: #f7f1de;
+    --ink: #181410;
+    --ink-2: #3a3128;
+    --muted: #7a6f5d;
+    --rule: #bfb398;
+    --brick: #9b2c2c;
+    --brick-soft: #efd6c8;
+    --ochre: #b8841c;
+    --ochre-soft: #f0e0a8;
+    --moss: #4a6b3a;
+    --moss-soft: #d8e6ce;
+    --deep: #1f3a4d;
+    --deep-soft: #cfdde6;
+    --plum: #6b3a5c;
+    --plum-soft: #e6d4df;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif;
+    font-size: 18px; line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(155,44,44,0.025) 0%, transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(74,107,58,0.025) 0%, transparent 40%);
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.045 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+    mix-blend-mode: multiply; opacity: 0.5;
+  }
+
+  .progress { position: fixed; top: 0; left: 0; right: 0; height: 3px; background: transparent; z-index: 1000; }
+  .progress-bar { height: 100%; background: var(--brick); width: 0%; transition: width 0.1s ease; }
+
+  .page {
+    max-width: 1080px; margin: 0 auto; padding: 56px 32px 160px;
+    display: grid; grid-template-columns: minmax(0, 1fr) 240px;
+    gap: 48px; align-items: start;
+  }
+  .col-main { min-width: 0; }
+  .col-side { font-size: 13px; line-height: 1.6; color: var(--ink-2); }
+  .col-side .pin {
+    border-left: 2px solid var(--plum);
+    padding: 4px 0 4px 12px; margin: 0 0 16px;
+  }
+  .col-side .pin-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--plum); font-weight: 700; display: block; margin-bottom: 4px;
+  }
+  .col-side .pin code { background: var(--paper-2); padding: 1px 5px; border-radius: 2px; font-size: 11.5px; }
+  @media (max-width: 900px) {
+    .page { grid-template-columns: 1fr; gap: 0; padding: 32px 20px 80px; }
+    .col-side { display: none; }
+  }
+
+  .masthead {
+    border-top: 4px double var(--ink);
+    border-bottom: 1px solid var(--rule);
+    padding: 14px 0;
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--ink-2); margin-bottom: 56px;
+  }
+  .masthead .l { font-weight: 700; }
+  .masthead .r { color: var(--muted); }
+
+  .hero { margin-bottom: 72px; }
+  .hero .issue {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--brick); font-weight: 700;
+    margin-bottom: 18px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+  h1.title {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1;
+    font-weight: 700; font-size: clamp(48px, 8vw, 96px);
+    line-height: 0.95; letter-spacing: -0.035em;
+    margin: 0 0 8px; color: var(--ink);
+  }
+  h1.title .em {
+    font-style: italic;
+    font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+    color: var(--brick);
+  }
+  .hero .dek {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-variation-settings: "opsz" 36;
+    font-style: italic; font-weight: 300;
+    font-size: clamp(20px, 2.2vw, 28px);
+    line-height: 1.4; color: var(--ink-2);
+    max-width: 760px; margin: 28px 0 24px;
+  }
+  .hero .bylines {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--muted); letter-spacing: 1.5px;
+    display: flex; gap: 24px; flex-wrap: wrap;
+  }
+  .hero .bylines a { color: var(--brick); text-decoration: none; border-bottom: 1px dotted; }
+
+  p.lede {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-variation-settings: "opsz" 24;
+    font-weight: 400; font-size: 20px; line-height: 1.6;
+    color: var(--ink); margin: 28px 0;
+  }
+  p.lede strong { font-weight: 600; }
+
+  #thesis + p::first-letter {
+    font-family: 'Fraunces', serif;
+    font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1;
+    font-weight: 700; font-size: 76px;
+    float: left; line-height: 0.85;
+    padding: 8px 12px 0 0; color: var(--brick);
+  }
+
+  h2 {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1;
+    font-weight: 700; font-size: clamp(34px, 4vw, 48px);
+    line-height: 1.1; letter-spacing: -0.02em;
+    margin: 80px 0 24px; padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap;
+  }
+  h2 .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--brick); font-weight: 700; flex-shrink: 0;
+  }
+  h3 {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-weight: 600; font-size: 24px;
+    margin: 32px 0 10px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h3 .small-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); font-weight: 700;
+  }
+
+  p { margin: 14px 0; }
+  strong { color: var(--ink); font-weight: 600; }
+  em { color: var(--ink-2); }
+
+  ul, ol { padding-left: 26px; margin: 12px 0; }
+  li { margin: 8px 0; }
+
+  a { color: var(--brick); text-decoration: none; border-bottom: 1px dotted rgba(155,44,44,0.5); }
+  a:hover { color: var(--ink); border-bottom-style: solid; }
+
+  code {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.88em;
+    background: var(--paper-2); padding: 1px 6px; border-radius: 3px;
+    color: var(--ink-2);
+  }
+  pre {
+    background: #1c1814; color: #e8dfc8;
+    padding: 18px 22px; border-radius: 4px; overflow-x: auto;
+    font-size: 13px; line-height: 1.7;
+    border-left: 3px solid var(--brick); margin: 18px 0;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  /* ===== TOC ===== */
+  .toc { margin: 48px 0; padding: 24px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .toc-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); font-weight: 700;
+    display: block; margin-bottom: 12px;
+  }
+  .toc ol { list-style: none; padding: 0; margin: 0; counter-reset: toc; }
+  .toc ol li { counter-increment: toc; display: flex; gap: 12px; align-items: baseline; padding: 4px 0; }
+  .toc-num { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--brick); font-weight: 700; min-width: 24px; }
+  .toc a { color: var(--ink); border-bottom: none; flex: 1; font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 17px; font-weight: 500; }
+  .toc a:hover { color: var(--brick); }
+  .toc-hint { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+
+  /* ===== notes ===== */
+  .note {
+    background: var(--paper-card); border-left: 3px solid var(--ochre);
+    padding: 14px 20px; margin: 22px 0; border-radius: 0 4px 4px 0;
+  }
+  .note.deep { border-left-color: var(--deep); }
+  .note.moss { border-left-color: var(--moss); background: var(--moss-soft); }
+  .note.brick { border-left-color: var(--brick); background: var(--brick-soft); }
+  .note.plum { border-left-color: var(--plum); background: var(--plum-soft); }
+  .note p { margin: 6px 0; }
+  .note .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--ochre); font-weight: 700; display: block; margin-bottom: 6px;
+  }
+  .note.deep .label { color: var(--deep); }
+  .note.moss .label { color: var(--moss); }
+  .note.brick .label { color: var(--brick); }
+  .note.plum .label { color: var(--plum); }
+
+  /* ===== jargon ===== */
+  .jr {
+    background: linear-gradient(to top, var(--ochre-soft) 0%, var(--ochre-soft) 30%, transparent 30%);
+    padding: 0 3px; border-bottom: 1px dotted var(--ochre);
+    color: inherit; text-decoration: none; cursor: pointer;
+    font-style: normal; transition: background 0.18s ease;
+  }
+  a.jr:hover { background: linear-gradient(to top, var(--brick-soft) 0%, var(--brick-soft) 60%, transparent 60%); border-bottom-color: var(--brick); }
+  a.jr:focus { outline: 2px solid var(--brick); outline-offset: 2px; }
+  .jr sup { color: var(--brick); font-weight: 700; font-size: 0.7em; font-family: 'JetBrains Mono', monospace; margin-left: 1px; }
+  .gloss-item:target {
+    background: var(--brick-soft);
+    box-shadow: inset 4px 0 0 var(--brick);
+    animation: glossPulse 1.4s ease-out;
+  }
+  @keyframes glossPulse {
+    0%   { background: var(--ochre); }
+    40%  { background: var(--ochre-soft); }
+    100% { background: var(--brick-soft); }
+  }
+
+  /* ===== figures ===== */
+  figure { margin: 32px 0 40px; padding: 0; }
+  .fig-head {
+    display: flex; align-items: baseline; gap: 14px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--rule); padding-bottom: 6px;
+  }
+  .fig-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--brick); font-weight: 700; }
+  .fig-title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-weight: 600; font-size: 16px; color: var(--ink); }
+  figcaption {
+    font-size: 13.5px; color: var(--ink-2);
+    margin-top: 14px; line-height: 1.6;
+    padding-left: 12px; border-left: 1px solid var(--rule);
+  }
+  .ctrls { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    background: transparent; border: 1px solid var(--ink);
+    padding: 6px 14px; cursor: pointer; color: var(--ink);
+    transition: all 0.15s;
+  }
+  .btn:hover { background: var(--ink); color: var(--paper); }
+  .btn.primary { background: var(--brick); color: var(--paper); border-color: var(--brick); }
+  .btn.primary:hover { background: var(--ink); border-color: var(--ink); }
+
+  /* ===== Fig 1 · RNN vs Transformer parallelism ===== */
+  .par-frame { background: var(--paper); padding: 24px; border: 1px solid var(--rule); }
+  .par-row {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 14px; align-items: center;
+    margin: 8px 0;
+  }
+  .par-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--ink-2); font-weight: 700; text-align: right;
+  }
+  .par-label .sub { display: block; font-size: 9px; color: var(--muted); font-weight: 400; margin-top: 2px; letter-spacing: 1px; }
+  .par-track {
+    display: flex; gap: 6px; align-items: center;
+    background: var(--paper-card);
+    border: 1px solid var(--rule);
+    padding: 8px;
+    border-radius: 2px;
+  }
+  .par-tok {
+    flex: 1;
+    height: 30px;
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--ink-2); font-weight: 700;
+    transition: background 0.4s ease, color 0.4s ease, border-color 0.4s ease, transform 0.3s ease;
+    border-radius: 2px;
+  }
+  .par-tok.active {
+    background: var(--brick); color: var(--paper); border-color: var(--brick);
+    transform: scale(1.06);
+  }
+  .par-tok.done {
+    background: var(--moss-soft); color: var(--ink-2); border-color: var(--moss);
+  }
+  .par-tok.arrow { flex: 0 0 auto; background: transparent; border: none; color: var(--muted); }
+  .par-clock {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 14px; align-items: center;
+    margin-top: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted); letter-spacing: 1px;
+  }
+  .par-clock .bar {
+    height: 4px; background: var(--paper-2); border-radius: 2px; position: relative;
+    overflow: hidden;
+  }
+  .par-clock .bar .fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: var(--ochre);
+    width: 0;
+    transition: width 0.5s linear;
+  }
+
+  /* ===== Fig 2 · Self-attention mechanism ===== */
+  .att-frame { background: var(--paper); padding: 28px 24px; border: 1px solid var(--rule); }
+  .att-sentence {
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+    margin: 18px 0 30px;
+  }
+  .att-tok {
+    padding: 10px 14px;
+    background: var(--paper-card); border: 1.5px solid var(--rule);
+    border-radius: 3px;
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-weight: 600; font-size: 16px; color: var(--ink);
+    position: relative;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+  .att-tok .idx {
+    position: absolute; top: -8px; left: 4px;
+    background: var(--paper); padding: 0 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--muted); font-weight: 400;
+  }
+  .att-tok.query {
+    background: var(--brick); color: var(--paper); border-color: var(--brick);
+    box-shadow: 0 0 0 3px var(--brick-soft);
+  }
+  .att-tok.key-on { border-color: var(--ochre); }
+  .att-steps {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .att-step {
+    padding: 14px 16px;
+    border-top: 1px solid var(--rule);
+    opacity: 0; transform: translateX(-8px);
+    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22,1,0.36,1);
+  }
+  .att-step.on { opacity: 1; transform: translateX(0); }
+  .att-step:first-child { border-top: 2px solid var(--ink); }
+  .att-step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--brick); font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .att-step-name {
+    font-family: 'Fraunces', serif;
+    font-weight: 600; font-size: 16px; color: var(--ink);
+    margin-right: 10px;
+  }
+  .att-formula {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; color: var(--ink-2);
+    background: var(--paper-card); padding: 8px 12px;
+    border-radius: 2px; margin-top: 6px;
+    border-left: 2px solid var(--ochre);
+    overflow-x: auto;
+  }
+  .att-formula .q { color: var(--brick); font-weight: 700; }
+  .att-formula .k { color: var(--ochre); font-weight: 700; }
+  .att-formula .v { color: var(--deep); font-weight: 700; }
+  .att-scores {
+    display: grid;
+    grid-template-columns: 80px repeat(6, 1fr);
+    gap: 6px; align-items: center;
+    margin: 10px 0; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  }
+  .att-scores-name {
+    color: var(--ink-2); text-align: right;
+    font-weight: 700;
+  }
+  .att-score-cell {
+    height: 22px; background: var(--paper-card); border: 1px solid var(--rule);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: var(--ink-2);
+    position: relative;
+    border-radius: 2px;
+    transition: background 0.5s ease, color 0.5s ease;
+  }
+  .att-score-cell.filled { background: var(--ochre); color: var(--paper); border-color: var(--ochre); }
+  .att-bar-cell {
+    height: 22px; background: var(--paper-2); border: 1px solid var(--rule); position: relative;
+    overflow: hidden;
+  }
+  .att-bar-cell .fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: var(--brick); width: 0;
+    transition: width 0.7s cubic-bezier(0.22,1,0.36,1);
+  }
+  .att-bar-cell .pct {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: var(--ink);
+    text-shadow: 0 0 2px var(--paper);
+    z-index: 2;
+  }
+  .att-output-row {
+    display: flex; align-items: center; gap: 14px;
+    margin-top: 14px;
+    padding: 10px 14px; background: var(--moss-soft);
+    border-left: 3px solid var(--moss); border-radius: 0 3px 3px 0;
+  }
+  .att-output-row .lbl {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--moss);
+    font-weight: 700; letter-spacing: 1px;
+  }
+  .att-output-row .desc { font-size: 13px; color: var(--ink-2); }
+
+  /* ===== Fig 3 · Multi-head attention ===== */
+  .mh-frame { background: var(--paper); padding: 24px; border: 1px solid var(--rule); }
+  .mh-heads {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;
+  }
+  .mh-head {
+    background: var(--paper-card); border: 1px solid var(--rule);
+    padding: 12px 14px; border-radius: 2px;
+    opacity: 0; transform: translateY(6px);
+    transition: opacity 0.5s, transform 0.5s;
+  }
+  .mh-head.on { opacity: 1; transform: translateY(0); }
+  .mh-head .htag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--brick); font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .mh-head .hdesc {
+    font-size: 12px; color: var(--ink-2);
+    font-family: 'Newsreader', serif;
+    margin-bottom: 10px;
+  }
+  .mh-head-svg { width: 100%; height: 110px; display: block; }
+  .mh-conn { stroke-width: 0; transition: stroke-width 0.5s ease, opacity 0.5s ease; opacity: 0; }
+  .mh-head.on .mh-conn { stroke-width: 1.6; opacity: 1; }
+  .mh-tok-circ { fill: var(--paper); stroke: var(--ink); stroke-width: 1.5; }
+  .mh-tok-text { font-family: 'Fraunces', serif; font-size: 11px; fill: var(--ink); font-weight: 600; }
+  @media (max-width: 700px) {
+    .mh-heads { grid-template-columns: 1fr; }
+  }
+
+  /* ===== Fig 4 · Positional encoding ===== */
+  .pe-frame { background: var(--paper); padding: 24px; border: 1px solid var(--rule); }
+  .pe-heat {
+    display: grid;
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    padding: 1px;
+    margin: 12px 0;
+  }
+  .pe-row {
+    display: grid;
+    gap: 1px;
+    background: var(--rule);
+  }
+  .pe-cell {
+    height: 14px;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+  .pe-cell.on { opacity: 1; }
+  .pe-axes {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 8px; align-items: start;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    letter-spacing: 1px;
+  }
+  .pe-y-label {
+    text-align: right; padding-top: 4px;
+  }
+  .pe-y-label .marks {
+    display: flex; flex-direction: column;
+    justify-content: space-between;
+    height: calc(20 * 14px + 19px);
+  }
+  .pe-x-label {
+    margin-top: 6px;
+    display: flex; justify-content: space-between;
+  }
+
+  /* ===== Fig 5 · Encoder-Decoder architecture ===== */
+  .arch-frame { background: var(--paper); padding: 28px 24px; border: 1px solid var(--rule); }
+  .arch-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+  .arch-col { display: flex; flex-direction: column; gap: 10px; }
+  .arch-col-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--brick); font-weight: 700; text-align: center;
+    padding-bottom: 6px; border-bottom: 1px solid var(--rule);
+  }
+  .arch-stack {
+    display: flex; flex-direction: column; gap: 8px; padding: 0;
+  }
+  .arch-block {
+    background: var(--paper-card);
+    border: 1.5px solid var(--ink);
+    padding: 10px 14px;
+    border-radius: 2px;
+    position: relative;
+    opacity: 0; transform: translateY(6px);
+    transition: opacity 0.4s, transform 0.4s;
+  }
+  .arch-block.on { opacity: 1; transform: translateY(0); }
+  .arch-sub {
+    background: var(--brick-soft); border: 1px solid var(--brick);
+    padding: 6px 10px; border-radius: 2px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--ink); font-weight: 700;
+    margin: 4px 0;
+  }
+  .arch-sub.cross { background: var(--ochre-soft); border-color: var(--ochre); }
+  .arch-sub.ffn { background: var(--moss-soft); border-color: var(--moss); }
+  .arch-block-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .arch-input {
+    text-align: center;
+    background: var(--ink); color: var(--paper);
+    padding: 6px 12px; border-radius: 2px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    letter-spacing: 1px;
+  }
+  .arch-arrow {
+    text-align: center; font-family: 'JetBrains Mono', monospace;
+    font-size: 14px; color: var(--muted);
+  }
+  .arch-cross-line {
+    text-align: center; padding: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--ochre); font-weight: 700;
+    letter-spacing: 1px;
+    border: 1px dashed var(--ochre);
+    background: var(--ochre-soft);
+    border-radius: 2px;
+    margin: 6px 0;
+    opacity: 0; transition: opacity 0.5s ease;
+  }
+  .arch-cross-line.on { opacity: 1; }
+  @media (max-width: 700px) {
+    .arch-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ===== glossary ===== */
+  .glossary { margin-top: 80px; padding-top: 24px; border-top: 4px double var(--ink); }
+  .glossary h2 { margin-top: 16px; }
+  .gloss-grid { display: grid; grid-template-columns: 1fr; gap: 0; border-top: 1px solid var(--rule); }
+  .gloss-item {
+    padding: 18px 0; border-bottom: 1px solid var(--rule);
+    display: grid; grid-template-columns: 36px 200px 1fr; gap: 16px; align-items: baseline;
+  }
+  .gloss-num { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--brick); font-weight: 700; }
+  .gloss-term { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: var(--ink); }
+  .gloss-def { font-size: 15.5px; line-height: 1.6; color: var(--ink-2); }
+  .gloss-def code { font-size: 12.5px; }
+  @media (max-width: 700px) {
+    .gloss-item { grid-template-columns: 28px 1fr; }
+    .gloss-term { grid-column: 2; }
+    .gloss-def { grid-column: 1 / -1; padding-left: 28px; }
+  }
+
+  table { width: 100%; border-collapse: collapse; margin: 22px 0; font-size: 14.5px; background: var(--paper-card); }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--rule); }
+  th {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--brick); font-weight: 700; border-bottom: 2px solid var(--ink);
+  }
+  td.num { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--brick); }
+
+  .colophon {
+    margin-top: 80px; padding-top: 20px;
+    border-top: 4px double var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--muted);
+    letter-spacing: 1px; line-height: 1.7;
+  }
+
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · attention-is-all-you-need</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+
+<div class="page">
+<div class="col-main">
+
+<div class="masthead">
+  <span class="l">Connectionism · 中文讲解</span>
+  <span class="r">VOL. 03 · 2017 / 06 / 12 → 2026 / 05 / 20</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 序列建模 / 深度学习史</div>
+  <h1 class="title">Attention<br /><span class="em">Is All You Need.</span></h1>
+  <p class="dek">2017 年那篇砍掉 recurrence、用纯 attention 把 NLP 推上 scaling 轨道的奠基论文 —— 一篇带交互式 self-attention 演示与术语注解的中文解读。</p>
+  <div class="bylines">
+    <span>原文 / Vaswani et al. · Google Brain</span>
+    <span><a href="https://arxiv.org/abs/1706.03762" target="_blank">arxiv:1706.03762 →</a></span>
+    <span>NeurIPS 2017</span>
+    <span>讲解 / Claude</span>
+  </div>
+</section>
+
+<p class="lede">现在所有大模型（GPT / Claude / Gemini / Qwen / Llama / fish-speech / TML interaction model）都是这一篇的后代。它的核心主张是一句几乎不像论文标题的话："<strong>注意力，是你所需要的全部</strong>" —— 抛弃 2014-2017 年间 NLP 标配的 RNN/LSTM，用纯 attention 堆出来的网络，又快、又能学长程依赖、又能 scale。这页的目的是把 self-attention 这个核心机制讲到能在脑子里跑一遍，配上 5 张可播放的图。</p>
+
+<div class="toc">
+  <span class="toc-label">contents · 目录</span>
+  <ol>
+    <li><span class="toc-num">01</span><a href="#thesis">RNN 的天花板</a><span class="toc-hint">问题诊断</span></li>
+    <li><span class="toc-num">02</span><a href="#parallel">并行 vs 串行</a><span class="toc-hint">配图 · 时间轴</span></li>
+    <li><span class="toc-num">03</span><a href="#attn">Self-Attention 机制</a><span class="toc-hint">配图 · 一步步算</span></li>
+    <li><span class="toc-num">04</span><a href="#mh">Multi-Head</a><span class="toc-hint">配图 · 4 个 head</span></li>
+    <li><span class="toc-num">05</span><a href="#pe">Positional Encoding</a><span class="toc-hint">配图 · 频率指纹</span></li>
+    <li><span class="toc-num">06</span><a href="#arch">完整架构</a><span class="toc-hint">配图 · Encoder/Decoder</span></li>
+    <li><span class="toc-num">07</span><a href="#legacy">改变了什么</a><span class="toc-hint">下游影响</span></li>
+    <li><span class="toc-num">08</span><a href="#takeaway">个人解读</a><span class="toc-hint">能拿走什么</span></li>
+    <li><span class="toc-num">▼</span><a href="#glossary">术语词典</a><span class="toc-hint">所有专有名词</span></li>
+  </ol>
+</div>
+
+<!-- ============ 01 ============ -->
+<h2 id="thesis"><span class="num">§ 01 · the bottleneck</span>RNN 的天花板</h2>
+
+<p>2017 年之前，NLP 处理序列的标准是 <a class="jr" href="#g-01">RNN<sup>1</sup></a>（包括 <a class="jr" href="#g-02">LSTM<sup>2</sup></a> / GRU）。机器翻译、语言建模、问答、命名实体识别 —— 全是 RNN 的天下。但它有三个让人受不了的痛点：</p>
+
+<ol>
+  <li><strong>串行瓶颈</strong>：RNN 必须 <code>t=0 → t=1 → t=2 ...</code> 一个 timestep 接一个，**前一步算完才能算下一步**。GPU 有几千个核能并行，但 RNN 在 sequence 维度上根本用不上。</li>
+  <li><strong>长程依赖衰减</strong>：序列里第 50 个 token 想看第 1 个 token 的信息，得让信号在 RNN 隐状态里流 49 步。中间每一步乘一个矩阵 + 过激活函数 → 梯度沿路衰减或爆炸（LSTM 缓解但没根治）。</li>
+  <li><strong>难 scale</strong>：参数量上去之后训练不稳定 —— 时间维度越长、梯度路径越深、问题越严重。</li>
+</ol>
+
+<p>2014-2017 有过几次尝试：Bahdanau attention（给 RNN decoder 加 attention 看 encoder 输出，仍是 RNN 主体）、ConvS2S / ByteNet（用空洞卷积把长程依赖压到 O(log N) 跳）。但都没真正解决"序列建模必须串行"的诅咒。</p>
+
+<p>这篇论文的标题就是答案：<strong>把 RNN 完全拿掉</strong>，纯 attention + FFN 堆出来的网络反而 work better。</p>
+
+<!-- ============ 02 ============ -->
+<h2 id="parallel"><span class="num">§ 02 · figure one</span>并行 vs 串行</h2>
+
+<p>先看一张图理解为什么"砍掉 recurrence"是个核心工程胜利。同一个 6 token 的序列，RNN 跟 Transformer 用 wall-clock 时间走完处理的路径：</p>
+
+<figure>
+  <div class="fig-head">
+    <span class="fig-label">Fig. 01</span>
+    <span class="fig-title">同一个序列 · RNN 串行 vs Transformer 并行</span>
+  </div>
+
+  <div class="par-frame">
+
+    <div class="par-row">
+      <div class="par-label">RNN<span class="sub">t = 0,1,2,...</span></div>
+      <div class="par-track" id="par-rnn">
+        <div class="par-tok" data-i="0">t₀</div>
+        <div class="par-tok arrow">→</div>
+        <div class="par-tok" data-i="1">t₁</div>
+        <div class="par-tok arrow">→</div>
+        <div class="par-tok" data-i="2">t₂</div>
+        <div class="par-tok arrow">→</div>
+        <div class="par-tok" data-i="3">t₃</div>
+        <div class="par-tok arrow">→</div>
+        <div class="par-tok" data-i="4">t₄</div>
+        <div class="par-tok arrow">→</div>
+        <div class="par-tok" data-i="5">t₅</div>
+      </div>
+    </div>
+    <div class="par-clock">
+      <span>wall clock</span>
+      <div class="bar"><div class="fill" id="par-rnn-clock"></div></div>
+    </div>
+
+    <div class="par-row" style="margin-top: 20px;">
+      <div class="par-label">Transformer<span class="sub">all-at-once</span></div>
+      <div class="par-track" id="par-tf">
+        <div class="par-tok" data-i="0">t₀</div>
+        <div class="par-tok" data-i="1">t₁</div>
+        <div class="par-tok" data-i="2">t₂</div>
+        <div class="par-tok" data-i="3">t₃</div>
+        <div class="par-tok" data-i="4">t₄</div>
+        <div class="par-tok" data-i="5">t₅</div>
+      </div>
+    </div>
+    <div class="par-clock">
+      <span>wall clock</span>
+      <div class="bar"><div class="fill" id="par-tf-clock"></div></div>
+    </div>
+
+  </div>
+
+  <div class="ctrls">
+    <button class="btn primary" onclick="playParallel()">▷ run both</button>
+    <button class="btn" onclick="resetParallel()">reset</button>
+  </div>
+
+  <figcaption><strong>RNN 一格一格点亮</strong>（t₀ 算完 → t₁ → t₂ ...），整条 wall-clock 进度条慢慢推。<strong>Transformer 所有 token 同时点亮</strong>（GPU 一个 batch 同时 forward N 个位置），wall-clock 一下子就走完。复杂度上：RNN O(N)，Transformer O(N²) —— 但 N² 是 <strong>并行算力</strong> 而不是 wall-clock，所以在 GPU 上反而比 RNN 快得多。</figcaption>
+</figure>
+
+<!-- ============ 03 ============ -->
+<h2 id="attn"><span class="num">§ 03 · the trick</span>Self-Attention 机制</h2>
+
+<p>这是整篇论文最核心、最值得脑子里跑一遍的部分。一句话：</p>
+
+<p class="lede">序列里每个 token，用 <strong><span style="color:var(--brick)">Q</span></strong>（"我在问什么"）、<strong><span style="color:var(--ochre)">K</span></strong>（"我能提供什么 key"）、<strong><span style="color:var(--deep)">V</span></strong>（"我能提供什么 value"）三个向量 —— 跟所有其他 token 的 K 算相似度，softmax 当权重，加权求和 V → 这个 token 的输出。</p>
+
+<p>下面把每一步显式展开。例句 <strong>"The cat sat on the mat"</strong>，query 选第 1 个（即 <code>cat</code>）：</p>
+
+<figure>
+  <div class="fig-head">
+    <span class="fig-label">Fig. 02</span>
+    <span class="fig-title">Self-Attention 一步步算 · query = "cat"</span>
+  </div>
+
+  <div class="att-frame">
+
+    <!-- sentence -->
+    <div class="att-sentence" id="att-sentence">
+      <div class="att-tok" data-i="0"><span class="idx">0</span>The</div>
+      <div class="att-tok query" data-i="1"><span class="idx">1</span>cat</div>
+      <div class="att-tok" data-i="2"><span class="idx">2</span>sat</div>
+      <div class="att-tok" data-i="3"><span class="idx">3</span>on</div>
+      <div class="att-tok" data-i="4"><span class="idx">4</span>the</div>
+      <div class="att-tok" data-i="5"><span class="idx">5</span>mat</div>
+    </div>
+
+    <div class="att-steps">
+
+      <div class="att-step" data-step="1">
+        <div class="att-step-num">Step 1 · 投影</div>
+        <span class="att-step-name">从 query token 提取 Q；从所有 token 提取 K, V</span>
+        <div class="att-formula">
+          <span class="q">Q</span><sub>cat</sub> = embedding(cat) · W<sub>Q</sub> &nbsp;&nbsp;&nbsp;
+          <span class="k">K</span><sub>i</sub> = embedding(t<sub>i</sub>) · W<sub>K</sub> &nbsp;&nbsp;&nbsp;
+          <span class="v">V</span><sub>i</sub> = embedding(t<sub>i</sub>) · W<sub>V</sub>
+        </div>
+      </div>
+
+      <div class="att-step" data-step="2">
+        <div class="att-step-num">Step 2 · 算相似度</div>
+        <span class="att-step-name">Q<sub>cat</sub> 跟每个 K<sub>i</sub> 做 dot product，再除以 √d<sub>k</sub></span>
+        <div class="att-formula">
+          score<sub>i</sub> = <span class="q">Q</span><sub>cat</sub> · <span class="k">K</span><sub>i</sub><sup>T</sup> / √d<sub>k</sub>
+        </div>
+        <div class="att-scores">
+          <div class="att-scores-name">score</div>
+          <div class="att-score-cell" data-i="0">—</div>
+          <div class="att-score-cell" data-i="1">—</div>
+          <div class="att-score-cell" data-i="2">—</div>
+          <div class="att-score-cell" data-i="3">—</div>
+          <div class="att-score-cell" data-i="4">—</div>
+          <div class="att-score-cell" data-i="5">—</div>
+        </div>
+      </div>
+
+      <div class="att-step" data-step="3">
+        <div class="att-step-num">Step 3 · softmax</div>
+        <span class="att-step-name">把 scores 归一化成概率分布（行内 sum = 1）</span>
+        <div class="att-formula">
+          w<sub>i</sub> = softmax(score)<sub>i</sub> = exp(score<sub>i</sub>) / Σ<sub>j</sub> exp(score<sub>j</sub>)
+        </div>
+        <div class="att-scores">
+          <div class="att-scores-name">weight</div>
+          <div class="att-bar-cell" data-i="0"><div class="fill"></div><div class="pct">—</div></div>
+          <div class="att-bar-cell" data-i="1"><div class="fill"></div><div class="pct">—</div></div>
+          <div class="att-bar-cell" data-i="2"><div class="fill"></div><div class="pct">—</div></div>
+          <div class="att-bar-cell" data-i="3"><div class="fill"></div><div class="pct">—</div></div>
+          <div class="att-bar-cell" data-i="4"><div class="fill"></div><div class="pct">—</div></div>
+          <div class="att-bar-cell" data-i="5"><div class="fill"></div><div class="pct">—</div></div>
+        </div>
+      </div>
+
+      <div class="att-step" data-step="4">
+        <div class="att-step-num">Step 4 · 加权求和</div>
+        <span class="att-step-name">用 weights 加权所有 V<sub>i</sub> → 输出 z<sub>cat</sub></span>
+        <div class="att-formula">
+          z<sub>cat</sub> = Σ<sub>i</sub> w<sub>i</sub> · <span class="v">V</span><sub>i</sub>
+        </div>
+        <div class="att-output-row">
+          <div class="lbl">OUTPUT</div>
+          <div class="desc"><strong>z<sub>cat</sub></strong> 是 cat 这个位置吸收了序列里所有相关 token 信息后的新向量。注意 attention 给 <strong>sat</strong> 的权重最高 —— "猫"做的动作是"坐"，是最相关的 context。</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="ctrls">
+    <button class="btn primary" onclick="playAtt()">▷ run attention</button>
+    <button class="btn" onclick="resetAtt()">reset</button>
+  </div>
+
+  <figcaption>四步把 self-attention 拆开演示。<strong>Step 2 的 scores</strong> 是 Q · K<sup>T</sup> 算出的原始数值（这里给的是手动设的示意值 —— 真实场景由学到的 W<sub>Q</sub>/W<sub>K</sub> 决定）；<strong>Step 3 的 weights</strong> 是 softmax 后的概率（条形长度 = 权重大小）；<strong>Step 4</strong> 用 weights 加权 V 得到 cat 位置的输出 z<sub>cat</sub>。整个序列 N 个位置都做这个计算（并行）。</figcaption>
+</figure>
+
+<div class="note brick">
+  <span class="label">为什么除 √d<sub>k</sub></span>
+  <p>当 d<sub>k</sub> 大（论文 d<sub>k</sub>=64），Q·K<sup>T</sup> 的 dot product 数值很容易爆到 +50 / -50 量级。softmax 进入饱和区，绝大部分位置 weight ≈ 0、一两个 ≈ 1 —— 梯度直接消失。除 √d<sub>k</sub> 把 scores 的方差控回 1 量级，softmax 在线性区，梯度健康。</p>
+  <p>这条不是"装饰"，是论文最重要的工程细节之一。后来所有 transformer 变种都保留 √d<sub>k</sub> 缩放。</p>
+</div>
+
+<!-- ============ 04 ============ -->
+<h2 id="mh"><span class="num">§ 04 · the expansion</span>Multi-Head</h2>
+
+<p>一个 self-attention 头只能学<strong>一种</strong>关系模式。但一个句子里同时有句法、语义、共指、词性各种关系。论文的招数：<strong>跑 h 次（论文 h=8）</strong>，每次用不同的 W<sub>Q</sub> / W<sub>K</sub> / W<sub>V</sub> 投影 —— 每个 head 学不同的模式。</p>
+
+<figure>
+  <div class="fig-head">
+    <span class="fig-label">Fig. 03</span>
+    <span class="fig-title">4 个 head 在同一句话上学到的不同 attention 模式</span>
+  </div>
+
+  <div class="mh-frame">
+    <div class="mh-heads" id="mh-heads">
+      <!-- 4 panels populated by JS -->
+    </div>
+  </div>
+
+  <div class="ctrls">
+    <button class="btn primary" onclick="playMH()">▷ reveal heads</button>
+    <button class="btn" onclick="resetMH()">reset</button>
+  </div>
+
+  <figcaption>同一个句子 <code>The cat sat on the mat</code>，<strong>4 个 head 各自学到不同的 attention 模式</strong>（连线粗细 = attention 权重大小）。Head 1 学句法（动词找主语），Head 2 学词共现/邻接，Head 3 学词性（限定词→名词），Head 4 学语义角色（动作发生在哪里）。论文的 base 配置是 8 head，这里画 4 个示意。实际训练里不是所有 head 都有清晰含义，<a class="jr" href="#g-04">pruning<sup>4</sup></a> 研究表明剪掉一半 head 性能基本不掉。</figcaption>
+</figure>
+
+<p>关键数字：</p>
+
+<ul>
+  <li>输入 d<sub>model</sub> = 512</li>
+  <li>每个 head 的 d<sub>k</sub> = d<sub>v</sub> = 512 / 8 = 64</li>
+  <li>所以多头 <strong>不是免费扩张能力</strong>，是"同样参数预算下，把 512 维 attention 切成 8 个 64 维 attention"</li>
+  <li>concat 后再过一个线性 W<sub>O</sub> 把 8 × 64 = 512 拼回 d<sub>model</sub></li>
+</ul>
+
+<pre><code>for head in [0..7]:
+  Q_h = x @ W_Q[h]    # 各自的投影
+  K_h = x @ W_K[h]
+  V_h = x @ W_V[h]
+  head_out[h] = softmax(Q_h @ K_h.T / sqrt(64)) @ V_h
+
+output = concat(head_out) @ W_O</code></pre>
+
+<!-- ============ 05 ============ -->
+<h2 id="pe"><span class="num">§ 05 · the hack</span>Positional Encoding</h2>
+
+<p>Self-attention 有个让人尴尬的性质：<strong>对位置不敏感</strong>。把序列里 K 和 V 的行打乱，Q·K<sup>T</sup> 算出来的"行内分布"完全一样 —— 模型分不清 "dog bites man" 和 "man bites dog"。</p>
+
+<p>论文的招数：给每个位置加一个<strong>唯一的"位置向量"</strong>，跟 token embedding 直接相加。位置向量用 <strong>sin/cos 不同频率</strong>组成：</p>
+
+<pre><code>PE(pos, 2i)   = sin(pos / 10000^(2i / d_model))
+PE(pos, 2i+1) = cos(pos / 10000^(2i / d_model))
+
+input = embedding(token) + PE(pos)</code></pre>
+
+<div style="background:var(--ochre-soft); border:1px solid var(--ochre); border-left:3px solid var(--ochre); border-radius:3px; padding:12px 16px; margin:12px 0 22px; font-size:14px;">
+  <span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ochre); font-weight:700; display:block; margin-bottom:8px;">📐 公式拆解</span>
+  <p style="margin:4px 0; line-height:1.7;"><code style="background:var(--paper); border:1px solid var(--rule); padding:1px 5px; border-radius:2px;">pos</code> = token 在序列里的位置（0, 1, 2, ...）<br/>
+  <code style="background:var(--paper); border:1px solid var(--rule); padding:1px 5px; border-radius:2px;">i</code> = 维度下标（每个位置向量有 d_model 维，i 跑 0 到 d_model/2-1）<br/>
+  <code style="background:var(--paper); border:1px solid var(--rule); padding:1px 5px; border-radius:2px;">10000^(2i/d_model)</code> = 频率控制 · i 小时频率高（变化快），i 大时频率低（变化慢）<br/>
+  <strong>→ 偶数维放 sin，奇数维放 cos，跨多个频率的组合形成"位置指纹"</strong>。低维高频快变（区分相近位置），高维低频慢变（区分远距位置）。<br/>
+  <em>看不懂 sin/cos/exp 这些符号？查 <a href="../concepts/math-symbols.html" style="color:var(--deep); font-weight:700;">math-symbols</a>。</em></p>
+</div>
+
+<p>这等于给每个位置一个"指纹"。下图把前 20 个位置 × 前 64 维度可视化成热力图：</p>
+
+<figure>
+  <div class="fig-head">
+    <span class="fig-label">Fig. 04</span>
+    <span class="fig-title">Positional Encoding · 20 个位置 × 64 个维度的"指纹"</span>
+  </div>
+
+  <div class="pe-frame">
+    <div class="pe-axes">
+      <div class="pe-y-label">
+        <div style="font-weight:700;color:var(--brick);">position</div>
+        <div class="marks" id="pe-y-marks"></div>
+      </div>
+      <div>
+        <div class="pe-heat" id="pe-heat"></div>
+        <div class="pe-x-label">
+          <span>dim 0</span>
+          <span>(低维 = 高频)</span>
+          <span>dim 32</span>
+          <span>(高维 = 低频)</span>
+          <span>dim 63</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ctrls">
+    <button class="btn primary" onclick="playPE()">▷ reveal grid</button>
+    <button class="btn" onclick="resetPE()">reset</button>
+  </div>
+
+  <figcaption>每一行是一个位置，每一列是该位置 PE 向量的一个维度。<strong>暖色 = +1，冷色 = −1</strong>。低维（左侧）频率高、相邻位置变化大；高维（右侧）频率低、相邻位置变化小。每个位置在 64 维空间里有自己唯一的指纹 → 模型能区分 "dog bites man" 和 "man bites dog"。<strong>而且任何相对位置 k 都能表达成 PE(pos+k) 是 PE(pos) 的线性变换</strong>（sin/cos 加法定理），所以模型不只能记绝对位置，也能学到"距离这个 token 5 步远"这种相对关系。</figcaption>
+</figure>
+
+<div class="note plum">
+  <span class="label">现代变种</span>
+  <p>论文的 sinusoidal PE 是 OG 方案，但外推效果一般。现代 LLM 大多换了：</p>
+  <ul>
+    <li><strong>Learned PE</strong>（GPT-2）·把 PE 当 embedding 训。简单，但不能外推到训练时没见过的长度</li>
+    <li><strong>RoPE</strong>（GPT-J / LLaMA / Qwen）·把位置编码进 Q/K 的<em>旋转</em>里，相对位置天然就有。<strong>当下主流</strong></li>
+    <li><strong>ALiBi</strong>（BLOOM）·在 attention scores 上加位置距离的线性偏置。可外推</li>
+    <li><strong>NoPE</strong>·完全不要 PE，让大模型自己学。小模型不行，大模型 OK</li>
+  </ul>
+</div>
+
+<!-- ============ 06 ============ -->
+<h2 id="arch"><span class="num">§ 06 · the architecture</span>完整架构</h2>
+
+<p>把上面所有组件拼成完整网络。论文 base 版：<strong>Encoder 6 层 + Decoder 6 层</strong>。每一层都是"multi-head attention + position-wise FFN + residual + LayerNorm"的标准块。</p>
+
+<figure>
+  <div class="fig-head">
+    <span class="fig-label">Fig. 05</span>
+    <span class="fig-title">Encoder 6 层 × Decoder 6 层 + Cross-Attention</span>
+  </div>
+
+  <div class="arch-frame">
+    <div class="arch-grid">
+
+      <!-- Encoder -->
+      <div class="arch-col">
+        <div class="arch-col-title">Encoder · 看 source</div>
+        <div class="arch-input">input embedding + PE</div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-stack" id="enc-stack">
+          <!-- 6 blocks populated by JS -->
+        </div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-input" style="background:var(--ochre);color:var(--ink);">encoder output (K, V)</div>
+      </div>
+
+      <!-- Decoder -->
+      <div class="arch-col">
+        <div class="arch-col-title">Decoder · 生 target</div>
+        <div class="arch-input">target embedding + PE</div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-stack" id="dec-stack">
+          <!-- 6 blocks populated by JS -->
+        </div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-input" style="background:var(--moss);">linear + softmax → next token</div>
+      </div>
+
+    </div>
+
+    <div class="arch-cross-line" id="arch-cross">
+      ← Cross-Attention · Decoder 每层都拿 Encoder 顶部输出当 K / V →
+    </div>
+  </div>
+
+  <div class="ctrls">
+    <button class="btn primary" onclick="playArch()">▷ stack layers</button>
+    <button class="btn" onclick="resetArch()">reset</button>
+  </div>
+
+  <figcaption><strong>左 Encoder</strong> 每层有两个子层：multi-head self-attention（看 source 序列）+ FFN。<strong>右 Decoder</strong> 多一个：先 masked self-attention（看自己 已经生成的 target 序列，不偷看未来）→ cross-attention（拿 Encoder 顶部输出当 K/V，Q 来自 decoder）→ FFN。每个子层都套着 residual + LayerNorm。<strong>橙色虚线</strong>提示 cross-attention 的信息流：encoder 编完整个 source，把 K/V 提供给 decoder 每一层。</figcaption>
+</figure>
+
+<h3><span class="small-num">06.1</span>每个子层里发生什么</h3>
+
+<p>"sub-layer" 这词在论文里反复出现。一个 sub-layer 的完整流程：</p>
+
+<pre><code>def sublayer(x, fn):
+    # fn = multi_head_attention 或 ffn
+    return LayerNorm(x + Dropout(fn(x)))</code></pre>
+
+<p><strong>Residual</strong>（<code>x + fn(x)</code>）让梯度有"直通车" —— 不管 fn 学得多差，<code>x</code> 都能直接传到下一层。<strong>LayerNorm</strong> 把激活值标准化，让训练数值稳定。<strong>Dropout</strong> 正则化。三件套是深层 transformer 能训得动的关键。</p>
+
+<h3><span class="small-num">06.2</span>FFN 是什么</h3>
+
+<p>每个 attention 子层后面跟一个 <strong>position-wise FFN</strong> —— 看起来不起眼，实际占模型一半以上参数：</p>
+
+<pre><code>FFN(x) = max(0, x · W_1 + b_1) · W_2 + b_2
+       # 两层 MLP, dim 是 d_model=512 → d_ff=2048 → d_model=512
+       # 中间膨胀到 4 倍, 再压回来</code></pre>
+
+<p>"Position-wise" 是说每个位置<strong>独立</strong>过这个 FFN（不像 attention 是位置间交互）。可以理解为 attention 负责"位置间信息聚合"，FFN 负责"每个位置自己的 non-linear 变换"。两者轮流交替。</p>
+
+<!-- ============ 07 ============ -->
+<h2 id="legacy"><span class="num">§ 07 · the legacy</span>改变了什么</h2>
+
+<p>2017 这篇出来时，作者大概没想到它会成为接下来 10 年所有大模型的母体。粗略时间线：</p>
+
+<table>
+  <thead><tr><th>年</th><th>事件</th><th>用了 Transformer 哪部分</th></tr></thead>
+  <tbody>
+    <tr><td class="num">2017</td><td><strong>Attention Is All You Need</strong></td><td>Encoder + Decoder (本文)</td></tr>
+    <tr><td class="num">2018</td><td>GPT-1（OpenAI）</td><td>纯 Decoder + causal mask · "decoder-only" 范式诞生</td></tr>
+    <tr><td class="num">2018</td><td>BERT（Google）</td><td>纯 Encoder + Masked LM 训练</td></tr>
+    <tr><td class="num">2019</td><td>GPT-2</td><td>Decoder-only 放大到 1.5B</td></tr>
+    <tr><td class="num">2020</td><td>GPT-3</td><td>175B 参数 · in-context learning emerge</td></tr>
+    <tr><td class="num">2020</td><td>Vision Transformer (ViT)</td><td>Transformer 跨界 CV，把图切 patch 当 token</td></tr>
+    <tr><td class="num">2022</td><td>ChatGPT</td><td>Decoder-only + RLHF · 大众破圈</td></tr>
+    <tr><td class="num">2023+</td><td>Claude / Gemini / Qwen / Llama</td><td>全是 decoder-only transformer 变种</td></tr>
+  </tbody>
+</table>
+
+<p>Decoder-only 路线最后赢了 —— GPT 们证明：只要数据和参数够大，<strong>不需要 encoder + cross-attention 也能学好</strong>。<a href="../papers/fish-speech-s2-pro.html" target="_blank">fish-speech S2 Pro</a> 的 Dual-AR 也是 decoder-only；<a href="../papers/interaction-models-tml.html" target="_blank">TML interaction model</a> 也是。整个现代 LLM 圈基本上是这一篇的延长线。</p>
+
+<div class="note moss">
+  <span class="label">原论文 BLEU 数字（次要但记下）</span>
+  <p>WMT 2014 En→De：<strong>BLEU 28.4</strong>（比当时 SOTA 高 2 分以上）；En→Fr：<strong>BLEU 41.8</strong>。训练 8 GPU 3.5 天。这些数字 2017 年很惊人但今天已经没人关心 —— transformer 真正的价值是它<strong>开辟了 scaling 的可能</strong>，不是这两个 BLEU。</p>
+</div>
+
+<!-- ============ 08 ============ -->
+<h2 id="takeaway"><span class="num">§ 08 · what to keep</span>个人解读</h2>
+
+<ol>
+  <li><strong>最核心的认知升级</strong>：从"序列建模 = 沿时间步串行处理 + 记忆状态"切到"序列建模 = 一次性看全所有位置 + 学位置间的注意力"。这是一个完全不同的归纳偏置（inductive bias）—— 它放弃了 RNN 的"时间结构先验"，换来了"任意两个位置都能 O(1) 交互"的灵活性。</li>
+
+  <li><strong>"O(N²) 但可并行"赢"O(N) 但串行"</strong>。论文出来时大家担心 N² 内存/计算炸，但 GPU 上的 N² 是<em>同时算</em>的 N² 元素，wall-clock 上反而比 RNN 的 O(N) 串行快。这个"用并行算力换 wall-clock"的范式在后来 GPU 集群时代越来越值得。</li>
+
+  <li><strong>结构简洁 + 易 scale 是底层优势</strong>。Transformer 的整个网络就两种子层（attention + FFN），加上 residual / LayerNorm 这些通用组件。没有任何"特殊先验" —— 所以容易加大、容易并行训练、容易跨模态（语言 → 视觉 → 音频 → 视频 → 多模态都用同一个骨架）。</li>
+
+  <li><strong>"Decoder-only" 是事后才明朗的选择</strong>。论文本来设计的是 encoder-decoder（适合翻译这种 seq2seq 任务）。GPT 系列证明：用 decoder + causal mask + 海量 next-token prediction 训练，模型既能"理解"（encoder 的活）又能"生成"（decoder 的活）。结构上更简单，且 scaling 性更好。</li>
+
+  <li><strong>Positional encoding 是工程妥协，不是终极方案</strong>。论文用 sinusoidal PE 是没办法 —— 给 attention 补一个位置感。后续 RoPE / ALiBi 等改进证明这个位置注入方式可以更优雅。任何"attention 的位置信息怎么搞"是后续 10 年还在被改的方向。</li>
+</ol>
+
+<!-- ============ glossary ============ -->
+<section class="glossary" id="glossary">
+
+<h2><span class="num">§ ▼ · vocabulary</span>术语词典</h2>
+
+<p>正文里带波浪底的词都对应这里一条。按出现顺序编号：</p>
+
+<div class="gloss-grid">
+
+  <div class="gloss-item" id="g-01">
+    <span class="gloss-num">01</span>
+    <span class="gloss-term">RNN &nbsp;(recurrent neural network)</span>
+    <p class="gloss-def">"循环神经网络"。每个时间步 t 用 <code>h_t = f(h_{t-1}, x_t)</code> 更新一个隐状态，序列处理是串行的（必须 t 算完才能 t+1）。1980s 提出，但训练长序列梯度爆炸/消失。LSTM / GRU 缓解了这条，但仍然串行。被 Transformer 全面取代。</p>
+  </div>
+
+  <div class="gloss-item" id="g-02">
+    <span class="gloss-num">02</span>
+    <span class="gloss-term">LSTM &nbsp;(long short-term memory)</span>
+    <p class="gloss-def">"长短期记忆网络"。1997 年 Hochreiter & Schmidhuber 提出，给 RNN 加了"门"（input / forget / output gate）控制信息流，缓解长程梯度衰减。2013-2017 NLP 的主力模型。Transformer 出来后逐渐淡出，但在某些序列任务（语音识别、时间序列预测）还活着。</p>
+  </div>
+
+  <div class="gloss-item" id="g-03">
+    <span class="gloss-num">03</span>
+    <span class="gloss-term">softmax</span>
+    <p class="gloss-def">归一化函数：<code>softmax(x)_i = exp(x_i) / Σ_j exp(x_j)</code>。把任意实数向量映射到正且和为 1 的概率分布。Self-attention 的 weights 就是 softmax 后的。"饱和区"指 softmax 在某些极端 input 下输出几乎都是 0 或 1，梯度消失 —— 所以要 √d_k 缩放。</p>
+  </div>
+
+  <div class="gloss-item" id="g-04">
+    <span class="gloss-num">04</span>
+    <span class="gloss-term">attention head pruning</span>
+    <p class="gloss-def">"头剪枝"。Multi-head attention 训完后，研究表明不是所有 head 都重要 —— 剪掉一半 head 性能基本不掉。这意味着多头里有冗余。Pruning 是模型压缩的常见手段。代表论文：Michel et al. 2019 "Are Sixteen Heads Really Better Than One?"</p>
+  </div>
+
+  <div class="gloss-item" id="g-05">
+    <span class="gloss-num">05</span>
+    <span class="gloss-term">causal mask</span>
+    <p class="gloss-def">"因果掩码"。Decoder 自注意力时只允许每个位置看自己和之前的位置（不偷看未来），用一个上三角全 −∞ 的矩阵加到 attention scores 上，softmax 后这些位置 weight = 0。Decoder-only LLM（GPT 系列）整个模型都用 causal mask 训练，做下一 token 预测。</p>
+  </div>
+
+  <div class="gloss-item" id="g-06">
+    <span class="gloss-num">06</span>
+    <span class="gloss-term">FFN &nbsp;(feed-forward network)</span>
+    <p class="gloss-def">两层 MLP：<code>linear → ReLU → linear</code>。在 Transformer 里每个 attention 子层后面跟一个 position-wise FFN，每个位置独立过 FFN（不像 attention 是位置间交互）。中间层维度通常是输入的 4 倍（论文 d_model=512 → d_ff=2048）。<strong>占 transformer 一半以上参数</strong>。</p>
+  </div>
+
+  <div class="gloss-item" id="g-07">
+    <span class="gloss-num">07</span>
+    <span class="gloss-term">LayerNorm</span>
+    <p class="gloss-def">"层归一化"。对每个样本的特征维度做标准化（mean=0, var=1），然后乘可学的 γ + β 还原。让深层网络训练数值稳定（输入分布不会随层数漂移到爆掉）。BatchNorm 是另一种归一化（在 batch 维度），适合 CNN；Transformer 用 LayerNorm 因为它对序列长度和 batch size 不敏感。</p>
+  </div>
+
+  <div class="gloss-item" id="g-08">
+    <span class="gloss-num">08</span>
+    <span class="gloss-term">residual connection</span>
+    <p class="gloss-def">"残差连接"。<code>output = x + sublayer(x)</code>。来自 ResNet (He et al. 2015)，让深层网络的梯度可以"直通"反传，避免衰减。Transformer 每个子层都套着 residual，所以 6 / 12 / 24 / 96 层都能稳定训。</p>
+  </div>
+
+  <div class="gloss-item" id="g-09">
+    <span class="gloss-num">09</span>
+    <span class="gloss-term">embedding</span>
+    <p class="gloss-def">"嵌入"。把离散 token（词表索引 0..V）映射到 d_model 维连续向量的查找表。论文 d_model=512。embedding 矩阵跟整个模型联合训练。也是后来 LLM 把"world model"压在里面的主要载体 —— 词表里相近的概念在 embedding 空间里距离近。</p>
+  </div>
+
+  <div class="gloss-item" id="g-10">
+    <span class="gloss-num">10</span>
+    <span class="gloss-term">BLEU</span>
+    <p class="gloss-def">"双语评估替补"。机器翻译质量指标（0-100），算生成译文跟参考译文的 n-gram 重叠率。2002 年提出，至今仍是翻译 benchmark 标准。论文 WMT 2014 En→De 28.4 BLEU 当时 SOTA。现代 LLM 在翻译任务上 BLEU 通常 35+。</p>
+  </div>
+
+  <div class="gloss-item" id="g-11">
+    <span class="gloss-num">11</span>
+    <span class="gloss-term">in-context learning</span>
+    <p class="gloss-def">"上下文学习"。GPT-3 论文提出的能力：模型在 prompt 里给几个示例（few-shot），就能在没有梯度更新的情况下做新任务。这是 transformer + scaling 的 emergent property，RNN/LSTM 几乎没有这个。Transformer 的 attention 机制天然支持"从 prompt 里抽取模式"，可能是它的根因。</p>
+  </div>
+
+  <div class="gloss-item" id="g-12">
+    <span class="gloss-num">12</span>
+    <span class="gloss-term">decoder-only</span>
+    <p class="gloss-def">"纯解码器"。GPT 系列开始的范式：去掉原 Transformer 的 encoder + cross-attention，只保留 decoder + causal mask，用 next-token prediction 训整个网络。证明这种简化结构同样能学好（甚至更好），且更容易 scale。当下所有大语言模型都是 decoder-only 变种。</p>
+  </div>
+
+</div>
+
+</section>
+
+<div class="colophon">
+  讲解 / Claude · 原文 © Vaswani et al. 2017 · 2026<br />
+  本页是中文讲解版而非直译。架构 / 参数 / BLEU 数字来自原 arxiv 论文 1706.03762。带"为什么 / 现代变种 / 跟其他 paper 的关系"色块的是 Claude 加的上下文。<br />
+  互动图里的 attention scores / weights 是手工设的演示值，方便直观；真实训练得到的 attention 模式跟数据 + 任务有关。
+</div>
+
+</div><!-- /col-main -->
+
+<aside class="col-side" aria-label="术语速查">
+
+  <div class="pin">
+    <span class="pin-label">§ 02 · 复杂度</span>
+    RNN: O(N) 串行 · Transformer: O(N²) 并行。在 GPU 上 O(N²) 并行 &lt;&lt; O(N) 串行 的 wall-clock。
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 03 · 公式</span>
+    <code>Attention(Q,K,V) = softmax(QK<sup>T</sup>/√d<sub>k</sub>) V</code> —— 整篇论文最值得记的一行
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 03 · 数字</span>
+    <code>d<sub>k</sub> = 64</code>。√d<sub>k</sub> = 8。Q·K<sup>T</sup> 除 8 让 softmax 不进饱和。
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 04 · 配置</span>
+    h=8 头 × d<sub>k</sub>=64 维 = d<sub>model</sub>=512。多头不增参数，是切片。
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 05 · 替代</span>
+    <code>RoPE</code> · 把位置编进 Q/K 旋转 · 当下主流 (LLaMA / Qwen)
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 06 · 数字</span>
+    base 版 65M 参数 · big 版 213M · 8 GPU 3.5 天训完
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 07 · 名词</span>
+    <code>emergent ability</code> · 小模型没有、大模型有的能力（in-context learning, CoT 等）
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 全文 · 名词</span>
+    <code>seq2seq</code> · "sequence to sequence"。translation / summarization / dialogue 都是。
+  </div>
+
+</aside>
+
+</div><!-- /page -->
+
+<script>
+// ============ Fig 1 · RNN vs Transformer parallelism ============
+let parTimers = [];
+function resetParallel() {
+  parTimers.forEach(t => clearTimeout(t));
+  parTimers = [];
+  document.querySelectorAll('#par-rnn .par-tok, #par-tf .par-tok').forEach(t => {
+    t.classList.remove('active', 'done');
+  });
+  document.getElementById('par-rnn-clock').style.width = '0';
+  document.getElementById('par-tf-clock').style.width = '0';
+}
+function playParallel() {
+  resetParallel();
+  // RNN: tick 0..5 sequentially, each 400ms
+  const rnnToks = document.querySelectorAll('#par-rnn .par-tok:not(.arrow)');
+  rnnToks.forEach((tok, i) => {
+    parTimers.push(setTimeout(() => {
+      tok.classList.add('active');
+      if (i > 0) rnnToks[i-1].classList.remove('active');
+      if (i > 0) rnnToks[i-1].classList.add('done');
+    }, 200 + i * 450));
+  });
+  // mark last as done
+  parTimers.push(setTimeout(() => {
+    rnnToks[rnnToks.length - 1].classList.remove('active');
+    rnnToks[rnnToks.length - 1].classList.add('done');
+  }, 200 + rnnToks.length * 450));
+  // RNN clock fills over 2700ms
+  parTimers.push(setTimeout(() => {
+    document.getElementById('par-rnn-clock').style.transition = 'width 2700ms linear';
+    document.getElementById('par-rnn-clock').style.width = '100%';
+  }, 200));
+
+  // Transformer: all tokens light up together quickly
+  const tfToks = document.querySelectorAll('#par-tf .par-tok');
+  tfToks.forEach((tok, i) => {
+    parTimers.push(setTimeout(() => {
+      tok.classList.add('active');
+    }, 200 + i * 30));
+    parTimers.push(setTimeout(() => {
+      tok.classList.remove('active');
+      tok.classList.add('done');
+    }, 600));
+  });
+  // Transformer clock fills fast
+  parTimers.push(setTimeout(() => {
+    document.getElementById('par-tf-clock').style.transition = 'width 500ms linear';
+    document.getElementById('par-tf-clock').style.width = '100%';
+  }, 200));
+}
+
+// ============ Fig 2 · Self-attention ============
+// 示意 scores (随便设的, 让 sat 拿最高 weight)
+const ATT_SCORES = [1.2, 1.0, 4.5, 2.1, 1.3, 2.0];  // raw scores
+function softmax(arr) {
+  const m = Math.max(...arr);
+  const exps = arr.map(x => Math.exp(x - m));
+  const s = exps.reduce((a, b) => a + b, 0);
+  return exps.map(x => x / s);
+}
+const ATT_WEIGHTS = softmax(ATT_SCORES);
+
+let attTimers = [];
+function resetAtt() {
+  attTimers.forEach(t => clearTimeout(t));
+  attTimers = [];
+  document.querySelectorAll('.att-step').forEach(s => s.classList.remove('on'));
+  document.querySelectorAll('.att-score-cell').forEach(c => { c.classList.remove('filled'); c.textContent = '—'; });
+  document.querySelectorAll('.att-bar-cell').forEach(c => {
+    c.querySelector('.fill').style.width = '0';
+    c.querySelector('.pct').textContent = '—';
+  });
+  document.querySelectorAll('.att-tok').forEach(t => t.classList.remove('key-on'));
+}
+function playAtt() {
+  resetAtt();
+  // Step 1: appear
+  attTimers.push(setTimeout(() => document.querySelector('.att-step[data-step="1"]').classList.add('on'), 200));
+  // Step 2: appear, then scores fade in
+  attTimers.push(setTimeout(() => document.querySelector('.att-step[data-step="2"]').classList.add('on'), 1200));
+  document.querySelectorAll('.att-score-cell').forEach((cell, i) => {
+    attTimers.push(setTimeout(() => {
+      cell.classList.add('filled');
+      cell.textContent = ATT_SCORES[i].toFixed(1);
+      document.querySelector(`.att-tok[data-i="${i}"]`).classList.add('key-on');
+    }, 1700 + i * 120));
+  });
+  // Step 3: weights animate
+  attTimers.push(setTimeout(() => document.querySelector('.att-step[data-step="3"]').classList.add('on'), 2800));
+  document.querySelectorAll('.att-bar-cell').forEach((cell, i) => {
+    attTimers.push(setTimeout(() => {
+      cell.querySelector('.fill').style.width = (ATT_WEIGHTS[i] * 100) + '%';
+      cell.querySelector('.pct').textContent = (ATT_WEIGHTS[i] * 100).toFixed(0) + '%';
+    }, 3300 + i * 120));
+  });
+  // Step 4: output reveal
+  attTimers.push(setTimeout(() => document.querySelector('.att-step[data-step="4"]').classList.add('on'), 4500));
+}
+
+// ============ Fig 3 · Multi-head ============
+const TOKENS = ['The', 'cat', 'sat', 'on', 'the', 'mat'];
+// 4 head pattern: 每个 head 学不同的 attention 模式
+// 每个 entry [from, to, strength]
+const MH_HEADS = [
+  {
+    tag: 'Head 1 · 句法',
+    desc: '动词找主语 / 宾语',
+    edges: [
+      ['cat', 'sat', 0.9],
+      ['sat', 'cat', 0.8],
+      ['sat', 'mat', 0.7],
+      ['mat', 'sat', 0.5],
+    ],
+  },
+  {
+    tag: 'Head 2 · 邻接',
+    desc: '相邻词共现',
+    edges: [
+      ['The', 'cat', 0.9],
+      ['cat', 'sat', 0.85],
+      ['sat', 'on', 0.85],
+      ['on', 'the', 0.85],
+      ['the', 'mat', 0.9],
+    ],
+  },
+  {
+    tag: 'Head 3 · 词性',
+    desc: '限定词 → 名词',
+    edges: [
+      ['The', 'cat', 0.95],
+      ['the', 'mat', 0.95],
+      ['cat', 'The', 0.6],
+      ['mat', 'the', 0.6],
+    ],
+  },
+  {
+    tag: 'Head 4 · 语义角色',
+    desc: '动作发生地',
+    edges: [
+      ['sat', 'mat', 0.9],
+      ['sat', 'on', 0.8],
+      ['mat', 'sat', 0.7],
+      ['on', 'mat', 0.6],
+    ],
+  },
+];
+
+function buildMH() {
+  const container = document.getElementById('mh-heads');
+  if (!container) return;
+  container.innerHTML = '';
+  MH_HEADS.forEach((H, idx) => {
+    const div = document.createElement('div');
+    div.className = 'mh-head';
+    div.dataset.idx = idx;
+    // build SVG with tokens as nodes + curved connections
+    const W = 320, H_ = 110;
+    const tokY_top = 20, tokY_bot = 90;
+    const N = TOKENS.length;
+    const positions = TOKENS.map((t, i) => ({
+      x: 25 + (i * (W - 50) / (N - 1)),
+      label: t,
+    }));
+    // edges
+    const edgeLines = H.edges.map(([from, to, s]) => {
+      const fromIdx = TOKENS.indexOf(from);
+      const toIdx = TOKENS.indexOf(to);
+      const x1 = positions[fromIdx].x;
+      const x2 = positions[toIdx].x;
+      // arc from top row to bottom row
+      const midY = (tokY_top + tokY_bot) / 2 + (fromIdx === toIdx ? -15 : 0);
+      return `<path class="mh-conn" d="M ${x1} ${tokY_top + 8} Q ${(x1+x2)/2} ${midY} ${x2} ${tokY_bot - 8}" stroke="var(--brick)" fill="none" stroke-opacity="${s}" stroke-width="${1 + s * 2}"/>`;
+    }).join('');
+    // top row tokens (query side)
+    const topTokens = positions.map((p, i) => `
+      <circle class="mh-tok-circ" cx="${p.x}" cy="${tokY_top}" r="9"/>
+      <text class="mh-tok-text" x="${p.x}" y="${tokY_top + 3}" text-anchor="middle">${p.label[0]}</text>
+    `).join('');
+    // bottom row tokens (key side)
+    const botTokens = positions.map((p, i) => `
+      <circle class="mh-tok-circ" cx="${p.x}" cy="${tokY_bot}" r="9"/>
+      <text class="mh-tok-text" x="${p.x}" y="${tokY_bot + 3}" text-anchor="middle">${p.label[0]}</text>
+    `).join('');
+    div.innerHTML = `
+      <div class="htag">${H.tag}</div>
+      <div class="hdesc">${H.desc}</div>
+      <svg class="mh-head-svg" viewBox="0 0 ${W} ${H_}" preserveAspectRatio="xMidYMid meet">
+        ${edgeLines}
+        ${topTokens}
+        ${botTokens}
+      </svg>
+    `;
+    container.appendChild(div);
+  });
+}
+buildMH();
+
+let mhTimers = [];
+function resetMH() {
+  mhTimers.forEach(t => clearTimeout(t));
+  mhTimers = [];
+  document.querySelectorAll('.mh-head').forEach(h => h.classList.remove('on'));
+}
+function playMH() {
+  resetMH();
+  document.querySelectorAll('.mh-head').forEach((h, i) => {
+    mhTimers.push(setTimeout(() => h.classList.add('on'), 200 + i * 400));
+  });
+}
+
+// ============ Fig 4 · Positional encoding ============
+const PE_POSITIONS = 20;
+const PE_DIMS = 64;
+const D_MODEL = 64;
+
+function pe(pos, dim) {
+  const i = Math.floor(dim / 2);
+  const angle = pos / Math.pow(10000, (2 * i) / D_MODEL);
+  return dim % 2 === 0 ? Math.sin(angle) : Math.cos(angle);
+}
+
+function colorForVal(v) {
+  // v in [-1, 1]. positive → ochre, negative → deep
+  if (v >= 0) {
+    // 0 → paper-card, 1 → ochre
+    const t = v;
+    return `rgb(${Math.round(247 - t * (247 - 184))}, ${Math.round(241 - t * (241 - 132))}, ${Math.round(222 - t * (222 - 28))})`;
+  } else {
+    // 0 → paper-card, -1 → deep
+    const t = -v;
+    return `rgb(${Math.round(247 - t * (247 - 31))}, ${Math.round(241 - t * (241 - 58))}, ${Math.round(222 - t * (222 - 77))})`;
+  }
+}
+
+function buildPE() {
+  const heat = document.getElementById('pe-heat');
+  if (!heat) return;
+  heat.innerHTML = '';
+  for (let p = 0; p < PE_POSITIONS; p++) {
+    const row = document.createElement('div');
+    row.className = 'pe-row';
+    row.style.gridTemplateColumns = `repeat(${PE_DIMS}, 1fr)`;
+    for (let d = 0; d < PE_DIMS; d++) {
+      const cell = document.createElement('div');
+      cell.className = 'pe-cell';
+      cell.dataset.p = p;
+      cell.dataset.d = d;
+      cell.style.background = colorForVal(pe(p, d));
+      row.appendChild(cell);
+    }
+    heat.appendChild(row);
+  }
+  heat.style.gridTemplateColumns = '1fr';
+  // y label marks
+  const ymarks = document.getElementById('pe-y-marks');
+  ymarks.innerHTML = '';
+  [0, 5, 10, 15, 19].forEach(p => {
+    const m = document.createElement('div');
+    m.textContent = 'pos ' + p;
+    m.style.height = '14px';
+    m.style.lineHeight = '14px';
+    ymarks.appendChild(m);
+  });
+}
+buildPE();
+
+let peTimers = [];
+function resetPE() {
+  peTimers.forEach(t => clearTimeout(t));
+  peTimers = [];
+  document.querySelectorAll('.pe-cell').forEach(c => c.classList.remove('on'));
+}
+function playPE() {
+  resetPE();
+  // reveal row by row
+  for (let p = 0; p < PE_POSITIONS; p++) {
+    peTimers.push(setTimeout(() => {
+      document.querySelectorAll(`.pe-cell[data-p="${p}"]`).forEach(c => c.classList.add('on'));
+    }, 100 + p * 80));
+  }
+}
+
+// ============ Fig 5 · Encoder-Decoder architecture ============
+function buildArch() {
+  const enc = document.getElementById('enc-stack');
+  const dec = document.getElementById('dec-stack');
+  if (!enc || !dec) return;
+  enc.innerHTML = '';
+  dec.innerHTML = '';
+  for (let i = 0; i < 6; i++) {
+    const eb = document.createElement('div');
+    eb.className = 'arch-block';
+    eb.dataset.layer = i;
+    eb.innerHTML = `
+      <div class="arch-block-tag">Encoder Layer ${i + 1}</div>
+      <div class="arch-sub">Multi-Head Self-Attention</div>
+      <div class="arch-sub ffn">Position-wise FFN</div>
+    `;
+    enc.appendChild(eb);
+
+    const db = document.createElement('div');
+    db.className = 'arch-block';
+    db.dataset.layer = i;
+    db.innerHTML = `
+      <div class="arch-block-tag">Decoder Layer ${i + 1}</div>
+      <div class="arch-sub">Masked Self-Attention</div>
+      <div class="arch-sub cross">Cross-Attention (K,V from Enc)</div>
+      <div class="arch-sub ffn">Position-wise FFN</div>
+    `;
+    dec.appendChild(db);
+  }
+}
+buildArch();
+
+let archTimers = [];
+function resetArch() {
+  archTimers.forEach(t => clearTimeout(t));
+  archTimers = [];
+  document.querySelectorAll('.arch-block').forEach(b => b.classList.remove('on'));
+  document.getElementById('arch-cross').classList.remove('on');
+}
+function playArch() {
+  resetArch();
+  // encoder bottom to top
+  document.querySelectorAll('#enc-stack .arch-block').forEach((b, i) => {
+    archTimers.push(setTimeout(() => b.classList.add('on'), 200 + i * 220));
+  });
+  // decoder bottom to top (paired with encoder)
+  document.querySelectorAll('#dec-stack .arch-block').forEach((b, i) => {
+    archTimers.push(setTimeout(() => b.classList.add('on'), 300 + i * 220));
+  });
+  // cross-attention line
+  archTimers.push(setTimeout(() => document.getElementById('arch-cross').classList.add('on'), 1700));
+}
+
+// ============ Auto-play on first view ============
+function obs(target, fn) {
+  if (!target) return;
+  const o = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { fn(); o.disconnect(); } });
+  }, { threshold: 0.3 });
+  o.observe(target);
+}
+obs(document.querySelector('.par-frame'), playParallel);
+obs(document.querySelector('.att-frame'), playAtt);
+obs(document.querySelector('.mh-frame'), playMH);
+obs(document.querySelector('.pe-frame'), playPE);
+obs(document.querySelector('.arch-frame'), playArch);
+
+// ============ Scroll progress ============
+const pb = document.getElementById('progressBar');
+window.addEventListener('scroll', () => {
+  const h = document.documentElement;
+  const p = (h.scrollTop) / (h.scrollHeight - h.clientHeight);
+  pb.style.width = (p * 100) + '%';
+});
+</script>
+
+</body>
+</html>

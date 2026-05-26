@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>LayerNorm · 层归一化 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · layernorm</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>LayerNorm · 层归一化</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>对每个 token 自己的 hidden 维度做归一化，不依赖 batch 里其他样本。</p>
+<h2>直觉</h2>
+<p><a href="../concepts/batchnorm.html">batchnorm</a> 是看一批样本的统计量，适合 CNN 训练；LayerNorm 是每个 token 自己整理自己的特征尺度，适合序列模型。推理时 batch 怎么拼、句子多长，都不影响这个 token 的归一化统计。</p>
+<p>这对 LLM 很关键：线上请求 batch 是动态凑的，不能让"旁边坐了谁"改变你这条样本的输出。</p>
+<h2>怎么做的</h2>
+<p>对 hidden vector <code>x</code>：</p>
+<pre><code class="language-text">y = (x - mean(x)) / std(x) * gamma + beta
+</code></pre>
+<p><code>mean/std</code> 在 hidden 维度上算，<code>gamma/beta</code> 是可学习参数。</p>
+<h2>代码出处</h2>
+<p>Transformer/BERT/GPT block 里每个 attention / FFN 子层旁边都有 LayerNorm 变体。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/residual-layernorm.html">residual-layernorm</a> · LayerNorm 跟 residual 怎么配</li>
+<li><a href="../concepts/batchnorm.html">batchnorm</a> · CNN 时代的对照</li>
+<li><a href="../concepts/transformer-architecture.html">transformer-architecture</a> · Transformer block 的稳定组件</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../concepts/batchnorm.html"><span class="cat">concept</span>Batch Normalization · BN</a></li><li><a href="../concepts/residual-layernorm.html"><span class="cat">concept</span>Residual + LayerNorm</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/layernorm.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

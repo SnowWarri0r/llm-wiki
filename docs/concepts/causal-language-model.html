@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Causal Language Model · CLM · 自回归语言模型 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · causal-language-model</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Causal Language Model · CLM · 自回归语言模型</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>给定前 N 个 token，预测第 N+1 个 token。训练时每个位置都做这个预测 —— 每个 token 都贡献一份 loss。</p>
+<h2>直觉</h2>
+<p>从小你学语文是这样：读完一句话的开头能猜接下来的词。"今天天气真..." → "好 / 热 / 冷 / 不错"。猜对说明你懂语法 + 常识 + 词频分布。</p>
+<p>CLM 把这个变成训练目标：模型读完前缀，预测下一个 token 的概率分布；跟真实下一个 token 算交叉熵。</p>
+<p><strong>关键洞察</strong>：要把"猜下一个词"做对，模型要学：</p>
+<ul>
+<li>语法（前面是主语，后面该是动词或形容词）</li>
+<li>语义（"今天天气"后面接什么合理）</li>
+<li>常识（"水沸腾后是" → "气体" 不是 "固体"）</li>
+<li>推理（"如果 A &gt; B 且 B &gt; C，那么 A" → "&gt; C"）</li>
+</ul>
+<p>→ 一个"预测下一词"任务，逼着模型把整个世界知识压进权重。这是 LLM 的核心训练范式。</p>
+<h2>怎么做的</h2>
+<pre><code class="language-python"># 单条样本: &quot;the cat sat on the mat&quot;
+tokens = tokenize(&quot;the cat sat on the mat&quot;)  # [the, cat, sat, on, the, mat]
+
+# 输入 vs target 错位一格
+input  = [the, cat, sat, on, the]
+target = [cat, sat, on, the, mat]
+
+# 一次 forward，所有位置同时预测下一个
+hidden = transformer(input)  # shape: [seq_len, hidden_dim]
+logits = lm_head(hidden)      # shape: [seq_len, vocab_size]
+
+# 每个位置算 loss
+loss = cross_entropy(logits, target).mean()
+</code></pre>
+<p><strong>关键技巧</strong>：训练时一次 forward 同时算所有位置的 loss。但 attention 必须加 <strong>causal mask</strong> —— 位置 i 只能看到 ≤ i 的 token，否则模型作弊（直接看到下一个 token）。</p>
+<h2>为什么训练效率高</h2>
+<p>对比 BERT 的 <a href="../concepts/masked-language-model.html">masked-language-model</a>：</p>
+<ul>
+<li>MLM：每条样本 15% 位置做预测 → 训练信号稀疏</li>
+<li>CLM：每条样本所有位置都做预测 → 训练信号密集 6 倍多</li>
+</ul>
+<p>同等 wall-clock 下，CLM 让 transformer 看到的"预测任务"次数远多于 MLM。这部分解释了为什么 decoder-only 模型 scale 上去更顺。</p>
+<h2>推理时怎么生成</h2>
+<p>训练完后，用 CLM 生成文本：</p>
+<pre><code class="language-python">prompt = &quot;今天天气真&quot;
+tokens = tokenize(prompt)
+
+for _ in range(max_new):
+    logits = model(tokens)
+    next_token = sample(logits[-1])    # 最后一个位置的预测
+    tokens.append(next_token)
+    if next_token == EOS: break
+
+print(detokenize(tokens))
+</code></pre>
+<p>每生成一个 token 就把它接到输入后面，再 forward 一次。这就是<strong>自回归生成</strong>（autoregressive generation）—— "auto" = 自己，"regress" = 回归到之前的输出。</p>
+<h2>跟其他训练目标的对比</h2>
+<table>
+<thead>
+<tr>
+<th>目标</th>
+<th>信号密度</th>
+<th>双向</th>
+<th>生成？</th>
+<th>谁用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Causal LM (CLM)</strong></td>
+<td>每位置都算</td>
+<td>否</td>
+<td>可以</td>
+<td>GPT 系 / Llama / Claude</td>
+</tr>
+<tr>
+<td><strong>Masked LM (MLM)</strong></td>
+<td>15% 位置</td>
+<td>是</td>
+<td>不行（需 decoder）</td>
+<td>BERT 系</td>
+</tr>
+<tr>
+<td><strong>Replaced Token Detection</strong></td>
+<td>每位置</td>
+<td>是</td>
+<td>不行</td>
+<td>ELECTRA</td>
+</tr>
+<tr>
+<td><strong>Prefix LM</strong></td>
+<td>部分位置</td>
+<td>部分</td>
+<td>可以</td>
+<td>T5 / UL2</td>
+</tr>
+</tbody>
+</table>
+<p>decoder-only + CLM 现在是大模型主流。原因：训练简单、生成天然、scaling 行为好。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/gpt-1.html">gpt-1</a> · 最早用 CLM + Transformer 做大规模预训练</li>
+<li><a href="../concepts/masked-language-model.html">masked-language-model</a> · 对照的另一条预训练路线</li>
+<li><a href="../concepts/self-attention.html">self-attention</a> · CLM 必须加 causal mask 的就是它</li>
+<li><a href="../concepts/decoder-only-paradigm.html">decoder-only-paradigm</a> · CLM 的载体</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 7 处</span>
+  <ul><li><a href="../papers/gpt-1.html"><span class="cat">paper</span>GPT-1 · Improving Language Understanding by Generative Pre-Training</a></li><li><a href="../papers/gpt-2.html"><span class="cat">paper</span>GPT-2 · Language Models are Unsupervised Multitask Learners</a></li><li><a href="../papers/gpt-3.html"><span class="cat">paper</span>GPT-3 · Language Models are Few-Shot Learners</a></li><li><a href="../concepts/decoder-only-paradigm.html"><span class="cat">concept</span>Decoder-Only Paradigm · 解码器路线</a></li><li><a href="../concepts/input-transformations.html"><span class="cat">concept</span>Input Transformations · 用输入格式喂任务</a></li><li><a href="../concepts/language-modeling-as-multitask.html"><span class="cat">concept</span>Language Modeling as Multitask Learning · LM 即多任务学习</a></li><li><a href="../concepts/webtext.html"><span class="cat">concept</span>WebText · GPT-2 用的数据集</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/causal-language-model.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

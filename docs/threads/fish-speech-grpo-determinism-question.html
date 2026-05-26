@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Fish Speech GRPO Determinism Question · Thread</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">threads · fish-speech-grpo-determinism-question</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="threads">
+
+<header class="concept-header">
+  <span class="concept-badge cat-thread">Thread</span>
+  <h1>Fish Speech GRPO Determinism Question</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>fish-speech 做 GRPO/RL 对齐时，训练采样和推理 serving 的 kernel 不一致会不会影响 reward 归因？</p>
+<h2>问题背景</h2>
+<p>TML 强调 <a href="../concepts/bitwise-determinism.html">bitwise-determinism</a>：训练和推理 kernel 要尽量 bit-for-bit 一致。fish-speech 则更像常规 LLM/TTS 工程：训练、采样、serving 可能走不同栈。</p>
+<p>如果 <a href="../concepts/grpo.html">grpo</a> 的 reward 对细微音频差异敏感，那么 kernel 差异、采样温度、codec decode 差异都可能让"同一策略"的表现看起来不一样。</p>
+<h2>需要查什么</h2>
+<ul>
+<li>fish-speech RL 阶段是不是直接用 serving kernel 采样</li>
+<li>reward 是文本级、语音级，还是多维组合</li>
+<li><a href="../concepts/sglang-inference.html">sglang-inference</a> 是否只用于推理，还是训练采样也复用</li>
+<li>多次采样的随机性如何固定 seed / cache / tokenizer</li>
+</ul>
+<h2>暂时判断</h2>
+<p>它大概率不追求 TML 那种 bitwise determinism，而是接受常规 RL 的采样噪声，通过组内相对 reward 抵消一部分不稳定。但这需要读代码确认。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/fish-speech-s2-pro.html">fish-speech-s2-pro</a></li>
+<li><a href="../concepts/grpo.html">grpo</a></li>
+<li><a href="../concepts/bitwise-determinism.html">bitwise-determinism</a></li>
+<li><a href="../concepts/sglang-inference.html">sglang-inference</a></li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../concepts/bitwise-determinism.html"><span class="cat">concept</span>Bitwise Determinism · 位级确定性</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/threads/fish-speech-grpo-determinism-question.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

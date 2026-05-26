@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Input Transformations · 用输入格式喂任务 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · input-transformations</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Input Transformations · 用输入格式喂任务</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>不为每个下游任务设计新的网络结构，而是<strong>把任务结构编码进输入文本</strong> —— 用分隔符、拼接顺序告诉模型"这是哪种任务"。</p>
+<h2>直觉</h2>
+<p>2018 之前 NLP 任务接入一般做法：</p>
+<ul>
+<li>分类：模型最后接一个二/多分类 head</li>
+<li>蕴含（NLI）：双输入，需要两路 encoder + 比较层</li>
+<li>相似度：双输入，cosine 或交叉特征</li>
+<li>多选 QA：每个候选答案一份 forward，再选最高</li>
+</ul>
+<p>每种任务一种架构。GPT-1 觉得这事太麻烦了 —— <strong>能不能让 transformer 一直是同一个 transformer，靠输入格式区分任务？</strong></p>
+<p>类比：你跟同一个人说话，靠语气和句式让他知道"我是在问问题"还是"我在陈述"。模型也是同一个，区别只在输入格式。</p>
+<h2>GPT-1 论文里的 4 种格式</h2>
+<p><strong>分类（情感、可接受性）：</strong></p>
+<pre><code>[start] this movie is terrible [extract]
+                                    ↑ 这个位置的 hidden state 接分类头
+</code></pre>
+<p><strong>文本蕴含（NLI · premise → hypothesis）：</strong></p>
+<pre><code>[start] the bird is flying [delim] the bird has wings [extract]
+                                                          ↑ 分类头预测 entail/contradict/neutral
+</code></pre>
+<p><strong>相似度（两个句子是否同义）：</strong></p>
+<pre><code>跑两次：
+[start] sentence A [delim] sentence B [extract]
+[start] sentence B [delim] sentence A [extract]
+两次 hidden 相加 → 分类头
+</code></pre>
+<p><strong>多选 QA：</strong></p>
+<pre><code>对每个候选答案 c_i 跑一次：
+[start] context + question [delim] c_i [extract]
+得到 N 个 hidden，softmax 选最高的
+</code></pre>
+<p><code>[start]</code> <code>[delim]</code> <code>[extract]</code> 是新加的特殊 token，只在 finetune 时学。</p>
+<h2>为什么这套设计影响深远</h2>
+<p><strong>它把"任务结构"从架构层挪到了数据层</strong>。以前任务结构是模型架构的一部分（要写代码定义 head）；现在任务结构是输入文本的一部分（只需要文本编码就行）。</p>
+<p>这是 prompting 的雏形：</p>
+<ul>
+<li>GPT-1 · "用特殊 token 编码任务结构"（仍需 finetune）</li>
+<li>GPT-2 · 发现可以用 zero-shot prompt 触发任务（"TL;DR:" 让模型做摘要）</li>
+<li>GPT-3 · 用 few-shot in-context learning：在 prompt 里给几个例子就行（连 finetune 都不要）</li>
+<li>ChatGPT · 用"system + user + assistant" 三角色格式</li>
+</ul>
+<p>→ 一条直接的演化线。GPT-1 的 input transformations 是这条线的起点。</p>
+<h2>跟 BERT 的对比</h2>
+<p>BERT 也用了 <code>[CLS]</code> / <code>[SEP]</code> 这类特殊 token，但它的 head 设计仍是任务专属（每种任务一个 head）。GPT-1 把这思路推得更远：head 也固定（就是 LM head），只靠输入格式区分。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/gpt-1.html">gpt-1</a> · 提出</li>
+<li><a href="../concepts/causal-language-model.html">causal-language-model</a> · 预训练任务（finetune 时跟这个共用 head）</li>
+<li><a href="../concepts/in-context-learning.html">in-context-learning</a> · 这思路推到极致的产物</li>
+<li><a href="../concepts/pretrain-finetune-paradigm.html">pretrain-finetune-paradigm</a> · 它服务的范式</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/gpt-1.html"><span class="cat">paper</span>GPT-1 · Improving Language Understanding by Generative Pre-Training</a></li><li><a href="../papers/gpt-2.html"><span class="cat">paper</span>GPT-2 · Language Models are Unsupervised Multitask Learners</a></li><li><a href="../concepts/in-context-learning.html"><span class="cat">concept</span>In-Context Learning · ICL · 在 prompt 里现学</a></li><li><a href="../concepts/zero-shot-transfer.html"><span class="cat">concept</span>Zero-Shot Transfer · 不 finetune 直接用 prompt 触发任务</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/input-transformations.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

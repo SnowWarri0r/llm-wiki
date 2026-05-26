@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Early Fusion · 无独立编码器的早融合 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · early-fusion</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Early Fusion · 无独立编码器的早融合</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>各模态用<strong>轻量预处理</strong>直接进同一个 transformer，不用 Whisper / ViT 那种独立大编码器再拼。</p>
+<h2>直觉</h2>
+<p>传统多模态架构（late fusion）：</p>
+<ul>
+<li>音频 → Whisper encoder → 特征</li>
+<li>视频 → ViT encoder → 特征</li>
+<li>各路特征拼一起 → LLM</li>
+</ul>
+<p>问题：</p>
+<ol>
+<li>编码器<strong>冻结</strong> → 没法跟着主模型一起 scale</li>
+<li>编码器<strong>单独训</strong> → 跟主任务目标脱节</li>
+<li><strong>延迟链路长</strong> → 音频要等 Whisper 跑完才能进 transformer</li>
+</ol>
+<p>Early fusion = 把编码器砍到最小，让主 transformer 自己吃近似原始的 token。</p>
+<h2>TML 怎么做的</h2>
+<table>
+<thead>
+<tr>
+<th>模态</th>
+<th>预处理</th>
+<th>进 transformer 时</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>音频输入</td>
+<td><a href="../concepts/dmel.html">dmel</a> 离散 Mel → 轻 embedding</td>
+<td>embed token</td>
+</tr>
+<tr>
+<td>视频输入</td>
+<td>切 40×40 patch → <a href="../concepts/hmlp.html">hmlp</a> 分层 MLP</td>
+<td>patch token</td>
+</tr>
+<tr>
+<td>文本</td>
+<td>常规 tokenize</td>
+<td>text token</td>
+</tr>
+<tr>
+<td>音频输出</td>
+<td>——</td>
+<td><a href="../concepts/flow-matching.html">flow-matching</a> head 解</td>
+</tr>
+</tbody>
+</table>
+<p>这些预处理组件<strong>跟主 transformer 一起端到端训练</strong>，不是冻结。</p>
+<h2>为什么"轻量预处理"还要保留</h2>
+<p>你可能问：为什么不让 transformer 直接吃 raw 16kHz waveform？因为：</p>
+<ul>
+<li>序列太长（1 秒 = 16000 个采样点）</li>
+<li>没有局部相关性的归纳偏置 = 学习效率低</li>
+<li>计算资源浪费在"再发明 Mel 频谱"上</li>
+</ul>
+<p>dMel / hMLP 这种轻预处理 = <strong>保留必要的归纳偏置</strong>（频域 / 空间局部性），同时让后续表征跟着主模型学。</p>
+<h2>重要 trade-off</h2>
+<p>Early fusion 听起来全好处，但：</p>
+<ul>
+<li>训练数据要求<strong>齐全的多模态对齐数据</strong>（音视频文本同步），获取贵</li>
+<li>模型规模必须够大才能吃下原始模态，小模型反而 late fusion 更好</li>
+</ul>
+<p>TML 是 276B MoE 量级才合算。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/interaction-models-tml.html">interaction-models-tml</a> · 论文</li>
+<li><a href="../concepts/dmel.html">dmel</a> · 音频预处理</li>
+<li><a href="../concepts/hmlp.html">hmlp</a> · 视频预处理</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · 音频输出</li>
+<li><a href="../topics/replace-heuristics-with-weights.html">replace-heuristics-with-weights</a> · "把 pipeline 吃进权重"模式</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 8 处</span>
+  <ul><li><a href="../papers/dmel.html"><span class="cat">paper</span>dMel · 离散 Mel 频谱</a></li><li><a href="../papers/interaction-models-tml.html"><span class="cat">paper</span>Interaction Models · Thinking Machines Lab</a></li><li><a href="../topics/replace-heuristics-with-weights.html"><span class="cat">topic</span>把外挂规则吃进模型权重</a></li><li><a href="../concepts/bitter-lesson.html"><span class="cat">concept</span>Bitter Lesson · 苦涩教训</a></li><li><a href="../concepts/flow-matching.html"><span class="cat">concept</span>Flow Matching · 流匹配</a></li><li><a href="../concepts/hmlp.html"><span class="cat">concept</span>hMLP · Hierarchical MLP</a></li><li><a href="../concepts/micro-turn.html"><span class="cat">concept</span>Micro-Turn · 200ms 微回合</a></li><li><a href="../concepts/vad.html"><span class="cat">concept</span>VAD · Voice Activity Detection</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/early-fusion.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

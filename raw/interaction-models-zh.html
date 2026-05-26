@@ -1,0 +1,1202 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Interaction Models · 中文讲解</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f0e9d6;
+    --paper-2: #e8e0c8;
+    --ink: #181410;
+    --ink-2: #3a3128;
+    --muted: #7a6f5d;
+    --rule: #bfb398;
+    --brick: #9b2c2c;
+    --brick-soft: #efd6c8;
+    --ochre: #b8841c;
+    --ochre-soft: #f0e0a8;
+    --moss: #4a6b3a;
+    --paper-card: #f7f1de;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); }
+  body {
+    font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif;
+    font-size: 18px;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(155,44,44,0.025) 0%, transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(74,107,58,0.025) 0%, transparent 40%);
+  }
+
+  /* paper grain */
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.045 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+    mix-blend-mode: multiply; opacity: 0.5;
+  }
+
+  /* layout: main column + right sidenote column on desktop */
+  .page {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 56px 32px 160px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 240px;
+    gap: 48px;
+    align-items: start;
+  }
+  .col-main { min-width: 0; }
+  .col-side { font-size: 13px; line-height: 1.6; color: var(--ink-2); }
+  .col-side .pin {
+    border-left: 2px solid var(--brick);
+    padding: 4px 0 4px 12px;
+    margin: 0 0 16px;
+    font-family: 'Newsreader', 'Noto Serif SC', serif;
+  }
+  .col-side .pin-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--brick); font-weight: 700; display: block; margin-bottom: 4px;
+  }
+  .col-side .pin code {
+    background: var(--paper-2); padding: 1px 5px; border-radius: 2px;
+    font-size: 11.5px;
+  }
+
+  @media (max-width: 900px) {
+    .page { grid-template-columns: 1fr; gap: 0; padding: 32px 20px 80px; }
+    .col-side { display: none; }
+  }
+
+  /* ===== masthead ===== */
+  .masthead {
+    border-top: 4px double var(--ink);
+    border-bottom: 1px solid var(--rule);
+    padding: 14px 0;
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--ink-2);
+    margin-bottom: 56px;
+  }
+  .masthead .l { font-weight: 700; }
+  .masthead .r { color: var(--muted); }
+
+  /* ===== hero ===== */
+  .hero { margin-bottom: 72px; }
+  .hero .issue {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--brick); font-weight: 700;
+    margin-bottom: 18px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .hero .issue::after {
+    content: ""; flex: 1; height: 1px; background: var(--rule);
+  }
+  h1.title {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1;
+    font-weight: 700;
+    font-size: clamp(56px, 9vw, 112px);
+    line-height: 0.92;
+    letter-spacing: -0.035em;
+    margin: 0 0 8px;
+    color: var(--ink);
+  }
+  h1.title .em {
+    font-style: italic;
+    font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+    color: var(--brick);
+  }
+  .hero .dek {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-variation-settings: "opsz" 36;
+    font-style: italic; font-weight: 400;
+    font-size: clamp(20px, 2.3vw, 26px);
+    line-height: 1.35; color: var(--ink-2);
+    max-width: 28ch;
+    margin: 28px 0 28px;
+  }
+  .hero .bylines {
+    display: flex; gap: 24px; flex-wrap: wrap;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted);
+    padding-top: 20px; border-top: 1px solid var(--rule);
+  }
+  .hero .bylines a { color: var(--brick); text-decoration: none; }
+  .hero .bylines a:hover { text-decoration: underline; }
+
+  /* ===== body type ===== */
+  p { margin: 18px 0; }
+  p.lede { font-size: 22px; line-height: 1.55; color: var(--ink); }
+  p.lede::first-letter {
+    font-family: 'Fraunces', serif;
+    font-variation-settings: "opsz" 144, "SOFT" 50, "WONK" 1;
+    font-weight: 700;
+    float: left;
+    font-size: 84px;
+    line-height: 0.85;
+    margin: 6px 12px 0 0;
+    color: var(--brick);
+  }
+
+  /* ===== section heading ===== */
+  h2 {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-variation-settings: "opsz" 72, "WONK" 1;
+    font-weight: 600;
+    font-size: clamp(32px, 4vw, 44px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin: 88px 0 8px;
+    color: var(--ink);
+  }
+  h2 .num {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--brick); font-weight: 700;
+    margin-bottom: 10px;
+  }
+  h2 + p { font-size: 19px; line-height: 1.65; color: var(--ink-2); margin-top: 6px; }
+  h3 {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-variation-settings: "opsz" 36;
+    font-weight: 600;
+    font-size: 22px;
+    margin: 36px 0 6px;
+    color: var(--ink);
+  }
+  h3 .small-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--brick); font-weight: 700;
+    letter-spacing: 1.5px; margin-right: 8px;
+  }
+
+  ul, ol { padding-left: 1.5em; }
+  li { margin: 6px 0; }
+  li::marker { color: var(--brick); }
+
+  strong { color: var(--ink); font-weight: 600; }
+  a { color: var(--brick); }
+
+  /* ===== jargon term ===== */
+  .jr {
+    background: linear-gradient(to top, var(--ochre-soft) 0%, var(--ochre-soft) 30%, transparent 30%);
+    padding: 0 3px; cursor: help;
+    border-bottom: 1px dotted var(--ochre);
+    font-style: normal;
+  }
+  .jr sup {
+    color: var(--brick); font-weight: 700; font-size: 0.7em;
+    font-family: 'JetBrains Mono', monospace;
+    margin-left: 1px;
+  }
+
+  /* ===== inline mono ===== */
+  code, .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.88em;
+    background: var(--paper-2);
+    padding: 1px 6px;
+    border-radius: 2px;
+    color: var(--ink);
+  }
+
+  /* ===== callout (warning/note) ===== */
+  .note {
+    margin: 28px 0;
+    padding: 18px 22px;
+    background: var(--paper-card);
+    border-left: 3px solid var(--brick);
+    position: relative;
+  }
+  .note .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    font-weight: 700; color: var(--brick); display: block; margin-bottom: 6px;
+  }
+  .note p:first-of-type { margin-top: 0; }
+  .note p:last-of-type { margin-bottom: 0; }
+  .note.moss { border-left-color: var(--moss); }
+  .note.moss .label { color: var(--moss); }
+  .note.ochre { border-left-color: var(--ochre); }
+  .note.ochre .label { color: var(--ochre); }
+
+  /* ===== figure / diagram ===== */
+  figure {
+    margin: 36px 0;
+    background: var(--paper-card);
+    border: 1px solid var(--rule);
+    padding: 24px;
+    position: relative;
+  }
+  figure::before {
+    content: ""; position: absolute; top: -1px; left: -1px;
+    width: 24px; height: 24px;
+    border-top: 2px solid var(--ink); border-left: 2px solid var(--ink);
+  }
+  figure::after {
+    content: ""; position: absolute; bottom: -1px; right: -1px;
+    width: 24px; height: 24px;
+    border-bottom: 2px solid var(--ink); border-right: 2px solid var(--ink);
+  }
+  .fig-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 14px;
+    padding-bottom: 10px; border-bottom: 1px solid var(--rule);
+  }
+  .fig-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--brick); font-weight: 700;
+  }
+  .fig-title {
+    font-family: 'Fraunces', serif;
+    font-style: italic; font-weight: 500; font-size: 15px;
+    color: var(--ink-2);
+  }
+  figcaption {
+    font-family: 'Newsreader', 'Noto Serif SC', serif;
+    font-size: 14px; line-height: 1.55; color: var(--ink-2);
+    margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--rule);
+    font-style: italic;
+  }
+  .ctrls {
+    display: flex; gap: 10px; margin-top: 16px; justify-content: center; flex-wrap: wrap;
+  }
+  .btn {
+    font: inherit; font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 700;
+    padding: 8px 14px; border: 1px solid var(--ink); background: transparent;
+    cursor: pointer; color: var(--ink);
+    transition: all 0.15s;
+  }
+  .btn:hover { background: var(--ink); color: var(--paper); }
+  .btn.primary { background: var(--brick); color: var(--paper); border-color: var(--brick); }
+  .btn.primary:hover { background: var(--ink); border-color: var(--ink); }
+
+  /* ===== timeline diagram ===== */
+  .tl-section { margin-bottom: 14px; }
+  .tl-cap {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--ink-2); margin-bottom: 6px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tl-cap .dash { flex: 1; height: 1px; background: var(--rule); }
+  .tl-row {
+    display: grid; grid-template-columns: 64px 1fr; gap: 12px;
+    align-items: center; margin: 4px 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .tl-name {
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); font-weight: 700;
+  }
+  .tl-track {
+    height: 32px; background: var(--paper); border: 1px solid var(--rule);
+    position: relative; overflow: hidden;
+  }
+  .tl-seg {
+    position: absolute; top: 0; bottom: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase; font-weight: 700;
+    opacity: 0; transition: opacity 0.4s ease;
+  }
+  .tl-seg.on { opacity: 1; }
+  .tl-seg.user { background: var(--brick); color: var(--paper); }
+  .tl-seg.model { background: var(--ochre); color: var(--ink); }
+  .tl-seg.silent {
+    background: repeating-linear-gradient(
+      45deg, transparent, transparent 4px,
+      rgba(122,111,93,0.15) 4px, rgba(122,111,93,0.15) 5px
+    );
+    color: var(--muted);
+  }
+  .tl-ticks {
+    display: grid; grid-template-columns: 64px 1fr; gap: 12px;
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted);
+  }
+  .tl-ticks .row {
+    display: flex; justify-content: space-between;
+    border-top: 1px solid var(--rule); padding-top: 3px;
+  }
+
+  /* ===== sequence diagram ===== */
+  .seq-frame {
+    background: var(--paper); padding: 22px; border: 1px solid var(--rule);
+  }
+  .seq {
+    display: flex; gap: 4px; align-items: center; justify-content: center;
+    flex-wrap: wrap; font-family: 'JetBrains Mono', monospace;
+  }
+  .tok {
+    padding: 7px 11px; font-size: 12px; letter-spacing: 0.5px;
+    transform: translateY(8px); opacity: 0;
+    transition: transform 0.35s cubic-bezier(0.22,1,0.36,1), opacity 0.35s ease;
+    border: 1px solid transparent;
+    position: relative;
+  }
+  .tok.on { transform: translateY(0); opacity: 1; }
+  .tok.in { color: var(--brick); border-color: var(--brick); background: var(--brick-soft); }
+  .tok.out { color: var(--ochre); border-color: var(--ochre); background: var(--ochre-soft); }
+  .tok::before {
+    content: ""; position: absolute; left: -1px; top: -1px;
+    width: 5px; height: 5px; border-top: 1px solid currentColor; border-left: 1px solid currentColor;
+  }
+  .tok::after {
+    content: ""; position: absolute; right: -1px; bottom: -1px;
+    width: 5px; height: 5px; border-bottom: 1px solid currentColor; border-right: 1px solid currentColor;
+  }
+  .seq-legend {
+    display: flex; gap: 24px; justify-content: center; margin-top: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .seq-legend .sw { display: inline-block; width: 14px; height: 14px; vertical-align: middle; margin-right: 6px; border: 1px solid; }
+  .seq-legend .sw.in { background: var(--brick-soft); border-color: var(--brick); }
+  .seq-legend .sw.out { background: var(--ochre-soft); border-color: var(--ochre); }
+
+  /* ===== arch svg ===== */
+  .arch-frame { background: var(--paper); padding: 24px 16px; border: 1px solid var(--rule); }
+  .arch-frame svg { width: 100%; height: auto; max-height: 320px; }
+  .pulse-circle { animation: pulse 1.8s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+  .pulse-circle.slow { animation-duration: 3.4s; }
+  @keyframes pulse { 0%,100%{opacity:0.3;transform:scale(0.9)} 50%{opacity:1;transform:scale(1.05)} }
+  .flow-line { stroke-width: 1.5; fill: none; stroke-dasharray: 5 3; animation: flow 1.6s linear infinite; }
+  .flow-line.back { animation-direction: reverse; animation-duration: 2.6s; }
+  @keyframes flow { to { stroke-dashoffset: -16; } }
+
+  /* ===== benchmark bars ===== */
+  .bench-block { margin: 12px 0 22px; }
+  .bench-name {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-weight: 600; font-size: 16px;
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin: 16px 0 8px;
+    padding-bottom: 4px; border-bottom: 1px dotted var(--rule);
+  }
+  .bench-name .desc {
+    font-family: 'Newsreader', serif; font-style: italic; font-weight: 400;
+    font-size: 13px; color: var(--muted);
+  }
+  .bench-row {
+    display: grid; grid-template-columns: 140px 1fr 70px; gap: 12px;
+    align-items: center; margin: 8px 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .bench-who {
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--ink-2); font-weight: 700;
+  }
+  .bench-track {
+    height: 22px; background: var(--paper); border: 1px solid var(--rule); position: relative;
+  }
+  .bench-bar {
+    position: absolute; top: 0; bottom: 0; left: 0; width: 0;
+    transition: width 1.3s cubic-bezier(0.22,1,0.36,1);
+  }
+  .bench-bar.tml { background: var(--brick); }
+  .bench-bar.gpt {
+    background: repeating-linear-gradient(
+      135deg, var(--muted), var(--muted) 4px,
+      transparent 4px, transparent 8px
+    );
+    background-color: var(--paper-2);
+  }
+  .bench-val {
+    font-size: 13px; font-weight: 700; color: var(--ink);
+    text-align: right;
+  }
+
+  /* ===== capability grid ===== */
+  .caps {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0;
+    margin: 28px 0;
+    border: 1px solid var(--rule);
+  }
+  .cap {
+    padding: 22px;
+    background: var(--paper-card);
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    position: relative;
+    transition: background 0.2s;
+  }
+  .cap:hover { background: var(--brick-soft); }
+  .cap .cap-num {
+    position: absolute; top: 12px; right: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1px;
+    color: var(--brick); font-weight: 700;
+  }
+  .cap h4 {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-weight: 600; font-size: 17px; margin: 0 0 6px;
+  }
+  .cap p { margin: 0; font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+
+  /* ===== table ===== */
+  table {
+    border-collapse: collapse; width: 100%;
+    margin: 22px 0; font-size: 14.5px;
+    background: var(--paper-card);
+  }
+  th, td {
+    padding: 10px 14px; text-align: left;
+    border-bottom: 1px solid var(--rule);
+  }
+  th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--brick); font-weight: 700;
+    border-bottom: 2px solid var(--ink);
+  }
+  td.num { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--brick); }
+
+  /* ===== glossary ===== */
+  .glossary {
+    margin-top: 80px;
+    padding-top: 24px;
+    border-top: 4px double var(--ink);
+  }
+  .glossary h2 { margin-top: 16px; }
+  .gloss-grid {
+    display: grid; grid-template-columns: 1fr; gap: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .gloss-item {
+    padding: 18px 0;
+    border-bottom: 1px solid var(--rule);
+    display: grid;
+    grid-template-columns: 36px 200px 1fr;
+    gap: 16px;
+    align-items: baseline;
+  }
+  .gloss-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--brick); font-weight: 700;
+  }
+  .gloss-term {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px; font-weight: 700; color: var(--ink);
+  }
+  .gloss-def {
+    font-size: 15.5px; line-height: 1.6; color: var(--ink-2);
+  }
+  .gloss-def code { font-size: 12.5px; }
+  @media (max-width: 700px) {
+    .gloss-item { grid-template-columns: 28px 1fr; }
+    .gloss-term { grid-column: 2; }
+    .gloss-def { grid-column: 1 / -1; padding-left: 28px; }
+  }
+
+  /* ===== toc ===== */
+  .toc {
+    margin: 48px 0;
+    padding: 24px 0;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .toc-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 14px; display: block;
+  }
+  .toc ol { list-style: none; padding: 0; margin: 0; }
+  .toc li {
+    display: grid; grid-template-columns: 32px 1fr auto; gap: 12px;
+    padding: 8px 0; border-bottom: 1px dotted var(--rule);
+    align-items: baseline;
+  }
+  .toc li:last-child { border: none; }
+  .toc .toc-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--brick); font-weight: 700;
+  }
+  .toc a {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-weight: 500; font-size: 18px;
+    color: var(--ink); text-decoration: none;
+  }
+  .toc a:hover { color: var(--brick); font-style: italic; }
+  .toc .toc-hint {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    letter-spacing: 1px; text-transform: uppercase; color: var(--muted);
+  }
+
+  /* footer */
+  .colophon {
+    margin-top: 96px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 1px; line-height: 1.7;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* sticky scroll progress */
+  .progress {
+    position: fixed; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--rule); z-index: 200;
+  }
+  .progress-bar { height: 100%; background: var(--brick); width: 0%; transition: width 0.1s ease; }
+</style>
+</head>
+<body>
+
+<div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+
+<div class="page">
+
+<div class="col-main">
+
+<div class="masthead">
+  <span class="l">Connectionism · 中文讲解</span>
+  <span class="r">VOL. 01 · 2026 / 05 / 11</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 人机协作 / 实时多模态</div>
+
+  <h1 class="title">Interaction<br /><span class="em">Models.</span></h1>
+
+  <p class="dek">为什么"你说一段我说一段"挡住了真正的协作 —— 一篇带交互图与术语注解的中文解读。</p>
+
+  <div class="bylines">
+    <span>原文 / Thinking Machines Lab</span>
+    <span><a href="https://thinkingmachines.ai/blog/interaction-models/" target="_blank">thinkingmachines.ai →</a></span>
+    <span>讲解 / Claude</span>
+  </div>
+</section>
+
+<p class="lede">现在的 AI 圈把精力都押在"自主性"上 —— 一个 agent 能跑多久、能调多少工具。TML 提出的诊断是：<strong>另一面被牺牲了。人参与协作的那一面，被接口本身卡住了</strong>。原因不是任务不需要人，是接口装不下人。</p>
+
+<p>这篇博客同时是 <strong>TML-Interaction-Small</strong>（276B MoE / 12B 激活）的研究预览发布。文章分两半：前半在讲<em>为什么</em>当前 chat 模型范式不够，后半在讲<em>怎么</em>把交互能力做进模型本体而不是靠外挂。下面是按这两条线整理出来的中文版，配几张可播放的示意图，加一份术语词典。</p>
+
+<div class="toc">
+  <span class="toc-label">contents · 目录</span>
+  <ol>
+    <li><span class="toc-num">01</span><a href="#thesis">协作瓶颈</a><span class="toc-hint">问题诊断</span></li>
+    <li><span class="toc-num">02</span><a href="#compare">轮次制 vs 时间对齐</a><span class="toc-hint">配图 · 时间轴</span></li>
+    <li><span class="toc-num">03</span><a href="#caps">六种原生能力</a><span class="toc-hint">卡片</span></li>
+    <li><span class="toc-num">04</span><a href="#arch">双模型架构</a><span class="toc-hint">配图 · 数据流</span></li>
+    <li><span class="toc-num">05</span><a href="#micro">200ms 微回合</a><span class="toc-hint">配图 · token 流</span></li>
+    <li><span class="toc-num">06</span><a href="#tech">技术细节</a><span class="toc-hint">融合 / 流式 / 训推一致</span></li>
+    <li><span class="toc-num">07</span><a href="#bench">Benchmark 对比</a><span class="toc-hint">配图 · 条形</span></li>
+    <li><span class="toc-num">08</span><a href="#takeaway">个人解读</a><span class="toc-hint">能拿走什么</span></li>
+    <li><span class="toc-num">▼</span><a href="#glossary">术语词典</a><span class="toc-hint">所有专有名词</span></li>
+  </ol>
+</div>
+
+<!-- ============ 01 ============ -->
+<h2 id="thesis"><span class="num">§ 01 · the bottleneck</span>协作瓶颈</h2>
+
+<p>当前所谓的 chat 模型用的是"轮次制"：你说一段 → 它说一段 → 你再说一段。这是把两个本来可以同时存在的人，强行编排成一前一后。问题表现为：</p>
+
+<ul>
+  <li>用户输入时，模型干等；模型输出时，模型对外界完全失聪。</li>
+  <li>人的知识、判断、临场修正只能挤进这条窄通道。</li>
+  <li>结果是：用户被推向"丢一个 prompt 让 agent 自己跑"的模式 —— 哪怕协作其实更好。</li>
+</ul>
+
+<p>TML 说真正的协作需要三件事：<strong>共在 / 共时 / 同时</strong>。当前架构卡死了这些可能。这不是模型不够聪明，是接口架构本身有问题。</p>
+
+<div class="note moss">
+  <span class="label">背景 · bitter lesson</span>
+  <p>Rich Sutton 2019 那篇短文：AI 史上凡是"人工精心设计的方法"最终都被"靠规模算力 + 通用学习"碾压。TML 借这个论点说：把交互逻辑写成外挂规则（<span class="jr">VAD<sup>11</sup></span>、轮次状态机）就是在重蹈覆辙。要让交互能力跟着 scaling law 一起涨，必须把它做进模型本体。</p>
+</div>
+
+<!-- ============ 02 ============ -->
+<h2 id="compare"><span class="num">§ 02 · figure one</span>轮次制 vs 时间对齐</h2>
+
+<p>这是整篇文章的图像化心智模型。播放下面这张图看两种范式的差异。</p>
+
+<figure>
+  <div class="fig-head">
+    <span class="fig-label">Fig. 01</span>
+    <span class="fig-title">两种交互范式的时间轴</span>
+  </div>
+
+  <div class="tl-section">
+    <div class="tl-cap">A · TURN-BASED · 严格交替<span class="dash"></span></div>
+    <div class="tl-row"><span class="tl-name">User</span><div class="tl-track" id="tb-u"></div></div>
+    <div class="tl-row"><span class="tl-name">Model</span><div class="tl-track" id="tb-m"></div></div>
+  </div>
+
+  <div class="tl-section" style="margin-top: 22px;">
+    <div class="tl-cap">B · TIME-ALIGNED · 200ms 微回合，并发<span class="dash"></span></div>
+    <div class="tl-row"><span class="tl-name">User</span><div class="tl-track" id="ta-u"></div></div>
+    <div class="tl-row"><span class="tl-name">Model</span><div class="tl-track" id="ta-m"></div></div>
+  </div>
+
+  <div class="tl-ticks">
+    <span></span>
+    <div class="row"><span>0</span><span>400</span><span>800</span><span>1200</span><span>1600</span><span>2000 ms</span></div>
+  </div>
+
+  <div class="ctrls">
+    <button class="btn primary" onclick="playTimeline()">▷ play</button>
+    <button class="btn" onclick="resetTimeline()">reset</button>
+  </div>
+
+  <figcaption>砖红 = 用户在说；土黄 = 模型在说；斜线 = 失聪 / 静默。上半部 A 里，当模型生成时，用户的输入是不被感知的。下半部 B 里，两条流并行常亮 —— 同时存在，同时感知。</figcaption>
+</figure>
+
+<p>上半部分的关键问题：当 Model 那一行亮起（在生成）的时候，User 那一行是<strong>纯静默</strong>的。不是用户没动，是模型"看不见"用户动了什么。这就是失聪。</p>
+
+<!-- ============ 03 ============ -->
+<h2 id="caps"><span class="num">§ 03 · what unlocks</span>六种原生能力</h2>
+
+<p>TML 列出靠外挂规则做不到、必须靠原生架构才能解锁的六类能力：</p>
+
+<div class="caps">
+  <div class="cap">
+    <span class="cap-num">01</span>
+    <h4>无缝对话管理</h4>
+    <p>模型自己知道现在该思考、该让位、该纠正还是该邀请说话 —— 无需外挂状态机。</p>
+  </div>
+  <div class="cap">
+    <span class="cap-num">02</span>
+    <h4>口头 / 视觉打断</h4>
+    <p>基于内容主动插话。说着说着画面里出现了什么，它能马上接上，而不是等你说完。</p>
+  </div>
+  <div class="cap">
+    <span class="cap-num">03</span>
+    <h4>同时说话</h4>
+    <p>实时翻译、live commentary 这类必须两人同时出声的场景，模型可以一边听一边说。</p>
+  </div>
+  <div class="cap">
+    <span class="cap-num">04</span>
+    <h4>时间感知</h4>
+    <p>直接感知"过去了多久"，不靠外部计时器。比如"每 4 秒提醒我吸气呼气"它能自己掐点。</p>
+  </div>
+  <div class="cap">
+    <span class="cap-num">05</span>
+    <h4>边说边用工具</h4>
+    <p>搜索、浏览、生成 UI 跟说话同步发生，结果再织回对话里。</p>
+  </div>
+  <div class="cap">
+    <span class="cap-num">06</span>
+    <h4>跨模态连续</h4>
+    <p>音频 + 视频 + 文本在长 session 里持续协作，不掉线。</p>
+  </div>
+</div>
+
+<!-- ============ 04 ============ -->
+<h2 id="arch"><span class="num">§ 04 · system shape</span>双模型架构</h2>
+
+<p>整个系统是两层，<strong>共享上下文</strong>但角色互补 —— 一前一后，前台永远在线，后台负责"想得久"。</p>
+
+<figure>
+  <div class="fig-head">
+    <span class="fig-label">Fig. 02</span>
+    <span class="fig-title">Interaction Model + Background Model 的协同</span>
+  </div>
+  <div class="arch-frame">
+    <svg viewBox="0 0 620 240" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <line x1="0" y1="0" x2="0" y2="6" stroke="#bfb398" stroke-width="1"/>
+        </pattern>
+      </defs>
+
+      <!-- User -->
+      <circle cx="70" cy="120" r="38" fill="#f7f1de" stroke="#181410" stroke-width="2"/>
+      <circle class="pulse-circle" cx="70" cy="120" r="46" fill="none" stroke="#9b2c2c" stroke-width="1.2" opacity="0.5"/>
+      <text x="70" y="118" text-anchor="middle" font-family="Fraunces, serif" font-size="14" font-weight="600" fill="#181410">User</text>
+      <text x="70" y="134" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#7a6f5d">human</text>
+
+      <!-- arrows U <-> Interaction -->
+      <path class="flow-line" stroke="#9b2c2c" d="M 112 110 Q 170 88 220 110"/>
+      <path class="flow-line back" stroke="#b8841c" d="M 220 130 Q 170 152 112 130"/>
+      <text x="166" y="78" font-family="JetBrains Mono, monospace" font-size="9" fill="#7a6f5d" text-anchor="middle" letter-spacing="1">audio · video · text — 200ms tick</text>
+
+      <!-- Interaction model -->
+      <rect x="220" y="70" width="180" height="100" fill="#efd6c8" stroke="#181410" stroke-width="2"/>
+      <text x="310" y="98" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="15" font-weight="600" fill="#181410">Interaction Model</text>
+      <text x="310" y="118" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#3a3128">always-on · low latency</text>
+      <text x="310" y="134" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#3a3128">12B active / 276B MoE</text>
+      <circle class="pulse-circle" cx="310" cy="156" r="5" fill="#9b2c2c"/>
+
+      <!-- arrows I <-> Background -->
+      <path class="flow-line" stroke="#181410" d="M 400 105 Q 460 85 520 105"/>
+      <path class="flow-line back" stroke="#181410" d="M 520 135 Q 460 155 400 135"/>
+      <text x="460" y="78" font-family="JetBrains Mono, monospace" font-size="9" fill="#3a3128" text-anchor="middle" letter-spacing="1">委托 · 共享 context</text>
+      <text x="460" y="170" font-family="JetBrains Mono, monospace" font-size="9" fill="#3a3128" text-anchor="middle" letter-spacing="1">streaming 结果回流</text>
+
+      <!-- Background model -->
+      <rect x="520" y="80" width="80" height="80" fill="url(#hatch)" stroke="#181410" stroke-width="2"/>
+      <rect x="520" y="80" width="80" height="80" fill="#f7f1de" stroke="#181410" stroke-width="2" opacity="0.85"/>
+      <text x="560" y="106" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="13" font-weight="600" fill="#181410">Background</text>
+      <text x="560" y="122" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#3a3128">async</text>
+      <text x="560" y="134" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#3a3128">reasoning</text>
+      <text x="560" y="146" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#3a3128">tools / plan</text>
+      <circle class="pulse-circle slow" cx="560" cy="170" r="4" fill="#181410"/>
+    </svg>
+  </div>
+  <figcaption>前台模型永远在线（红色脉搏），需要深推理时把任务委托给后台（黑色慢脉搏），结果回流织进对话。两者共享 context，不是"独立调用 API"。</figcaption>
+</figure>
+
+<div class="note ochre">
+  <span class="label">类比 · 你熟的范式</span>
+  <p>很像 Lovart 里 <strong>agent-scheduler / agent-generator</strong> 那套：前台 socket 持续推状态，后台 MQ 触发耗时任务，回调织进 UI。区别在于：TML 把这个异步分工<strong>做进了单个模型权重内部</strong>，前台自己决定什么时候去找后台、怎么把结果嵌回对话。</p>
+</div>
+
+<!-- ============ 05 ============ -->
+<h2 id="micro"><span class="num">§ 05 · the core trick</span>200ms 微回合</h2>
+
+<p>这是整篇文章最核心的工程取舍。</p>
+
+<p>传统做法：用户说完整段 → 模型生成整段。两个"回合"严格交替。</p>
+
+<p>TML 做法：把时间切成 <strong>200ms 一个 chunk</strong>，每个 chunk 里输入和输出<strong>同时</strong>发生。模型看到的 token 序列长这样：</p>
+
+<figure>
+  <div class="fig-head">
+    <span class="fig-label">Fig. 03</span>
+    <span class="fig-title">单一交错 token 流</span>
+  </div>
+  <div class="seq-frame">
+    <div class="seq" id="seq">
+      <span class="tok in">input₀</span>
+      <span class="tok out">output₀</span>
+      <span class="tok in">input₁</span>
+      <span class="tok out">output₁</span>
+      <span class="tok in">input₂</span>
+      <span class="tok out">output₂</span>
+      <span class="tok in">input₃</span>
+      <span class="tok out">output₃</span>
+      <span class="tok in">input₄</span>
+      <span class="tok out">output₄</span>
+      <span style="color: var(--muted); padding: 0 6px; font-family: 'JetBrains Mono', monospace;">…</span>
+    </div>
+    <div class="seq-legend">
+      <span><span class="sw in"></span>用户那 200ms 说的话</span>
+      <span><span class="sw out"></span>模型那 200ms 生成的</span>
+    </div>
+  </div>
+  <div class="ctrls">
+    <button class="btn primary" onclick="playSeq()">▷ play token stream</button>
+    <button class="btn" onclick="resetSeq()">reset</button>
+  </div>
+  <figcaption>两路是并发流，不是交替段。模型在同一个 transformer 里看到这条单一交错序列；对人类来说，感受到的是真正的"同时在线"。</figcaption>
+</figure>
+
+<p>对模型来说：它看到的是一条单一交错序列；对人类来说：感受到的是真正的"同时在线"。</p>
+
+<p>"什么时候我该说话""什么时候这是用户在思考""什么时候该插嘴" —— 全都让模型自己学，不再交给外面那个比模型笨的 <span class="jr">VAD<sup>11</sup></span> 启发式。</p>
+
+<div class="note ochre">
+  <span class="label">类比 · fish-speech 的影子</span>
+  <p>你之前研究过 fish-speech 的 dual-AR + RVQ。那是把<strong>音频生成</strong>做成实时 token 流。TML 这里更进一步：<strong>输入和输出都是 token 流</strong>，而且在同一个 transformer 里被同步推理。它的 audio 输出用了 <span class="jr">flow-head decoder<sup>8</sup></span>（flow matching 思路），跟 RVQ codec 不是同一路，但目的一致 —— 让音频生成低延迟、可微、可端到端训练。</p>
+</div>
+
+<!-- ============ 06 ============ -->
+<h2 id="tech"><span class="num">§ 06 · the plumbing</span>技术细节</h2>
+
+<p>下面这几节涉及不少 GPU / 推理工程术语。每个加底色的词都对应右侧 / 文末"<a href="#glossary">术语词典</a>"里的一条解释。</p>
+
+<h3><span class="small-num">06.1</span>Encoder-Free Early Fusion · 无独立编码器的早融合</h3>
+<p>没有 Whisper 那种独立大编码器。预处理尽量轻：</p>
+<ul>
+  <li><strong>音频</strong>：<span class="jr">dMel<sup>9</sup></span>（离散 Mel 频谱）→ 轻量 embedding 层</li>
+  <li><strong>视频</strong>：切 40×40 patch → <span class="jr">hMLP<sup>10</sup></span>（分层 MLP）编码</li>
+  <li><strong>文本</strong>：常规 tokenize</li>
+  <li><strong>音频输出</strong>：<span class="jr">flow-head<sup>8</sup></span> 解码器</li>
+</ul>
+<p>这些组件跟主 transformer <strong>一起端到端训练</strong>。理由：减少前置 pipeline 延迟；避免"冻结编码器"成为瓶颈，让交互能力跟着模型 scaling 一起涨。</p>
+
+<h3><span class="small-num">06.2</span>Streaming Sessions · 流式会话</h3>
+<p>问题：200ms 一个 chunk，<span class="jr">prefill / decode<sup>2</sup></span> 调用极频繁。常规 LLM 推理库每次调用的元数据开销和内存重分配顶不住。</p>
+<p>解法：</p>
+<ul>
+  <li>客户端每个 200ms chunk 当一次请求发；</li>
+  <li>推理服务器在 GPU 内存里维持一条<strong>持久序列</strong>，新 chunk 追加进 <span class="jr">KV cache<sup>3</sup></span>；</li>
+  <li>不重分配内存、不重算元数据；</li>
+  <li>定制 kernel 替换常规库的实现，针对小 batch 极低延迟做了三个优化：</li>
+</ul>
+
+<div class="note">
+  <span class="label">这三个 kernel 优化分别在做什么</span>
+  <p><strong>① MoE 用 <span class="jr">gather+gemv<sup>4</sup></span> 替代标准 <span class="jr">grouped GEMM<sup>4</sup></span>。</strong> MoE 推理时不同 token 要送到不同专家。常规做法把"去同一个专家的所有 token"凑成一批做矩阵乘 —— 但 200ms chunk 里 token 太少凑不起 batch，分组反而成开销。这里直接按 token 索引<em>取</em>专家权重做矩阵-向量乘，跳过分组。</p>
+  <p><strong>② 通信走 <span class="jr">NVLS<sup>5</sup></span>。</strong> 多卡之间做 all-reduce（合并各卡的部分结果）时，让 NVLink 网络自己做加法，而不是把数据先拉回某张卡再算。省一次往返。</p>
+  <p><strong>③ Attention 用 <span class="jr">Split-KV<sup>6</sup></span> 保证 prefill 和 decode 一致。</strong> 把 KV cache 沿序列维切成块并行算各块再合并 —— 关键是 prefill 和 decode 走<em>完全一样</em>的切法，保证两个阶段算出的数值在比特层面一致，不会因为切法不同导致最后几位浮点漂移。</p>
+</div>
+
+<h3><span class="small-num">06.3</span>Trainer-Sampler 一致性</h3>
+<p>训练和推理在 <span class="jr">bitwise 层面一致<sup>7</sup></span>（同样的输入在二进制位上给出完全相同的输出）。用 <span class="jr">batch-invariant kernel<sup>1</sup></span> 实现，端到端开销 &lt;5%。这点对 RL 训练 / 对话稳定性极重要 —— 训练里学到的行为不会因为推理时换了批大小、换了并行策略而"漂"掉。</p>
+
+<h3><span class="small-num">06.4</span>安全</h3>
+<p>实时交互对安全的压力跟轮次制不一样。两个方向：</p>
+<ol>
+  <li><strong>模态对齐的拒答</strong>：用 <span class="jr">TTS<sup>12</sup></span> 让"我不能回答这个"听起来自然，韵律正常，不是机器人腔。</li>
+  <li><strong>长程鲁棒性</strong>：自动 red-team 工具批量生成多轮拒答场景，让语音对话的安全行为跟文本保持同步。</li>
+</ol>
+
+<!-- ============ 07 ============ -->
+<h2 id="bench"><span class="num">§ 07 · the numbers</span>Benchmark 对比</h2>
+
+<p>真正震撼的是 TML 自己提的新基准。在现有 chat 模型完全没人测的"实时主动交互"维度上，差距是<strong>一个数量级以上</strong>。</p>
+
+<figure>
+  <div class="fig-head">
+    <span class="fig-label">Fig. 04</span>
+    <span class="fig-title">TML 自造基准上的对比</span>
+  </div>
+  <div id="bench-chart">
+
+    <div class="bench-name"><span>TimeSpeak <span class="desc">指定时间点主动开口</span></span></div>
+    <div class="bench-row">
+      <span class="bench-who">TML-Int-Small</span>
+      <div class="bench-track"><div class="bench-bar tml" data-w="64.7"></div></div>
+      <span class="bench-val">64.7%</span>
+    </div>
+    <div class="bench-row">
+      <span class="bench-who">GPT Realtime-2.0</span>
+      <div class="bench-track"><div class="bench-bar gpt" data-w="4.3"></div></div>
+      <span class="bench-val">4.3%</span>
+    </div>
+
+    <div class="bench-name"><span>CueSpeak <span class="desc">检测口头线索后插话</span></span></div>
+    <div class="bench-row">
+      <span class="bench-who">TML-Int-Small</span>
+      <div class="bench-track"><div class="bench-bar tml" data-w="81.7"></div></div>
+      <span class="bench-val">81.7%</span>
+    </div>
+    <div class="bench-row">
+      <span class="bench-who">GPT Realtime-2.0</span>
+      <div class="bench-track"><div class="bench-bar gpt" data-w="2.9"></div></div>
+      <span class="bench-val">2.9%</span>
+    </div>
+
+    <div class="bench-name"><span>RepCount-A <span class="desc">视频里数动作次数</span></span></div>
+    <div class="bench-row">
+      <span class="bench-who">TML-Int-Small</span>
+      <div class="bench-track"><div class="bench-bar tml" data-w="35.4"></div></div>
+      <span class="bench-val">35.4%</span>
+    </div>
+    <div class="bench-row">
+      <span class="bench-who">GPT Realtime-2.0</span>
+      <div class="bench-track"><div class="bench-bar gpt" data-w="1.3"></div></div>
+      <span class="bench-val">1.3%</span>
+    </div>
+
+    <div class="bench-name"><span>Charades <span class="desc">动作开始 / 结束时说 start / stop · mIoU</span></span></div>
+    <div class="bench-row">
+      <span class="bench-who">TML-Int-Small</span>
+      <div class="bench-track"><div class="bench-bar tml" data-w="32.4"></div></div>
+      <span class="bench-val">32.4%</span>
+    </div>
+    <div class="bench-row">
+      <span class="bench-who">GPT Realtime-2.0</span>
+      <div class="bench-track"><div class="bench-bar gpt" data-w="2"></div></div>
+      <span class="bench-val">0%</span>
+    </div>
+
+  </div>
+  <div class="ctrls">
+    <button class="btn primary" onclick="playBench()">▷ animate</button>
+  </div>
+  <figcaption>砖红实心 = TML-Interaction-Small；斜线纹理 = GPT Realtime-2.0 (minimal 档)。差距大到说明这是个新维度，不是简单刷榜。</figcaption>
+</figure>
+
+<h3><span class="small-num">07.5</span>常规基准（不是 TML 自造的）</h3>
+<table>
+  <thead><tr><th>基准</th><th>测什么</th><th>TML</th><th>竞品区间</th></tr></thead>
+  <tbody>
+    <tr><td>FD-bench v1</td><td>换手延迟</td><td class="num">0.40 s</td><td>0.57 – 2.14 s</td></tr>
+    <tr><td>FD-bench v1.5</td><td>插话场景响应</td><td class="num">77.8</td><td>46.8 – 54.3</td></tr>
+    <tr><td>Audio MultiChallenge</td><td>音频智能</td><td class="num">43.4%</td><td>26.8 – 48.5%</td></tr>
+    <tr><td>IFEval (VoiceBench)</td><td>语音指令遵循</td><td class="num">82.1%</td><td>67.6 – 83.2%</td></tr>
+    <tr><td>Harmbench</td><td>安全拒答率</td><td class="num">99.0%</td><td>98.0 – 100%</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <span class="label">注意 · benchmark 该怎么读</span>
+  <p>新基准是他们自己定义的，自然往自己强项靠。<strong>但反过来想</strong>：他们能造出竞品几乎拿零分的题，本身就说明"实时主动交互"这个维度上确实<strong>没人在做</strong>。客观看，这更像在开辟一个新评估子领域，而不是在已有榜单上耍花招。读的时候记得 GPT Realtime-2.0 这边是 <code>minimal</code> 档（reasoning effort 最低），不代表 GPT 全貌；他们也没有和 Gemini Live 等专门做实时语音的产品对比。</p>
+</div>
+
+<!-- ============ 08 ============ -->
+<h2 id="takeaway"><span class="num">§ 08 · what to keep</span>个人解读</h2>
+
+<p>给你梳理几条值得记的：</p>
+
+<ol>
+  <li><strong>"轮次制" vs "时间对齐" 是一个真问题</strong>。不光在语音里 —— 想想 chat 流里 user 一次贴 5000 字 + 一张图 + "请改下面这段代码"，模型必须读完才能动笔。这是同一个 UX 病在不同模态的表现。</li>
+  <li><strong>200ms 是个工程数</strong>。选这个粒度不是"物理实时"，是听觉感知阈值 + GPU prefill 开销之间的妥协点。改大改小都影响交互手感。</li>
+  <li><strong>"把外挂规则吃进权重"是个反复出现的范式</strong>。Whisper → 端到端语音 LLM；OCR → VLM；VAD → 这里的 micro-turn。Lovart 这边其实也在做类似的事 —— 你最近改 tool-svc 商业化下沉，就是把外面 cashier 的 ToolPreStart 收到工具一侧。同一种"把控制流收进核心"的张力。</li>
+  <li><strong>双模型分工最值得偷</strong>。"前台轻量永远在线 + 后台异步深推理"是个通用模式，不光语音能用。你做 canvas / canda 的"前台快速响应 + 后台 ag 长任务"已经是这个形状，只是边界画在服务上而不是模型上。</li>
+  <li><strong>看 benchmark 看到 minimal 档</strong>。公开对比的是 GPT Realtime-2.0 minimal，不是它的最强档；也没列 Gemini Live、Sesame 这类专门做实时语音的对手。读的时候保持一份警觉。</li>
+</ol>
+
+<!-- ============ glossary ============ -->
+<section class="glossary" id="glossary">
+
+<h2><span class="num">§ ▼ · vocabulary</span>术语词典</h2>
+
+<p>正文里带波浪底的词都对应这里一条。按出现顺序编号：</p>
+
+<div class="gloss-grid">
+
+  <div class="gloss-item">
+    <span class="gloss-num">01</span>
+    <span class="gloss-term">batch-invariant kernel</span>
+    <p class="gloss-def">"对 batch 划分不敏感的算子"。常规 GPU kernel 为了效率会做 reduce 顺序优化，导致同一个样本在不同 batch 里跑出来的浮点数最后几位略有差异。batch-invariant 强制结果只依赖样本本身、跟同批的其他样本无关 —— 这样训练和推理才能做到 <strong>bitwise 一致</strong>。代价是损失约 5% 性能。</p>
+  </div>
+
+  <div class="gloss-item">
+    <span class="gloss-num">02</span>
+    <span class="gloss-term">prefill / decode</span>
+    <p class="gloss-def">LLM 推理的两个阶段。<strong>prefill</strong> = 把整段输入一次性吃进去，并行算所有 token 的 KV，GPU 利用率高。<strong>decode</strong> = 一个 token 一个 token 往外吐，每步依赖上一步，是个长尾过程。200ms chunk 模式下 prefill 极小、decode 极频繁，所以推理库的元数据开销被无限放大。</p>
+  </div>
+
+  <div class="gloss-item">
+    <span class="gloss-num">03</span>
+    <span class="gloss-term">KV cache</span>
+    <p class="gloss-def">Transformer 每层 attention 算过的 Key / Value 矩阵存下来，下一个 token 直接复用，不用重算前面所有 token。模型推理的内存占用主要来自这块。TML 的 streaming session 就是让 KV cache 在 GPU 里持久存在，每来一个 200ms chunk 就追加，而不是重新分配。</p>
+  </div>
+
+  <div class="gloss-item">
+    <span class="gloss-num">04</span>
+    <span class="gloss-term">grouped GEMM &nbsp;vs&nbsp; gather + gemv</span>
+    <p class="gloss-def">MoE 里把不同 token 路由到不同专家。<strong>grouped GEMM</strong>（grouped general matrix multiply）= 把要去同一个专家的 token 凑成一批，做大矩阵-矩阵乘，适合 batch 大的情况。<strong>gather + gemv</strong>（gather then general matrix-vector multiply）= 直接按 token 索引把对应专家权重取出来，做矩阵-向量乘 —— 适合 batch 极小的低延迟场景。200ms chunk 里 token 太少凑不起 batch，所以选后者。</p>
+  </div>
+
+  <div class="gloss-item">
+    <span class="gloss-num">05</span>
+    <span class="gloss-term">NVLS &nbsp;(NVLink SHARP)</span>
+    <p class="gloss-def">NVIDIA 在 NVLink Switch 网络里做的"网内归约"特性。多卡推理时各张 GPU 算出部分结果，需要 all-reduce 求和合并 —— 传统做法要把数据拉回某张卡再算。NVLS 让交换机本身在数据流过时做加法，省去一次往返。<code>SHARP = Scalable Hierarchical Aggregation and Reduction Protocol</code>。</p>
+  </div>
+
+  <div class="gloss-item">
+    <span class="gloss-num">06</span>
+    <span class="gloss-term">Split-KV</span>
+    <p class="gloss-def">Attention 的一种并行算法 —— 把 KV cache 沿序列维切成若干块，每块独立算 attention partial result，最后再合并。<a href="https://github.com/Dao-AILab/flash-attention" target="_blank">FlashAttention</a> 系列里的 Split-K 思路。TML 的关键是：让 prefill 和 decode 走<em>完全一样</em>的切法，保证两个阶段在数值层面 bit-for-bit 相等 —— 否则同一段对话在两个阶段会有微小漂移。</p>
+  </div>
+
+  <div class="gloss-item">
+    <span class="gloss-num">07</span>
+    <span class="gloss-term">bitwise determinism</span>
+    <p class="gloss-def">"位级确定性" —— 同样的输入在 GPU 上跑两次，结果在二进制位上完全相同。听起来理所当然，实际上常规 CUDA kernel 里 reduce 顺序、tensor parallel 切分都会让浮点最后几位不同。这对推理影响不大，但对<strong>训练时算梯度 / 做 RL</strong> 是大坑：训练用一套 kernel、推理换另一套，行为就漂了。TML 强制训练和推理用同一套 batch-invariant kernel 来规避。</p>
+  </div>
+
+  <div class="gloss-item">
+    <span class="gloss-num">08</span>
+    <span class="gloss-term">flow-head decoder &nbsp;/&nbsp; flow matching</span>
+    <p class="gloss-def">一种连续值生成范式。模型不直接预测音频样本，而是学一个"速度场"：从噪声出发，沿速度场积分若干步，到达目标音频。背后是 <strong>Continuous Normalizing Flow</strong> + <strong>Flow Matching</strong>（2022 年由 Lipman 等提出）。比起 VQ codec 把音频量化成离散 token，flow matching 更平滑、更适合端到端联合训练，但推理时需要 ODE 求解。</p>
+  </div>
+
+  <div class="gloss-item">
+    <span class="gloss-num">09</span>
+    <span class="gloss-term">dMel &nbsp;(discrete Mel)</span>
+    <p class="gloss-def">把 <strong>Mel 频谱图</strong>（人耳感知尺度下的声音能量分布）量化成离散 token，让音频能像文本一样喂进 transformer。比 Whisper 那种"音频先过专用编码器再拼到 LLM"的两段式方案更轻。</p>
+  </div>
+
+  <div class="gloss-item">
+    <span class="gloss-num">10</span>
+    <span class="gloss-term">hMLP &nbsp;(hierarchical MLP)</span>
+    <p class="gloss-def">分层 MLP，作为视频 patch 的轻量嵌入层。视频先切成 40×40 patch，hMLP 把每个 patch 嵌入成 token 送进主 transformer。比 ViT 那种 patch + transformer 编码器轻得多。出自 Meta 的 ConvNeXt / hMLP 工作。</p>
+  </div>
+
+  <div class="gloss-item">
+    <span class="gloss-num">11</span>
+    <span class="gloss-term">VAD &nbsp;(Voice Activity Detection)</span>
+    <p class="gloss-def">"语音活动检测" —— 判断"现在麦克风里有没有人在说话"的小模型。传统语音助手 pipeline 用它决定什么时候开始 / 停止处理音频、什么时候判定用户说完该回应了。TML 的论点：VAD 是个比主模型笨得多的启发式，把它丢掉、让主模型自己学这个判断。</p>
+  </div>
+
+  <div class="gloss-item">
+    <span class="gloss-num">12</span>
+    <span class="gloss-term">TTS &nbsp;(Text-To-Speech)</span>
+    <p class="gloss-def">文本转语音。这里指生成"自然"的语音输出，避免拒答时让用户感觉是一段被插进来的机器人录音 —— 韵律、停顿要跟正常对话一致。</p>
+  </div>
+
+</div>
+
+</section>
+
+<div class="colophon">
+  讲解 / Claude · 原文 © Thinking Machines Lab · 2026<br />
+  本页是中文讲解版而非直译。所有 benchmark 数据 / 架构描述 / 200ms 等技术数字来自原文；带"背景 / 类比"色块的是 Claude 加的上下文。
+</div>
+
+</div><!-- /col-main -->
+
+<!-- ============ right column sidenotes ============ -->
+<aside class="col-side" aria-label="术语速查">
+
+  <div class="pin">
+    <span class="pin-label">§ 02 · 名词</span>
+    turn-based · 轮次制：你说一段我说一段。当前 chat 模型的默认范式。
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 04 · 名词</span>
+    <code>MoE</code> Mixture of Experts：模型养着许多专家子网，每次推理只激活其中几个。276B 总参 / 12B 激活意味着每个 token 只过 12B 参数的计算路径。
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 06.1 · 名词</span>
+    <code>early fusion</code>：各模态在<em>极早</em>就进同一个 transformer，而不是各自先过编码器再拼起来（"late fusion"）。
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 06.2 · 名词</span>
+    <code>kernel</code> 在 GPU 语境里 = 在 GPU 上跑的一段算子代码。"自定义 kernel" = 自己写 CUDA / Triton 替换标准库实现。
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 06.2 · 名词</span>
+    <code>all-reduce</code>：多张 GPU 各算了一部分结果，需要把所有卡的部分加起来再分发回去。多卡推理里最常见的通信原语。NVLS 就是给它加速的。
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 06.3 · 名词</span>
+    <code>RL</code> Reinforcement Learning：训练时让模型用对话产生 reward，再回传梯度。是 ChatGPT 后训练的核心一步。bitwise determinism 缺失会让 RL 训练不稳定甚至发散。
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 07 · 名词</span>
+    <code>minimal</code> 档：GPT Realtime-2.0 的 reasoning effort 设置，最低延迟、最少推理。对比 minimal 档而不是 high 档，让对手在它最弱的设置上出场。
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 全文 · 名词</span>
+    <code>scaling law</code>：模型能力随参数 / 数据 / 算力按幂律增长的经验规律。"让交互能力跟着 scaling law 一起涨" = 加大模型时这个能力也会变强，而不是停留在硬编码规则的水平。
+  </div>
+
+</aside>
+
+</div><!-- /page -->
+
+<script>
+// ============ Timeline ============
+const els = {
+  tbU: document.getElementById('tb-u'),
+  tbM: document.getElementById('tb-m'),
+  taU: document.getElementById('ta-u'),
+  taM: document.getElementById('ta-m'),
+};
+let tlTimer = null;
+
+function seg(parent, cls, left, width, text) {
+  const s = document.createElement('div');
+  s.className = 'tl-seg ' + cls;
+  s.style.left = left + '%';
+  s.style.width = width + '%';
+  s.textContent = text || '';
+  parent.appendChild(s);
+  return s;
+}
+
+function buildTimeline() {
+  [els.tbU, els.tbM, els.taU, els.taM].forEach(t => t.innerHTML = '');
+  // turn-based
+  seg(els.tbU, 'user',   0, 25, 'speak');
+  seg(els.tbU, 'silent', 30, 25, '');
+  seg(els.tbU, 'user',  60, 20, 'speak');
+  seg(els.tbU, 'silent',85, 15, '');
+  seg(els.tbM, 'silent', 0, 25, '');
+  seg(els.tbM, 'model', 30, 25, 'generate');
+  seg(els.tbM, 'silent',60, 20, '');
+  seg(els.tbM, 'model', 85, 15, 'generate');
+  // time-aligned
+  seg(els.taU, 'user',  0, 100, 'continuous input');
+  seg(els.taM, 'model', 0, 100, 'continuous output');
+  // 200ms ticks
+  for (let i = 1; i < 10; i++) {
+    const t1 = document.createElement('div');
+    t1.style.cssText = `position:absolute; left:${i*10}%; top:0; bottom:0; width:1px; background:rgba(255,255,255,0.4); z-index:2;`;
+    els.taU.appendChild(t1);
+    els.taM.appendChild(t1.cloneNode());
+  }
+}
+
+function resetTimeline() {
+  if (tlTimer) tlTimer.forEach(t => clearTimeout(t));
+  tlTimer = [];
+  document.querySelectorAll('.tl-seg').forEach(s => s.classList.remove('on'));
+}
+
+function playTimeline() {
+  resetTimeline();
+  const order = [
+    [els.tbU.children[0], 0],
+    [els.tbM.children[0], 0],
+    [els.tbM.children[1], 500],
+    [els.tbU.children[1], 500],
+    [els.tbU.children[2], 1100],
+    [els.tbM.children[2], 1100],
+    [els.tbM.children[3], 1700],
+    [els.tbU.children[3], 1700],
+    [els.taU.children[0], 200],
+    [els.taM.children[0], 200],
+  ];
+  order.forEach(([el, t]) => {
+    if (!el) return;
+    tlTimer.push(setTimeout(() => el.classList.add('on'), t));
+  });
+}
+
+buildTimeline();
+
+// ============ Sequence ============
+const seqToks = document.querySelectorAll('#seq .tok');
+let seqTimer = null;
+function resetSeq() { if (seqTimer) clearInterval(seqTimer); seqToks.forEach(t => t.classList.remove('on')); }
+function playSeq() {
+  resetSeq();
+  let i = 0;
+  seqTimer = setInterval(() => {
+    if (i >= seqToks.length) { clearInterval(seqTimer); return; }
+    seqToks[i++].classList.add('on');
+  }, 220);
+}
+
+// ============ Benchmark ============
+function playBench() {
+  const bars = document.querySelectorAll('#bench-chart .bench-bar');
+  bars.forEach(b => b.style.width = '0');
+  setTimeout(() => {
+    bars.forEach((b, i) => {
+      setTimeout(() => { b.style.width = b.dataset.w + '%'; }, i * 110);
+    });
+  }, 50);
+}
+
+// ============ Auto-play on first view ============
+function obs(target, fn) {
+  const o = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { fn(); o.disconnect(); } });
+  }, { threshold: 0.35 });
+  o.observe(target);
+}
+obs(document.querySelector('#compare figure'), playTimeline);
+obs(document.querySelector('#micro figure'), playSeq);
+obs(document.getElementById('bench-chart'), playBench);
+
+// ============ Scroll progress ============
+const pb = document.getElementById('progressBar');
+window.addEventListener('scroll', () => {
+  const h = document.documentElement;
+  const p = (h.scrollTop) / (h.scrollHeight - h.clientHeight);
+  pb.style.width = (p * 100) + '%';
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>音频 token 化：RVQ vs Flow Matching · Topic</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">topics · audio-tokenization-rvq-vs-flow</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="topics">
+
+<header class="concept-header">
+  <span class="concept-badge cat-topic">Topic</span>
+  <h1>音频 token 化：RVQ vs Flow Matching</h1>
+</header>
+
+<article class="concept-body">
+<p>两条<strong>当前主流</strong>路线的对照。fish-speech 走前者，TML 走后者。</p>
+<h2>范式区别</h2>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>RVQ codec</th>
+<th>Flow Matching</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>表征</td>
+<td>离散 token（多 codebook 残差量化）</td>
+<td>连续向量场</td>
+</tr>
+<tr>
+<td>训练目标</td>
+<td>cross-entropy on token</td>
+<td>conditional flow matching loss（学速度场）</td>
+</tr>
+<tr>
+<td>推理</td>
+<td>AR 模型吐 token + decoder 重建 waveform</td>
+<td>ODE 求解 N 步采样</td>
+</tr>
+<tr>
+<td>端到端联训</td>
+<td>VQ 不可微，需 straight-through estimator</td>
+<td>干净，可微</td>
+</tr>
+<tr>
+<td>表达力</td>
+<td>受 codebook size 限制（量化误差）</td>
+<td>连续，无量化</td>
+</tr>
+<tr>
+<td>延迟</td>
+<td>单 step 吐多 codebook token → 取决于 codec 解码</td>
+<td>ODE 多步，每步矩阵乘</td>
+</tr>
+<tr>
+<td>跟 LLM 接口</td>
+<td>完美：token 序列直接喂 transformer</td>
+<td>需要 flow head 作为输出接口</td>
+</tr>
+<tr>
+<td>推理基建复用</td>
+<td>直接吃 SGLang / vLLM</td>
+<td>需要定制 sampler</td>
+</tr>
+</tbody>
+</table>
+<h2>选哪条的判断</h2>
+<p><strong>RVQ 适合</strong>：</p>
+<ul>
+<li>服务化 TTS（fish-speech 场景）—— 想直接复用 LLM 推理栈</li>
+<li>训练数据量大、想 scale 到多语言</li>
+<li>工程复杂度低优先</li>
+</ul>
+<p><strong>Flow matching 适合</strong>：</p>
+<ul>
+<li>实时双向交互（TML 场景）—— 想跟主 transformer 端到端联训</li>
+<li>模型容量很大、能 carry flow head</li>
+<li>音质上限优先</li>
+</ul>
+<h2>我的解读</h2>
+<p><strong>这是工程取舍而不是理论优劣</strong>。</p>
+<p>fish-speech 选 RVQ 是因为它要"做最好的离线 TTS 同时极致流式"。"跟标准 LLM 同构"这条让他们直接吃 SGLang 红利 → 工程 ROI 极高。</p>
+<p>TML 选 flow matching 是因为它要"做实时双向对话"。flow head 端到端可微 → 音频生成质量随主模型 scaling 自然涨，不被 codec 拖后腿。</p>
+<p>如果哪天 fish-speech 团队也做实时双向（不只是流式 TTS），他们大概率也会切到 flow matching 或类似可微 head。</p>
+<h2>一个延展问题</h2>
+<p>RVQ codec 本身能不能也"端到端可微" 替代 straight-through？已经有人在做（RQ-VAE-Transformer、FunCodec 系列），但还没看到在 LLM 一体化训练里大规模用起来。值得跟踪。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/rvq-codec.html">rvq-codec</a> · 离散路线</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · 连续路线</li>
+<li><a href="../concepts/dmel.html">dmel</a> · TML 输入侧的离散化（不是 codec）</li>
+<li><a href="../papers/fish-speech-s2-pro.html">fish-speech-s2-pro</a> · RVQ 实例</li>
+<li><a href="../papers/interaction-models-tml.html">interaction-models-tml</a> · Flow matching 实例</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 7 处</span>
+  <ul><li><a href="../papers/dmel.html"><span class="cat">paper</span>dMel · 离散 Mel 频谱</a></li><li><a href="../papers/fish-speech-s2-pro.html"><span class="cat">paper</span>Fish Audio S2 Pro</a></li><li><a href="../papers/flow-matching.html"><span class="cat">paper</span>Flow Matching · 流匹配</a></li><li><a href="../concepts/dmel.html"><span class="cat">concept</span>dMel · 离散 Mel 频谱</a></li><li><a href="../concepts/flow-matching.html"><span class="cat">concept</span>Flow Matching · 流匹配</a></li><li><a href="../concepts/rvq-codec.html"><span class="cat">concept</span>RVQ Codec · 残差向量量化</a></li><li><a href="../threads/open-questions.html"><span class="cat">thread</span>待回答的问题（attached: 每个都该新开一页）</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/topics/audio-tokenization-rvq-vs-flow.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>
