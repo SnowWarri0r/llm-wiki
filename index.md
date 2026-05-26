@@ -31,6 +31,7 @@
   - [Ch07 · Freedom](wiki/books/pom-ch07-freedom.md) — 钱最高的红利是对时间的控制权，不是物质
   - [Ch08 · Man in the Car Paradox](wiki/books/pom-ch08-man-in-the-car-paradox.md) — 你想用钱买 admiration，但别人在看你的东西，不在看你
   - [Ch09 · Wealth is What You Don't See](wiki/books/pom-ch09-wealth-is-what-you-dont-see.md) — 财富 = 你没花掉的钱；看着有钱的大多数只是在花钱
+  - [Ch10 · Save Money](wiki/books/pom-ch10-save-money.md) — 财富 = 收入 − 虚荣心；存钱不需要理由
 
 ## Topics · 综合
 
