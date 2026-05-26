@@ -369,3 +369,17 @@ skill 更新:
   - Fig 05 · 谁在用 RoPE (16 个 model chip grid)
   - glossary 12 条全有正文跳转 (审计通过)
   - sym-hint: 频率公式拆解 + 点积结果拆解
+
+## [2026-05-25] ingest | Whisper · Robust Speech Recognition
+
+- wiki/papers/whisper.md: paper md (Radford et al. 2022, arXiv 2212.04356)
+- wiki/concepts/weak-supervision-at-scale.md: 弱监督核心策略 (米其林 vs 民间厨师类比)
+- wiki/concepts/multitask-speech.md: 一个模型多任务, 靠 token 切换
+- wiki/concepts/log-mel-spectrogram.md: 更新 sources 加 whisper
+- docs/papers/whisper.html: bespoke HTML, moss accent, 4 figures:
+  - Fig 01 · 数据规模对比 (960h LibriSpeech vs 680Kh Whisper, 700×)
+  - Fig 02 · 架构 (音频→log-mel→encoder→decoder→文本 flow)
+  - Fig 03 · 多任务 (4 task cards: 转录/翻译/语言识别/时间戳)
+  - Fig 04 · 模型尺寸 (Tiny 39M → Large 1550M table)
+  - glossary 12 条全有跳转
+- 历史定位: 语音领域的 GPT 时刻 + Whisper encoder 成为语音 foundation model
