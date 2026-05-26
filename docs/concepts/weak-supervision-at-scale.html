@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Weak Supervision at Scale · 大规模弱监督 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · weak-supervision-at-scale</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Weak Supervision at Scale · 大规模弱监督</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>不花钱请人标数据，用互联网上天然存在的"音频 + 自动字幕"配对 —— 质量差但量大，最终效果碾压精标小数据。</p>
+<h2>直觉</h2>
+<p>传统 ASR 训练方式：请一群人听录音打字，一小时录音标注成本几十到几百美元。标得很准（强监督），但量上不去 —— 世界上最大的公开精标数据集 LibriSpeech 也就 960 小时。</p>
+<p>Whisper 换了一套：互联网上到处是"视频 + 自动生成字幕"的配对（YouTube / 播客 / 新闻），字幕可能有错、不全、甚至是机器翻译的。但它们<strong>免费、海量、多样</strong> —— 最终收了 68 万小时，比 LibriSpeech 多 700 倍。</p>
+<p>类比：</p>
+<ul>
+<li><strong>强监督</strong> = 请了一位米其林厨师教你做 10 道菜，每道教得很细 → 你做这 10 道很好，换一道就不会</li>
+<li><strong>弱监督</strong> = 看了 10000 个民间厨师的短视频，很多步骤拍糊了、调料量说不清 → 你每道都不完美，但<strong>什么菜你都敢下手，鲁棒性极强</strong></li>
+</ul>
+<p>工程上更准的类比：在有噪声的数据上训大模型 = <strong>用 dropout 训神经网络</strong> —— 噪声本身就是正则化手段。</p>
+<h2>怎么做的</h2>
+<ol>
+<li>从互联网上收集"音频 + 文本配对"（不人工标注）</li>
+<li>过滤明显不靠谱的（语言不匹配、文本太短、音频静音）</li>
+<li>保留的配对里文本可能有错 → 没关系，量足够大时模型能学出"多数正确"的分布</li>
+<li>用标准 encoder-decoder Transformer 在这些数据上直接训</li>
+<li>最终模型不在任何目标测试集上 finetune → zero-shot 跑</li>
+</ol>
+<h2>为什么管用</h2>
+<p><strong>噪声在大规模下是可以被平均掉的</strong>。</p>
+<p>如果 1000 条训练样本里有 50 条字幕是错的（5% 噪声率），模型在这 50 条上学到的是噪声，在其他 950 条上学到的是信号。只要信号量 &gt;&gt; 噪声量，模型的期望输出就趋向正确。</p>
+<p>精标小数据反而有另一个问题：<strong>不够多样</strong>。LibriSpeech 主要是美式英语的朗读语音 —— 模型在这上面训得再好，碰到印度口音 / 街头采访 / 方言 / 背景噪声就完蛋。Whisper 的 68 万小时覆盖了 99 种语言 + 各种说话场景，模型被迫学会应对所有情况。</p>
+<h2>跟 GPT-3 的关系</h2>
+<p>一模一样的哲学：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>GPT-3</th>
+<th>Whisper</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>领域</td>
+<td>文本</td>
+<td>语音</td>
+</tr>
+<tr>
+<td>数据</td>
+<td>Common Crawl 互联网文本（巨量 + 带噪声）</td>
+<td>互联网音频 + 自动字幕（巨量 + 带噪声）</td>
+</tr>
+<tr>
+<td>架构</td>
+<td>标准 Transformer decoder</td>
+<td>标准 Transformer encoder-decoder</td>
+</tr>
+<tr>
+<td>核心</td>
+<td><strong>量大力飞</strong></td>
+<td><strong>量大力飞</strong></td>
+</tr>
+<tr>
+<td>作者</td>
+<td>Alec Radford et al. (OpenAI)</td>
+<td>Alec Radford et al. (OpenAI)</td>
+</tr>
+</tbody>
+</table>
+<p>连第一作者都是同一个人。</p>
+<h2>代码出处</h2>
+<ul>
+<li>原论文：Radford et al. 2022, arXiv 2212.04356</li>
+<li>开源实现：github.com/openai/whisper</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/whisper.html">whisper</a> · 论文</li>
+<li><a href="../concepts/scaling-laws.html">scaling-laws</a> · 量大力飞的数学基础</li>
+<li><a href="../concepts/in-context-learning.html">in-context-learning</a> · GPT-3 也是靠数据多样性涌现能力</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/whisper.html"><span class="cat">paper</span>Whisper · Robust Speech Recognition via Large-Scale Weak Supervision</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/weak-supervision-at-scale.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

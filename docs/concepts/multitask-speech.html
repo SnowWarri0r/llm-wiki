@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Multitask Speech · 一个模型干多件事 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · multitask-speech</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Multitask Speech · 一个模型干多件事</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>Whisper 一个模型同时做语音转录、语音翻译、语言识别、时间戳对齐 —— 全靠输入序列里的<strong>特殊 token</strong> 区分任务，不改架构。</p>
+<h2>直觉</h2>
+<p>以前 ASR 系统是一个任务一个模型（识别用一个、翻译用一个、语言检测用一个）。Whisper 把所有任务塞进同一个 encoder-decoder —— 怎么做到的？</p>
+<p>核心思路跟 GPT 系列一脉相承：<strong>用输入格式编码任务</strong>。</p>
+<p>Whisper 的 decoder 输入序列长这样：</p>
+<pre><code>&lt;|startoftranscript|&gt; &lt;|zh|&gt; &lt;|transcribe|&gt; &lt;|notimestamps|&gt; 你好世界&lt;|endoftext|&gt;
+</code></pre>
+<pre><code>&lt;|startoftranscript|&gt; &lt;|zh|&gt; &lt;|translate|&gt; &lt;|notimestamps|&gt; hello world&lt;|endoftext|&gt;
+</code></pre>
+<p>第一条：中文语音 → 转录中文文字。
+第二条：中文语音 → 翻译成英文。</p>
+<p><strong>唯一差别是 <code>&lt;|transcribe|&gt;</code> 换成了 <code>&lt;|translate|&gt;</code></strong> —— 同一个模型，同一份权重，靠这个 token 切换任务。</p>
+<h2>怎么做的</h2>
+<table>
+<thead>
+<tr>
+<th>特殊 token</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;\|startoftranscript\|&gt;</code></td>
+<td>序列开始</td>
+</tr>
+<tr>
+<td><code>&lt;\|zh\|&gt;</code> / <code>&lt;\|en\|&gt;</code> / ...</td>
+<td>语言标签（99 种语言）</td>
+</tr>
+<tr>
+<td><code>&lt;\|transcribe\|&gt;</code></td>
+<td>任务 = 语音转文字（保持原语言）</td>
+</tr>
+<tr>
+<td><code>&lt;\|translate\|&gt;</code></td>
+<td>任务 = 语音翻译成英文</td>
+</tr>
+<tr>
+<td><code>&lt;\|notimestamps\|&gt;</code></td>
+<td>不输出时间戳</td>
+</tr>
+<tr>
+<td><code>&lt;\|0.00\|&gt;</code> <code>&lt;\|0.50\|&gt;</code> ...</td>
+<td>时间戳 token（每 30ms 一个）</td>
+</tr>
+<tr>
+<td><code>&lt;\|endoftext\|&gt;</code></td>
+<td>序列结束</td>
+</tr>
+</tbody>
+</table>
+<p>训练时所有任务的数据混在一起，模型学会根据开头的 token 组合决定"这次要干嘛"。</p>
+<h2>为什么这种设计好</h2>
+<ol>
+<li><strong>共享表示</strong>：语音识别和语音翻译共享 encoder —— 学到的语音特征能同时服务两个任务</li>
+<li><strong>零额外架构</strong>：不需要给每个任务加 head，所有输出都是 text token</li>
+<li><strong>组合灵活</strong>：新语言 / 新任务只需加新的 special token + 训练数据</li>
+<li><strong>跟 GPT 输入格式思路一致</strong>：<a href="../concepts/input-transformations.html">input-transformations</a>（GPT-1 那篇）就是用文本格式编码任务结构的鼻祖</li>
+</ol>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/whisper.html">whisper</a> · 论文</li>
+<li><a href="../concepts/input-transformations.html">input-transformations</a> · GPT-1 的任务格式编码</li>
+<li><a href="../concepts/transformer-architecture.html">transformer-architecture</a> · encoder-decoder 架构</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/whisper.html"><span class="cat">paper</span>Whisper · Robust Speech Recognition via Large-Scale Weak Supervision</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/multitask-speech.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>
