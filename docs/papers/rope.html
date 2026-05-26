@@ -363,7 +363,9 @@ out_odd  = x_even × sin(m × θ_i) + x_odd × cos(m × θ_i)
 
 <h3>远距离自动衰减</h3>
 
-<p>RoPE 还有一个好性质 —— 当 |m−n| 越大（两个 token 越远），d/2 个频率的 cos 值<strong>互相抵消</strong>（就像很多不同频率的波叠在一起，远处振幅趋向零）。</p>
+<p>RoPE 还有一个好性质 —— 当 |m−n| 越大（两个 token 越远），位置对 attention score 的贡献<strong>自动变弱</strong>。</p>
+
+<p>直觉用<strong>拔河</strong>想：d/2 个频率 = d/2 根绳子，每根给一个 cos 值（+1 到 -1 之间）。距离近时所有 cos 都接近 +1（小角度 cos ≈ 1），32 根绳子朝同一方向拉 → 合力大 → 位置信号强。距离远时每根绳子的 cos 值正负各异（有的 +0.3，有的 -0.7），朝左朝右互相抵消 → 合力趋近于零 → 位置信号弱。<strong>距离越远，绳子方向越"各说各话"，加起来越接近零</strong>。</p>
 
 <p>结果：RoPE <strong>自带一个软窗口效应</strong><a class="jr" href="#g-10">10</a> —— 不需要显式 mask，模型就会天然更关注近处。这跟语言的直觉一致 —— 离你越远的词对你影响越小。</p>
 
@@ -444,7 +446,7 @@ out_odd  = x_even × sin(m × θ_i) + x_odd × cos(m × θ_i)
     <li id="g-07"><span class="term">多频率 = 多尺度位置指纹</span> · 跟 sinusoidal PE 的多频率设计一脉相承 —— 低频捕捉长距离关系（段落级），高频捕捉短距离关系（词级）。合在一起给每个位置一个唯一的"频率指纹"。区别是 sinusoidal PE 把这个指纹<strong>加到</strong> embedding，RoPE 把它做成<strong>旋转角度</strong>。</li>
     <li id="g-08"><span class="term">元素级实现</span> · 真实实现不会构造旋转矩阵做矩阵乘法（太慢），而是直接用 sin/cos 值做 element-wise 的重排：out_even = x_even×cos − x_odd×sin, out_odd = x_even×sin + x_odd×cos。跟 Flash Attention 完全兼容，几乎没有额外开销。</li>
     <li id="g-09"><span class="term">正交变换 · 保角性</span> · 2D 旋转是正交变换（orthogonal transformation）—— 保持向量长度不变，保持两个向量之间的夹角不变。这意味着旋转不会破坏 Q 和 K 的原始语义相似度，只是在点积里多加一个位置相关的偏移。</li>
-    <li id="g-10"><span class="term">远距离自动衰减</span> · d/2 个频率的 cos 值在 |m−n| 较大时互相抵消（destructive interference），导致位置对 attention score 的贡献随距离下降。RoPE 自带这个"软窗口"效应，不需要显式 mask。跟语言的直觉一致 —— 离你越远的词影响越小。</li>
+    <li id="g-10"><span class="term">远距离自动衰减</span> · 拔河类比：d/2 个频率 = d/2 根绳子。距离近时所有绳子朝同一方向拉（cos 都接近 +1），合力大；距离远时正负各异互相抵消，合力趋近于零。RoPE 自带这个"软窗口"效应，不需要显式 mask。跟语言的直觉一致 —— 离你越远的词影响越小。</li>
     <li id="g-11"><span class="term">苏剑林 · Jianlin Su</span> · RoPE 的第一作者，中国 NLP 开发者。这篇论文是中文 NLP 社区对全球 LLM 基础设施的重要贡献 —— 2024 年几乎所有新 LLM 的位置编码都用 RoPE 或其变体。</li>
     <li id="g-12"><span class="term">上下文扩展 · NTK-aware / YaRN</span> · RoPE 训练 4K 上下文直接推理 32K 会崩。后续方法通过调整旋转频率来扩展窗口：NTK-aware scaling 按信息论原则重新分配高/低频带宽，YaRN 进一步做分段插值。实践中可以从 4K 扩到 128K+。这条线还在快速演进。</li>
   </ol>
