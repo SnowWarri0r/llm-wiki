@@ -1074,6 +1074,22 @@ input = embedding(token) + PE(pos)</code></pre>
   <li><strong>Positional encoding 是工程妥协，不是终极方案</strong>。论文用 sinusoidal PE 是没办法 —— 给 attention 补一个位置感。后续 RoPE / ALiBi 等改进证明这个位置注入方式可以更优雅。任何"attention 的位置信息怎么搞"是后续 10 年还在被改的方向。</li>
 </ol>
 
+<!-- ============ training vs inference ============ -->
+<h2><span class="num">§ 06</span>训练 vs 推理 · 同一个架构两种跑法</h2>
+
+<p>这篇论文画了架构图但<strong>没讲训练和推理时数据流有什么不同</strong>。差异全在 decoder 那一半：</p>
+
+<p><strong>训练时 · Teacher Forcing</strong>：decoder 的输入是<strong>正确答案往右移一位</strong>（[BOS] + ground truth）。所有位置并行算 loss —— decoder 在"作弊"（看得见正确答案），所以能并行、很快。</p>
+
+<p><strong>推理时 · 自回归</strong>：decoder 每次只吐一个 token，喂回去再吐下一个。N 个 token 跑 N 步，每步等上一步。这就是为什么翻译模型"一个词一个词蹦出来"。</p>
+
+<p><strong>Encoder 不受影响</strong> —— 训练和推理都是一次性并行处理整个源序列。差异只在 decoder。</p>
+
+<div class="note">
+  <span class="l">详细对比 · 三种架构</span>
+  <p>Encoder-Decoder / Decoder-Only / Encoder-Only 的训练和推理对比 + teacher forcing / causal mask / KV cache 全景 → <a href="../topics/training-vs-inference.html">训练 vs 推理 · 全景对比</a></p>
+</div>
+
 <!-- ============ glossary ============ -->
 <section class="glossary" id="glossary">
 
