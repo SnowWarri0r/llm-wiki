@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Language Modeling as Multitask Learning · LM 即多任务学习 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · language-modeling-as-multitask</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Language Modeling as Multitask Learning · LM 即多任务学习</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>GPT-2 论文标题点破的核心 thesis：训练 LM 预测下一词的过程<strong>已经在学无数个具体任务</strong>，多任务能力是预训练的天然副产品。</p>
+<h2>直觉</h2>
+<p>传统 NLP 把任务理解为离散的：分类是分类、翻译是翻译、问答是问答。每个任务一份数据集一份标注一份模型。</p>
+<p>GPT-2 论文标题：<strong>"Language Models are Unsupervised Multitask Learners"</strong> —— 这是对范式的彻底重新框定。</p>
+<p><strong>核心论点</strong>：互联网文本本身就<strong>充满任务示例</strong>。比如：</p>
+<ul>
+<li>一篇博客文章末尾的 "TL;DR: ..." → 训练 LM 时模型学到 "看到 TL;DR: 就要总结上文"。这是一个隐式的<strong>摘要任务样本</strong></li>
+<li>"English: Hello. French: Bonjour." → 翻译任务样本</li>
+<li>"Q: ... A: ..." → 问答任务样本</li>
+<li>"Review: ... Sentiment: positive" → 分类任务样本</li>
+</ul>
+<p>互联网这种<strong>无标注</strong>文本里，每种任务有几百万到几十亿个隐式样本。LM 训练时每个 token 位置预测下一词，本质上是在<strong>同时</strong>学语法 + 常识 + 翻译 + 摘要 + QA + 分类 + ... 上万种任务。</p>
+<p>类比：传统 NLP 是"专科医生"训练 —— 每个科室单独培养。GPT-2 视角是"全科医生"训练 —— 让一个人读完海量医学文献，他自然学会各科室的常识。</p>
+<h2>怎么"读懂"训练数据</h2>
+<p>模型在<strong>预测下一词</strong>这个单一目标下：</p>
+<pre><code>... 文章 ... TL;DR: [predict next token]
+                    ↑ 这里预测的就是&quot;摘要的第一个词&quot;
+                    模型必须先在内部&quot;理解&quot;文章
+                    才能预测出合理的总结开头
+</code></pre>
+<p>每个这种格式的 sample 都让模型学到一点点"看到 TL;DR: 就该总结"的映射。WebText 里有数百万这种例子，模型学到了。</p>
+<p>同理：</p>
+<ul>
+<li>看到 <code>english: X french:</code> 后续 → 学翻译</li>
+<li>看到 <code>Q: X A:</code> 后续 → 学问答</li>
+<li>...</li>
+</ul>
+<p>所以<strong>预训练 = 万任务隐式监督学习</strong>。任务的种类不是训练时显式指定的，是<strong>从数据分布里浮现的</strong>。</p>
+<h2>为什么这个 thesis 重要</h2>
+<ol>
+<li><strong>解释了为什么大 LM 能 zero-shot</strong>：模型预训练时已经隐式学过这个任务，prompt 只是触发已有能力，不是教新东西</li>
+<li><strong>预言了 scaling laws</strong>：更多数据 + 更大模型 → 模型能"覆盖"更多任务类型 + 每种学得更细</li>
+<li><strong>奠定 prompt engineering 的合理性</strong>：好的 prompt = 找到预训练时模型见过的"任务格式"信号</li>
+<li><strong>暗示了 instruction tuning</strong>：如果普通 LM 预训练已经在学多任务，那么用<strong>更整齐的"指令-回答"对</strong>训一遍（InstructGPT/ChatGPT 做的事）应该效果更好 —— 后来证实了</li>
+</ol>
+<h2>它的局限</h2>
+<p>"LM 即多任务学习"是个有用的 frame，但<strong>不是所有任务都能从纯 LM 里浮现</strong>：</p>
+<ul>
+<li>需要复杂多步推理的任务 → CoT prompting / 显式 RL 训练能加强</li>
+<li>需要工具使用的任务 → 要专门 finetune（如 Toolformer / function calling）</li>
+<li>需要遵循指令的任务 → 要 instruction tuning + RLHF（GPT-3.5 → ChatGPT 那一步）</li>
+</ul>
+<p>所以现代 LLM 的训练 = LM 预训练（多任务学习的隐式版） + 指令微调（多任务学习的显式版） + RLHF（用人类反馈对齐）。GPT-2 立的 thesis 是<strong>第一步</strong>，后续两步是工程上的强化。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/gpt-2.html">gpt-2</a> · 提出</li>
+<li><a href="../concepts/causal-language-model.html">causal-language-model</a> · 多任务学习的载体</li>
+<li><a href="../concepts/zero-shot-transfer.html">zero-shot-transfer</a> · 这个 thesis 的直接应用</li>
+<li><a href="../concepts/in-context-learning.html">in-context-learning</a> · GPT-3 把这个 thesis 推到极致</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/gpt-2.html"><span class="cat">paper</span>GPT-2 · Language Models are Unsupervised Multitask Learners</a></li><li><a href="../concepts/in-context-learning.html"><span class="cat">concept</span>In-Context Learning · ICL · 在 prompt 里现学</a></li><li><a href="../concepts/zero-shot-transfer.html"><span class="cat">concept</span>Zero-Shot Transfer · 不 finetune 直接用 prompt 触发任务</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/language-modeling-as-multitask.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

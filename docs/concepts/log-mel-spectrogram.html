@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Log-Mel Spectrogram · 对数 Mel 频谱图 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · log-mel-spectrogram</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Log-Mel Spectrogram · 对数 Mel 频谱图</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把 1D 音频波形转成 2D <code>[频道 × 时间]</code> 的能量矩阵 —— 跟人耳听到的"哪个时刻、哪个频段、有多响"对应。</p>
+<h2>直觉</h2>
+<p>波形是 1D 信号（每个采样点一个浮点数，16kHz 采样率 = 每秒 16000 个值）。直接喂 transformer 太长（10 秒音频 = 160000 token）。</p>
+<p>Mel spectrogram 做<strong>降维 + 人耳化</strong>：</p>
+<ul>
+<li>切短时窗（如 25ms）</li>
+<li>每窗做 FFT → 频率分布</li>
+<li>把频率轴换成 Mel scale（对数轴 · 人耳感知）</li>
+<li>取每个 Mel band 的能量</li>
+<li>取对数（log）让动态范围合理</li>
+</ul>
+<p>结果：<strong><code>[80 mel bands × N frames]</code></strong>，10 秒音频 → 80 × 1000 ≈ 80000 个浮点数，<strong>压缩 2 倍</strong>，更结构化。</p>
+<p>每个 cell 是 "这一帧（10ms 左右）这个频段（如 1.2kHz 附近）的 log 能量"。</p>
+<h2>为什么用 Mel 而不是 Hz</h2>
+<p>人耳对频率是<strong>对数感知</strong>：100Hz → 200Hz 跟 1000Hz → 2000Hz 听起来都是"高了一个八度"。Mel scale 把 Hz 转成感知一致的轴。</p>
+<p>公式（简化）：</p>
+<pre><code>mel(f) = 2595 · log10(1 + f / 700)
+</code></pre>
+<p>低频段密、高频段疏 —— 跟人耳分辨率匹配。</p>
+<h2>为什么取 log</h2>
+<p>原始能量值范围巨大（10⁻⁸ 到 10⁰ 都常见）。取 log 后压缩到 [-8, 0] 范围 —— 神经网络喜欢这种动态范围。</p>
+<h2>跟 raw waveform 的对比</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>raw waveform</th>
+<th>log-mel spectrogram</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>维度</td>
+<td>1D 长序列</td>
+<td>2D 短矩阵</td>
+</tr>
+<tr>
+<td>长度</td>
+<td>16000/秒</td>
+<td>100/秒（10ms 帧）</td>
+</tr>
+<tr>
+<td>跟人耳对齐</td>
+<td>不（线性频率）</td>
+<td>是（Mel scale）</td>
+</tr>
+<tr>
+<td>信息完整度</td>
+<td>100%</td>
+<td>~95%（高频细节略损）</td>
+</tr>
+<tr>
+<td>主流应用</td>
+<td>end-to-end 模型（如 WaveNet 输入）</td>
+<td>TTS / ASR / speech LLM</td>
+</tr>
+</tbody>
+</table>
+<p>现代 speech LLM 几乎都用 log-mel 输入。raw waveform 太长且不结构化。</p>
+<h2>dMel 在这之上做什么</h2>
+<p>log-mel 仍是连续值（浮点）。dMel 把每个 cell 按 16 bin 量化 → 整张 spectrogram 变成 <code>[80 × N]</code> 的 bin index 矩阵 → 每个 index 是 token。送 LLM。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/dmel.html">dmel</a> · 用它的论文</li>
+<li><a href="../concepts/bin-quantization.html">bin-quantization</a> · dMel 在它上面做的事</li>
+<li><a href="../concepts/rvq-codec.html">rvq-codec</a> · 对照的另一种"音频 → token"路线</li>
+<li><a href="../papers/interaction-models-tml.html">interaction-models-tml</a> · 应用</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/dmel.html"><span class="cat">paper</span>dMel · 离散 Mel 频谱</a></li><li><a href="../concepts/bin-quantization.html"><span class="cat">concept</span>Bin Quantization · 等距分箱量化</a></li><li><a href="../concepts/dmel.html"><span class="cat">concept</span>dMel · 离散 Mel 频谱</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/log-mel-spectrogram.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

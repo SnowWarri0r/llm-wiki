@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>KV Cache · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · kv-cache</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>KV Cache</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>Transformer 每层 attention 算过的 Key / Value 矩阵存下来，下一个 token 直接复用，不重算前面所有 token。</p>
+<h2>直觉</h2>
+<p>Attention 公式里 Query 是"当前 token 在问什么"，Key/Value 是"序列里每个位置存了什么"。一次推理一个 token 时，Key/Value 是前缀全部 token 的，重新算一遍 O(N²) 浪费。KV cache 把它存下来，每步只新增当前 token 的 K/V 拼上去 → O(N) per step。</p>
+<h2>关键场景</h2>
+<ul>
+<li><strong>长序列推理</strong>：核心瓶颈 = KV cache 内存（每层 × N token × hidden_dim × 2）</li>
+<li><strong>流式会话</strong>（fish-speech / TML 都用）：cache 在 GPU 内存里持久存在，每个新 chunk 追加；不重分配 = 省 latency</li>
+<li><strong>batched 推理</strong>：paged KV cache（vLLM/SGLang）让多个 session 共享 GPU 内存池</li>
+<li><strong>prefix sharing</strong>：相同 prompt prefix 复用 cache（RadixAttention）</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/prefill-decode.html">prefill-decode</a> · prefill 阶段填 cache、decode 阶段读 cache</li>
+<li><a href="../concepts/split-kv.html">split-kv</a> · 切 cache 沿序列维并行算</li>
+<li><a href="../concepts/micro-turn.html">micro-turn</a> · 200ms chunk 模式下持久 cache 的关键</li>
+<li><a href="../concepts/sglang-inference.html">sglang-inference</a> · fish-speech 复用的推理栈</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 8 处</span>
+  <ul><li><a href="../papers/fish-speech-s2-pro.html"><span class="cat">paper</span>Fish Audio S2 Pro</a></li><li><a href="../papers/interaction-models-tml.html"><span class="cat">paper</span>Interaction Models · Thinking Machines Lab</a></li><li><a href="../papers/rope.html"><span class="cat">paper</span>RoFormer · Rotary Position Embedding (RoPE)</a></li><li><a href="../concepts/micro-turn.html"><span class="cat">concept</span>Micro-Turn · 200ms 微回合</a></li><li><a href="../concepts/prefill-decode.html"><span class="cat">concept</span>Prefill / Decode</a></li><li><a href="../concepts/rotary-position-embedding.html"><span class="cat">concept</span>Rotary Position Embedding · RoPE · 旋转位置编码</a></li><li><a href="../concepts/sglang-inference.html"><span class="cat">concept</span>SGLang Inference</a></li><li><a href="../concepts/split-kv.html"><span class="cat">concept</span>Split-KV · 沿 KV 序列切分 attention</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/kv-cache.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

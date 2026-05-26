@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Encoder-Only Paradigm · 编码器路线 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · encoder-only-paradigm</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Encoder-Only Paradigm · 编码器路线</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>只用 Transformer 的 encoder 部分（双向 self-attention，没有 causal mask），目标是<strong>产生表征</strong>而不是<strong>生成 token</strong>。</p>
+<h2>直觉</h2>
+<p>Transformer 原论文是 encoder-decoder（翻译任务）。2018 三条路同时出现：</p>
+<ul>
+<li><strong>encoder-only</strong>：BERT · 双向 attention · 输出表征 → 理解任务</li>
+<li><strong>decoder-only</strong>：GPT · 因果 mask · 输出下一 token → 生成任务</li>
+<li><strong>encoder-decoder</strong>：T5 / BART · 两边都有 · 输入序列 → 输出序列任务（翻译、摘要）</li>
+</ul>
+<p>Encoder-only 的核心选择是 <strong>"双向"换"不能生成"</strong> —— 它能看到每个位置左右的全部上下文，所以表征精确；代价是无法做自回归生成。</p>
+<h2>结构差异</h2>
+<p><strong>BERT encoder layer</strong>（双向）：</p>
+<pre><code>y = LayerNorm(x + MultiHeadAttention(x, x, x))   # 没 mask，所有位置互看
+y = LayerNorm(y + FFN(y))
+</code></pre>
+<p><strong>GPT decoder layer</strong>（因果）：</p>
+<pre><code>y = LayerNorm(x + MaskedMultiHeadAttention(x, x, x))  # causal mask
+y = LayerNorm(y + FFN(y))
+</code></pre>
+<p>差别只在 attention 的 mask。<strong>架构几乎一样，训练目标决定一切</strong>。</p>
+<h2>各代表</h2>
+<ul>
+<li><strong>BERT</strong> (2018) · 12/24 层 encoder</li>
+<li><strong>RoBERTa</strong> (2019) · 同 BERT 结构，去 NSP，扩数据</li>
+<li><strong>ALBERT</strong> (2020) · 跨层参数共享，参数省 18×</li>
+<li><strong>DeBERTa</strong> (2021) · 解耦 attention 的位置和内容</li>
+<li><strong>DistilBERT / TinyBERT</strong> · 压缩</li>
+<li><strong>ELECTRA</strong> (2020) · MLM 换成 replaced-token-detection，效率高</li>
+</ul>
+<h2>现在还活着吗</h2>
+<p><strong>不在前沿语言模型里。</strong> 2020 GPT-3 之后，decoder-only 用 in-context learning 几乎可以做所有任务，连分类都不用专门 finetune。</p>
+<p>但是在两个领域活得很好：</p>
+<ul>
+<li><strong>嵌入 / 检索 / RAG</strong>：BGE / E5 / Cohere-Embed 几乎都基于 BERT。decoder-only 算嵌入慢、不双向</li>
+<li><strong>小型分类 / NER / 信息抽取</strong>：finetune 一个 BERT 比 prompt 一个 decoder-only 便宜得多</li>
+</ul>
+<h2>跟 decoder-only 的根本对照</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>encoder-only</th>
+<th>decoder-only</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Attention</td>
+<td>双向</td>
+<td>因果</td>
+</tr>
+<tr>
+<td>主任务</td>
+<td>还原 / 分类 / 表征</td>
+<td>生成下一 token</td>
+</tr>
+<tr>
+<td>训练信号密度</td>
+<td>稀疏（仅 mask 处）</td>
+<td>密集（每个位置）</td>
+</tr>
+<tr>
+<td>适合</td>
+<td>理解 / 检索</td>
+<td>生成 / 通用</td>
+</tr>
+<tr>
+<td>扩展性</td>
+<td>中等（330M 顶天就够用）</td>
+<td>极强（→ 100B+）</td>
+</tr>
+</tbody>
+</table>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/bert.html">bert</a> · encoder-only 代表</li>
+<li><a href="../papers/gpt-1.html">gpt-1</a> · decoder-only 对照</li>
+<li><a href="../concepts/self-attention.html">self-attention</a> · attention 的可见性差异是核心</li>
+<li><a href="../concepts/transformer-architecture.html">transformer-architecture</a> · 都是它的子集</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/bert.html"><span class="cat">paper</span>BERT · Bidirectional Encoder Representations from Transformers</a></li><li><a href="../concepts/decoder-only-paradigm.html"><span class="cat">concept</span>Decoder-Only Paradigm · 解码器路线</a></li><li><a href="../concepts/masked-language-model.html"><span class="cat">concept</span>Masked Language Model · MLM</a></li><li><a href="../concepts/next-sentence-prediction.html"><span class="cat">concept</span>Next Sentence Prediction · NSP</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/encoder-only-paradigm.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

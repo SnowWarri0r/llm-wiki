@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>RoPE · Rotary Position Embedding</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6;
+  --paper-2: #e8e0c8;
+  --paper-3: #faf4e1;
+  --paper-card: #f7f1de;
+  --ink: #181410;
+  --ink-2: #3a3128;
+  --muted: #7a6f5d;
+  --rule: #bfb398;
+  --brick: #9b2c2c;
+  --brick-soft: #efd6c8;
+  --ochre: #b8841c;
+  --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a;
+  --moss-soft: #d8e6ce;
+  --deep: #1f3a5f;
+  --deep-soft: #c8d4e2;
+  --accent: var(--ochre);
+  --accent-soft: var(--ochre-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body {
+  font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif;
+  font-size: 18px; line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply; opacity: 0.5;
+}
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead {
+  border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule);
+  padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px;
+}
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px;
+}
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1;
+  font-weight: 700; font-size: clamp(56px, 9vw, 96px); line-height: 0.92; letter-spacing: -0.035em; margin: 0 0 12px;
+}
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek {
+  font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36;
+  font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4;
+  color: var(--ink-2); max-width: 720px; margin: 16px 0;
+}
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 {
+  font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1;
+  font-weight: 700; font-size: 38px; letter-spacing: -0.02em; margin: 72px 0 20px;
+  display: flex; align-items: baseline; gap: 18px;
+}
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; letter-spacing: -0.01em; }
+p { margin: 12px 0; }
+strong { font-weight: 700; color: var(--ink); }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 15px; line-height: 1.7; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--ochre-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--ochre); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--ochre); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--ochre-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--brick-soft); } 100% { background: var(--ochre-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* === RoPE-specific figure styles === */
+.evo-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-top: 12px; }
+.evo-card { background: var(--paper-3); border: 1px solid var(--rule); border-radius: 6px; padding: 18px; text-align: center; }
+.evo-card.winner { border-color: var(--accent); border-width: 2px; background: var(--ochre-soft); }
+.evo-card .evo-icon { font-size: 36px; margin-bottom: 8px; display: block; }
+.evo-card .evo-name { font-family: 'Fraunces', serif; font-weight: 700; font-size: 18px; margin-bottom: 6px; }
+.evo-card .evo-desc { font-size: 14px; color: var(--ink-2); line-height: 1.5; }
+.evo-card .evo-era { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 1px; margin-top: 8px; }
+
+.clock-wrap { display: flex; justify-content: center; align-items: center; gap: 32px; flex-wrap: wrap; }
+.clock-label { font-family: 'JetBrains Mono', monospace; font-size: 12px; text-align: center; color: var(--ink-2); margin-top: 8px; }
+.clock-result { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: var(--accent); text-align: center; padding: 16px; }
+
+.freq-bar { display: flex; height: 48px; border-radius: 6px; overflow: hidden; border: 1px solid var(--rule); margin: 12px 0; }
+.freq-seg { flex: 1; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: white; font-weight: 700; letter-spacing: 0.5px; }
+
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 15px; margin: 16px 0; }
+.cmp-table th, .cmp-table td { padding: 10px 14px; border-bottom: 1px solid var(--rule); text-align: left; }
+.cmp-table th { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); background: var(--paper-3); }
+.cmp-table .yes { color: var(--moss); font-weight: 700; }
+.cmp-table .no { color: var(--brick); }
+.cmp-table .partial { color: var(--ochre); }
+.cmp-table tr.highlight { background: var(--ochre-soft); }
+
+.adopt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin: 12px 0; }
+.adopt-chip { background: var(--paper-3); border: 1px solid var(--rule); border-radius: 4px; padding: 10px 14px; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; text-align: center; }
+.adopt-chip.major { background: var(--ochre-soft); border-color: var(--accent); font-weight: 700; }
+
+.sym-hint { background: var(--paper-3); border-left: 3px solid var(--deep); padding: 14px 18px; margin: 18px 0; font-size: 15px; line-height: 1.7; }
+.sym-hint-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--deep); font-weight: 700; display: block; margin-bottom: 6px; }
+.sym-hint p { margin: 6px 0; }
+.sym-link { font-size: 13px; color: var(--muted); margin-top: 8px; }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · rope</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · arXiv 2104.09864 · 2021</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · POSITION ENCODING</div>
+  <h1 class="title">Rotary Position<br /><span class="em">Embedding.</span></h1>
+  <div class="byline">Jianlin Su · Yu Lu · Shengfeng Pan · et al. · 2021</div>
+  <p class="dek">不在输入层加位置向量，而是在每次 attention 时按位置旋转 Q 和 K —— 让点积天然包含相对位置信息。LLaMA、Mistral、Qwen 全在用。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>Transformer 的 attention 对顺序无感<a class="jr" href="#g-01">1</a>。原版 sinusoidal PE 在输入层一次性"加"位置，往深走信号就淡了<a class="jr" href="#g-02">2</a>。RoPE 换了一种做法 —— <strong>在每层 attention 计算时，按位置旋转 Q 和 K</strong><a class="jr" href="#g-03">3</a>。旋转之后做点积，结果里天然包含两个 token 的<strong>相对位置</strong><a class="jr" href="#g-04">4</a>。零额外参数，每层都有位置信号，远距离自动衰减，跟 KV cache<a class="jr" href="#g-05">5</a> 完美兼容。2024-2025 几乎所有新 LLM 都用 RoPE 或它的变体。</p>
+</div>
+
+
+<!-- ═══════════════════════════ §01 ═══════════════════════════ -->
+<h2><span class="num">§ 01</span>为什么需要新的 PE</h2>
+
+<p>Attention Is All You Need 那篇用 sinusoidal PE 解决"attention 不认识顺序"的问题<a class="jr" href="#g-02">2</a>。做法是给每个 token 的 embedding <strong>加</strong>一个位置向量，然后丢进 Transformer。</p>
+
+<p>这套方案用了好几年，但三个问题越来越明显：</p>
+
+<p><strong>1 · 位置信息随层数稀释</strong>。位置向量只在第 0 层加了一次，过了几层 attention + FFN 之后，位置信号在 residual stream 里被语义信号淹没。模型后半段几乎不知道 token 在哪。</p>
+
+<p><strong>2 · 编的是绝对位置</strong>。模型收到的是"你在 position 5""你在 position 8"，要自己做减法推出"你俩差 3 个"。能学会，但不直接。而自然语言里"差几个位置"几乎总是比"在第几个位置"更有意义<a class="jr" href="#g-04">4</a>。</p>
+
+<p><strong>3 · 长上下文外推差</strong>。训练时见过 512 长度，推理时给 2048 就开始抖。虽然 sin/cos 理论上能外推，实际效果不好。后来的 Learned PE（GPT-2 / BERT）直接训 embedding，更灵活但<strong>完全不能外推</strong> —— 没见过的 position id 没有对应 embedding。</p>
+
+<figure id="fig-evo">
+  <figcaption>
+    <span>Fig 01 · PE 三代</span>
+    <span class="fnum">加法 → 偏置 → 旋转</span>
+  </figcaption>
+  <div class="evo-grid">
+    <div class="evo-card">
+      <span class="evo-icon">➕</span>
+      <div class="evo-name">加法</div>
+      <div class="evo-desc">embedding + PE(pos)<br/>位置一次性注入输入层<br/>深层会稀释</div>
+      <div class="evo-era">SINUSOIDAL · LEARNED · 2017-2020</div>
+    </div>
+    <div class="evo-card">
+      <span class="evo-icon">📏</span>
+      <div class="evo-name">偏置</div>
+      <div class="evo-desc">attention score + f(距离)<br/>直接在 score 上加距离惩罚</div>
+      <div class="evo-era">T5 · ALiBi · 2019-2022</div>
+    </div>
+    <div class="evo-card winner">
+      <span class="evo-icon">🔄</span>
+      <div class="evo-name">旋转</div>
+      <div class="evo-desc">Rotate(Q, pos) · Rotate(K, pos)<br/>点积里天然含相对位置<br/><strong>零额外参数 · 每层都有</strong></div>
+      <div class="evo-era">RoPE · 2021 → 当前主流</div>
+    </div>
+  </div>
+</figure>
+
+<p>RoPE 是第三条路 —— 不加不偏，而是<strong>旋转</strong><a class="jr" href="#g-03">3</a>。它不改 attention 公式，只在算 Q·K^T 之前把 Q 和 K 各自按位置转一下。</p>
+
+
+<!-- ═══════════════════════════ §02 ═══════════════════════════ -->
+<h2><span class="num">§ 02</span>核心直觉 · 时钟指针</h2>
+
+<p>忘掉所有数学，先建立一个直觉。</p>
+
+<p>想象你手里有<strong>两根指针</strong>，一根代表 token A（在句子里第 m 个位置），一根代表 token B（第 n 个位置）。</p>
+
+<p>RoPE 做的事极简 —— <strong>把 A 的指针转 m 圈，把 B 的指针转 n 圈</strong>。</p>
+
+<p>现在你量两根指针之间的<strong>角度差</strong>：m − n 圈 = <strong>相对位置</strong><a class="jr" href="#g-04">4</a>。</p>
+
+<figure id="fig-clock">
+  <figcaption>
+    <span>Fig 02 · 时钟指针 · 相对位置</span>
+    <span class="fnum">角度差 = 位置差</span>
+  </figcaption>
+  <div class="clock-wrap">
+    <div>
+      <svg width="140" height="140" viewBox="0 0 140 140">
+        <circle cx="70" cy="70" r="60" fill="none" stroke="var(--rule)" stroke-width="2"/>
+        <circle cx="70" cy="70" r="3" fill="var(--ink)"/>
+        <!-- hand at ~150° (position 5 on 12-unit clock) -->
+        <line x1="70" y1="70" x2="40" y2="100" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/>
+        <text x="70" y="16" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--muted)">0</text>
+        <text x="130" y="74" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--muted)">3</text>
+        <text x="70" y="136" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--muted)">6</text>
+        <text x="10" y="74" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--muted)">9</text>
+      </svg>
+      <div class="clock-label">token A · position <strong>5</strong><br/>指针转了 5 格</div>
+    </div>
+    <div style="font-size:32px; color:var(--muted); padding: 0 8px;">−</div>
+    <div>
+      <svg width="140" height="140" viewBox="0 0 140 140">
+        <circle cx="70" cy="70" r="60" fill="none" stroke="var(--rule)" stroke-width="2"/>
+        <circle cx="70" cy="70" r="3" fill="var(--ink)"/>
+        <!-- hand at ~240° (position 8 on 12-unit clock) -->
+        <line x1="70" y1="70" x2="18" y2="40" stroke="var(--deep)" stroke-width="3" stroke-linecap="round"/>
+        <text x="70" y="16" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--muted)">0</text>
+        <text x="130" y="74" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--muted)">3</text>
+        <text x="70" y="136" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--muted)">6</text>
+        <text x="10" y="74" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--muted)">9</text>
+      </svg>
+      <div class="clock-label">token B · position <strong>8</strong><br/>指针转了 8 格</div>
+    </div>
+    <div style="font-size:32px; color:var(--muted); padding: 0 8px;">=</div>
+    <div style="min-width:120px;">
+      <div class="clock-result">角度差 = 3<br/><span style="font-size:14px; color:var(--ink-2);">= 相对位置</span></div>
+    </div>
+  </div>
+  <div style="text-align:center; margin-top:14px; font-size:15px; color:var(--ink-2);">
+    不管 A 在 position 5 还是 105 —— <strong>只要两人差 3 个位置，角度差永远一样</strong>。<br/>
+    不需要查表，不需要额外参数，不需要知道绝对位置。
+  </div>
+</figure>
+
+<p>你不需要知道 m 和 n 各自是多少 —— <strong>光看两根针的夹角就知道它们差几个位置</strong>。而且不管绝对位置怎么变（position 5 vs 8 跟 position 105 vs 108），差 3 个位置的指针夹角永远一样。</p>
+
+<p>这就是"旋转编码相对位置"的全部直觉。剩下的只是把这个 2D 指针扩展到 d 维。</p>
+
+
+<!-- ═══════════════════════════ §03 ═══════════════════════════ -->
+<h2><span class="num">§ 03</span>怎么做 · 多频率旋转</h2>
+
+<p>d 维向量不是"整体旋转"（那没意义）。实际做法：<strong>把 d 维拆成 d/2 对 2D 子空间<a class="jr" href="#g-06">6</a>，每对用不同的频率旋转</strong>。</p>
+
+<pre class="eq">d_model = 64  →  32 对 2D 子空间
+
+每对 i 的旋转频率:  θ_i = 1 / 10000^(2i / d)
+
+position m 的 token:
+  第 i 对子空间旋转角度 = m × θ_i
+
+→ 低频对(i 小) 转得慢, 对长距离位置敏感
+→ 高频对(i 大) 转得快, 对短距离位置敏感</pre>
+
+<div class="sym-hint">
+  <span class="sym-hint-label">📐 频率公式拆解</span>
+  <p>
+    <code>θ_i = 1 / 10000^(2i/d)</code> 跟 sinusoidal PE 用的是<strong>同一套频率</strong>。<br/>
+    <code>i=0</code> → θ = 1（最低频，转一圈要经过整个序列）<br/>
+    <code>i=d/2-1</code> → θ ≈ 1/10000（最高频，每走一步就转很多）<br/>
+    区别只是 sinusoidal PE 把 sin/cos <strong>加到</strong> embedding 上，RoPE 把 sin/cos 做成<strong>旋转矩阵乘到</strong> Q/K 上。
+  </p>
+  <p class="sym-link">→ 完整数学符号表：<a href="../concepts/math-symbols.html">math-symbols</a></p>
+</div>
+
+<figure id="fig-freq">
+  <figcaption>
+    <span>Fig 03 · 多频率频谱</span>
+    <span class="fnum">低频 → 高频</span>
+  </figcaption>
+  <div class="freq-bar">
+    <div class="freq-seg" style="background:#c06020;">θ₁</div>
+    <div class="freq-seg" style="background:#b06820;">θ₂</div>
+    <div class="freq-seg" style="background:#a07020;">θ₃</div>
+    <div class="freq-seg" style="background:#907820;">θ₄</div>
+    <div class="freq-seg" style="background:#708030;">θ₅</div>
+    <div class="freq-seg" style="background:#508840;">θ₆</div>
+    <div class="freq-seg" style="background:#309050;">θ₇</div>
+    <div class="freq-seg" style="background:#209858;">θ₈</div>
+  </div>
+  <div style="display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted); margin-top:4px;">
+    <span>← 低频 · 长距离 · 转得慢</span>
+    <span>高频 · 短距离 · 转得快 →</span>
+  </div>
+  <div style="display:flex; justify-content:space-between; font-size:14px; color:var(--ink-2); margin-top:10px;">
+    <span>🥁 低音鼓 · 标大拍（段落级）</span>
+    <span>🔔 高音钹 · 标小拍（相邻词级）</span>
+  </div>
+</figure>
+
+<p>就像音乐的多声部 —— 低频鼓点标记大拍（段落距离），高频钹声标记小拍（相邻词距离）。所有频率合在一起，给每个位置一个<strong>多尺度的唯一指纹</strong>，跟 sinusoidal PE 的多频率思路一脉相承<a class="jr" href="#g-07">7</a>。</p>
+
+<p>实际代码里不会真的做矩阵乘法旋转（太慢），而是用 sin/cos 直接做元素级重排<a class="jr" href="#g-08">8</a>：</p>
+
+<pre class="eq"># 对 Q/K 的第 i 对 (x_even, x_odd):
+out_even = x_even × cos(m × θ_i) − x_odd × sin(m × θ_i)
+out_odd  = x_even × sin(m × θ_i) + x_odd × cos(m × θ_i)
+
+# 就是 2D 旋转公式 · 两次乘法 + 两次加法 per pair
+# 全程 element-wise · 跟 Flash Attention 完美兼容</pre>
+
+
+<!-- ═══════════════════════════ §04 ═══════════════════════════ -->
+<h2><span class="num">§ 04</span>为什么管用</h2>
+
+<h3>点积天然含相对位置</h3>
+
+<p>2D 旋转是<strong>正交变换</strong><a class="jr" href="#g-09">9</a> —— 保持向量长度不变，只改方向。所以：</p>
+
+<pre class="eq">Rotate(Q, m) · Rotate(K, n)
+= Q · K × cos((m−n) × θ)  +  交叉项 × sin((m−n) × θ)
+       ↑                              ↑
+  原始语义相似度完好保留      多出一个只依赖 (m−n) 的位置项</pre>
+
+<div class="sym-hint">
+  <span class="sym-hint-label">📐 这个公式在说什么</span>
+  <p>
+    旋转之后做点积，结果分两部分：<br/>
+    <strong>1)</strong> Q 和 K 原来的语义相似度（"这两个词意思有多像"）—— 旋转没碰它<br/>
+    <strong>2)</strong> 一个只跟 <code>(m−n)</code> 有关的项（"这两个词差几个位置"）—— 旋转加进来的<br/>
+    两部分叠加 = attention score 同时看<strong>语义 + 相对位置</strong>。不需要额外参数或架构修改。
+  </p>
+</div>
+
+<p><strong>V 不旋转</strong> —— 位置信息只在 attention score 里起作用（决定"关注谁"），不影响 value 的内容（"拿什么"）。</p>
+
+<h3>远距离自动衰减</h3>
+
+<p>RoPE 还有一个好性质 —— 当 |m−n| 越大（两个 token 越远），d/2 个频率的 cos 值<strong>互相抵消</strong>（就像很多不同频率的波叠在一起，远处振幅趋向零）。</p>
+
+<p>结果：RoPE <strong>自带一个软窗口效应</strong><a class="jr" href="#g-10">10</a> —— 不需要显式 mask，模型就会天然更关注近处。这跟语言的直觉一致 —— 离你越远的词对你影响越小。</p>
+
+
+<!-- ═══════════════════════════ §05 ═══════════════════════════ -->
+<h2><span class="num">§ 05</span>历史定位 · 静悄悄改变了整个行业</h2>
+
+<p>RoPE 作者 Jianlin Su（苏剑林）是中国开发者<a class="jr" href="#g-11">11</a>。这篇论文可能是中文 NLP 社区对全球 LLM 基础设施最大的单篇贡献。</p>
+
+<figure id="fig-cmp">
+  <figcaption>
+    <span>Fig 04 · PE 方法对比</span>
+    <span class="fnum">为什么 RoPE 赢了</span>
+  </figcaption>
+  <table class="cmp-table">
+    <thead>
+      <tr><th>方法</th><th>零参数</th><th>相对位置</th><th>每层有</th><th>长上下文可扩</th><th>KV cache 兼容</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Sinusoidal PE</td><td class="yes">✓</td><td class="no">✗ 绝对</td><td class="no">✗ 只输入层</td><td class="partial">⚠ 理论行实际差</td><td class="yes">✓</td></tr>
+      <tr><td>Learned PE</td><td class="no">✗ 要训</td><td class="no">✗ 绝对</td><td class="no">✗ 只输入层</td><td class="no">✗ 完全不能</td><td class="yes">✓</td></tr>
+      <tr><td>T5 Relative Bias</td><td class="no">✗ 要训</td><td class="yes">✓</td><td class="yes">✓</td><td class="partial">⚠ 有上限</td><td class="partial">⚠ 需额外存偏置</td></tr>
+      <tr><td>ALiBi</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓ 天然外推</td><td class="yes">✓</td></tr>
+      <tr class="highlight"><td><strong>RoPE</strong></td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓ + NTK/YaRN</td><td class="yes">✓ 完美</td></tr>
+    </tbody>
+  </table>
+  <div style="font-size:14px; color:var(--ink-2); margin-top:10px;">RoPE 唯一没有 ALiBi 的一项是"天然外推" —— 但配合 NTK-aware scaling / YaRN<a class="jr" href="#g-12">12</a> 可以从 4K 扩到 128K+，实际效果更好。</div>
+</figure>
+
+<p>2024-2025 年几乎所有新 LLM 都选了 RoPE：</p>
+
+<figure id="fig-adopt">
+  <figcaption>
+    <span>Fig 05 · 谁在用 RoPE</span>
+    <span class="fnum">2023-2025</span>
+  </figcaption>
+  <div class="adopt-grid">
+    <div class="adopt-chip major">LLaMA 1/2/3</div>
+    <div class="adopt-chip major">Mistral / Mixtral</div>
+    <div class="adopt-chip major">Qwen 1/2/3</div>
+    <div class="adopt-chip">CodeLlama</div>
+    <div class="adopt-chip">DeepSeek V2/V3</div>
+    <div class="adopt-chip">Yi</div>
+    <div class="adopt-chip">Gemma 1/2</div>
+    <div class="adopt-chip">Falcon</div>
+    <div class="adopt-chip">GPT-NeoX</div>
+    <div class="adopt-chip">PaLM 2</div>
+    <div class="adopt-chip">Phi-3/4</div>
+    <div class="adopt-chip">InternLM</div>
+    <div class="adopt-chip">Baichuan</div>
+    <div class="adopt-chip">ChatGLM-3/4</div>
+    <div class="adopt-chip">Command R+</div>
+    <div class="adopt-chip">Cohere Aya</div>
+  </div>
+  <div style="font-size:14px; color:var(--ink-2); margin-top:10px; text-align:center;">
+    没用 RoPE 的新模型反而成了少数 —— 它已经是 <strong>Transformer 位置编码的事实标准</strong>。
+  </div>
+</figure>
+
+<div class="note">
+  <span class="l">为什么 RoPE 赢了 ALiBi</span>
+  <p>ALiBi 理论上也很优雅（线性距离惩罚 + 天然外推）。但实际训练中 RoPE 在<strong>长上下文质量</strong>上表现更好 —— 它的多频率旋转能捕获比线性衰减更丰富的距离模式。而且 RoPE + NTK/YaRN 的上下文扩展方案在工程上更成熟、社区支持更广。</p>
+</div>
+
+<p>RoPE 之后的发展方向是<strong>上下文长度扩展</strong>。原始 RoPE 训练 4K 上下文，直接推理 32K 会挂。但只要调整旋转频率（NTK-aware scaling / YaRN / Dynamic NTK），就可以把窗口拉到 128K 甚至更长。这条线目前还在快速演进<a class="jr" href="#g-12">12</a>。</p>
+
+
+<!-- ═══════════════════════════ glossary ═══════════════════════════ -->
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">Attention 对顺序无感</span> · Transformer 的 self-attention 是置换不变的（permutation invariant）—— 把 token 打乱，Q·K^T 算出来的分数矩阵只是行列跟着重排，不会变化。所以不加位置信息的话，"dog bites man" 和 "man bites dog" 对模型来说是一样的。详见 <a href="../concepts/self-attention.html">self-attention</a>。</li>
+    <li id="g-02"><span class="term">Sinusoidal PE · 原版位置编码</span> · Attention Is All You Need 提出的方案：用不同频率的 sin/cos 函数给每个位置一个唯一的 d 维向量，<strong>加到</strong> embedding 上。优点是零参数、理论上可外推；缺点是只在输入层注入一次、编的是绝对位置。详见 <a href="../concepts/positional-encoding.html">positional-encoding</a>。</li>
+    <li id="g-03"><span class="term">旋转 Q/K</span> · RoPE 的核心操作。不是给 embedding 加向量，而是在每层 attention 计算前，把 Q 向量按 position×频率 旋转，K 同理。旋转后做标准点积。数学上等价于在点积里插入一个只依赖相对位置的项。详见 <a href="../concepts/rotary-position-embedding.html">rotary-position-embedding</a>。</li>
+    <li id="g-04"><span class="term">相对位置 vs 绝对位置</span> · "你在第 5 个位置"是绝对位置；"你跟那个词差 3 个位置"是相对位置。自然语言里，相对距离几乎总是比绝对地址有意义 —— 把整个句子平移 10 个位置，语义不变。RoPE 通过旋转让点积天然感知相对距离。详见 <a href="../concepts/relative-position-encoding.html">relative-position-encoding</a>。</li>
+    <li id="g-05"><span class="term">KV Cache</span> · 自回归推理的缓存机制。已经算过的 token 的 K/V 存起来，下一步只算新 token 的 Q/K/V。RoPE 跟它完美兼容 —— cache 里存的就是旋转后的 K，新 token 的 Q 也旋转过，直接点积就行。详见 <a href="../concepts/kv-cache.html">kv-cache</a>。</li>
+    <li id="g-06"><span class="term">2D 子空间分解</span> · d 维向量不是整体旋转（那在高维没有唯一定义），而是拆成 d/2 个二维平面，每个平面独立旋转。就像把一个长向量想象成 d/2 个时钟，每个时钟转不同频率。</li>
+    <li id="g-07"><span class="term">多频率 = 多尺度位置指纹</span> · 跟 sinusoidal PE 的多频率设计一脉相承 —— 低频捕捉长距离关系（段落级），高频捕捉短距离关系（词级）。合在一起给每个位置一个唯一的"频率指纹"。区别是 sinusoidal PE 把这个指纹<strong>加到</strong> embedding，RoPE 把它做成<strong>旋转角度</strong>。</li>
+    <li id="g-08"><span class="term">元素级实现</span> · 真实实现不会构造旋转矩阵做矩阵乘法（太慢），而是直接用 sin/cos 值做 element-wise 的重排：out_even = x_even×cos − x_odd×sin, out_odd = x_even×sin + x_odd×cos。跟 Flash Attention 完全兼容，几乎没有额外开销。</li>
+    <li id="g-09"><span class="term">正交变换 · 保角性</span> · 2D 旋转是正交变换（orthogonal transformation）—— 保持向量长度不变，保持两个向量之间的夹角不变。这意味着旋转不会破坏 Q 和 K 的原始语义相似度，只是在点积里多加一个位置相关的偏移。</li>
+    <li id="g-10"><span class="term">远距离自动衰减</span> · d/2 个频率的 cos 值在 |m−n| 较大时互相抵消（destructive interference），导致位置对 attention score 的贡献随距离下降。RoPE 自带这个"软窗口"效应，不需要显式 mask。跟语言的直觉一致 —— 离你越远的词影响越小。</li>
+    <li id="g-11"><span class="term">苏剑林 · Jianlin Su</span> · RoPE 的第一作者，中国 NLP 开发者。这篇论文是中文 NLP 社区对全球 LLM 基础设施的重要贡献 —— 2024 年几乎所有新 LLM 的位置编码都用 RoPE 或其变体。</li>
+    <li id="g-12"><span class="term">上下文扩展 · NTK-aware / YaRN</span> · RoPE 训练 4K 上下文直接推理 32K 会崩。后续方法通过调整旋转频率来扩展窗口：NTK-aware scaling 按信息论原则重新分配高/低频带宽，YaRN 进一步做分段插值。实践中可以从 4K 扩到 128K+。这条线还在快速演进。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>Authored / 个人学习笔记 · 2026</span>
+  <span>Index / <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+
+<script>
+{
+  const figs = ['fig-evo','fig-clock','fig-freq','fig-cmp','fig-adopt'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.3 });
+    obs.observe(el);
+  });
+}
+</script>
+
+</body>
+</html>

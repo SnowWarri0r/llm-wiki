@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Dual-AR · 双自回归 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · dual-ar</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Dual-AR · 双自回归</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>慢 AR 写主旋律（语义骨架），快 AR 写配器（声学细节），主从串成两层 AR。</p>
+<h2>直觉</h2>
+<p>TTS 的根本矛盾：要质量高就得在高采样率的 token 流上跑 AR，但每秒上千 token × 大模型 = 推不动。</p>
+<p>S2 把任务摊到两层：</p>
+<ul>
+<li><strong>慢 AR (4B)</strong> —— 沿时间轴每帧吐 <strong>1 个</strong> 主语义 codebook，决定这一帧"说什么"</li>
+<li><strong>快 AR (400M)</strong> —— 同一帧上再吐 <strong>9 个</strong>残差 codebook，把音色 / 咬字 / 气声补齐</li>
+</ul>
+<p>慢 AR 算少次但算重，快 AR 算多次但便宜。乘下来推理 budget 守得住。</p>
+<h2>怎么做的</h2>
+<ul>
+<li><a href="../concepts/rvq-codec.html">rvq-codec</a> 把 waveform 编成 10 个 codebook、~21 Hz 帧率（约 50ms 一帧）</li>
+<li>慢 AR = decoder-only transformer，自回归吐主 codebook 序列</li>
+<li>每个时间步把慢 AR 的隐状态喂给快 AR</li>
+<li>快 AR 在这一帧上<strong>顺序生成</strong> 9 个残差 codebook</li>
+<li>整体跟标准 LLM 同构 → SGLang 的 paged KV cache / continuous batching / CUDA graph / RadixAttention 全直接复用</li>
+</ul>
+<h2>为什么不一层搞定</h2>
+<p>单一大 AR：rate × params = 推不动。
+多层 codec 但单 AR：codec 信息瓶颈 OK 但要 AR 每步吐 10 个 token，要么自回归长度 ×10，要么"并行吐" → 牺牲精度。</p>
+<p>Dual-AR 是用一个小的"局部 AR" 把 codec 内部依赖打掉，让外层 AR 看到的序列长度跟传统 LLM 一样。</p>
+<h2>跟 TML interaction model 的对照</h2>
+<p>TML 也是双层结构，但<strong>边界不一样</strong>：</p>
+<ul>
+<li>fish-speech：两层都在生成路径上，主/从（["怎么发"]委托给["发什么"]）</li>
+<li>TML：<a href="../concepts/dual-model-architecture.html">dual-model-architecture</a> 是前台 always-on + 后台异步深推理，分工是"谁负责说话 / 谁负责想"</li>
+</ul>
+<h2>代码出处</h2>
+<ul>
+<li>本地 clone 软链至 <code>raw/fish-speech/fish_speech/models/</code>（具体文件待查 ingest）</li>
+<li>技术报告：https://arxiv.org/abs/2603.08823</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/rvq-codec.html">rvq-codec</a> · 这是 Dual-AR 操纵的离散 token 来源</li>
+<li><a href="../concepts/grpo.html">grpo</a> · 后训练阶段做 RL 对齐</li>
+<li><a href="../concepts/sglang-inference.html">sglang-inference</a> · 推理基建复用前提</li>
+<li><a href="../papers/fish-speech-s2-pro.html">fish-speech-s2-pro</a> · 论文</li>
+<li><a href="../concepts/dual-model-architecture.html">dual-model-architecture</a> · 不同维度的"两层"思路</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 7 处</span>
+  <ul><li><a href="../papers/fish-speech-s2-pro.html"><span class="cat">paper</span>Fish Audio S2 Pro</a></li><li><a href="../concepts/dual-model-architecture.html"><span class="cat">concept</span>Dual-Model Architecture · 双模型架构</a></li><li><a href="../concepts/grpo.html"><span class="cat">concept</span>GRPO · Group Relative Policy Optimization</a></li><li><a href="../concepts/inline-emotion-tags.html"><span class="cat">concept</span>Inline Emotion Tags · 内联情绪标签</a></li><li><a href="../concepts/rvq-codec.html"><span class="cat">concept</span>RVQ Codec · 残差向量量化</a></li><li><a href="../concepts/sglang-inference.html"><span class="cat">concept</span>SGLang Inference</a></li><li><a href="../concepts/voice-cloning-reference.html"><span class="cat">concept</span>Voice Cloning Reference · 声音克隆参考音频</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/dual-ar.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

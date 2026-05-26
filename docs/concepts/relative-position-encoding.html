@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Relative Position Encoding · 相对位置编码 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · relative-position-encoding</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Relative Position Encoding · 相对位置编码</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>不告诉模型"你在第 5 个位置"，而是告诉模型"你跟那个词差 3 个位置" —— <strong>相对距离比绝对地址有用得多</strong>。</p>
+<h2>直觉</h2>
+<p>你写代码时引用变量，用的是"当前作用域往上第 2 层"这种相对引用，还是"内存地址 0x7F3A"这种绝对地址？</p>
+<p>自然语言也一样。"the dog that bit me" 里 "bit" 跟 "dog" 的关系不取决于它们在句子里的绝对位置（第 2 个和第 5 个），取决于它们<strong>之间差几个词</strong>。把整个句子往后平移 10 个位置，语义一点不变。</p>
+<p>绝对位置编码（sinusoidal PE / learned PE）让模型自己从两个绝对地址里做减法推出相对距离。<strong>能学会，但费力且不直接</strong>。</p>
+<p>相对位置编码直接把距离喂给 attention score。</p>
+<h2>几种主要做法</h2>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>原理</th>
+<th>代表</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>T5 relative bias</strong></td>
+<td>在 attention score 上加一个可学习的距离偏置矩阵</td>
+<td>T5 / mT5</td>
+</tr>
+<tr>
+<td><strong>ALiBi</strong></td>
+<td>在 attention score 上减去 <code>slope × distance</code>（线性惩罚远距离）</td>
+<td>BLOOM</td>
+</tr>
+<tr>
+<td><strong>RoPE</strong></td>
+<td>旋转 Q/K，点积天然包含相对距离</td>
+<td>LLaMA / Mistral / Qwen / GPT-NeoX</td>
+</tr>
+<tr>
+<td><strong>Transformer-XL 式</strong></td>
+<td>修改 attention 公式加 relative key/value</td>
+<td>Transformer-XL / XLNet</td>
+</tr>
+</tbody>
+</table>
+<p>RoPE 是目前（2024-2025）最主流的方案 —— 零参数、不改 attention 公式、跟 KV cache / Flash Attention 完美兼容。</p>
+<h2>为什么相对位置好</h2>
+<ol>
+<li><strong>平移不变</strong>：句子整体往后移 N 个位置，所有相对距离不变 → attention pattern 不变</li>
+<li><strong>天然支持变长</strong>：不依赖固定的 max_position_id</li>
+<li><strong>更容易外推</strong>：训练时见过"差 3 个位置"的注意力模式，推理时"差 3 个位置"不管在序列哪个绝对位置都一样好用</li>
+</ol>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/rotary-position-embedding.html">rotary-position-embedding</a> · 当前主流的相对位置方案</li>
+<li><a href="../concepts/positional-encoding.html">positional-encoding</a> · PE 家族全景（含绝对方案）</li>
+<li><a href="../concepts/self-attention.html">self-attention</a> · attention 为什么需要位置</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/rope.html"><span class="cat">paper</span>RoFormer · Rotary Position Embedding (RoPE)</a></li><li><a href="../concepts/positional-encoding.html"><span class="cat">concept</span>Positional Encoding · 位置编码</a></li><li><a href="../concepts/rotary-position-embedding.html"><span class="cat">concept</span>Rotary Position Embedding · RoPE · 旋转位置编码</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/relative-position-encoding.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

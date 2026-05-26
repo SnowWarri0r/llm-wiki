@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Batch Normalization · BN · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · batchnorm</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Batch Normalization · BN</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>对一个 mini-batch 在每个 channel 内做归一化（减均值/除方差），让中间层的分布<strong>不要剧烈漂移</strong>，间接稳住训练。</p>
+<h2>直觉</h2>
+<p>深网络训练时，每层输出的分布会随着上游 weight 更新而剧烈变化（叫 internal covariate shift）。下游层永远在追"昨天的分布"，导致：</p>
+<ul>
+<li>学习率不敢调大（怕炸）</li>
+<li>初始化敏感（一点偏差经过几层放大）</li>
+<li>训练慢</li>
+</ul>
+<p><strong>BN 的暴力做法</strong>：每层 forward 前，对当前 batch 在 channel 维度内做 z-score 归一化 + 可学习的 scale/shift：</p>
+<pre><code class="language-python">mu = x.mean(dim=batch)
+var = x.var(dim=batch)
+x_hat = (x - mu) / sqrt(var + eps)
+out = gamma * x_hat + beta   # gamma/beta 可学
+</code></pre>
+<p>forward 时这就让每层输入都是 0 均值 1 方差（再被 gamma/beta 调一下）。下游层的"任务"被解耦了。</p>
+<h2>在 ResNet 里的位置</h2>
+<p>原版 ResNet block：</p>
+<pre><code>conv → BN → ReLU → conv → BN → (+ x) → ReLU
+</code></pre>
+<p>后来的 pre-activation ResNet（同作者的 follow-up）：</p>
+<pre><code>BN → ReLU → conv → BN → ReLU → conv → (+ x)
+</code></pre>
+<p>效果更好，因为 <code>+ x</code> 这条 path 完全不过 BN/ReLU，identity 真正干净。</p>
+<h2>它的坑</h2>
+<ul>
+<li><strong>batch size 小的时候不稳</strong>（mean/var 估不准）→ 后来有 GroupNorm / LayerNorm 替代</li>
+<li><strong>训练和推理行为不同</strong>（推理用 running mean/var）→ 容易出 train/test 不一致 bug</li>
+<li><strong>不适合序列模型</strong>（每个 timestep 的 batch 不同）→ Transformer 用 <a href="../concepts/layernorm.html">layernorm</a> 不是 BN</li>
+</ul>
+<h2>Transformer 为什么不用 BN</h2>
+<ul>
+<li>序列长度可变，batch 维度不稳定</li>
+<li>序列内的 token 分布差别大（早期 token vs 后期 token），不该混着归一化</li>
+<li>LayerNorm 在 feature 维度归一化，跟序列长度无关，更适合</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/resnet.html">resnet</a> · BN 的早期高光场景</li>
+<li><a href="../concepts/layernorm.html">layernorm</a> · Transformer 用的替代品</li>
+<li><a href="../concepts/residual-connection.html">residual-connection</a> · BN 跟残差是组合拳</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 5 处</span>
+  <ul><li><a href="../papers/resnet.html"><span class="cat">paper</span>Deep Residual Learning · 残差连接的起源</a></li><li><a href="../concepts/bottleneck-block.html"><span class="cat">concept</span>Bottleneck Block · 瓶颈残差块</a></li><li><a href="../concepts/degradation-problem.html"><span class="cat">concept</span>Degradation Problem · 深网络反而变差</a></li><li><a href="../concepts/layernorm.html"><span class="cat">concept</span>LayerNorm · 层归一化</a></li><li><a href="../concepts/residual-connection.html"><span class="cat">concept</span>Residual Connection · 残差连接 / Skip Connection</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/batchnorm.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>
