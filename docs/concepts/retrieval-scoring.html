@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Retrieval Scoring · 记忆检索排序 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · retrieval-scoring</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Retrieval Scoring · 记忆检索排序</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>从 <a href="../concepts/memory-stream.html">memory-stream</a> 里捞记忆时，按 <strong>时近度 × 重要性 × 相关性</strong> 三个维度加权排序 —— 不是最新的就最好，也不是最重要的就最好，是三者的乘积最高的。</p>
+<h2>直觉</h2>
+<p>你现在要决定"今天下班后干嘛"。你大脑里会冒出哪些记忆？</p>
+<ul>
+<li><strong>时近度</strong>高的："刚才同事说今晚有个聚会"（1 小时前发生的）</li>
+<li><strong>重要性</strong>高的："上周体检报告说我该开始运动了"（重要但不是今天发生的）</li>
+<li><strong>相关性</strong>高的："我三天前查了一家新开的健身房"（跟"下班后干嘛"直接相关）</li>
+</ul>
+<p>你大脑自动把这三个维度综合排序了 —— 不会只因为"刚发生"就排第一，也不会只因为"很重要"就排第一。</p>
+<h2>怎么做的</h2>
+<pre><code class="language-python">score = alpha * recency(memory) 
+
+      + beta  * importance(memory) 
+      + gamma * relevance(memory, query)
+
+# recency:    指数衰减, 越近的分越高 (e^(-decay * hours_ago))
+# importance: 存入时 LLM 打的 1-10 分, 归一化到 [0,1]
+# relevance:  memory embedding 跟 query embedding 的余弦相似度
+</code></pre>
+<p>三个系数 α / β / γ 控制偏重 —— 论文里大致均衡，但可以按场景调。</p>
+<p><strong>检索出 top-K 条记忆后，拼成文本塞进 LLM 的 prompt</strong>：</p>
+<pre><code>[Relevant memories]
+
+- (2 hours ago) 同事说今晚有聚会
+- (3 days ago) 查了一家新健身房，离公司 10 分钟
+- (1 week ago) 体检报告建议每周运动 3 次
+
+Based on these memories, what would you do after work?
+</code></pre>
+<p>LLM 基于这些"回忆"做决策 —— 效果就像一个有记忆的人在思考。</p>
+<h2>为什么三个维度都要</h2>
+<table>
+<thead>
+<tr>
+<th>只用一个维度</th>
+<th>会出什么问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>只用时近度</td>
+<td>agent 只记得最近几分钟的事，完全没有长期记忆</td>
+</tr>
+<tr>
+<td>只用重要性</td>
+<td>agent 永远被最重大的事件主导（"被裁员"这条记忆会压倒一切），没法正常生活</td>
+</tr>
+<tr>
+<td>只用相关性</td>
+<td>agent 会捞出很久以前的相关记忆但忽略刚发生的事，反应迟钝</td>
+</tr>
+</tbody>
+</table>
+<p>三个维度乘在一起 = <strong>"最近发生的 + 确实重要 + 跟当前情况相关"的记忆排最前面</strong>。</p>
+<h2>跟 RAG 的关系</h2>
+<p>RAG（检索增强生成）的核心也是"检索 → 塞进 prompt"，但标准 RAG 只用<strong>相关性</strong>排序（向量相似度）。Generative Agents 加了<strong>时近度 + 重要性</strong>两个维度 —— 这是 agent 场景跟知识问答场景的核心区别：agent 需要"像人一样回忆"，不只是"找最相关的文档"。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/memory-stream.html">memory-stream</a> · 被检索的数据源</li>
+<li><a href="../concepts/agent-reflection.html">agent-reflection</a> · 反思结果也参与检索</li>
+<li><a href="../papers/generative-agents.html">generative-agents</a> · 论文</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/generative-agents.html"><span class="cat">paper</span>Generative Agents · Interactive Simulacra of Human Behavior</a></li><li><a href="../concepts/agent-reflection.html"><span class="cat">concept</span>Agent Reflection · 反思 · 从碎片到认知</a></li><li><a href="../concepts/memory-stream.html"><span class="cat">concept</span>Memory Stream · 记忆流</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/retrieval-scoring.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>
