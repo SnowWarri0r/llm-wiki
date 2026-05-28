@@ -1,8 +1,8 @@
 ---
 name: grpo
 type: concept
-sources: [fish-speech-s2-pro]
-updated: 2026-05-20
+sources: [fish-speech-s2-pro, ppo]
+updated: 2026-05-28
 ---
 
 # GRPO · Group Relative Policy Optimization

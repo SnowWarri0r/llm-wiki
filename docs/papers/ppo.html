@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>PPO · Proximal Policy Optimization</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --accent: var(--brick); --accent-soft: var(--brick-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(48px, 8vw, 84px); line-height: 0.92; letter-spacing: -0.035em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 38px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
+p { margin: 12px 0; } strong { font-weight: 700; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--brick-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--brick); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--brick); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--brick-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--brick-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* ppo-specific */
+.ppo-svg { width: 100%; height: auto; display: block; }
+
+/* fig-1 RL loop */
+.loop-arrow { stroke: var(--ink-2); stroke-width: 2; fill: none; opacity: 0; transition: opacity 0.6s ease; }
+.fig-loop.play .loop-arrow { opacity: 1; }
+.fig-loop.play .loop-arrow.a1 { transition-delay: 0.3s; }
+.fig-loop.play .loop-arrow.a2 { transition-delay: 0.8s; }
+.loop-box { opacity: 0; transition: opacity 0.6s ease; }
+.fig-loop.play .loop-box.agent { opacity: 1; transition-delay: 0.1s; }
+.fig-loop.play .loop-box.env { opacity: 1; transition-delay: 0.5s; }
+.loop-label { opacity: 0; transition: opacity 0.5s ease; }
+.fig-loop.play .loop-label { opacity: 1; transition-delay: 1.4s; }
+
+/* fig-2 vanilla pg instability */
+.policy-curve { fill: none; stroke-width: 2.2; transition: opacity 0.6s ease; opacity: 0; }
+.fig-vanilla.play .policy-curve.old { opacity: 1; stroke: var(--ink-2); transition-delay: 0.3s; }
+.fig-vanilla.play .policy-curve.small { opacity: 1; stroke: var(--moss); transition-delay: 0.8s; }
+.fig-vanilla.play .policy-curve.big { opacity: 1; stroke: var(--brick); transition-delay: 1.3s; }
+.pg-label { opacity: 0; transition: opacity 0.5s ease; }
+.fig-vanilla.play .pg-label { opacity: 1; transition-delay: 1.8s; }
+
+/* fig-3 clip plot */
+.clip-line { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.clip-unclipped { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 3 4; opacity: 0; transition: opacity 0.5s ease; }
+.fig-clip.play .clip-unclipped { opacity: 1; transition-delay: 0.3s; }
+.clip-actual { stroke: var(--brick); stroke-dasharray: 0 600; transition: stroke-dasharray 1.4s ease; }
+.fig-clip.play .clip-actual { stroke-dasharray: 600 600; transition-delay: 0.8s; }
+.clip-region { fill: var(--brick-soft); opacity: 0; transition: opacity 0.5s ease; }
+.fig-clip.play .clip-region { opacity: 0.4; transition-delay: 2.2s; }
+.clip-tag { opacity: 0; transition: opacity 0.5s ease; }
+.fig-clip.play .clip-tag { opacity: 1; transition-delay: 2.6s; }
+
+/* fig-4 training loop */
+.tloop-step { opacity: 0; transition: opacity 0.5s ease; }
+.fig-tloop.play .tloop-step { opacity: 1; }
+.fig-tloop.play .tloop-step.s1 { transition-delay: 0.3s; }
+.fig-tloop.play .tloop-step.s2 { transition-delay: 0.8s; }
+.fig-tloop.play .tloop-step.s3 { transition-delay: 1.3s; }
+.fig-tloop.play .tloop-step.s4 { transition-delay: 1.8s; }
+.tloop-recycle { stroke: var(--brick); stroke-width: 2; stroke-dasharray: 4 4; fill: none; opacity: 0; transition: opacity 0.6s ease; }
+.fig-tloop.play .tloop-recycle { opacity: 1; transition-delay: 2.4s; }
+
+/* fig-5 rlhf */
+.rlhf-stage { opacity: 0; transition: opacity 0.6s ease; }
+.fig-rlhf.play .rlhf-stage.s1 { opacity: 1; transition-delay: 0.3s; }
+.fig-rlhf.play .rlhf-stage.s2 { opacity: 1; transition-delay: 1.0s; }
+.fig-rlhf.play .rlhf-stage.s3 { opacity: 1; transition-delay: 1.7s; }
+.rlhf-arrow { stroke: var(--ink-2); stroke-width: 1.5; fill: none; opacity: 0; transition: opacity 0.5s ease; }
+.fig-rlhf.play .rlhf-arrow.a1 { opacity: 1; transition-delay: 0.7s; }
+.fig-rlhf.play .rlhf-arrow.a2 { opacity: 1; transition-delay: 1.4s; }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · ppo</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · arXiv 1707.06347 · OpenAI · 2017</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · REINFORCEMENT LEARNING · ALIGNMENT</div>
+  <h1 class="title">PPO ·<br /><span class="em">一行 clip 撑起 ChatGPT.</span></h1>
+  <div class="byline">Schulman · Wolski · Dhariwal · Radford · Klimov · OpenAI · 2017</div>
+  <p class="dek">策略梯度最头疼的"步子大就崩"问题, PPO 用一行 torch.clamp 干掉了。简单到 200 行能复现, 稳到撑起了 RLHF, 也就是 ChatGPT 真正会聊天的那一步。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>强化学习里 policy gradient<a class="jr" href="#g-01">1</a> 走太大一步策略就崩, 老数据立刻不能用。TRPO<a class="jr" href="#g-02">2</a> 用 KL 散度精确约束步长, 但需要共轭梯度 + 线搜索, 复杂。PPO 的回答: <strong>不约束 KL, 直接 clip 新老策略的概率比值</strong><a class="jr" href="#g-03">3</a>。一行 <code>torch.clamp(r, 1-ε, 1+ε)</code> 让 loss 在"该停的方向"梯度归零, 软性 trust region。代价是不精确, 收获是简单、稳、能跟 Adam 配。<strong>顺手解锁的是同一批 rollout 跑 K 个 epoch</strong><a class="jr" href="#g-04">4</a>, sample efficiency 翻倍。2017 出, 2022 撑起 InstructGPT/ChatGPT 的 RLHF<a class="jr" href="#g-05">5</a>。</p>
+</div>
+
+
+<!-- §01 -->
+<h2><span class="num">§ 01</span>RL 基本设定 · agent ↔ env 一来一回</h2>
+
+<p>跟监督学习"猜对答案给奖、猜错给罚"不同, 强化学习的训练信号<strong>是迟来的</strong> —— 你玩完一整局才知道输赢, 而不是每一步都有 ground truth<a class="jr" href="#g-06">6</a>。</p>
+
+<figure id="fig-loop" class="fig-loop">
+  <figcaption>
+    <span>Fig 01 · agent ↔ environment 的反馈循环</span>
+    <span class="fnum">policy 选 action, env 还 reward + 下一个 state</span>
+  </figcaption>
+  <svg class="ppo-svg" viewBox="0 0 880 340" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arr-ppo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#3a3128"/>
+      </marker>
+    </defs>
+
+    <!-- Agent box (左) -->
+    <g class="loop-box agent" transform="translate(80, 100)">
+      <rect x="0" y="0" width="220" height="140" fill="#efd6c8" stroke="#9b2c2c" stroke-width="2" rx="6"/>
+      <text x="110" y="32" text-anchor="middle" font-family="Fraunces" font-size="20" font-weight="700" fill="#9b2c2c">Agent</text>
+      <text x="110" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d">(你训的模型)</text>
+      <!-- 内部 policy 和 value -->
+      <rect x="20" y="68" width="180" height="26" fill="white" stroke="#9b2c2c" stroke-width="0.8" rx="3"/>
+      <text x="110" y="86" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#3a3128">policy π(a|s)</text>
+      <rect x="20" y="100" width="180" height="26" fill="white" stroke="#9b2c2c" stroke-width="0.8" rx="3"/>
+      <text x="110" y="118" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#3a3128">value V(s)</text>
+    </g>
+
+    <!-- Environment box (右) -->
+    <g class="loop-box env" transform="translate(580, 100)">
+      <rect x="0" y="0" width="220" height="140" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="2" rx="6"/>
+      <text x="110" y="32" text-anchor="middle" font-family="Fraunces" font-size="20" font-weight="700" fill="#4a6b3a">Environment</text>
+      <text x="110" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d">(游戏 / 真实世界)</text>
+      <!-- 简单画一个抽象的游戏场景 -->
+      <rect x="40" y="68" width="140" height="60" fill="#a8c898" stroke="#3a3128" stroke-width="0.6"/>
+      <circle cx="70" cy="98" r="6" fill="#9b2c2c"/>
+      <rect x="100" y="92" width="14" height="14" fill="#1f3a5f"/>
+      <path d="M 130 105 L 150 95 L 150 115 Z" fill="#b8841c"/>
+    </g>
+
+    <!-- 顶部 action 箭头: agent → env -->
+    <path class="loop-arrow a1" d="M 300 140 Q 440 60 580 140" marker-end="url(#arr-ppo)"/>
+    <g class="loop-label">
+      <rect x="370" y="60" width="140" height="34" fill="var(--paper-3)" stroke="#9b2c2c" stroke-width="1" rx="3"/>
+      <text x="440" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#9b2c2c" font-weight="700">action a_t</text>
+      <text x="440" y="91" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">policy 采样出的动作</text>
+    </g>
+
+    <!-- 底部 state+reward 箭头: env → agent -->
+    <path class="loop-arrow a2" d="M 580 200 Q 440 280 300 200" marker-end="url(#arr-ppo)"/>
+    <g class="loop-label">
+      <rect x="350" y="248" width="180" height="48" fill="var(--paper-3)" stroke="#4a6b3a" stroke-width="1" rx="3"/>
+      <text x="440" y="266" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#4a6b3a" font-weight="700">state s_{t+1} + reward r_t</text>
+      <text x="440" y="280" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">下一帧画面 + 这一步给多少分</text>
+      <text x="440" y="292" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">(reward 可能是 0, 一整局结束才给)</text>
+    </g>
+
+    <!-- 顶部时间步标签 -->
+    <text x="440" y="30" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">
+      每个 time step 这样转一圈
+    </text>
+  </svg>
+</figure>
+
+<p>目标: 让 agent 学一个 <code>π(a|s)</code> 使得长期累计 reward 最大。<strong>策略梯度</strong>的核心想法是把 π 当成可微分的神经网络, 直接 gradient ascent。</p>
+
+<pre class="eq">loss = -log π(a_t | s_t) × R_t       # 跟监督学习 cross-entropy 几乎一样
+                       └─ "label 权重", 这一步之后的总 reward
+</pre>
+
+<p>意译: "在状态 s_t 选了 a_t 之后总收益是 R_t, 就把 P(选 a_t) 朝 R_t 的方向推"。R_t 高 → 推大, R_t 低 → 推小。详见 <a href="../concepts/policy-gradient.html">policy-gradient</a>。</p>
+
+
+<!-- §02 -->
+<h2><span class="num">§ 02</span>痛点 · 步子大就崩</h2>
+
+<p>策略梯度有个致命缺陷 —— <strong>步子大小决定生死</strong><a class="jr" href="#g-07">7</a>。具体崩盘场景:</p>
+
+<p>1. 用<strong>老策略 π_old</strong> 跑一批 rollout 收集 (s, a, R) 数据<br/>
+2. 用这批数据算 gradient<br/>
+3. 走一步, 得到 <strong>π_new</strong><br/>
+4. 但如果 π_new 离 π_old 太远, <strong>那批数据描述的"在 π_old 下哪些 action 好"对 π_new 已经不再适用</strong><br/>
+5. 拿着失效数据继续算梯度, 越调越偏, 几步后训练崩盘</p>
+
+<figure id="fig-vanilla" class="fig-vanilla">
+  <figcaption>
+    <span>Fig 02 · 步子太大就崩</span>
+    <span class="fnum">老数据失效, 训练发散</span>
+  </figcaption>
+  <svg class="ppo-svg" viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg">
+
+    <!-- 左 panel: 小步 OK -->
+    <g transform="translate(40, 40)">
+      <text x="180" y="0" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="14" font-weight="700" fill="#4a6b3a">小步: OK</text>
+      <rect x="0" y="20" width="360" height="240" fill="white" stroke="#bfb398" stroke-width="0.8"/>
+
+      <!-- 坐标轴: action 概率分布 -->
+      <line x1="20" y1="240" x2="340" y2="240" stroke="#3a3128" stroke-width="0.8"/>
+      <text x="180" y="258" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">action 空间</text>
+
+      <!-- π_old 分布 -->
+      <path class="policy-curve old" d="M 20 240 Q 110 240 130 180 Q 180 80 230 180 Q 250 240 340 240"/>
+      <text x="180" y="195" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">π_old</text>
+
+      <!-- π_new (小步, 接近 π_old) -->
+      <path class="policy-curve small" d="M 20 240 Q 100 240 130 170 Q 190 70 250 170 Q 260 240 340 240"/>
+      <text x="200" y="135" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#4a6b3a">π_new (小步)</text>
+
+      <!-- 标签 -->
+      <text x="180" y="290" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">π_new ≈ π_old → 老数据仍有用</text>
+      <text x="180" y="310" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d">✓ 训得稳, 但慢</text>
+    </g>
+
+    <!-- 右 panel: 大步崩 -->
+    <g transform="translate(460, 40)">
+      <text x="180" y="0" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="14" font-weight="700" fill="#9b2c2c">大步: 崩盘</text>
+      <rect x="0" y="20" width="360" height="240" fill="white" stroke="#bfb398" stroke-width="0.8"/>
+
+      <line x1="20" y1="240" x2="340" y2="240" stroke="#3a3128" stroke-width="0.8"/>
+      <text x="180" y="258" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">action 空间</text>
+
+      <!-- π_old (同上) -->
+      <path class="policy-curve old" d="M 20 240 Q 110 240 130 180 Q 180 80 230 180 Q 250 240 340 240"/>
+      <text x="180" y="195" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">π_old</text>
+
+      <!-- π_new (大步, 跑偏) -->
+      <path class="policy-curve big" d="M 20 240 Q 40 240 70 100 Q 110 50 170 200 Q 220 240 280 130 Q 310 60 340 240"/>
+      <text x="100" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#9b2c2c">π_new (大步)</text>
+
+      <text x="180" y="290" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">π_new ≠ π_old → 老数据失效</text>
+      <text x="180" y="310" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d">✗ 后续几步把 policy 推飞</text>
+    </g>
+
+    <!-- 底部说明 -->
+    <text x="440" y="345" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128" class="pg-label">
+      RL 跟监督学习的根本区别: 数据分布跟 policy 耦合 → policy 一变, 老数据就过期
+    </text>
+  </svg>
+</figure>
+
+<p>TRPO (2015) 解过这个 —— 加 KL 散度约束 <code>KL(π_new ‖ π_old) ≤ δ</code> 精确限制每步。理论漂亮, 但工程上要做共轭梯度 + 线搜索, 慢、复杂、不亲深度学习。</p>
+
+
+<!-- §03 -->
+<h2><span class="num">§ 03</span>核心 · 一行 clip 干掉所有麻烦</h2>
+
+<p>PPO 的回答<a class="jr" href="#g-03">3</a>: 不用 KL 约束, 不用共轭梯度, 就一行 <code>torch.clamp</code>。</p>
+
+<p>定义新老策略的概率比:</p>
+
+<pre class="eq">r_t(θ) = π_new(a_t | s_t) / π_old(a_t | s_t)
+
+  r = 1.0  ←  新老完全一样
+  r = 1.5  ←  新策略把这个 action 概率提了 50%
+  r = 0.5  ←  新策略把这个 action 概率降了 50%</pre>
+
+<p>PPO 的 loss:</p>
+
+<pre class="eq">L_CLIP = E_t [ min( r_t · A_t,  clip(r_t, 1-ε, 1+ε) · A_t ) ]
+                                          ↑
+                                  ε 一般 0.2</pre>
+
+<p>其中 <code>A_t</code> 是 <a href="../concepts/advantage-function.html">advantage</a><a class="jr" href="#g-08">8</a> —— "这个 action 比平均好多少"。实际工程里 A_t 用 GAE<a class="jr" href="#g-11">11</a> 算 (λ=0.95 是标配)。看不懂没事, 下面这张图把它讲透:</p>
+
+<figure id="fig-clip" class="fig-clip">
+  <figcaption>
+    <span>Fig 03 · PPO 的 clipped objective</span>
+    <span class="fnum">在该停的方向梯度归零 = 软性 trust region</span>
+  </figcaption>
+  <svg class="ppo-svg" viewBox="0 0 880 380" xmlns="http://www.w3.org/2000/svg">
+
+    <!-- 左 panel: A > 0 (好 action) -->
+    <g transform="translate(40, 50)">
+      <text x="180" y="-10" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="14" font-weight="700" fill="#4a6b3a">A &gt; 0 · 好 action, 想增加它</text>
+
+      <!-- 坐标系 -->
+      <rect x="0" y="0" width="360" height="240" fill="white" stroke="#bfb398" stroke-width="0.6"/>
+      <line x1="20" y1="200" x2="340" y2="200" stroke="#3a3128" stroke-width="1"/>
+      <line x1="180" y1="20" x2="180" y2="220" stroke="#3a3128" stroke-width="1"/>
+
+      <!-- 轴标签 -->
+      <text x="340" y="216" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d">r</text>
+      <text x="172" y="18" text-anchor="end" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d">L</text>
+      <text x="180" y="216" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">1</text>
+      <text x="100" y="216" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#9b2c2c">1-ε</text>
+      <text x="260" y="216" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#9b2c2c">1+ε</text>
+
+      <!-- clip 边界 dotted -->
+      <line x1="100" y1="20" x2="100" y2="200" stroke="#9b2c2c" stroke-width="0.6" stroke-dasharray="2 3"/>
+      <line x1="260" y1="20" x2="260" y2="200" stroke="#9b2c2c" stroke-width="0.6" stroke-dasharray="2 3"/>
+
+      <!-- clipped region 高亮: r > 1+ε 才被切平 (右侧) -->
+      <rect class="clip-region" x="260" y="20" width="80" height="180"/>
+
+      <!-- unclipped curve (would go up forever) -->
+      <line class="clip-unclipped" x1="20" y1="240" x2="340" y2="40"/>
+      <text class="clip-unclipped" x="318" y="58" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">no clip</text>
+
+      <!-- clipped actual curve: 线性上升一路到 1+ε, 之后才切平 (1-ε 不起作用) -->
+      <path class="clip-line clip-actual" d="M 20 240 L 260 100 L 340 100"/>
+
+      <!-- 区域标签 -->
+      <g class="clip-tag">
+        <text x="180" y="55" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="11" fill="#9b2c2c">clip 后: 这一段 flat</text>
+        <text x="180" y="69" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#9b2c2c">→ 梯度 = 0</text>
+        <path d="M 240 80 L 270 95" stroke="#9b2c2c" stroke-width="1" fill="none" marker-end="url(#arr-ppo)"/>
+      </g>
+
+      <text x="180" y="270" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">想 push 概率 → OK,</text>
+      <text x="180" y="284" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">但增加超 20% 就停</text>
+    </g>
+
+    <!-- 右 panel: A < 0 (坏 action) -->
+    <g transform="translate(460, 50)">
+      <text x="180" y="-10" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="14" font-weight="700" fill="#9b2c2c">A &lt; 0 · 坏 action, 想减小它</text>
+
+      <rect x="0" y="0" width="360" height="240" fill="white" stroke="#bfb398" stroke-width="0.6"/>
+      <line x1="20" y1="40" x2="340" y2="40" stroke="#3a3128" stroke-width="1"/>
+      <line x1="180" y1="20" x2="180" y2="220" stroke="#3a3128" stroke-width="1"/>
+
+      <text x="340" y="56" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d">r</text>
+      <text x="172" y="218" text-anchor="end" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d">L</text>
+      <text x="180" y="34" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">1</text>
+      <text x="100" y="34" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#9b2c2c">1-ε</text>
+      <text x="260" y="34" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#9b2c2c">1+ε</text>
+
+      <line x1="100" y1="40" x2="100" y2="220" stroke="#9b2c2c" stroke-width="0.6" stroke-dasharray="2 3"/>
+      <line x1="260" y1="40" x2="260" y2="220" stroke="#9b2c2c" stroke-width="0.6" stroke-dasharray="2 3"/>
+
+      <rect class="clip-region" x="20" y="40" width="80" height="180"/>
+
+      <!-- unclipped curve -->
+      <line class="clip-unclipped" x1="20" y1="20" x2="340" y2="200"/>
+      <text class="clip-unclipped" x="55" y="48" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">no clip</text>
+
+      <!-- clipped actual curve: r<1-ε 切平, 之后线性下降一路过 1+ε 不再 clip -->
+      <path class="clip-line clip-actual" d="M 20 140 L 100 140 L 340 240"/>
+
+      <g class="clip-tag">
+        <text x="60" y="190" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="11" fill="#9b2c2c">clip 后: flat</text>
+        <text x="60" y="204" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#9b2c2c">→ 梯度 = 0</text>
+        <path d="M 75 165 L 95 145" stroke="#9b2c2c" stroke-width="1" fill="none" marker-end="url(#arr-ppo)"/>
+      </g>
+
+      <text x="180" y="270" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">想 push 概率 ↓ → OK,</text>
+      <text x="180" y="284" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">但减小超 20% 就停</text>
+    </g>
+
+    <!-- 底部说明 -->
+    <text x="440" y="365" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">
+      clip 在两边都把 loss 切平 → optimizer 自动停在 [1-ε, 1+ε] 边界 → 不再继续把 π 推远
+    </text>
+  </svg>
+</figure>
+
+<div class="note">
+  <span class="l">为什么 min 函数</span>
+  <p><code>min(r·A, clip(r)·A)</code> 取"更不利于增加 loss"的那个。当更新是"善意方向"(好 action 增、坏 action 减): clip 起作用, 防贪心。当 r 已经跑过边界且要修正回来: 让原 r·A 起作用, 不阻碍修正。<strong>这个 min 设计让 clip 只在该停的方向停</strong>, 是 PPO 论文最微妙也最关键的一个细节。</p>
+</div>
+
+
+<!-- §04 -->
+<h2><span class="num">§ 04</span>顺手白送 · 数据重用 K 个 epoch</h2>
+
+<p>Vanilla 策略梯度: 一批 rollout 只能用一次, 算完梯度立刻扔。<br/>
+PPO: 一批 rollout 可以反复跑 <strong>K 个 epoch (K=3~10)</strong>, sample efficiency 翻好几倍<a class="jr" href="#g-04">4</a>。</p>
+
+<figure id="fig-tloop" class="fig-tloop">
+  <figcaption>
+    <span>Fig 04 · PPO 训练循环</span>
+    <span class="fnum">collect 一次, 复用 K 次</span>
+  </figcaption>
+  <svg class="ppo-svg" viewBox="0 0 880 320" xmlns="http://www.w3.org/2000/svg">
+
+    <!-- Step 1: collect rollouts -->
+    <g class="tloop-step s1" transform="translate(40, 80)">
+      <rect x="0" y="0" width="180" height="120" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.5" rx="6"/>
+      <text x="90" y="30" text-anchor="middle" font-family="Fraunces" font-size="14" font-weight="700" fill="#4a6b3a">① Collect</text>
+      <text x="90" y="50" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">用 π_old 跑环境</text>
+      <text x="90" y="68" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">收 N 步 rollout</text>
+      <text x="90" y="92" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#7a6f5d">(s, a, r) × 2048</text>
+      <text x="90" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">数据池</text>
+    </g>
+
+    <!-- Arrow -->
+    <path class="tloop-step s2" d="M 230 140 L 270 140" stroke="#3a3128" stroke-width="1.5" fill="none" marker-end="url(#arr-ppo)"/>
+
+    <!-- Step 2: compute advantages -->
+    <g class="tloop-step s2" transform="translate(280, 80)">
+      <rect x="0" y="0" width="180" height="120" fill="#efd6c8" stroke="#9b2c2c" stroke-width="1.5" rx="6"/>
+      <text x="90" y="30" text-anchor="middle" font-family="Fraunces" font-size="14" font-weight="700" fill="#9b2c2c">② Compute</text>
+      <text x="90" y="50" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">A_t = GAE(rewards, V)</text>
+      <text x="90" y="68" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">π_old 概率算好缓存</text>
+      <text x="90" y="92" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#7a6f5d">advantage + log π_old</text>
+      <text x="90" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">这一批的"标签"</text>
+    </g>
+
+    <!-- Arrow -->
+    <path class="tloop-step s3" d="M 470 140 L 510 140" stroke="#3a3128" stroke-width="1.5" fill="none" marker-end="url(#arr-ppo)"/>
+
+    <!-- Step 3: K-epoch update -->
+    <g class="tloop-step s3" transform="translate(520, 60)">
+      <rect x="0" y="0" width="220" height="160" fill="#f0e0a8" stroke="#b8841c" stroke-width="2" rx="6"/>
+      <text x="110" y="32" text-anchor="middle" font-family="Fraunces" font-size="14" font-weight="700" fill="#b8841c">③ Update × K</text>
+      <text x="110" y="52" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">for epoch in range(K):</text>
+      <text x="110" y="68" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">  for batch in shuffle:</text>
+      <text x="110" y="86" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">    loss = L_CLIP(batch)</text>
+      <text x="110" y="102" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">    loss.backward()</text>
+      <text x="110" y="118" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">    optimizer.step()</text>
+      <text x="110" y="140" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="11" fill="#b8841c">同一批数据跑 K 遍!</text>
+    </g>
+
+    <!-- Arrow loop back -->
+    <path class="tloop-recycle" d="M 630 220 Q 630 280 350 280 Q 130 280 130 220"/>
+    <g class="tloop-step s4" transform="translate(330, 286)">
+      <text x="90" y="0" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="13" font-weight="700" fill="#9b2c2c">π_old ← π_new, 回到 ①</text>
+    </g>
+
+    <!-- 顶部说明 -->
+    <text x="440" y="35" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="14" fill="#3a3128">
+      Vanilla PG: K=1 (数据用一次扔). PPO: K=4~10 (同一批数据反复用).
+    </text>
+    <text x="440" y="55" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d">
+      ← clip 保证 π_new 不会跑离 π_old 太远, 所以老数据还能用
+    </text>
+  </svg>
+</figure>
+
+<p><strong>为什么这能 work</strong>: clip 保证了 π_new 离 π_old 不会跑出 [1-ε, 1+ε] 范围, 那批 rollout 数据相对 π_new 还"近似准确"。这是 PPO 工程价值的核心 —— <strong>sample efficiency 翻倍, 同样 wall-clock 时间能训出更好的策略</strong>。</p>
+
+
+<!-- §05 -->
+<h2><span class="num">§ 05</span>杀手级应用 · RLHF 训出 ChatGPT</h2>
+
+<p>PPO 2017 年出, 在游戏 / 机器人控制圈里跑了 5 年。2022 年 OpenAI 用 PPO 训了 InstructGPT, 把"会预测下一个 token 的 GPT-3" 变成了"会按人类偏好聊天的 ChatGPT"<a class="jr" href="#g-05">5</a>。<strong>这是 PPO 最重要的一笔遗产</strong>。</p>
+
+<figure id="fig-rlhf" class="fig-rlhf">
+  <figcaption>
+    <span>Fig 05 · RLHF 三步流程</span>
+    <span class="fnum">SFT · Reward Model · PPO</span>
+  </figcaption>
+  <svg class="ppo-svg" viewBox="0 0 880 400" xmlns="http://www.w3.org/2000/svg">
+
+    <!-- Stage 1: SFT -->
+    <g class="rlhf-stage s1" transform="translate(40, 100)">
+      <rect x="0" y="0" width="240" height="200" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="2" rx="6"/>
+      <text x="120" y="30" text-anchor="middle" font-family="Fraunces" font-size="16" font-weight="700" fill="#4a6b3a">① SFT</text>
+      <text x="120" y="46" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d">Supervised Fine-Tuning</text>
+
+      <!-- 数据图标 -->
+      <rect x="20" y="62" width="200" height="50" fill="white" stroke="#7a6f5d" stroke-width="0.6"/>
+      <text x="120" y="80" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3a3128">人工写 (prompt, answer)</text>
+      <text x="120" y="94" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3a3128">~10K 对子</text>
+      <text x="120" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">(贵但量小)</text>
+
+      <text x="120" y="135" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">cross-entropy fine-tune</text>
+      <text x="120" y="152" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">GPT-3 base</text>
+
+      <rect x="60" y="166" width="120" height="26" fill="#4a6b3a" stroke="#181410" stroke-width="0.8" rx="3"/>
+      <text x="120" y="184" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="white" font-weight="700">SFT model</text>
+    </g>
+
+    <!-- Arrow 1 -->
+    <path class="rlhf-arrow a1" d="M 290 200 L 320 200" marker-end="url(#arr-ppo)"/>
+
+    <!-- Stage 2: Reward Model -->
+    <g class="rlhf-stage s2" transform="translate(330, 100)">
+      <rect x="0" y="0" width="240" height="200" fill="#efd6c8" stroke="#9b2c2c" stroke-width="2" rx="6"/>
+      <text x="120" y="30" text-anchor="middle" font-family="Fraunces" font-size="16" font-weight="700" fill="#9b2c2c">② Reward Model</text>
+      <text x="120" y="46" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d">学人类排序偏好</text>
+
+      <rect x="20" y="62" width="200" height="50" fill="white" stroke="#7a6f5d" stroke-width="0.6"/>
+      <text x="120" y="80" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3a3128">SFT 采样 2 个 → 人选哪个好</text>
+      <text x="120" y="94" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3a3128">(A &gt; B) 标注 · 几十万</text>
+      <text x="120" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">(便宜易扩展)</text>
+
+      <text x="120" y="135" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">Bradley-Terry loss</text>
+      <text x="120" y="152" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">→ scalar score</text>
+
+      <rect x="60" y="166" width="120" height="26" fill="#9b2c2c" stroke="#181410" stroke-width="0.8" rx="3"/>
+      <text x="120" y="184" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="white" font-weight="700">Reward Model</text>
+    </g>
+
+    <!-- Arrow 2 -->
+    <path class="rlhf-arrow a2" d="M 580 200 L 610 200" marker-end="url(#arr-ppo)"/>
+
+    <!-- Stage 3: PPO -->
+    <g class="rlhf-stage s3" transform="translate(620, 100)">
+      <rect x="0" y="0" width="240" height="200" fill="#f0e0a8" stroke="#b8841c" stroke-width="2" rx="6"/>
+      <text x="120" y="30" text-anchor="middle" font-family="Fraunces" font-size="16" font-weight="700" fill="#b8841c">③ PPO</text>
+      <text x="120" y="46" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d">RM 当 reward, 训 LLM</text>
+
+      <rect x="20" y="62" width="200" height="50" fill="white" stroke="#7a6f5d" stroke-width="0.6"/>
+      <text x="120" y="80" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3a3128">LLM 生成回答 → RM 打分</text>
+      <text x="120" y="94" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3a3128">- β × KL(LLM ‖ SFT)</text>
+      <text x="120" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#9b2c2c">防止 reward hacking</text>
+
+      <text x="120" y="135" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">PPO clipped loss</text>
+      <text x="120" y="152" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">最大化 (reward - KL)</text>
+
+      <rect x="40" y="166" width="160" height="26" fill="#b8841c" stroke="#181410" stroke-width="0.8" rx="3"/>
+      <text x="120" y="184" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="white" font-weight="700">aligned chat model</text>
+    </g>
+
+    <!-- 顶部说明 -->
+    <text x="440" y="40" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="14" font-weight="700" fill="#3a3128">
+      把"哪个回答更好"的人类排序, 转成 PPO 能用的 reward 信号
+    </text>
+    <text x="440" y="62" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d">
+      InstructGPT (2022) · ChatGPT · GPT-4 · Claude · Llama-chat 全用这套
+    </text>
+
+    <!-- 底部说明 -->
+    <text x="440" y="345" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">
+      第 ③ 步里 LLM 就是 PPO 里的 "agent", 词表就是 "action 空间", RM 给的分就是 reward
+    </text>
+    <text x="440" y="365" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d">
+      但每个 episode 短 (几十 token), action 空间大 (50K 词表), 不需要太多 exploration → 弱 RL
+    </text>
+    <text x="440" y="385" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#9b2c2c">
+      详见 <tspan fill="#9b2c2c" font-weight="700">../concepts/rlhf.html</tspan>
+    </text>
+  </svg>
+</figure>
+
+<div class="note">
+  <span class="l">KL penalty 防 reward hacking</span>
+  <p>没有 KL penalty 时, LLM 会过拟合 RM 的 bug —— "RM 喜欢长回答" → LLM 学会啰嗦; "RM 给 'Certainly!' 高分" → LLM 每个回答开头都加 "Certainly!"。加 <code>β × KL(LLM ‖ SFT)</code> 限制 LLM 偏离 SFT 模型太远, 是 RLHF 工程最关键的细节之一<a class="jr" href="#g-09">9</a>。</p>
+</div>
+
+
+<!-- §06 -->
+<h2><span class="num">§ 06</span>遗产 · GRPO · DPO · 跟它们的关系</h2>
+
+<p>PPO 之后的 RL alignment 演化, 几条主要路线都跟它有渊源:</p>
+
+<h3>GRPO (DeepSeek 2024)</h3>
+
+<p>PPO 的 LLM 友好简化版<a class="jr" href="#g-10">10</a>。<strong>干掉了 value network</strong>, 改用一组样本 (一个 prompt 采样 N 个回答) 的相对得分直接当 advantage:</p>
+
+<pre class="eq"># PPO 标准做法
+A_t = GAE(rewards, V_critic(state))    # 需要训 critic 估 V
+
+# GRPO 简化做法
+A_t = (r_i - mean(group)) / std(group) # 一组样本里相对位置</pre>
+
+<p>省一个网络, 训得更稳。DeepSeek R1 (2025) 用 GRPO 做 reasoning 训练取得突破。<a href="../concepts/grpo.html">详见 grpo concept</a></p>
+
+<h3>DPO (2023)</h3>
+
+<p>Direct Preference Optimization<a class="jr" href="#g-12">12</a> 跳过 reward model + PPO, <strong>直接用对比学习的思路一步训 LLM</strong>:</p>
+
+<pre class="eq">loss = -log σ( β · log[π(y_w|x) / π_ref(y_w|x)] - β · log[π(y_l|x) / π_ref(y_l|x)] )
+                          ↑ 偏好的回答                       ↑ 不偏好的回答</pre>
+
+<p>没有 RM, 没有 PPO 循环, 一个 cross-entropy 一样的 loss 训完。<strong>工程上更稳, 但不能 online 探索</strong> —— 适合"用现成偏好数据对齐", 不适合需要 RL 探索的场景 (比如 reasoning)。</p>
+
+<h3>当前生态</h3>
+
+<p>2024-2025 的格局大致是:</p>
+
+<p>• <strong>对话对齐</strong> (chat models, helpfulness, harmlessness): DPO 多, 因为偏好数据现成 + 工程稳<br/>
+• <strong>Reasoning 训练</strong> (R1 / o1 系): GRPO 多, 因为 reward signal 来自正确性 (可验证), 需要 online RL 探索<br/>
+• <strong>需要严格 KL 控制 + 明确 reward 的场景</strong>: PPO 经典版仍在用</p>
+
+<p>所以 PPO 没死, 它分裂成了几条更专的路线 —— 但 <strong>clipped surrogate + advantage 这套 core idea, 是 DPO/GRPO 都建立在其上的基础</strong>。</p>
+
+
+<!-- §07 -->
+<h2><span class="num">§ 07</span>它真正改变的是什么</h2>
+
+<p>PPO 作为 2017 年的 RL 算法本身的影响:</p>
+
+<p>• <strong>RL 落地门槛大幅降低</strong> —— 之前 RL 是研究领域的事, PPO 之后中等团队也能跑出能用的策略<br/>
+• <strong>OpenAI Five</strong> (Dota 2 击败人类职业战队), AlphaStar (StarCraft II 顶级水准) 都基于 PPO 系<br/>
+• <strong>机器人控制</strong>, locomotion (Boston Dynamics 风格的步态学习), simulated humanoid 全靠 PPO</p>
+
+<p>但 PPO 的<strong>最大遗产</strong>明显是 RLHF —— 没有 PPO 这套稳定可调的 policy gradient, OpenAI 不可能在 2022 年底把 ChatGPT 训出来。<strong>ChatGPT 之后的 LLM 应用爆炸, 算上一笔 PPO 的功劳</strong>。</p>
+
+<p>从工程哲学层面: PPO 体现的"<strong>粗暴近似打败精确解</strong>"也成了深度学习里反复出现的规律 ——</p>
+
+<p>• TRPO (精确 KL 约束) → PPO (粗暴 clip): clip 赢<br/>
+• Attention with mask (精确因果约束) → causal mask (粗暴下三角): mask 赢<br/>
+• Adam (精确学习率自适应) → SGD + momentum (粗暴动量): 各有领地<br/>
+• Bayesian deep learning (精确不确定性) → Monte Carlo dropout (粗暴 sample): dropout 赢</p>
+
+<p>PPO 的 clip 是这个规律的一个标杆案例。</p>
+
+
+<!-- glossary -->
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">Policy gradient · 策略梯度</span> · RL 训练的基础方法 —— 把策略 π(a|s) 当成神经网络, 用 reward 当 loss 的方向梯度 ascent。跟监督学习的 cross-entropy 几乎同一个公式, 唯一区别是 label 换成了 reward 数值。详见 <a href="../concepts/policy-gradient.html">policy-gradient</a>。</li>
+    <li id="g-02"><span class="term">TRPO · Trust Region Policy Optimization</span> · PPO 的前身 (Schulman 2015)。加 KL 散度约束 KL(π_new ‖ π_old) ≤ δ 精确限制每步策略变化。理论漂亮但工程上要做共轭梯度 + 线搜索, 慢、复杂、不亲深度学习框架。</li>
+    <li id="g-03"><span class="term">Clipped surrogate objective</span> · PPO 的核心创新。用 clip(r, 1-ε, 1+ε) 限制新老策略概率比值, 把 trust region 约束直接写进 loss。一行 torch.clamp 干掉 TRPO 的所有复杂。详见 <a href="../concepts/clipped-surrogate-objective.html">clipped-surrogate-objective</a>。</li>
+    <li id="g-04"><span class="term">K-epoch data reuse</span> · PPO 的副产品 —— 因为 clip 保证 π_new 不跑远, 同一批 rollout 可以反复跑 K 个 epoch (K=3~10) 而不让数据失效。Sample efficiency 比 vanilla PG 高 K 倍。这是 PPO 工程价值的核心。</li>
+    <li id="g-05"><span class="term">RLHF · Reinforcement Learning from Human Feedback</span> · PPO 在 LLM 上的杀手级应用 —— 用人类排序偏好训 reward model, 再用 PPO 让 LLM 最大化 reward。InstructGPT (2022) 用这套把 GPT-3 变成 ChatGPT。详见 <a href="../concepts/rlhf.html">rlhf</a>。</li>
+    <li id="g-06"><span class="term">RL 训练信号迟来</span> · 监督学习每个样本都有 ground truth, RL 只在一整局结束才知道输赢。这是 RL 难训的根本原因 —— 训练信号稀疏且滞后, 还得 attribute 给中间某个 action。</li>
+    <li id="g-07"><span class="term">步子大就崩</span> · Vanilla 策略梯度的致命缺陷。数据用 π_old 收集, 梯度算 π_new, 一旦 π_new 跑远, 数据立即失效, 训练发散。所有现代 RL 算法 (TRPO/PPO/GRPO/DPO) 都在解这个。</li>
+    <li id="g-08"><span class="term">Advantage function · 优势函数</span> · A(s,a) = Q(s,a) - V(s) = "这个 action 比当前局面的平均预期好多少"。比 raw return 更稳的训练信号, 对 reward 偏移不敏感。GAE 是估计 A 的标配。详见 <a href="../concepts/advantage-function.html">advantage-function</a>。</li>
+    <li id="g-09"><span class="term">KL penalty · 防 reward hacking</span> · RLHF 第 3 步里, 把 reward 改成 reward - β·KL(LLM ‖ SFT_frozen)。防止 LLM 为了 RM 高分把所有回答都搞成"啰嗦版/markdown 版/Certainly! 开头"。β 一般 0.01-0.1。是 RLHF 工程最关键的细节之一。</li>
+    <li id="g-10"><span class="term">GRPO · Group Relative Policy Optimization</span> · DeepSeek 2024 提出的 PPO 简化版 —— 干掉 value network, 用一组样本的相对得分直接当 advantage。R1 (2025) 的 reasoning 训练用它取得突破。详见 <a href="../concepts/grpo.html">grpo</a>。</li>
+    <li id="g-11"><span class="term">GAE · Generalized Advantage Estimation</span> · Schulman 2015 提出的 advantage 估计方法 —— 在 TD (1-step) 和 MC (whole episode) 之间用 λ 插值。λ=0.95 是 PPO 标准配置。算 GAE 比 clip 本身对训练效果影响还大。</li>
+    <li id="g-12"><span class="term">DPO · Direct Preference Optimization</span> · 2023 提出, 跳过 reward model 跟 PPO 循环, 直接用对比学习的思路从偏好数据一步训出对齐的 LLM。比 PPO 简单稳定, 但不能 online 探索, 现在 chat 模型对齐多数选 DPO; reasoning 训练仍用 PPO/GRPO。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>Authored / 个人学习笔记 · 2026</span>
+  <span>Index / <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+
+<script>
+{
+  const figs = ['fig-loop','fig-vanilla','fig-clip','fig-tloop','fig-rlhf'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.25 });
+    obs.observe(el);
+  });
+}
+</script>
+
+</body>
+</html>
