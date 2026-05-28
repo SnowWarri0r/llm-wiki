@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>CLIP · Learning Transferable Visual Models from Natural Language Supervision</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --accent: var(--ochre); --accent-soft: var(--ochre-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(48px, 8vw, 84px); line-height: 0.92; letter-spacing: -0.035em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 38px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
+p { margin: 12px 0; } strong { font-weight: 700; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--ochre-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--ochre); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--ochre); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--ochre-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--brick-soft); } 100% { background: var(--ochre-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* clip-specific */
+.clip-svg { width: 100%; height: auto; display: block; }
+
+/* fig-1 dual-tower */
+.tower-box { opacity: 0; transition: opacity 0.6s ease; }
+.fig-tower.play .tower-box.tw-img { opacity: 1; transition-delay: 0.3s; }
+.fig-tower.play .tower-box.tw-txt { opacity: 1; transition-delay: 0.6s; }
+.fig-tower.play .embed-vec { opacity: 1; transition-delay: 1.1s; }
+.fig-tower.play .dot-line { opacity: 1; transition-delay: 1.5s; }
+.fig-tower.play .sim-out { opacity: 1; transition-delay: 1.9s; }
+.embed-vec, .dot-line, .sim-out { opacity: 0; transition: opacity 0.6s ease; }
+
+/* fig-2 contrastive matrix */
+.cmatrix-cell { stroke: var(--rule); stroke-width: 0.6; opacity: 0; transition: opacity 0.3s ease; }
+.fig-cmat.play .cmatrix-cell { opacity: 1; }
+.cmatrix-cell.pos { fill: var(--ochre); }
+.cmatrix-cell.neg { fill: var(--paper-3); }
+.cmat-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; fill: var(--ink-2); opacity: 0; transition: opacity 0.5s ease; }
+.fig-cmat.play .cmat-label { opacity: 1; transition-delay: 0.8s; }
+.diag-highlight { fill: none; stroke: var(--brick); stroke-width: 2.5; opacity: 0; transition: opacity 0.6s ease; }
+.fig-cmat.play .diag-highlight { opacity: 1; transition-delay: 1.4s; }
+
+/* fig-3 data scale */
+.scale-bar { transform-origin: left center; transform: scaleX(0); transition: transform 1.2s ease; }
+.fig-scale.play .scale-bar { transform: scaleX(1); }
+.fig-scale.play .scale-bar.bar1 { transition-delay: 0.3s; }
+.fig-scale.play .scale-bar.bar2 { transition-delay: 0.8s; }
+.scale-num { opacity: 0; transition: opacity 0.4s ease; }
+.fig-scale.play .scale-num.n1 { opacity: 1; transition-delay: 1.3s; }
+.fig-scale.play .scale-num.n2 { opacity: 1; transition-delay: 1.7s; }
+
+/* fig-4 zero-shot */
+.candidate-row { opacity: 0; transition: opacity 0.5s ease; }
+.fig-zshot.play .candidate-row { opacity: 1; }
+.fig-zshot.play .candidate-row.r1 { transition-delay: 0.5s; }
+.fig-zshot.play .candidate-row.r2 { transition-delay: 0.9s; }
+.fig-zshot.play .candidate-row.r3 { transition-delay: 1.3s; }
+.fig-zshot.play .candidate-row.r4 { transition-delay: 1.7s; }
+.fig-zshot.play .candidate-row.r5 { transition-delay: 2.1s; }
+
+.candidate-bar { fill: var(--ochre-soft); stroke: var(--ochre); stroke-width: 1; transform-origin: left center; transform: scaleX(0); transition: transform 0.8s ease; }
+.fig-zshot.play .candidate-row.r1 .candidate-bar { transform: scaleX(0.95); transition-delay: 1.2s; }
+.fig-zshot.play .candidate-row.r2 .candidate-bar { transform: scaleX(0.2); transition-delay: 1.4s; }
+.fig-zshot.play .candidate-row.r3 .candidate-bar { transform: scaleX(0.08); transition-delay: 1.6s; }
+.fig-zshot.play .candidate-row.r4 .candidate-bar { transform: scaleX(0.15); transition-delay: 1.8s; }
+.fig-zshot.play .candidate-row.r5 .candidate-bar { transform: scaleX(0.12); transition-delay: 2s; }
+
+.winner-glow { fill: none; stroke: var(--brick); stroke-width: 2; opacity: 0; transition: opacity 0.5s ease; }
+.fig-zshot.play .winner-glow { opacity: 1; transition-delay: 2.6s; }
+
+/* fig-5 downstream */
+.ds-center { transform: scale(0); transform-origin: center; transform-box: fill-box; transition: transform 0.8s cubic-bezier(0.4, 1.6, 0.6, 1); }
+.fig-ds.play .ds-center { transform: scale(1); }
+.ds-arrow { stroke-dasharray: 0 200; transition: stroke-dasharray 0.8s ease; }
+.fig-ds.play .ds-arrow { stroke-dasharray: 200 200; }
+.fig-ds.play .ds-arrow.a1 { transition-delay: 0.8s; }
+.fig-ds.play .ds-arrow.a2 { transition-delay: 1.0s; }
+.fig-ds.play .ds-arrow.a3 { transition-delay: 1.2s; }
+.fig-ds.play .ds-arrow.a4 { transition-delay: 1.4s; }
+.fig-ds.play .ds-arrow.a5 { transition-delay: 1.6s; }
+.fig-ds.play .ds-arrow.a6 { transition-delay: 1.8s; }
+
+.ds-node { opacity: 0; transform: scale(0.6); transform-origin: center; transform-box: fill-box; transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.4, 1.6, 0.6, 1); }
+.fig-ds.play .ds-node { opacity: 1; transform: scale(1); }
+.fig-ds.play .ds-node.n1 { transition-delay: 1.2s; }
+.fig-ds.play .ds-node.n2 { transition-delay: 1.4s; }
+.fig-ds.play .ds-node.n3 { transition-delay: 1.6s; }
+.fig-ds.play .ds-node.n4 { transition-delay: 1.8s; }
+.fig-ds.play .ds-node.n5 { transition-delay: 2.0s; }
+.fig-ds.play .ds-node.n6 { transition-delay: 2.2s; }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · clip</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · arXiv 2103.00020 · OpenAI · 2021</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · MULTIMODAL · CONTRASTIVE</div>
+  <h1 class="title">CLIP ·<br /><span class="em">图文对齐到同一空间.</span></h1>
+  <div class="byline">Radford · Kim · Hallacy · Ramesh · Goh · Sutskever · et al. · OpenAI · 2021</div>
+  <p class="dek">不再标"这张图是哪一类"，直接从互联网爬 4 亿个"图 + caption"配对训练。图像和文本在同一向量空间里对齐 —— 这是所有现代多模态的起点。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>ImageNet 那套"人工标 1000 类"的训练方式贵且穷 —— 一张图一个 label, 信号被压扁<a class="jr" href="#g-01">1</a>。CLIP 反过来 —— 从网上爬 <strong>4 亿个图文对</strong><a class="jr" href="#g-02">2</a>, 用<strong>对比学习</strong><a class="jr" href="#g-03">3</a>训一个图像 encoder + 一个文本 encoder, 让两边的 embedding 对齐到同一空间<a class="jr" href="#g-04">4</a>。训完后想分什么类不用 fine-tune —— 写句话 "a photo of a {class}" 喂进去就行<a class="jr" href="#g-05">5</a>。Zero-shot 27 个数据集平均跟 ResNet-50 finetune 持平。<strong>真正的意义不在 benchmark, 在于它立起来的那个图文对齐空间</strong> —— DALL-E / Stable Diffusion / LLaVA / GPT-4V 全靠它<a class="jr" href="#g-06">6</a>。</p>
+</div>
+
+
+<!-- §01 -->
+<h2><span class="num">§ 01</span>痛点 · 一张图一个 label 太浪费</h2>
+
+<p>2020 年之前, 视觉训练的标准流程是 <strong>ImageNet 范式</strong>:</p>
+
+<p>1. 雇人标几千几万张图 (每张图标一个 class)<br/>
+2. 训 CNN, 输出 1000 类的概率分布<br/>
+3. 想换任务 (医学图 / 卫星图 / 商品图) → 重新标 + 重新训</p>
+
+<div class="note">
+  <span class="l">浪费在哪</span>
+  <p>看下面这张图。它的 ImageNet label 是 <code>"golden_retriever"</code>。但这张图实际包含的信息远多于此 —— "金毛犬 / 在草地上 / 阳光 / 戴红色项圈 / 转头看镜头 / 年轻"。<strong>所有这些信息全被压扁成了一个 label</strong>, 监督信号极度稀疏。</p>
+</div>
+
+<p>同一时间, NLP 那边 GPT-2/3 已经证明: <strong>不用人工标, 直接从互联网原文学</strong>, 反而能学到更通用、更可迁移的表示<a class="jr" href="#g-07">7</a>。视觉为什么不能也来这一套？</p>
+
+<p>问题: <strong>视觉没有"原文"</strong> —— 图不能像维基百科一样直接读。</p>
+
+<p>OpenAI 注意到一个事实: <strong>互联网上有数十亿张图配着 caption</strong>（alt 文本、Instagram 配文、Flickr 描述、新闻图说）。这些 caption 不是为训练写的, 是网友自然产生的"图说话"。<strong>这就是图像的"原文"</strong>。</p>
+
+
+<!-- §02 -->
+<h2><span class="num">§ 02</span>架构 · 双塔 + 末端对齐</h2>
+
+<p>CLIP 的工程设计 —— 两个独立的 encoder, 各跑各的, 最后只在末端算一个点积<a class="jr" href="#g-04">4</a>:</p>
+
+<figure id="fig-tower" class="fig-tower">
+  <figcaption>
+    <span>Fig 01 · Dual-Tower 架构</span>
+    <span class="fnum">image encoder + text encoder + 末端 dot product</span>
+  </figcaption>
+  <svg class="clip-svg" viewBox="0 0 860 360" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#3a3128"/>
+      </marker>
+    </defs>
+
+    <!-- 左上 image input -->
+    <g transform="translate(40, 50)">
+      <text x="60" y="-10" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d" letter-spacing="1">image</text>
+      <rect x="0" y="0" width="120" height="80" fill="#d8c8a8" stroke="#181410" stroke-width="1"/>
+      <ellipse cx="60" cy="48" rx="30" ry="22" fill="#7a6248"/>
+      <circle cx="50" cy="42" r="2.5" fill="#181410"/>
+      <circle cx="70" cy="42" r="2.5" fill="#181410"/>
+      <path d="M 52 56 Q 60 60 68 56" stroke="#181410" stroke-width="1" fill="none"/>
+    </g>
+
+    <!-- 左下 text input -->
+    <g transform="translate(40, 220)">
+      <text x="60" y="-10" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d" letter-spacing="1">text caption</text>
+      <rect x="0" y="0" width="220" height="60" fill="white" stroke="#181410" stroke-width="1"/>
+      <text x="110" y="25" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">"a golden retriever</text>
+      <text x="110" y="44" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">on the grass"</text>
+    </g>
+
+    <!-- 箭头 image → image encoder -->
+    <path d="M 165 90 L 200 90" stroke="#3a3128" stroke-width="1.5" fill="none" marker-end="url(#arrow1)"/>
+    <path d="M 265 250 L 295 250" stroke="#3a3128" stroke-width="1.5" fill="none" marker-end="url(#arrow1)"/>
+
+    <!-- Image encoder (上) -->
+    <g class="tower-box tw-img" transform="translate(205, 50)">
+      <rect x="0" y="0" width="160" height="80" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.5" rx="4"/>
+      <text x="80" y="22" text-anchor="middle" font-family="Fraunces" font-size="14" font-weight="700" fill="#4a6b3a">Image Encoder</text>
+      <text x="80" y="40" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">ViT-B/32 (or ResNet)</text>
+      <text x="80" y="58" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">86M params</text>
+      <text x="80" y="73" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">独立的图像 tower</text>
+    </g>
+
+    <!-- Text encoder (下) -->
+    <g class="tower-box tw-txt" transform="translate(300, 220)">
+      <rect x="0" y="0" width="160" height="80" fill="#efd6c8" stroke="#9b2c2c" stroke-width="1.5" rx="4"/>
+      <text x="80" y="22" text-anchor="middle" font-family="Fraunces" font-size="14" font-weight="700" fill="#9b2c2c">Text Encoder</text>
+      <text x="80" y="40" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">12-layer Transformer</text>
+      <text x="80" y="58" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">63M params</text>
+      <text x="80" y="73" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">独立的文本 tower</text>
+    </g>
+
+    <!-- 上 encoder → image embedding -->
+    <path d="M 370 90 L 410 90" stroke="#3a3128" stroke-width="1.5" fill="none" marker-end="url(#arrow1)"/>
+    <path d="M 465 260 L 495 200 L 495 130" stroke="#3a3128" stroke-width="1.5" fill="none" marker-end="url(#arrow1)"/>
+
+    <!-- image embedding vector -->
+    <g class="embed-vec" transform="translate(420, 60)">
+      <text x="60" y="-6" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">image embedding</text>
+      <rect x="0" y="0" width="120" height="22" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1"/>
+      <text x="60" y="15" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">[ 0.12, -0.4, ...] 512-d</text>
+      <text x="60" y="34" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#4a6b3a">/ ‖·‖</text>
+    </g>
+
+    <!-- text embedding vector -->
+    <g class="embed-vec" transform="translate(420, 200)">
+      <text x="60" y="-6" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">text embedding</text>
+      <rect x="0" y="0" width="120" height="22" fill="#efd6c8" stroke="#9b2c2c" stroke-width="1"/>
+      <text x="60" y="15" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">[ 0.10, -0.35, ...] 512-d</text>
+      <text x="60" y="34" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#9b2c2c">/ ‖·‖</text>
+    </g>
+
+    <!-- 收敛到同一空间 -->
+    <g class="dot-line">
+      <path d="M 545 80 Q 590 160 540 230" stroke="#b8841c" stroke-width="2" fill="none" stroke-dasharray="3 3"/>
+      <text x="565" y="155" font-family="Fraunces" font-style="italic" font-size="12" fill="#b8841c">同一向量空间</text>
+    </g>
+
+    <!-- 点积 -->
+    <g class="sim-out" transform="translate(640, 130)">
+      <rect x="0" y="0" width="150" height="80" fill="#f0e0a8" stroke="#b8841c" stroke-width="2" rx="6"/>
+      <text x="75" y="24" text-anchor="middle" font-family="Fraunces" font-size="14" font-weight="700" fill="#b8841c">Dot Product</text>
+      <text x="75" y="46" text-anchor="middle" font-family="JetBrains Mono" font-size="13" fill="#181410">img · txt</text>
+      <text x="75" y="68" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d">cosine 相似度</text>
+    </g>
+
+    <!-- 底部说明 -->
+    <text x="430" y="335" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">
+      两个 encoder 内部完全独立 —— 最后只在末端通过一个点积对齐
+    </text>
+  </svg>
+</figure>
+
+<p>关键设计:</p>
+
+<p>• 两边 encoder <strong>完全独立</strong>, 训练和推理都互不相干<br/>
+• 各自最后一层投影到同一维度 (512), 然后 L2 normalize 让点积 = cosine similarity<br/>
+• <strong>所有跨模态交互只发生在最后那一个点积</strong> —— 没有 cross-attention, 没有 fusion layer</p>
+
+<div class="note">
+  <span class="l">为啥不用一个大 Transformer 直接吃图+文本</span>
+  <p>有两种主流多模态架构: <strong>Dual-tower</strong> (CLIP) 和 <strong>Single-tower</strong> (LLaVA / GPT-4V)。前者推理高效 (一边可缓存)、训练目标干净, 但表达力受限; 后者表达力高 (能生成、能问答) 但推理贵。<strong>实际系统经常混合用 —— CLIP 当视觉前端 + LLM 当推理后端</strong>。详见 <a href="../concepts/dual-tower-architecture.html">dual-tower-architecture</a>。</p>
+</div>
+
+
+<!-- §03 -->
+<h2><span class="num">§ 03</span>对比学习 · 把整个 batch 当训练单元</h2>
+
+<p>CLIP 的训练目标 —— 这是真正的"魔法所在"<a class="jr" href="#g-03">3</a>:</p>
+
+<figure id="fig-cmat" class="fig-cmat">
+  <figcaption>
+    <span>Fig 02 · 对比学习 · in-batch negatives</span>
+    <span class="fnum">对角线 = 正样本, 其余 = 负样本</span>
+  </figcaption>
+  <svg class="clip-svg" viewBox="0 0 860 460" xmlns="http://www.w3.org/2000/svg">
+    <!-- 左侧 images -->
+    <g transform="translate(50, 120)">
+      <text class="cmat-label" x="50" y="-15" text-anchor="middle">图像 (batch)</text>
+      <!-- 5 个小 image thumbnail -->
+      <rect class="cmatrix-cell pos" x="0" y="0" width="80" height="50" fill="#d8c8a8" stroke="#181410"/>
+      <text class="cmat-label" x="40" y="30" text-anchor="middle">🐕 dog</text>
+      <rect class="cmatrix-cell pos" x="0" y="55" width="80" height="50" fill="#c8d8a8" stroke="#181410"/>
+      <text class="cmat-label" x="40" y="85" text-anchor="middle">🌲 tree</text>
+      <rect class="cmatrix-cell pos" x="0" y="110" width="80" height="50" fill="#d8a8c8" stroke="#181410"/>
+      <text class="cmat-label" x="40" y="140" text-anchor="middle">🍕 pizza</text>
+      <rect class="cmatrix-cell pos" x="0" y="165" width="80" height="50" fill="#a8c8d8" stroke="#181410"/>
+      <text class="cmat-label" x="40" y="195" text-anchor="middle">🚗 car</text>
+      <rect class="cmatrix-cell pos" x="0" y="220" width="80" height="50" fill="#d8d8a8" stroke="#181410"/>
+      <text class="cmat-label" x="40" y="250" text-anchor="middle">🏖 beach</text>
+    </g>
+
+    <!-- 顶部 texts -->
+    <g transform="translate(160, 50)">
+      <text class="cmat-label" x="250" y="-10" text-anchor="middle">文本 (batch)</text>
+      <text class="cmat-label" x="50" y="30" text-anchor="middle">"a dog"</text>
+      <text class="cmat-label" x="150" y="30" text-anchor="middle">"a tree"</text>
+      <text class="cmat-label" x="250" y="30" text-anchor="middle">"a pizza"</text>
+      <text class="cmat-label" x="350" y="30" text-anchor="middle">"a car"</text>
+      <text class="cmat-label" x="450" y="30" text-anchor="middle">"a beach"</text>
+    </g>
+
+    <!-- 5×5 矩阵 -->
+    <g transform="translate(160, 120)">
+      <!-- row 1: dog -->
+      <rect class="cmatrix-cell pos" x="0" y="0" width="100" height="50"/>
+      <rect class="cmatrix-cell neg" x="100" y="0" width="100" height="50"/>
+      <rect class="cmatrix-cell neg" x="200" y="0" width="100" height="50"/>
+      <rect class="cmatrix-cell neg" x="300" y="0" width="100" height="50"/>
+      <rect class="cmatrix-cell neg" x="400" y="0" width="100" height="50"/>
+      <!-- row 2: tree -->
+      <rect class="cmatrix-cell neg" x="0" y="55" width="100" height="50"/>
+      <rect class="cmatrix-cell pos" x="100" y="55" width="100" height="50"/>
+      <rect class="cmatrix-cell neg" x="200" y="55" width="100" height="50"/>
+      <rect class="cmatrix-cell neg" x="300" y="55" width="100" height="50"/>
+      <rect class="cmatrix-cell neg" x="400" y="55" width="100" height="50"/>
+      <!-- row 3: pizza -->
+      <rect class="cmatrix-cell neg" x="0" y="110" width="100" height="50"/>
+      <rect class="cmatrix-cell neg" x="100" y="110" width="100" height="50"/>
+      <rect class="cmatrix-cell pos" x="200" y="110" width="100" height="50"/>
+      <rect class="cmatrix-cell neg" x="300" y="110" width="100" height="50"/>
+      <rect class="cmatrix-cell neg" x="400" y="110" width="100" height="50"/>
+      <!-- row 4: car -->
+      <rect class="cmatrix-cell neg" x="0" y="165" width="100" height="50"/>
+      <rect class="cmatrix-cell neg" x="100" y="165" width="100" height="50"/>
+      <rect class="cmatrix-cell neg" x="200" y="165" width="100" height="50"/>
+      <rect class="cmatrix-cell pos" x="300" y="165" width="100" height="50"/>
+      <rect class="cmatrix-cell neg" x="400" y="165" width="100" height="50"/>
+      <!-- row 5: beach -->
+      <rect class="cmatrix-cell neg" x="0" y="220" width="100" height="50"/>
+      <rect class="cmatrix-cell neg" x="100" y="220" width="100" height="50"/>
+      <rect class="cmatrix-cell neg" x="200" y="220" width="100" height="50"/>
+      <rect class="cmatrix-cell neg" x="300" y="220" width="100" height="50"/>
+      <rect class="cmatrix-cell pos" x="400" y="220" width="100" height="50"/>
+
+      <!-- 对角线高亮 -->
+      <rect class="diag-highlight" x="0" y="0" width="100" height="50"/>
+      <rect class="diag-highlight" x="100" y="55" width="100" height="50"/>
+      <rect class="diag-highlight" x="200" y="110" width="100" height="50"/>
+      <rect class="diag-highlight" x="300" y="165" width="100" height="50"/>
+      <rect class="diag-highlight" x="400" y="220" width="100" height="50"/>
+
+      <!-- 矩阵内文字 -->
+      <text class="cmat-label" x="50" y="28" text-anchor="middle" fill="white" font-weight="700">+1</text>
+      <text class="cmat-label" x="150" y="28" text-anchor="middle">-1</text>
+      <text class="cmat-label" x="250" y="28" text-anchor="middle">-1</text>
+      <text class="cmat-label" x="350" y="28" text-anchor="middle">-1</text>
+      <text class="cmat-label" x="450" y="28" text-anchor="middle">-1</text>
+
+      <text class="cmat-label" x="150" y="83" text-anchor="middle" fill="white" font-weight="700">+1</text>
+      <text class="cmat-label" x="250" y="138" text-anchor="middle" fill="white" font-weight="700">+1</text>
+      <text class="cmat-label" x="350" y="193" text-anchor="middle" fill="white" font-weight="700">+1</text>
+      <text class="cmat-label" x="450" y="248" text-anchor="middle" fill="white" font-weight="700">+1</text>
+    </g>
+
+    <!-- 右下说明 -->
+    <g transform="translate(700, 130)">
+      <text class="cmat-label" x="0" y="0" font-family="Fraunces" font-weight="700" font-size="14" fill="#b8841c">N = 5</text>
+      <text class="cmat-label" x="0" y="20" font-size="10">5 个正样本 (对角线)</text>
+      <text class="cmat-label" x="0" y="38" font-size="10">20 个负样本</text>
+      <text class="cmat-label" x="0" y="64" font-family="Fraunces" font-weight="700" font-size="14" fill="#b8841c">实际 N = 32768</text>
+      <text class="cmat-label" x="0" y="84" font-size="10">32768 正 + 1B 负</text>
+      <text class="cmat-label" x="0" y="102" font-size="10">N² - N 个负样本</text>
+      <text class="cmat-label" x="0" y="120" font-size="10">**白送**</text>
+    </g>
+
+    <!-- 底部说明 -->
+    <text x="430" y="430" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">
+      训练目标: 对角线点积 ↑, 非对角线点积 ↓. cross-entropy 一行搞定.
+    </text>
+  </svg>
+</figure>
+
+<p>核心机制 —— 三句话讲完:</p>
+
+<p>• <strong>一个 batch 里 N 个图文对</strong>, 都是网上天然配对的 (image_i 跟 text_i 是网友写在一起的)<br/>
+• <strong>对角线那 N 对是正样本</strong> (image_i ↔ text_i)<br/>
+• <strong>非对角线 N²-N 对是负样本</strong> (image_i ↔ text_j where j≠i) —— 用 batch 内其他文本当负样本, 不用单独构造<a class="jr" href="#g-08">8</a></p>
+
+<pre class="eq"># 简化伪代码
+img_embeds = image_encoder(images)        # (N, 512)
+txt_embeds = text_encoder(texts)          # (N, 512)
+
+# normalize 到单位向量
+img_embeds = img_embeds / img_embeds.norm(dim=-1, keepdim=True)
+txt_embeds = txt_embeds / txt_embeds.norm(dim=-1, keepdim=True)
+
+# 算 N×N 相似度矩阵
+sim = img_embeds @ txt_embeds.T * temperature.exp()    # temperature 可学
+
+# 标签就是 [0, 1, 2, ..., N-1] (对角线位置)
+labels = torch.arange(N)
+
+# 两边对称做 cross entropy
+loss = (F.cross_entropy(sim, labels) +
+        F.cross_entropy(sim.T, labels)) / 2</pre>
+
+<div class="note">
+  <span class="l">为什么 batch 要这么大</span>
+  <p>CLIP 用 batch_size = <strong>32768</strong>。原因: 对比学习的"难度"取决于负样本数量。batch=32 时, 每个图只跟 31 个其他文本对比, 很容易学; batch=32768 时, 模型必须学到极精细的语义区别 (比如 "金毛" vs "拉布拉多") 才能跑赢这 32767 个负样本。<strong>负样本越多, 模型被逼着学得越细</strong>。</p>
+  <p>工程代价: 这要求分布式 + gradient checkpointing + 大显存。CLIP 还学了一个可学的<strong>温度参数</strong><a class="jr" href="#g-09">9</a>控制 softmax 尖锐度。后来 SigLIP<a class="jr" href="#g-12">12</a> (2023) 用 sigmoid loss 替代 softmax-style, 据说能在小 batch 上跑得动, 目前 (2024-2025) 是开源多模态事实标准。</p>
+</div>
+
+
+<!-- §04 -->
+<h2><span class="num">§ 04</span>数据 · 4 亿对子的力量</h2>
+
+<p>CLIP 真正的"魔法"不在算法, 在数据规模<a class="jr" href="#g-02">2</a>:</p>
+
+<figure id="fig-scale" class="fig-scale">
+  <figcaption>
+    <span>Fig 03 · 数据规模 · CLIP 比 ImageNet 大 300×</span>
+    <span class="fnum">WIT 400M vs ImageNet 1.3M</span>
+  </figcaption>
+  <svg class="clip-svg" viewBox="0 0 860 340" xmlns="http://www.w3.org/2000/svg">
+
+    <!-- 坐标轴 -->
+    <line x1="100" y1="60" x2="100" y2="280" stroke="#3a3128" stroke-width="1.2"/>
+    <line x1="100" y1="280" x2="800" y2="280" stroke="#3a3128" stroke-width="1.2"/>
+
+    <!-- ImageNet 条 -->
+    <text x="60" y="110" text-anchor="end" font-family="JetBrains Mono" font-size="11" fill="#3a3128">ImageNet</text>
+    <text x="60" y="124" text-anchor="end" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">(人工精标)</text>
+    <rect class="scale-bar bar1" x="100" y="95" width="20" height="34" fill="#1f3a5f"/>
+    <text class="scale-num n1" x="135" y="120" font-family="JetBrains Mono" font-size="14" fill="#1f3a5f" font-weight="700">1.3M</text>
+    <text class="scale-num n1" x="200" y="120" font-family="JetBrains Mono" font-size="11" fill="#7a6f5d">labeled images · 1000 类</text>
+
+    <!-- WIT (CLIP) 条 -->
+    <text x="60" y="220" text-anchor="end" font-family="JetBrains Mono" font-size="11" fill="#3a3128">WIT (CLIP)</text>
+    <text x="60" y="234" text-anchor="end" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">(网上爬)</text>
+    <rect class="scale-bar bar2" x="100" y="205" width="680" height="34" fill="#b8841c"/>
+    <text class="scale-num n2" x="425" y="227" text-anchor="middle" font-family="JetBrains Mono" font-size="18" fill="white" font-weight="700">400M</text>
+    <text class="scale-num n2" x="430" y="270" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#7a6f5d">image-text pairs · 无固定类别, 任意自然语言描述</text>
+
+    <!-- 比率 -->
+    <text x="430" y="40" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="20" font-weight="700" fill="#b8841c">300× 数据规模</text>
+
+    <!-- 关键说明 -->
+    <g transform="translate(100, 305)">
+      <text x="0" y="0" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d">来源: alt 文本 · 社交媒体配文 · Flickr 描述 · 新闻图说 · ... 任何网上的"图 + 文字"自然配对</text>
+      <text x="0" y="20" font-family="JetBrains Mono" font-size="10" fill="#3a3128" font-weight="700">关键: 文本是"自然产生的", 不是为训练标的, 但因为量级足够大, 噪声平均后信号反而比精标更强</text>
+    </g>
+  </svg>
+</figure>
+
+<p>WIT (WebImageText) 是 OpenAI 自己爬的数据集, 没有公开。但 <strong>LAION-400M / LAION-5B</strong> 后来开源复刻了这条路 —— 现在所有开源 CLIP / 开源 Stable Diffusion 都是建立在 LAION 之上。<strong>这是社区给 OpenAI 闭源 WIT 的最大回应</strong>。</p>
+
+<p>跟 <a href="../papers/gpt-3.html">gpt-3</a> 是同一个故事 —— <strong>数据规模 + 弱监督 > 数据精标 + 强监督</strong>。GPT-3 证明语言可以这么训, CLIP 证明视觉-语言对齐也可以这么训。<a href="../concepts/bitter-lesson.html">Bitter lesson</a> 再次胜出。</p>
+
+
+<!-- §05 -->
+<h2><span class="num">§ 05</span>Zero-Shot · 分类变成"哪句话最配"</h2>
+
+<p>训完之后, 用法极其优雅 —— <strong>不用 fine-tune, 不用任何标注</strong>。想分什么类, 把类名包成一句话喂进去就行<a class="jr" href="#g-05">5</a>:</p>
+
+<figure id="fig-zshot" class="fig-zshot">
+  <figcaption>
+    <span>Fig 04 · Zero-Shot 分类</span>
+    <span class="fnum">把"分类"改写成"哪句话配这张图"</span>
+  </figcaption>
+  <svg class="clip-svg" viewBox="0 0 860 420" xmlns="http://www.w3.org/2000/svg">
+
+    <!-- 左: query 图 -->
+    <g transform="translate(40, 130)">
+      <text x="80" y="-15" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d">未知图像</text>
+      <rect x="0" y="0" width="160" height="120" fill="#d8c8a8" stroke="#181410" stroke-width="1.5"/>
+      <ellipse cx="80" cy="76" rx="42" ry="32" fill="#7a6248"/>
+      <circle cx="68" cy="68" r="3" fill="#181410"/>
+      <circle cx="92" cy="68" r="3" fill="#181410"/>
+      <path d="M 70 88 Q 80 94 90 88" stroke="#181410" stroke-width="1.5" fill="none"/>
+      <!-- 草地 -->
+      <rect x="0" y="106" width="160" height="14" fill="#7a8a4a" opacity="0.6"/>
+    </g>
+
+    <!-- 箭头 -->
+    <text x="220" y="190" font-family="JetBrains Mono" font-size="11" fill="#7a6f5d">→ CLIP image</text>
+    <text x="220" y="205" font-family="JetBrains Mono" font-size="11" fill="#7a6f5d">  encoder →</text>
+
+    <!-- 右: 5 个候选 caption -->
+    <g transform="translate(330, 60)">
+      <text x="0" y="-15" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d">候选 caption (你自己写)</text>
+
+      <!-- row 1 winner -->
+      <g class="candidate-row r1">
+        <text x="0" y="22" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">"a photo of a dog"</text>
+        <rect x="260" y="10" width="200" height="20" fill="#f0e0a8" stroke="#bfb398" stroke-width="0.5"/>
+        <rect class="candidate-bar" x="260" y="10" width="200" height="20"/>
+        <text x="475" y="24" font-family="JetBrains Mono" font-size="11" fill="#9b2c2c" font-weight="700">0.95</text>
+        <!-- winner box -->
+        <rect class="winner-glow" x="-8" y="0" width="500" height="35" rx="4"/>
+      </g>
+
+      <g class="candidate-row r2" transform="translate(0, 50)">
+        <text x="0" y="22" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">"a photo of a cat"</text>
+        <rect x="260" y="10" width="200" height="20" fill="#f0e0a8" stroke="#bfb398" stroke-width="0.5"/>
+        <rect class="candidate-bar" x="260" y="10" width="200" height="20"/>
+        <text x="475" y="24" font-family="JetBrains Mono" font-size="11" fill="#3a3128">0.20</text>
+      </g>
+
+      <g class="candidate-row r3" transform="translate(0, 100)">
+        <text x="0" y="22" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">"a photo of an airplane"</text>
+        <rect x="260" y="10" width="200" height="20" fill="#f0e0a8" stroke="#bfb398" stroke-width="0.5"/>
+        <rect class="candidate-bar" x="260" y="10" width="200" height="20"/>
+        <text x="475" y="24" font-family="JetBrains Mono" font-size="11" fill="#3a3128">0.08</text>
+      </g>
+
+      <g class="candidate-row r4" transform="translate(0, 150)">
+        <text x="0" y="22" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">"a photo of a tree"</text>
+        <rect x="260" y="10" width="200" height="20" fill="#f0e0a8" stroke="#bfb398" stroke-width="0.5"/>
+        <rect class="candidate-bar" x="260" y="10" width="200" height="20"/>
+        <text x="475" y="24" font-family="JetBrains Mono" font-size="11" fill="#3a3128">0.15</text>
+      </g>
+
+      <g class="candidate-row r5" transform="translate(0, 200)">
+        <text x="0" y="22" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">"a photo of a car"</text>
+        <rect x="260" y="10" width="200" height="20" fill="#f0e0a8" stroke="#bfb398" stroke-width="0.5"/>
+        <rect class="candidate-bar" x="260" y="10" width="200" height="20"/>
+        <text x="475" y="24" font-family="JetBrains Mono" font-size="11" fill="#3a3128">0.12</text>
+      </g>
+    </g>
+
+    <!-- 底部 -->
+    <text x="430" y="380" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">
+      想加新类 "兔子"? 直接写一句 "a photo of a rabbit" 喂进去 —— 不需要任何新训练.
+    </text>
+    <text x="430" y="400" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7a6f5d">
+      这就是 "open vocabulary" 的意思. 类别由文本定义, 不由模型权重定义.
+    </text>
+  </svg>
+</figure>
+
+<p>这个用法看起来简单, 但背后的逻辑是革命性的:</p>
+
+<p><strong>传统做法</strong>: 类别 = 模型最后一层权重的 1000 个 row, 训完就定死<br/>
+<strong>CLIP 做法</strong>: 类别 = 你写的几句话, 想换就换</p>
+
+<div class="note">
+  <span class="l">Prompt engineering 来到视觉</span>
+  <p>既然类别用文本描述, "怎么描述"也成了变量。CLIP 论文实验显示:</p>
+  <p>• <code>{class}</code> 只写类名 → ImageNet 64.2%<br/>
+  • <code>a photo of a {class}</code> → 66.7%<br/>
+  • <code>a photo of a {class}, a type of pet</code> → 68.3%<br/>
+  • <strong>80 个模板 ensemble → 70.7%</strong></p>
+  <p>为啥? 网上的 caption 大多是完整句子, 不是孤立的词。CLIP 的文本 encoder 对完整句子更熟。<em>视觉模型的效果, 现在要靠文本提示词的写法</em><a class="jr" href="#g-10">10</a> —— 这就是 <strong>open vocabulary</strong><a class="jr" href="#g-11">11</a> 的全部含义: 类别集合不再由模型权重定义, 由用户用自然语言定义。</p>
+</div>
+
+
+<!-- §06 -->
+<h2><span class="num">§ 06</span>下游 · 谁在用 CLIP</h2>
+
+<p>CLIP 真正的影响力远超它自己的 benchmark。<strong>2022 年之后整个生成 AI 浪潮, 底层都依赖 CLIP 立起来的那个 joint embedding space</strong><a class="jr" href="#g-06">6</a>:</p>
+
+<figure id="fig-ds" class="fig-ds">
+  <figcaption>
+    <span>Fig 05 · CLIP 是现代多模态的地基</span>
+    <span class="fnum">7 个主要下游应用</span>
+  </figcaption>
+  <svg class="clip-svg" viewBox="0 0 860 480" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrowDS" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#b8841c"/>
+      </marker>
+    </defs>
+
+    <!-- 中心 CLIP -->
+    <g class="ds-center" transform="translate(430, 240)">
+      <circle cx="0" cy="0" r="70" fill="#f0e0a8" stroke="#b8841c" stroke-width="3"/>
+      <text x="0" y="-5" text-anchor="middle" font-family="Fraunces" font-size="22" font-weight="700" fill="#b8841c">CLIP</text>
+      <text x="0" y="14" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">joint embedding</text>
+      <text x="0" y="28" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">space</text>
+    </g>
+
+    <!-- 6 个下游应用, 放在圆周 -->
+    <!-- 上 (12点): DALL-E 2 -->
+    <line class="ds-arrow a1" x1="430" y1="170" x2="430" y2="100" stroke="#b8841c" stroke-width="1.5" marker-end="url(#arrowDS)"/>
+    <g class="ds-node n1" transform="translate(370, 50)">
+      <rect x="0" y="0" width="120" height="44" fill="#efd6c8" stroke="#9b2c2c" stroke-width="1.5" rx="4"/>
+      <text x="60" y="18" text-anchor="middle" font-family="Fraunces" font-size="13" font-weight="700" fill="#9b2c2c">DALL-E 2</text>
+      <text x="60" y="35" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3a3128">text → image</text>
+    </g>
+
+    <!-- 右上: Stable Diffusion -->
+    <line class="ds-arrow a2" x1="490" y1="200" x2="640" y2="120" stroke="#b8841c" stroke-width="1.5" marker-end="url(#arrowDS)"/>
+    <g class="ds-node n2" transform="translate(640, 90)">
+      <rect x="0" y="0" width="140" height="44" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.5" rx="4"/>
+      <text x="70" y="18" text-anchor="middle" font-family="Fraunces" font-size="13" font-weight="700" fill="#4a6b3a">Stable Diffusion</text>
+      <text x="70" y="35" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3a3128">用 CLIP text 做 cond</text>
+    </g>
+
+    <!-- 右: LLaVA / GPT-4V -->
+    <line class="ds-arrow a3" x1="500" y1="240" x2="700" y2="240" stroke="#b8841c" stroke-width="1.5" marker-end="url(#arrowDS)"/>
+    <g class="ds-node n3" transform="translate(700, 220)">
+      <rect x="0" y="0" width="140" height="44" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="1.5" rx="4"/>
+      <text x="70" y="18" text-anchor="middle" font-family="Fraunces" font-size="13" font-weight="700" fill="#1f3a5f">LLaVA / GPT-4V</text>
+      <text x="70" y="35" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3a3128">CLIP 当图像前端</text>
+    </g>
+
+    <!-- 右下: Open-vocabulary detection -->
+    <line class="ds-arrow a4" x1="490" y1="280" x2="640" y2="370" stroke="#b8841c" stroke-width="1.5" marker-end="url(#arrowDS)"/>
+    <g class="ds-node n4" transform="translate(640, 380)">
+      <rect x="0" y="0" width="160" height="44" fill="#f7f1de" stroke="#b8841c" stroke-width="1.5" rx="4"/>
+      <text x="80" y="18" text-anchor="middle" font-family="Fraunces" font-size="13" font-weight="700" fill="#b8841c">Open-vocab Detect</text>
+      <text x="80" y="35" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3a3128">OWL-ViT / OpenSeed</text>
+    </g>
+
+    <!-- 下: 数据筛选 -->
+    <line class="ds-arrow a5" x1="430" y1="310" x2="430" y2="400" stroke="#b8841c" stroke-width="1.5" marker-end="url(#arrowDS)"/>
+    <g class="ds-node n5" transform="translate(370, 410)">
+      <rect x="0" y="0" width="120" height="44" fill="#f7f1de" stroke="#7a6f5d" stroke-width="1.5" rx="4"/>
+      <text x="60" y="18" text-anchor="middle" font-family="Fraunces" font-size="13" font-weight="700" fill="#3a3128">数据筛选</text>
+      <text x="60" y="35" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3a3128">LAION 用它过滤</text>
+    </g>
+
+    <!-- 左下: 图文搜索 -->
+    <line class="ds-arrow a6" x1="370" y1="280" x2="220" y2="370" stroke="#b8841c" stroke-width="1.5" marker-end="url(#arrowDS)"/>
+    <g class="ds-node n6" transform="translate(60, 380)">
+      <rect x="0" y="0" width="160" height="44" fill="#f7f1de" stroke="#7a6f5d" stroke-width="1.5" rx="4"/>
+      <text x="80" y="18" text-anchor="middle" font-family="Fraunces" font-size="13" font-weight="700" fill="#3a3128">图文搜索 / 推荐</text>
+      <text x="80" y="35" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3a3128">"以图搜图" 服务</text>
+    </g>
+
+    <!-- 左: zero-shot 分类 -->
+    <line class="ds-arrow a3" x1="360" y1="240" x2="220" y2="240" stroke="#b8841c" stroke-width="1.5" marker-end="url(#arrowDS)"/>
+    <g class="ds-node n3" transform="translate(60, 220)">
+      <rect x="0" y="0" width="160" height="44" fill="#f0e0a8" stroke="#b8841c" stroke-width="1.5" rx="4"/>
+      <text x="80" y="18" text-anchor="middle" font-family="Fraunces" font-size="13" font-weight="700" fill="#b8841c">Zero-shot 分类</text>
+      <text x="80" y="35" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3a3128">论文本身的 demo</text>
+    </g>
+
+    <!-- 左上: 视频 / 机器人 -->
+    <line class="ds-arrow a2" x1="370" y1="200" x2="220" y2="120" stroke="#b8841c" stroke-width="1.5" marker-end="url(#arrowDS)"/>
+    <g class="ds-node n2" transform="translate(60, 90)">
+      <rect x="0" y="0" width="160" height="44" fill="#f7f1de" stroke="#7a6f5d" stroke-width="1.5" rx="4"/>
+      <text x="80" y="18" text-anchor="middle" font-family="Fraunces" font-size="13" font-weight="700" fill="#3a3128">视频理解 / 机器人</text>
+      <text x="80" y="35" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3a3128">VideoCLIP / RT-2</text>
+    </g>
+
+    <!-- 底部 -->
+    <text x="430" y="465" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">
+      所有箭头指出 CLIP 不再只是个分类器 —— 它是整个多模态 AI 时代的"通用图文对齐层"
+    </text>
+  </svg>
+</figure>
+
+<h3>① 生成模型的 conditioning</h3>
+
+<p><strong>DALL-E 2 / Stable Diffusion</strong> 都用 CLIP 文本 encoder 把 prompt 转成 conditioning 向量, 喂给 diffusion / flow matching 模型生成图。<strong>没有 CLIP 就没有"a photo of an astronaut riding a horse"这种 text-to-image 能力</strong>。</p>
+
+<h3>② LLM 的视觉前端</h3>
+
+<p><strong>LLaVA / GPT-4V / Qwen-VL</strong> 用 CLIP 图像 encoder 把图转成 visual token, 然后跟文本 token 一起喂给 LLM。<strong>所有"看图问答"产品的视觉前端基本都是 CLIP</strong>。</p>
+
+<h3>③ 大数据集的过滤器</h3>
+
+<p><strong>LAION-5B</strong> 自己就是用 CLIP 过滤出来的 —— 爬一堆原始图文对, 用 CLIP 算"图文是否匹配", 留下高匹配的, 扔掉噪声。<strong>这是个非常 meta 的递归</strong>: 训出来的 CLIP 用来筛数据, 筛出来的数据训下一代 CLIP / SD。</p>
+
+<h3>④ Open-vocabulary 检测 / 分割</h3>
+
+<p>传统目标检测固定类别 (COCO 80 类)。<strong>OWL-ViT / OpenSeed / Grounded-SAM</strong> 把 CLIP 文本端跟 detection / segmentation 头对齐, 实现 "找出图中所有 '红色花瓶'" 这种自由查询。<strong>检测也变 open vocabulary 了</strong>。</p>
+
+
+<!-- §07 -->
+<h2><span class="num">§ 07</span>历史定位 · 视觉的 GPT-3 时刻</h2>
+
+<p>CLIP 在 2021 年发布时, 圈内反应是分层的:</p>
+
+<p>• <strong>视觉传统派</strong>: "Zero-shot 跑不过 finetune, 意义不大"<br/>
+• <strong>多模态人</strong>: "终于有可用的 joint embedding 了"<br/>
+• <strong>生成式人</strong>: "这是 DALL-E 想要的那个 prior"</p>
+
+<p>2022 年 Stable Diffusion 公开发布后, 大家才反应过来 —— <strong>CLIP 不只是个分类器, 它是整个生成 AI 浪潮的地基</strong>。</p>
+
+<p>CLIP 跟 GPT-3 是 OpenAI 同期的两条主线, 共享同一个哲学:</p>
+
+<div class="bias-table" style="margin-top:18px;">
+  <div class="bias-row" style="display:grid; grid-template-columns: 140px 1fr 1fr; border-bottom: 1px solid var(--rule);">
+    <div class="bias-cell head" style="background:var(--paper-3); padding:14px;"></div>
+    <div class="bias-cell head" style="background:var(--paper-3); padding:14px; font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); font-weight:700;">GPT-3 (NLP)</div>
+    <div class="bias-cell head" style="background:var(--paper-3); padding:14px; font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); font-weight:700;">CLIP (Vision)</div>
+  </div>
+  <div class="bias-row" style="display:grid; grid-template-columns: 140px 1fr 1fr; border-bottom: 1px solid var(--rule);">
+    <div style="background:var(--paper-3); padding:12px 16px; font-weight:600; font-family:'Fraunces',serif;">监督</div>
+    <div style="padding:12px 16px; background:var(--brick-soft); color:var(--brick);">弱: next-token prediction</div>
+    <div style="padding:12px 16px; background:var(--ochre-soft); color:var(--ochre);">弱: 图文匹配 (网上自然配对)</div>
+  </div>
+  <div class="bias-row" style="display:grid; grid-template-columns: 140px 1fr 1fr; border-bottom: 1px solid var(--rule);">
+    <div style="background:var(--paper-3); padding:12px 16px; font-weight:600; font-family:'Fraunces',serif;">数据</div>
+    <div style="padding:12px 16px; background:var(--brick-soft); color:var(--brick);">300B tokens 的 web 文本</div>
+    <div style="padding:12px 16px; background:var(--ochre-soft); color:var(--ochre);">400M 网上图文对</div>
+  </div>
+  <div class="bias-row" style="display:grid; grid-template-columns: 140px 1fr 1fr; border-bottom: 1px solid var(--rule);">
+    <div style="background:var(--paper-3); padding:12px 16px; font-weight:600; font-family:'Fraunces',serif;">下游</div>
+    <div style="padding:12px 16px; background:var(--brick-soft); color:var(--brick);">写几个例子 (few-shot prompt)</div>
+    <div style="padding:12px 16px; background:var(--ochre-soft); color:var(--ochre);">写一句话当 class (zero-shot)</div>
+  </div>
+  <div class="bias-row" style="display:grid; grid-template-columns: 140px 1fr 1fr;">
+    <div style="background:var(--paper-3); padding:12px 16px; font-weight:600; font-family:'Fraunces',serif;">改变了什么</div>
+    <div style="padding:12px 16px; background:var(--brick-soft); color:var(--brick);">NLP 任务定义方式</div>
+    <div style="padding:12px 16px; background:var(--ochre-soft); color:var(--ochre);">视觉任务定义方式 + 解锁多模态</div>
+  </div>
+</div>
+
+<p>这两条线汇合后, 才有了 2022-2024 的 ChatGPT / Stable Diffusion / GPT-4V / Sora 等等等。<strong>CLIP 是视觉端的 GPT-3 时刻</strong>。</p>
+
+
+<!-- glossary -->
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">ImageNet 范式</span> · 2009-2020 视觉训练的标准做法：人工标注几百万张图, 每张一个 class label, 训 CNN 输出 K 类概率分布。优点是干净, 缺点是贵 + 类别固定 + 单一监督信号信息量太低 (一张图配一个 label 信息浪费)。</li>
+    <li id="g-02"><span class="term">WIT · WebImageText 400M</span> · OpenAI 自己从互联网爬的图文对数据集, 4 亿对子, 没开源。后来 LAION 社区复刻成 LAION-400M / LAION-5B 开源。所有现代开源多模态 (Stable Diffusion / OpenCLIP) 都建在 LAION 上。</li>
+    <li id="g-03"><span class="term">对比学习 · contrastive learning</span> · 不预测具体类别, 只学"两个东西配不配"。CLIP 用 in-batch negatives —— batch 里其他文本当负样本, 不用单独构造。一个 batch 同时贡献 N² 个判断。详见 <a href="../concepts/contrastive-learning.html">contrastive-learning</a>。</li>
+    <li id="g-04"><span class="term">Dual-tower architecture · 双塔</span> · 两个独立 encoder (图像 + 文本), 各自最后投影到同一维度, 跨模态只在末端点积发生。推理时一边可以预先 encode 缓存, 适合检索类应用。详见 <a href="../concepts/dual-tower-architecture.html">dual-tower-architecture</a>。</li>
+    <li id="g-05"><span class="term">Zero-shot classification</span> · 不 fine-tune, 不看任何下游标注 —— 把类名包成 "a photo of a {class}" 喂给文本 encoder, 跟图像 embedding 算相似度, 最高的就是预测。类别由文本定义, 不由权重定义。详见 <a href="../concepts/zero-shot-image-classification.html">zero-shot-image-classification</a>。</li>
+    <li id="g-06"><span class="term">CLIP joint embedding space</span> · CLIP 真正的价值不在它自己的分类准确率, 而在它训出来的那个"图像和文本对齐"的向量空间。DALL-E / Stable Diffusion / LLaVA / GPT-4V 等所有后续多模态都依赖这个空间。</li>
+    <li id="g-07"><span class="term">GPT-3 弱监督路线</span> · OpenAI 在 2020 年用 GPT-3 证明: 不用人工标注, 直接拿互联网原文做 next-token prediction, 学出来的表示能 zero-shot 任何 NLP 任务。CLIP 是这条思路在视觉端的复制 —— 弱监督 + 大数据 + 大模型 = 通用表征。详见 <a href="gpt-3.html">GPT-3 paper</a>。</li>
+    <li id="g-08"><span class="term">In-batch negatives · 批内负样本</span> · 对比学习的核心工程技巧。一个 batch 有 N 个正样本对, 其他 N-1 个文本就自然成为每个图的负样本。N² 个判断, N 个正例 + N²-N 个负例, 不需要单独构造负样本。Batch 越大负样本越多, 模型被逼着学到更细的语义区别。</li>
+    <li id="g-09"><span class="term">Temperature parameter · 温度参数</span> · CLIP 损失里有一个可学的温度标量, 控制 softmax 的尖锐度。初始化 0.07 左右, 训练中模型自己调。温度低 → softmax 尖锐 → 强调最近的正样本; 温度高 → softmax 平坦 → 让梯度信号更均匀。</li>
+    <li id="g-10"><span class="term">Prompt engineering · 提示词工程</span> · 既然 CLIP 类别用自然语言描述, 怎么写描述也成了变量。<code>{class}</code> 只 64.2%, <code>a photo of a {class}</code> 66.7%, 多模板 ensemble 70.7%。NLP 的 prompt engineering 在 CLIP 这里复刻了。</li>
+    <li id="g-11"><span class="term">Open vocabulary</span> · 类别不由模型权重定义, 由文本定义 —— 想加什么新类写句话就行, 不需要重训模型。这是 CLIP 给视觉带来的最大概念跃迁: 从"模型决定类别集" 到"用户用自然语言定义类别集"。</li>
+    <li id="g-12"><span class="term">SigLIP · sigmoid-loss CLIP</span> · 2023 Google 提出的 CLIP 变种, 用 sigmoid loss 替代 softmax-style 对比损失。优势: 对 batch size 不敏感 (小 batch 也能训), 对负样本不需要 N² 那么多。是当前 (2024-2025) 开源多模态的事实标准。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>Authored / 个人学习笔记 · 2026</span>
+  <span>Index / <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+
+<script>
+{
+  const figs = ['fig-tower','fig-cmat','fig-scale','fig-zshot','fig-ds'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.25 });
+    obs.observe(el);
+  });
+}
+</script>
+
+</body>
+</html>
