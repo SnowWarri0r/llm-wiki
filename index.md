@@ -39,6 +39,11 @@
   - [Ch14 · You'll Change](wiki/books/pom-ch14-youll-change.md) — 未来的你跟现在不一样；中庸策略给未来的自己留路
   - [Ch15 · Nothing's Free](wiki/books/pom-ch15-nothings-free.md) — 任何回报都有标价；波动是费用不是罚单
   - [Ch16 · You & Me](wiki/books/pom-ch16-you-and-me.md) — 同一市场里两个人玩的是不同游戏
+  - [Ch17 · The Seduction of Pessimism](wiki/books/pom-ch17-seduction-of-pessimism.md) — 悲观听起来聪明，但过去 200 年押乐观的人都赢了
+  - [Ch18 · When You'll Believe Anything](wiki/books/pom-ch18-when-youll-believe-anything.md) — 越想要某结果越容易相信通往它的故事；诱人虚构
+  - [Ch19 · All Together Now](wiki/books/pom-ch19-all-together-now.md) — 全书 12 条原则速查清单
+  - [Ch20 · Confessions](wiki/books/pom-ch20-confessions.md) — Housel 自己的方案：简单到无聊
+  - [Postscript · 美国消费者心理简史](wiki/books/pom-postscript-us-consumer-history.md) — 75 年经济史，预期脱节于现实的根源
 
 ## Topics · 综合
 
