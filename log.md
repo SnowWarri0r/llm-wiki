@@ -383,3 +383,18 @@ skill 更新:
   - Fig 04 · 模型尺寸 (Tiny 39M → Large 1550M table)
   - glossary 12 条全有跳转
 - 历史定位: 语音领域的 GPT 时刻 + Whisper encoder 成为语音 foundation model
+
+## [2026-05-28] ingest | ViT · An Image is Worth 16×16 Words
+
+- wiki/papers/vit.md: paper md (Dosovitskiy et al. 2021, arXiv 2010.11929)
+- wiki/concepts/patch-embedding.md: 把图切成 token 的核心操作 (NLP token embedding 完全同构)
+- wiki/concepts/inductive-bias.md: CNN 的祖传家产 vs ViT 的"无知"; 老员工 vs 新员工类比
+- wiki/concepts/self-attention.md / positional-encoding.md / scaling-laws.md / bitter-lesson.md: 更新 sources 加 vit
+- docs/papers/vit.html: bespoke HTML, moss accent, 5 figures:
+  - Fig 01 · 完整 pipeline (image → 7×7 patch grid → 196 tokens + cls → Transformer → 分类头), 动画 stagger 50 patch cells
+  - Fig 02 · 单个 patch 怎么变 token (slice → flatten → linear projection 三步), 切线动画 + patch 浮起 + 投影箭头
+  - Fig 03 · CNN 归纳偏置 vs ViT (3×3 表格: 局部性/平移不变/层次结构)
+  - Fig 04 · 数据量决定胜负 (ResNet vs ViT 曲线交叉于 ImageNet-21k, JFT-300M ViT 反超), 曲线 stroke-dasharray 动画
+  - Fig 05 · 注意力的自然层次 (浅层 Layer1 局部 / 中层 6 混合 / 深层 12 全局), 3 个 SVG attention dot pattern
+  - glossary 11 条全有正文跳转 (审计通过)
+- 历史定位: ViT 真正的影响力不在分类准确率, 而在 (1) 跨模态架构统一 (CLIP/DALL-E/GPT-4V 全靠它) (2) CNN 时代结束 (3) 视觉吃 scaling law
