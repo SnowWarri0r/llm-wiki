@@ -36,6 +36,9 @@
   - [Ch11 · Reasonable > Rational](wiki/books/pom-ch11-reasonable-gt-rational.md) — 能坚持 30 年的普通方案吊打坚持 3 年就放弃的最优方案
   - [Ch12 · Surprise!](wiki/books/pom-ch12-surprise.md) — 从没发生过的事一直在发生；历史教的是人性，不是具体会发生什么
   - [Ch13 · Room for Error](wiki/books/pom-ch13-room-for-error.md) — 安全边际让预测变得不必要；给计划留"计划不成"的空间
+  - [Ch14 · You'll Change](wiki/books/pom-ch14-youll-change.md) — 未来的你跟现在不一样；中庸策略给未来的自己留路
+  - [Ch15 · Nothing's Free](wiki/books/pom-ch15-nothings-free.md) — 任何回报都有标价；波动是费用不是罚单
+  - [Ch16 · You & Me](wiki/books/pom-ch16-you-and-me.md) — 同一市场里两个人玩的是不同游戏
 
 ## Topics · 综合
 
