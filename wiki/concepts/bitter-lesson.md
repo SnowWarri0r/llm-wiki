@@ -1,8 +1,8 @@
 ---
 name: bitter-lesson
 type: concept
-sources: [replace-heuristics-with-weights]
-updated: 2026-05-22
+sources: [replace-heuristics-with-weights, vit]
+updated: 2026-05-28
 ---
 
 # Bitter Lesson · 苦涩教训
