@@ -128,6 +128,7 @@ reward = RM(prompt, response) - β × KL(LLM ‖ SFT_frozen)
 | 训练成本 | 几百万 episode | 几百万 GPU 小时 |
 
 ## 链接
+- [[rl-for-llm-people]] · 看不懂 RL 术语先读这个打底
 - [[ppo]] · RLHF 的训练算法主力
 - [[grpo]] · PPO 的 LLM 友好简化版本
 - [[policy-gradient]] · RLHF 的数学基础

@@ -150,6 +150,11 @@ figcaption .fnum { color: var(--accent); font-weight: 700; }
   <p>强化学习里 policy gradient<a class="jr" href="#g-01">1</a> 走太大一步策略就崩, 老数据立刻不能用。TRPO<a class="jr" href="#g-02">2</a> 用 KL 散度精确约束步长, 但需要共轭梯度 + 线搜索, 复杂。PPO 的回答: <strong>不约束 KL, 直接 clip 新老策略的概率比值</strong><a class="jr" href="#g-03">3</a>。一行 <code>torch.clamp(r, 1-ε, 1+ε)</code> 让 loss 在"该停的方向"梯度归零, 软性 trust region。代价是不精确, 收获是简单、稳、能跟 Adam 配。<strong>顺手解锁的是同一批 rollout 跑 K 个 epoch</strong><a class="jr" href="#g-04">4</a>, sample efficiency 翻倍。2017 出, 2022 撑起 InstructGPT/ChatGPT 的 RLHF<a class="jr" href="#g-05">5</a>。</p>
 </div>
 
+<div class="note">
+  <span class="l">先打底</span>
+  <p>如果"rollout / state / action / 分布变化 / KL / 各种 loss 走势"这些词让你发懵, 先读 <a href="../concepts/rl-for-llm-people.html">RL 直觉打底 · 给懂 LLM 不懂 RL 的人</a> —— 它用 LLM 自回归把这套术语全翻译成你已经会的东西, 再回来看这页会顺很多。</p>
+</div>
+
 
 <!-- §01 -->
 <h2><span class="num">§ 01</span>RL 基本设定 · agent ↔ env 一来一回</h2>
