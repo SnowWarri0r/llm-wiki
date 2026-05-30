@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Memory Stream · 记忆流 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · memory-stream</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Memory Stream · 记忆流</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>Agent 看到的、听到的、做的所有事，按时间顺序存成一条流 —— 每条记忆带时间戳和重要性评分，需要的时候检索出来塞进 prompt。</p>
+<h2>直觉</h2>
+<p>人脑的记忆不是一个文件夹，是一条时间线 —— 你不会按"工作 / 生活 / 学习"分类存，你会按"什么时候发生的"来回忆。而且不是所有记忆都一样重要 —— "今天中午吃了拌面"和"今天被裁员了"存的权重完全不同。</p>
+<p>Memory stream 就是给 LLM 搭一个类似的东西：</p>
+<pre><code>[2024-01-15 09:00] 到公司，跟同事打招呼        (重要性: 1)
+[2024-01-15 09:15] 听到隔壁组在讨论裁员消息     (重要性: 7)
+[2024-01-15 10:00] 开会，项目正常推进           (重要性: 3)
+[2024-01-15 14:00] HR 找我谈话                 (重要性: 9)
+[2024-01-15 14:30] 被告知部门整体优化           (重要性: 10)
+</code></pre>
+<p>重要性由 LLM 自己打分（"这件事对这个人有多重要，1-10 分"）。</p>
+<h2>怎么做的</h2>
+<ol>
+<li>Agent 每做一件事 / 观察到一件事，存一条记录：<code>{时间, 描述, 重要性评分}</code></li>
+<li>重要性评分让 LLM 打（prompt: "On a scale of 1-10, how important is this to the agent?"）</li>
+<li>所有记录按时间顺序排成一条流，不删除、不分类</li>
+<li>需要做决策时，从流里<strong>检索</strong>最相关的几条，塞进 LLM 的 prompt 当"回忆"</li>
+<li><strong>反思</strong>产生的高层总结也存回流里，跟原始观察混在一起</li>
+</ol>
+<h2>跟数据库的类比</h2>
+<p>Memory stream 就是一张只追加的表：</p>
+<pre><code class="language-sql">CREATE TABLE memory_stream (
+    id         SERIAL,
+    created_at TIMESTAMP,
+    description TEXT,
+    importance  INT,        -- 1-10
+    embedding   VECTOR(1536) -- 用来做语义检索
+);
+</code></pre>
+<p>检索时不用 SQL 精确查询，用 <a href="../concepts/retrieval-scoring.html">retrieval-scoring</a>（时近度 × 重要性 × 相关性）做加权排序。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/retrieval-scoring.html">retrieval-scoring</a> · 从流里捞记忆的排序公式</li>
+<li><a href="../concepts/agent-reflection.html">agent-reflection</a> · 定期把碎片记忆总结成高层认知</li>
+<li><a href="../papers/generative-agents.html">generative-agents</a> · 论文</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/generative-agents.html"><span class="cat">paper</span>Generative Agents · Interactive Simulacra of Human Behavior</a></li><li><a href="../concepts/agent-reflection.html"><span class="cat">concept</span>Agent Reflection · 反思 · 从碎片到认知</a></li><li><a href="../concepts/retrieval-scoring.html"><span class="cat">concept</span>Retrieval Scoring · 记忆检索排序</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/memory-stream.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

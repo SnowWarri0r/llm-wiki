@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Agent Reflection · 反思 · 从碎片到认知 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · agent-reflection</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Agent Reflection · 反思 · 从碎片到认知</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>定期把大量低层观察总结成高层认知 —— "我看到 A/B/C/D → 我觉得 X"。反思结果存回 <a href="../concepts/memory-stream.html">memory-stream</a>，下次检索时跟原始观察一起参与排序。</p>
+<h2>直觉</h2>
+<p>你每天看到几百件事，但真正影响你决策的不是那几百件碎片，是你从碎片里<strong>提炼出来的判断</strong>。</p>
+<p>比如你新入职一个月，每天看到的碎片是：</p>
+<ul>
+<li>周一：组长开会迟到 15 分钟</li>
+<li>周二：组长在群里发了个没什么内容的周报</li>
+<li>周三：组长当面被总监问进度答不上来</li>
+<li>周四：隔壁组的人跟你说"你们组长快被换了"</li>
+<li>周五：组长请全组吃饭但气氛很怪</li>
+</ul>
+<p>这些碎片单独看都是小事。但你的大脑会在某个时刻把它们<strong>合成一条高层判断</strong>："我组长可能要被换掉了，我该提前想想怎么应对。"</p>
+<p><strong>这就是反思</strong> —— 从碎片里提炼出碎片本身没有的信息。</p>
+<h2>怎么做的</h2>
+<p>Generative Agents 里反思的触发和流程：</p>
+<p><strong>触发条件</strong>：最近一批记忆的重要性分数加起来超过阈值（比如累积到 150 分）。不是定时触发，是"积累够了才反思"。</p>
+<p><strong>流程</strong>：</p>
+<pre><code>
+1. 从最近的高重要性记忆里提出 3 个问题
+   LLM prompt: &quot;给定这些记忆，你最想搞清楚的 3 件事是什么？&quot;
+
+2. 针对每个问题，从 memory stream 检索相关记忆
+
+3. 让 LLM 基于检索到的记忆回答问题，生成 insight
+   &quot;基于以下记忆，你能得出什么结论？&quot;
+
+4. 把 insight 存回 memory stream（带时间戳 + 高重要性分数）
+</code></pre>
+<p><strong>关键</strong>：反思的结果<strong>也是记忆</strong>。下次检索时它会跟原始观察一起参与排序，而且因为重要性分数通常更高，它更容易被捞出来。</p>
+<h2>反思的层级</h2>
+<p>反思可以基于之前的反思再次反思 —— 形成一棵树：</p>
+<pre><code>叶子（原始观察）:
+  &quot;看到 Klaus 在画画&quot; · &quot;Klaus 提到他喜欢印象派&quot; · &quot;Klaus 的房间挂满画&quot;
+
+第一层反思:
+  &quot;Klaus 对绘画很有热情&quot;
+
+第二层反思（基于多个第一层）:
+  &quot;Klaus 是一个有艺术追求的人，跟他聊天可以多聊艺术&quot;
+</code></pre>
+<p>层级越高，信息越抽象但越有用 —— 做决策时你不需要知道"Klaus 房间挂了几幅画"，只需要"Klaus 是艺术爱好者"。</p>
+<h2>代码出处</h2>
+<ul>
+<li>原论文：Park et al. 2023, arXiv 2304.03442</li>
+<li>反思的 prompt 模板和触发逻辑在论文 §5.3</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/memory-stream.html">memory-stream</a> · 反思的输入来源 + 输出存储</li>
+<li><a href="../concepts/retrieval-scoring.html">retrieval-scoring</a> · 反思结果参与检索排序</li>
+<li><a href="../papers/generative-agents.html">generative-agents</a> · 论文</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/generative-agents.html"><span class="cat">paper</span>Generative Agents · Interactive Simulacra of Human Behavior</a></li><li><a href="../concepts/memory-stream.html"><span class="cat">concept</span>Memory Stream · 记忆流</a></li><li><a href="../concepts/retrieval-scoring.html"><span class="cat">concept</span>Retrieval Scoring · 记忆检索排序</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/agent-reflection.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>
