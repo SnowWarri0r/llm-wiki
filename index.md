@@ -34,6 +34,8 @@
   - [Ch09 · Wealth is What You Don't See](wiki/books/pom-ch09-wealth-is-what-you-dont-see.md) — 财富 = 你没花掉的钱；看着有钱的大多数只是在花钱
   - [Ch10 · Save Money](wiki/books/pom-ch10-save-money.md) — 财富 = 收入 − 虚荣心；存钱不需要理由
   - [Ch11 · Reasonable > Rational](wiki/books/pom-ch11-reasonable-gt-rational.md) — 能坚持 30 年的普通方案吊打坚持 3 年就放弃的最优方案
+  - [Ch12 · Surprise!](wiki/books/pom-ch12-surprise.md) — 从没发生过的事一直在发生；历史教的是人性，不是具体会发生什么
+  - [Ch13 · Room for Error](wiki/books/pom-ch13-room-for-error.md) — 安全边际让预测变得不必要；给计划留"计划不成"的空间
 
 ## Topics · 综合
 
