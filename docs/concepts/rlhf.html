@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>RLHF · Reinforcement Learning from Human Feedback · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · rlhf</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>RLHF · Reinforcement Learning from Human Feedback</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p><strong>人类用排序代替评分</strong>: 把"哪个回答更好"这种廉价标注转成 reward model, 再用 PPO 把 LLM 训成"按人类偏好回答"的样子 —— 这是 ChatGPT 从"会预测下一个 token 的模型"变成"会聊天的助手"的关键一步。</p>
+<h2>直觉 · 预训练 + SFT 还不够, 为什么</h2>
+<p>GPT-3 训完后会生成"网上文本风格"的回答, 但<strong>网上的文本不是"好对话"</strong>. 你问它"怎么做番茄炒蛋", 它可能开始随机模仿网上某个帖子, 越扯越远。</p>
+<p>第一道补丁: <strong>SFT</strong> (Supervised Fine-Tuning). 雇一批人写"问答对", LLM 学着模仿。这一步把 GPT-3 变成 InstructGPT 的雏形, 但还不够好 —— 因为:</p>
+<ol>
+<li><strong>写"完美答案"很贵很慢</strong>. 几万对 SFT 数据已经是天文数字, 但远不够覆盖所有问题</li>
+<li><strong>"什么是好答案"很模糊</strong>. 一个问题往往有多个合理回答, 写一个"标准答案"反而把模型框死</li>
+</ol>
+<p>更便宜也更准的标注方式: <strong>让人在 LLM 生成的两个回答里选哪个更好</strong>.</p>
+<ul>
+<li>给一个 prompt → LLM 采样 2 个回答 A 和 B</li>
+<li>人来评: "A 比 B 好" or "B 比 A 好"</li>
+<li><strong>这种标注每条只要几秒, 不需要写答案, 不需要专业知识</strong></li>
+</ul>
+<p>但选哪个更好 ≠ 直接可用的 loss. 怎么把"排序标注"转成 LLM 训练信号?</p>
+<p><strong>RLHF 的核心 trick</strong>: 训一个 reward model 学排序, 再用 PPO 让 LLM 最大化 reward.</p>
+<h2>三步流程</h2>
+<h3>Step 1: SFT (监督微调)</h3>
+<p>雇一小批专业标注员写高质量问答对 (~10K 量级). 直接 cross-entropy fine-tune 让 GPT-3 学会"对话风格".</p>
+<pre><code>input: &quot;How do I bake a cake?&quot;
+output: &quot;To bake a cake, you'll need...&quot; (人工写)
+
+loss: 标准 next-token cross entropy
+</code></pre>
+<p>这一步产物: <strong>SFT 模型</strong> (能聊但偏好不对齐).</p>
+<h3>Step 2: 训 reward model</h3>
+<p>让 SFT 模型对同一个 prompt 采样多个回答 (一般 4-9 个), 让标注员两两比较, 标"这个比那个好".</p>
+<pre><code>prompt: &quot;解释一下黑洞&quot;
+response_A: &lt;较好的回答&gt;
+response_B: &lt;较差的回答&gt;
+label: A &gt; B
+</code></pre>
+<p>把这种 (prompt, response_A, response_B, "A 好") 标注数据<strong>几十万条</strong>收齐, 训一个独立的 reward model RM:</p>
+<pre><code class="language-python">RM: (prompt, response) → scalar reward
+loss = -log σ( RM(prompt, A) - RM(prompt, B) )   # Bradley-Terry 模型
+</code></pre>
+<p>意译: "希望 RM 给 A 的分比 B 高". 训完后 RM 能给任意 (prompt, response) 打一个"人类觉得好不好"的分数.</p>
+<p>这一步产物: <strong>reward model</strong> (能预测人类偏好).</p>
+<h3>Step 3: PPO 用 RM 当 reward 训 LLM</h3>
+<p>现在好了 —— 我们有了一个 "判官" (RM), 可以给任何回答打分. 用 <a href="../papers/ppo.html">ppo</a> 把 LLM 训成"会拿高分的样子":</p>
+<pre><code class="language-python">for batch in range(many_batches):
+    prompts = sample_prompts()
+
+    # LLM 自己生成回答 (rollout)
+    responses = LLM.generate(prompts)
+
+    # 用 reward model 算 reward
+    rewards = RM(prompts, responses)
+
+    # 关键修正: 加一项 KL penalty, 让 LLM 别离 SFT 模型太远
+    kl = compute_kl(LLM, SFT_frozen)
+    final_rewards = rewards - β * kl
+
+    # PPO 更新
+    advantages = compute_gae(final_rewards, value_net(states))
+    ppo_loss = clipped_surrogate(LLM, prompts, responses, advantages)
+    ppo_loss.backward()
+</code></pre>
+<p>这一步产物: <strong>最终 chat 模型</strong> (跟人偏好对齐).</p>
+<h2>KL penalty: 防止 reward hacking</h2>
+<p>第 3 步如果只是"maximize RM 得分", LLM 会<strong>过拟合 reward model 的 bug</strong>:</p>
+<ul>
+<li>RM 喜欢长回答 → LLM 学到"啰嗦点能拿高分" → 输出越来越冗长</li>
+<li>RM 给 "Certainly!" 高分 → LLM 每个回答都以 "Certainly!" 开头</li>
+<li>RM 给 markdown 加分 → LLM 强行把所有回答都加列表和粗体</li>
+</ul>
+<p>工程上发现的最有效缓解: <strong>加一个 KL 散度 penalty, 让 LLM 不要偏离 SFT 模型太远</strong>:</p>
+<pre><code>reward = RM(prompt, response) - β × KL(LLM ‖ SFT_frozen)
+</code></pre>
+<p>β 一般 0.01~0.1. 直觉: SFT 模型是"健康的语言模型基线", 偏离太远说明 LLM 在为了高分变形.</p>
+<h2>历史定位 · ChatGPT 的关键一步</h2>
+<ul>
+<li><strong>InstructGPT</strong> (OpenAI 2022 Jan): 第一次用 RLHF 训 GPT-3 → 跟 GPT-3 base 比对话能力质变. 这是 RLHF 在 LLM 端的首次大规模应用</li>
+<li><strong>ChatGPT</strong> (2022 Nov): InstructGPT 的对话版, 用了同一套 RLHF pipeline. 上线 5 天用户破百万, 引爆了 LLM 应用浪潮</li>
+<li><strong>GPT-4 / Claude / Gemini / Llama-chat</strong>: 全部用 RLHF 或它的变种</li>
+<li><strong>DPO</strong> (2023): 跳过 reward model, 直接用对比学习训 LLM, 工程更稳, 现在很多开源模型选 DPO</li>
+<li><strong>GRPO</strong> (DeepSeek 2024): PPO 的简化版, 去掉 value network 用相对得分当 advantage, 配合 reasoning 训练 (R1 系列)</li>
+</ul>
+<h2>跟传统 RL 的区别</h2>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>传统 RL (玩游戏)</th>
+<th>RLHF (训 LLM)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reward 来源</td>
+<td>环境硬编码 (得分 / 输赢)</td>
+<td>Reward model 学出来的</td>
+</tr>
+<tr>
+<td>Episode 长度</td>
+<td>几百到几千步</td>
+<td>几十 token, 一句话就完</td>
+</tr>
+<tr>
+<td>Action 空间</td>
+<td>离散少 (上下左右) 或连续低维</td>
+<td>词表大小 (~50K)</td>
+</tr>
+<tr>
+<td>探索</td>
+<td>关键 (要尝试新策略)</td>
+<td>弱 (LLM 已经预训练得够好, 只是对齐)</td>
+</tr>
+<tr>
+<td>KL 约束</td>
+<td>通常没有</td>
+<td>必有, 防止偏离 SFT</td>
+</tr>
+<tr>
+<td>训练成本</td>
+<td>几百万 episode</td>
+<td>几百万 GPU 小时</td>
+</tr>
+</tbody>
+</table>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/ppo.html">ppo</a> · RLHF 的训练算法主力</li>
+<li><a href="../concepts/grpo.html">grpo</a> · PPO 的 LLM 友好简化版本</li>
+<li><a href="../concepts/policy-gradient.html">policy-gradient</a> · RLHF 的数学基础</li>
+<li><a href="../concepts/advantage-function.html">advantage-function</a> · PPO 里的关键信号</li>
+<li><a href="../papers/gpt-3.html">gpt-3</a> · RLHF 的训练对象</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/ppo.html"><span class="cat">paper</span>PPO · Proximal Policy Optimization</a></li><li><a href="../concepts/policy-gradient.html"><span class="cat">concept</span>Policy Gradient · 策略梯度</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/rlhf.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

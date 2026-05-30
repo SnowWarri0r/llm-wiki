@@ -414,3 +414,21 @@ skill 更新:
   - Fig 05 · CLIP 下游 (中心 CLIP + 7 个应用扇出: DALL-E / SD / LLaVA / Open-vocab 检测 / 数据筛选 / 图文搜索 / 视频机器人), 箭头 stroke-dash + 节点 scale 弹出
   - glossary 12 条全有正文跳转 (审计通过)
 - 历史定位: 视觉的 GPT-3 时刻; GPT-3 跟 CLIP 共享 OpenAI "弱监督 + 大数据 + 大模型 = 通用表征" 哲学
+
+## [2026-05-28] ingest | PPO · Proximal Policy Optimization
+
+- wiki/papers/ppo.md: paper md (Schulman et al. 2017, arXiv 1707.06347, OpenAI)
+- wiki/concepts/policy-gradient.md: RL 基础, 用 reward 当 loss 权重 gradient ascent; 步子大就崩
+- wiki/concepts/clipped-surrogate-objective.md: PPO 核心 clip(r, 1-ε, 1+ε); A>0 和 A<0 两种情况都切平梯度
+- wiki/concepts/advantage-function.md: A = Q-V, 跟基线比不看绝对值; reward 偏移不变性; actor-critic + GAE
+- wiki/concepts/rlhf.md: SFT → reward model → PPO 三步; KL penalty 防 reward hacking
+- wiki/concepts/grpo.md: 更新 sources 加 ppo
+- docs/papers/ppo.html: bespoke HTML, brick accent, 5 figures:
+  - Fig 01 · agent ↔ environment 循环 (内含 policy/value 子盒, 抽象游戏场景, 顶部 action 箭头 / 底部 state+reward 箭头)
+  - Fig 02 · 步子大就崩 (左 panel 小步 OK / 右 panel 大步 π_new 跑飞, 同 π_old 曲线对比)
+  - Fig 03 · PPO 的 clipped objective (左 A>0 右 A<0 两 panel; 显示 unclipped dashed + clipped 实线 + clip region 高亮)
+  - Fig 04 · PPO 训练循环 (collect → compute advantage → K-epoch update + dashed loopback 显示数据重用)
+  - Fig 05 · RLHF 三步流程 (SFT box → Reward Model box → PPO box; 每个 box 详细标 input/loss/output)
+  - glossary 12 条全有正文跳转 (审计通过)
+- 历史定位: PPO 自身是 2017 RL breakthrough, 但最大遗产是 2022 RLHF (InstructGPT/ChatGPT); 跟 GRPO/DPO 是接力, 不是冲突
+- 工程哲学: clip 是 "粗暴近似打败精确解" 的标杆案例, mirror Adam/SGD 跟 Bayesian DL/MC dropout 的同类规律

@@ -20,6 +20,7 @@
 - [MemGPT · LLMs as Operating Systems](wiki/papers/memgpt.md) — context 当 RAM、外部存储当硬盘，LLM 自己 function call 调度记忆
 - [ViT · An Image is Worth 16×16 Words](wiki/papers/vit.md) — 把图切成 16×16 patch 当 token，纯 Transformer 干视觉；CNN 在视觉的护城河被填平
 - [CLIP · Learning Transferable Visual Models](wiki/papers/clip.md) — 4 亿图文对对比学习, 图像和文本对齐到同一向量空间; DALL-E / SD / LLaVA 都靠它
+- [PPO · Proximal Policy Optimization](wiki/papers/ppo.md) — 一行 clip 干掉 TRPO 的复杂; RLHF 的训练发动机, 撑起 ChatGPT 的对齐
 
 ## Books · 书籍精讲
 
@@ -140,6 +141,12 @@
 - [Contrastive Learning](wiki/concepts/contrastive-learning.md) — 拉近正样本 + 推开负样本, in-batch negatives 白送 N²-N 个负例
 - [Zero-Shot Image Classification](wiki/concepts/zero-shot-image-classification.md) — 分类变成"哪句话最配这张图", 类别由文本定义
 - [Dual-Tower Architecture](wiki/concepts/dual-tower-architecture.md) — 两个独立 encoder + 末端点积; 推理可缓存, 适合检索
+
+### 强化学习 / 对齐
+- [Policy Gradient](wiki/concepts/policy-gradient.md) — RL 的基础: 用 reward 当 loss 权重直接 gradient ascent, 步子大就崩
+- [Clipped Surrogate Objective](wiki/concepts/clipped-surrogate-objective.md) — PPO 核心的一行 clip, 软性 trust region
+- [Advantage Function](wiki/concepts/advantage-function.md) — A = Q - V, "比平均好多少" 比 raw return 信号稳得多
+- [RLHF](wiki/concepts/rlhf.md) — SFT → reward model → PPO 三步, 把人类排序偏好变成 LLM 训练信号
 
 ### Agent 记忆
 - [Memory Stream](wiki/concepts/memory-stream.md) — 所有观察按时间存成一条流，带重要性评分
