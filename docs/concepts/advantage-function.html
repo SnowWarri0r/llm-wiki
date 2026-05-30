@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Advantage Function · 跟基线比,不是看绝对值 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · advantage-function</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Advantage Function · 跟基线比,不是看绝对值</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>"这一步赚了多少"比"这一步总共拿了多少"信号更稳定 —— <strong>优势函数 = 实际回报 − 预期回报</strong>, 让训练不会因 reward 整体偏移就乱掉。</p>
+<h2>直觉 · 为什么 raw return 不够好</h2>
+<p>策略梯度的原始版本用 <strong>return</strong> R_t (这一步之后的总 reward) 当 loss 的权重:</p>
+<pre><code>loss = -log π(a_t) × R_t
+</code></pre>
+<p>问题: <strong>return 跟 action 没有直接因果关系</strong>. 比如:</p>
+<ul>
+<li>你在围棋里第一手下了一个不错的位置, R = +10 (最后赢了)</li>
+<li>你在围棋里第一手下了一个<strong>很烂</strong>的位置, R = +10 (但后面救回来, 最后还是赢了)</li>
+</ul>
+<p>这两种情况 R 都是 +10, 但<strong>第一种 action 应该被鼓励, 第二种应该被惩罚</strong>. Raw return 区分不了。</p>
+<p>更糟的是: 如果环境 reward 偏移 (比如所有 reward 都加 100), policy gradient 会变得离谱:</p>
+<ul>
+<li>Raw return 偏移后: <code>loss = -log π(a) × (R + 100)</code> —— 100 这个偏移把所有 action 都强推, 不管好坏</li>
+</ul>
+<h2>Advantage = 这步比平均好多少</h2>
+<p>定义:</p>
+<pre><code>A(s, a) = Q(s, a) - V(s)
+</code></pre>
+<ul>
+<li><code>Q(s, a)</code>: 在状态 s 选 action a 之后的预期 return</li>
+<li><code>V(s)</code>: 在状态 s 不管选啥的平均预期 return</li>
+<li><code>A</code>: 这个 action 比"我在这种局面下平均能拿多少" 好多少</li>
+</ul>
+<p><strong>意译</strong>: "在这个局面下, 选了这个 action 是赚了还是亏了?"</p>
+<p>举例:</p>
+<ul>
+<li>围棋开局: V(s) = 0.5 (双方对等)</li>
+<li>你下了一手坏棋: Q(s, a) = 0.3 → A = -0.2 → 该惩罚</li>
+<li>你下了一手好棋: Q(s, a) = 0.7 → A = +0.2 → 该鼓励</li>
+<li>即使最后赢了 (R=+1), 那一手坏棋的 A 仍然是负的</li>
+</ul>
+<p><strong>这就是 advantage 比 raw return 强的本质</strong> —— 它<strong>只看 action 的相对贡献</strong>, 跟最终的 reward 偏移无关。</p>
+<h2>实际怎么估计 advantage</h2>
+<p>精确的 Q 和 V 我们都不知道, 都要估计。最常用的两种估计:</p>
+<p><strong>TD (1-step Temporal Difference)</strong>:</p>
+<pre><code>A_t = r_t + γ V(s_{t+1}) - V(s_t)
+</code></pre>
+<p>"这一步 reward 加上下一步的预期, 减去当前预期" —— bootstrap 估计</p>
+<p><strong>MC (Monte Carlo, 跑完整 episode)</strong>:</p>
+<pre><code>A_t = R_t - V(s_t)         # R_t 是这一步开始的实际累计 reward
+</code></pre>
+<p><strong>GAE (Generalized Advantage Estimation)</strong> —— Schulman 2015, 现在 PPO 标配:</p>
+<pre><code>A_t = δ_t + (γλ) δ_{t+1} + (γλ)² δ_{t+2} + ...
+其中 δ_t = r_t + γ V(s_{t+1}) - V(s_t)
+</code></pre>
+<p>TD 和 MC 之间插值, 用 λ 控制 bias-variance tradeoff. <strong>λ=0 → TD, λ=1 → MC</strong>. 实际常用 λ=0.95.</p>
+<h2>Actor-Critic 架构</h2>
+<p>要算 advantage, 你需要一个 V(s) 的估计器 —— 这就是 <strong>critic</strong> (评论员).
+要选 action, 你需要一个 π(a|s) —— 这就是 <strong>actor</strong> (演员).</p>
+<p>两个网络一起训:</p>
+<pre><code class="language-python"># Actor: 输出 action 分布
+actor_net: state → action_distribution
+
+# Critic: 输出 state 的 V 估计
+critic_net: state → V_estimate
+
+# 训练循环
+for rollout in rollouts:
+    states, actions, rewards = rollout
+
+    V_estimates = critic_net(states)
+    advantages = compute_gae(rewards, V_estimates)
+
+    # actor loss: 策略梯度 (PPO 的 clipped 版)
+    actor_loss = ppo_clip_loss(actor_net, states, actions, advantages)
+
+    # critic loss: 监督回归到实际 return
+    critic_loss = (V_estimates - returns).pow(2).mean()
+
+    loss = actor_loss + 0.5 * critic_loss
+    loss.backward()
+</code></pre>
+<p><strong>Actor 学怎么选, critic 学评估当前局面好坏</strong>. 互相配合.</p>
+<p>PPO / TRPO / A3C / SAC 全都是 actor-critic 结构。GRPO 是个例外 —— 它<strong>干掉了 critic</strong>, 改用一组采样的相对得分直接当 advantage (省一个网络的开销, 这是 DeepSeek GRPO 的核心简化).</p>
+<h2>Reward 偏移不变性 (advantage 的关键性质)</h2>
+<p>如果环境的 reward 整体加一个常数 C, V 也跟着变 (V_new = V_old + C/(1-γ)). <strong>A 不变</strong>.</p>
+<p>意义: 你的训练<strong>对 reward 的绝对值不敏感, 只对 reward 的相对差异敏感</strong>. 这让 hyperparameter 调起来方便很多.</p>
+<p>跟监督学习里"输入做 normalize"是同一回事: <strong>去除无关的整体偏移, 只保留有信息的相对值</strong>.</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/policy-gradient.html">policy-gradient</a> · 它的 loss 权重就是 advantage</li>
+<li><a href="../concepts/clipped-surrogate-objective.html">clipped-surrogate-objective</a> · PPO 的 clip 作用在 A_t 上</li>
+<li><a href="../papers/ppo.html">ppo</a> · 用 advantage 配合 clip 训练</li>
+<li><a href="../concepts/grpo.html">grpo</a> · 不要 critic, 用组内相对得分当 advantage</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/ppo.html"><span class="cat">paper</span>PPO · Proximal Policy Optimization</a></li><li><a href="../concepts/clipped-surrogate-objective.html"><span class="cat">concept</span>Clipped Surrogate Objective · PPO 的核心一行 clip</a></li><li><a href="../concepts/policy-gradient.html"><span class="cat">concept</span>Policy Gradient · 策略梯度</a></li><li><a href="../concepts/rlhf.html"><span class="cat">concept</span>RLHF · Reinforcement Learning from Human Feedback</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/advantage-function.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>
