@@ -80,7 +80,7 @@ figcaption .fnum { color: var(--accent); font-weight: 700; }
 .fig-cmat.play .diag-highlight { opacity: 1; transition-delay: 1.4s; }
 
 /* fig-3 data scale */
-.scale-bar { transform-origin: left center; transform: scaleX(0); transition: transform 1.2s ease; }
+.scale-bar { transform-origin: left center; transform-box: fill-box; transform: scaleX(0); transition: transform 1.2s ease; }
 .fig-scale.play .scale-bar { transform: scaleX(1); }
 .fig-scale.play .scale-bar.bar1 { transition-delay: 0.3s; }
 .fig-scale.play .scale-bar.bar2 { transition-delay: 0.8s; }
@@ -97,19 +97,22 @@ figcaption .fnum { color: var(--accent); font-weight: 700; }
 .fig-zshot.play .candidate-row.r4 { transition-delay: 1.7s; }
 .fig-zshot.play .candidate-row.r5 { transition-delay: 2.1s; }
 
-.candidate-bar { fill: var(--ochre-soft); stroke: var(--ochre); stroke-width: 1; transform-origin: left center; transform: scaleX(0); transition: transform 0.8s ease; }
-.fig-zshot.play .candidate-row.r1 .candidate-bar { transform: scaleX(0.95); transition-delay: 1.2s; }
-.fig-zshot.play .candidate-row.r2 .candidate-bar { transform: scaleX(0.2); transition-delay: 1.4s; }
-.fig-zshot.play .candidate-row.r3 .candidate-bar { transform: scaleX(0.08); transition-delay: 1.6s; }
-.fig-zshot.play .candidate-row.r4 .candidate-bar { transform: scaleX(0.15); transition-delay: 1.8s; }
-.fig-zshot.play .candidate-row.r5 .candidate-bar { transform: scaleX(0.12); transition-delay: 2s; }
+.candidate-bar { fill: var(--ochre-soft); stroke: var(--ochre); stroke-width: 1; transform-origin: left center; transform-box: fill-box; transform: scaleX(0); transition: transform 0.8s ease; }
+.fig-zshot.play .candidate-row.r1 .candidate-bar { transform: scaleX(0.78); transition-delay: 1.2s; }
+.fig-zshot.play .candidate-row.r2 .candidate-bar { transform: scaleX(0.10); transition-delay: 1.4s; }
+.fig-zshot.play .candidate-row.r3 .candidate-bar { transform: scaleX(0.06); transition-delay: 1.6s; }
+.fig-zshot.play .candidate-row.r4 .candidate-bar { transform: scaleX(0.04); transition-delay: 1.8s; }
+.fig-zshot.play .candidate-row.r5 .candidate-bar { transform: scaleX(0.02); transition-delay: 2s; }
 
 .winner-glow { fill: none; stroke: var(--brick); stroke-width: 2; opacity: 0; transition: opacity 0.5s ease; }
 .fig-zshot.play .winner-glow { opacity: 1; transition-delay: 2.6s; }
 
 /* fig-5 downstream */
-.ds-center { transform: scale(0); transform-origin: center; transform-box: fill-box; transition: transform 0.8s cubic-bezier(0.4, 1.6, 0.6, 1); }
-.fig-ds.play .ds-center { transform: scale(1); }
+/* 注意: .ds-center / .ds-node 的 g 元素本身有 SVG transform="translate(...)" 属性,
+   不能再加 CSS transform —— 会被 CSS 覆盖, translate 全部失效, 节点会被压到 viewBox 原点.
+   所以这里只用 opacity 做淡入, 不做 scale 弹出. */
+.ds-center { opacity: 0; transition: opacity 0.8s ease; }
+.fig-ds.play .ds-center { opacity: 1; }
 .ds-arrow { stroke-dasharray: 0 200; transition: stroke-dasharray 0.8s ease; }
 .fig-ds.play .ds-arrow { stroke-dasharray: 200 200; }
 .fig-ds.play .ds-arrow.a1 { transition-delay: 0.8s; }
@@ -118,15 +121,19 @@ figcaption .fnum { color: var(--accent); font-weight: 700; }
 .fig-ds.play .ds-arrow.a4 { transition-delay: 1.4s; }
 .fig-ds.play .ds-arrow.a5 { transition-delay: 1.6s; }
 .fig-ds.play .ds-arrow.a6 { transition-delay: 1.8s; }
+.fig-ds.play .ds-arrow.a7 { transition-delay: 2.0s; }
+.fig-ds.play .ds-arrow.a8 { transition-delay: 2.2s; }
 
-.ds-node { opacity: 0; transform: scale(0.6); transform-origin: center; transform-box: fill-box; transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.4, 1.6, 0.6, 1); }
-.fig-ds.play .ds-node { opacity: 1; transform: scale(1); }
+.ds-node { opacity: 0; transition: opacity 0.5s ease; }
+.fig-ds.play .ds-node { opacity: 1; }
 .fig-ds.play .ds-node.n1 { transition-delay: 1.2s; }
 .fig-ds.play .ds-node.n2 { transition-delay: 1.4s; }
 .fig-ds.play .ds-node.n3 { transition-delay: 1.6s; }
 .fig-ds.play .ds-node.n4 { transition-delay: 1.8s; }
 .fig-ds.play .ds-node.n5 { transition-delay: 2.0s; }
 .fig-ds.play .ds-node.n6 { transition-delay: 2.2s; }
+.fig-ds.play .ds-node.n7 { transition-delay: 2.4s; }
+.fig-ds.play .ds-node.n8 { transition-delay: 2.6s; }
 </style>
 </head>
 <body>
@@ -250,28 +257,29 @@ figcaption .fnum { color: var(--accent); font-weight: 700; }
 
     <!-- 上 encoder → image embedding -->
     <path d="M 370 90 L 410 90" stroke="#3a3128" stroke-width="1.5" fill="none" marker-end="url(#arrow1)"/>
-    <path d="M 465 260 L 495 200 L 495 130" stroke="#3a3128" stroke-width="1.5" fill="none" marker-end="url(#arrow1)"/>
+    <!-- 下 encoder → text embedding（垂直短箭头，从 encoder 顶部往上指向 embedding 底边） -->
+    <path d="M 440 218 L 440 190" stroke="#3a3128" stroke-width="1.5" fill="none" marker-end="url(#arrow1)"/>
 
-    <!-- image embedding vector -->
+    <!-- image embedding vector（rect 加宽到 170 以容纳里面 vector 字符串） -->
     <g class="embed-vec" transform="translate(420, 60)">
-      <text x="60" y="-6" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">image embedding</text>
-      <rect x="0" y="0" width="120" height="22" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1"/>
-      <text x="60" y="15" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">[ 0.12, -0.4, ...] 512-d</text>
-      <text x="60" y="34" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#4a6b3a">/ ‖·‖</text>
+      <text x="85" y="-6" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">image embedding</text>
+      <rect x="0" y="0" width="170" height="22" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1"/>
+      <text x="85" y="15" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">[ 0.12, -0.4, ...] 512-d</text>
+      <text x="85" y="34" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#4a6b3a">/ ‖·‖</text>
     </g>
 
-    <!-- text embedding vector -->
-    <g class="embed-vec" transform="translate(420, 200)">
-      <text x="60" y="-6" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">text embedding</text>
-      <rect x="0" y="0" width="120" height="22" fill="#efd6c8" stroke="#9b2c2c" stroke-width="1"/>
-      <text x="60" y="15" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">[ 0.10, -0.35, ...] 512-d</text>
-      <text x="60" y="34" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#9b2c2c">/ ‖·‖</text>
+    <!-- text embedding vector（上移到 y=165 + 加宽到 170） -->
+    <g class="embed-vec" transform="translate(420, 165)">
+      <text x="85" y="-6" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">text embedding</text>
+      <rect x="0" y="0" width="170" height="22" fill="#efd6c8" stroke="#9b2c2c" stroke-width="1"/>
+      <text x="85" y="15" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">[ 0.10, -0.35, ...] 512-d</text>
+      <text x="85" y="34" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#9b2c2c">/ ‖·‖</text>
     </g>
 
-    <!-- 收敛到同一空间 -->
+    <!-- 收敛到同一空间（curve 端点跟随加宽后的 embedding 右下/右上角） -->
     <g class="dot-line">
-      <path d="M 545 80 Q 590 160 540 230" stroke="#b8841c" stroke-width="2" fill="none" stroke-dasharray="3 3"/>
-      <text x="565" y="155" font-family="Fraunces" font-style="italic" font-size="12" fill="#b8841c">同一向量空间</text>
+      <path d="M 590 82 Q 620 135 590 187" stroke="#b8841c" stroke-width="2" fill="none" stroke-dasharray="3 3"/>
+      <text x="540" y="128" font-family="Fraunces" font-style="italic" font-size="12" fill="#b8841c">同一向量空间</text>
     </g>
 
     <!-- 点积 -->
@@ -312,19 +320,19 @@ figcaption .fnum { color: var(--accent); font-weight: 700; }
     <span class="fnum">对角线 = 正样本, 其余 = 负样本</span>
   </figcaption>
   <svg class="clip-svg" viewBox="0 0 860 460" xmlns="http://www.w3.org/2000/svg">
-    <!-- 左侧 images -->
+    <!-- 左侧 images（thumbnail 不共用 cmatrix-cell class，避免被 CSS 染同色） -->
     <g transform="translate(50, 120)">
       <text class="cmat-label" x="50" y="-15" text-anchor="middle">图像 (batch)</text>
       <!-- 5 个小 image thumbnail -->
-      <rect class="cmatrix-cell pos" x="0" y="0" width="80" height="50" fill="#d8c8a8" stroke="#181410"/>
+      <rect x="0" y="0" width="80" height="50" fill="#d8c8a8" stroke="#181410" stroke-width="0.8"/>
       <text class="cmat-label" x="40" y="30" text-anchor="middle">🐕 dog</text>
-      <rect class="cmatrix-cell pos" x="0" y="55" width="80" height="50" fill="#c8d8a8" stroke="#181410"/>
+      <rect x="0" y="55" width="80" height="50" fill="#c8d8a8" stroke="#181410" stroke-width="0.8"/>
       <text class="cmat-label" x="40" y="85" text-anchor="middle">🌲 tree</text>
-      <rect class="cmatrix-cell pos" x="0" y="110" width="80" height="50" fill="#d8a8c8" stroke="#181410"/>
+      <rect x="0" y="110" width="80" height="50" fill="#d8a8c8" stroke="#181410" stroke-width="0.8"/>
       <text class="cmat-label" x="40" y="140" text-anchor="middle">🍕 pizza</text>
-      <rect class="cmatrix-cell pos" x="0" y="165" width="80" height="50" fill="#a8c8d8" stroke="#181410"/>
+      <rect x="0" y="165" width="80" height="50" fill="#a8c8d8" stroke="#181410" stroke-width="0.8"/>
       <text class="cmat-label" x="40" y="195" text-anchor="middle">🚗 car</text>
-      <rect class="cmatrix-cell pos" x="0" y="220" width="80" height="50" fill="#d8d8a8" stroke="#181410"/>
+      <rect x="0" y="220" width="80" height="50" fill="#d8d8a8" stroke="#181410" stroke-width="0.8"/>
       <text class="cmat-label" x="40" y="250" text-anchor="middle">🏖 beach</text>
     </g>
 
@@ -379,27 +387,27 @@ figcaption .fnum { color: var(--accent); font-weight: 700; }
       <rect class="diag-highlight" x="400" y="220" width="100" height="50"/>
 
       <!-- 矩阵内文字 -->
-      <text class="cmat-label" x="50" y="28" text-anchor="middle" fill="white" font-weight="700">+1</text>
+      <text class="cmat-label" x="50" y="28" text-anchor="middle" style="fill: white" font-weight="700">+1</text>
       <text class="cmat-label" x="150" y="28" text-anchor="middle">-1</text>
       <text class="cmat-label" x="250" y="28" text-anchor="middle">-1</text>
       <text class="cmat-label" x="350" y="28" text-anchor="middle">-1</text>
       <text class="cmat-label" x="450" y="28" text-anchor="middle">-1</text>
 
-      <text class="cmat-label" x="150" y="83" text-anchor="middle" fill="white" font-weight="700">+1</text>
-      <text class="cmat-label" x="250" y="138" text-anchor="middle" fill="white" font-weight="700">+1</text>
-      <text class="cmat-label" x="350" y="193" text-anchor="middle" fill="white" font-weight="700">+1</text>
-      <text class="cmat-label" x="450" y="248" text-anchor="middle" fill="white" font-weight="700">+1</text>
+      <text class="cmat-label" x="150" y="83" text-anchor="middle" style="fill: white" font-weight="700">+1</text>
+      <text class="cmat-label" x="250" y="138" text-anchor="middle" style="fill: white" font-weight="700">+1</text>
+      <text class="cmat-label" x="350" y="193" text-anchor="middle" style="fill: white" font-weight="700">+1</text>
+      <text class="cmat-label" x="450" y="248" text-anchor="middle" style="fill: white" font-weight="700">+1</text>
     </g>
 
-    <!-- 右下说明 -->
+    <!-- 右下说明（标题用 style 覆盖 .cmat-label 的 fill） -->
     <g transform="translate(700, 130)">
-      <text class="cmat-label" x="0" y="0" font-family="Fraunces" font-weight="700" font-size="14" fill="#b8841c">N = 5</text>
+      <text class="cmat-label" x="0" y="0" font-family="Fraunces" font-weight="700" font-size="14" style="fill: #b8841c">N = 5</text>
       <text class="cmat-label" x="0" y="20" font-size="10">5 个正样本 (对角线)</text>
       <text class="cmat-label" x="0" y="38" font-size="10">20 个负样本</text>
-      <text class="cmat-label" x="0" y="64" font-family="Fraunces" font-weight="700" font-size="14" fill="#b8841c">实际 N = 32768</text>
+      <text class="cmat-label" x="0" y="64" font-family="Fraunces" font-weight="700" font-size="14" style="fill: #b8841c">实际 N = 32768</text>
       <text class="cmat-label" x="0" y="84" font-size="10">32768 正 + 1B 负</text>
-      <text class="cmat-label" x="0" y="102" font-size="10">N² - N 个负样本</text>
-      <text class="cmat-label" x="0" y="120" font-size="10">**白送**</text>
+      <text class="cmat-label" x="0" y="102" font-size="10">N² − N 个负样本</text>
+      <text class="cmat-label" x="0" y="120" font-size="10" font-weight="700" style="fill: #9b2c2c">← 白送</text>
     </g>
 
     <!-- 底部说明 -->
@@ -471,7 +479,8 @@ loss = (F.cross_entropy(sim, labels) +
     <text class="scale-num n2" x="430" y="270" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="#7a6f5d">image-text pairs · 无固定类别, 任意自然语言描述</text>
 
     <!-- 比率 -->
-    <text x="430" y="40" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="20" font-weight="700" fill="#b8841c">300× 数据规模</text>
+    <text x="430" y="32" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="20" font-weight="700" fill="#b8841c">300× 数据规模</text>
+    <text x="430" y="50" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">(条长仅示意 · 真实差距太大无法等比绘出)</text>
 
     <!-- 关键说明 -->
     <g transform="translate(100, 305)">
@@ -523,37 +532,37 @@ loss = (F.cross_entropy(sim, labels) +
         <text x="0" y="22" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">"a photo of a dog"</text>
         <rect x="260" y="10" width="200" height="20" fill="#f0e0a8" stroke="#bfb398" stroke-width="0.5"/>
         <rect class="candidate-bar" x="260" y="10" width="200" height="20"/>
-        <text x="475" y="24" font-family="JetBrains Mono" font-size="11" fill="#9b2c2c" font-weight="700">0.95</text>
+        <text x="475" y="24" font-family="JetBrains Mono" font-size="11" fill="#9b2c2c" font-weight="700">0.78</text>
         <!-- winner box -->
-        <rect class="winner-glow" x="-8" y="0" width="500" height="35" rx="4"/>
+        <rect class="winner-glow" x="-8" y="0" width="520" height="35" rx="4"/>
       </g>
 
       <g class="candidate-row r2" transform="translate(0, 50)">
         <text x="0" y="22" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">"a photo of a cat"</text>
         <rect x="260" y="10" width="200" height="20" fill="#f0e0a8" stroke="#bfb398" stroke-width="0.5"/>
         <rect class="candidate-bar" x="260" y="10" width="200" height="20"/>
-        <text x="475" y="24" font-family="JetBrains Mono" font-size="11" fill="#3a3128">0.20</text>
+        <text x="475" y="24" font-family="JetBrains Mono" font-size="11" fill="#3a3128">0.10</text>
       </g>
 
       <g class="candidate-row r3" transform="translate(0, 100)">
-        <text x="0" y="22" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">"a photo of an airplane"</text>
-        <rect x="260" y="10" width="200" height="20" fill="#f0e0a8" stroke="#bfb398" stroke-width="0.5"/>
-        <rect class="candidate-bar" x="260" y="10" width="200" height="20"/>
-        <text x="475" y="24" font-family="JetBrains Mono" font-size="11" fill="#3a3128">0.08</text>
-      </g>
-
-      <g class="candidate-row r4" transform="translate(0, 150)">
         <text x="0" y="22" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">"a photo of a tree"</text>
         <rect x="260" y="10" width="200" height="20" fill="#f0e0a8" stroke="#bfb398" stroke-width="0.5"/>
         <rect class="candidate-bar" x="260" y="10" width="200" height="20"/>
-        <text x="475" y="24" font-family="JetBrains Mono" font-size="11" fill="#3a3128">0.15</text>
+        <text x="475" y="24" font-family="JetBrains Mono" font-size="11" fill="#3a3128">0.06</text>
       </g>
 
-      <g class="candidate-row r5" transform="translate(0, 200)">
+      <g class="candidate-row r4" transform="translate(0, 150)">
         <text x="0" y="22" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">"a photo of a car"</text>
         <rect x="260" y="10" width="200" height="20" fill="#f0e0a8" stroke="#bfb398" stroke-width="0.5"/>
         <rect class="candidate-bar" x="260" y="10" width="200" height="20"/>
-        <text x="475" y="24" font-family="JetBrains Mono" font-size="11" fill="#3a3128">0.12</text>
+        <text x="475" y="24" font-family="JetBrains Mono" font-size="11" fill="#3a3128">0.04</text>
+      </g>
+
+      <g class="candidate-row r5" transform="translate(0, 200)">
+        <text x="0" y="22" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">"a photo of an airplane"</text>
+        <rect x="260" y="10" width="200" height="20" fill="#f0e0a8" stroke="#bfb398" stroke-width="0.5"/>
+        <rect class="candidate-bar" x="260" y="10" width="200" height="20"/>
+        <text x="475" y="24" font-family="JetBrains Mono" font-size="11" fill="#3a3128">0.02</text>
       </g>
     </g>
 
@@ -591,7 +600,7 @@ loss = (F.cross_entropy(sim, labels) +
 <figure id="fig-ds" class="fig-ds">
   <figcaption>
     <span>Fig 05 · CLIP 是现代多模态的地基</span>
-    <span class="fnum">7 个主要下游应用</span>
+    <span class="fnum">8 个主要下游应用</span>
   </figcaption>
   <svg class="clip-svg" viewBox="0 0 860 480" xmlns="http://www.w3.org/2000/svg">
     <defs>
@@ -641,9 +650,9 @@ loss = (F.cross_entropy(sim, labels) +
       <text x="80" y="35" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3a3128">OWL-ViT / OpenSeed</text>
     </g>
 
-    <!-- 下: 数据筛选 -->
-    <line class="ds-arrow a5" x1="430" y1="310" x2="430" y2="400" stroke="#b8841c" stroke-width="1.5" marker-end="url(#arrowDS)"/>
-    <g class="ds-node n5" transform="translate(370, 410)">
+    <!-- 下: 数据筛选（上移 15 单位避免和底部说明文字贴边） -->
+    <line class="ds-arrow a5" x1="430" y1="310" x2="430" y2="385" stroke="#b8841c" stroke-width="1.5" marker-end="url(#arrowDS)"/>
+    <g class="ds-node n5" transform="translate(370, 395)">
       <rect x="0" y="0" width="120" height="44" fill="#f7f1de" stroke="#7a6f5d" stroke-width="1.5" rx="4"/>
       <text x="60" y="18" text-anchor="middle" font-family="Fraunces" font-size="13" font-weight="700" fill="#3a3128">数据筛选</text>
       <text x="60" y="35" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3a3128">LAION 用它过滤</text>
@@ -657,17 +666,17 @@ loss = (F.cross_entropy(sim, labels) +
       <text x="80" y="35" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3a3128">"以图搜图" 服务</text>
     </g>
 
-    <!-- 左: zero-shot 分类 -->
-    <line class="ds-arrow a3" x1="360" y1="240" x2="220" y2="240" stroke="#b8841c" stroke-width="1.5" marker-end="url(#arrowDS)"/>
-    <g class="ds-node n3" transform="translate(60, 220)">
+    <!-- 左: zero-shot 分类（改用 a7/n7 唯一 class，避免和右侧 LLaVA 同 delay） -->
+    <line class="ds-arrow a7" x1="360" y1="240" x2="220" y2="240" stroke="#b8841c" stroke-width="1.5" marker-end="url(#arrowDS)"/>
+    <g class="ds-node n7" transform="translate(60, 220)">
       <rect x="0" y="0" width="160" height="44" fill="#f0e0a8" stroke="#b8841c" stroke-width="1.5" rx="4"/>
       <text x="80" y="18" text-anchor="middle" font-family="Fraunces" font-size="13" font-weight="700" fill="#b8841c">Zero-shot 分类</text>
       <text x="80" y="35" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3a3128">论文本身的 demo</text>
     </g>
 
-    <!-- 左上: 视频 / 机器人 -->
-    <line class="ds-arrow a2" x1="370" y1="200" x2="220" y2="120" stroke="#b8841c" stroke-width="1.5" marker-end="url(#arrowDS)"/>
-    <g class="ds-node n2" transform="translate(60, 90)">
+    <!-- 左上: 视频 / 机器人（改用 a8/n8） -->
+    <line class="ds-arrow a8" x1="370" y1="200" x2="220" y2="120" stroke="#b8841c" stroke-width="1.5" marker-end="url(#arrowDS)"/>
+    <g class="ds-node n8" transform="translate(60, 90)">
       <rect x="0" y="0" width="160" height="44" fill="#f7f1de" stroke="#7a6f5d" stroke-width="1.5" rx="4"/>
       <text x="80" y="18" text-anchor="middle" font-family="Fraunces" font-size="13" font-weight="700" fill="#3a3128">视频理解 / 机器人</text>
       <text x="80" y="35" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3a3128">VideoCLIP / RT-2</text>
