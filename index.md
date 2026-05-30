@@ -19,6 +19,7 @@
 - [Generative Agents · Smallville](wiki/papers/generative-agents.md) — 给 LLM 加记忆流 + 反思 + 规划，25 个 agent 在虚拟小镇里自主生活
 - [MemGPT · LLMs as Operating Systems](wiki/papers/memgpt.md) — context 当 RAM、外部存储当硬盘，LLM 自己 function call 调度记忆
 - [ViT · An Image is Worth 16×16 Words](wiki/papers/vit.md) — 把图切成 16×16 patch 当 token，纯 Transformer 干视觉；CNN 在视觉的护城河被填平
+- [CLIP · Learning Transferable Visual Models](wiki/papers/clip.md) — 4 亿图文对对比学习, 图像和文本对齐到同一向量空间; DALL-E / SD / LLaVA 都靠它
 
 ## Books · 书籍精讲
 
@@ -134,6 +135,11 @@
 ### 视觉
 - [Patch Embedding](wiki/concepts/patch-embedding.md) — 图切成 16×16 块, 每块拉平投影成 token, ViT 唯一的工程创新
 - [Inductive Bias](wiki/concepts/inductive-bias.md) — 模型架构里的"祖传家产", 数据少时是宝大数据时是包袱
+
+### 多模态
+- [Contrastive Learning](wiki/concepts/contrastive-learning.md) — 拉近正样本 + 推开负样本, in-batch negatives 白送 N²-N 个负例
+- [Zero-Shot Image Classification](wiki/concepts/zero-shot-image-classification.md) — 分类变成"哪句话最配这张图", 类别由文本定义
+- [Dual-Tower Architecture](wiki/concepts/dual-tower-architecture.md) — 两个独立 encoder + 末端点积; 推理可缓存, 适合检索
 
 ### Agent 记忆
 - [Memory Stream](wiki/concepts/memory-stream.md) — 所有观察按时间存成一条流，带重要性评分

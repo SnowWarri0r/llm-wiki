@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Contrastive Learning · 对比学习 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · contrastive-learning</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Contrastive Learning · 对比学习</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>不告诉模型"这张图是什么类别", 只告诉它"这张图配这句话, 不配那 N 句话" —— <strong>靠正样本互相吸引、负样本互相推开</strong>, 让模型自己学出语义对齐。</p>
+<h2>直觉 · 为什么"对比"比"分类"更好</h2>
+<p>传统分类的训练目标: 模型预测一个 1000 类的概率分布, 跟 ground truth one-hot 算交叉熵。</p>
+<p>这种训练方式有两个根本问题:</p>
+<ol>
+<li><strong>类别要预先定死</strong>: 你训了 1000 类, 模型就只认 1000 类。来了第 1001 类完全不会</li>
+<li><strong>监督信号太稀</strong>: 一张图配一个 label "dog", 模型只学到"图 → dog"的映射。<strong>这张图里的其他信息（金毛、在草地上、阳光、戴项圈）全被扔了</strong></li>
+</ol>
+<p>对比学习换一种思路 —— <strong>不预测具体类别</strong>, 而是判断"这两个东西配不配"。</p>
+<ul>
+<li>给你一张猫图 + 一句话 "a photo of a cat", 模型说: 配</li>
+<li>给你同一张猫图 + 一句话 "a photo of a car", 模型说: 不配</li>
+</ul>
+<p>这种训练方式不需要"猫"这个 label 存在 —— <strong>它只关心两个东西的语义对齐</strong>。任何一对"语义相关"的数据都可以做训练样本: (图, caption) / (英文句子, 法文句子) / (视频, 字幕) / (图, 同一个图的不同裁剪)。</p>
+<h2>怎么训出来</h2>
+<p>CLIP 的具体做法 (in-batch contrastive)<br></p>
+<pre><code class="language-python"># 一个 batch 有 N 个图文对: (image_1, text_1), ..., (image_N, text_N)
+# 注意 text_i 是 image_i 在网上配套出现的那个 caption (天然 pair)
+
+img_embeds = image_encoder(images)    # (N, D)
+txt_embeds = text_encoder(texts)      # (N, D)
+
+# normalize 到单位向量
+img_embeds = img_embeds / img_embeds.norm(dim=-1, keepdim=True)
+txt_embeds = txt_embeds / txt_embeds.norm(dim=-1, keepdim=True)
+
+# 算所有图跟所有文本的相似度: 一个 N×N 矩阵
+sim = img_embeds @ txt_embeds.T       # (N, N)
+sim = sim * temperature_scale         # 学一个温度参数
+
+# 标签: 对角线是正样本 (image_i 跟 text_i 配)
+labels = torch.arange(N)
+
+# 两边都做 cross entropy (图→文 + 文→图, 对称)
+loss = (
+    F.cross_entropy(sim, labels) +
+    F.cross_entropy(sim.T, labels)
+) / 2
+</code></pre>
+<p>关键洞察:</p>
+<ul>
+<li><strong>正样本</strong>: 对角线那 N 对 (image_i, text_i) —— 这些是网上天然配在一起的</li>
+<li><strong>负样本</strong>: 非对角线的 N²-N 对 —— 用 batch 里的其他文本当负样本, 不用单独构造</li>
+<li><strong>训练目标</strong>: 让对角线 sim 高、非对角线 sim 低 —— softmax + cross entropy 一行搞定</li>
+</ul>
+<p><strong>一个 batch 同时贡献 N² 个判断</strong>, 数据效率高得多。</p>
+<h2>In-batch negatives · 为什么 batch 要大</h2>
+<p>对比学习的一个关键工程细节: <strong>batch size 必须很大</strong>。</p>
+<ul>
+<li>batch = 32: 每个图只跟 31 个负样本对比 → 模型很容易学</li>
+<li>batch = 32768 (CLIP 实际用的): 每个图跟 32767 个负样本对比 → 模型必须学到很精细的语义区别才能做对</li>
+</ul>
+<p>直观理解: <strong>越多负样本越能逼模型学到细节</strong>。区分"金毛" vs "汽车"很简单, 区分"金毛" vs "拉布拉多" 难得多 —— 但只有当 batch 里同时出现这两种相似的样本时, 模型才会被迫学到这个区别。</p>
+<p>工程代价: 这要求<strong>分布式训练 + gradient checkpointing + 大显存</strong>, 不是随便能复现的。SigLIP (2023) 用 sigmoid loss 替代 softmax-style 对比损失, 据说能在小 batch 上跑得动。</p>
+<h2>跟 cross entropy 分类的对比</h2>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Cross Entropy 分类</th>
+<th>Contrastive Learning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>标签形态</td>
+<td>固定 K 个类的 one-hot</td>
+<td>任意一对 "配 / 不配"</td>
+</tr>
+<tr>
+<td>监督信号密度</td>
+<td>一张图一个 label</td>
+<td>一张图跟 N-1 个负样本对比, 信号 N-1 倍</td>
+</tr>
+<tr>
+<td>类别可扩展</td>
+<td>类别变就要重训</td>
+<td>任何新类别只要写一句话就行</td>
+</tr>
+<tr>
+<td>数据要求</td>
+<td>干净人工标注</td>
+<td>网上爬的弱配对就够</td>
+</tr>
+<tr>
+<td>工程难度</td>
+<td>中</td>
+<td>高 (大 batch + 分布式)</td>
+</tr>
+</tbody>
+</table>
+<h2>对比学习的家族</h2>
+<p>CLIP 不是第一个对比学习的方法, 但它把这思路推到了语言-视觉对齐的极致。其他重要变种:</p>
+<ul>
+<li><strong>SimCLR / MoCo (2020)</strong> · 在<strong>同一张图</strong>上做不同的数据增强, 增强后的两版本互相做正样本 —— <strong>自监督</strong>视觉表示学习, 不需要 caption</li>
+<li><strong>CLIP (2021)</strong> · 跨模态对比, 4 亿图文对</li>
+<li><strong>DINOv2 (2023)</strong> · 纯视觉自监督 + 多种对比损失, 训出强大的图像表示</li>
+<li><strong>SigLIP (2023)</strong> · 用 sigmoid loss 代替 softmax-style, 对 batch size 不敏感</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/clip.html">clip</a> · 对比学习在跨模态对齐上的最经典应用</li>
+<li><a href="../concepts/zero-shot-image-classification.html">zero-shot-image-classification</a> · 对比学习训出来的 joint space 直接拿来做 zero-shot</li>
+<li><a href="../concepts/dual-tower-architecture.html">dual-tower-architecture</a> · 对比学习常用的双塔结构</li>
+<li><a href="../concepts/bitter-lesson.html">bitter-lesson</a> · 弱监督 + 大数据 &gt; 精标注 + 小数据</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/clip.html"><span class="cat">paper</span>CLIP · Learning Transferable Visual Models from Natural Language Supervision</a></li><li><a href="../concepts/dual-tower-architecture.html"><span class="cat">concept</span>Dual-Tower Architecture · 双塔架构</a></li><li><a href="../concepts/zero-shot-image-classification.html"><span class="cat">concept</span>Zero-Shot Image Classification · 不训练新模型就能分新类</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/contrastive-learning.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,7 +1,7 @@
 ---
 name: patch-embedding
 type: concept
-sources: [vit]
+sources: [vit, clip]
 updated: 2026-05-28
 ---
 

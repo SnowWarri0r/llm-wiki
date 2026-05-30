@@ -398,3 +398,19 @@ skill 更新:
   - Fig 05 · 注意力的自然层次 (浅层 Layer1 局部 / 中层 6 混合 / 深层 12 全局), 3 个 SVG attention dot pattern
   - glossary 11 条全有正文跳转 (审计通过)
 - 历史定位: ViT 真正的影响力不在分类准确率, 而在 (1) 跨模态架构统一 (CLIP/DALL-E/GPT-4V 全靠它) (2) CNN 时代结束 (3) 视觉吃 scaling law
+
+## [2026-05-28] ingest | CLIP · Learning Transferable Visual Models
+
+- wiki/papers/clip.md: paper md (Radford et al. 2021, arXiv 2103.00020, OpenAI)
+- wiki/concepts/contrastive-learning.md: 拉近正样本推开负样本, in-batch negatives, batch 越大学得越细
+- wiki/concepts/zero-shot-image-classification.md: 分类变图文匹配, prompt engineering 来到视觉
+- wiki/concepts/dual-tower-architecture.md: 双塔末端对齐 + 推理可缓存, vs single-tower 表达力对比
+- wiki/concepts/patch-embedding.md / scaling-laws.md / bitter-lesson.md: 更新 sources 加 clip
+- docs/papers/clip.html: bespoke HTML, ochre accent, 5 figures:
+  - Fig 01 · Dual-tower 架构 (image encoder + text encoder + 末端点积), 6 阶段错峰浮现
+  - Fig 02 · 对比学习矩阵 (5×5 batch + 对角线高亮 +1 / 其余 -1), brick stroke 对角线 highlight
+  - Fig 03 · 数据规模 ImageNet 1.3M vs WIT 400M (300× 倍数), scaleX 动画
+  - Fig 04 · Zero-shot 分类 (1 个图 + 5 候选 caption, bar 显示相似度 0.95/0.20/0.08/0.15/0.12, 最高 winner 加 brick 边框)
+  - Fig 05 · CLIP 下游 (中心 CLIP + 7 个应用扇出: DALL-E / SD / LLaVA / Open-vocab 检测 / 数据筛选 / 图文搜索 / 视频机器人), 箭头 stroke-dash + 节点 scale 弹出
+  - glossary 12 条全有正文跳转 (审计通过)
+- 历史定位: 视觉的 GPT-3 时刻; GPT-3 跟 CLIP 共享 OpenAI "弱监督 + 大数据 + 大模型 = 通用表征" 哲学

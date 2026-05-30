@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Zero-Shot Image Classification · 不训练新模型就能分新类 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · zero-shot-image-classification</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Zero-Shot Image Classification · 不训练新模型就能分新类</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>不再问"这是 1000 类里的哪一类", 而是问"我列的这几句话, 哪句话最配这张图" —— <strong>分类变成了图文匹配</strong>, 想分什么类直接写句话就行。</p>
+<h2>直觉 · 从"猜类别"到"配文字"</h2>
+<p>传统图像分类的工作流:</p>
+<pre><code>任务: 分 &quot;猫 / 狗 / 飞机&quot;
+↓
+做法: 标几千张图 (每张标对应 label) → train CNN → softmax 1000-way classifier
+↓
+想加一类 &quot;兔子&quot;? → 重新标兔子的图 → 重新训
+</code></pre>
+<p>CLIP 这条路:</p>
+<pre><code>任务: 分 &quot;猫 / 狗 / 飞机&quot;
+↓
+做法: 把 &quot;a photo of a cat&quot; / &quot;a photo of a dog&quot; / &quot;a photo of a airplane&quot; 喂给文本 encoder
+     → 得到 3 个文本向量
+     → 把图也喂给图像 encoder → 得到 1 个图像向量
+     → 算 3 个相似度, 最大的那个就是答案
+↓
+想加一类 &quot;兔子&quot;? → 把 &quot;a photo of a rabbit&quot; 喂进去算一个向量就行
+</code></pre>
+<p><strong>核心区别</strong>: CLIP 把"分类"问题转化成了"图文匹配"问题。所有类别都用自然语言描述, 而 CLIP 已经在 4 亿图文对上学会了"图跟文本怎么对齐" —— 拿来直接用就行, 不需要任何新训练。</p>
+<h2>Prompt engineering 也来到视觉</h2>
+<p>既然类别用自然语言描述, 那<strong>怎么描述也会影响效果</strong>。这跟 NLP 的 prompt engineering 一模一样。</p>
+<p>CLIP 论文里的实验:</p>
+<table>
+<thead>
+<tr>
+<th>Prompt 模板</th>
+<th>ImageNet 准确率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>{class}</code> (光是类名)</td>
+<td>64.2%</td>
+</tr>
+<tr>
+<td><code>a photo of a {class}</code></td>
+<td>66.7%</td>
+</tr>
+<tr>
+<td><code>a photo of a {class}, a type of pet.</code> (加上下文)</td>
+<td>68.3%</td>
+</tr>
+<tr>
+<td><strong>80 个模板做 ensemble</strong></td>
+<td><strong>70.7%</strong></td>
+</tr>
+</tbody>
+</table>
+<p>为啥 "a photo of a dog" 比单写 "dog" 好? <strong>因为网上的 caption 大多是完整句子</strong>, 不是孤立的词。CLIP 训出来的文本 encoder 对完整句子更熟。</p>
+<p>这是个有点哭笑不得的发现 —— <strong>视觉模型的效果, 现在要靠文本提示词的写法</strong>。</p>
+<h2>优势 vs 局限</h2>
+<p><strong>优势</strong>:</p>
+<ol>
+<li><strong>任意新类别零成本</strong>: 想分什么类写句话就行, 不需要标数据</li>
+<li><strong>细粒度更灵活</strong>: 想区分"棕色金毛" vs "金色金毛"? 只要 CLIP 训练时见过相关 caption, 就能区分</li>
+<li><strong>多语言</strong>: CLIP 的文本 encoder 是多语言的 (虽然主要英文, 但有 LAION 的多语言版本)</li>
+<li><strong>可解释</strong>: 你看到的"分类决策"就是 5 个文本向量跟图算相似度, 一目了然</li>
+</ol>
+<p><strong>局限</strong>:</p>
+<ol>
+<li><strong>细粒度分类弱</strong>: 区分 "金毛" vs "拉布拉多" vs "古牧" 这种品种级别, CLIP 不如专门标注训练的分类器</li>
+<li><strong>计数 / 空间关系弱</strong>: "图里有几只猫" 经常错; "猫在桌子上还是桌子下" 也分不清</li>
+<li><strong>训练分布偏见</strong>: "a photo of a CEO" 给出的图像大多是白人男性 —— CLIP 反映训练数据偏见</li>
+<li><strong>OCR 弱</strong>: 图里的文字 CLIP 看得到一部分但不准</li>
+<li><strong>绝对值 vs 相对值</strong>: CLIP 输出的是相似度的相对排序, 不是真正的概率 —— "70% 是猫" 这个 70% 没有标定意义</li>
+</ol>
+<h2>工程上怎么用</h2>
+<pre><code class="language-python">import clip
+import torch
+from PIL import Image
+
+model, preprocess = clip.load(&quot;ViT-B/32&quot;)
+image = preprocess(Image.open(&quot;dog.jpg&quot;)).unsqueeze(0)
+
+# 1. 准备候选 label 文本
+class_names = [&quot;cat&quot;, &quot;dog&quot;, &quot;airplane&quot;, &quot;car&quot;, &quot;tree&quot;]
+text_prompts = [f&quot;a photo of a {c}&quot; for c in class_names]
+text_tokens = clip.tokenize(text_prompts)
+
+# 2. 跑双 encoder
+with torch.no_grad():
+    image_features = model.encode_image(image)        # (1, 512)
+    text_features = model.encode_image(text_tokens)   # (5, 512)
+
+    image_features /= image_features.norm(dim=-1, keepdim=True)
+    text_features /= text_features.norm(dim=-1, keepdim=True)
+
+    # 3. 算相似度
+    similarity = (100.0 * image_features @ text_features.T).softmax(dim=-1)
+
+# 4. 取最大
+best = similarity.argmax()
+print(f&quot;This is a {class_names[best]}&quot;)
+</code></pre>
+<p>四步: tokenize 类名 → encode 图 + 文本 → 算相似度 → argmax。整个 inference 不用任何 fine-tune。</p>
+<h2>实际工程里它最常被用作哪种功能?</h2>
+<p><strong>Zero-shot 分类只是 CLIP 最简单的用法</strong>。真实工程里它更多用于:</p>
+<ul>
+<li><strong>以图搜图 / 图文搜索</strong>: encode 一次, 库里所有图存 embedding, 来个 query 算相似度</li>
+<li><strong>生成模型的 conditioning</strong>: Stable Diffusion 用 CLIP 文本 encoder 把 prompt 转成 conditioning 向量</li>
+<li><strong>多模态 LLM 的视觉前端</strong>: LLaVA / GPT-4V 用 CLIP 图像 encoder 把图转成 visual token 喂给 LLM</li>
+<li><strong>数据筛选</strong>: 给定一组图, 用 CLIP 算"哪些跟某个文本最相关" —— LAION 等大数据集就是这么过滤出来的</li>
+<li><strong>开放词汇检测 / 分割</strong>: 把 detector / segmentation 头跟 CLIP 文本端对齐, 实现"找出图中所有'红色花瓶'"这种 free-form 查询</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/clip.html">clip</a> · zero-shot 分类的源头</li>
+<li><a href="../concepts/contrastive-learning.html">contrastive-learning</a> · 训出来的 joint space 是 zero-shot 的基础</li>
+<li><a href="../concepts/dual-tower-architecture.html">dual-tower-architecture</a> · 图文两个 encoder 投影到同一空间</li>
+<li><a href="../concepts/in-context-learning.html">in-context-learning</a> · NLP 端类似的"不训新模型也能干新任务"思路</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/clip.html"><span class="cat">paper</span>CLIP · Learning Transferable Visual Models from Natural Language Supervision</a></li><li><a href="../concepts/contrastive-learning.html"><span class="cat">concept</span>Contrastive Learning · 对比学习</a></li><li><a href="../concepts/dual-tower-architecture.html"><span class="cat">concept</span>Dual-Tower Architecture · 双塔架构</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/zero-shot-image-classification.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>
