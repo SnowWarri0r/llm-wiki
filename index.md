@@ -16,6 +16,7 @@
 - [Fish Audio S2 Pro](wiki/papers/fish-speech-s2-pro.md) — Dual-AR + RVQ + GRPO 的开源 TTS
 - [RoPE · Rotary Position Embedding](wiki/papers/rope.md) — 不加位置向量，旋转 Q/K 让点积天然含相对位置；LLaMA / Mistral / Qwen 全在用
 - [Whisper](wiki/papers/whisper.md) — 68 万小时弱监督训 ASR，zero-shot 碾压精标模型；语音领域的 GPT 时刻
+- [Generative Agents · Smallville](wiki/papers/generative-agents.md) — 给 LLM 加记忆流 + 反思 + 规划，25 个 agent 在虚拟小镇里自主生活
 
 ## Books · 书籍精讲
 
@@ -117,6 +118,11 @@
 ### 语音 / ASR
 - [Weak Supervision at Scale](wiki/concepts/weak-supervision-at-scale.md) — 弱标注 + 量大力飞，Whisper 核心策略
 - [Multitask Speech](wiki/concepts/multitask-speech.md) — 一个模型多任务，靠特殊 token 切换
+
+### Agent 记忆
+- [Memory Stream](wiki/concepts/memory-stream.md) — 所有观察按时间存成一条流，带重要性评分
+- [Agent Reflection](wiki/concepts/agent-reflection.md) — 碎片观察 → 高层认知，定期提炼
+- [Retrieval Scoring](wiki/concepts/retrieval-scoring.md) — 时近度 × 重要性 × 相关性 三维排序
 
 ### 共享基础设施
 - [KV Cache](wiki/concepts/kv-cache.md) — 流式推理的内存账本
