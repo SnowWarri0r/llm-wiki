@@ -1,7 +1,7 @@
 ---
 name: log-mel-spectrogram
 type: concept
-sources: [dmel, interaction-models-tml]
+sources: [dmel, interaction-models-tml, whisper]
 updated: 2026-05-21
 ---
 
