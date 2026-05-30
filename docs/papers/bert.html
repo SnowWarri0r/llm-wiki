@@ -1,0 +1,1245 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>BERT · Bidirectional Encoder Representations</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6;
+  --paper-2: #e8e0c8;
+  --paper-3: #faf4e1;
+  --paper-card: #f7f1de;
+  --ink: #181410;
+  --ink-2: #3a3128;
+  --muted: #7a6f5d;
+  --rule: #bfb398;
+  --brick: #9b2c2c;
+  --brick-soft: #efd6c8;
+  --ochre: #b8841c;
+  --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a;
+  --moss-soft: #d8e6ce;
+  --moss-bright: #6b8f54;
+  --deep: #1f3a5f;
+  --deep-soft: #c8d4e2;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body {
+  font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(74,107,58,0.04) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(31,58,95,0.025) 0%, transparent 40%);
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply; opacity: 0.5;
+}
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+
+.masthead {
+  border-top: 4px double var(--ink);
+  border-bottom: 1px solid var(--rule);
+  padding: 14px 0;
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ink-2);
+  margin-bottom: 48px;
+}
+.masthead .l { font-weight: 700; }
+.masthead .r { color: var(--muted); }
+
+.hero { margin-bottom: 64px; }
+.hero .issue {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--moss); font-weight: 700;
+  margin-bottom: 18px;
+  display: flex; align-items: center; gap: 12px;
+}
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+
+h1.title {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1;
+  font-weight: 700;
+  font-size: clamp(56px, 9vw, 96px);
+  line-height: 0.92;
+  letter-spacing: -0.035em;
+  margin: 0 0 12px;
+}
+h1.title .em {
+  font-style: italic;
+  font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+  color: var(--moss);
+}
+
+.byline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  margin: 18px 0 6px;
+}
+.hero .dek {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-variation-settings: "opsz" 36;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(20px, 2.2vw, 26px);
+  line-height: 1.4;
+  color: var(--ink-2);
+  max-width: 720px;
+  margin: 16px 0 16px;
+}
+
+.tldr {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--moss);
+  padding: 22px 26px;
+  margin: 32px 0;
+  border-radius: 0 4px 4px 0;
+}
+.tldr .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--moss); font-weight: 700;
+  display: block; margin-bottom: 8px;
+}
+.tldr p { margin: 6px 0; }
+
+h2 {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1;
+  font-weight: 700;
+  font-size: 38px;
+  letter-spacing: -0.02em;
+  margin: 72px 0 20px;
+  display: flex; align-items: baseline; gap: 18px;
+}
+h2 .num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--moss); font-weight: 700;
+  min-width: 56px;
+}
+
+h3 {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-size: 22px;
+  font-weight: 600;
+  margin: 36px 0 12px;
+  letter-spacing: -0.01em;
+}
+
+p { margin: 12px 0; }
+strong { font-weight: 700; color: var(--ink); }
+code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.88em;
+  background: var(--paper-3);
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid var(--rule);
+}
+
+a { color: var(--moss); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { color: var(--brick); }
+
+.jr {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  vertical-align: super;
+  background: var(--ochre-soft);
+  color: var(--ink-2);
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid var(--ochre);
+  text-decoration: none !important;
+  margin: 0 2px;
+  cursor: pointer;
+}
+.jr:hover { background: var(--ochre); color: var(--paper); }
+
+figure {
+  margin: 40px 0;
+  padding: 28px;
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+}
+figcaption {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--rule);
+  display: flex; justify-content: space-between; align-items: center;
+}
+figcaption .fnum { color: var(--moss); font-weight: 700; }
+
+.note {
+  background: var(--paper-3);
+  border-left: 3px solid var(--moss);
+  padding: 14px 18px;
+  margin: 18px 0;
+  font-size: 16px;
+  color: var(--ink-2);
+}
+.note.brick { border-left-color: var(--brick); }
+.note.deep { border-left-color: var(--deep); }
+.note .l {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--moss); font-weight: 700;
+  display: block; margin-bottom: 4px;
+}
+.note.brick .l { color: var(--brick); }
+.note.deep .l { color: var(--deep); }
+
+/* Fig 01: bidirectional attention */
+.bd-fig {}
+.bd-panel {
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 20px;
+  margin-bottom: 14px;
+}
+.bd-panel:last-child { margin-bottom: 0; }
+.bd-panel h4 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  margin: 0 0 4px;
+}
+.bd-panel.gpt h4 { color: var(--brick); }
+.bd-panel.bert h4 { color: var(--moss); }
+.bd-panel .sub {
+  font-size: 13px; color: var(--muted); margin-bottom: 14px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.bd-svg { width: 100%; height: 130px; }
+.bd-tok rect {
+  fill: var(--paper-2); stroke: var(--ink); stroke-width: 1;
+}
+.bd-tok rect.target { fill: var(--ochre-soft); stroke: var(--ochre); stroke-width: 2.5; }
+.bd-tok text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; fill: var(--ink);
+  text-anchor: middle; dominant-baseline: middle;
+}
+.bd-arrow {
+  fill: none;
+  stroke-width: 1.5;
+  opacity: 0;
+  transition: opacity 0.6s;
+}
+.bd-fig.play .bd-arrow { opacity: 0.7; }
+.bd-arrow.gpt-left { stroke: var(--brick); }
+.bd-arrow.bert-bidir-l { stroke: var(--moss); }
+.bd-arrow.bert-bidir-r { stroke: var(--moss); }
+.bd-disabled {
+  stroke: var(--muted); stroke-dasharray: 3 3; opacity: 0.4;
+}
+.bd-conclusion {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--rule);
+}
+.bd-conclusion.brick { color: var(--brick); }
+.bd-conclusion.moss { color: var(--moss); font-weight: 700; }
+
+/* Fig 02: MLM training */
+.mlm-fig {}
+.mlm-canvas {
+  width: 100%;
+  min-height: 360px;
+}
+.mlm-tokrow {
+  display: grid;
+  grid-template-columns: repeat(11, 1fr);
+  gap: 6px;
+  margin: 12px 0;
+}
+.mlm-tok {
+  background: var(--paper-2);
+  border: 1px solid var(--ink);
+  border-radius: 3px;
+  padding: 9px 4px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  position: relative;
+  transition: all 0.5s;
+}
+.mlm-tok.masked {
+  background: var(--ink);
+  color: var(--paper-3);
+  border-color: var(--ink);
+}
+.mlm-tok.masked-rand {
+  background: var(--ochre-soft);
+  border-color: var(--ochre);
+  color: var(--ink);
+}
+.mlm-tok.masked-keep {
+  background: var(--brick-soft);
+  border-color: var(--brick);
+  color: var(--brick);
+}
+.mlm-tok .orig {
+  position: absolute;
+  bottom: -22px;
+  left: 50%; transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--moss);
+  font-weight: 700;
+  opacity: 0;
+  transition: opacity 0.4s;
+  white-space: nowrap;
+}
+.mlm-fig.s2 .mlm-tok.masked .orig,
+.mlm-fig.s2 .mlm-tok.masked-rand .orig,
+.mlm-fig.s2 .mlm-tok.masked-keep .orig {
+  opacity: 1;
+}
+.mlm-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  margin: 30px 0 8px;
+}
+.mlm-encoder {
+  background: var(--moss-soft);
+  border: 1px solid var(--moss);
+  border-radius: 4px;
+  padding: 14px;
+  margin: 12px 0;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--moss);
+  font-weight: 700;
+}
+.mlm-predrow {
+  display: grid;
+  grid-template-columns: repeat(11, 1fr);
+  gap: 6px;
+  margin: 12px 0;
+  min-height: 32px;
+}
+.mlm-pred {
+  background: var(--paper-3);
+  border: 1px dashed var(--rule);
+  border-radius: 2px;
+  padding: 6px 4px;
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+.mlm-fig.s3 .mlm-pred.show {
+  opacity: 1;
+  background: var(--moss-soft);
+  border-color: var(--moss);
+  color: var(--moss);
+  font-weight: 700;
+}
+.mlm-legend {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--rule);
+}
+.mlm-legend span { display: flex; align-items: center; gap: 6px; }
+.mlm-legend .sw { display: inline-block; width: 14px; height: 14px; border-radius: 2px; }
+.mlm-step-ctrl {
+  display: flex; justify-content: center; gap: 10px;
+  margin-top: 18px;
+}
+.mlm-step {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+  background: var(--paper-3); border: 1px solid var(--rule);
+  color: var(--ink-2);
+  padding: 5px 10px; border-radius: 3px; cursor: pointer;
+}
+.mlm-step.active { background: var(--moss); color: var(--paper); border-color: var(--moss); }
+
+/* Fig 03: NSP and special tokens */
+.nsp-fig {}
+.nsp-input {
+  display: flex; flex-wrap: wrap; gap: 4px;
+  margin: 18px 0;
+  align-items: center;
+}
+.nsp-tok {
+  background: var(--paper-2);
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  padding: 7px 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  position: relative;
+}
+.nsp-tok.special {
+  background: var(--deep-soft);
+  border-color: var(--deep);
+  color: var(--deep);
+  font-weight: 700;
+}
+.nsp-tok.seg-a { border-bottom: 3px solid var(--moss); }
+.nsp-tok.seg-b { border-bottom: 3px solid var(--ochre); }
+.nsp-tok.seg-label {
+  position: absolute;
+  bottom: -22px;
+  left: 50%; transform: translateX(-50%);
+  font-size: 9px;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 1.5px;
+}
+.nsp-arrow {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--moss);
+  font-size: 18px;
+  margin: 0 4px;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+.nsp-fig.play .nsp-arrow { opacity: 1; }
+.nsp-decision {
+  background: var(--moss-soft);
+  border: 1px solid var(--moss);
+  border-radius: 4px;
+  padding: 12px 18px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--moss);
+  font-weight: 700;
+  display: inline-block;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+.nsp-fig.play .nsp-decision { opacity: 1; }
+.nsp-segrow {
+  display: flex; gap: 6px;
+  margin-top: 18px;
+}
+.nsp-seg {
+  flex: 1;
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 14px;
+  font-size: 14px;
+}
+.nsp-seg h5 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 1.5px;
+  margin: 0 0 6px;
+}
+.nsp-seg.a h5 { color: var(--moss); }
+.nsp-seg.b h5 { color: var(--ochre); }
+
+/* Fig 04: Architecture comparison */
+.arch-fig {}
+.arch-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+}
+.arch-col {
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 16px;
+  text-align: center;
+}
+.arch-col h4 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+  margin: 0 0 4px;
+}
+.arch-col.transformer h4 { color: var(--ink-2); }
+.arch-col.bert h4 { color: var(--moss); }
+.arch-col.gpt h4 { color: var(--brick); }
+.arch-col .sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.arch-stack {
+  display: flex; flex-direction: column-reverse;
+  gap: 3px;
+  align-items: stretch;
+}
+.arch-block {
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  height: 14px;
+  border-radius: 2px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.3s, transform 0.3s;
+}
+.arch-block.show { opacity: 1; transform: translateY(0); }
+.arch-block.enc { background: var(--moss-soft); border-color: var(--moss); }
+.arch-block.dec { background: var(--brick-soft); border-color: var(--brick); }
+.arch-block.dim { opacity: 0.18 !important; filter: grayscale(1); }
+.arch-divider {
+  height: 2px;
+  background: var(--rule);
+  margin: 6px 0;
+  opacity: 0.5;
+}
+.arch-stack-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  margin: 6px 0 2px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.arch-meta {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--ink-2);
+}
+.arch-meta strong { color: var(--ink); }
+.arch-attn {
+  margin-top: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.arch-col.bert .arch-attn { color: var(--moss); font-weight: 700; }
+.arch-col.gpt .arch-attn { color: var(--brick); font-weight: 700; }
+
+/* Fig 05: pretrain → finetune */
+.pft-fig {}
+.pft-flow {
+  position: relative;
+  padding: 14px 0 30px;
+}
+.pft-top {
+  display: flex; justify-content: center;
+  margin-bottom: 18px;
+}
+.pft-corpus {
+  background: var(--paper-3);
+  border: 1.5px dashed var(--moss);
+  border-radius: 4px;
+  padding: 14px 22px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--moss);
+  font-weight: 700;
+  text-align: center;
+}
+.pft-corpus .big {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  font-style: italic;
+  display: block;
+  margin-bottom: 3px;
+}
+.pft-arrow-vert {
+  height: 36px;
+  width: 2px;
+  background: var(--ink);
+  margin: 0 auto;
+  position: relative;
+}
+.pft-arrow-vert::after {
+  content: '▼';
+  position: absolute;
+  bottom: -8px;
+  left: 50%; transform: translateX(-50%);
+  color: var(--ink);
+  font-size: 10px;
+}
+.pft-stage {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+  margin: 4px 0;
+}
+.pft-bert {
+  background: var(--moss);
+  color: var(--paper);
+  padding: 24px 32px;
+  border-radius: 6px;
+  text-align: center;
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  font-weight: 700;
+  font-style: italic;
+  max-width: 280px;
+  margin: 0 auto;
+  letter-spacing: -0.01em;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.pft-bert .sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-style: normal;
+  letter-spacing: 1.5px;
+  font-weight: 400;
+  margin-top: 4px;
+  opacity: 0.8;
+}
+.pft-bottom {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 26px;
+}
+.pft-task {
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-top: 4px solid var(--ochre);
+  border-radius: 0 0 4px 4px;
+  padding: 14px;
+  font-size: 13px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.6s, transform 0.6s;
+}
+.pft-fig.play .pft-task.show-1 { opacity: 1; transform: translateY(0); transition-delay: 0.2s; }
+.pft-fig.play .pft-task.show-2 { opacity: 1; transform: translateY(0); transition-delay: 0.4s; }
+.pft-fig.play .pft-task.show-3 { opacity: 1; transform: translateY(0); transition-delay: 0.6s; }
+.pft-fig.play .pft-task.show-4 { opacity: 1; transform: translateY(0); transition-delay: 0.8s; }
+.pft-task h5 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: 0 0 4px;
+  color: var(--ochre);
+  font-weight: 700;
+}
+.pft-task .head {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--rule);
+}
+.pft-task .head .l { color: var(--moss); font-weight: 700; }
+.pft-fanout {
+  position: relative;
+  height: 32px;
+  margin: 0 0 -6px;
+}
+.pft-fanout svg { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+.pft-fanout path {
+  stroke: var(--moss); stroke-width: 1.5; fill: none;
+  stroke-dasharray: 200;
+  stroke-dashoffset: 200;
+  transition: stroke-dashoffset 1.2s ease-in-out;
+}
+.pft-fig.play .pft-fanout path { stroke-dashoffset: 0; }
+
+/* Glossary */
+.gloss {
+  margin-top: 64px;
+  padding-top: 32px;
+  border-top: 2px solid var(--rule);
+}
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li {
+  counter-increment: g;
+  padding: 14px 0 14px 50px;
+  position: relative;
+  border-bottom: 1px dashed var(--rule);
+  font-size: 16px;
+}
+.gloss li::before {
+  content: counter(g, decimal-leading-zero);
+  position: absolute; left: 0; top: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--moss);
+  font-weight: 700;
+}
+.gloss li:target {
+  background: var(--ochre-soft);
+  border-radius: 4px;
+  animation: glossPulse 1.8s ease-out;
+}
+@keyframes glossPulse {
+  0% { background: var(--brick-soft); }
+  100% { background: var(--ochre-soft); }
+}
+.gloss .term {
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--ink);
+}
+
+.colophon {
+  margin-top: 80px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  display: flex; justify-content: space-between;
+}
+
+@media (max-width: 720px) {
+  .arch-grid { grid-template-columns: 1fr; }
+  .pft-bottom { grid-template-columns: 1fr 1fr; }
+  .mlm-tokrow, .mlm-predrow { grid-template-columns: repeat(6, 1fr); }
+}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · bert</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · NAACL 2019</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 2018 · Google AI Language</div>
+  <h1 class="title">BERT<br /><span class="em">double-edged.</span></h1>
+  <div class="byline">Devlin · Chang · Lee · Toutanova · NAACL 2019 best paper</div>
+  <p class="dek">Transformer 之后的第一个分叉：<strong>只要 encoder</strong>。用 masked LM 让一个模型一次性看到双向上下文做预训练 —— 然后给所有理解类任务 finetune。NLP 一夜之间换了套打法。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>GPT-1 当年用 Transformer 的 decoder 部分做了 left-to-right 预训练。但理解任务 —— 情感、问答、指代 —— 都<strong>天生需要双向上下文</strong>。</p>
+  <p><strong>核心诡计</strong>：随机 mask 15% 的 token，让模型从剩下所有位置（左右都行）还原。绕开了"双向看自己"的悖论。</p>
+  <p>这同时也立住了<strong>pretrain → finetune</strong> 范式 —— 一个 backbone，11 项 benchmark 通吃。</p>
+</div>
+
+<h2><span class="num">§ 01</span>2018 的分叉路口</h2>
+<p>2017 Transformer 出来，2018 OpenAI 用它的 decoder 搞出 GPT-1，证明"Transformer + 因果 LM pretrain + 任务 head finetune"能打 NLP 一片。但 GPT-1 只能看左边上下文 —— 这对生成类没问题，对<strong>理解类</strong>是天生的短板。更早的 ELMo<a class="jr" href="#g-12">12</a> 用双向 LSTM 拼接试图绕过，但两个方向互不通气，不是真正的双向 attention。</p>
+
+<p>看一句歧义句子：<em>"她从河岸边走过，看到 [bank] 上飘着的纸船"</em>。判断这个 bank 是河岸还是银行 —— 你需要看右边的 "飘着的纸船"。GPT-1 看不到，BERT 看得到。</p>
+
+<figure class="bd-fig" id="bd-fig">
+  <figcaption>
+    <span>Fig 01 · GPT 单向 vs BERT 双向 · 目标 token 能调用的上下文</span>
+    <span class="fnum">同一句话，能看到的不一样</span>
+  </figcaption>
+  <div class="bd-panel gpt">
+    <h4>GPT · Causal · 只能看左边</h4>
+    <div class="sub">"她从河岸边走过，看到 <strong style="color:var(--brick)">[bank]</strong> 上飘着的纸船"</div>
+    <svg class="bd-svg" viewBox="0 0 800 130" preserveAspectRatio="xMidYMid meet">
+      <g class="bd-tok">
+        <rect x="20"  y="60" width="86" height="32" rx="3"/>
+        <text x="63"  y="76">她从</text>
+        <rect x="116" y="60" width="86" height="32" rx="3"/>
+        <text x="159" y="76">河岸边</text>
+        <rect x="212" y="60" width="86" height="32" rx="3"/>
+        <text x="255" y="76">走过</text>
+        <rect x="308" y="60" width="86" height="32" rx="3"/>
+        <text x="351" y="76">看到</text>
+        <rect class="target" x="404" y="60" width="86" height="32" rx="3"/>
+        <text x="447" y="76">[bank]</text>
+        <rect x="500" y="60" width="86" height="32" rx="3"/>
+        <text x="543" y="76">上</text>
+        <rect x="596" y="60" width="86" height="32" rx="3"/>
+        <text x="639" y="76">飘着的</text>
+        <rect x="692" y="60" width="86" height="32" rx="3"/>
+        <text x="735" y="76">纸船</text>
+      </g>
+      <!-- arrows: only left tokens reach target -->
+      <path class="bd-arrow gpt-left" d="M 63 60 C 63 20, 447 20, 447 56" marker-end="url(#bd-tri-brick)"/>
+      <path class="bd-arrow gpt-left" d="M 159 60 C 159 22, 447 22, 447 56" marker-end="url(#bd-tri-brick)"/>
+      <path class="bd-arrow gpt-left" d="M 255 60 C 255 25, 447 25, 447 56" marker-end="url(#bd-tri-brick)"/>
+      <path class="bd-arrow gpt-left" d="M 351 60 C 351 30, 447 30, 447 56" marker-end="url(#bd-tri-brick)"/>
+      <!-- right tokens disabled -->
+      <path class="bd-disabled" d="M 543 60 C 543 22, 447 22, 447 56" stroke-width="1.5" fill="none"/>
+      <path class="bd-disabled" d="M 639 60 C 639 24, 447 24, 447 56" stroke-width="1.5" fill="none"/>
+      <path class="bd-disabled" d="M 735 60 C 735 28, 447 28, 447 56" stroke-width="1.5" fill="none"/>
+      <defs>
+        <marker id="bd-tri-brick" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#9b2c2c"/>
+        </marker>
+        <marker id="bd-tri-moss" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#4a6b3a"/>
+        </marker>
+      </defs>
+    </svg>
+    <div class="bd-conclusion brick">→ 看不到右边"飘着的纸船"，难以判断是河岸还是银行</div>
+  </div>
+
+  <div class="bd-panel bert">
+    <h4>BERT · Bidirectional · 看双向</h4>
+    <div class="sub">"她从河岸边走过，看到 <strong style="color:var(--moss)">[bank]</strong> 上飘着的纸船"</div>
+    <svg class="bd-svg" viewBox="0 0 800 130" preserveAspectRatio="xMidYMid meet">
+      <g class="bd-tok">
+        <rect x="20"  y="60" width="86" height="32" rx="3"/>
+        <text x="63"  y="76">她从</text>
+        <rect x="116" y="60" width="86" height="32" rx="3"/>
+        <text x="159" y="76">河岸边</text>
+        <rect x="212" y="60" width="86" height="32" rx="3"/>
+        <text x="255" y="76">走过</text>
+        <rect x="308" y="60" width="86" height="32" rx="3"/>
+        <text x="351" y="76">看到</text>
+        <rect class="target" x="404" y="60" width="86" height="32" rx="3"/>
+        <text x="447" y="76">[bank]</text>
+        <rect x="500" y="60" width="86" height="32" rx="3"/>
+        <text x="543" y="76">上</text>
+        <rect x="596" y="60" width="86" height="32" rx="3"/>
+        <text x="639" y="76">飘着的</text>
+        <rect x="692" y="60" width="86" height="32" rx="3"/>
+        <text x="735" y="76">纸船</text>
+      </g>
+      <!-- bidirectional arrows -->
+      <path class="bd-arrow bert-bidir-l" d="M 63 60 C 63 20, 447 20, 447 56" marker-end="url(#bd-tri-moss)"/>
+      <path class="bd-arrow bert-bidir-l" d="M 159 60 C 159 22, 447 22, 447 56" marker-end="url(#bd-tri-moss)"/>
+      <path class="bd-arrow bert-bidir-l" d="M 255 60 C 255 25, 447 25, 447 56" marker-end="url(#bd-tri-moss)"/>
+      <path class="bd-arrow bert-bidir-l" d="M 351 60 C 351 30, 447 30, 447 56" marker-end="url(#bd-tri-moss)"/>
+      <path class="bd-arrow bert-bidir-r" d="M 543 60 C 543 22, 447 22, 447 56" marker-end="url(#bd-tri-moss)"/>
+      <path class="bd-arrow bert-bidir-r" d="M 639 60 C 639 24, 447 24, 447 56" marker-end="url(#bd-tri-moss)"/>
+      <path class="bd-arrow bert-bidir-r" d="M 735 60 C 735 28, 447 28, 447 56" marker-end="url(#bd-tri-moss)"/>
+    </svg>
+    <div class="bd-conclusion moss">→ "纸船"的存在让模型把概率压向"河岸"<a class="jr" href="#g-01">1</a></div>
+  </div>
+</figure>
+
+<div class="note">
+  <span class="l">为什么是 attention 的 mask</span>
+  <p>BERT 和 GPT 的<strong>架构几乎一模一样</strong> —— 都是 transformer 堆叠。唯一的差别是 attention 矩阵上有没有那个三角形的 causal mask。BERT 把它<strong>去掉了</strong> —— 然后所有难题都在"怎么训练这玩意"上。</p>
+</div>
+
+<h2><span class="num">§ 02</span>MLM · 训练双向的诡计</h2>
+<p>直接训"双向预测下一个词"会出现自我打脸：模型能看到右边，包括它自己。BERT 的解法 MLM<a class="jr" href="#g-06">6</a> 是先把目标 token 遮起来，模型看不到答案，然后再训双向。输入先经过 WordPiece tokenizer<a class="jr" href="#g-09">9</a> 切成子词，再送进 transformer。</p>
+
+<figure class="mlm-fig" id="mlm-fig">
+  <figcaption>
+    <span>Fig 02 · KEY · MLM 训练过程 · 三步</span>
+    <span class="fnum">完形填空，但 15% 概率 + 80/10/10 策略</span>
+  </figcaption>
+  <div class="mlm-canvas">
+    <div class="mlm-label">输入句子（11 个 token，每个 15% 概率被选中）</div>
+    <div class="mlm-tokrow" id="mlm-input">
+      <div class="mlm-tok">The</div>
+      <div class="mlm-tok" data-i="1">cat<span class="orig">cat (keep)</span></div>
+      <div class="mlm-tok">sat</div>
+      <div class="mlm-tok">on</div>
+      <div class="mlm-tok">the</div>
+      <div class="mlm-tok" data-i="5">mat<span class="orig">→ [MASK]</span></div>
+      <div class="mlm-tok">,</div>
+      <div class="mlm-tok">eating</div>
+      <div class="mlm-tok" data-i="8">a<span class="orig">→ banana (rand)</span></div>
+      <div class="mlm-tok">delicious</div>
+      <div class="mlm-tok">treat</div>
+    </div>
+
+    <div class="mlm-label">3 个 token 被选中 · 应用 80 / 10 / 10 策略</div>
+    <div class="mlm-encoder">
+      ↑ ↑ ↑ ↑ ↑ ↑ ↑ ↑ ↑ ↑ ↑<br/>
+      BERT Encoder · 12 层双向 transformer
+    </div>
+
+    <div class="mlm-label">预测被选中位置的原始 token · 只在这些位置算 loss</div>
+    <div class="mlm-predrow" id="mlm-pred">
+      <div class="mlm-pred"></div>
+      <div class="mlm-pred" data-i="1">cat ✓</div>
+      <div class="mlm-pred"></div>
+      <div class="mlm-pred"></div>
+      <div class="mlm-pred"></div>
+      <div class="mlm-pred" data-i="5">mat ✓</div>
+      <div class="mlm-pred"></div>
+      <div class="mlm-pred"></div>
+      <div class="mlm-pred" data-i="8">a ✓</div>
+      <div class="mlm-pred"></div>
+      <div class="mlm-pred"></div>
+    </div>
+
+    <div class="mlm-legend">
+      <span><span class="sw" style="background:var(--ink)"></span> 80% · 换成 [MASK]</span>
+      <span><span class="sw" style="background:var(--ochre-soft); border:1px solid var(--ochre)"></span> 10% · 换成随机词</span>
+      <span><span class="sw" style="background:var(--brick-soft); border:1px solid var(--brick)"></span> 10% · 保留原词</span>
+    </div>
+  </div>
+  <div class="mlm-step-ctrl">
+    <button class="mlm-step active" data-step="1">1 · 选 15%</button>
+    <button class="mlm-step" data-step="2">2 · 应用 80/10/10</button>
+    <button class="mlm-step" data-step="3">3 · 双向预测原词</button>
+  </div>
+</figure>
+
+<div class="note">
+  <span class="l">为什么不是 100% 换成 [MASK]</span>
+  <p>因为 finetune 和 inference 时输入里<strong>没有</strong> <code>[MASK]</code> 这个特殊 token。如果训练时 100% 用 [MASK]，模型会形成"看到 [MASK] 才动脑"的坏习惯 —— 训推不一致<a class="jr" href="#g-02">2</a>。10% 随机词 + 10% 保留原词 是为了让模型在<strong>每一个</strong> token 位置都保持高质量表征。</p>
+</div>
+
+<h2><span class="num">§ 03</span>NSP · 给段间关系一个 pretrain 信号</h2>
+<p>MLM 是 token 级监督。但问答、自然语言推理这些任务关心的是<strong>两段文本的关系</strong> —— 它们承接吗？支持吗？矛盾吗？BERT 想给段间关系一个预训练任务，于是搞了 NSP<a class="jr" href="#g-07">7</a>，配套引入了 [CLS] / [SEP] / segment embedding 三件套<a class="jr" href="#g-08">8</a>。</p>
+
+<figure class="nsp-fig" id="nsp-fig">
+  <figcaption>
+    <span>Fig 03 · NSP 输入构造 · [CLS] 位置做二分类</span>
+    <span class="fnum">B 是不是 A 的下一段？</span>
+  </figcaption>
+  <div class="nsp-input">
+    <div class="nsp-tok special">[CLS]</div>
+    <div class="nsp-tok seg-a">男人</div>
+    <div class="nsp-tok seg-a">去</div>
+    <div class="nsp-tok seg-a">商店</div>
+    <div class="nsp-tok special">[SEP]</div>
+    <div class="nsp-tok seg-b">他</div>
+    <div class="nsp-tok seg-b">买</div>
+    <div class="nsp-tok seg-b">了</div>
+    <div class="nsp-tok seg-b">牛奶</div>
+    <div class="nsp-tok special">[SEP]</div>
+  </div>
+  <p style="margin-top:32px;">
+    <span class="nsp-arrow">↑ [CLS] 的 hidden state →</span>
+    <span class="nsp-decision">分类器输出 · IsNext (正样本)</span>
+  </p>
+
+  <div class="nsp-segrow">
+    <div class="nsp-seg a">
+      <h5>Segment A · embedding 标 0</h5>
+      <div>"男人去商店"</div>
+    </div>
+    <div class="nsp-seg b">
+      <h5>Segment B · embedding 标 1</h5>
+      <div>"他买了牛奶" —— 50% 正样本（原文下一段），50% 负样本（语料随机抽）</div>
+    </div>
+  </div>
+</figure>
+
+<div class="note brick">
+  <span class="l">⚠ 假洞察</span>
+  <p>RoBERTa (2019) 实验证明 NSP <strong>没用甚至有害</strong> —— 因为随机抽的负样本通常话题完全不同，模型靠"主题词共现"就能 99% 判对，根本没在学段落级逻辑。后来主流 BERT 变种（RoBERTa / DeBERTa）都去掉了 NSP，把那点算力用在更长 MLM 序列上。BERT 论文里唯一被证伪的设计<a class="jr" href="#g-03">3</a>。</p>
+</div>
+
+<h2><span class="num">§ 04</span>只要 encoder · 架构对比</h2>
+<p>2017 Transformer 是 encoder + decoder（翻译 seq2seq）。2018 BERT 切下来 encoder，GPT 切下来 decoder，分叉成两条路。</p>
+
+<figure class="arch-fig" id="arch-fig">
+  <figcaption>
+    <span>Fig 04 · Transformer / BERT / GPT · 同样的 block，砍法不同</span>
+    <span class="fnum">差别只在 attention 的 mask</span>
+  </figcaption>
+  <div class="arch-grid">
+    <div class="arch-col transformer">
+      <h4>Transformer (2017)</h4>
+      <div class="sub">encoder + decoder · 翻译</div>
+      <div class="arch-stack-label">encoder · 6 层</div>
+      <div class="arch-stack" data-n="6" data-cls="enc"></div>
+      <div class="arch-divider"></div>
+      <div class="arch-stack-label">decoder · 6 层</div>
+      <div class="arch-stack" data-n="6" data-cls="dec"></div>
+      <div class="arch-attn">attn · enc 双向 · dec 因果 + cross</div>
+      <div class="arch-meta">
+        <strong>65M</strong> params · 翻译专用
+      </div>
+    </div>
+    <div class="arch-col bert">
+      <h4>BERT-large (2018)<a class="jr" href="#g-10">10</a></h4>
+      <div class="sub">encoder-only · 双向</div>
+      <div class="arch-stack-label">encoder · 24 层</div>
+      <div class="arch-stack" data-n="24" data-cls="enc"></div>
+      <div class="arch-divider"></div>
+      <div class="arch-stack-label">decoder · — 砍掉</div>
+      <div class="arch-stack" data-n="6" data-cls="dec dim"></div>
+      <div class="arch-attn">attn · full bidirectional</div>
+      <div class="arch-meta">
+        <strong>340M</strong> params · 理解任务
+      </div>
+    </div>
+    <div class="arch-col gpt">
+      <h4>GPT-1 (2018)</h4>
+      <div class="sub">decoder-only · 因果</div>
+      <div class="arch-stack-label">encoder · — 砍掉</div>
+      <div class="arch-stack" data-n="6" data-cls="enc dim"></div>
+      <div class="arch-divider"></div>
+      <div class="arch-stack-label">decoder · 12 层</div>
+      <div class="arch-stack" data-n="12" data-cls="dec"></div>
+      <div class="arch-attn">attn · causal mask only</div>
+      <div class="arch-meta">
+        <strong>117M</strong> params · 生成任务
+      </div>
+    </div>
+  </div>
+</figure>
+
+<p>三种切法 —— Transformer 保留两端做翻译；BERT 只留 encoder 把双向用足；GPT 只留 decoder 押注生成。<strong>架构上几乎一样的 block，全靠训练目标决定走向。</strong></p>
+
+<h2><span class="num">§ 05</span>Pretrain → Finetune · 范式革命</h2>
+<p>2018 之前 NLP 大多任务都是从头训：取 word2vec / GloVe，搭 LSTM/CNN，标几千条数据训一个。BERT 把这套换成了：</p>
+
+<figure class="pft-fig" id="pft-fig">
+  <figcaption>
+    <span>Fig 05 · 一个 backbone，4 种下游任务</span>
+    <span class="fnum">所有任务共享 BERT，只换 head</span>
+  </figcaption>
+  <div class="pft-flow">
+    <div class="pft-top">
+      <div class="pft-corpus">
+        <span class="big">Wikipedia + BookCorpus</span>
+        ~3.3B token · 无标注 · 一次性
+      </div>
+    </div>
+    <div class="pft-stage">PRETRAIN · MLM + NSP · ~16 TPU days</div>
+    <div class="pft-arrow-vert"></div>
+
+    <div class="pft-bert">
+      BERT
+      <div class="sub">110M / 340M params · 通用语言表征</div>
+    </div>
+
+    <div class="pft-stage" style="margin-top:24px;">FINETUNE · 每个任务 · 几千条标注 · 几小时</div>
+    <div class="pft-fanout">
+      <svg viewBox="0 0 600 32" preserveAspectRatio="none">
+        <path d="M 300 0 C 300 16, 75 16, 75 32"/>
+        <path d="M 300 0 C 300 16, 225 16, 225 32"/>
+        <path d="M 300 0 C 300 16, 375 16, 375 32"/>
+        <path d="M 300 0 C 300 16, 525 16, 525 32"/>
+      </svg>
+    </div>
+    <div class="pft-bottom">
+      <div class="pft-task show-1">
+        <h5>Sentiment · SST-2</h5>
+        "这部电影令人失望" → 负面
+        <div class="head"><span class="l">+ head</span> · [CLS] → binary classifier</div>
+      </div>
+      <div class="pft-task show-2">
+        <h5>NER · CoNLL-2003</h5>
+        "[李雷] 来自 [北京]" → person · location
+        <div class="head"><span class="l">+ head</span> · 每个 token → 标签分类</div>
+      </div>
+      <div class="pft-task show-3">
+        <h5>QA · SQuAD 1.1</h5>
+        "他生于 1949 年" → 找 "1949"
+        <div class="head"><span class="l">+ head</span> · 预测 answer 的 start / end token</div>
+      </div>
+      <div class="pft-task show-4">
+        <h5>NLI · MNLI</h5>
+        前提 ↔ 假设 → 蕴含 / 矛盾 / 中立
+        <div class="head"><span class="l">+ head</span> · [CLS] → 三分类</div>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<p>关键点：<strong>backbone 共享，head 极小</strong>。一次昂贵 pretrain，N 次便宜 finetune。这套范式后来主导 NLP 五年，直到 GPT-3 的 in-context learning 把它从前沿挤掉。</p>
+
+<div class="note deep">
+  <span class="l">这条路现在还活着</span>
+  <p>对话 / 生成被 GPT 系拿下了，但<strong>嵌入 / 检索 / RAG</strong> 几乎全是 BERT 后代 —— BGE / E5 / Cohere Embed / OpenAI text-embedding 都建立在 encoder-only + 双向表征的优势上<a class="jr" href="#g-04">4</a>。decoder-only 算 embedding 慢且不双向。</p>
+</div>
+
+<h2><span class="num">§ 06</span>当时炸场，今天的遗产</h2>
+<p>BERT 发布时把 11 项 NLP benchmark 全推到新 SOTA。GLUE 综合分<a class="jr" href="#g-11">11</a> 从 GPT-1 的 72.8 跳到 BERT-large 的 82.1，SQuAD 1.1 EM 从 81.8 → 87.4。一夜之间，所有 NLP 论文的 baseline 都变成"BERT + 某种 finetune"。</p>
+
+<p>但 BERT 真正持久的影响不是 benchmark 分数，是它<strong>把"pretrain 一个大模型再到处 finetune"做成了行业默认</strong>。GPT 路线后来用 prompt + ICL 替代了 finetune，但"先 pretrain 一个 backbone"这件事再也没倒退过<a class="jr" href="#g-05">5</a>。</p>
+
+<div class="note">
+  <span class="l">两条路的总账</span>
+  <p>2018-2022 NLP 是 BERT 的天下：理解任务通吃，每个公司都有自己的 BERT-finetuned 模型。2022 之后 GPT-3.5 / ChatGPT 出来，几乎所有"prompt 一个 LLM 就行"的场景把 BERT finetune 路径取代了 —— 包括分类、信息抽取、问答。BERT 系仍在<strong>嵌入 / 检索</strong>里活着，但前沿任务上 decoder-only 赢了。<strong>不是 BERT 错了，是 decoder-only 在规模和泛化上意外地强。</strong></p>
+</div>
+
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">Bidirectional context</span> · 双向上下文。在 BERT 里，每个位置的 self-attention 能看到序列里所有其他位置（包括右边）。GPT 因为加了 causal mask 看不到右边。这是 BERT 整篇论文的核心优势。详见 <a href="../concepts/self-attention.html">self-attention</a>。</li>
+    <li id="g-02"><span class="term">Train-inference 分布漂移</span> · 训练时输入里有 [MASK]，但 inference 时没有。如果训练 100% 用 [MASK]，模型只在见到 [MASK] 时才"上心"，其他位置表征质量下滑 —— finetune 时会发现下游任务输入根本不会有 [MASK]，结果性能掉。80/10/10 是缓解这个问题的工程妥协。</li>
+    <li id="g-03"><span class="term">RoBERTa · A Robustly Optimized BERT Pretraining Approach</span> · Liu et al. 2019。同 BERT 架构，做了三件事：去掉 NSP、训练序列加长、训练数据扩 10×。所有指标都涨。证明 NSP 不仅没用还在浪费算力。</li>
+    <li id="g-04"><span class="term">RAG 嵌入模型为何还在用 BERT 系</span> · embedding 任务需要<strong>每个 token 都看双向</strong>才能产生稳定的语义压缩。decoder-only 模型每个位置只看左边，需要额外 trick（最后一个 token 池化 + bidirectional fine-tune）才能做嵌入，且通常慢于同尺寸 encoder。RAG 检索侧 BGE / E5 / Cohere-Embed 都是 BERT 后裔。</li>
+    <li id="g-05"><span class="term">"先 pretrain 一个大模型再到处用"成了行业默认</span> · 2018 之后任何新任务的起点都是"载入哪个 backbone"，而不是"从零设计"。BERT 把这事变成 commonsense。后来 GPT-3 用 prompt 替代 finetune，再到 ChatGPT 用 RLHF 替代专项 finetune —— "pretrain → 适配"这件事从未改变。</li>
+    <li id="g-06"><span class="term">MLM · Masked Language Model</span> · BERT 的核心预训练任务。详见 <a href="../concepts/masked-language-model.html">masked-language-model</a>。</li>
+    <li id="g-07"><span class="term">NSP · Next Sentence Prediction</span> · 两段 A、B；用 [CLS] 表征预测 B 是不是 A 在原文里的下一段。被证伪。详见 <a href="../concepts/next-sentence-prediction.html">next-sentence-prediction</a>。</li>
+    <li id="g-08"><span class="term">[CLS] / [SEP] / segment embedding</span> · 三个特殊 token 和一个 0/1 embedding。[CLS] 在句首，hidden state 用于 sentence-level 分类；[SEP] 分隔 segment；segment embedding 标记 token 属于 A 还是 B。这套约定影响了后续所有 encoder-only 模型。</li>
+    <li id="g-09"><span class="term">WordPiece tokenizer</span> · BERT 用的子词分词器，基于贪心最长匹配。把不在词表里的词拆成子词（如 "playing" → "play" + "##ing"）。后来 BPE / SentencePiece 更主流，但 BERT 当年用 WordPiece。</li>
+    <li id="g-10"><span class="term">BERT-base vs BERT-large</span> · base 是 12 层 / 768 hidden / 12 head / 110M params；large 是 24 层 / 1024 hidden / 16 head / 340M params。论文给了同 hyperparam 下两个尺寸都更优，立住了"参数多更好"的趋势 —— 也是 GPT-3 / 现代 LLM scaling 的伏笔。</li>
+    <li id="g-11"><span class="term">GLUE benchmark</span> · General Language Understanding Evaluation。9 项 NLP 理解任务（NLI、相似度、情感等）的综合 leaderboard。2018-2019 大家都靠它比 BERT 变种。后来 SuperGLUE、BIG-bench 取代了它。</li>
+    <li id="g-12"><span class="term">ELMo · 2018 前的"双向"半成品</span> · Peters et al. 2018。用两个独立的 LSTM 一个左到右一个右到左，最后<strong>拼接</strong>两边的 hidden state。两个方向互不通气，跟 BERT 在 transformer 内做真正的双向 self-attention 是两件事。BERT 让 ELMo 立刻过时。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>Authored / Devlin et al. · 2018</span>
+  <span>Index / <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+
+<script>
+// ===== Fig 01: bidirectional =====
+{
+  const fig = document.getElementById('bd-fig');
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting) { fig.classList.add('play'); obs.disconnect(); }
+    });
+  }, { threshold: 0.3 });
+  obs.observe(fig);
+}
+
+// ===== Fig 02: MLM stepper =====
+{
+  const fig = document.getElementById('mlm-fig');
+  const btns = fig.querySelectorAll('.mlm-step');
+  const inputs = fig.querySelectorAll('#mlm-input .mlm-tok');
+  const preds = fig.querySelectorAll('#mlm-pred .mlm-pred');
+
+  // mapping: i=5 (mat) → mask, i=8 (a) → random, i=1 (cat) → keep
+  function applyStep(s) {
+    inputs.forEach(t => t.classList.remove('masked', 'masked-rand', 'masked-keep'));
+    preds.forEach(p => p.classList.remove('show'));
+
+    if (s >= 2) {
+      const i5 = fig.querySelector('#mlm-input .mlm-tok[data-i="5"]');
+      const i8 = fig.querySelector('#mlm-input .mlm-tok[data-i="8"]');
+      const i1 = fig.querySelector('#mlm-input .mlm-tok[data-i="1"]');
+      if (i5) { i5.classList.add('masked'); i5.childNodes[0].nodeValue = '[MASK]'; }
+      if (i8) { i8.classList.add('masked-rand'); i8.childNodes[0].nodeValue = 'banana'; }
+      if (i1) { i1.classList.add('masked-keep'); }
+    } else {
+      // restore
+      const i5 = fig.querySelector('#mlm-input .mlm-tok[data-i="5"]');
+      const i8 = fig.querySelector('#mlm-input .mlm-tok[data-i="8"]');
+      if (i5) i5.childNodes[0].nodeValue = 'mat';
+      if (i8) i8.childNodes[0].nodeValue = 'a';
+    }
+    if (s >= 3) {
+      preds.forEach(p => {
+        if (p.dataset.i) p.classList.add('show');
+      });
+    }
+
+    fig.classList.remove('s1', 's2', 's3');
+    fig.classList.add('s' + s);
+    btns.forEach(b => b.classList.toggle('active', b.dataset.step === String(s)));
+  }
+  btns.forEach(b => b.addEventListener('click', () => applyStep(parseInt(b.dataset.step))));
+
+  let autoTimer = null;
+  function autoPlay() {
+    let s = 1;
+    applyStep(s);
+    autoTimer = setInterval(() => {
+      s += 1;
+      if (s > 3) { clearInterval(autoTimer); return; }
+      applyStep(s);
+    }, 1700);
+  }
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting && !autoTimer) { autoPlay(); obs.disconnect(); }
+    });
+  }, { threshold: 0.4 });
+  obs.observe(fig);
+}
+
+// ===== Fig 03: NSP =====
+{
+  const fig = document.getElementById('nsp-fig');
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting) { fig.classList.add('play'); obs.disconnect(); }
+    });
+  }, { threshold: 0.3 });
+  obs.observe(fig);
+}
+
+// ===== Fig 04: arch stacks =====
+{
+  const fig = document.getElementById('arch-fig');
+  const stacks = fig.querySelectorAll('.arch-stack');
+  stacks.forEach(s => {
+    const n = parseInt(s.dataset.n);
+    const cls = s.dataset.cls;
+    for (let i = 0; i < n; i++) {
+      const b = document.createElement('div');
+      b.className = 'arch-block ' + cls;
+      s.appendChild(b);
+    }
+  });
+  function animate() {
+    stacks.forEach((s, si) => {
+      const blocks = s.querySelectorAll('.arch-block');
+      blocks.forEach((b, i) => {
+        setTimeout(() => b.classList.add('show'), si * 100 + i * 40);
+      });
+    });
+  }
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting) { animate(); obs.disconnect(); }
+    });
+  }, { threshold: 0.3 });
+  obs.observe(fig);
+}
+
+// ===== Fig 05: pretrain→finetune =====
+{
+  const fig = document.getElementById('pft-fig');
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting) { fig.classList.add('play'); obs.disconnect(); }
+    });
+  }, { threshold: 0.3 });
+  obs.observe(fig);
+}
+</script>
+
+</body>
+</html>

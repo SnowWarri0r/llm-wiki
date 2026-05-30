@@ -1,0 +1,1273 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>dMel · Speech Tokenization Made Simple</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6;
+  --paper-2: #e8e0c8;
+  --paper-3: #faf4e1;
+  --paper-card: #f7f1de;
+  --ink: #181410;
+  --ink-2: #3a3128;
+  --muted: #7a6f5d;
+  --rule: #bfb398;
+  --brick: #9b2c2c;
+  --brick-soft: #efd6c8;
+  --ochre: #b8841c;
+  --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a;
+  --moss-soft: #d8e6ce;
+  --deep: #1f3a5f;
+  --deep-soft: #c8d4e2;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body {
+  font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(184,132,28,0.045) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(74,107,58,0.025) 0%, transparent 40%);
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply; opacity: 0.5;
+}
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+
+.masthead {
+  border-top: 4px double var(--ink);
+  border-bottom: 1px solid var(--rule);
+  padding: 14px 0;
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ink-2);
+  margin-bottom: 48px;
+}
+.masthead .l { font-weight: 700; }
+.masthead .r { color: var(--muted); }
+
+.hero { margin-bottom: 64px; }
+.hero .issue {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--ochre); font-weight: 700;
+  margin-bottom: 18px;
+  display: flex; align-items: center; gap: 12px;
+}
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+
+h1.title {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1;
+  font-weight: 700;
+  font-size: clamp(56px, 9vw, 96px);
+  line-height: 0.92;
+  letter-spacing: -0.035em;
+  margin: 0 0 12px;
+}
+h1.title .em {
+  font-style: italic;
+  font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+  color: var(--ochre);
+}
+
+.byline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  margin: 18px 0 6px;
+}
+.hero .dek {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-variation-settings: "opsz" 36;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(20px, 2.2vw, 26px);
+  line-height: 1.4;
+  color: var(--ink-2);
+  max-width: 720px;
+  margin: 16px 0 16px;
+}
+
+.tldr {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--ochre);
+  padding: 22px 26px;
+  margin: 32px 0;
+  border-radius: 0 4px 4px 0;
+}
+.tldr .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ochre); font-weight: 700;
+  display: block; margin-bottom: 8px;
+}
+.tldr p { margin: 6px 0; }
+
+h2 {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1;
+  font-weight: 700;
+  font-size: 38px;
+  letter-spacing: -0.02em;
+  margin: 72px 0 20px;
+  display: flex; align-items: baseline; gap: 18px;
+}
+h2 .num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--ochre); font-weight: 700;
+  min-width: 56px;
+}
+
+h3 {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-size: 22px;
+  font-weight: 600;
+  margin: 36px 0 12px;
+  letter-spacing: -0.01em;
+}
+
+p { margin: 12px 0; }
+strong { font-weight: 700; color: var(--ink); }
+code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.88em;
+  background: var(--paper-3);
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid var(--rule);
+}
+
+a { color: var(--ochre); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { color: var(--brick); }
+
+.jr {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  vertical-align: super;
+  background: var(--ochre-soft);
+  color: var(--ink-2);
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid var(--ochre);
+  text-decoration: none !important;
+  margin: 0 2px;
+  cursor: pointer;
+}
+.jr:hover { background: var(--ochre); color: var(--paper); }
+
+figure {
+  margin: 40px 0;
+  padding: 28px;
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+}
+figcaption {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--rule);
+  display: flex; justify-content: space-between; align-items: center;
+}
+figcaption .fnum { color: var(--ochre); font-weight: 700; }
+
+.note {
+  background: var(--paper-3);
+  border-left: 3px solid var(--ochre);
+  padding: 14px 18px;
+  margin: 18px 0;
+  font-size: 16px;
+  color: var(--ink-2);
+}
+.note.brick { border-left-color: var(--brick); }
+.note.moss { border-left-color: var(--moss); }
+.note.deep { border-left-color: var(--deep); }
+.note .l {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ochre); font-weight: 700;
+  display: block; margin-bottom: 4px;
+}
+.note.brick .l { color: var(--brick); }
+.note.moss .l { color: var(--moss); }
+.note.deep .l { color: var(--deep); }
+
+pre.code {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--ochre);
+  padding: 12px 16px;
+  border-radius: 3px;
+  font-size: 13px;
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+/* Fig 01: audio → log-mel pipeline */
+.pl-fig {}
+.pl-flow {
+  display: grid;
+  grid-template-columns: 1fr 26px 1fr 26px 1fr 26px 1fr;
+  gap: 6px;
+  align-items: stretch;
+}
+.pl-stage {
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 14px 10px;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.5s, transform 0.5s;
+  display: flex; flex-direction: column; justify-content: space-between;
+}
+.pl-fig.play .pl-stage.s1 { opacity: 1; transform: translateY(0); transition-delay: 0.0s; }
+.pl-fig.play .pl-stage.s2 { opacity: 1; transform: translateY(0); transition-delay: 0.3s; }
+.pl-fig.play .pl-stage.s3 { opacity: 1; transform: translateY(0); transition-delay: 0.6s; }
+.pl-fig.play .pl-stage.s4 { opacity: 1; transform: translateY(0); transition-delay: 0.9s; }
+.pl-stage h5 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ochre);
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+.pl-stage .viz {
+  height: 60px;
+  margin: 8px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pl-stage .viz svg { width: 100%; height: 100%; }
+.pl-stage .desc {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+.pl-stage .desc b { color: var(--ink); font-weight: 700; }
+.pl-arrow {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--ochre);
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.pl-fig.play .pl-arrow.a1 { opacity: 1; transition-delay: 0.2s; }
+.pl-fig.play .pl-arrow.a2 { opacity: 1; transition-delay: 0.5s; }
+.pl-fig.play .pl-arrow.a3 { opacity: 1; transition-delay: 0.8s; }
+.pl-summary {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-align: center;
+}
+.pl-summary strong {
+  color: var(--ink);
+  font-size: 11px;
+}
+
+/* Fig 02: bin quantization (single integrated SVG) */
+.bq-fig {}
+.bq-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+}
+.bq-svg .bin-line {
+  stroke: var(--rule);
+  stroke-width: 0.5;
+  stroke-dasharray: 2 3;
+  opacity: 0.5;
+}
+.bq-svg .bin-line.major {
+  stroke: var(--rule);
+  stroke-width: 1;
+  stroke-dasharray: none;
+  opacity: 0.7;
+}
+.bq-svg .axis-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  fill: var(--muted);
+}
+.bq-svg .ch-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  fill: var(--ink-2);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-anchor: middle;
+}
+.bq-svg .val-label {
+  font-family: 'Fraunces', serif;
+  font-size: 13px;
+  font-style: italic;
+  font-weight: 700;
+  fill: var(--ink);
+  text-anchor: middle;
+}
+.bq-svg .bin-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  fill: var(--muted);
+}
+.bq-svg .bin-label.hit {
+  fill: var(--ochre);
+  font-weight: 700;
+}
+.bq-svg .bar {
+  fill: var(--ochre);
+  opacity: 0.7;
+  transition: height 1.0s cubic-bezier(0.4, 0, 0.2, 1),
+              y 1.0s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.bq-svg .hit-cell {
+  fill: var(--ochre-soft);
+  stroke: var(--ochre);
+  stroke-width: 1.5;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+.bq-fig.play .bq-svg .hit-cell { opacity: 1; }
+.bq-svg .connector {
+  stroke: var(--ochre);
+  stroke-width: 1.2;
+  stroke-dasharray: 4 3;
+  fill: none;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.bq-fig.play .bq-svg .connector { opacity: 0.8; }
+.bq-svg .tok-box {
+  fill: var(--ochre);
+  stroke: var(--ink);
+  stroke-width: 1;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.bq-svg .tok-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  fill: var(--paper);
+  text-anchor: middle;
+  dominant-baseline: middle;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.bq-fig.play .bq-svg .tok-box,
+.bq-fig.play .bq-svg .tok-text { opacity: 1; }
+.bq-svg .section-divider {
+  stroke: var(--rule);
+  stroke-width: 1;
+  stroke-dasharray: 6 4;
+}
+.bq-svg .header-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  fill: var(--muted);
+  font-weight: 700;
+}
+.bq-svg .bin-idx-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  fill: var(--ink-2);
+  font-weight: 700;
+}
+.bq-svg .bin-idx-text.hit {
+  fill: var(--ochre);
+}
+.bq-code-block {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  background: var(--paper-3);
+  border-radius: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  color: var(--ink);
+  line-height: 1.6;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+/* Fig 03: dMel vs RVQ comparison */
+.cmp-fig {}
+.cmp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.cmp-col {
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 16px;
+}
+.cmp-col.dmel { border-left: 4px solid var(--ochre); }
+.cmp-col.rvq { border-left: 4px solid var(--moss); }
+.cmp-col h5 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin: 0 0 6px;
+  font-weight: 700;
+}
+.cmp-col.dmel h5 { color: var(--ochre); }
+.cmp-col.rvq h5 { color: var(--moss); }
+.cmp-col .sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.cmp-pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 12px 0;
+}
+.cmp-step {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  padding: 6px 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  border-radius: 2px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.cmp-step.trained {
+  background: var(--brick-soft);
+  border-color: var(--brick);
+  color: var(--brick);
+  font-weight: 700;
+}
+.cmp-step.trained::after {
+  content: '需训练';
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: var(--brick);
+  background: var(--paper);
+  padding: 1px 5px;
+  border: 1px solid var(--brick);
+  border-radius: 2px;
+}
+.cmp-step.fixed {
+  background: var(--moss-soft);
+  border-color: var(--moss);
+}
+.cmp-step.fixed::after {
+  content: '查表';
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: var(--moss);
+  background: var(--paper);
+  padding: 1px 5px;
+  border: 1px solid var(--moss);
+  border-radius: 2px;
+}
+.cmp-step.lib::after {
+  content: 'numpy';
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: var(--ink-2);
+  background: var(--paper);
+  padding: 1px 5px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+.cmp-arrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  margin: -2px 0;
+}
+.cmp-meta {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.cmp-meta .k { color: var(--muted); letter-spacing: 0.5px; }
+.cmp-meta .v { font-weight: 700; text-align: right; }
+.cmp-col.dmel .v.win { color: var(--ochre); }
+.cmp-col.rvq .v.win { color: var(--moss); }
+
+.cmp-verdict {
+  margin-top: 20px;
+  background: var(--paper-3);
+  border: 1px dashed var(--rule);
+  border-radius: 3px;
+  padding: 14px 18px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  text-align: center;
+  color: var(--ink-2);
+}
+.cmp-verdict strong {
+  color: var(--ochre);
+  font-family: 'Fraunces', serif;
+  font-size: 14px;
+  font-style: italic;
+}
+
+/* Fig 04: 简单方案有时一样好的范式 */
+.pat-fig {}
+.pat-table {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1.4fr;
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.pat-cell {
+  background: var(--paper-3);
+  padding: 12px 14px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+}
+.pat-cell.header {
+  background: var(--paper-2);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 700;
+  border-bottom: 2px solid var(--ink);
+}
+.pat-cell.header.complex { color: var(--brick); }
+.pat-cell.header.simple { color: var(--ochre); }
+.pat-cell.dim {
+  background: var(--paper-2);
+  color: var(--ink-2);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.pat-cell.complex {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+.pat-cell.simple {
+  background: var(--ochre-soft);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* Glossary */
+.gloss {
+  margin-top: 64px;
+  padding-top: 32px;
+  border-top: 2px solid var(--rule);
+}
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li {
+  counter-increment: g;
+  padding: 14px 0 14px 50px;
+  position: relative;
+  border-bottom: 1px dashed var(--rule);
+  font-size: 16px;
+}
+.gloss li::before {
+  content: counter(g, decimal-leading-zero);
+  position: absolute; left: 0; top: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--ochre);
+  font-weight: 700;
+}
+.gloss li:target {
+  background: var(--ochre-soft);
+  border-radius: 4px;
+  animation: glossPulse 1.8s ease-out;
+}
+@keyframes glossPulse {
+  0% { background: var(--brick-soft); }
+  100% { background: var(--ochre-soft); }
+}
+.gloss .term {
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--ink);
+}
+
+.colophon {
+  margin-top: 80px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  display: flex; justify-content: space-between;
+}
+
+@media (max-width: 720px) {
+  .pl-flow { grid-template-columns: 1fr; }
+  .pl-arrow { transform: rotate(90deg); }
+  .bq-canvas { grid-template-columns: 1fr; }
+  .cmp-grid { grid-template-columns: 1fr; }
+  .pat-table { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · dmel</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · Apple · 2024-07</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 2024 · Apple · 简单到让人怀疑的方案</div>
+  <h1 class="title">Speech Tokenization<br /><span class="em">Made Simple.</span></h1>
+  <div class="byline">Bai · Zhao · Bao · He · ... · Apple · 2024-07</div>
+  <p class="dek">把语音切成离散 token 通常要训个 neural codec（fish-speech / EnCodec / SoundStream）。dMel 提出：<strong>直接把 log-mel 按预设 bin 量化成 token</strong>，不用训 codec。然后证明这套简单方案在 speech-LLM 训练里跟 RVQ codec<strong>一样好</strong>。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>2024 主流 "speech as LLM input" 方案是 <strong>训个 neural codec 把音频压成离散 token</strong>（RVQ / EnCodec / SoundStream）。又贵又复杂，跟 LLM 训练分离。</p>
+  <p>dMel 的方案：跳过 codec，<strong>直接 bin quantize log-mel 频谱</strong>。每个 mel 频道按 16 个等距 bin 切，token 就是 bin index。<strong>20 行 numpy 代码</strong>就能复现。</p>
+  <p>结果：在 ASR / TTS / speech LLM 训练上，dMel 跟 codec 路线<strong>性能相当</strong>。<a href="interaction-models-tml.html">TML</a> 用 dMel 做音频输入 + <a href="flow-matching.html">flow matching</a> 做音频输出 —— 全链路无独立 codec。</p>
+  <p>这是个反复出现的范式：<strong>主模型变强后，预处理的复杂度可以塌缩</strong>。</p>
+</div>
+
+<h2><span class="num">§ 01</span>音频 → token · 主流做法的痛点</h2>
+<p>2024 主流 speech-LLM 训练管线：</p>
+
+<ol>
+  <li>训一个 neural codec（RVQ / EnCodec / SoundStream / fish-speech codec）把音频压成离散 token</li>
+  <li>用这些 token 训 speech LLM</li>
+</ol>
+
+<p>问题 ——</p>
+
+<ul>
+  <li><strong>codec 是独立模型</strong>，要训练、调参、维护，自己就是个大工程</li>
+  <li><strong>codec 训练和 LLM 训练分离</strong>，不能端到端反向传播</li>
+  <li><strong>codec 决定上限</strong> · LLM 见到的"音频"是 codec 抽象出来的样子，可能不是 LLM 视角下最优的表征</li>
+  <li><strong>跨语言迁移困难</strong> · 英语训的 codec 跑中文可能掉点（codebook 跟训练域绑定）</li>
+  <li><strong>可解释性差</strong> · codebook entry 是个学出来的黑盒向量，debug 时不知道每个 token 对应啥</li>
+</ul>
+
+<p>Apple 内部的疑问：<strong>能不能不用 codec？</strong> dMel 给了答案。</p>
+
+<h2><span class="num">§ 02</span>从波形到 log-mel · 输入是什么</h2>
+<p>音频原始是 1D 波形（16kHz 采样率 = 每秒 16000 个浮点）。太长。dMel 接受的输入是 <strong>log-mel 频谱图</strong><a class="jr" href="#g-01">1</a> —— 一个 2D 矩阵 `[频道 × 时间]`。</p>
+
+<figure class="pl-fig" id="pl-fig">
+  <figcaption>
+    <span>Fig 01 · 从波形到 log-mel 频谱图 · 4 步标准 audio pipeline</span>
+    <span class="fnum">这部分跟 dMel 没关系 · 是 dMel 之前的标准预处理</span>
+  </figcaption>
+  <div class="pl-flow">
+
+    <div class="pl-stage s1">
+      <h5>1 · 波形</h5>
+      <div class="viz">
+        <svg viewBox="0 0 100 60" preserveAspectRatio="none">
+          <path d="M 0 30 Q 5 10, 10 30 T 20 30 T 30 30 T 40 30 T 50 30 Q 55 50, 60 30 T 70 30 T 80 30 T 90 30 T 100 30" fill="none" stroke="var(--ochre)" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="desc">
+        <b>1D · 16kHz</b><br/>每秒 16000 个采样点
+      </div>
+    </div>
+
+    <div class="pl-arrow a1">▶</div>
+
+    <div class="pl-stage s2">
+      <h5>2 · STFT</h5>
+      <div class="viz">
+        <svg viewBox="0 0 100 60" preserveAspectRatio="none">
+          <!-- STFT visualization: 多个 frequency bands -->
+          <rect x="5" y="50" width="6" height="6" fill="var(--ochre)" opacity="0.4"/>
+          <rect x="5" y="40" width="6" height="8" fill="var(--ochre)" opacity="0.6"/>
+          <rect x="5" y="25" width="6" height="13" fill="var(--ochre)" opacity="0.8"/>
+          <rect x="5" y="10" width="6" height="13" fill="var(--ochre)"/>
+          <rect x="14" y="48" width="6" height="8" fill="var(--ochre)" opacity="0.5"/>
+          <rect x="14" y="35" width="6" height="11" fill="var(--ochre)" opacity="0.7"/>
+          <rect x="14" y="20" width="6" height="13" fill="var(--ochre)" opacity="0.9"/>
+          <rect x="14" y="5" width="6" height="13" fill="var(--ochre)"/>
+          <rect x="23" y="52" width="6" height="4" fill="var(--ochre)" opacity="0.3"/>
+          <rect x="23" y="38" width="6" height="12" fill="var(--ochre)" opacity="0.6"/>
+          <rect x="23" y="20" width="6" height="16" fill="var(--ochre)" opacity="0.8"/>
+          <rect x="23" y="3" width="6" height="15" fill="var(--ochre)"/>
+        </svg>
+      </div>
+      <div class="desc">
+        <b>短时傅里叶</b><br/>切 25ms 窗 · FFT → 频率分布
+      </div>
+    </div>
+
+    <div class="pl-arrow a2">▶</div>
+
+    <div class="pl-stage s3">
+      <h5>3 · Mel scale</h5>
+      <div class="viz">
+        <svg viewBox="0 0 100 60" preserveAspectRatio="none">
+          <!-- Mel scale: log frequency axis, denser low freq -->
+          <line x1="5" y1="55" x2="95" y2="55" stroke="var(--muted)" stroke-width="0.5"/>
+          <line x1="5" y1="55" x2="5" y2="5" stroke="var(--muted)" stroke-width="0.5"/>
+          <circle cx="10" cy="50" r="2" fill="var(--ochre)"/>
+          <circle cx="14" cy="42" r="2" fill="var(--ochre)"/>
+          <circle cx="20" cy="35" r="2" fill="var(--ochre)"/>
+          <circle cx="28" cy="28" r="2" fill="var(--ochre)"/>
+          <circle cx="38" cy="22" r="2" fill="var(--ochre)"/>
+          <circle cx="50" cy="17" r="2" fill="var(--ochre)"/>
+          <circle cx="64" cy="13" r="2" fill="var(--ochre)"/>
+          <circle cx="80" cy="9" r="2" fill="var(--ochre)"/>
+          <text x="50" y="60" text-anchor="middle" font-size="6" fill="var(--muted)" font-family="monospace">log freq</text>
+        </svg>
+      </div>
+      <div class="desc">
+        <b>对数频率</b><br/>跟人耳感知一致<br/>低频密 · 高频疏
+      </div>
+    </div>
+
+    <div class="pl-arrow a3">▶</div>
+
+    <div class="pl-stage s4">
+      <h5>4 · log + 80 channels</h5>
+      <div class="viz">
+        <svg viewBox="0 0 100 60" preserveAspectRatio="none">
+          <!-- log-mel spectrogram: [80 mel × N time] heatmap-like -->
+          <rect x="2" y="2" width="96" height="56" fill="var(--paper)" stroke="var(--muted)" stroke-width="0.5"/>
+          <rect x="3" y="3" width="6" height="2" fill="var(--ochre)" opacity="0.3"/>
+          <rect x="9" y="3" width="6" height="2" fill="var(--ochre)" opacity="0.6"/>
+          <rect x="15" y="3" width="6" height="2" fill="var(--ochre)" opacity="0.9"/>
+          <rect x="3" y="6" width="6" height="2" fill="var(--ochre)" opacity="0.5"/>
+          <rect x="9" y="6" width="6" height="2" fill="var(--ochre)" opacity="0.8"/>
+          <rect x="15" y="6" width="6" height="2" fill="var(--ochre)" opacity="0.4"/>
+          <rect x="3" y="9" width="6" height="2" fill="var(--ochre)" opacity="0.7"/>
+          <rect x="9" y="9" width="6" height="2" fill="var(--ochre)" opacity="0.3"/>
+          <rect x="15" y="9" width="6" height="2" fill="var(--ochre)" opacity="0.6"/>
+          <rect x="21" y="3" width="6" height="2" fill="var(--ochre)" opacity="0.5"/>
+          <rect x="27" y="3" width="6" height="2" fill="var(--ochre)" opacity="0.7"/>
+          <rect x="33" y="3" width="6" height="2" fill="var(--ochre)" opacity="0.4"/>
+          <rect x="39" y="3" width="6" height="2" fill="var(--ochre)" opacity="0.8"/>
+          <rect x="45" y="3" width="6" height="2" fill="var(--ochre)" opacity="0.6"/>
+          <rect x="51" y="3" width="6" height="2" fill="var(--ochre)" opacity="0.3"/>
+          <rect x="57" y="3" width="6" height="2" fill="var(--ochre)" opacity="0.7"/>
+          <rect x="63" y="3" width="6" height="2" fill="var(--ochre)" opacity="0.5"/>
+          <text x="50" y="35" text-anchor="middle" font-size="9" font-family="monospace" fill="var(--ink-2)" font-weight="700">80 × N</text>
+          <text x="50" y="45" text-anchor="middle" font-size="6" font-family="monospace" fill="var(--muted)">mel × time</text>
+        </svg>
+      </div>
+      <div class="desc">
+        <b>log-mel</b><br/>2D 矩阵<br/>连续浮点
+      </div>
+    </div>
+
+  </div>
+
+  <div class="pl-summary">
+    <strong>10 秒音频:</strong>  原始 160000 个采样点  →  log-mel  →  80 × 1000 ≈ 80000 浮点（压缩 2×, 结构化）
+  </div>
+</figure>
+
+<p>到这里得到的还是<strong>连续浮点矩阵</strong>。要喂 LLM（吃离散 token），必须离散化。<strong>这一步就是 dMel</strong>。</p>
+
+<h2><span class="num">§ 03</span>Bin Quantization · 简单到 20 行代码</h2>
+<p>dMel 的全部方案 —— 每个 mel 频道独立按 K 个 bin 等距切，token 就是 bin index：</p>
+
+<figure class="bq-fig" id="bq-fig">
+  <figcaption>
+    <span>Fig 02 · KEY · 6 mel channel 同时量化 · "连续值 → bin → token" 一条直线</span>
+    <span class="fnum">每个 bar 顶部落在哪个 bin 横线 · 那个 bin 索引就是 token</span>
+  </figcaption>
+
+  <svg class="bq-svg" viewBox="0 0 720 420" preserveAspectRatio="xMidYMid meet" id="bq-svg">
+    <!-- y-axis value markers (left side) · 5 个刻度对齐 bar 实际位置 · 统一 0.xx 前缀 -->
+    <text x="52" y="78" class="axis-text" text-anchor="end">1.0</text>
+    <text x="52" y="138" class="axis-text" text-anchor="end">0.75</text>
+    <text x="52" y="198" class="axis-text" text-anchor="end">0.5</text>
+    <text x="52" y="258" class="axis-text" text-anchor="end">0.25</text>
+    <text x="52" y="320" class="axis-text" text-anchor="end">0.0</text>
+
+    <!-- bin idx 头部小标签 · 放在右侧 column 顶部 不跟 mel labels 撞 -->
+    <text x="660" y="46" class="header-label" text-anchor="middle">bin idx</text>
+
+    <!-- The bin lines + bars + highlights + connectors + tokens get added by JS so positions stay in sync with the math -->
+    <g id="bq-svg-content"></g>
+
+    <!-- section divider above token row · 离 chart 底部 22px · 离 token label 18px -->
+    <line x1="60" y1="346" x2="600" y2="346" class="section-divider"/>
+    <text x="60" y="368" class="header-label" text-anchor="start">→ token (= bin idx)</text>
+  </svg>
+
+  <div class="bq-code-block">def quantize(x):           # x: continuous log-mel value
+  return clip(
+    (x - vmin) / (vmax - vmin) * K,
+    0, K-1
+  ).astype(int)
+
+# K = 16 · vmin = data 1% quantile · vmax = data 99%
+# 一行 numpy 搞定 · 无训练 · 无 codec</div>
+</figure>
+
+<p>实际配置：<strong>80 mel channels × 16 bins × N frames</strong>。每帧 80 个 token（每个 channel 一个），vocabulary 大小是 16<a class="jr" href="#g-07">7</a>。10 秒音频 ≈ 80 × 1000 = 80000 token。vmin / vmax 不是学的，是<strong>数据集统计值</strong><a class="jr" href="#g-08">8</a>（取 1%/99% 分位数避开极端）。</p>
+
+<div class="note">
+  <span class="l">关键属性</span>
+  <ul style="margin:6px 0; padding-left:20px;">
+    <li><strong>不需要训练</strong> · vmin/vmax 是数据集统计值</li>
+    <li><strong>跨语言稳定</strong> · log-mel 是物理量，bin 切片纯几何，跟语言无关</li>
+    <li><strong>可解释</strong> · token = bin index = 这个频道在那帧的能量等级，直接对应频谱图</li>
+    <li><strong>跨域稳定</strong> · 英语训的模型在中文 dMel 上直接 work</li>
+  </ul>
+</div>
+
+<h2><span class="num">§ 04</span>dMel vs RVQ · 复杂度差一个量级</h2>
+<p>把 dMel 跟主流 RVQ codec<a class="jr" href="#g-02">2</a> 路线（fish-speech / EnCodec / SoundStream）平铺对比：</p>
+
+<figure class="cmp-fig" id="cmp-fig">
+  <figcaption>
+    <span>Fig 03 · 两条路 · 同样把音频变成 token</span>
+    <span class="fnum">dMel 简单 · RVQ 表达力强</span>
+  </figcaption>
+  <div class="cmp-grid">
+
+    <div class="cmp-col dmel">
+      <h5>dMel (Apple 2024)</h5>
+      <div class="sub">规则 bin · 不训 codec</div>
+      <div class="cmp-pipeline">
+        <div class="cmp-step">log-mel 频谱</div>
+        <div class="cmp-arrow">↓</div>
+        <div class="cmp-step lib">bin quantize</div>
+        <div class="cmp-arrow">↓</div>
+        <div class="cmp-step fixed">查表 → token index</div>
+      </div>
+      <div class="cmp-meta">
+        <span class="k">代码量</span><span class="v win">~20 行 numpy</span>
+        <span class="k">训练时间</span><span class="v win">0 (无 codec)</span>
+        <span class="k">vocabulary</span><span class="v">16/channel · 80ch</span>
+        <span class="k">跨语言</span><span class="v win">稳定</span>
+        <span class="k">可解释</span><span class="v win">每 bin 对应能量</span>
+        <span class="k">端到端</span><span class="v win">可微</span>
+      </div>
+    </div>
+
+    <div class="cmp-col rvq">
+      <h5>RVQ codec (fish-speech / EnCodec)</h5>
+      <div class="sub">学 codebook · 多层残差</div>
+      <div class="cmp-pipeline">
+        <div class="cmp-step">log-mel / waveform</div>
+        <div class="cmp-arrow">↓</div>
+        <div class="cmp-step trained">encoder (CNN/Transformer)</div>
+        <div class="cmp-arrow">↓</div>
+        <div class="cmp-step trained">RVQ N 层 codebook 查找</div>
+      </div>
+      <div class="cmp-meta">
+        <span class="k">代码量</span><span class="v">完整模型 + 训练 pipeline</span>
+        <span class="k">训练时间</span><span class="v">数日 · GPU</span>
+        <span class="k">vocabulary</span><span class="v">1024-2048 × N codebook</span>
+        <span class="k">跨语言</span><span class="v">跟训练域绑定</span>
+        <span class="k">可解释</span><span class="v">codebook 是黑盒向量</span>
+        <span class="k">端到端</span><span class="v">不可微 (straight-through)</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="cmp-verdict">
+    实证：speech-LLM 训练上 <strong>dMel ≈ RVQ codec</strong><a class="jr" href="#g-03">3</a> ·
+    复杂度差一个量级 · 性能相当
+  </div>
+</figure>
+
+<div class="note ochre">
+  <span class="l">为什么 dMel 能跟 RVQ 打平</span>
+  <p>两个原因：</p>
+  <p><strong>1 · 主 LLM 足够强</strong>。当 transformer 大到一定程度，它能从 raw bin index 序列里学到复杂结构 —— 不需要 codec 帮它"压缩信息"。codec 的"额外表达力"在大 LLM 视角下并不必要。</p>
+  <p><strong>2 · 信息没丢</strong>。16 bin × 80 channels 足够表达 mel 频谱的有用变化。RVQ codec 的"额外质量"主要体现在<strong>生成端的 vocoder 解码</strong>，对 LLM 训练阶段不重要。</p>
+</div>
+
+<h2><span class="num">§ 05</span>这是个反复出现的范式</h2>
+<p>"主模型变强后预处理可以塌缩"这事在 ML 历史上反复出现：</p>
+
+<figure class="pat-fig" id="pat-fig">
+  <figcaption>
+    <span>Fig 04 · "主模型变强 · 预处理塌缩" 范式</span>
+    <span class="fnum">不是 dMel 独有的故事</span>
+  </figcaption>
+  <div class="pat-table">
+    <div class="pat-cell dim">领域</div>
+    <div class="pat-cell header complex">早期 · 复杂预处理</div>
+    <div class="pat-cell header simple">晚期 · 简化方案</div>
+
+    <div class="pat-cell dim">NLP 下游接入</div>
+    <div class="pat-cell complex">每任务一个 head · finetune 全套</div>
+    <div class="pat-cell simple">prompt 触发 (GPT-3)</div>
+
+    <div class="pat-cell dim">语音预处理</div>
+    <div class="pat-cell complex">phonemizer + 声学模型 + vocoder 多段串联</div>
+    <div class="pat-cell simple">主模型直吃文本 (fish-speech)</div>
+
+    <div class="pat-cell dim">语音 → token</div>
+    <div class="pat-cell complex">RVQ codec · 训练 · 多层 codebook</div>
+    <div class="pat-cell simple">bin quantize log-mel (dMel)</div>
+
+    <div class="pat-cell dim">VAD (语音活动检测)</div>
+    <div class="pat-cell complex">独立小模型分类</div>
+    <div class="pat-cell simple">主 LLM 自己判断 (TML micro-turn)</div>
+
+    <div class="pat-cell dim">OCR</div>
+    <div class="pat-cell complex">检测 + 识别 + 后处理 pipeline</div>
+    <div class="pat-cell simple">VLM 直接读图片 (Gemini / Claude)</div>
+
+    <div class="pat-cell dim">图像预处理</div>
+    <div class="pat-cell complex">手工 feature (SIFT / HOG)</div>
+    <div class="pat-cell simple">conv / ViT 直吃像素 (AlexNet / ViT)</div>
+  </div>
+</figure>
+
+<p>每一列都是<strong>"原本以为很重要的预处理，被主模型变强吃掉了"</strong>。dMel 在音频 token 化这一具体位置上重新讲了一遍这个故事<a class="jr" href="#g-04">4</a>。</p>
+
+<div class="note moss">
+  <span class="l">设计原则</span>
+  <p>遇到"我应该训个 codec / 设计个预处理 / 写规则" 的冲动时，先问：<strong>主模型足够强吗？强到不需要这个辅助？</strong></p>
+  <p>如果是，直接最 naive 的方案试一遍。dMel 的全部贡献就是这个发现："直接 bin quantize 试一下" → 它 work。Apple 的工程师没发明新东西，只是<strong>抗住了"得训个 codec 才行"的直觉</strong>，跑了 ablation 证明给大家看 —— 这种 "baseline-first" 工程哲学<a class="jr" href="#g-12">12</a>在 paper 写作上不性感，工程上极有价值。</p>
+</div>
+
+<h2><span class="num">§ 06</span>TML 怎么把 dMel 接进 micro-turn</h2>
+<p><a href="interaction-models-tml.html">TML interaction model</a> 是 dMel 最有意思的应用之一。TML 的音频管线设计：</p>
+
+<pre class="code">音频输入 →  log-mel 频谱  →  <strong>dMel bin quantize</strong>  →  token 流  →  micro-turn transformer
+                                                          (并发跟文本 token 在同一序列里)
+
+模型推理 →  生成连续 mel 特征  →  <strong>flow matching</strong> ODE 积分  →  vocoder<a class="jr" href="#g-09">9</a>  →  音频输出
+                                  (4-8 步 · 200ms 预算内)</pre>
+
+<p><strong>整条链路没有任何独立 codec 模型</strong>：</p>
+<ul>
+  <li>输入侧 · dMel 让"音频 → token"是规则查表</li>
+  <li>主模型 · transformer 直接吃 dMel token 跟文本 token，端到端联训</li>
+  <li>输出侧 · flow matching 在连续空间生成 mel，可微</li>
+</ul>
+
+<p>这个组合让 TML 实现<strong>真正的端到端语音 LLM</strong><a class="jr" href="#g-05">5</a> —— 没有梯度断点，没有独立模型，没有 codec 训练。dMel 是这个 elegant 设计的关键支柱。</p>
+
+<div class="note brick">
+  <span class="l">dMel 不是终极方案</span>
+  <p>需要承认 trade-off：</p>
+  <ul style="margin:6px 0; padding-left:20px;">
+    <li>RVQ codec 在<strong>音频生成质量</strong>上仍领先（codebook 学了更精细的 phonetic / prosodic 模式）</li>
+    <li>dMel 在<strong>简单度 + 实证可用</strong>上领先</li>
+    <li>fish-speech 走 RVQ + dual-AR 是另一条同样合理的路线</li>
+  </ul>
+  <p>选哪条看你最在乎什么 —— 工程简洁 vs 生成 SOTA<a class="jr" href="#g-11">11</a>。TML 选了 dMel 因为<strong>200ms 实时预算下端到端可微更重要</strong>，fish-speech 选 RVQ 因为<strong>生成质量是产品核心</strong>。</p>
+</div>
+
+<h2><span class="num">§ 07</span>历史定位与影响</h2>
+<ul>
+  <li>2017 Tacotron · Mel spec + WaveNet vocoder · 经典 TTS pipeline</li>
+  <li>2020 EnCodec / SoundStream · neural codec · RVQ-based · 高质量音频压缩</li>
+  <li>2022 AudioLM · 用 SoundStream token 做音频 LLM</li>
+  <li>2023 fish-speech / Moshi / Spirit-LM · 各自 codec + LLM 组合</li>
+  <li>2024-07 <strong>dMel</strong> · 简单 bin quantization 跟 codec 性能相当</li>
+  <li>2024-12 TML · 用 dMel + flow matching 做实时语音 LLM<a class="jr" href="#g-06">6</a></li>
+  <li>2025+ · 简单 + 端到端方案逐步成为研究主流</li>
+</ul>
+
+<div class="note deep">
+  <span class="l">真正的遗产</span>
+  <p>dMel 当时学术界没特别炸 —— 因为它"不像 contribution"（就是简化了一下）。但<strong>工业界很快接受了它</strong>，因为简化意味着部署省事 / 调试可控 / 跨域可用。</p>
+  <p>它的影响不在"打榜 SOTA"，在<strong>给社区一个 strong baseline 让人停下来想"我真的需要 codec 吗？"</strong> —— 类似 RoBERTa 给 BERT 时代的影响（"先把简单方案做扎实再考虑复杂"）。这种<strong>pipeline 简化的工程价值</strong><a class="jr" href="#g-10">10</a>累计起来比 paper SOTA 重要得多。</p>
+</div>
+
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">Log-mel spectrogram · 对数 Mel 频谱图</span> · 把波形按短时窗 FFT → 转到 Mel scale（人耳对数感知）→ 取 log 后得到 `[80 频道 × N 帧]` 的连续矩阵。10 秒音频 ≈ 80 × 1000 = 80000 浮点。所有现代 speech LLM 的标准输入特征。详见 <a href="../concepts/log-mel-spectrogram.html">log-mel-spectrogram</a>。</li>
+    <li id="g-02"><span class="term">RVQ codec · Residual Vector Quantization</span> · neural codec 主流方案。用 encoder 把音频编码成向量序列，每个向量在多层 codebook 上做残差量化。EnCodec / SoundStream / fish-speech codec 都用 RVQ。表达力强但要训练 + 跟训练域绑定。详见 <a href="../concepts/rvq-codec.html">rvq-codec</a>。</li>
+    <li id="g-03"><span class="term">"性能相当"的实证</span> · dMel paper 在 ASR (Librispeech) / TTS (LibriTTS) / speech LLM (内部 benchmark) 上跟 EnCodec / SoundStream / 自家 RVQ 对照，结果是<strong>多数指标差距 ≤ 2%</strong>。这是个 "good enough" 的对照 —— 不是 dMel 全面胜出，是<strong>没有显著区别</strong>。</li>
+    <li id="g-04"><span class="term">"主模型变强 · 预处理塌缩" 范式</span> · 反复出现在 ML 历史里 · NLP 的 task head → prompt，TTS 的 phonemizer → end-to-end，VAD → micro-turn，OCR → VLM，手工 feature → 端到端 CNN/ViT。每次都是同种现象：<strong>外挂的预处理被主模型吸收</strong>。</li>
+    <li id="g-05"><span class="term">"端到端"的工程含义</span> · 整条 forward 过程中没有梯度断点 —— 任何中间表示都可以反向传播。dMel + flow matching 组合下 TML 实现真正的端到端：从音频输入到音频输出，loss 可以一路传回所有参数。codec-based 方案因为 codec 的离散步骤打断梯度（要靠 straight-through 近似），<strong>不算严格端到端</strong>。</li>
+    <li id="g-06"><span class="term">2024-12 TML</span> · Thinking Machines Lab 的 interaction model paper，用 dMel + flow matching 做实时语音 LLM。这是 dMel 在 frontier 模型里的第一次主要应用。证明"简单 + 端到端"组合在<strong>200ms 实时预算</strong>下能拿到生产可用质量。</li>
+    <li id="g-07"><span class="term">vocabulary 大小取舍</span> · dMel 默认 16 bin × 80 channel = 80 token/帧 · vocab 16 每个 token · 总信息量约等于 `80 × log2(16) = 320 bit/帧`。RVQ codec 通常 1-8 layer × 1024-2048 codebook · 总信息量约 100-300 bit/帧。<strong>同信息密度</strong>但 dMel 用更多更简单的 token 表达，RVQ 用更少更复杂的 token 表达。</li>
+    <li id="g-08"><span class="term">vmin / vmax 是数据集统计值</span> · dMel 不用学，但需要定 bin 范围。具体做法：跑过预训练数据集，取 log-mel 的 1% 和 99% 分位数作为 vmin / vmax（避开极端值）。等距分 K = 16 bin。这是个<strong>1 次性</strong>统计操作，跟"训练 codec"完全不同等级的复杂度。</li>
+    <li id="g-09"><span class="term">Vocoder · 把 mel 转回波形</span> · dMel 解决的是<strong>音频 → token</strong>方向。反向（token → 音频）仍需要 vocoder（HiFi-GAN / WaveNet / BigVGAN 等）。这部分跟 dMel 无关，可以是任何成熟方案。TML 的输出端用 flow matching 直接生成连续 mel，再过 vocoder。</li>
+    <li id="g-10"><span class="term">Pipeline 简化的工程价值</span> · 不只是代码量。简化带来：调试可视化（每 bin 对应已知能量范围）、版本控制简单（无 codec checkpoint）、新语言上线快（不用训新 codec）、A/B 实验便宜（改 bin 数立即试）。这些<strong>累计起来比 paper SOTA 重要</strong>。</li>
+    <li id="g-11"><span class="term">fish-speech 路线 vs dMel 路线</span> · 两种 speech-LLM 哲学。fish-speech 用 RVQ codec 让 LLM 见到"高质量音频抽象"，押注主模型用既有 next-token 能力学语音。dMel 让 LLM 见到"raw bin index 序列"，押注主模型够强能自己学复杂度。<strong>哲学差异 → 工程优先级差异</strong>。详见 <a href="../topics/audio-tokenization-rvq-vs-flow.html">audio-tokenization-rvq-vs-flow</a>。</li>
+    <li id="g-12"><span class="term">"先做扎实简单方案"的工程哲学</span> · Apple / Anthropic 等公司有一个共同的工程文化：<strong>新点子先用最 naive 方案跑 ablation</strong>。如果简单方案不行，再加复杂度。这种"baseline-first" 思路在论文写作上不性感（"我们就是简化了一下"），但工程上极有价值 —— 帮人停下来想"我真的需要这个复杂度吗？"。dMel 就是这种文化的产物。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>Authored / Bai et al. · Apple · 2024-07</span>
+  <span>Index / <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+
+<script>
+// ===== Fig 01: audio pipeline =====
+{
+  const fig = document.getElementById('pl-fig');
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting) { fig.classList.add('play'); obs.disconnect(); }
+    });
+  }, { threshold: 0.25 });
+  obs.observe(fig);
+}
+
+// ===== Fig 02: bin quantization (single integrated SVG) =====
+{
+  const fig = document.getElementById('bq-fig');
+  const svg = document.getElementById('bq-svg');
+  const content = document.getElementById('bq-svg-content');
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  // --- Configuration: positions + math ---
+  const K = 16;                    // 16 bins
+  const values = [0.72, 0.55, 0.38, 0.82, 0.20, 0.65];
+  const labels = ['mel 0', 'mel 1', 'mel 2', 'mel 3', 'mel 4', 'mel 5'];
+
+  // Geometry (in SVG viewBox 720x400)
+  const Y_TOP = 70;                // top of chart area
+  const Y_BOTTOM = 318;            // bottom of chart area
+  const CHART_H = Y_BOTTOM - Y_TOP; // 248
+  const BIN_H = CHART_H / K;       // 15.5
+  const X_LEFT = 60;
+  const X_RIGHT = 600;
+  const CHART_W = X_RIGHT - X_LEFT; // 540
+  const N = values.length;
+  const LANE_W = CHART_W / N;       // 90
+  const BAR_W = LANE_W * 0.5;       // 45
+
+  // Compute per-channel layout
+  const channels = values.map((v, i) => {
+    const cx = X_LEFT + LANE_W * (i + 0.5);   // lane center x
+    const binIdx = Math.min(Math.floor(v * K), K - 1);
+    const barTopY = Y_BOTTOM - v * CHART_H;
+    // The bin "slot" that bar top falls into
+    const binBottomY = Y_BOTTOM - binIdx * BIN_H;       // lower y of this bin slot
+    const binTopY = Y_BOTTOM - (binIdx + 1) * BIN_H;    // upper y
+    return { i, cx, v, binIdx, barTopY, binBottomY, binTopY };
+  });
+
+  function elt(tag, attrs, parent) {
+    const e = document.createElementNS(SVG_NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+
+  // 1) Bin gridlines (16 internal + 2 boundaries)
+  for (let i = 0; i <= K; i++) {
+    const y = Y_BOTTOM - i * BIN_H;
+    const cls = (i % 4 === 0) ? 'bin-line major' : 'bin-line';
+    elt('line', { x1: X_LEFT, y1: y, x2: X_RIGHT, y2: y, class: cls }, content);
+  }
+
+  // 2) Bin index labels on right · 放远一点离 hit-cell stroke 8px 才不看着粘住
+  for (let i = 0; i < K; i++) {
+    const yCenter = Y_BOTTOM - (i + 0.5) * BIN_H;
+    const isHit = channels.some(c => c.binIdx === i);
+    if (isHit || i % 2 === 0) {
+      const lbl = elt('text', {
+        x: X_RIGHT + 16, y: yCenter + 3,
+        class: 'bin-idx-text' + (isHit ? ' hit' : ''),
+        'text-anchor': 'start'
+      }, content);
+      lbl.textContent = i;
+    }
+  }
+
+  // 3) Channel + value labels (top) · 留出顶部 60px header zone
+  channels.forEach((c) => {
+    const chLbl = elt('text', { x: c.cx, y: 24, class: 'ch-label' }, content);
+    chLbl.textContent = labels[c.i];
+    const valLbl = elt('text', { x: c.cx, y: 46, class: 'val-label' }, content);
+    valLbl.textContent = c.v.toFixed(2);  // 保留 0.xx 前缀跟 y 轴一致
+  });
+
+  // 4) Hit-cell highlights (rect across full chart width at bin row) — drawn FIRST so bars sit on top
+  const hitCells = channels.map((c) => {
+    return elt('rect', {
+      x: X_LEFT,
+      y: c.binTopY,
+      width: CHART_W,
+      height: BIN_H,
+      class: 'hit-cell',
+      rx: 1
+    }, content);
+  });
+
+  // 5) Bars (start with height 0, will animate)
+  const bars = channels.map((c) => {
+    return elt('rect', {
+      x: c.cx - BAR_W / 2,
+      y: Y_BOTTOM,
+      width: BAR_W,
+      height: 0,
+      class: 'bar',
+      rx: 1.5
+    }, content);
+  });
+
+  // 6) Connector dashes from bar top to right side bin label
+  const connectors = channels.map((c) => {
+    return elt('line', {
+      x1: c.cx + BAR_W / 2,
+      y1: c.barTopY,
+      x2: X_RIGHT,
+      y2: c.barTopY,
+      class: 'connector'
+    }, content);
+  });
+
+  // 7) Token boxes at bottom · 移到 viewBox 拓宽的下半部 (380~408)
+  const tokBoxes = channels.map((c) => {
+    return elt('rect', {
+      x: c.cx - 18,
+      y: 384,
+      width: 36,
+      height: 26,
+      class: 'tok-box',
+      rx: 3
+    }, content);
+  });
+  const tokTexts = channels.map((c) => {
+    const t = elt('text', {
+      x: c.cx,
+      y: 400,
+      class: 'tok-text'
+    }, content);
+    t.textContent = c.binIdx;
+    return t;
+  });
+
+  // --- Animation ---
+  function animate() {
+    fig.classList.add('play');
+    // stage 1: bars grow (each one staggered)
+    channels.forEach((c, i) => {
+      setTimeout(() => {
+        bars[i].setAttribute('y', c.barTopY);
+        bars[i].setAttribute('height', Y_BOTTOM - c.barTopY);
+      }, 200 + i * 120);
+    });
+    // stage 2: hit cells + connectors appear (after bars done)
+    setTimeout(() => {
+      hitCells.forEach((cell, i) => {
+        setTimeout(() => {
+          cell.style.opacity = '1';
+          connectors[i].style.opacity = '0.8';
+        }, i * 90);
+      });
+    }, 200 + N * 120 + 200);
+    // stage 3: tokens pop in
+    setTimeout(() => {
+      tokBoxes.forEach((b, i) => {
+        setTimeout(() => {
+          b.style.opacity = '1';
+          tokTexts[i].style.opacity = '1';
+        }, i * 90);
+      });
+    }, 200 + N * 120 + 200 + N * 90 + 200);
+  }
+
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting) { animate(); obs.disconnect(); }
+    });
+  }, { threshold: 0.3 });
+  obs.observe(fig);
+}
+
+// ===== Fig 03: dMel vs RVQ =====
+{
+  const fig = document.getElementById('cmp-fig');
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting) { fig.classList.add('play'); obs.disconnect(); }
+    });
+  }, { threshold: 0.25 });
+  obs.observe(fig);
+}
+
+// ===== Fig 04: pattern table =====
+// no animation needed
+</script>
+
+</body>
+</html>

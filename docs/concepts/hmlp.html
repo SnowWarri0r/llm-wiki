@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>hMLP · Hierarchical MLP · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · hmlp</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>hMLP · Hierarchical MLP</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>TML 用来处理视频 patch 的轻量预处理器：先保留空间局部性，再把图像块压成 transformer 能吃的 token。</p>
+<h2>直觉</h2>
+<p>它不像 ViT encoder 那样自己做一整套视觉理解，更像一个很薄的"图像打包器"。raw frame 太大，直接喂主 transformer 会把上下文窗口和算力烧光；hMLP 先把 40×40 这类局部 patch 压成紧凑表示，把剩下的理解工作交给主模型。</p>
+<p>这正好符合 TML 的 <a href="../concepts/early-fusion.html">early-fusion</a> 思路：预处理只做必要的归纳偏置，不把语义理解锁死在一个冻结 encoder 里。</p>
+<h2>怎么做的</h2>
+<ul>
+<li>输入视频帧，切成固定大小的空间 patch</li>
+<li>每个 patch 过轻量 MLP，把局部像素关系压进一个 embedding</li>
+<li>多层/多尺度地合并局部信息，避免完全丢掉邻近 patch 的关系</li>
+<li>输出 token 序列，与文本 token、<a href="../concepts/dmel.html">dmel</a> 音频 token 一起进主 transformer</li>
+</ul>
+<h2>代码出处</h2>
+<p>当前只有 TML 文章级描述；没有公开代码可精确指到文件行。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/early-fusion.html">early-fusion</a> · hMLP 的架构位置</li>
+<li><a href="../papers/interaction-models-tml.html">interaction-models-tml</a> · 来源</li>
+<li><a href="../topics/replace-heuristics-with-weights.html">replace-heuristics-with-weights</a> · 把重 encoder 收进主模型的范式</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/interaction-models-tml.html"><span class="cat">paper</span>Interaction Models · Thinking Machines Lab</a></li><li><a href="../topics/replace-heuristics-with-weights.html"><span class="cat">topic</span>把外挂规则吃进模型权重</a></li><li><a href="../concepts/bitter-lesson.html"><span class="cat">concept</span>Bitter Lesson · 苦涩教训</a></li><li><a href="../concepts/early-fusion.html"><span class="cat">concept</span>Early Fusion · 无独立编码器的早融合</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/hmlp.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

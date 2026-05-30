@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>NVLS · NVIDIA Low-Latency SHARP · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · nvls</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>NVLS · NVIDIA Low-Latency SHARP</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>NVIDIA/NCCL 生态里的低延迟集合通信路径，用来减少多 GPU 之间 all-reduce / reduce-scatter 这类同步成本。</p>
+<h2>直觉</h2>
+<p>大模型不是一张 GPU 跑完的。每层算完后，GPU 之间常要交换中间结果。普通通信像大家都把纸条传给主持人再广播；NVLS 这类低延迟路径试图把"汇总"推进网络/硬件里，减少来回搬运。</p>
+<p>对 <a href="../concepts/micro-turn.html">micro-turn</a> 这种 200ms 级交互模型，通信尾延迟会直接变成用户体感延迟。</p>
+<h2>怎么做的</h2>
+<ul>
+<li>在支持的 GPU/NVSwitch/NCCL 环境里启用低延迟 collective</li>
+<li>把 all-reduce / reduce-scatter 这类操作放到更接近硬件的路径上做</li>
+<li>与 <a href="../concepts/grouped-gemm-vs-gemv.html">grouped-gemm-vs-gemv</a>、<a href="../concepts/split-kv.html">split-kv</a> 一起减少小 batch 推理的系统开销</li>
+</ul>
+<h2>代码出处</h2>
+<p>当前 wiki 只记录 TML 提到的系统点；具体实现取决于 NCCL / CUDA 环境。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/micro-turn.html">micro-turn</a> · 为什么低延迟通信重要</li>
+<li><a href="../concepts/moe.html">moe</a> · expert 并行会放大通信需求</li>
+<li><a href="../concepts/grouped-gemm-vs-gemv.html">grouped-gemm-vs-gemv</a> · 小 batch MoE 的计算侧取舍</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/interaction-models-tml.html"><span class="cat">paper</span>Interaction Models · Thinking Machines Lab</a></li><li><a href="../concepts/grouped-gemm-vs-gemv.html"><span class="cat">concept</span>Grouped GEMM vs GEMV</a></li><li><a href="../concepts/micro-turn.html"><span class="cat">concept</span>Micro-Turn · 200ms 微回合</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/nvls.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

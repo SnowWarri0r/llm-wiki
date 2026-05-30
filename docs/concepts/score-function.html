@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Score Function · ∇log p(x) · 对数概率梯度 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · score-function</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Score Function · ∇log p(x) · 对数概率梯度</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>对一个概率密度 p(x)，<strong>score = ∇log p(x)</strong> —— 指向"概率密度更大的方向"的向量。diffusion 模型学这个，flow matching 不学这个。</p>
+<h2>直觉</h2>
+<p>想象数据分布是一坨地形（高度 = 概率密度）。在地形上某一点 x：</p>
+<ul>
+<li><strong>概率密度 p(x)</strong> = 这点的地形高度</li>
+<li><strong>score ∇log p(x)</strong> = 这点的<strong>上坡方向 + 坡度</strong></li>
+</ul>
+<p>如果你想生成 "像数据的样本"，就<strong>沿 score 方向走</strong> —— 一步步爬向高密度区域。这就是 diffusion 反向去噪的本质。</p>
+<p>类比 1：迷雾里找村庄。你看不到全局地图（不知道 p(x) 长什么样），但每点能感受到"哪边人多 / 灯光更密"（score 方向）。沿这个感觉走，最终到村庄（高密度区）。</p>
+<p>类比 2：物理。如果 p 是势能函数 e^(-E)，那 ∇log p = -∇E = 受力方向。粒子在势场里运动 = 沿 score 走。</p>
+<h2>为什么是 log</h2>
+<p>两个原因：</p>
+<p><strong>1 · 数值范围合理</strong>。<code>p(x)</code> 在高维空间常常是 10⁻¹⁰⁰ 这种夸张小数；<code>log p(x)</code> 是 -230 左右，神经网络好处理。</p>
+<p><strong>2 · 让梯度公式简化</strong>。<code>∇p(x) / p(x) = ∇log p(x)</code> —— 学 score 等于学 "归一化的梯度方向"，不受 p 数值大小影响，只关注方向。</p>
+<h2>为什么 diffusion 学 score 而不是 p 本身</h2>
+<p>学 p 直接需要知道 partition function（积分配一才能归一化）—— 高维上 intractable。</p>
+<p>学 score 跳过 partition function：</p>
+<pre><code>∇log p(x) = ∇log [unnormalized_p(x) / Z]
+          = ∇log unnormalized_p(x) - ∇log Z
+          = ∇log unnormalized_p(x)        # Z 是常数, 梯度为 0
+</code></pre>
+<p>→ 只要知道 unnormalized density 的形状就够，partition function 自动消掉。</p>
+<h2>diffusion 怎么学 score</h2>
+<p>直接学 score 没法做（不知道 p_t 是啥）。Trick：用<strong>加噪后样本预测原噪声</strong>，通过 Tweedie's formula 转成 score。</p>
+<pre><code class="language-python"># Diffusion 训练
+x_0 ~ data
+ε ~ N(0, I)
+t ~ U(0, T)
+x_t = √(ᾱ_t)·x_0 + √(1 − ᾱ_t)·ε       # 加噪到 t 时刻
+ε_pred = model(x_t, t)                # 模型预测噪声
+loss = || ε_pred − ε ||²              # MSE on noise
+
+# 推理时通过 Tweedie's formula:
+score_at_t = -ε_pred / √(1 − ᾱ_t)     # 等价于学到了 score
+</code></pre>
+<p>这就是 <a href="../concepts/flow-matching.html">flow-matching</a> 论文吐槽 diffusion "训练目标不直观"的原因 —— 你想生成，结果学了"加噪样本的噪声预测"，绕一圈才转回 score。</p>
+<h2>flow matching 怎么避开 score</h2>
+<p>flow matching 直接学 <a href="../concepts/velocity-field.html">velocity-field</a> v(x, t) —— "该往哪走"。完全不需要 score 这个抽象。</p>
+<p>数学上两者有关系：在某些 path（如 VP-SDE）下，velocity 跟 score 有线性关系，所以 diffusion 可以视作 flow matching 的特例。但<strong>训练目标的直观度</strong>差异巨大。</p>
+<h2>跟 energy-based model 的关系</h2>
+<p>EBM 学 unnormalized log p（叫 energy E(x)，其实是 −log p 加常数）。score = −∇E。</p>
+<p>EBM / score-matching / diffusion 一脉相承，都是"绕过 partition function"的路线。flow matching 是另一条路：<strong>不解决 partition function，直接绕开整个 p 的建模，只学搬运速度</strong>。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · 提出不学 score 的方案</li>
+<li><a href="../concepts/velocity-field.html">velocity-field</a> · flow matching 学的替代目标</li>
+<li><a href="../concepts/math-symbols.html">math-symbols</a> · ∇ / log / partition function 这些符号的速查</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../concepts/math-symbols.html"><span class="cat">concept</span>数学符号速查</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/score-function.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

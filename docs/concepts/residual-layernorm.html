@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Residual + LayerNorm · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · residual-layernorm</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Residual + LayerNorm</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>Transformer block 里每个子层都配 <code>x + sublayer(x)</code> 和 <a href="../concepts/layernorm.html">layernorm</a>，让深层网络既能传梯度又能稳住激活尺度。</p>
+<h2>直觉</h2>
+<p><a href="../concepts/residual-connection.html">residual-connection</a> 给信息一条直达高速路，LayerNorm 给每个 token 做尺度整理。一个负责"别学坏了还能走原路"，一个负责"每层输出别越跑越飘"。</p>
+<p>没有这对组合，Transformer 堆到几十层、上百层会非常难训。</p>
+<h2>怎么做的</h2>
+<p>常见有两种摆法：</p>
+<ul>
+<li><strong>Post-LN</strong>：<code>LayerNorm(x + Sublayer(x))</code>，原始 Transformer 用法</li>
+<li><strong>Pre-LN</strong>：<code>x + Sublayer(LayerNorm(x))</code>，后来的大模型更常见，深层训练更稳</li>
+</ul>
+<p>直觉上 Pre-LN 让 residual 主干更干净，梯度更容易沿着 identity path 往回走。</p>
+<h2>代码出处</h2>
+<p>Transformer 原论文 block；现代 GPT/BERT 系列实现都有对应变体。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/layernorm.html">layernorm</a> · 归一化组件</li>
+<li><a href="../concepts/residual-connection.html">residual-connection</a> · 残差组件</li>
+<li><a href="../concepts/transformer-architecture.html">transformer-architecture</a> · block 结构</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/attention-is-all-you-need.html"><span class="cat">paper</span>Attention Is All You Need · Transformer 始祖</a></li><li><a href="../concepts/layernorm.html"><span class="cat">concept</span>LayerNorm · 层归一化</a></li><li><a href="../concepts/transformer-architecture.html"><span class="cat">concept</span>Transformer Architecture · 整体架构</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/residual-layernorm.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

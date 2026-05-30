@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>RVQ Codec · 残差向量量化 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · rvq-codec</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>RVQ Codec · 残差向量量化</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把音频压成 <strong>N 层堆叠的 codebook</strong>，第 k 层负责前 k-1 层量化剩下的"误差"。</p>
+<h2>直觉</h2>
+<p>单个大 VQ codebook 要么太小（音质烂）要么太大（内存爆）。RVQ 把任务分到多层：</p>
+<ul>
+<li>第 1 层：粗略量化，"大致这是什么音"</li>
+<li>第 2 层：量化第 1 层的残差 = 一阶修正</li>
+<li>第 N 层：再修正前 N-1 层留下的高频细节</li>
+</ul>
+<p>类比：<strong>JPEG 渐进式编码</strong> —— 先一个低分辨率版本，再叠加细节层。或 <strong>bitplane coding</strong> 把灰度图按位平面切。</p>
+<h2>怎么做的</h2>
+<ul>
+<li>fish-speech S2 用 <strong>10 个 codebook</strong>，<strong>~21 Hz</strong> 帧率</li>
+<li>编码器（卷积栈）把 waveform 编成连续向量</li>
+<li>第 1 个 codebook 找最近邻 → token₁</li>
+<li>用 codebook 解码后的向量算残差 → 第 2 个 codebook 找最近邻 → token₂</li>
+<li>以此类推到 10 层</li>
+<li>解码器吃 10 路 token 重建波形</li>
+<li>训练时联合优化编码器 + 解码器 + codebook（VQ-VAE 风格，带 commitment loss + codebook loss）</li>
+</ul>
+<h2>跟 TML dMel 的区别</h2>
+<ul>
+<li><strong>RVQ</strong> = 学出来的 codebook，跨数据集会自动适配，表达力强</li>
+<li><strong><a href="../concepts/dmel.html">dmel</a></strong> = 规则离散化 Mel 频谱（每个频带按预设格点切）—— 简单、无需训 codebook，但只适合输入侧</li>
+</ul>
+<p>为什么 TML 不在输出侧用 RVQ？我的猜测：RVQ 需要 N 层串行解码 → 延迟高；TML 想要 200ms 内吐完音频，选了 <a href="../concepts/flow-matching.html">flow-matching</a> 一步到位（但 flow matching 也要 ODE 多步，是另一种 trade-off）。详见 <a href="../topics/audio-tokenization-rvq-vs-flow.html">audio-tokenization-rvq-vs-flow</a>。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/dual-ar.html">dual-ar</a> · 10 路 token 由 Dual-AR 生成</li>
+<li><a href="../concepts/dmel.html">dmel</a> · 对照：TML 的离散化方案</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · TML 选用的非量化路线</li>
+<li><a href="../topics/audio-tokenization-rvq-vs-flow.html">audio-tokenization-rvq-vs-flow</a> · 横向比较</li>
+<li><a href="../papers/fish-speech-s2-pro.html">fish-speech-s2-pro</a> · 论文</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 11 处</span>
+  <ul><li><a href="../papers/attention-is-all-you-need.html"><span class="cat">paper</span>Attention Is All You Need · Transformer 始祖</a></li><li><a href="../papers/dmel.html"><span class="cat">paper</span>dMel · 离散 Mel 频谱</a></li><li><a href="../papers/fish-speech-s2-pro.html"><span class="cat">paper</span>Fish Audio S2 Pro</a></li><li><a href="../topics/audio-tokenization-rvq-vs-flow.html"><span class="cat">topic</span>音频 token 化：RVQ vs Flow Matching</a></li><li><a href="../concepts/bin-quantization.html"><span class="cat">concept</span>Bin Quantization · 等距分箱量化</a></li><li><a href="../concepts/dmel.html"><span class="cat">concept</span>dMel · 离散 Mel 频谱</a></li><li><a href="../concepts/dual-ar.html"><span class="cat">concept</span>Dual-AR · 双自回归</a></li><li><a href="../concepts/flow-matching.html"><span class="cat">concept</span>Flow Matching · 流匹配</a></li><li><a href="../concepts/inline-emotion-tags.html"><span class="cat">concept</span>Inline Emotion Tags · 内联情绪标签</a></li><li><a href="../concepts/log-mel-spectrogram.html"><span class="cat">concept</span>Log-Mel Spectrogram · 对数 Mel 频谱图</a></li><li><a href="../concepts/voice-cloning-reference.html"><span class="cat">concept</span>Voice Cloning Reference · 声音克隆参考音频</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/rvq-codec.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

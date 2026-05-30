@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>把外挂规则吃进模型权重 · Topic</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">topics · replace-heuristics-with-weights</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="topics">
+
+<header class="concept-header">
+  <span class="concept-badge cat-topic">Topic</span>
+  <h1>把外挂规则吃进模型权重</h1>
+</header>
+
+<article class="concept-body">
+<p>这是这次 ingest 的两个源都在做的<strong>反复出现的范式</strong>，工程系统里也有同形状的事。</p>
+<h2>主张</h2>
+<p>任何 pipeline 里"用规则 / 启发式 / 小专用模型做的事"，迟早会被"做进主模型权重"。理由：</p>
+<ul>
+<li>规则被 scaling law 跨过（<a href="../concepts/bitter-lesson.html">bitter-lesson</a>）</li>
+<li>端到端联训能力 &gt; 段段对接</li>
+<li>维护规则比训权重还累</li>
+</ul>
+<h2>例子</h2>
+<h3>TML 干掉的：<a href="../concepts/vad.html">vad</a>（Voice Activity Detection）</h3>
+<p>传统语音助手用小专用模型判断"用户说完没"。TML 把这个判断让主模型自己学 —— <a href="../concepts/micro-turn.html">micro-turn</a> 是工程支撑。</p>
+<h3>fish-speech 干掉的：phonemizer / G2P</h3>
+<p>传统 TTS 要把文本转音素（grapheme-to-phoneme），每种语言一套规则或一个小模型。fish-speech 80+ 语言<strong>无需 phonemizer</strong>，主模型直接吃 raw 文本 token。</p>
+<h3>TML 干掉的：Whisper-style 独立编码器</h3>
+<p><a href="../concepts/early-fusion.html">early-fusion</a> 用轻量预处理（<a href="../concepts/dmel.html">dmel</a> / <a href="../concepts/hmlp.html">hmlp</a>）替代独立大编码器，让多模态表征跟着主模型一起 scale。</p>
+<h3>工程系统里同形状的事</h3>
+<ul>
+<li><strong>把外挂的预检 / 计费门收进调用方自身责任</strong> → 把"外挂检查"收到"自治单元自己负责"</li>
+<li><strong>轮询调度替换为 callback 事件驱动</strong> → "外挂状态机"被吃进事件流</li>
+<li><strong>把跨服务的解析 / 校验下沉到统一上下文服务</strong> → 同一个收敛方向</li>
+</ul>
+<p>不完全等价于"做进模型权重"，但是<strong>同一种"边界收紧"张力</strong> —— 把分散在各处的小规则收回核心。</p>
+<h2>例外 / 反例</h2>
+<p>不是所有规则都该吃。该吃的特征：</p>
+<ul>
+<li>信号噪声比可学（数据量够）</li>
+<li>输入分布跟主模型 input 一致或可对齐</li>
+<li>端到端 loss 能反向传到这个判断上</li>
+</ul>
+<p>不该吃的：硬约束（safety hard rules）、外部世界状态（实时股价、用户身份）、需要可解释审计的判断（合规检查）。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/interaction-models-tml.html">interaction-models-tml</a> · VAD 例子</li>
+<li><a href="../papers/fish-speech-s2-pro.html">fish-speech-s2-pro</a> · phonemizer 例子</li>
+<li><a href="../concepts/early-fusion.html">early-fusion</a> · 独立编码器例子</li>
+<li><a href="../concepts/micro-turn.html">micro-turn</a> · VAD 的替代工程</li>
+<li><a href="../concepts/bitter-lesson.html">bitter-lesson</a> · 理论根基</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 7 处</span>
+  <ul><li><a href="../papers/interaction-models-tml.html"><span class="cat">paper</span>Interaction Models · Thinking Machines Lab</a></li><li><a href="../concepts/bitter-lesson.html"><span class="cat">concept</span>Bitter Lesson · 苦涩教训</a></li><li><a href="../concepts/early-fusion.html"><span class="cat">concept</span>Early Fusion · 无独立编码器的早融合</a></li><li><a href="../concepts/hmlp.html"><span class="cat">concept</span>hMLP · Hierarchical MLP</a></li><li><a href="../concepts/micro-turn.html"><span class="cat">concept</span>Micro-Turn · 200ms 微回合</a></li><li><a href="../concepts/vad.html"><span class="cat">concept</span>VAD · Voice Activity Detection</a></li><li><a href="../threads/open-questions.html"><span class="cat">thread</span>待回答的问题（attached: 每个都该新开一页）</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/topics/replace-heuristics-with-weights.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

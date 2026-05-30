@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Velocity Field · 速度场 · v(x, t) · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · velocity-field</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Velocity Field · 速度场 · v(x, t)</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>对每个 (位置 x, 时间 t)，告诉你这个粒子应该往哪个方向、以多快的速度走。flow matching 就是让神经网络学这个函数。</p>
+<h2>直觉</h2>
+<p>想象一群粒子从噪声分布（如标准高斯）"流"到数据分布（如 MNIST 数字 / 真实图片）。每个粒子在每个时刻该往哪走？</p>
+<p>如果你知道一个速度场 <code>v(x, t)</code>，每个粒子沿它积分：</p>
+<pre><code>x_{t+Δt} = x_t + v(x_t, t) · Δt
+</code></pre>
+<p>就能从噪声 t=0 走到数据 t=1。</p>
+<p>这就是 ODE（Ordinary Differential Equation）的样子。flow matching 训练的核心是<strong>学这个 v</strong>。</p>
+<p>类比：风在地图上的分布。如果你知道每个位置每个时间的风向 + 风速，给你一颗气球的起点，你能模拟它的飞行轨迹。flow matching 让神经网络学气象台的风预报功能。</p>
+<h2>数学上的本质</h2>
+<p>任何概率路径 p_t(x)（一族随时间变化的概率密度）都对应<strong>唯一</strong>一个速度场 v_t(x)，满足 <a href="../concepts/continuity-equation.html">continuity-equation</a>：</p>
+<pre><code>∂p_t/∂t + ∇·(p_t · v_t) = 0
+</code></pre>
+<p>（粒子守恒：粒子流入流出和密度变化平衡）</p>
+<p>flow matching 的洞察是：<strong>不需要直接知道 p_t</strong>（很难算），<strong>只要学 v_t</strong>，对样本 ODE 积分就能采样。</p>
+<h2>训练时怎么学</h2>
+<p>直观做法：用 marginal velocity field v_t(x)，但它是 intractable 的（要对所有 conditioning 求积分）。</p>
+<p>Flow matching 用 <strong>conditional velocity field</strong> 替代：给定一个 target sample x_1（数据点），定义一条从 noise 到 x_1 的<strong>条件路径</strong>，对应的 conditional velocity 是 tractable 的。</p>
+<p>线性插值路径（最简单）：</p>
+<pre><code>x_t = (1 - t) · x_0 + t · x_1     # x_0 是噪声, x_1 是数据
+v_t(x | x_1) = x_1 - x_0           # 常数速度，沿直线
+</code></pre>
+<p>训练 loss：</p>
+<pre><code>loss = E_{t, x_0, x_1} || u_θ(x_t, t) - (x_1 - x_0) ||²
+</code></pre>
+<p>就是个 MSE —— 让神经网络 u_θ 在每个 (x_t, t) 上预测对应的 velocity。</p>
+<p>理论上 conditional FM loss 跟 marginal FM loss 等价（梯度方向相同），所以学出来的 u_θ 就是 marginal velocity field 的近似。</p>
+<h2>推理时怎么用</h2>
+<p>学完 u_θ 后，从 x_0 ~ N(0, I) 开始，沿 ODE 走 N 步到 x_1：</p>
+<pre><code class="language-python">x = sample_noise()
+for t in linspace(0, 1, N):
+    v = model(x, t)
+    x = x + v * (1/N)
+return x  # 生成的数据
+</code></pre>
+<p>N 取多少？OT 直线路径下理论 1 步够，实际 4-20 步达到 diffusion 50-1000 步质量。</p>
+<h2>跟 score 的对比</h2>
+<p>Diffusion 学 score: <code>s_t(x) = ∇log p_t(x)</code> —— 概率密度的对数梯度。
+Flow matching 学 velocity: <code>v_t(x)</code> —— 直接的"该往哪走"。</p>
+<p>两者关系：在某些 path 下（如 VP-SDE），velocity 跟 score 有简单线性关系。所以 diffusion 可以视作 flow matching 的特例 —— 但训练目标的<strong>直观度</strong>差异巨大。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · 提出论文</li>
+<li><a href="../concepts/probability-path.html">probability-path</a> · 路径设计</li>
+<li><a href="../concepts/conditional-flow-matching.html">conditional-flow-matching</a> · 实际训练 loss</li>
+<li><a href="../concepts/ode-vs-sde.html">ode-vs-sde</a> · flow vs diffusion</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 8 处</span>
+  <ul><li><a href="../papers/flow-matching.html"><span class="cat">paper</span>Flow Matching · 流匹配</a></li><li><a href="../concepts/conditional-flow-matching.html"><span class="cat">concept</span>Conditional Flow Matching · 条件流匹配</a></li><li><a href="../concepts/continuity-equation.html"><span class="cat">concept</span>Continuity Equation · 连续性方程</a></li><li><a href="../concepts/math-symbols.html"><span class="cat">concept</span>数学符号速查</a></li><li><a href="../concepts/ode-vs-sde.html"><span class="cat">concept</span>ODE vs SDE · 确定性 vs 随机性流</a></li><li><a href="../concepts/optimal-transport.html"><span class="cat">concept</span>Optimal Transport · 最优传输</a></li><li><a href="../concepts/probability-path.html"><span class="cat">concept</span>Probability Path · 概率路径</a></li><li><a href="../concepts/score-function.html"><span class="cat">concept</span>Score Function · ∇log p(x) · 对数概率梯度</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/velocity-field.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

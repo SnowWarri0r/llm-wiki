@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Pretrain-Finetune Paradigm · 先预训练再微调 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · pretrain-finetune-paradigm</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Pretrain-Finetune Paradigm · 先预训练再微调</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>先在<strong>无标注</strong>大语料上用自监督任务（MLM / LM）预训练一个 transformer，再在每个下游任务的<strong>小标注集</strong>上 finetune —— 一个 backbone 万能。</p>
+<h2>直觉</h2>
+<p>2018 之前 NLP 几乎每个任务都是从头训：取 word2vec 或 GloVe embedding，搭一个 LSTM/CNN 上去，标注几千到几万条数据训一个专门模型。每个任务一个模型，互不复用，标注成本高。</p>
+<p>Pretrain-finetune 的核心洞察：<strong>语言知识的 99% 来自语法/常识/事实，跟具体下游任务无关</strong>。这部分可以从无标注的 wiki/书/网页里学（自监督），只要 1% 的标注数据就够"指明"特定任务的输出格式。</p>
+<p>类比：先让人学语言（pretrain），再训练他做客服 / 法律 / 翻译岗位（finetune）。每个岗位不用从婴儿学起。</p>
+<h2>怎么做的</h2>
+<p><strong>Pretrain 阶段</strong>（数百 GB 文本 + 几千卡天 + 一次）：</p>
+<pre><code class="language-python">for batch in unlabeled_corpus:
+    # BERT: 随机 mask，预测被遮住的 token
+    masked_input, target = mask_15_percent(batch)
+    loss = bert(masked_input).predict(target)
+
+    # GPT: 因果预测下一个 token
+    # loss = gpt(batch[:-1]).predict(batch[1:])
+
+    loss.backward()
+</code></pre>
+<p><strong>Finetune 阶段</strong>（几千条标注 + 几个 GPU 时 + 每个任务一次）：</p>
+<pre><code class="language-python">model = load_pretrained_bert()
+model.add_head(classifier_for_this_task)   # 一个小线性层
+for batch in labeled_data:
+    pred = model(batch.text)
+    loss = task_loss(pred, batch.label)
+    loss.backward()                         # 同时更新 BERT 和 head
+</code></pre>
+<p>各任务通常加什么 head：</p>
+<ul>
+<li>分类（情感、NLI）：[CLS] 的 hidden → 线性层</li>
+<li>序列标注（NER、POS）：每个 token 的 hidden → 线性层</li>
+<li>问答（SQuAD）：两个线性层预测 answer 的 start/end 位置</li>
+</ul>
+<h2>为什么这条路赢了</h2>
+<ol>
+<li><strong>算力规模化</strong>：一次昂贵 pretrain，无数次便宜 finetune</li>
+<li><strong>标注数据稀缺友好</strong>：很多任务只有几千条标注，从头训会过拟合</li>
+<li><strong>跨任务迁移</strong>：pretrain 学到的语法/常识对所有 NLP 任务都有用</li>
+<li><strong>工程简化</strong>：所有任务用同一个 backbone，infra 复用</li>
+</ol>
+<h2>后续演化</h2>
+<ul>
+<li><strong>GPT-2 (2019)</strong>：发现 pretrain 模型大到一定程度，<strong>不 finetune 也能 zero-shot 做下游任务</strong>（prompt-based）</li>
+<li><strong>GPT-3 (2020)</strong>：in-context learning · 不改 weight，只在 prompt 里给几个例子就行</li>
+<li><strong>InstructGPT / ChatGPT (2022)</strong>：finetune 阶段换成 RLHF，不再针对单一任务，而是针对"听人指令"</li>
+<li><strong>Pretrain + RLHF</strong> 现在是大多 LLM 的标配</li>
+</ul>
+<p><strong>Finetune 在 LLM 时代退潮</strong>：因为 prompt + ICL 已经够好；但在小模型（&lt; 1B）和企业内部任务里仍是主力。</p>
+<h2>在 BERT 论文里的具体演示</h2>
+<p>BERT 论文 Fig 3 给了 4 种典型下游任务的 head 添加方式：</p>
+<ul>
+<li>(a) Sentence pair classification (MNLI, QQP) — [CLS] 的 hidden 接二/三分类</li>
+<li>(b) Single sentence classification (SST-2) — 同上</li>
+<li>(c) Question answering (SQuAD) — 每个 token 的 hidden 预测 start/end logit</li>
+<li>(d) Single sentence tagging (NER) — 每个 token 的 hidden 接序列标注分类头</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/bert.html">bert</a> · 立住这个范式的论文</li>
+<li><a href="../papers/gpt-1.html">gpt-1</a> · 同期且更早的 paper（也是 pretrain+finetune，只是用 causal LM）</li>
+<li><a href="../concepts/masked-language-model.html">masked-language-model</a> · BERT 的 pretrain 任务</li>
+<li><a href="../concepts/in-context-learning.html">in-context-learning</a> · 替代它的下一代范式</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/bert.html"><span class="cat">paper</span>BERT · Bidirectional Encoder Representations from Transformers</a></li><li><a href="../papers/gpt-1.html"><span class="cat">paper</span>GPT-1 · Improving Language Understanding by Generative Pre-Training</a></li><li><a href="../concepts/input-transformations.html"><span class="cat">concept</span>Input Transformations · 用输入格式喂任务</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/pretrain-finetune-paradigm.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

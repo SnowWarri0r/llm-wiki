@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>SGLang Inference · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · sglang-inference</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>SGLang Inference</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>SGLang 是 LLM 推理服务栈；fish-speech 复用它来拿到高效 batching、KV cache 管理和 serving 基建。</p>
+<h2>直觉</h2>
+<p>TTS 看起来是音频任务，但 Dual-AR 的慢模型本质上像一个 decoder-only LLM：吃文本/语音条件，吐离散 token。既然问题长得像 LLM 推理，就可以直接借 LLM serving 的轮子，而不是从零写 scheduler、cache manager、batcher。</p>
+<h2>怎么做的</h2>
+<ul>
+<li>用 <a href="../concepts/prefill-decode.html">prefill-decode</a> 两阶段组织请求</li>
+<li>用 <a href="../concepts/kv-cache.html">kv-cache</a> 管理长上下文</li>
+<li>用 continuous batching / paged cache 提高 GPU 利用率</li>
+<li>把 <a href="../concepts/dual-ar.html">dual-ar</a> 的慢 AR 模型接到通用推理框架里</li>
+</ul>
+<h2>代码出处</h2>
+<p><code>raw/fish-speech/</code> 是本地软链，默认不进仓；具体入口需要在本地 clone 中继续查。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/fish-speech-s2-pro.html">fish-speech-s2-pro</a> · 来源</li>
+<li><a href="../concepts/dual-ar.html">dual-ar</a> · 为什么能复用 LLM serving</li>
+<li><a href="../concepts/kv-cache.html">kv-cache</a> · 推理内存账本</li>
+<li><a href="../concepts/prefill-decode.html">prefill-decode</a> · 推理阶段拆分</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/fish-speech-s2-pro.html"><span class="cat">paper</span>Fish Audio S2 Pro</a></li><li><a href="../concepts/dual-ar.html"><span class="cat">concept</span>Dual-AR · 双自回归</a></li><li><a href="../concepts/kv-cache.html"><span class="cat">concept</span>KV Cache</a></li><li><a href="../threads/fish-speech-grpo-determinism-question.html"><span class="cat">thread</span>Fish Speech GRPO Determinism Question</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/sglang-inference.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

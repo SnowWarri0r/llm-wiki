@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Zero-Shot Transfer · 不 finetune 直接用 prompt 触发任务 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · zero-shot-transfer</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Zero-Shot Transfer · 不 finetune 直接用 prompt 触发任务</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>预训练完的 LM <strong>不改一个参数</strong>，直接在 prompt 里写任务格式，让模型续写出答案。</p>
+<h2>直觉</h2>
+<p>GPT-1 的范式是"pretrain → 加个 head → finetune"。一个任务一份模型 weights 一组 head 参数。</p>
+<p>GPT-2 发现：<strong>LM 足够大、训练数据足够多，它在预训练阶段已经"见过"无数次每种任务的格式</strong>。比如 WebText 里有大量"... TL;DR:" 这种格式的文本，模型见过几百万次后，自然学会"看到 TL;DR: 就要总结前文"。</p>
+<p>类比：教小孩做数学题。pretrain+finetune 是"先让他学语文（pretrain）再专门刷数学题（finetune）"；zero-shot 是"给他读够多书后，问他一道数学题 + 写'答：'，他能直接续写出答案"。前提是<strong>书里有足够多带答案的数学题</strong>。</p>
+<h2>怎么做的</h2>
+<p><strong>摘要</strong>：</p>
+<pre><code>[文章正文]
+TL;DR:
+</code></pre>
+<p>模型继续写 → 摘要</p>
+<p><strong>翻译</strong>：</p>
+<pre><code>The cat sat on the mat = 
+</code></pre>
+<p>模型续写 → "Le chat s'est assis sur le tapis"</p>
+<p><strong>阅读理解</strong>：</p>
+<pre><code>[文章]
+Q: What did the cat do?
+A:
+</code></pre>
+<p>模型续写 → "The cat sat on the mat"</p>
+<p><strong>情感分类</strong>：</p>
+<pre><code>Review: &quot;This movie is terrible&quot;
+Sentiment:
+</code></pre>
+<p>模型续写 → "negative"</p>
+<p>每个任务都靠<strong>提示文本</strong>把任务格式喂给模型，输出是 LM 续写的下一段 token。</p>
+<h2>跟 GPT-1 input transformations 的关系</h2>
+<p>GPT-1 的 input transformations（用 [start] [delim] [extract] 编码任务结构）跟 zero-shot 是<strong>同一个 idea 的不同阶段</strong>：</p>
+<ul>
+<li>GPT-1: 用特殊 token + finetune（仍要改 weights）</li>
+<li>GPT-2: 用自然语言 prompt + 不 finetune（不改 weights）</li>
+<li>GPT-3: prompt 里塞几个例子（few-shot in-context learning）</li>
+</ul>
+<p>一条直接的演化线。区别在<strong>触发任务需要的精度</strong>：</p>
+<ul>
+<li>GPT-1 117M 模型，prompt 单靠"TL;DR:"触发不了 —— 需要 finetune 把这个映射强化</li>
+<li>GPT-2 1.5B 模型，prompt"TL;DR:"已经能触发 —— 模型自己学到了这层映射</li>
+<li>GPT-3 175B 模型，连给几个例子的能力都有 —— in-context learning 浮现</li>
+</ul>
+<p><strong>触发不了 → 能触发 → 能学新任务</strong>：scale 把每个台阶都打通。</p>
+<h2>它的局限</h2>
+<ul>
+<li>准确度不高：GPT-2 zero-shot 翻译 BLEU 5-10 分，远低于专门 finetune 的 30-40 分</li>
+<li>prompt sensitive：同一任务用不同提示词差别巨大（"TL;DR:" vs "Summary:" vs "总结："）</li>
+<li>不可控：模型经常输出格式不对的内容，需要 prompt engineering</li>
+</ul>
+<p>这些局限在 GPT-3 / instruction tuning / RLHF 后逐步缓解，但 zero-shot 仍是个<strong>启发式</strong>能力，不像 finetune 那样可工程化。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/gpt-2.html">gpt-2</a> · 提出</li>
+<li><a href="../concepts/input-transformations.html">input-transformations</a> · 前身</li>
+<li><a href="../concepts/in-context-learning.html">in-context-learning</a> · 后续演化（GPT-3）</li>
+<li><a href="../concepts/language-modeling-as-multitask.html">language-modeling-as-multitask</a> · 理论解释</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/gpt-2.html"><span class="cat">paper</span>GPT-2 · Language Models are Unsupervised Multitask Learners</a></li><li><a href="../concepts/language-modeling-as-multitask.html"><span class="cat">concept</span>Language Modeling as Multitask Learning · LM 即多任务学习</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/zero-shot-transfer.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

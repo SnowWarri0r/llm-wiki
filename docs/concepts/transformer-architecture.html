@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Transformer Architecture · 整体架构 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · transformer-architecture</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Transformer Architecture · 整体架构</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>Encoder 6 层 + Decoder 6 层，每层都是"multi-head attention + FFN + residual + layernorm"的标准块。Decoder 多一个 cross-attention 子层看 encoder 输出。</p>
+<h2>Encoder 单层</h2>
+<pre><code>x → MultiHeadAttention(x, x, x)  → Add &amp; LayerNorm → 
+  → FFN(·) → Add &amp; LayerNorm → output
+</code></pre>
+<ul>
+<li><strong>Self-attention</strong>：每个位置看序列所有位置（包括自己）</li>
+<li><strong>FFN</strong>：两层 MLP（线性 → ReLU → 线性），dim 中间是 2048（输入 512）</li>
+<li><strong>Residual + LayerNorm</strong>：让梯度好流，深层训得动</li>
+</ul>
+<h2>Decoder 单层</h2>
+<pre><code>y → MaskedMultiHeadAttention(y, y, y) → Add &amp; LayerNorm →
+  → MultiHeadAttention(y, x_enc, x_enc) → Add &amp; LayerNorm →
+  → FFN(·) → Add &amp; LayerNorm → output
+</code></pre>
+<ul>
+<li><strong>第一个 self-attention 加 causal mask</strong>：每个位置只能看到自己和之前（不偷看未来）</li>
+<li><strong><a href="../concepts/cross-attention.html">cross-attention</a></strong> 子层：Q 来自 decoder，K/V 来自 encoder → "decoder 看 encoder 在编码什么"</li>
+<li>其他跟 encoder 一样</li>
+</ul>
+<h2>输入处理</h2>
+<pre><code>input_tokens → embedding → + positional_encoding → 进 encoder
+target_tokens → embedding → + positional_encoding → 进 decoder
+</code></pre>
+<p>参见 <a href="../concepts/positional-encoding.html">positional-encoding</a>。</p>
+<h2>输出</h2>
+<p>Decoder 最后一层 → linear → softmax → 词表上的概率分布</p>
+<p>训练时跟 ground truth 算 cross-entropy loss，teacher forcing（喂真实前缀给 decoder）。</p>
+<h2>配置（论文 base 版）</h2>
+<ul>
+<li>d_model = 512</li>
+<li>6 层 encoder + 6 层 decoder</li>
+<li>h = 8 head, d_k = d_v = 64</li>
+<li>FFN d_ff = 2048</li>
+<li>dropout 0.1</li>
+<li>总参数 65M</li>
+</ul>
+<h2>现代变种</h2>
+<ul>
+<li><strong>GPT 系列</strong>：去掉 encoder，纯 decoder + causal mask（用 decoder 做完整任务）</li>
+<li><strong>BERT</strong>：去掉 decoder，纯 encoder + masked LM 训练</li>
+<li><strong>T5 / BART</strong>：保留 encoder-decoder（适合 seq2seq 任务如翻译、摘要）</li>
+</ul>
+<p>GPT 路线最后赢了：decoder-only + 自回归生成成为通用范式。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/self-attention.html">self-attention</a> · 核心操作</li>
+<li><a href="../concepts/multi-head-attention.html">multi-head-attention</a> · 每个 attention 子层用的</li>
+<li><a href="../concepts/positional-encoding.html">positional-encoding</a> · 怎么加位置信息</li>
+<li><a href="../concepts/cross-attention.html">cross-attention</a> · Decoder 独有的子层</li>
+<li><a href="../concepts/residual-layernorm.html">residual-layernorm</a> · 训练稳定的关键</li>
+<li><a href="../papers/attention-is-all-you-need.html">attention-is-all-you-need</a> · 论文</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 14 处</span>
+  <ul><li><a href="../papers/attention-is-all-you-need.html"><span class="cat">paper</span>Attention Is All You Need · Transformer 始祖</a></li><li><a href="../papers/bert.html"><span class="cat">paper</span>BERT · Bidirectional Encoder Representations from Transformers</a></li><li><a href="../papers/gpt-1.html"><span class="cat">paper</span>GPT-1 · Improving Language Understanding by Generative Pre-Training</a></li><li><a href="../papers/resnet.html"><span class="cat">paper</span>Deep Residual Learning · 残差连接的起源</a></li><li><a href="../concepts/cross-attention.html"><span class="cat">concept</span>Cross-Attention · 交叉注意力</a></li><li><a href="../concepts/decoder-only-paradigm.html"><span class="cat">concept</span>Decoder-Only Paradigm · 解码器路线</a></li><li><a href="../concepts/encoder-only-paradigm.html"><span class="cat">concept</span>Encoder-Only Paradigm · 编码器路线</a></li><li><a href="../concepts/layernorm.html"><span class="cat">concept</span>LayerNorm · 层归一化</a></li><li><a href="../concepts/multi-head-attention.html"><span class="cat">concept</span>Multi-Head Attention · 多头注意力</a></li><li><a href="../concepts/positional-encoding.html"><span class="cat">concept</span>Positional Encoding · 位置编码</a></li><li><a href="../concepts/residual-connection.html"><span class="cat">concept</span>Residual Connection · 残差连接 / Skip Connection</a></li><li><a href="../concepts/residual-layernorm.html"><span class="cat">concept</span>Residual + LayerNorm</a></li><li><a href="../concepts/self-attention.html"><span class="cat">concept</span>Self-Attention · 自注意力</a></li><li><a href="../concepts/sparse-attention.html"><span class="cat">concept</span>Sparse Attention · 稀疏注意力</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/transformer-architecture.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

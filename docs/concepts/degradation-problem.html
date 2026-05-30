@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Degradation Problem · 深网络反而变差 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · degradation-problem</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Degradation Problem · 深网络反而变差</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>深网络（比如 56 层）在<strong>训练集</strong>上的表现比浅网络（20 层）还差——不是过拟合，是 SGD 学不到"白送的好解"。</p>
+<h2>直觉</h2>
+<p>理论上：56 层网络至少能复刻 20 层网络的能力——把多出的 36 层学成恒等映射就行。</p>
+<p>实际上：56 层 plain net 训练 loss 比 20 层还高。<strong>网络甚至学不会"什么都不做"</strong>。</p>
+<p>这不是梯度消失（BatchNorm 已经基本解决了纯数值层面的梯度爆炸/消失），是更深层的优化几何问题：<strong>SGD 在 "identity is a sweet spot" 这种局部结构里找不到路</strong>。</p>
+<h2>实验证据（ResNet 论文 Fig 1）</h2>
+<p>CIFAR-10 上同一套 plain CNN 架构跑：</p>
+<ul>
+<li>20 layer · train error ~9% · test error ~9.5%</li>
+<li>56 layer · train error ~13% · test error ~13.5%</li>
+</ul>
+<p>加上残差连接后：</p>
+<ul>
+<li>20 layer ResNet · train error ~8.5%</li>
+<li>56 layer ResNet · train error ~6.5% （越深越好）</li>
+</ul>
+<p><strong>关键</strong>：plain net 在 train 上就掉点了，所以不是模型容量不够也不是过拟合，<strong>是优化器找不到好解</strong>。</p>
+<h2>为什么残差能解决</h2>
+<p><a href="../concepts/residual-connection.html">residual-connection</a> 让 identity 变成 layer 的默认输出。如果某一层暂时不需要做事，只要 F 把所有权重学成 0（容易），就自动是 identity。相当于把优化路径<strong>默认对齐</strong>到一个本来就该是的局部最优附近，剩下的训练只在"小修小补"层面操作。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/resnet.html">resnet</a> · 提出和解决问题的论文</li>
+<li><a href="../concepts/residual-connection.html">residual-connection</a> · 解决方案</li>
+<li><a href="../concepts/batchnorm.html">batchnorm</a> · 之前以为问题是梯度消失，BN 部分缓解但根本没解决 degradation</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/resnet.html"><span class="cat">paper</span>Deep Residual Learning · 残差连接的起源</a></li><li><a href="../concepts/residual-connection.html"><span class="cat">concept</span>Residual Connection · 残差连接 / Skip Connection</a></li><li><a href="../concepts/resnet-architecture.html"><span class="cat">concept</span>ResNet Architecture · 残差网络堆叠结构</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/degradation-problem.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

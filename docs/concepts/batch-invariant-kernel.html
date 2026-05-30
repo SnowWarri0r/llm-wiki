@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Batch-Invariant Kernel · 批大小不变算子 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · batch-invariant-kernel</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Batch-Invariant Kernel · 批大小不变算子</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>同一条样本不管跟谁凑 batch，kernel 都尽量按同一顺序做浮点运算，结果保持 bit-for-bit 一致。</p>
+<h2>直觉</h2>
+<p>GPU 上很多算子会因为 batch 形状不同而换算法、换归约顺序。数学上差不多，浮点位上不一样。对普通聊天模型这只是微小噪声；对 TML 这种要做 <a href="../concepts/bitwise-determinism.html">bitwise-determinism</a> 的系统，它会让训练/推理不一致，debug 也变成猜谜。</p>
+<p>Batch-invariant kernel 的目标是：batch 只是调度外壳，不改变单条样本的计算路径。</p>
+<h2>怎么做的</h2>
+<ul>
+<li>固定归约顺序，避免 batch size 改变时自动换 kernel</li>
+<li>attention 切分用稳定策略，比如 <a href="../concepts/split-kv.html">split-kv</a></li>
+<li>MoE expert 调度避免因为 batch composition 改变专家内部排序</li>
+<li>必要时牺牲一点峰值吞吐，换可复现性和线上/离线一致性</li>
+</ul>
+<h2>代码出处</h2>
+<p>当前只有 TML 文章级描述；没有公开 kernel 代码。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/bitwise-determinism.html">bitwise-determinism</a> · 目标</li>
+<li><a href="../concepts/split-kv.html">split-kv</a> · attention 场景里的具体手段</li>
+<li><a href="../concepts/grouped-gemm-vs-gemv.html">grouped-gemm-vs-gemv</a> · MoE 推理场景里的调度取舍</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/interaction-models-tml.html"><span class="cat">paper</span>Interaction Models · Thinking Machines Lab</a></li><li><a href="../concepts/bitwise-determinism.html"><span class="cat">concept</span>Bitwise Determinism · 位级确定性</a></li><li><a href="../concepts/grouped-gemm-vs-gemv.html"><span class="cat">concept</span>Grouped GEMM vs GEMV</a></li><li><a href="../concepts/split-kv.html"><span class="cat">concept</span>Split-KV · 沿 KV 序列切分 attention</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/batch-invariant-kernel.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

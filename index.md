@@ -1,0 +1,127 @@
+# Index · 个人学习 wiki 目录
+
+按类别组织。每条 `[标题](路径) — 一句话钩子`。
+
+## Papers · 源页
+
+- [Deep Residual Learning · ResNet](wiki/papers/resnet.md) — 残差连接的起源，把"网络越深越好"做成现实，也给两年后的 Transformer 留好 sublayer 模板
+- [Attention Is All You Need](wiki/papers/attention-is-all-you-need.md) — Transformer 始祖，整个 LLM 时代的奠基
+- [BERT](wiki/papers/bert.md) — 只要 Transformer encoder，用 MLM 学双向上下文，立住 pretrain → finetune 范式
+- [GPT-1](wiki/papers/gpt-1.md) — 只要 Transformer decoder，causal LM 预训练，用输入格式编码任务结构
+- [GPT-2](wiki/papers/gpt-2.md) — 同架构 scale 13× 到 1.5B + WebText，发现 prompt 能 zero-shot 触发任务
+- [GPT-3](wiki/papers/gpt-3.md) — 同架构再 scale 100× 到 175B，prompt 里给几个例子模型现学（ICL），ChatGPT 时代由此开始
+- [Flow Matching](wiki/papers/flow-matching.md) — 把 diffusion 的 score matching 换成"学速度场 + ODE 积分"，简单 + 少步推理
+- [dMel](wiki/papers/dmel.md) — 跳过 neural codec 直接 bin quantize log-mel，简单方案跟 RVQ 一样好
+- [Interaction Models · Thinking Machines](wiki/papers/interaction-models-tml.md) — 把交互能力做进权重的 276B MoE 模型
+- [Fish Audio S2 Pro](wiki/papers/fish-speech-s2-pro.md) — Dual-AR + RVQ + GRPO 的开源 TTS
+- [RoPE · Rotary Position Embedding](wiki/papers/rope.md) — 不加位置向量，旋转 Q/K 让点积天然含相对位置；LLaMA / Mistral / Qwen 全在用
+
+## Books · 书籍精讲
+
+非 ML papers，但跟我自己关心的领域（理财 / 行为 / 决策）相关。每章独立成页，"精讲 + 自己加例子"形态，不做 bespoke HTML。
+
+- [The Psychology of Money · Morgan Housel](wiki/books/psychology-of-money.md) — 财富 = 行为 × 时间，不是数学
+  - [Ch01 · No One's Crazy](wiki/books/pom-ch01-no-ones-crazy.md) — 你的金钱观是你经历过的世界
+  - [Ch02 · Luck & Risk](wiki/books/pom-ch02-luck-and-risk.md) — 运气和风险，一对从同一台抽奖机出来的双胞胎
+  - [Ch03 · Never Enough](wiki/books/pom-ch03-never-enough.md) — 胃口别跟着饭量长；别拿你有且需要的去赌你没有也不需要的
+  - [Ch04 · Confounding Compounding](wiki/books/pom-ch04-confounding-compounding.md) — 复利的关键不是收益率，是时间
+  - [Ch05 · Getting Wealthy vs Staying Wealthy](wiki/books/pom-ch05-getting-vs-staying-wealthy.md) — 致富靠进攻，守富靠防守；两套完全相反的技能
+  - [Ch06 · Tails, You Win](wiki/books/pom-ch06-tails-you-win.md) — 极少数极端事件主导大部分结果；你做对的事可以很少，只要那几下对了
+  - [Ch07 · Freedom](wiki/books/pom-ch07-freedom.md) — 钱最高的红利是对时间的控制权，不是物质
+  - [Ch08 · Man in the Car Paradox](wiki/books/pom-ch08-man-in-the-car-paradox.md) — 你想用钱买 admiration，但别人在看你的东西，不在看你
+  - [Ch09 · Wealth is What You Don't See](wiki/books/pom-ch09-wealth-is-what-you-dont-see.md) — 财富 = 你没花掉的钱；看着有钱的大多数只是在花钱
+
+## Topics · 综合
+
+- [音频 token 化：RVQ vs Flow](wiki/topics/audio-tokenization-rvq-vs-flow.md) — 两种主流路线的工程对照
+- [把外挂规则吃进权重](wiki/topics/replace-heuristics-with-weights.md) — 反复出现的范式：VAD、phonemizer、Whisper encoder 都在被收
+
+## Concepts · 概念
+
+### TML interaction models
+- [Micro-Turn](wiki/concepts/micro-turn.md) — 200ms 一片，输入输出同时入流
+- [Dual-Model Architecture](wiki/concepts/dual-model-architecture.md) — 前台 always-on + 后台异步
+- [Early Fusion](wiki/concepts/early-fusion.md) — 各模态早早进同一 transformer
+- [hMLP](wiki/concepts/hmlp.md) — TML 的轻量视频预处理，把 patch 压成 token
+- [Flow Matching](wiki/concepts/flow-matching.md) — 学速度场积分到目标
+- [dMel](wiki/concepts/dmel.md) — 规则离散化 Mel 频谱
+- [Bitwise Determinism](wiki/concepts/bitwise-determinism.md) — 训推 bit-for-bit 一致
+- [Batch-Invariant Kernel](wiki/concepts/batch-invariant-kernel.md) — batch 怎么切都尽量同结果
+- [Split-KV](wiki/concepts/split-kv.md) — attention 沿 KV 序列切分并行
+- [Grouped GEMM vs GEMV](wiki/concepts/grouped-gemm-vs-gemv.md) — MoE 小 batch 推理的吞吐/延迟取舍
+- [NVLS](wiki/concepts/nvls.md) — NVIDIA 低延迟集合通信
+- [MoE](wiki/concepts/moe.md) — 稀疏激活，276B/12B
+
+### fish-speech
+- [Dual-AR](wiki/concepts/dual-ar.md) — 慢 AR 4B + 快 AR 400M 主从
+- [RVQ Codec](wiki/concepts/rvq-codec.md) — 10 层残差量化 codec
+- [GRPO](wiki/concepts/grpo.md) — 无 critic 的组内相对 RL
+- [SGLang Inference](wiki/concepts/sglang-inference.md) — fish-speech 借用的 LLM 推理基建
+- [Voice Cloning Reference](wiki/concepts/voice-cloning-reference.md) — 参考音频提供说话人条件
+- [Inline Emotion Tags](wiki/concepts/inline-emotion-tags.md) — 文本里直接写情绪/风格控制
+
+### Transformer 骨架
+- [Self-Attention](wiki/concepts/self-attention.md) — Q·Kᵀ/√dₖ 然后 softmax 加权 V
+- [Multi-Head Attention](wiki/concepts/multi-head-attention.md) — 多个 head 学不同关系模式
+- [Cross-Attention](wiki/concepts/cross-attention.md) — decoder 用自己的 Q 去查 encoder 的 K/V
+- [Positional Encoding](wiki/concepts/positional-encoding.md) — 给无顺序的 attention 加位置
+- [Rotary Position Embedding](wiki/concepts/rotary-position-embedding.md) — 旋转 Q/K 让点积天然含相对位置，现代 LLM 事实标准
+- [Relative Position Encoding](wiki/concepts/relative-position-encoding.md) — 为什么"差几个位置"比"在第几个位置"好
+- [Transformer Architecture](wiki/concepts/transformer-architecture.md) — Encoder + Decoder 堆叠
+- [LayerNorm](wiki/concepts/layernorm.md) — 每个 token 内部归一化，序列模型比 BN 更顺手
+- [Residual + LayerNorm](wiki/concepts/residual-layernorm.md) — 现代 Transformer block 的稳定训练骨架
+
+### ResNet 系
+- [Residual Connection](wiki/concepts/residual-connection.md) — `+ x` 快车道，identity 是默认值
+- [Degradation Problem](wiki/concepts/degradation-problem.md) — 深网络反而变差的怪现象
+- [BatchNorm](wiki/concepts/batchnorm.md) — z-score 归一化 + scale/shift
+- [ResNet Architecture](wiki/concepts/resnet-architecture.md) — stage 堆叠：分辨率降、通道升
+- [Bottleneck Block](wiki/concepts/bottleneck-block.md) — 1×1 → 3×3 → 1×1 的省算力残差块
+
+### BERT 系
+- [Masked Language Model](wiki/concepts/masked-language-model.md) — BERT 的核心预训练任务
+- [Next Sentence Prediction](wiki/concepts/next-sentence-prediction.md) — 段间关系 pretrain，后被证伪
+- [Encoder-Only Paradigm](wiki/concepts/encoder-only-paradigm.md) — 双向 attention 路线
+- [Pretrain-Finetune Paradigm](wiki/concepts/pretrain-finetune-paradigm.md) — NLP 训练范式革命
+
+### GPT 系
+- [Causal Language Model](wiki/concepts/causal-language-model.md) — 每位置预测下一词，CLM
+- [Input Transformations](wiki/concepts/input-transformations.md) — 用文本格式编码任务结构，prompting 的雏形
+- [Decoder-Only Paradigm](wiki/concepts/decoder-only-paradigm.md) — 因果 attention 路线，最终赢的那条
+- [Zero-Shot Transfer](wiki/concepts/zero-shot-transfer.md) — GPT-2 用 prompt 触发任务，不 finetune
+- [WebText](wiki/concepts/webtext.md) — Reddit karma 筛网页，GPT-2 数据集
+- [Language Modeling as Multitask](wiki/concepts/language-modeling-as-multitask.md) — LM 预训练即多任务学习
+- [In-Context Learning](wiki/concepts/in-context-learning.md) — GPT-3 的核心，prompt 里给例子模型现学
+- [Few-Shot Learning](wiki/concepts/few-shot-learning.md) — ICL 里最常见的 prompt 形态
+- [Emergent Abilities](wiki/concepts/emergent-abilities.md) — 小模型 ≈ 0 大模型突然能的 hockey-stick 曲线
+- [Sparse Attention](wiki/concepts/sparse-attention.md) — GPT-3 用的省算力 attention 方案
+- [Scaling Laws](wiki/concepts/scaling-laws.md) — LM loss 跟参数/数据/算力的 power law
+
+### 生成模型基础
+- [Velocity Field](wiki/concepts/velocity-field.md) — flow matching 学的目标，(x, t) → 该往哪走
+- [Conditional Flow Matching](wiki/concepts/conditional-flow-matching.md) — 实际可训练的 flow matching loss
+- [Probability Path](wiki/concepts/probability-path.md) — 噪声到数据的密度演化路径
+- [Optimal Transport](wiki/concepts/optimal-transport.md) — 让噪声到数据尽量走直路的路径选择
+- [Continuity Equation](wiki/concepts/continuity-equation.md) — 粒子守恒：密度变化 = 净流入
+- [ODE vs SDE](wiki/concepts/ode-vs-sde.md) — flow（确定性）vs diffusion（随机性）
+
+### 音频 tokenization
+- [Log-Mel Spectrogram](wiki/concepts/log-mel-spectrogram.md) — 音频特征基础
+- [Bin Quantization](wiki/concepts/bin-quantization.md) — dMel 的核心，等距分箱量化
+- [dMel](wiki/concepts/dmel.md) — log-mel 直接 bin quantize（避开 codec）
+
+### 共享基础设施
+- [KV Cache](wiki/concepts/kv-cache.md) — 流式推理的内存账本
+- [Prefill / Decode](wiki/concepts/prefill-decode.md) — LLM 推理两阶段
+- [VAD](wiki/concepts/vad.md) — 判断用户是否说完的传统语音启发式
+- [Bitter Lesson](wiki/concepts/bitter-lesson.md) — 可 scale 的学习系统长期吃掉手写规则
+
+## Threads · 开放问题
+
+- [Open Questions](wiki/threads/open-questions.md) — 这次 ingest 后还想搞清楚的问题清单
+- [Fish Speech GRPO Determinism Question](wiki/threads/fish-speech-grpo-determinism-question.md) — RL 训练和推理 kernel 不一致时怎么处理
+
+## Raw 源 · 已 ingest
+
+- `raw/interaction-models-zh.html` — TML interaction models 中文讲解版
+- `raw/fish-speech/` → 软链到本地 clone

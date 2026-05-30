@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Prefill / Decode · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · prefill-decode</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Prefill / Decode</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>LLM 推理两阶段：<strong>prefill</strong> 一次性吃整段输入并行算所有 token，<strong>decode</strong> 一个一个往外吐。</p>
+<h2>直觉</h2>
+<ul>
+<li><strong>Prefill</strong>：拿到 prompt → 并行算所有 token 的 K/V → 填 <a href="../concepts/kv-cache.html">kv-cache</a>。GPU 利用率高（大矩阵乘）。</li>
+<li><strong>Decode</strong>：每步依赖上一步 token，串行 → GPU 利用率低（小矩阵乘）。</li>
+</ul>
+<p>正常 LLM 服务 prefill 占总时间 10-30%，decode 70-90%。</p>
+<h2>微回合场景下变了</h2>
+<p><a href="../concepts/micro-turn.html">micro-turn</a> 模式 200ms chunk → prefill 极小（只有几个新 token），decode 极频繁。原来 prefill 的优化经验不再适用，反而<strong>元数据开销</strong>（kernel launch、内存分配、调度）成了瓶颈。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/kv-cache.html">kv-cache</a> · prefill 填 cache，decode 读 cache</li>
+<li><a href="../concepts/split-kv.html">split-kv</a> · 让两阶段走同一种切法保 bitwise</li>
+<li><a href="../concepts/micro-turn.html">micro-turn</a> · 微回合放大了 decode 频次</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 6 处</span>
+  <ul><li><a href="../papers/interaction-models-tml.html"><span class="cat">paper</span>Interaction Models · Thinking Machines Lab</a></li><li><a href="../concepts/bitwise-determinism.html"><span class="cat">concept</span>Bitwise Determinism · 位级确定性</a></li><li><a href="../concepts/kv-cache.html"><span class="cat">concept</span>KV Cache</a></li><li><a href="../concepts/micro-turn.html"><span class="cat">concept</span>Micro-Turn · 200ms 微回合</a></li><li><a href="../concepts/sglang-inference.html"><span class="cat">concept</span>SGLang Inference</a></li><li><a href="../concepts/split-kv.html"><span class="cat">concept</span>Split-KV · 沿 KV 序列切分 attention</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/prefill-decode.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

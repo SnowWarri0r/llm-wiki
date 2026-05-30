@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Dual-Model Architecture · 双模型架构 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · dual-model-architecture</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Dual-Model Architecture · 双模型架构</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p><strong>前台 always-on 低延迟模型</strong> + <strong>后台异步深推理模型</strong>，共享 context，前台委托后台干慢活。</p>
+<h2>直觉</h2>
+<p>人的大脑也是双系统（Kahneman System 1 / System 2）。"快直觉 + 慢深思" 这个分工在工程上一直有，TML 的新意是 <strong>把这种分工做进单一系统的两个权重模块</strong>，且<strong>共享 context</strong>。</p>
+<p>类比常见的异步服务架构：</p>
+<ul>
+<li>前台 BFF 跑 socket，持续推状态</li>
+<li>后台 worker 被消息队列触发，长任务做完回调</li>
+<li>前台/后台分在两个服务上</li>
+</ul>
+<p>TML 是把这同一种形状收到<strong>模型权重内</strong>：前台 interaction model 跑 <a href="../concepts/micro-turn.html">micro-turn</a>，遇到要深推理的事情委托后台 background model，结果 streaming 回流织进对话。</p>
+<h2>怎么做的</h2>
+<ul>
+<li><strong>Interaction Model</strong>：276B MoE / 12B 激活（每个 token 只过 12B 计算路径）。always-on，跑在 200ms tick 上。</li>
+<li><strong>Background Model</strong>：异步运行，做长 reasoning、tool calls、规划。</li>
+<li><strong>共享 context</strong>：不是独立 API 调用 —— 两边读同一个对话状态，前台可以引用后台正在做的事。</li>
+<li>前台知道<strong>什么时候</strong>该委托（自己学的判断），不靠外挂调度器。</li>
+</ul>
+<h2>为什么不全用一个大模型</h2>
+<ul>
+<li>一个 276B 模型跑 200ms tick → GPU 烧不起，延迟也守不住</li>
+<li>一个 12B 小模型做长 reasoning → 能力不够</li>
+<li>分两层 = 拿热路径的 latency 换冷路径的 capacity</li>
+</ul>
+<h2>跟 fish-speech Dual-AR 的对照</h2>
+<p>都叫"双模型"，但维度完全不同：</p>
+<ul>
+<li><a href="../concepts/dual-ar.html">dual-ar</a> 是<strong>生成路径上</strong>的主从：慢/快沿 codec 层级分工</li>
+<li>这里是<strong>控制流上</strong>的分工：前台/后台沿时间尺度分工</li>
+</ul>
+<h2>跟工程系统的对照</h2>
+<p>现代 web/AI 服务架构里也有同形状的事：前台 BFF + 后台 worker 的服务版。<strong>重要差别</strong>：服务版要写消息队列 topic、写并发槽位、写 callback 协议；权重版理论上让模型自己学这些 —— 但前提是数据集里有大量"前台 → 委托后台 → 回收结果"的标注样本。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/interaction-models-tml.html">interaction-models-tml</a> · 论文</li>
+<li><a href="../concepts/micro-turn.html">micro-turn</a> · 前台跑的是 micro-turn</li>
+<li><a href="../concepts/moe.html">moe</a> · 前台用 MoE 稀疏激活省算力</li>
+<li><a href="../concepts/dual-ar.html">dual-ar</a> · 不同维度的"双模型"</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/interaction-models-tml.html"><span class="cat">paper</span>Interaction Models · Thinking Machines Lab</a></li><li><a href="../concepts/dual-ar.html"><span class="cat">concept</span>Dual-AR · 双自回归</a></li><li><a href="../concepts/micro-turn.html"><span class="cat">concept</span>Micro-Turn · 200ms 微回合</a></li><li><a href="../concepts/moe.html"><span class="cat">concept</span>MoE · Mixture of Experts</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/dual-model-architecture.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

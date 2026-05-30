@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Positional Encoding · 位置编码 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · positional-encoding</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Positional Encoding · 位置编码</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>Attention 本身<strong>对位置不敏感</strong>（"dog bites man" 和 "man bites dog" 算出来一样），所以要显式给每个位置加一个独特的"位置向量"。</p>
+<h2>直觉</h2>
+<p>RNN 天然有顺序：t=1 → t=2 → t=3。Attention 是<strong>置换不变的</strong> —— 对 Q · K^T 来说，把 K 矩阵的行打乱不影响结果（只影响输出的对应位置）。</p>
+<p>为了让 transformer 能区分"第一个 the" vs "第二个 the"，要给每个 token 加一个<strong>只依赖位置的向量</strong>：</p>
+<pre><code>input = embedding(token) + PE(position)
+</code></pre>
+<p>PE(pos) 必须对每个 pos 唯一，且让模型能学到"相对位置"信息。</p>
+<h2>Sinusoidal PE（论文用的）</h2>
+<pre><code>PE(pos, 2i)   = sin(pos / 10000^(2i / d_model))
+PE(pos, 2i+1) = cos(pos / 10000^(2i / d_model))
+</code></pre>
+<p>第 i 维用频率 1 / 10000^(2i / d_model) 的正弦/余弦。低维高频，高维低频。</p>
+<p><strong>为什么这么设计</strong>：</p>
+<ul>
+<li>每个位置 pos 在 d_model 维度上有唯一的频率指纹</li>
+<li>任何相对位置 k 都能表达成 PE(pos+k) 是 PE(pos) 的<strong>线性变换</strong>（用 sin/cos 加法定理）→ 模型能学相对位置</li>
+<li>不需要训练（无参数）</li>
+<li>可外推到训练时没见过的长序列（理论上）</li>
+</ul>
+<h2>后续改进</h2>
+<p>论文这种 sinusoidal PE 是 OG 方案，但有问题（外推效果一般、跟现代长上下文不太搭）。现代 LLM 大多换了：</p>
+<ul>
+<li><strong>Learned PE</strong>（GPT-2）：把 PE 当 embedding 训。简单但不能外推。</li>
+<li><strong>Rotary PE / RoPE</strong>（GPT-J / LLaMA / Mistral / Qwen）：不在 embedding 层加位置，而是每层 attention 算之前<strong>旋转 Q/K</strong> —— 点积天然包含相对位置，零额外参数。2024-2025 几乎所有新 LLM 都用。详见 <a href="../concepts/rotary-position-embedding.html">rotary-position-embedding</a>。</li>
+<li><strong>ALiBi</strong>（BLOOM）：在 attention scores 上加位置距离偏置。可外推。</li>
+<li><strong>NoPE</strong>：完全不要 PE，让模型自己学（小模型不行，大模型 OK）。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/self-attention.html">self-attention</a> · attention 为什么不带位置</li>
+<li><a href="../papers/attention-is-all-you-need.html">attention-is-all-you-need</a> · 论文（sinusoidal PE）</li>
+<li><a href="../papers/rope.html">rope</a> · RoPE 论文</li>
+<li><a href="../concepts/rotary-position-embedding.html">rotary-position-embedding</a> · RoPE 详解</li>
+<li><a href="../concepts/relative-position-encoding.html">relative-position-encoding</a> · 为什么相对位置好</li>
+<li><a href="../concepts/transformer-architecture.html">transformer-architecture</a> · 在哪嵌入 PE</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 6 处</span>
+  <ul><li><a href="../papers/attention-is-all-you-need.html"><span class="cat">paper</span>Attention Is All You Need · Transformer 始祖</a></li><li><a href="../papers/rope.html"><span class="cat">paper</span>RoFormer · Rotary Position Embedding (RoPE)</a></li><li><a href="../concepts/relative-position-encoding.html"><span class="cat">concept</span>Relative Position Encoding · 相对位置编码</a></li><li><a href="../concepts/rotary-position-embedding.html"><span class="cat">concept</span>Rotary Position Embedding · RoPE · 旋转位置编码</a></li><li><a href="../concepts/self-attention.html"><span class="cat">concept</span>Self-Attention · 自注意力</a></li><li><a href="../concepts/transformer-architecture.html"><span class="cat">concept</span>Transformer Architecture · 整体架构</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/positional-encoding.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,1290 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Flow Matching for Generative Modeling</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6;
+  --paper-2: #e8e0c8;
+  --paper-3: #faf4e1;
+  --paper-card: #f7f1de;
+  --ink: #181410;
+  --ink-2: #3a3128;
+  --muted: #7a6f5d;
+  --rule: #bfb398;
+  --brick: #9b2c2c;
+  --brick-soft: #efd6c8;
+  --ochre: #b8841c;
+  --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a;
+  --moss-soft: #d8e6ce;
+  --deep: #1f3a5f;
+  --deep-soft: #c8d4e2;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body {
+  font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(31,58,95,0.045) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(155,44,44,0.02) 0%, transparent 40%);
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply; opacity: 0.5;
+}
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+
+.masthead {
+  border-top: 4px double var(--ink);
+  border-bottom: 1px solid var(--rule);
+  padding: 14px 0;
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ink-2);
+  margin-bottom: 48px;
+}
+.masthead .l { font-weight: 700; }
+.masthead .r { color: var(--muted); }
+
+.hero { margin-bottom: 64px; }
+.hero .issue {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--deep); font-weight: 700;
+  margin-bottom: 18px;
+  display: flex; align-items: center; gap: 12px;
+}
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+
+h1.title {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1;
+  font-weight: 700;
+  font-size: clamp(56px, 9vw, 96px);
+  line-height: 0.92;
+  letter-spacing: -0.035em;
+  margin: 0 0 12px;
+}
+h1.title .em {
+  font-style: italic;
+  font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+  color: var(--deep);
+}
+
+.byline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  margin: 18px 0 6px;
+}
+.hero .dek {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-variation-settings: "opsz" 36;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(20px, 2.2vw, 26px);
+  line-height: 1.4;
+  color: var(--ink-2);
+  max-width: 720px;
+  margin: 16px 0 16px;
+}
+
+.tldr {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--deep);
+  padding: 22px 26px;
+  margin: 32px 0;
+  border-radius: 0 4px 4px 0;
+}
+.tldr .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--deep); font-weight: 700;
+  display: block; margin-bottom: 8px;
+}
+.tldr p { margin: 6px 0; }
+
+/* vocab quick reference · 给 ODE/SDE/OU/score 这种缩写做扫盲 */
+.vocab-box {
+  background: var(--paper-3);
+  border: 1px dashed var(--ochre);
+  border-radius: 4px;
+  padding: 18px 22px;
+  margin: 28px 0 40px;
+}
+.vocab-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ochre);
+  font-weight: 700;
+  display: block;
+  margin-bottom: 14px;
+}
+.vocab-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.vocab-item {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 12px 14px;
+}
+.vh {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--rule);
+}
+.vocab-item code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--deep);
+  color: var(--paper-3);
+  padding: 3px 9px;
+  border-radius: 2px;
+  border: none;
+}
+.vocab-item .cn {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink);
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+.vocab-item p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.vocab-item p em {
+  color: var(--deep);
+  font-style: italic;
+  font-weight: 700;
+}
+.vocab-foot {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.3px;
+}
+.vocab-foot strong { color: var(--ink); }
+@media (max-width: 720px) {
+  .vocab-grid { grid-template-columns: 1fr; }
+}
+
+/* 符号速查 inline hint · 放在公式块下面解释符号 */
+.sym-hint {
+  background: var(--ochre-soft);
+  border: 1px solid var(--ochre);
+  border-left: 3px solid var(--ochre);
+  border-radius: 3px;
+  padding: 12px 16px;
+  margin: 12px 0 22px;
+  font-size: 14px;
+}
+.sym-hint-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--ochre);
+  font-weight: 700;
+  display: block;
+  margin-bottom: 8px;
+}
+.sym-hint p {
+  margin: 4px 0;
+  line-height: 1.7;
+}
+.sym-hint code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  padding: 1px 6px;
+  border-radius: 2px;
+  color: var(--ink);
+}
+.sym-hint .sym-link {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--ochre);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+.sym-hint .sym-link a {
+  color: var(--deep);
+  text-decoration: underline;
+  font-weight: 700;
+}
+
+h2 {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1;
+  font-weight: 700;
+  font-size: 38px;
+  letter-spacing: -0.02em;
+  margin: 72px 0 20px;
+  display: flex; align-items: baseline; gap: 18px;
+}
+h2 .num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--deep); font-weight: 700;
+  min-width: 56px;
+}
+
+h3 {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-size: 22px;
+  font-weight: 600;
+  margin: 36px 0 12px;
+  letter-spacing: -0.01em;
+}
+
+p { margin: 12px 0; }
+strong { font-weight: 700; color: var(--ink); }
+code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.88em;
+  background: var(--paper-3);
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid var(--rule);
+}
+
+a { color: var(--deep); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { color: var(--brick); }
+
+.jr {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  vertical-align: super;
+  background: var(--ochre-soft);
+  color: var(--ink-2);
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid var(--ochre);
+  text-decoration: none !important;
+  margin: 0 2px;
+  cursor: pointer;
+}
+.jr:hover { background: var(--ochre); color: var(--paper); }
+
+figure {
+  margin: 40px 0;
+  padding: 28px;
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+}
+figcaption {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--rule);
+  display: flex; justify-content: space-between; align-items: center;
+}
+figcaption .fnum { color: var(--deep); font-weight: 700; }
+
+.note {
+  background: var(--paper-3);
+  border-left: 3px solid var(--deep);
+  padding: 14px 18px;
+  margin: 18px 0;
+  font-size: 16px;
+  color: var(--ink-2);
+}
+.note.brick { border-left-color: var(--brick); }
+.note.moss { border-left-color: var(--moss); }
+.note.ochre { border-left-color: var(--ochre); }
+.note .l {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--deep); font-weight: 700;
+  display: block; margin-bottom: 4px;
+}
+.note.brick .l { color: var(--brick); }
+.note.moss .l { color: var(--moss); }
+.note.ochre .l { color: var(--ochre); }
+
+pre.eq {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--deep);
+  padding: 12px 16px;
+  border-radius: 3px;
+  font-size: 13px;
+  overflow-x: auto;
+}
+
+/* Fig 01: flow vs diffusion paths */
+.fd-fig {}
+.fd-canvas {
+  width: 100%;
+  height: 300px;
+}
+.fd-canvas svg { width: 100%; height: 100%; display: block; }
+.fd-bg {
+  fill: var(--paper);
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+.fd-noise-pt { fill: var(--ink-2); }
+.fd-data-pt { fill: var(--deep); }
+.fd-path {
+  fill: none;
+  stroke-width: 2;
+  stroke-dasharray: 600;
+  stroke-dashoffset: 600;
+  transition: stroke-dashoffset 2.2s ease-out;
+}
+.fd-fig.play .fd-path { stroke-dashoffset: 0; }
+.fd-path.flow { stroke: var(--deep); }
+.fd-path.diff { stroke: var(--brick); }
+.fd-particle {
+  fill: var(--ochre);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.fd-fig.play .fd-particle { opacity: 1; }
+.fd-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  fill: var(--ink-2);
+  font-weight: 700;
+}
+.fd-label.deep { fill: var(--deep); }
+.fd-label.brick { fill: var(--brick); }
+.fd-small {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  fill: var(--muted);
+}
+.fd-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-top: 12px;
+}
+.fd-panel {
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 14px;
+}
+.fd-panel h5 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+.fd-panel.flow h5 { color: var(--deep); }
+.fd-panel.diff h5 { color: var(--brick); }
+.fd-panel ul {
+  font-size: 13px;
+  margin: 6px 0;
+  padding-left: 20px;
+}
+.fd-panel li { margin: 4px 0; }
+
+/* Fig 02: velocity field 2D visualization */
+.vf-fig {}
+.vf-canvas {
+  width: 100%;
+  height: 380px;
+  position: relative;
+}
+.vf-canvas svg { width: 100%; height: 100%; }
+.vf-grid line {
+  stroke: var(--rule);
+  stroke-width: 0.5;
+  stroke-dasharray: 2 3;
+}
+.vf-arrow {
+  stroke: var(--deep);
+  stroke-width: 1.4;
+  fill: none;
+  opacity: 0;
+  transition: opacity 0.5s, transform 0.7s;
+}
+.vf-fig.play .vf-arrow { opacity: 0.75; }
+.vf-data-cluster circle {
+  fill: var(--ochre);
+  opacity: 0.6;
+}
+.vf-noise-region {
+  fill: var(--deep-soft);
+  opacity: 0.3;
+  stroke: var(--deep);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+.vf-data-region {
+  fill: var(--ochre-soft);
+  opacity: 0.45;
+  stroke: var(--ochre);
+  stroke-width: 1;
+}
+.vf-particle {
+  fill: var(--brick);
+  stroke: var(--ink);
+  stroke-width: 0.8;
+}
+.vf-trail {
+  fill: none;
+  stroke: var(--brick);
+  stroke-width: 1.5;
+  stroke-dasharray: 200;
+  stroke-dashoffset: 200;
+  transition: stroke-dashoffset 2s ease-out;
+}
+.vf-fig.play .vf-trail { stroke-dashoffset: 0; transition-delay: 1.5s; }
+.vf-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  fill: var(--ink-2);
+  font-weight: 700;
+}
+.vf-cap {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--rule);
+  letter-spacing: 0.5px;
+}
+
+/* Fig 03: OT straight vs curved path · few steps win */
+.ot-fig {}
+.ot-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.ot-panel {
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 14px;
+}
+.ot-panel.straight { border-left: 4px solid var(--deep); }
+.ot-panel.curved { border-left: 4px solid var(--brick); }
+.ot-panel h5 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+.ot-panel.straight h5 { color: var(--deep); }
+.ot-panel.curved h5 { color: var(--brick); }
+.ot-svg {
+  width: 100%;
+  height: 200px;
+}
+.ot-svg svg { width: 100%; height: 100%; }
+.ot-line {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-dasharray: 300;
+  stroke-dashoffset: 300;
+  transition: stroke-dashoffset 1.8s ease-out;
+}
+.ot-fig.play .ot-line { stroke-dashoffset: 0; }
+.ot-panel.straight .ot-line { stroke: var(--deep); }
+.ot-panel.curved .ot-line { stroke: var(--brick); }
+.ot-step {
+  fill: var(--ochre);
+  stroke: var(--ink);
+  stroke-width: 1;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.ot-fig.play .ot-step { opacity: 1; transition-delay: 1.8s; }
+.ot-endpoint {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  fill: var(--ink-2);
+  font-weight: 700;
+}
+.ot-stat {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.ot-stat .k {
+  color: var(--muted);
+  letter-spacing: 0.5px;
+}
+.ot-stat .v {
+  font-weight: 700;
+  text-align: right;
+}
+.ot-panel.straight .v.win { color: var(--deep); }
+.ot-panel.curved .v.lose { color: var(--brick); }
+
+/* Fig 04: training objective comparison */
+.tg-fig {}
+.tg-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.tg-panel {
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 16px;
+}
+.tg-panel.flow { border-left: 4px solid var(--deep); }
+.tg-panel.diff { border-left: 4px solid var(--brick); }
+.tg-panel h5 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+  font-weight: 700;
+}
+.tg-panel.flow h5 { color: var(--deep); }
+.tg-panel.diff h5 { color: var(--brick); }
+.tg-step {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  padding: 8px 10px;
+  margin: 6px 0;
+  border-radius: 2px;
+  color: var(--ink);
+  line-height: 1.5;
+}
+.tg-step .label {
+  font-weight: 700;
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+.tg-panel.flow .tg-step .label { color: var(--deep); }
+.tg-panel.diff .tg-step .label { color: var(--brick); }
+.tg-step.final {
+  background: var(--deep-soft);
+  border-color: var(--deep);
+  font-weight: 700;
+}
+.tg-panel.diff .tg-step.final {
+  background: var(--brick-soft);
+  border-color: var(--brick);
+}
+.tg-arrow {
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--muted);
+  font-size: 10px;
+}
+.tg-verdict {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  text-align: center;
+}
+.tg-panel.flow .tg-verdict { color: var(--deep); font-weight: 700; }
+.tg-panel.diff .tg-verdict { color: var(--brick); }
+
+/* Glossary */
+.gloss {
+  margin-top: 64px;
+  padding-top: 32px;
+  border-top: 2px solid var(--rule);
+}
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li {
+  counter-increment: g;
+  padding: 14px 0 14px 50px;
+  position: relative;
+  border-bottom: 1px dashed var(--rule);
+  font-size: 16px;
+}
+.gloss li::before {
+  content: counter(g, decimal-leading-zero);
+  position: absolute; left: 0; top: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--deep);
+  font-weight: 700;
+}
+.gloss li:target {
+  background: var(--ochre-soft);
+  border-radius: 4px;
+  animation: glossPulse 1.8s ease-out;
+}
+@keyframes glossPulse {
+  0% { background: var(--brick-soft); }
+  100% { background: var(--ochre-soft); }
+}
+.gloss .term {
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--ink);
+}
+
+.colophon {
+  margin-top: 80px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  display: flex; justify-content: space-between;
+}
+
+@media (max-width: 720px) {
+  .fd-row, .ot-grid, .tg-grid { grid-template-columns: 1fr; }
+  .vf-canvas { height: 280px; }
+}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · flow-matching</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · Meta AI · ICLR 2023</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 2022 · Meta AI · 把 diffusion 简化成回归</div>
+  <h1 class="title">Flow Matching<br /><span class="em">for Generative.</span></h1>
+  <div class="byline">Lipman · Chen · Ben-Hamu · Nickel · Le · ICLR 2023</div>
+  <p class="dek">把 diffusion 的 "加噪 → 学 score → 反向 SDE 去噪" 一整套换成<strong>更直观的"学速度场 → ODE 积分"</strong>。训练目标是普通 regression MSE，没有 SDE 黑魔法。推理 4-20 步达到 diffusion 50-1000 步质量。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>做生成模型只需要一件事：<strong>找一条从噪声分布到数据分布的路径，让模型沿着走</strong>。</p>
+  <p>Diffusion 的做法 = 加噪声 → 学 score（log 概率梯度）→ 跑 SDE 反向去噪。<strong>训练目标不直观</strong>，推理需要 50-1000 步。</p>
+  <p>Flow Matching 的做法 = 选一条<strong>概率路径</strong> p_t → 学对应的<strong>速度场</strong> v(x, t) → ODE 积分。训练 loss 是 simple MSE，推理 OT 直线路径下 4-20 步够。</p>
+  <p>统一框架：<strong>diffusion 是 flow matching 的特例</strong>（OU 路径 + ODE 视角）。</p>
+</div>
+
+<div class="vocab-box">
+  <span class="vocab-label">读之前 · 4 个数学缩写一句话扫清</span>
+  <div class="vocab-grid">
+    <div class="vocab-item">
+      <div class="vh"><code>ODE</code><span class="cn">确定性流</span></div>
+      <p>"普通微分方程"。<strong>粒子在风场里飞</strong>，给起点 + 风场 → 轨迹完全确定。同样起点跑两次结果完全一样。<em>flow matching 用这个。</em></p>
+    </div>
+    <div class="vocab-item">
+      <div class="vh"><code>SDE</code><span class="cn">随机性流</span></div>
+      <p>"随机微分方程"。ODE 的基础上，<strong>每步多了个随机扰动</strong>（像粒子被空气分子持续撞击）。同样起点跑两次结果不一样。<em>diffusion 用这个。</em></p>
+    </div>
+    <div class="vocab-item">
+      <div class="vh"><code>OU</code><span class="cn">奥恩斯坦-乌伦贝克过程</span></div>
+      <p>一种<strong>特定的 SDE</strong> —— 像弹簧 + 噪声，被拉回原点附近抖动。diffusion 默认的加噪 schedule 就是它（"高斯加噪"那套）。</p>
+    </div>
+    <div class="vocab-item">
+      <div class="vh"><code>score</code><span class="cn">∇log p(x)</span></div>
+      <p>概率密度的<strong>对数梯度</strong>。直觉上指向"密度更高的方向"（往数据多的地方走）。<em>diffusion 学这个</em>—— 间接、绕路。flow matching 学的是 velocity 直接的"该往哪走"。</p>
+    </div>
+  </div>
+  <div class="vocab-foot">→ 这套数学符号是 diffusion 时代的遗产。Flow matching 的整篇 contribution 就是<strong>把它们简化掉一大半</strong>。后面正文还碰到时，回头扫这盒就行。</div>
+</div>
+
+<h2><span class="num">§ 01</span>为什么 diffusion 不够好用</h2>
+<p>2020 DDPM 出来，diffusion 一举成为 SOTA 生成模型。但用起来不舒服：</p>
+
+<ul>
+  <li><strong>训练目标不直观</strong> · score matching 学 score function ∇log p_t(x)<a class="jr" href="#g-06">6</a>，是个未知分布的 log 梯度。要绕一圈推导（Tweedie's formula<a class="jr" href="#g-08">8</a>）才能转成 MSE</li>
+  <li><strong>推理需要 SDE</strong> · 反向 diffusion 是带噪声的 SDE，要写补偿项</li>
+  <li><strong>只支持 OU 路径</strong> · 必须是高斯过程，换其他 path 难</li>
+  <li><strong>步数多</strong> · DDPM 50-1000 步生成一张图，部署成本高</li>
+</ul>
+
+<p>核心问题：<strong>做生成本质就是"从 p_0 到 p_1 的搬运"</strong>，但 diffusion 用了一套不直接表达这事的工具（score / SDE / OU 限制）。能不能直接说"从 p_0 到 p_1 的路径是什么、速度场是什么"？</p>
+
+<p>Flow matching 就是这个直接说法<a class="jr" href="#g-01">1</a>。</p>
+
+<h2><span class="num">§ 02</span>速度场 · Flow vs Diffusion 的核心差异</h2>
+<p>想象数据分布是一坨复杂形状，噪声是标准高斯。两种生成方式：</p>
+
+<figure class="fd-fig" id="fd-fig">
+  <figcaption>
+    <span>Fig 01 · Flow vs Diffusion · 同样 noise → data · 路径不同</span>
+    <span class="fnum">ODE 直线 / SDE 折线</span>
+  </figcaption>
+
+  <div class="fd-canvas">
+    <svg viewBox="0 0 760 300" preserveAspectRatio="xMidYMid meet">
+      <!-- noise region (left) -->
+      <ellipse cx="100" cy="150" rx="80" ry="100" fill="var(--deep-soft)" opacity="0.5" stroke="var(--deep)" stroke-width="1" stroke-dasharray="4 3"/>
+      <text class="fd-label deep" x="100" y="32" text-anchor="middle">p_0 · noise</text>
+
+      <!-- data region (right) -->
+      <ellipse cx="660" cy="150" rx="80" ry="100" fill="var(--ochre-soft)" opacity="0.6" stroke="var(--ochre)" stroke-width="1"/>
+      <text class="fd-label" x="660" y="32" text-anchor="middle" style="fill:var(--ochre);">p_1 · data</text>
+
+      <!-- a few noise points -->
+      <circle class="fd-noise-pt" cx="80" cy="120" r="3"/>
+      <circle class="fd-noise-pt" cx="120" cy="180" r="3"/>
+      <circle class="fd-noise-pt" cx="100" cy="100" r="3"/>
+      <circle class="fd-noise-pt" cx="110" cy="200" r="3"/>
+
+      <!-- a few data points -->
+      <circle class="fd-data-pt" cx="640" cy="120" r="3"/>
+      <circle class="fd-data-pt" cx="680" cy="180" r="3"/>
+      <circle class="fd-data-pt" cx="660" cy="100" r="3"/>
+      <circle class="fd-data-pt" cx="670" cy="200" r="3"/>
+
+      <!-- flow path (top): straight line from noise to data -->
+      <path class="fd-path flow" d="M 100 100 L 660 100"/>
+      <path class="fd-path flow" d="M 80 120 L 640 120"/>
+      <!-- particle markers along the flow path -->
+      <circle class="fd-particle" cx="240" cy="100" r="3.5"/>
+      <circle class="fd-particle" cx="380" cy="100" r="3.5"/>
+      <circle class="fd-particle" cx="520" cy="100" r="3.5"/>
+
+      <text class="fd-label deep" x="380" y="86" text-anchor="middle">Flow · ODE · 4 步走直线</text>
+
+      <!-- diffusion path (bottom): zigzag -->
+      <path class="fd-path diff" d="M 110 200 C 180 150, 200 240, 270 195 S 360 240, 440 200 S 520 250, 600 195 S 660 230, 670 200"/>
+      <path class="fd-path diff" d="M 120 180 C 200 130, 220 220, 280 175 S 380 220, 470 180 S 540 230, 620 180 S 660 215, 680 180"/>
+      <!-- many small particle markers along the diffusion path -->
+      <circle class="fd-particle" cx="160" cy="195" r="2.5"/>
+      <circle class="fd-particle" cx="200" cy="215" r="2.5"/>
+      <circle class="fd-particle" cx="245" cy="200" r="2.5"/>
+      <circle class="fd-particle" cx="290" cy="220" r="2.5"/>
+      <circle class="fd-particle" cx="340" cy="195" r="2.5"/>
+      <circle class="fd-particle" cx="395" cy="220" r="2.5"/>
+      <circle class="fd-particle" cx="450" cy="195" r="2.5"/>
+      <circle class="fd-particle" cx="510" cy="220" r="2.5"/>
+      <circle class="fd-particle" cx="555" cy="200" r="2.5"/>
+      <circle class="fd-particle" cx="610" cy="225" r="2.5"/>
+
+      <text class="fd-label brick" x="380" y="266" text-anchor="middle">Diffusion · SDE · 50-1000 步走折线</text>
+
+      <!-- t axis -->
+      <line x1="100" y1="280" x2="660" y2="280" stroke="var(--ink-2)" stroke-width="1"/>
+      <line x1="100" y1="276" x2="100" y2="284" stroke="var(--ink-2)" stroke-width="1"/>
+      <line x1="660" y1="276" x2="660" y2="284" stroke="var(--ink-2)" stroke-width="1"/>
+      <text class="fd-small" x="100" y="295" text-anchor="middle">t = 0</text>
+      <text class="fd-small" x="380" y="295" text-anchor="middle">t · 从 0 到 1</text>
+      <text class="fd-small" x="660" y="295" text-anchor="middle">t = 1</text>
+    </svg>
+  </div>
+
+  <div class="fd-row">
+    <div class="fd-panel flow">
+      <h5>Flow · ODE · 确定性</h5>
+      <ul>
+        <li><code>dx/dt = v(x, t)</code> · 学 velocity field</li>
+        <li>训练 = MSE regression · 直接</li>
+        <li>推理 OT 路径下 4-20 步够</li>
+        <li>同样 x_0 跑两次 → 同样结果</li>
+      </ul>
+    </div>
+    <div class="fd-panel diff">
+      <h5>Diffusion · SDE · 随机性</h5>
+      <ul>
+        <li><code>dx = f·dt + g·dW</code> · 学 score function</li>
+        <li>训练 = score matching · 间接</li>
+        <li>推理 DDPM 50-1000 步</li>
+        <li>同样 x_0 跑两次 → 不同结果（随机扰动）</li>
+      </ul>
+    </div>
+  </div>
+</figure>
+
+<div class="note">
+  <span class="l">关键洞察</span>
+  <p>diffusion 学 <strong>score</strong>（∇log p）是个 indirect 目标 —— 你想生成，结果训了个"概率密度的对数梯度"。<br/>
+  flow matching 学 <strong>velocity</strong>（每个点该往哪走）是个 direct 目标 —— 你想生成，就训"该往哪走"。<br/>
+  <strong>训练目标 = 你真正想要的东西</strong> 永远是个好设计。</p>
+</div>
+
+<h2><span class="num">§ 03</span>Velocity field · 具体长什么样</h2>
+<p>速度场 v(x, t) 是<strong>每个 (位置, 时间) 上的箭头</strong>。学完 v 之后，给一颗噪声粒子起点，沿 v 积分就能走到数据分布。</p>
+
+<figure class="vf-fig" id="vf-fig">
+  <figcaption>
+    <span>Fig 02 · KEY · 2D velocity field · 在 t = 0.5 的一个 snapshot</span>
+    <span class="fnum">蓝箭头 = v(x, t) · 红粒子沿箭头走 = ODE 积分</span>
+  </figcaption>
+
+  <div class="vf-canvas">
+    <svg viewBox="0 0 720 380" preserveAspectRatio="xMidYMid meet">
+      <!-- grid -->
+      <g class="vf-grid">
+        <line x1="0" y1="60" x2="720" y2="60"/>
+        <line x1="0" y1="120" x2="720" y2="120"/>
+        <line x1="0" y1="180" x2="720" y2="180"/>
+        <line x1="0" y1="240" x2="720" y2="240"/>
+        <line x1="0" y1="300" x2="720" y2="300"/>
+        <line x1="80" y1="0" x2="80" y2="380"/>
+        <line x1="240" y1="0" x2="240" y2="380"/>
+        <line x1="400" y1="0" x2="400" y2="380"/>
+        <line x1="560" y1="0" x2="560" y2="380"/>
+      </g>
+
+      <!-- noise region (left, blue dashed circle) -->
+      <ellipse class="vf-noise-region" cx="100" cy="200" rx="70" ry="130"/>
+      <text class="vf-label" x="100" y="40" text-anchor="middle">p_0 · noise</text>
+      <text class="vf-label" x="100" y="56" text-anchor="middle" style="font-weight:400; font-size:9px; fill:var(--muted);">N(0, I)</text>
+
+      <!-- data region (right, orange circle, with multi-modal data points) -->
+      <ellipse class="vf-data-region" cx="600" cy="200" rx="90" ry="140"/>
+      <text class="vf-label" x="600" y="40" text-anchor="middle" style="fill:var(--ochre);">p_1 · data</text>
+      <text class="vf-label" x="600" y="56" text-anchor="middle" style="font-weight:400; font-size:9px; fill:var(--muted);">data distribution</text>
+
+      <!-- data cluster points -->
+      <g class="vf-data-cluster">
+        <circle cx="570" cy="130" r="4"/>
+        <circle cx="610" cy="160" r="4"/>
+        <circle cx="640" cy="180" r="4"/>
+        <circle cx="570" cy="200" r="4"/>
+        <circle cx="630" cy="220" r="4"/>
+        <circle cx="600" cy="260" r="4"/>
+        <circle cx="570" cy="290" r="4"/>
+      </g>
+
+      <!-- velocity field arrows on a grid -->
+      <g>
+        <!-- col 1 (near noise) - all pointing roughly right -->
+        <line class="vf-arrow" x1="180" y1="80" x2="240" y2="100" marker-end="url(#vf-tri)"/>
+        <line class="vf-arrow" x1="180" y1="140" x2="240" y2="155" marker-end="url(#vf-tri)"/>
+        <line class="vf-arrow" x1="180" y1="200" x2="240" y2="200" marker-end="url(#vf-tri)"/>
+        <line class="vf-arrow" x1="180" y1="260" x2="240" y2="250" marker-end="url(#vf-tri)"/>
+        <line class="vf-arrow" x1="180" y1="320" x2="240" y2="295" marker-end="url(#vf-tri)"/>
+
+        <!-- col 2 -->
+        <line class="vf-arrow" x1="280" y1="80" x2="340" y2="115" marker-end="url(#vf-tri)"/>
+        <line class="vf-arrow" x1="280" y1="140" x2="340" y2="160" marker-end="url(#vf-tri)"/>
+        <line class="vf-arrow" x1="280" y1="200" x2="340" y2="200" marker-end="url(#vf-tri)"/>
+        <line class="vf-arrow" x1="280" y1="260" x2="340" y2="240" marker-end="url(#vf-tri)"/>
+        <line class="vf-arrow" x1="280" y1="320" x2="340" y2="285" marker-end="url(#vf-tri)"/>
+
+        <!-- col 3 -->
+        <line class="vf-arrow" x1="380" y1="80" x2="440" y2="125" marker-end="url(#vf-tri)"/>
+        <line class="vf-arrow" x1="380" y1="140" x2="440" y2="165" marker-end="url(#vf-tri)"/>
+        <line class="vf-arrow" x1="380" y1="200" x2="440" y2="200" marker-end="url(#vf-tri)"/>
+        <line class="vf-arrow" x1="380" y1="260" x2="440" y2="235" marker-end="url(#vf-tri)"/>
+        <line class="vf-arrow" x1="380" y1="320" x2="440" y2="275" marker-end="url(#vf-tri)"/>
+
+        <!-- col 4 (near data, arrows curving toward data points) -->
+        <line class="vf-arrow" x1="480" y1="80" x2="540" y2="140" marker-end="url(#vf-tri)"/>
+        <line class="vf-arrow" x1="480" y1="140" x2="540" y2="170" marker-end="url(#vf-tri)"/>
+        <line class="vf-arrow" x1="480" y1="200" x2="540" y2="200" marker-end="url(#vf-tri)"/>
+        <line class="vf-arrow" x1="480" y1="260" x2="540" y2="240" marker-end="url(#vf-tri)"/>
+        <line class="vf-arrow" x1="480" y1="320" x2="540" y2="280" marker-end="url(#vf-tri)"/>
+      </g>
+
+      <!-- a particle trajectory: starts in noise, follows field, ends near data point -->
+      <path class="vf-trail" d="M 100 200 L 240 200 L 340 200 L 440 200 L 540 200 L 600 200"/>
+      <circle class="vf-particle" cx="100" cy="200" r="6"/>
+      <circle class="vf-particle" cx="600" cy="200" r="6"/>
+
+      <defs>
+        <marker id="vf-tri" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+          <path d="M0,0 L8,4 L0,8 z" fill="var(--deep)"/>
+        </marker>
+      </defs>
+
+      <text class="vf-label" x="360" y="365" text-anchor="middle" style="fill:var(--brick);">红粒子从 p_0 沿 v(x, t) ODE 走到 p_1</text>
+    </svg>
+  </div>
+
+  <div class="vf-cap">→ 神经网络学的是这套箭头场。给 (x, t) 输出对应方向 + 大小。学好了之后，从噪声粒子起步，沿箭头积分到数据分布。</div>
+</figure>
+
+<p>数学上 velocity field 跟概率路径 p_t 是 1:1 对应的<a class="jr" href="#g-02">2</a>。任何 p_t(x) 都对应唯一的 v_t(x)，满足<strong>连续性方程</strong>：</p>
+
+<pre class="eq">∂p_t/∂t + ∇·(p_t · v_t) = 0
+
+→ 粒子守恒：流入流出和密度变化平衡</pre>
+
+<div class="sym-hint">
+  <span class="sym-hint-label">📐 拆给你看</span>
+  <p>这条方程其实在说一句废话："你这点多了多少粒子 = 走进来的 − 走出去的"。把"粒子"换成"人"理解：</p>
+  <ul style="margin:8px 0 0 0; padding-left:20px; line-height:1.7;">
+    <li><code>p(x, t)</code> = 这个街区在 t 时刻住了多少人（密度）</li>
+    <li><code>v(x, t)</code> = 这街区里人走动的方向和速度（风场）</li>
+    <li><code>∂p/∂t</code> = 街区人口怎么随时间变（位置不动，只让 t 动）</li>
+    <li><code>∇·(p·v)</code> = "净流出率"（散度 · 这点是发散源还是汇聚点）</li>
+  </ul>
+  <p style="margin:10px 0 0;">挪到一边：<strong>∂p/∂t = −(净流出) = 净流入</strong>。也就是"人不凭空冒"。三种典型流场：</p>
+  <ul style="margin:6px 0 0 0; padding-left:20px; line-height:1.7;">
+    <li><code>→→→→→</code> 等速流过 · 左来 = 右走 · 净流出 = 0 · 密度不变</li>
+    <li>发散喷泉 · 所有方向往外 · 净流出 &gt; 0 · 密度<strong>下降</strong></li>
+    <li>汇聚黑洞 · 所有方向往里 · 净流出 &lt; 0 · 密度<strong>上升</strong></li>
+  </ul>
+  <p class="sym-link" style="margin-top:10px;">→ 完整推导 + 守恒律证明：<a href="../concepts/continuity-equation.html">continuity-equation</a> · 数学符号字典：<a href="../concepts/math-symbols.html">math-symbols</a></p>
+</div>
+
+<p>这个 PDE 叫<strong>连续性方程</strong><a class="jr" href="#g-07">7</a>，是物理上粒子守恒的标准形式。在这里它强制 velocity field 和 probability path 必须 1:1 匹配。</p>
+
+<p>flow matching 不直接学 marginal v_t（intractable），而是学 <strong>conditional</strong> velocity field<a class="jr" href="#g-03">3</a>：给定 target sample x_1，定义条件 path，对应的 conditional velocity 是简单常数：</p>
+
+<pre class="eq">线性插值 path: x_t = (1 - t)·x_0 + t·x_1
+
+→ conditional velocity: v(x_t | x_1) = x_1 - x_0 · 常数</pre>
+
+<p>训练 loss：</p>
+
+<pre class="eq">L = E_{t, x_0, x_1}  || u_θ(x_t, t) - (x_1 - x_0) ||²
+
+→ 就是个 MSE · 神经网络 u_θ 学 predict velocity</pre>
+
+<div class="sym-hint">
+  <span class="sym-hint-label">📐 符号速查</span>
+  <p>
+    <code>E_{t, x_0, x_1}[ · ]</code> = 期望 / "对所有 (t, x_0, x_1) 组合求平均"<br/>
+    <code>u_θ</code> = "参数为 θ 的函数"（θ 是神经网络的 weights，u_θ 就是网络本身）<br/>
+    <code>|| · ||²</code> = 向量平方范数（每个分量平方加起来，对应 PyTorch 的 <code>(a - b).pow(2).sum()</code>）<br/>
+    全式翻译：<strong>"对所有训练样本平均地，让网络预测的速度尽量贴近 (x_1 − x_0)" → 就是 MSE</strong>
+  </p>
+</div>
+
+<p>论文证明这个 conditional FM loss 跟（intractable 的）marginal FM loss 梯度方向相同。所以训练 conditional 学到的 u_θ 就是 marginal velocity field 的近似 —— <strong>没有损失，只有简化</strong>。</p>
+
+<h2><span class="num">§ 04</span>OT 直线 · 为什么 flow matching 推理这么快</h2>
+<p>flow matching 让你自由选概率路径<a class="jr" href="#g-04">4</a>。论文证明<strong>最优传输（OT）路径就是直线</strong>：从每个 x_0 沿直线连到对应的 x_1。</p>
+
+<p>这有个巨大好处 —— 沿直线走 = 速度恒定 = ODE 解析解直接给出 = 推理只要少数几步：</p>
+
+<figure class="ot-fig" id="ot-fig">
+  <figcaption>
+    <span>Fig 03 · 直线 vs 弯路 · 推理步数差几个数量级</span>
+    <span class="fnum">同样 noise → data · 不同路径设计</span>
+  </figcaption>
+
+  <div class="ot-grid">
+    <div class="ot-panel straight">
+      <h5>OT · 直线路径 · Flow Matching 默认</h5>
+      <div class="ot-svg">
+        <svg viewBox="0 0 360 200" preserveAspectRatio="xMidYMid meet">
+          <!-- noise -->
+          <circle cx="30" cy="100" r="20" fill="var(--deep-soft)" stroke="var(--deep)" stroke-width="1.5" stroke-dasharray="3 2"/>
+          <text class="ot-endpoint" x="30" y="160" text-anchor="middle">x_0</text>
+
+          <!-- data -->
+          <circle cx="330" cy="100" r="20" fill="var(--ochre-soft)" stroke="var(--ochre)" stroke-width="1.5"/>
+          <text class="ot-endpoint" x="330" y="160" text-anchor="middle" style="fill:var(--ochre);">x_1</text>
+
+          <!-- straight line -->
+          <path class="ot-line" d="M 50 100 L 310 100"/>
+
+          <!-- 4 step markers along straight line -->
+          <circle class="ot-step" cx="115" cy="100" r="5"/>
+          <circle class="ot-step" cx="180" cy="100" r="5"/>
+          <circle class="ot-step" cx="245" cy="100" r="5"/>
+          <circle class="ot-step" cx="310" cy="100" r="5"/>
+        </svg>
+      </div>
+      <div class="ot-stat">
+        <span class="k">路径长度</span><span class="v win">1.00 单位</span>
+        <span class="k">速度方向</span><span class="v win">恒定 · v = x_1 - x_0</span>
+        <span class="k">推理步数</span><span class="v win">4-20 步</span>
+        <span class="k">每步精度</span><span class="v win">高（直线无折）</span>
+      </div>
+    </div>
+
+    <div class="ot-panel curved">
+      <h5>OU · 弯路（diffusion 默认）</h5>
+      <div class="ot-svg">
+        <svg viewBox="0 0 360 200" preserveAspectRatio="xMidYMid meet">
+          <!-- noise -->
+          <circle cx="30" cy="100" r="20" fill="var(--deep-soft)" stroke="var(--deep)" stroke-width="1.5" stroke-dasharray="3 2"/>
+          <text class="ot-endpoint" x="30" y="160" text-anchor="middle">x_0</text>
+
+          <!-- data -->
+          <circle cx="330" cy="100" r="20" fill="var(--ochre-soft)" stroke="var(--ochre)" stroke-width="1.5"/>
+          <text class="ot-endpoint" x="330" y="160" text-anchor="middle" style="fill:var(--ochre);">x_1</text>
+
+          <!-- curved/zigzag line -->
+          <path class="ot-line" d="M 50 100 C 80 30, 130 170, 170 100 S 240 30, 280 100 L 310 100"/>
+
+          <!-- many step markers along curved line -->
+          <circle class="ot-step" cx="75" cy="60" r="3"/>
+          <circle class="ot-step" cx="95" cy="40" r="3"/>
+          <circle class="ot-step" cx="115" cy="55" r="3"/>
+          <circle class="ot-step" cx="135" cy="95" r="3"/>
+          <circle class="ot-step" cx="150" cy="135" r="3"/>
+          <circle class="ot-step" cx="170" cy="160" r="3"/>
+          <circle class="ot-step" cx="190" cy="120" r="3"/>
+          <circle class="ot-step" cx="215" cy="65" r="3"/>
+          <circle class="ot-step" cx="235" cy="35" r="3"/>
+          <circle class="ot-step" cx="255" cy="55" r="3"/>
+          <circle class="ot-step" cx="270" cy="80" r="3"/>
+          <circle class="ot-step" cx="290" cy="100" r="3"/>
+        </svg>
+      </div>
+      <div class="ot-stat">
+        <span class="k">路径长度</span><span class="v lose">~3.5 单位</span>
+        <span class="k">速度方向</span><span class="v lose">变化 · 需要每步预测</span>
+        <span class="k">推理步数</span><span class="v lose">50-1000 步</span>
+        <span class="k">每步精度</span><span class="v lose">低（弯多 → 误差大）</span>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<div class="note ochre">
+  <span class="l">为什么直线 = 少步</span>
+  <p>ODE 数值积分（如 Euler / RK4）的误差跟<strong>路径曲率</strong>正相关。直线曲率为 0 → 一步走到位也精确。曲线曲率大 → 必须用小步长追踪轨迹，否则跨过弯就跑偏。</p>
+  <p>"少步推理"对部署成本是<strong>巨大优势</strong> —— Stable Diffusion 3 / Flux 转向 flow matching，TML 在 200ms 预算内做实时音频，都靠这个。</p>
+</div>
+
+<h2><span class="num">§ 05</span>Training · 跟 diffusion 比有多简单</h2>
+<p>flow matching 的训练流程跟 diffusion 形式上看着差不多，但<strong>每一步都更直观</strong>：</p>
+
+<figure class="tg-fig" id="tg-fig">
+  <figcaption>
+    <span>Fig 04 · Flow Matching vs Diffusion · 训练步骤对比</span>
+    <span class="fnum">每一步该做什么</span>
+  </figcaption>
+  <div class="tg-grid">
+
+    <div class="tg-panel flow">
+      <h5>Flow Matching · 训练</h5>
+      <div class="tg-step">
+        <span class="label">step 1 · sample</span>
+        采样数据 x_1 ~ data，噪声 x_0 ~ N(0, I)，时间 t ~ U(0, 1)
+      </div>
+      <div class="tg-arrow">↓</div>
+      <div class="tg-step">
+        <span class="label">step 2 · interpolate</span>
+        x_t = (1 - t)·x_0 + t·x_1 · 线性插值
+      </div>
+      <div class="tg-arrow">↓</div>
+      <div class="tg-step">
+        <span class="label">step 3 · forward</span>
+        v_pred = u_θ(x_t, t) · 神经网络预测 velocity
+      </div>
+      <div class="tg-arrow">↓</div>
+      <div class="tg-step final">
+        <span class="label">step 4 · loss</span>
+        L = || v_pred − (x_1 − x_0) ||² · MSE
+      </div>
+      <div class="tg-verdict">→ 4 步 · 直观 · 无 score / 无 SDE</div>
+    </div>
+
+    <div class="tg-panel diff">
+      <h5>Diffusion · 训练 (DDPM)</h5>
+      <div class="tg-step">
+        <span class="label">step 1 · sample</span>
+        采样数据 x_0 ~ data，时间步 t ~ U{1, ..., T}
+      </div>
+      <div class="tg-arrow">↓</div>
+      <div class="tg-step">
+        <span class="label">step 2 · add noise</span>
+        x_t = √(ᾱ_t)·x_0 + √(1 − ᾱ_t)·ε，ε ~ N(0, I) · 加噪
+      </div>
+      <div class="tg-arrow">↓</div>
+      <div class="tg-step">
+        <span class="label">step 3 · forward</span>
+        ε_pred = ε_θ(x_t, t) · 神经网络预测<strong>噪声</strong>（而不是数据）
+      </div>
+      <div class="tg-arrow">↓</div>
+      <div class="tg-step final">
+        <span class="label">step 4 · loss (score matching reparameterized)</span>
+        L = || ε_pred − ε ||² · 等价于学 score / √(1 − ᾱ_t)
+      </div>
+      <div class="tg-verdict">→ 4 步 · 但 step 2/4 需要查 ᾱ_t schedule · 间接</div>
+    </div>
+  </div>
+</figure>
+
+<div class="note">
+  <span class="l">表面相似 · 心智差很多</span>
+  <p>两边训练循环都是 4 步，loss 都是 MSE。<strong>但 flow matching 的 4 步每个都"自然"</strong> —— 你想生成，就学 velocity，就 MSE。Diffusion 的 4 步要先理解"加噪 schedule"、"为什么学噪声等价于学 score"、"为什么 ᾱ_t 是这个形式" —— 工程上多一层认知负担。</p>
+  <p>新人入门 diffusion 至少要看 3 篇 paper + 1 个视频才能写出训练循环。flow matching 只要看公式就能写。这种<strong>"看得懂"</strong>的差异在团队里复利累积。</p>
+</div>
+
+<h2><span class="num">§ 06</span>为什么 TML 选 flow matching 做音频</h2>
+<p>音频生成的特殊性：</p>
+<ul>
+  <li><strong>连续值</strong> · mel spectrogram / waveform 是连续浮点，跟图像类似</li>
+  <li><strong>实时性</strong> · 对话场景要 <strong>≤ 200ms</strong> 出第一段音频</li>
+  <li><strong>端到端联训</strong> · 不想要独立 codec 当中间层（梯度断）</li>
+</ul>
+
+<p>这三个约束筛掉了多数方案：</p>
+
+<ul>
+  <li><strong>RVQ codec + LLM</strong>（fish-speech 路线）· 离散 token 不可微，跨 codec 训练靠 straight-through。质量好但延迟大、不能端到端</li>
+  <li><strong>Diffusion + neural vocoder</strong> · 50+ 步推理，200ms 预算下质量崩</li>
+  <li><strong>Flow matching</strong><a class="jr" href="#g-05">5</a> · OT 直线路径 4-8 步够，连续值端到端可微，正好满足三约束</li>
+</ul>
+
+<p>所以 TML 的音频输出头是 flow matching。这是 paper 工程决策跟数学路线的精确匹配 —— 也对应 wiki 里跨源主题 <a href="../topics/audio-tokenization-rvq-vs-flow.html">audio-tokenization-rvq-vs-flow</a> 的两种哲学<a class="jr" href="#g-12">12</a>。</p>
+
+<h2><span class="num">§ 07</span>历史定位与后续</h2>
+<ul>
+  <li>2020 DDPM · Diffusion 起点 · SDE-based · score matching</li>
+  <li>2021 DDIM · 把 SDE 写成 ODE · 训练仍是 score matching</li>
+  <li>2022-05 Rectified Flow<a class="jr" href="#g-09">9</a> (Liu et al.) · OT 直线路径 · 跟 flow matching 同期独立发现</li>
+  <li>2022-10 <strong>Flow Matching</strong> (Lipman et al.) · 统一框架</li>
+  <li>2023 Stable Diffusion 3<a class="jr" href="#g-10">10</a> · flow matching 应用到 latent diffusion · SOTA 图像生成</li>
+  <li>2024 Flux · 高质量图像 · flow matching</li>
+  <li>2024+ · 音频 / 视频生成大模型大面积转向 flow matching</li>
+</ul>
+
+<div class="note moss">
+  <span class="l">把 flow matching 放进更大叙事</span>
+  <p>整个 ML 历史一直在做一件事：<strong>把不直观的训练目标换成直观的</strong>。</p>
+  <ul style="margin:6px 0; padding-left:20px;">
+    <li><a href="resnet.html">ResNet</a> · 学差量 F(x) = H(x) − x，不直接学 H</li>
+    <li><a href="bert.html">BERT MLM</a> · 学填空，不学纯 LM</li>
+    <li>Flow Matching · 学 velocity，不学 score</li>
+  </ul>
+  <p>每次"换成直观目标"都带来训练稳定 + 调参简单 + 工程上手快。<strong>这是个反复出现的范式</strong><a class="jr" href="#g-11">11</a> —— 永远值得问"我能不能把目标说得更直接？"</p>
+</div>
+
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">"直接说" vs "绕一圈说"</span> · diffusion 的 score matching 是绕一圈：你想生成，先学 ∇log p（log 概率梯度），再用 Tweedie's formula 转成 velocity。flow matching 直接学 velocity。<strong>训练目标 = 你真正想要的东西</strong> 是个永远值得追求的设计原则。</li>
+    <li id="g-02"><span class="term">Velocity field ↔ probability path 1:1 对应</span> · 任何 p_t(x) 都对应唯一一个 v_t(x) 满足连续性方程 ∂p/∂t + ∇·(p·v) = 0。这是物理上的"粒子守恒"约束 —— 流入流出和密度变化平衡。详见 <a href="../concepts/velocity-field.html">velocity-field</a>。</li>
+    <li id="g-03"><span class="term">Conditional vs Marginal Flow Matching loss</span> · marginal velocity field v_t(x) 是对所有可能的 (x_0, x_1) 取期望，intractable。Conditional 给定一个 target x_1，对应 velocity 是简单常数（线性 path 下是 x_1 − x_0）。论文证明两者梯度方向相同 → 学 conditional 等价于学 marginal，但简单得多。详见 <a href="../concepts/conditional-flow-matching.html">conditional-flow-matching</a>。</li>
+    <li id="g-04"><span class="term">概率路径自由</span> · diffusion 限定 OU 过程（高斯加噪 schedule），flow matching 解放这个约束 —— 你可以选任意 p_t。论文证明 OT 路径就是直线。后续工作（Rectified Flow / SD3）证实直线路径是工程最优。详见 <a href="../concepts/probability-path.html">probability-path</a>。</li>
+    <li id="g-05"><span class="term">TML 选 flow matching 而不是 diffusion 的工程原因</span> · 200ms 实时预算下需要 ≤ 8 步 ODE，OT 直线路径正好支持。Diffusion 50+ 步在这预算下质量崩。Flow matching 既满足实时性又能端到端可微跟 transformer 联训。</li>
+    <li id="g-06"><span class="term">Score function · ∇log p(x)</span> · 类比"地形上的上坡方向" —— 一个向量场，每个点指向"概率密度更大的地方"。diffusion 学这个就为了"沿上坡走"生成高密度样本。直接学不行（p 未知），所以绕一圈用 Tweedie's formula 转成"预测加噪样本里的原噪声"。flow matching 完全跳过 score，直接学 velocity。详见 <a href="../concepts/score-function.html">score-function</a>。</li>
+    <li id="g-07"><span class="term">连续性方程 · continuity equation</span> · 物理里 "粒子守恒"的标准方程。意思一句话：<strong>密度的时间变化 = 净流入</strong> —— 粒子既不凭空冒出来也不凭空消失。把它套到 flow matching 上：给定一族 probability path p_t，对应的 velocity field v_t 唯一存在（必须满足这条方程），所以"选 path = 选 velocity"。完整推导 + 三种流场例子见 <a href="../concepts/continuity-equation.html">continuity-equation</a>。</li>
+    <li id="g-08"><span class="term">Tweedie's formula</span> · diffusion 的"魔法转换"。原本你想知道 score（密度梯度），但 score 没法直接学。Tweedie 说：训一个网络<strong>预测加噪样本里的原噪声 ε</strong>，然后通过这个公式 <code>score = -ε_pred / √(1 − ᾱ_t)</code> 就<strong>等价</strong>地拿到了 score。这就是为什么 DDPM loss 是 <code>|| ε_pred − ε ||²</code> 而不是直接 score matching —— 工程上预测 ε 比直接学 score 容易。flow matching 不需要这层间接，直接学速度。</li>
+    <li id="g-09"><span class="term">Rectified Flow · Liu et al. 2022</span> · 跟 flow matching 几乎同期发表（早几个月）。同样押 OT 直线路径思想，提出 "rectification" 技术让路径越来越直。SD3 实际用的是 rectified flow + flow matching 的组合。</li>
+    <li id="g-10"><span class="term">Stable Diffusion 3 · Flux</span> · 2024 SOTA 图像生成。都用 flow matching · latent diffusion 框架。SD3 论文证明 flow matching 比 DDPM 在同模型规模下质量更高、推理更快。Flux 进一步推到高分辨率。</li>
+    <li id="g-11"><span class="term">"训练目标 = 想要的东西" 是反复出现的范式</span> · ResNet 学差量、BERT MLM 学填空、flow matching 学 velocity —— 都是"把不直观的训练目标换成直观的"。每次替换都带来训练稳 + 调参少 + 工程上手快。这是个值得永远问的设计问题。</li>
+    <li id="g-12"><span class="term">RVQ 路线 vs Flow Matching 路线 · 两种音频生成哲学</span> · RVQ codec 把音频离散化给 LLM 当 token（fish-speech），flow matching 让 LLM 直接生成连续音频特征（TML）。前者用 LLM 已有的 next-token 能力，后者用 LLM 的连续表征能力。两种哲学在 2026 仍并存。详见 <a href="../topics/audio-tokenization-rvq-vs-flow.html">audio-tokenization-rvq-vs-flow</a>。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>Authored / Lipman, Chen, Ben-Hamu, Nickel, Le · Meta AI · 2022-10</span>
+  <span>Index / <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+
+<script>
+// ===== Fig 01: flow vs diffusion =====
+{
+  const fig = document.getElementById('fd-fig');
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting) { fig.classList.add('play'); obs.disconnect(); }
+    });
+  }, { threshold: 0.25 });
+  obs.observe(fig);
+}
+
+// ===== Fig 02: velocity field =====
+{
+  const fig = document.getElementById('vf-fig');
+  const arrows = fig.querySelectorAll('.vf-arrow');
+  function animate() {
+    arrows.forEach((a, i) => {
+      setTimeout(() => { a.style.opacity = '0.75'; }, 80 + i * 40);
+    });
+    setTimeout(() => fig.classList.add('play'), 100);
+  }
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting) { animate(); obs.disconnect(); }
+    });
+  }, { threshold: 0.25 });
+  obs.observe(fig);
+}
+
+// ===== Fig 03: OT straight vs curved =====
+{
+  const fig = document.getElementById('ot-fig');
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting) { fig.classList.add('play'); obs.disconnect(); }
+    });
+  }, { threshold: 0.25 });
+  obs.observe(fig);
+}
+
+// ===== Fig 04: training comparison =====
+{
+  const fig = document.getElementById('tg-fig');
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting) { fig.classList.add('play'); obs.disconnect(); }
+    });
+  }, { threshold: 0.25 });
+  obs.observe(fig);
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Bin Quantization · 等距分箱量化 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · bin-quantization</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Bin Quantization · 等距分箱量化</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把连续值（如某个频道的能量）切成 K 个等距 bin，每个值映射到它所在 bin 的索引 —— 1 行 numpy 代码搞定。</p>
+<h2>直觉</h2>
+<p>最简单的"连续 → 离散"方案。比"训 codebook"少了一整层模型。</p>
+<pre><code class="language-python">def bin_quantize(x, vmin, vmax, K):
+    &quot;&quot;&quot;把 x 量化到 K 个 bin&quot;&quot;&quot;
+    return clip((x - vmin) / (vmax - vmin) * K, 0, K-1).astype(int)
+</code></pre>
+<p>K 通常 16-32。dMel 默认 16 个 bin。</p>
+<h2>对比"学出来的 codebook"</h2>
+<p>RVQ codec 干的事：训一个 encoder 把音频编码成向量，找最近的 codebook entry，记下索引。codebook 是<strong>学出来</strong>的（端到端反向传播优化）。</p>
+<p>bin quantization 干的事：把连续值除以 bin 宽度，<strong>查表</strong> bin index。没有学的部分。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>bin quantization</th>
+<th>RVQ codebook</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>训练</td>
+<td>不训</td>
+<td>端到端学</td>
+</tr>
+<tr>
+<td>表达力</td>
+<td>简单</td>
+<td>强</td>
+</tr>
+<tr>
+<td>跨域</td>
+<td>不变</td>
+<td>跟训练域绑</td>
+</tr>
+<tr>
+<td>可解释</td>
+<td>bin 直接对应数值范围</td>
+<td>codebook entry 是黑盒向量</td>
+</tr>
+<tr>
+<td>实现</td>
+<td>1 行</td>
+<td>一个完整模型</td>
+</tr>
+</tbody>
+</table>
+<h2>为什么这么 naive 的方案能 work</h2>
+<p>两个原因：</p>
+<p><strong>1 · 主模型足够强</strong>。当 transformer 大到一定程度，它能从 raw bin index 序列里学到复杂结构 —— 不需要预处理帮它"压缩信息"。</p>
+<p><strong>2 · 信息没丢</strong>。每个 bin 把连续值映射到 K 档，足够表达 mel 频谱的有用变化（实验显示 16 档够用）。RVQ codec 的"额外表达力"在主 LLM 视角下并不重要。</p>
+<p>这跟 BERT 时代每任务一个 head → GPT-3 prompt 就够 是同种现象：<strong>主模型变强后，下游 / 预处理 的复杂度可以塌缩</strong>。</p>
+<h2>它的局限</h2>
+<ul>
+<li><strong>序列变长</strong>：每帧多个 token（dMel 80 个），LLM 上下文长度受限</li>
+<li><strong>vocabulary 小</strong>：80 × 16 = 1280 跟文本 LLM 的 32K-256K 比偏小，可能限制某些任务（特别是长序列建模）</li>
+<li><strong>没有 cross-channel 关系建模</strong>：每个频道独立量化，频道之间的相关性靠主 LLM 学</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/dmel.html">dmel</a> · 提出</li>
+<li><a href="../concepts/log-mel-spectrogram.html">log-mel-spectrogram</a> · 应用的输入</li>
+<li><a href="../concepts/rvq-codec.html">rvq-codec</a> · 对照路线</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/dmel.html"><span class="cat">paper</span>dMel · 离散 Mel 频谱</a></li><li><a href="../concepts/dmel.html"><span class="cat">concept</span>dMel · 离散 Mel 频谱</a></li><li><a href="../concepts/log-mel-spectrogram.html"><span class="cat">concept</span>Log-Mel Spectrogram · 对数 Mel 频谱图</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/bin-quantization.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

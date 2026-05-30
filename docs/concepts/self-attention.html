@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Self-Attention · 自注意力 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · self-attention</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Self-Attention · 自注意力</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>对序列里每个位置，用 Q·Kᵀ/√dₖ 算它跟所有位置的相似度，softmax 当权重，加权求和 V → 输出。</p>
+<h2>直觉</h2>
+<p>"自注意力"的"自"是因为 Q、K、V 都从<strong>同一个序列</strong>生成（cross-attention 是 Q 从一个序列、K/V 从另一个）。</p>
+<p>类比：你读一句话"猫坐在垫子上"，理解"坐"这个字时，你的脑子会<strong>同时看</strong>周围的"猫"和"垫子"判断这是什么场景。自注意力就是把这个"同时看周围"做成显式计算 —— 而且每个 token 都这么干，互相看。</p>
+<h2>怎么做的</h2>
+<p>对每个 token x：</p>
+<pre><code>Q = x · W_Q     # 这个 token 在&quot;问什么&quot;
+K = x · W_K     # 这个 token 提供&quot;什么 key&quot;
+V = x · W_V     # 这个 token 提供&quot;什么 value&quot;
+</code></pre>
+<p>然后整个序列：</p>
+<pre><code>scores  = Q · Kᵀ / √dₖ        # N×N 相似度矩阵
+weights = softmax(scores)      # 行内归一化, 每行 sum=1
+output  = weights · V          # N×dᵥ 加权求和
+</code></pre>
+<p><strong>复杂度</strong>：O(N² · d)。N 维度可并行（GPU 友好）。</p>
+<p><strong>√dₖ 缩放</strong>：dₖ 大时 dot product 数值容易爆 → softmax 进饱和区梯度消失。除 √dₖ 把方差控回 1 量级。</p>
+<h2>跟 RNN attention 的区别</h2>
+<ul>
+<li>Bahdanau 2014 的 attention：作为 RNN 的辅助，给 decoder 看 encoder 输出</li>
+<li>这里：<strong>attention 本身就是层</strong>，没有 RNN</li>
+</ul>
+<h2>重要变种</h2>
+<ul>
+<li><strong>Causal self-attention</strong>：mask 掉未来位置（decoder-only LLM 用这个）</li>
+<li><strong>Cross-attention</strong>：Q 从 decoder，K/V 从 encoder</li>
+<li><strong>Multi-head</strong> (<a href="../concepts/multi-head-attention.html">multi-head-attention</a>)：跑 N 次自注意力，每次用不同投影</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/attention-is-all-you-need.html">attention-is-all-you-need</a> · 论文</li>
+<li><a href="../concepts/multi-head-attention.html">multi-head-attention</a> · 上层扩展</li>
+<li><a href="../concepts/positional-encoding.html">positional-encoding</a> · 解决 attention 无序问题</li>
+<li><a href="../concepts/transformer-architecture.html">transformer-architecture</a> · 整体架构</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 13 处</span>
+  <ul><li><a href="../papers/attention-is-all-you-need.html"><span class="cat">paper</span>Attention Is All You Need · Transformer 始祖</a></li><li><a href="../papers/bert.html"><span class="cat">paper</span>BERT · Bidirectional Encoder Representations from Transformers</a></li><li><a href="../papers/gpt-1.html"><span class="cat">paper</span>GPT-1 · Improving Language Understanding by Generative Pre-Training</a></li><li><a href="../papers/rope.html"><span class="cat">paper</span>RoFormer · Rotary Position Embedding (RoPE)</a></li><li><a href="../concepts/causal-language-model.html"><span class="cat">concept</span>Causal Language Model · CLM · 自回归语言模型</a></li><li><a href="../concepts/encoder-only-paradigm.html"><span class="cat">concept</span>Encoder-Only Paradigm · 编码器路线</a></li><li><a href="../concepts/masked-language-model.html"><span class="cat">concept</span>Masked Language Model · MLM</a></li><li><a href="../concepts/multi-head-attention.html"><span class="cat">concept</span>Multi-Head Attention · 多头注意力</a></li><li><a href="../concepts/positional-encoding.html"><span class="cat">concept</span>Positional Encoding · 位置编码</a></li><li><a href="../concepts/relative-position-encoding.html"><span class="cat">concept</span>Relative Position Encoding · 相对位置编码</a></li><li><a href="../concepts/rotary-position-embedding.html"><span class="cat">concept</span>Rotary Position Embedding · RoPE · 旋转位置编码</a></li><li><a href="../concepts/sparse-attention.html"><span class="cat">concept</span>Sparse Attention · 稀疏注意力</a></li><li><a href="../concepts/transformer-architecture.html"><span class="cat">concept</span>Transformer Architecture · 整体架构</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/self-attention.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>
