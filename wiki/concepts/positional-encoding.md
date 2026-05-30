@@ -1,8 +1,8 @@
 ---
 name: positional-encoding
 type: concept
-sources: [attention-is-all-you-need, rope]
-updated: 2026-05-20
+sources: [attention-is-all-you-need, rope, vit]
+updated: 2026-05-28
 ---
 
 # Positional Encoding · 位置编码

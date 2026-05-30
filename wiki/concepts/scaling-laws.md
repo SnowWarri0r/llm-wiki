@@ -1,8 +1,8 @@
 ---
 name: scaling-laws
 type: concept
-sources: [gpt-3]
-updated: 2026-05-21
+sources: [gpt-3, vit]
+updated: 2026-05-28
 ---
 
 # Scaling Laws · 模型 size 跟 loss 的经验公式

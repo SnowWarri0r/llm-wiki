@@ -1,8 +1,8 @@
 ---
 name: self-attention
 type: concept
-sources: [attention-is-all-you-need]
-updated: 2026-05-20
+sources: [attention-is-all-you-need, vit]
+updated: 2026-05-28
 ---
 
 # Self-Attention · 自注意力
