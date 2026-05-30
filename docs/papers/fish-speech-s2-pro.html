@@ -1,0 +1,1797 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Fish-Speech S2 Pro · 中文讲解</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f0e9d6;
+    --paper-2: #e8e0c8;
+    --ink: #181410;
+    --ink-2: #3a3128;
+    --muted: #7a6f5d;
+    --rule: #bfb398;
+    --brick: #9b2c2c;
+    --brick-soft: #efd6c8;
+    --ochre: #b8841c;
+    --ochre-soft: #f0e0a8;
+    --moss: #4a6b3a;
+    --moss-soft: #d8e6ce;
+    --paper-card: #f7f1de;
+    --deep: #1f3a4d;
+    --deep-soft: #cfdde6;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif;
+    font-size: 18px;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(31,58,77,0.030) 0%, transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(155,44,44,0.022) 0%, transparent 40%);
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.045 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+    mix-blend-mode: multiply; opacity: 0.5;
+  }
+
+  .progress { position: fixed; top: 0; left: 0; right: 0; height: 3px; background: transparent; z-index: 1000; }
+  .progress-bar { height: 100%; background: var(--brick); width: 0%; transition: width 0.1s ease; }
+
+  .page {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 56px 32px 160px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 240px;
+    gap: 48px;
+    align-items: start;
+  }
+  .col-main { min-width: 0; }
+  .col-side { font-size: 13px; line-height: 1.6; color: var(--ink-2); }
+  .col-side .pin {
+    border-left: 2px solid var(--deep);
+    padding: 4px 0 4px 12px;
+    margin: 0 0 16px;
+  }
+  .col-side .pin-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--deep); font-weight: 700; display: block; margin-bottom: 4px;
+  }
+  .col-side .pin code {
+    background: var(--paper-2); padding: 1px 5px; border-radius: 2px; font-size: 11.5px;
+  }
+  @media (max-width: 900px) {
+    .page { grid-template-columns: 1fr; gap: 0; padding: 32px 20px 80px; }
+    .col-side { display: none; }
+  }
+
+  .masthead {
+    border-top: 4px double var(--ink);
+    border-bottom: 1px solid var(--rule);
+    padding: 14px 0;
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--ink-2);
+    margin-bottom: 56px;
+  }
+  .masthead .l { font-weight: 700; }
+  .masthead .r { color: var(--muted); }
+
+  .hero { margin-bottom: 72px; }
+  .hero .issue {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--brick); font-weight: 700;
+    margin-bottom: 18px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+  h1.title {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1;
+    font-weight: 700;
+    font-size: clamp(56px, 9vw, 112px);
+    line-height: 0.92;
+    letter-spacing: -0.035em;
+    margin: 0 0 8px;
+    color: var(--ink);
+  }
+  h1.title .em {
+    font-style: italic;
+    font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+    color: var(--brick);
+  }
+  .hero .dek {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-variation-settings: "opsz" 36;
+    font-style: italic;
+    font-weight: 300;
+    font-size: clamp(20px, 2.2vw, 28px);
+    line-height: 1.4;
+    color: var(--ink-2);
+    max-width: 720px;
+    margin: 28px 0 24px;
+  }
+  .hero .bylines {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    display: flex; gap: 24px; flex-wrap: wrap;
+  }
+  .hero .bylines a { color: var(--brick); text-decoration: none; border-bottom: 1px dotted; }
+
+  p.lede {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-variation-settings: "opsz" 24;
+    font-weight: 400;
+    font-size: 20px;
+    line-height: 1.6;
+    color: var(--ink);
+    margin: 28px 0;
+  }
+  p.lede strong { font-weight: 600; }
+
+  /* drop cap on the first paragraph of section 01 */
+  #thesis + p::first-letter {
+    font-family: 'Fraunces', serif;
+    font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1;
+    font-weight: 700;
+    font-size: 76px;
+    float: left;
+    line-height: 0.85;
+    padding: 8px 12px 0 0;
+    color: var(--brick);
+  }
+
+  h2 {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1;
+    font-weight: 700;
+    font-size: clamp(34px, 4vw, 48px);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin: 80px 0 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    display: flex; align-items: baseline; gap: 18px;
+    flex-wrap: wrap;
+  }
+  h2 .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--brick); font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  h3 {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-weight: 600; font-size: 24px;
+    margin: 32px 0 10px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  h3 .small-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); font-weight: 700;
+  }
+
+  p { margin: 14px 0; }
+  strong { color: var(--ink); font-weight: 600; }
+  em { color: var(--ink-2); }
+
+  ul, ol { padding-left: 26px; margin: 12px 0; }
+  li { margin: 8px 0; }
+
+  a { color: var(--brick); text-decoration: none; border-bottom: 1px dotted rgba(155,44,44,0.5); }
+  a:hover { color: var(--ink); border-bottom-style: solid; }
+
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.88em;
+    background: var(--paper-2); padding: 1px 6px; border-radius: 3px;
+    color: var(--ink-2);
+  }
+  pre {
+    background: #1c1814; color: #e8dfc8;
+    padding: 18px 22px; border-radius: 4px; overflow-x: auto;
+    font-size: 13px; line-height: 1.7;
+    border-left: 3px solid var(--brick);
+    margin: 18px 0;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+
+  /* ===== TOC ===== */
+  .toc {
+    margin: 48px 0;
+    padding: 24px 0;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .toc-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); font-weight: 700;
+    display: block; margin-bottom: 12px;
+  }
+  .toc ol { list-style: none; padding: 0; margin: 0; counter-reset: toc; }
+  .toc ol li {
+    counter-increment: toc;
+    display: flex; gap: 12px; align-items: baseline;
+    padding: 4px 0;
+  }
+  .toc-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--brick); font-weight: 700;
+    min-width: 24px;
+  }
+  .toc a {
+    color: var(--ink); border-bottom: none;
+    flex: 1; font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-size: 17px; font-weight: 500;
+  }
+  .toc a:hover { color: var(--brick); }
+  .toc-hint {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted);
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+
+  /* ===== notes ===== */
+  .note {
+    background: var(--paper-card);
+    border-left: 3px solid var(--ochre);
+    padding: 14px 20px;
+    margin: 22px 0;
+    border-radius: 0 4px 4px 0;
+  }
+  .note.deep { border-left-color: var(--deep); }
+  .note.moss { border-left-color: var(--moss); background: var(--moss-soft); }
+  .note.brick { border-left-color: var(--brick); background: var(--brick-soft); }
+  .note p { margin: 6px 0; }
+  .note .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--ochre); font-weight: 700;
+    display: block; margin-bottom: 6px;
+  }
+  .note.deep .label { color: var(--deep); }
+  .note.moss .label { color: var(--moss); }
+  .note.brick .label { color: var(--brick); }
+
+  /* ===== jargon ===== */
+  .jr {
+    background: linear-gradient(to top, var(--ochre-soft) 0%, var(--ochre-soft) 30%, transparent 30%);
+    padding: 0 3px;
+    border-bottom: 1px dotted var(--ochre);
+    color: inherit; text-decoration: none;
+    cursor: pointer; font-style: normal;
+    transition: background 0.18s ease;
+  }
+  a.jr:hover {
+    background: linear-gradient(to top, var(--brick-soft) 0%, var(--brick-soft) 60%, transparent 60%);
+    border-bottom-color: var(--brick);
+  }
+  a.jr:focus { outline: 2px solid var(--brick); outline-offset: 2px; }
+  .jr sup {
+    color: var(--brick); font-weight: 700; font-size: 0.7em;
+    font-family: 'JetBrains Mono', monospace;
+    margin-left: 1px;
+  }
+  .gloss-item:target {
+    background: var(--brick-soft);
+    box-shadow: inset 4px 0 0 var(--brick);
+    animation: glossPulse 1.4s ease-out;
+  }
+  @keyframes glossPulse {
+    0%   { background: var(--ochre); }
+    40%  { background: var(--ochre-soft); }
+    100% { background: var(--brick-soft); }
+  }
+
+  /* ===== figures ===== */
+  figure { margin: 32px 0 40px; padding: 0; }
+  .fig-head {
+    display: flex; align-items: baseline; gap: 14px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 6px;
+  }
+  .fig-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--brick); font-weight: 700;
+  }
+  .fig-title {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-weight: 600; font-size: 16px; color: var(--ink);
+  }
+  figcaption {
+    font-size: 13.5px; color: var(--ink-2);
+    margin-top: 14px; line-height: 1.6;
+    padding-left: 12px; border-left: 1px solid var(--rule);
+  }
+  .ctrls { margin-top: 14px; display: flex; gap: 10px; }
+  .btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    background: transparent; border: 1px solid var(--ink);
+    padding: 6px 14px; cursor: pointer; color: var(--ink);
+    transition: all 0.15s;
+  }
+  .btn:hover { background: var(--ink); color: var(--paper); }
+  .btn.primary { background: var(--brick); color: var(--paper); border-color: var(--brick); }
+  .btn.primary:hover { background: var(--ink); border-color: var(--ink); }
+
+  /* ===== Fig 1 · Dual-AR data flow ===== */
+  .ar-frame {
+    background: var(--paper); padding: 28px 24px; border: 1px solid var(--rule);
+  }
+  .ar-grid {
+    display: grid;
+    grid-template-columns: 90px repeat(5, 1fr);
+    gap: 12px;
+    align-items: center;
+  }
+  .ar-row-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--ink-2); font-weight: 700;
+  }
+  .ar-row-label .sub {
+    display: block; font-size: 9px; color: var(--muted); font-weight: 400;
+    letter-spacing: 1px; margin-top: 2px;
+  }
+  .ar-frame-col {
+    border: 1px dashed var(--rule);
+    background: var(--paper-card);
+    padding: 8px 6px;
+    min-height: 48px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    border-radius: 2px;
+  }
+  .ar-frame-col .frame-tag {
+    position: absolute; top: -10px; left: 4px;
+    background: var(--paper); padding: 0 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 1px; color: var(--muted);
+  }
+  .ar-tok {
+    display: inline-block;
+    margin: 1px;
+    opacity: 0;
+    transform: scale(0.6);
+    transition: opacity 0.3s, transform 0.3s cubic-bezier(0.22,1.4,0.36,1);
+  }
+  .ar-tok.on { opacity: 1; transform: scale(1); }
+  .ar-tok.slow {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--brick);
+    box-shadow: 0 0 0 2px var(--brick-soft);
+  }
+  .ar-tok.fast {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--ochre);
+  }
+  .ar-fast-row { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; align-items: center; }
+  .ar-audio {
+    height: 26px; background: var(--paper);
+    border: 1px solid var(--rule);
+    background-image: linear-gradient(to right, transparent, transparent);
+    position: relative; overflow: hidden;
+    opacity: 0; transition: opacity 0.3s ease;
+  }
+  .ar-audio.on { opacity: 1; }
+  .ar-audio::before {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg,
+      var(--deep) 0%, var(--deep-soft) 25%, var(--deep) 50%, var(--deep-soft) 75%, var(--deep) 100%);
+    background-size: 200% 100%;
+    animation: wave 2s linear infinite;
+    opacity: 0.7;
+  }
+  @keyframes wave {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 200% 0%; }
+  }
+
+  /* ===== Fig 2 · RVQ residual quantization (mechanism view) ===== */
+  .rvq-frame {
+    background: var(--paper); padding: 28px 24px; border: 1px solid var(--rule);
+  }
+  .rq-step {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 18px;
+    align-items: start;
+    padding: 12px 0;
+  }
+  .rq-step + .rq-step { border-top: 1px dashed var(--rule); }
+  .rq-step.input-row { background: linear-gradient(to right, var(--paper-card), transparent); }
+  .rq-step.final-row { background: linear-gradient(to right, var(--moss-soft), transparent); }
+  .rq-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--brick); font-weight: 700;
+    padding-top: 4px;
+  }
+  .rq-label .sub {
+    display: block; font-size: 9px; color: var(--muted);
+    font-weight: 400; margin-top: 3px; letter-spacing: 1px;
+  }
+  .rq-body { min-width: 0; }
+  .rq-cap {
+    font-size: 13px; color: var(--ink-2);
+    margin-bottom: 8px; font-family: 'Newsreader', serif; line-height: 1.5;
+  }
+  .rq-codebook {
+    display: flex; gap: 3px; margin: 8px 0;
+    align-items: center; flex-wrap: wrap;
+  }
+  .rq-cb-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--muted);
+    margin-right: 6px; letter-spacing: 1px;
+  }
+  .rq-codebook .cell {
+    width: 22px; height: 22px;
+    background: var(--paper-2); border: 1px solid var(--rule);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-size: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    opacity: 0; transform: scale(0.6);
+    transition: opacity 0.25s, transform 0.25s, background 0.35s, border-color 0.35s, color 0.35s;
+  }
+  .rq-codebook .cell.shown { opacity: 1; transform: scale(1); }
+  .rq-codebook .cell.picked {
+    background: var(--brick); color: var(--paper); border-color: var(--brick);
+    box-shadow: 0 0 0 2px var(--brick-soft), 0 0 0 3px var(--brick);
+    font-weight: 700;
+  }
+  .rq-row {
+    display: grid;
+    grid-template-columns: 130px 1fr 80px;
+    gap: 10px; align-items: center;
+    margin: 4px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+  .rq-row-name {
+    color: var(--ink-2); text-align: right;
+    line-height: 1.3;
+  }
+  .rq-row-name .sym { font-weight: 700; color: var(--ink); font-size: 13px; }
+  .rq-row-name .note { color: var(--muted); font-size: 10px; }
+  .rq-bar-track {
+    height: 14px; background: var(--paper-2);
+    border: 1px solid var(--rule); position: relative;
+  }
+  .rq-bar {
+    position: absolute; top: 0; bottom: 0; left: 0; width: 0;
+    transition: width 0.55s cubic-bezier(0.22,1,0.36,1);
+  }
+  .rq-bar.input { background: var(--deep); }
+  .rq-bar.quant { background: var(--brick); }
+  .rq-bar.resid { background: repeating-linear-gradient(45deg, var(--ochre) 0 4px, var(--ochre-soft) 4px 8px); }
+  .rq-bar.recon { background: var(--moss); }
+  .rq-mag {
+    font-size: 11px; color: var(--ink); font-weight: 700;
+    text-align: left;
+    opacity: 0; transition: opacity 0.3s ease;
+  }
+  .rq-mag.on { opacity: 1; }
+  .rq-arrow {
+    margin: 4px 0 4px 100px;
+    padding: 4px 0 4px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted); letter-spacing: 1px;
+    border-left: 2px dashed var(--rule);
+  }
+  .rq-ellipsis {
+    padding: 14px 100px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--muted); letter-spacing: 1px;
+    text-align: center;
+    border-top: 1px dashed var(--rule);
+    border-bottom: 1px dashed var(--rule);
+    margin: 4px 0;
+  }
+  .rq-tokens {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; color: var(--ink-2);
+    padding: 8px 12px; background: var(--paper); border-left: 3px solid var(--moss);
+    margin: 6px 0;
+  }
+  .rq-tokens .tk { color: var(--brick); font-weight: 700; padding: 0 2px; }
+
+  /* ===== Fig 2 · Neural Codec overview ===== */
+  .nc-frame { background: var(--paper); padding: 28px 24px; border: 1px solid var(--rule); }
+  .nc-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: stretch;
+  }
+  .nc-col { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+  .nc-stage {
+    text-align: center;
+    padding: 10px 12px;
+    background: var(--paper-card);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    opacity: 0; transform: translateY(6px);
+    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22,1,0.36,1);
+  }
+  .nc-stage.on { opacity: 1; transform: translateY(0); }
+  .nc-stage.box { background: var(--brick-soft); border-color: var(--brick); }
+  .nc-stage .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--ink); font-weight: 700;
+    display: block;
+  }
+  .nc-stage .meta {
+    font-size: 11px; color: var(--muted); margin-top: 4px;
+    font-family: 'Newsreader', serif;
+    display: block;
+  }
+  .nc-wave { width: 100%; height: 36px; margin: 4px 0; display: block; }
+  .nc-arrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px; color: var(--muted);
+    text-align: center;
+    opacity: 0; transition: opacity 0.3s ease;
+  }
+  .nc-arrow.on { opacity: 1; }
+  .nc-vec {
+    display: flex; gap: 4px; justify-content: center; align-items: center;
+    padding: 6px 0;
+  }
+  .nc-vec .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--deep);
+  }
+  .nc-vec .vmeta {
+    margin-left: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted); letter-spacing: 1px;
+  }
+  .nc-codebook-zone {
+    grid-column: 1 / -1;
+    margin-top: 12px;
+    padding: 16px 18px;
+    background: var(--ochre-soft);
+    border: 2px solid var(--ochre);
+    border-radius: 2px;
+    opacity: 0; transform: translateY(6px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .nc-codebook-zone.on { opacity: 1; transform: translateY(0); }
+  .nc-codebook-zone .cz-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--ochre); font-weight: 700;
+    text-align: center; margin-bottom: 8px;
+  }
+  .nc-cb-row {
+    display: flex; justify-content: center; gap: 4px; flex-wrap: wrap;
+    padding: 6px 0;
+  }
+  .nc-cb-row .cell {
+    width: 26px; height: 26px;
+    background: var(--paper); border: 1px solid var(--ochre);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--ink-2);
+    transition: background 0.35s, border-color 0.35s, color 0.35s, transform 0.35s, box-shadow 0.35s;
+  }
+  .nc-cb-row .cell.picked {
+    background: var(--brick); color: var(--paper); border-color: var(--brick);
+    transform: scale(1.18);
+    box-shadow: 0 0 0 2px var(--brick-soft);
+    font-weight: 700;
+  }
+  .nc-cz-meta {
+    font-size: 12px; color: var(--ink-2); text-align: center;
+    margin-top: 8px; font-family: 'Newsreader', serif; line-height: 1.5;
+  }
+  .nc-cz-meta strong { color: var(--brick); }
+  .nc-token-row {
+    grid-column: 1 / -1;
+    text-align: center;
+    margin-top: 4px;
+    opacity: 0; transition: opacity 0.4s ease;
+  }
+  .nc-token-row.on { opacity: 1; }
+  .nc-token-row .token-pill {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px; font-weight: 700;
+    background: var(--ink); color: var(--paper);
+    padding: 6px 16px; border-radius: 2px;
+    letter-spacing: 1px;
+  }
+  .nc-token-row .token-pill .v { color: var(--ochre); }
+  .nc-token-row .token-note {
+    display: block; margin-top: 8px;
+    font-size: 11px; color: var(--muted);
+    font-family: 'JetBrains Mono', monospace; letter-spacing: 1px;
+  }
+  @media (max-width: 700px) {
+    .nc-grid { grid-template-columns: 1fr; }
+    .nc-codebook-zone { grid-column: 1; }
+    .nc-token-row { grid-column: 1; }
+  }
+
+  /* ===== Fig 3 · GRPO group sampling ===== */
+  .grpo-frame {
+    background: var(--paper); padding: 24px; border: 1px solid var(--rule);
+  }
+  .grpo-prompt {
+    background: var(--ink); color: var(--paper);
+    padding: 10px 16px; font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing: 0.5px;
+    border-radius: 2px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .grpo-prompt .tag {
+    font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--ochre); font-weight: 700;
+  }
+  .grpo-group {
+    margin: 16px 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  .grpo-sample {
+    background: var(--paper-card);
+    border: 1px solid var(--rule);
+    padding: 10px 12px;
+    border-radius: 2px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.35s, transform 0.35s cubic-bezier(0.22,1,0.36,1), background 0.4s ease, border-color 0.4s ease;
+  }
+  .grpo-sample.on { opacity: 1; transform: translateY(0); }
+  .grpo-sample.win {
+    background: var(--moss-soft); border-color: var(--moss);
+  }
+  .grpo-sample.lose {
+    background: var(--brick-soft); border-color: var(--brick); opacity: 0.55;
+  }
+  .grpo-sample .sname {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1px; color: var(--muted); font-weight: 700;
+  }
+  .grpo-sample .sr {
+    font-family: 'Fraunces', serif;
+    font-size: 22px; font-weight: 700; line-height: 1; color: var(--ink);
+    margin: 4px 0 2px;
+  }
+  .grpo-sample .sadv {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--ink-2); letter-spacing: 1px;
+    opacity: 0; transition: opacity 0.4s ease;
+  }
+  .grpo-sample.scored .sadv { opacity: 1; }
+  .grpo-stats {
+    display: flex; justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--muted); letter-spacing: 1px;
+    border-top: 1px dashed var(--rule);
+    padding-top: 8px; margin-top: 8px;
+    opacity: 0; transition: opacity 0.4s ease;
+  }
+  .grpo-stats.on { opacity: 1; }
+
+  /* ===== Fig 4 · Benchmark bars ===== */
+  .bench-name {
+    font-family: 'Fraunces', 'Noto Serif SC', serif;
+    font-weight: 600; font-size: 15px;
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin: 14px 0 6px;
+    padding-bottom: 4px; border-bottom: 1px dotted var(--rule);
+  }
+  .bench-name .desc {
+    font-family: 'Newsreader', serif; font-style: italic; font-weight: 400;
+    font-size: 12px; color: var(--muted);
+  }
+  .bench-row {
+    display: grid; grid-template-columns: 140px 1fr 70px; gap: 12px;
+    align-items: center; margin: 6px 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .bench-who {
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--ink-2); font-weight: 700;
+  }
+  .bench-track {
+    height: 18px; background: var(--paper); border: 1px solid var(--rule); position: relative;
+  }
+  .bench-bar {
+    position: absolute; top: 0; bottom: 0; left: 0; width: 0;
+    transition: width 1.3s cubic-bezier(0.22,1,0.36,1);
+  }
+  .bench-bar.s2 { background: var(--brick); }
+  .bench-bar.other {
+    background: repeating-linear-gradient(135deg, var(--muted), var(--muted) 4px, transparent 4px, transparent 8px);
+    background-color: var(--paper-2);
+  }
+  .bench-bar.win { background: var(--moss); }
+  .bench-val { font-size: 12px; font-weight: 700; color: var(--ink); text-align: right; }
+
+  /* ===== glossary ===== */
+  .glossary { margin-top: 80px; padding-top: 24px; border-top: 4px double var(--ink); }
+  .glossary h2 { margin-top: 16px; }
+  .gloss-grid {
+    display: grid; grid-template-columns: 1fr; gap: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .gloss-item {
+    padding: 18px 0;
+    border-bottom: 1px solid var(--rule);
+    display: grid;
+    grid-template-columns: 36px 200px 1fr;
+    gap: 16px;
+    align-items: baseline;
+  }
+  .gloss-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--brick); font-weight: 700;
+  }
+  .gloss-term {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px; font-weight: 700; color: var(--ink);
+  }
+  .gloss-def { font-size: 15.5px; line-height: 1.6; color: var(--ink-2); }
+  .gloss-def code { font-size: 12.5px; }
+  @media (max-width: 700px) {
+    .gloss-item { grid-template-columns: 28px 1fr; }
+    .gloss-term { grid-column: 2; }
+    .gloss-def { grid-column: 1 / -1; padding-left: 28px; }
+  }
+
+  .colophon {
+    margin-top: 80px;
+    padding-top: 20px;
+    border-top: 4px double var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted); letter-spacing: 1px;
+    line-height: 1.7;
+  }
+
+  /* tables */
+  table { width: 100%; border-collapse: collapse; margin: 22px 0; font-size: 14.5px; background: var(--paper-card); }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--rule); }
+  th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--brick); font-weight: 700;
+    border-bottom: 2px solid var(--ink);
+  }
+  td.num { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--brick); }
+
+
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · fish-speech-s2-pro</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+
+<div class="page">
+<div class="col-main">
+
+<div class="masthead">
+  <span class="l">Connectionism · 中文讲解</span>
+  <span class="r">VOL. 02 · 2026 / 05 / 20</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 语音 / 多语言 TTS</div>
+  <h1 class="title">Fish-Speech<br /><span class="em">S2 Pro.</span></h1>
+  <p class="dek">把高保真 TTS 做成跟标准 LLM 同构 —— 一篇带架构图与术语注解的中文解读。</p>
+  <div class="bylines">
+    <span>原文 / Fish Audio</span>
+    <span><a href="https://fish.audio/blog/fish-audio-open-sources-s2/" target="_blank">fish.audio →</a></span>
+    <span><a href="https://arxiv.org/abs/2603.08823" target="_blank">arxiv →</a></span>
+    <span>讲解 / Claude</span>
+  </div>
+</section>
+
+<p class="lede">TTS 行业过去 5 年的命题一直是同一道不可能三角：<strong>音质要高 ↔ 模型要大 ↔ 推理要快</strong>。fish-speech S2 的招数是把音频生成做成跟标准 LLM 结构上同构 —— 一旦同构，所有 LLM 推理基建白嫖；分两层 AR 把高采样率 token 流的成本降下来。这是一篇把 Dual-AR / RVQ / GRPO 三件套讲清楚的中文版，配三张可播放的动画图，加一份术语词典。</p>
+
+<div class="toc">
+  <span class="toc-label">contents · 目录</span>
+  <ol>
+    <li><span class="toc-num">01</span><a href="#thesis">不可能三角</a><span class="toc-hint">问题诊断</span></li>
+    <li><span class="toc-num">02</span><a href="#dualar">Dual-AR · 慢 + 快</a><span class="toc-hint">配图 · 数据流</span></li>
+    <li><span class="toc-num">03</span><a href="#rvq">RVQ · 10 层残差量化</a><span class="toc-hint">配图 · 层叠加</span></li>
+    <li><span class="toc-num">04</span><a href="#grpo">GRPO · 组相对 RL</a><span class="toc-hint">配图 · 组采样</span></li>
+    <li><span class="toc-num">05</span><a href="#streaming">推理工程</a><span class="toc-hint">TTFA / RTF</span></li>
+    <li><span class="toc-num">06</span><a href="#controls">控制与多语言</a><span class="toc-hint">tag / 80+ 语言</span></li>
+    <li><span class="toc-num">07</span><a href="#bench">Benchmark</a><span class="toc-hint">配图 · 条形</span></li>
+    <li><span class="toc-num">08</span><a href="#takeaway">个人解读</a><span class="toc-hint">能拿走什么</span></li>
+    <li><span class="toc-num">▼</span><a href="#glossary">术语词典</a><span class="toc-hint">所有专有名词</span></li>
+  </ol>
+</div>
+
+<!-- ============ 01 ============ -->
+<h2 id="thesis"><span class="num">§ 01 · the bottleneck</span>不可能三角</h2>
+
+<p>第三代 TTS（神经声学 + vocoder pipeline）的标准做法是把"说话"切成三段独立模型：<strong>phonemizer</strong>（文本 → 音素）→ <strong>声学模型</strong>（音素 → mel 频谱）→ <strong>vocoder</strong>（频谱 → 波形）。每段单独训练，对齐靠规则，三段都受限于上下两端的接口。</p>
+
+<p>第四代是 <a class="jr" href="#g-04">neural codec<sup>4</sup></a> + LLM 路线（VALL-E / Voicebox / XTTS / fish-speech 都在此列）：</p>
+
+<ul>
+  <li><strong>codec</strong>：可学的"音频压缩器"，把 waveform 压成离散 token 序列</li>
+  <li><strong>LLM</strong>：transformer 在 token 序列上做自回归</li>
+  <li><strong>解码</strong>：codec 反推 waveform</li>
+</ul>
+
+<p>这条路漂亮在<strong>端到端可微 + 跟文本 LLM 结构一致</strong>，但有个根本矛盾叫"不可能三角"：</p>
+
+<table>
+  <thead><tr><th>维度</th><th>想要</th><th>代价</th></tr></thead>
+  <tbody>
+    <tr><td>音质</td><td>高保真</td><td>codec 帧率高 → token rate 高（每秒上千 token）</td></tr>
+    <tr><td>容量</td><td>大模型</td><td>每 token 要过的参数多</td></tr>
+    <tr><td>速度</td><td>实时 / 流式</td><td>token_rate × params = 单帧计算量，必须 &lt; 实时</td></tr>
+  </tbody>
+</table>
+
+<p>三个全要 = 现实里推不动。第四代 TTS 团队各自的招数其实都在这三角里找妥协点。fish-speech S2 的解法：<strong>分两层 AR</strong>，把"大模型每帧只算一次，小模型每帧算多次" —— 见下一节。</p>
+
+<div class="note">
+  <span class="label">背景 · 为什么不用 diffusion</span>
+  <p>diffusion-based TTS（Voicebox / NaturalSpeech 3 等）走的是连续路径：模型不预测离散 token 而是学一个速度场，多步采样到目标 mel。质量天花板高，但<strong>推理要 ODE 求解 N 步</strong>，难做到极低 TTFA（首音延迟）。codec + AR 路线推一步出一帧，延迟可控 —— 这是 fish-speech 选 AR 而不是 flow matching 的关键工程取舍。</p>
+</div>
+
+<!-- ============ 02 ============ -->
+<h2 id="dualar"><span class="num">§ 02 · the core trick</span>Dual-AR · 慢 + 快</h2>
+
+<p>S2 用了一个<strong>主从两层</strong>的自回归结构：</p>
+
+<ul>
+  <li><strong>慢 AR (4B)</strong> · 沿时间轴每帧吐 <strong>1 个</strong>主语义 codebook —— 决定这一帧"说什么"</li>
+  <li><strong>快 AR (400M)</strong> · 在同一帧上顺序吐 <strong>9 个</strong>残差 codebook —— 决定"怎么发"（音色 / 咬字 / 气声）</li>
+</ul>
+
+<p>RVQ codec 把音频压成 10 路 codebook、~21 Hz 帧率（约 <strong>47ms 一帧</strong>）。慢 AR 算少次但算重；快 AR 算多次但便宜。乘下来推理预算守得住。下图把这个时序展开看：</p>
+
+<figure>
+  <div class="fig-head">
+    <span class="fig-label">Fig. 01</span>
+    <span class="fig-title">Dual-AR 数据流 · 5 个连续帧</span>
+  </div>
+
+  <div class="ar-frame">
+    <div class="ar-grid">
+      <div class="ar-row-label">Slow AR <span class="sub">4B · 1×/帧</span></div>
+      <div class="ar-frame-col"><span class="frame-tag">frame 0</span><span class="ar-tok slow" data-frame="0"></span></div>
+      <div class="ar-frame-col"><span class="frame-tag">frame 1</span><span class="ar-tok slow" data-frame="1"></span></div>
+      <div class="ar-frame-col"><span class="frame-tag">frame 2</span><span class="ar-tok slow" data-frame="2"></span></div>
+      <div class="ar-frame-col"><span class="frame-tag">frame 3</span><span class="ar-tok slow" data-frame="3"></span></div>
+      <div class="ar-frame-col"><span class="frame-tag">frame 4</span><span class="ar-tok slow" data-frame="4"></span></div>
+
+      <div class="ar-row-label">Fast AR <span class="sub">400M · 9×/帧</span></div>
+      <div class="ar-frame-col"><div class="ar-fast-row" data-frame="0"></div></div>
+      <div class="ar-frame-col"><div class="ar-fast-row" data-frame="1"></div></div>
+      <div class="ar-frame-col"><div class="ar-fast-row" data-frame="2"></div></div>
+      <div class="ar-frame-col"><div class="ar-fast-row" data-frame="3"></div></div>
+      <div class="ar-frame-col"><div class="ar-fast-row" data-frame="4"></div></div>
+
+      <div class="ar-row-label">RVQ Decoder <span class="sub">10 → waveform</span></div>
+      <div class="ar-audio" data-frame="0"></div>
+      <div class="ar-audio" data-frame="1"></div>
+      <div class="ar-audio" data-frame="2"></div>
+      <div class="ar-audio" data-frame="3"></div>
+      <div class="ar-audio" data-frame="4"></div>
+    </div>
+  </div>
+
+  <div class="ctrls">
+    <button class="btn primary" onclick="playAR()">▷ play data flow</button>
+    <button class="btn" onclick="resetAR()">reset</button>
+  </div>
+
+  <figcaption>每一列是一个 ~47ms 的帧。先看一个帧内：<strong>砖红大圆</strong>是慢 AR 一次性吐出的<a class="jr" href="#g-05">主语义 codebook<sup>5</sup></a>；之后<strong>9 个土黄小圆</strong>是快 AR 顺序吐出的残差 codebook（layer 2~10）。10 个 token 进 <a class="jr" href="#g-03">RVQ codec<sup>3</sup></a> decoder 出一段 47ms 音频（底排蓝色波形）。下一帧重复。整段语音 = 帧序列。</figcaption>
+</figure>
+
+<div class="note brick">
+  <span class="label">关键工程取舍 · 跟 LLM 同构</span>
+  <p>慢 AR 和快 AR 都是 <strong>decoder-only transformer</strong>，跟标准 LLM 结构上一致。这意味着 <a class="jr" href="#g-09">SGLang<sup>9</sup></a> 的全部推理优化（<a class="jr" href="#g-08">paged KV cache<sup>8</sup></a> / <a class="jr" href="#g-10">RadixAttention<sup>10</sup></a> / <a class="jr" href="#g-11">CUDA graph<sup>11</sup></a> / continuous batching）<strong>直接复用，不用 codec-aware 自研推理栈</strong>。这是 fish-speech 速度上能甩开其他第四代 TTS 的根本原因之一。</p>
+</div>
+
+<!-- ============ 03 ============ -->
+<h2 id="rvq"><span class="num">§ 03 · the codec</span>Neural Codec · 编 / 量 / 解</h2>
+
+<p>fish-speech 用的"codec"不是 MP3 那种规则编解码。它是<strong>一整套神经网络</strong> —— encoder、codebook、decoder 三件套联合训练。这一节先把整体架构画清楚，再讲 RVQ 怎么把"一个 codebook"扩展成"10 层 codebook"。</p>
+
+<h3><span class="small-num">03.1</span>Neural codec 全貌</h3>
+
+<p>三个组件 + 一条 reconstruction loss：</p>
+
+<ul>
+  <li><strong>Encoder</strong>（卷积下采样栈）把 16 kHz 波形压成 ~21 Hz 的连续向量序列（每 ~47ms 一个 d 维向量）</li>
+  <li><strong>Codebook</strong>（一个 K=1024 大的查找表，每条 entry 是个 d 维向量）把每个连续向量 snap 到最近的码字 → 它的索引是一个整数 token</li>
+  <li><strong>Decoder</strong>（转置卷积上采样栈）拿 token 查表得到向量，再还原成 16 kHz 波形</li>
+</ul>
+
+<p>训练时三件套<strong>同时优化</strong>，loss = 重建误差（让 decoder 输出尽量像 encoder 输入）+ VQ 损失（commitment + codebook update）。<strong>codebook 不是预先定的</strong>，是跟着学出来的 —— 训完之后码字恰好覆盖人类语音的统计结构，这是 neural codec 最神奇的地方。</p>
+
+<figure>
+  <div class="fig-head">
+    <span class="fig-label">Fig. 02</span>
+    <span class="fig-title">Neural Codec · 编码 → 量化 → 解码 闭环</span>
+  </div>
+
+  <div class="nc-frame">
+    <div class="nc-grid">
+
+      <!-- ENCODE column -->
+      <div class="nc-col encode">
+        <div class="nc-stage" data-step="1">
+          <span class="label">Waveform IN</span>
+          <svg class="nc-wave" viewBox="0 0 200 36" preserveAspectRatio="none">
+            <path d="M0,18 Q8,2 16,18 T32,18 T48,18 Q56,32 64,18 T80,18 Q88,4 96,18 T112,18 T128,18 Q136,30 144,18 T160,18 T176,18 T192,18 L200,18" stroke="var(--deep)" stroke-width="1.5" fill="none"/>
+          </svg>
+          <span class="meta">16 kHz · raw audio</span>
+        </div>
+        <div class="nc-arrow" data-step="2">↓</div>
+        <div class="nc-stage box" data-step="3">
+          <span class="label">Encoder</span>
+          <span class="meta">conv 下采样栈 · 16 kHz → ~21 Hz</span>
+        </div>
+        <div class="nc-arrow" data-step="4">↓</div>
+        <div class="nc-stage" data-step="5">
+          <span class="label">z ∈ ℝᵈ</span>
+          <div class="nc-vec">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="vmeta">continuous</span>
+          </div>
+          <span class="meta">每 ~47ms 一个 d 维连续向量</span>
+        </div>
+      </div>
+
+      <!-- DECODE column -->
+      <div class="nc-col decode">
+        <div class="nc-stage" data-step="13">
+          <span class="label">Waveform OUT</span>
+          <svg class="nc-wave" viewBox="0 0 200 36" preserveAspectRatio="none">
+            <path d="M0,18 Q8,3 16,18 T32,18 T48,18 Q56,31 64,18 T80,18 Q88,5 96,18 T112,18 T128,18 Q136,29 144,18 T160,18 T176,18 T192,18 L200,18" stroke="var(--moss)" stroke-width="1.5" fill="none"/>
+          </svg>
+          <span class="meta">≈ input · 重建波形</span>
+        </div>
+        <div class="nc-arrow" data-step="12">↑</div>
+        <div class="nc-stage box" data-step="11">
+          <span class="label">Decoder</span>
+          <span class="meta">conv 上采样栈 · ~21 Hz → 16 kHz</span>
+        </div>
+        <div class="nc-arrow" data-step="10">↑</div>
+        <div class="nc-stage" data-step="9">
+          <span class="label">ẑ ∈ ℝᵈ</span>
+          <div class="nc-vec">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="vmeta">≈ z</span>
+          </div>
+          <span class="meta">CB[47] 查表得到的向量</span>
+        </div>
+      </div>
+
+      <!-- shared codebook -->
+      <div class="nc-codebook-zone" data-step="6">
+        <div class="cz-label">CODEBOOK · K = 1024 vectors ∈ ℝᵈ &nbsp;(示意 12 格)</div>
+        <div class="nc-cb-row" id="nc-cb"></div>
+        <div class="nc-cz-meta"><strong>ENCODE 时</strong>：找跟 z 最近的码字 → 它的索引就是 token<br><strong>DECODE 时</strong>：拿 token 当索引查表 → 得到 ẑ</div>
+      </div>
+
+      <!-- token -->
+      <div class="nc-token-row" data-step="8">
+        <div class="token-pill">token = <span class="v">47</span></div>
+        <span class="token-note">↑ encode 产物 = decode 输入 · LLM 操作的"音频 token"就是这个整数 ↑</span>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="ctrls">
+    <button class="btn primary" onclick="playNC()">▷ encode → token → decode</button>
+    <button class="btn" onclick="resetNC()">reset</button>
+  </div>
+
+  <figcaption><strong>左半 encode、右半 decode、中间是共享的 codebook</strong>。waveform 进 encoder 出 z（连续向量），到 codebook 找最近邻 → 索引就是 token。reverse 过来：token → 查 codebook → ẑ → decoder → waveform。三件套<strong>联合训练</strong>，loss 是"输出波形 ≈ 输入波形"加 VQ 项。一帧 (~47ms) 一个 token；一句话几十帧；LLM (慢 AR) 操作的就是这个 token 流。<a class="jr" href="#g-03">RVQ<sup>3</sup></a> 在这个 codebook 基础上摞了 10 层，每层量化前层的残差。</figcaption>
+</figure>
+
+<h3><span class="small-num">03.2</span>RVQ · 把 codebook 摞 10 层</h3>
+
+<p>单个 codebook 对音频来说不够 —— 要么 K 太小（量化误差大）要么 K 太大（参数爆且训不起来）。<strong>RVQ 的招</strong>：</p>
+
+<ul>
+  <li>第 1 层：用 codebook₁ 粗略量化输入向量 x，留下残差 r₁</li>
+  <li>第 2 层：用 codebook₂ 量化 r₁，留下更小的残差 r₂</li>
+  <li>第 N 层：用 codebookₙ 量化 r<sub>n-1</sub>，r<sub>n</sub> 已经接近 0</li>
+</ul>
+
+<p>每层独立学自己的 codebook。"叠"出来的总效果跟一个超大 codebook 等价，但参数和训练成本都低得多。类比 <strong>JPEG 渐进式编码</strong>：先一个低分辨率版本，再叠细节层。播放下图看一帧完整的残差量化过程：</p>
+
+<figure>
+  <div class="fig-head">
+    <span class="fig-label">Fig. 03</span>
+    <span class="fig-title">RVQ 一帧音频的残差量化过程</span>
+  </div>
+
+  <div class="rvq-frame">
+
+    <!-- INPUT -->
+    <div class="rq-step input-row">
+      <div class="rq-label">INPUT<span class="sub">来自 encoder</span></div>
+      <div class="rq-body">
+        <div class="rq-cap">一帧 ~47ms 音频被 encoder 压成的<strong>连续向量</strong> x。RVQ 的工作是把这个 x 用 10 个离散 token 编码。</div>
+        <div class="rq-row">
+          <div class="rq-row-name"><span class="sym">x</span><br><span class="note">连续向量</span></div>
+          <div class="rq-bar-track"><div class="rq-bar input" data-w="100" id="rq-input"></div></div>
+          <div class="rq-mag" id="rq-input-mag">‖x‖ = 1.000</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LAYER 1 -->
+    <div class="rq-step" data-layer="1">
+      <div class="rq-label">LAYER 1<span class="sub">codebook₁</span></div>
+      <div class="rq-body">
+        <div class="rq-cap">在 codebook₁ 里找<strong>跟 x 最近</strong>的那个码字，记作 q₁。<strong>残差</strong> r₁ = x − q₁。</div>
+        <div class="rq-codebook" data-layer="1"><span class="rq-cb-label">CB₁</span></div>
+        <div class="rq-row">
+          <div class="rq-row-name"><span class="sym">q₁</span><br><span class="note">= CB₁[3]</span></div>
+          <div class="rq-bar-track"><div class="rq-bar quant" data-w="70"></div></div>
+          <div class="rq-mag">‖q₁‖ = 0.700</div>
+        </div>
+        <div class="rq-row">
+          <div class="rq-row-name"><span class="sym">r₁</span><br><span class="note">= x − q₁</span></div>
+          <div class="rq-bar-track"><div class="rq-bar resid" data-w="30"></div></div>
+          <div class="rq-mag">‖r₁‖ = 0.300</div>
+        </div>
+      </div>
+    </div>
+    <div class="rq-arrow">↓ 把 r₁ 作为下一层的输入</div>
+
+    <!-- LAYER 2 -->
+    <div class="rq-step" data-layer="2">
+      <div class="rq-label">LAYER 2<span class="sub">codebook₂</span></div>
+      <div class="rq-body">
+        <div class="rq-cap">在 codebook₂ 里找<strong>跟 r₁ 最近</strong>的码字 q₂。注意整体小一圈 —— 因为 r₁ 比 x 小，能量已经被 layer 1 拿走大半。</div>
+        <div class="rq-codebook" data-layer="2"><span class="rq-cb-label">CB₂</span></div>
+        <div class="rq-row">
+          <div class="rq-row-name"><span class="sym">q₂</span><br><span class="note">= CB₂[1]</span></div>
+          <div class="rq-bar-track"><div class="rq-bar quant" data-w="21"></div></div>
+          <div class="rq-mag">‖q₂‖ = 0.210</div>
+        </div>
+        <div class="rq-row">
+          <div class="rq-row-name"><span class="sym">r₂</span><br><span class="note">= r₁ − q₂</span></div>
+          <div class="rq-bar-track"><div class="rq-bar resid" data-w="9"></div></div>
+          <div class="rq-mag">‖r₂‖ = 0.090</div>
+        </div>
+      </div>
+    </div>
+    <div class="rq-arrow">↓ r₂ → 下一层</div>
+
+    <!-- LAYER 3 -->
+    <div class="rq-step" data-layer="3">
+      <div class="rq-label">LAYER 3<span class="sub">codebook₃</span></div>
+      <div class="rq-body">
+        <div class="rq-cap">同样的递推：每层吃上一层的残差，产生一个更小的残差。指数级收敛。</div>
+        <div class="rq-codebook" data-layer="3"><span class="rq-cb-label">CB₃</span></div>
+        <div class="rq-row">
+          <div class="rq-row-name"><span class="sym">q₃</span><br><span class="note">= CB₃[5]</span></div>
+          <div class="rq-bar-track"><div class="rq-bar quant" data-w="6.3"></div></div>
+          <div class="rq-mag">‖q₃‖ = 0.063</div>
+        </div>
+        <div class="rq-row">
+          <div class="rq-row-name"><span class="sym">r₃</span><br><span class="note">= r₂ − q₃</span></div>
+          <div class="rq-bar-track"><div class="rq-bar resid" data-w="2.7"></div></div>
+          <div class="rq-mag">‖r₃‖ = 0.027</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ellipsis -->
+    <div class="rq-ellipsis">· · · &nbsp; 第 4–10 层重复同样"找该层 codebook 最近邻 + 算残差" &nbsp; · · ·</div>
+
+    <!-- OUTPUT -->
+    <div class="rq-step final-row">
+      <div class="rq-label">OUTPUT<span class="sub">10 个 token</span></div>
+      <div class="rq-body">
+        <div class="rq-cap">实际<strong>"存"下来或者喂给 LLM</strong> 的是这 10 个 codebook 索引（10 个整数 / 帧）。重建时把它们查表得到 q₁..q₁₀，求和得到 x̂ ≈ x。</div>
+        <div class="rq-tokens">
+          tokens<sub>frame</sub> = ( <span class="tk">3</span>, <span class="tk">1</span>, <span class="tk">5</span>, <span class="tk">2</span>, <span class="tk">28</span>, <span class="tk">19</span>, <span class="tk">7</span>, <span class="tk">31</span>, <span class="tk">14</span>, <span class="tk">23</span> )
+        </div>
+        <div class="rq-row">
+          <div class="rq-row-name"><span class="sym">x̂</span><br><span class="note">= Σ qₖ</span></div>
+          <div class="rq-bar-track"><div class="rq-bar recon" data-w="99.9"></div></div>
+          <div class="rq-mag">‖x̂‖ ≈ ‖x‖</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="ctrls">
+    <button class="btn primary" onclick="playRVQ()">▷ run quantize</button>
+    <button class="btn" onclick="resetRVQ()">reset</button>
+  </div>
+
+  <figcaption><strong>残差递推是 RVQ 的本质</strong>：每层在自己的 codebook 里找当前残差的最近邻，剩下的"误差"再交给下一层 —— 越深的层量化的就是越细的细节。<strong>砖红</strong>条 = 该层量化出的 qₖ；<strong>土黄斜纹</strong>条 = 该层留下的残差 rₖ。注意条形长度逐层缩短 —— 这就是残差能量的指数衰减。最右数字是模长（示意值）。10 个 codebook 索引就是 LLM 实际操作的"音频 token"。</figcaption>
+</figure>
+
+<div class="note deep">
+  <span class="label">跟 dMel（TML 用的）的区别</span>
+  <p><strong>RVQ</strong> 是<em>学</em>出来的 codebook，跨数据集自动适配，表达力强 —— 但需要联合训练 encoder + decoder + codebook（VQ-VAE 风格，带 commitment loss）。</p>
+  <p><strong>dMel</strong> 是<em>规则</em>离散化 Mel 频谱（每个频带按预设格点切），无需训 codebook，简单可控 —— 但只适合做<strong>输入侧</strong>（音频 → token 喂 transformer）。要做输出侧（token → 音频）还得另接一个连续模型，TML 选了 <a href="https://snowwarri0r.github.io/llm-wiki/papers/interaction-models-tml.html" target="_blank">flow matching</a>。fish-speech 输入输出全用 RVQ，端到端一致。</p>
+</div>
+
+<!-- ============ 04 ============ -->
+<h2 id="grpo"><span class="num">§ 04 · the alignment</span>GRPO · 组相对 RL</h2>
+
+<p>预训练完的 S2 还要做 post-training alignment，让它<strong>语义更准、情感 tag 更服从、音色更像参考</strong>。用的是 <a class="jr" href="#g-06">GRPO<sup>6</sup></a>（Group Relative Policy Optimization），DeepSeek-Math 那篇提出来的，DeepSeek-R1 也用。</p>
+
+<p>GRPO 是 <a class="jr" href="#g-07">PPO<sup>7</sup></a> 的简化版：<strong>砍掉 critic（value network）</strong>，用同 prompt 一组采样之间的<strong>相对 reward</strong> 当 advantage。直觉：考试不需要绝对分数，只看你在班里的排名。</p>
+
+<figure>
+  <div class="fig-head">
+    <span class="fig-label">Fig. 04</span>
+    <span class="fig-title">GRPO 一步训练 · 8 条采样、4 维 reward、组相对 advantage</span>
+  </div>
+
+  <div class="grpo-frame">
+    <div class="grpo-prompt">
+      <span class="tag">prompt</span>
+      <span>用悲伤、低沉的声音说："今晚的月亮也是不太亮的"</span>
+    </div>
+
+    <div class="grpo-group" id="grpo-group">
+      <!-- 8 grpo-samples populated by JS -->
+    </div>
+
+    <div class="grpo-stats" id="grpo-stats">
+      <span>组内 mean &nbsp;= &nbsp;<strong id="g-mean">—</strong></span>
+      <span>std &nbsp;= &nbsp;<strong id="g-std">—</strong></span>
+      <span>advantage_i = (r_i − mean) / std</span>
+    </div>
+  </div>
+
+  <div class="ctrls">
+    <button class="btn primary" onclick="playGRPO()">▷ run one step</button>
+    <button class="btn" onclick="resetGRPO()">reset</button>
+  </div>
+
+  <figcaption><strong>① Sample</strong>：同 prompt 采 G=8 条响应（小卡片依次出）。<strong>② Score</strong>：4 维 reward 加权得总分（顶部大数字）。<strong>③ Normalize</strong>：减组内均值除组内方差 = advantage（底部小字）。<strong>④ Update</strong>：advantage 为正的卡片变绿（被强化），为负的变红（被压低）。整个过程<strong>没有 critic 网络</strong>。</figcaption>
+</figure>
+
+<h3><span class="small-num">04.1</span>四维 reward 信号</h3>
+
+<table>
+  <thead><tr><th>维度</th><th>测什么</th><th>怎么算</th></tr></thead>
+  <tbody>
+    <tr><td>语义准确</td><td>说没说错</td><td>外接 ASR 算生成音频 vs 目标文本的 WER</td></tr>
+    <tr><td>指令遵循</td><td>tag 是否生效</td><td>有 <code>[whisper]</code> 时音量是否真的低 / <code>[excited]</code> 时基频是否真升高</td></tr>
+    <tr><td>音色相似</td><td>跟参考人像不像</td><td>speaker embedding cosine similarity</td></tr>
+    <tr><td>声学偏好</td><td>整体好不好听</td><td>proxy preference model（小模型，学的人评数据）</td></tr>
+  </tbody>
+</table>
+
+<div class="note moss">
+  <span class="label">优雅之处 · self-rewarding</span>
+  <p><strong>Reward model = 数据清洗 / 标注用的同一套模型</strong>。传统 RLHF 的痛点：reward model 训在另一份数据上，跟 pre-train 数据分布有 gap → policy 学到的是"如何讨好 reward model"而不是"真正变好"。fish-speech 把"挑数据 / 给标签"和"打分"用同一套模型做，<strong>distribution mismatch 自动消失</strong>。</p>
+</div>
+
+<!-- ============ 05 ============ -->
+<h2 id="streaming"><span class="num">§ 05 · the plumbing</span>推理工程</h2>
+
+<p>"跟 LLM 同构"这条不只是好看的口号，它直接换成了具体的工程数字。H200 单卡上：</p>
+
+<ul>
+  <li><strong>TTFA</strong>（time-to-first-audio）<strong>~100ms</strong> · 用户点回车到第一帧音频出来</li>
+  <li><strong>RTF</strong>（real-time factor）<strong>0.195</strong> · 生成 1 秒音频只要 ~200ms，远超实时 5×</li>
+  <li><strong>3000+ acoustic tokens/s</strong> · 持续吞吐量 · RTF 始终 &lt; 0.5</li>
+</ul>
+
+<p>能做到这数字，靠的是<strong>白嫖整套 SGLang 优化</strong>：</p>
+
+<ul>
+  <li><a class="jr" href="#g-08">Paged KV cache<sup>8</sup></a> · 多个 session 共享 GPU 内存池，碎片化最小化</li>
+  <li><strong>Continuous batching</strong> · 不等整批跑完，新请求随时插入</li>
+  <li><a class="jr" href="#g-11">CUDA graph<sup>11</sup></a> · 把固定计算流图编译成 GPU 原生 graph，省 launch 开销</li>
+  <li><a class="jr" href="#g-10">RadixAttention<sup>10</sup></a> · prefix sharing —— 相同 prompt 前缀的 KV cache 自动复用</li>
+</ul>
+
+<p>如果 fish-speech 自研一套 codec-aware 推理引擎，这些优化每条都要重新实现一遍。"跟 LLM 同构"省的就是这部分天文级工程成本。</p>
+
+<!-- ============ 06 ============ -->
+<h2 id="controls"><span class="num">§ 06 · the controls</span>控制与多语言</h2>
+
+<h3><span class="small-num">06.1</span>15000+ 自由文本 tag</h3>
+
+<p>不是固定枚举，是<strong>开放词汇</strong>。常用的有：</p>
+
+<pre><code>[pause] [emphasis] [laughing] [inhale] [chuckle] [tsk] [singing]
+[excited] [laughing tone] [interrupting] [chuckling] [excited tone]
+[volume up] [echo] [angry] [low volume] [sigh] [low voice] [whisper]
+[screaming] [shouting] [loud] [surprised] [short pause] [exhale]
+[delight] [panting] [audience laughter] [with strong accent]
+[volume down] [clearing throat] [sad] [moaning] [shocked]</code></pre>
+
+<p>但<strong>更牛的是自由描述</strong>：<code>[whisper in small voice]</code> / <code>[professional broadcast tone]</code> / <code>[pitch up]</code> 都能写。模型在大规模带标注语料上学的是"自然语言 → 声学特征"的映射，不需要枚举所有 tag。</p>
+
+<h3><span class="small-num">06.2</span>80+ 语言不靠 phonemizer</h3>
+
+<table>
+  <thead><tr><th>Tier</th><th>语言</th><th>含义</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>ja / en / zh</td><td>主力 · 量大、质量最高</td></tr>
+    <tr><td>2</td><td>ko / es / pt / ar / ru / fr / de</td><td>覆盖主流 · 质量接近 Tier 1</td></tr>
+    <tr><td>3+</td><td>70+ others · sv / it / tr / no / nl / cy / eu / ca / da / ...</td><td>能用 · 含 sa / la / yi 等小语种</td></tr>
+  </tbody>
+</table>
+
+<p>关键是<strong>不需要 phonemizer / G2P</strong>。第三代 TTS 每种语言都要一套"文本 → 音素"的规则或小模型，新增语言成本高。fish-speech 直接把 raw 文本 token 喂主模型，<strong>音素映射隐式从 codec + audio 监督中学出来</strong>。这又是一例 <a href="https://snowwarri0r.github.io/llm-wiki/papers/interaction-models-tml.html" target="_blank">把外挂规则吃进权重</a> 的范式。</p>
+
+<!-- ============ 07 ============ -->
+<h2 id="bench"><span class="num">§ 07 · the numbers</span>Benchmark</h2>
+
+<p>S2 在多个公开基准上拿到 SOTA 或接近 SOTA。重点几个：</p>
+
+<figure>
+  <div class="fig-head">
+    <span class="fig-label">Fig. 05</span>
+    <span class="fig-title">Seed-TTS Eval WER · 越低越好</span>
+  </div>
+
+  <div id="bench-chart">
+
+    <div class="bench-name"><span>WER (zh) <span class="desc">中文测试集 · 越低越好</span></span></div>
+    <div class="bench-row">
+      <span class="bench-who">S2 Pro</span>
+      <div class="bench-track"><div class="bench-bar win" data-w="95"></div></div>
+      <span class="bench-val">0.54%</span>
+    </div>
+    <div class="bench-row">
+      <span class="bench-who">Qwen3-TTS</span>
+      <div class="bench-track"><div class="bench-bar other" data-w="67"></div></div>
+      <span class="bench-val">0.77%</span>
+    </div>
+    <div class="bench-row">
+      <span class="bench-who">MiniMax 02</span>
+      <div class="bench-track"><div class="bench-bar other" data-w="52"></div></div>
+      <span class="bench-val">0.99%</span>
+    </div>
+    <div class="bench-row">
+      <span class="bench-who">Seed-TTS</span>
+      <div class="bench-track"><div class="bench-bar other" data-w="46"></div></div>
+      <span class="bench-val">1.12%</span>
+    </div>
+
+    <div class="bench-name"><span>WER (en) <span class="desc">英文测试集 · 越低越好</span></span></div>
+    <div class="bench-row">
+      <span class="bench-who">S2 Pro</span>
+      <div class="bench-track"><div class="bench-bar win" data-w="95"></div></div>
+      <span class="bench-val">0.99%</span>
+    </div>
+    <div class="bench-row">
+      <span class="bench-who">Qwen3-TTS</span>
+      <div class="bench-track"><div class="bench-bar other" data-w="76"></div></div>
+      <span class="bench-val">1.24%</span>
+    </div>
+    <div class="bench-row">
+      <span class="bench-who">MiniMax 02</span>
+      <div class="bench-track"><div class="bench-bar other" data-w="50"></div></div>
+      <span class="bench-val">1.90%</span>
+    </div>
+    <div class="bench-row">
+      <span class="bench-who">Seed-TTS</span>
+      <div class="bench-track"><div class="bench-bar other" data-w="42"></div></div>
+      <span class="bench-val">2.25%</span>
+    </div>
+
+  </div>
+
+  <div class="ctrls">
+    <button class="btn primary" onclick="playBench()">▷ animate</button>
+  </div>
+
+  <figcaption><strong>条形长 = 强</strong>（视觉直觉），右侧数字才是真实 WER（越低越好）。条形长度按 (1/WER) 归一化到 0-100% —— 同一语言里 S2 总是最长。S2 在 zh / en 两种语言上都比所有闭源系统（Qwen3 / MiniMax / Seed-TTS）WER 低，差距在 30%-60% 之间。</figcaption>
+</figure>
+
+<h3><span class="small-num">07.5</span>更多基准（一张表）</h3>
+
+<table>
+  <thead><tr><th>基准</th><th>测什么</th><th>S2 Pro</th><th>对照</th></tr></thead>
+  <tbody>
+    <tr><td>Audio Turing Test (with instr)</td><td>"听上去像不像真人"</td><td class="num">0.515</td><td>Seed-TTS 0.417 / MiniMax 0.387</td></tr>
+    <tr><td>EmergentTTS-Eval Win Rate</td><td>整体偏好</td><td class="num">81.88%</td><td>highest overall</td></tr>
+    <tr><td>Fish Instruction · TAR</td><td>指令遵循率</td><td class="num">93.3%</td><td>—</td></tr>
+    <tr><td>Fish Instruction · Quality</td><td>5 分制人评</td><td class="num">4.51 / 5.0</td><td>—</td></tr>
+    <tr><td>MiniMax multilingual · WER</td><td>多语言 WER 最优数</td><td class="num">11 / 24</td><td>24 语言里 11 个最低</td></tr>
+    <tr><td>MiniMax multilingual · SIM</td><td>多语言相似度最优数</td><td class="num">17 / 24</td><td>24 语言里 17 个最高</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <span class="label">怎么读</span>
+  <p>fish 团队公布的对照表里 paralinguistics（韵律 / 情感）维度 win rate 91.61%、questions 84.41%、syntactic complexity 83.39% —— 这几条说明 S2 的强项是<strong>"情感表达 + 复杂语法处理"</strong>，不只是单纯"咬字清楚"。短板（没列出来的低分项）猜测在<strong>超低资源语种</strong>和<strong>长文本一致性</strong>。</p>
+</div>
+
+<!-- ============ 08 ============ -->
+<h2 id="takeaway"><span class="num">§ 08 · what to keep</span>个人解读</h2>
+
+<ol>
+  <li><strong>"跟 LLM 同构"是这篇里最值得偷的设计抉择</strong>。直接复用所有 LLM 推理基建 → 工程 ROI 极高。任何"新模态 + transformer"的项目都该问一句：能不能把核心结构跟标准 LLM 对齐？</li>
+
+  <li><strong>Dual-AR 的本质是把单一 AR 的 token 流上的成本摊到两层</strong>。慢的算少次但算重，快的算多次但便宜。这个 trick 不限于音频 —— 任何"高 token rate + 大模型"场景都可以借鉴：视频 token、机器人控制信号、HDR 图像 RGB stream 全是。</li>
+
+  <li><strong>GRPO 的 self-rewarding（reward model = annotation model）是 RLHF 漂移问题的优雅解</strong>。值得在自己的项目里复制：如果你已经有一套数据清洗的小模型，复用它当 reward model 而不是单独训。</li>
+
+  <li><strong>RVQ vs flow matching 是个工程取舍而不是理论优劣</strong>。RVQ 适合服务化 TTS（白嫖 LLM infra），flow matching 适合实时双向交互（端到端可微 → 跟主 transformer 联训）。详见跨源 topic <a href="../topics/audio-tokenization-rvq-vs-flow.html">audio-tokenization-rvq-vs-flow</a>（待做 bespoke）。</li>
+
+  <li><strong>跟 TML interaction models 是不同维度的"双层"</strong>。fish-speech Dual-AR 是<em>生成路径上</em>的主从（慢/快沿 codec 层级分工）；TML 的 dual-model 是<em>控制流上</em>的前后台（沿时间尺度分工）。两个值得对照学。</li>
+</ol>
+
+<!-- ============ glossary ============ -->
+<section class="glossary" id="glossary">
+
+<h2><span class="num">§ ▼ · vocabulary</span>术语词典</h2>
+
+<p>正文里带波浪底的词都对应这里一条。按出现顺序编号：</p>
+
+<div class="gloss-grid">
+
+  <div class="gloss-item" id="g-01">
+    <span class="gloss-num">01</span>
+    <span class="gloss-term">AR &nbsp;(autoregressive)</span>
+    <p class="gloss-def">"自回归"。模型生成时第 t 步的输出依赖前 t-1 步的输出（往回看）。语言模型、TTS、视频生成几乎都是 AR 范式。AR 推理是串行的（每步等上步结果），所以推不动是常态。Dual-AR 的"两层"是结构上的，每层内部还是 AR。</p>
+  </div>
+
+  <div class="gloss-item" id="g-02">
+    <span class="gloss-num">02</span>
+    <span class="gloss-term">codebook &nbsp;/ VQ</span>
+    <p class="gloss-def">VQ = Vector Quantization。把连续向量映射到最近邻的离散"码字"。codebook 就是这堆码字组成的查找表（比如 16384 个 1024 维向量）。VQ-VAE 把 encoder 输出连续向量量化到 codebook，VQ 离散索引就是后续 transformer 的 token。RVQ 是多层串联的 VQ。</p>
+  </div>
+
+  <div class="gloss-item" id="g-03">
+    <span class="gloss-num">03</span>
+    <span class="gloss-term">RVQ codec</span>
+    <p class="gloss-def">Residual Vector Quantization。多层 codebook 串联，第 k 层量化前 k-1 层留下的残差。fish-speech S2 用 10 层、~21 Hz 帧率。整套（encoder + N 层 codebook + decoder）联合训练，loss = 重建误差 + commitment loss + codebook loss（VQ-VAE 风格）。前几层贡献最大，后几层补细节。</p>
+  </div>
+
+  <div class="gloss-item" id="g-04">
+    <span class="gloss-num">04</span>
+    <span class="gloss-term">neural codec</span>
+    <p class="gloss-def">"用神经网络学出来的音频压缩器"。传统编解码（MP3 / Opus）用规则 + 信号处理；neural codec 用 encoder + 量化（一般是 RVQ）+ decoder 联合训练。代表：SoundStream / Encodec / DAC / fish 的自研 codec。它的"token"是 LLM 时代音频模态的事实接口。</p>
+  </div>
+
+  <div class="gloss-item" id="g-05">
+    <span class="gloss-num">05</span>
+    <span class="gloss-term">主语义 codebook</span>
+    <p class="gloss-def">RVQ 第 1 层 codebook。承载的是音频里最"宏观"的信息：大致是什么音、什么音节、什么韵律。fish-speech 让慢 AR（4B）专门预测这一层，因为这是决定"说什么"的核心。后续 9 层 codebook 由快 AR（400M）顺序生成，决定"怎么发"。</p>
+  </div>
+
+  <div class="gloss-item" id="g-06">
+    <span class="gloss-num">06</span>
+    <span class="gloss-term">GRPO</span>
+    <p class="gloss-def">Group Relative Policy Optimization。PPO 的简化版：不要 critic（value network），只用同 prompt 一组采样的相对 reward 算 advantage。来自 DeepSeek-Math 论文，DeepSeek-R1 / fish-speech S2 等都用。优点：少一个跟 policy 一样大的网络 → 训练成本砍一半 + 更稳定。</p>
+  </div>
+
+  <div class="gloss-item" id="g-07">
+    <span class="gloss-num">07</span>
+    <span class="gloss-term">PPO</span>
+    <p class="gloss-def">Proximal Policy Optimization。OpenAI 2017 提的 on-policy RL 算法，是 ChatGPT 那波 RLHF 的工作马。需要训一个 value network（critic）做 baseline。优点是稳；缺点是 critic 训练 + 内存开销大。GRPO 砍掉了 critic 用组内 normalize 代替。</p>
+  </div>
+
+  <div class="gloss-item" id="g-08">
+    <span class="gloss-num">08</span>
+    <span class="gloss-term">Paged KV cache</span>
+    <p class="gloss-def">vLLM 那篇论文（Kwon 2023）提出的核心创新。传统 KV cache 给每个 session 预留连续大块 GPU 内存 → 内存碎片严重，多 session 并发吃亏。Paged KV 借鉴 OS 虚拟内存的思路：把 cache 切成固定大小的 page，按需分配，多 session 共享内存池。GPU 显存利用率从 ~30% 提到 90%+。</p>
+  </div>
+
+  <div class="gloss-item" id="g-09">
+    <span class="gloss-num">09</span>
+    <span class="gloss-term">SGLang</span>
+    <p class="gloss-def">LMSys 团队（vLLM 之后）做的下一代 LLM 推理引擎。在 vLLM 基础上加 RadixAttention、co-runtime DSL、更激进的图优化。fish-speech S2 选 SGLang 是因为他们专门做了对 multi-modal / dual-AR 结构的优化。</p>
+  </div>
+
+  <div class="gloss-item" id="g-10">
+    <span class="gloss-num">10</span>
+    <span class="gloss-term">RadixAttention</span>
+    <p class="gloss-def">SGLang 的核心优化。多个请求共享相同 prompt 前缀时，传统做法每个请求各算各的 KV，浪费。RadixAttention 用一棵 radix 树管理所有 session 的 KV cache，相同前缀自动共享。对 TTS 场景特别有用：很多请求会共用 system prompt 或 voice reference 前缀。</p>
+  </div>
+
+  <div class="gloss-item" id="g-11">
+    <span class="gloss-num">11</span>
+    <span class="gloss-term">CUDA graph</span>
+    <p class="gloss-def">NVIDIA 提的优化：把一段固定的 CUDA kernel 调用序列编译成"原生 graph"一次性 launch，省去每个 kernel 单独的 launch 开销（~5μs/次）。小模型 / 低延迟场景受益最大。LLM 推理（每步几十次 kernel）用了能省 10-20% 延迟。</p>
+  </div>
+
+  <div class="gloss-item" id="g-12">
+    <span class="gloss-num">12</span>
+    <span class="gloss-term">TTFA &nbsp;(time-to-first-audio)</span>
+    <p class="gloss-def">"出第一帧音频的延迟"。用户输入 → 第一帧音频被解出来的时间。TTS 场景最重要的体验指标。fish-speech S2 在 H200 上 ~100ms —— 已经低到人耳几乎感知不到延迟。流式播放靠这条数字。</p>
+  </div>
+
+  <div class="gloss-item" id="g-13">
+    <span class="gloss-num">13</span>
+    <span class="gloss-term">RTF &nbsp;(real-time factor)</span>
+    <p class="gloss-def">生成 1 秒音频所需的实际计算时间 / 1 秒。RTF &lt; 1 = 比实时快。fish-speech S2 RTF 0.195 表示 1 秒音频只要 195ms 算完。RTF 越小越好，但太小没意义（不会带来体验提升）；RTF 越接近 1 越省 GPU。</p>
+  </div>
+
+</div>
+
+</section>
+
+<div class="colophon">
+  讲解 / Claude · 原文 © Fish Audio · 2026<br />
+  本页是中文讲解版而非直译。所有架构 / 参数 / RVQ 层数 / benchmark 数字均来自 Fish Audio S2 Pro 的 README / 技术报告 / 官方博客。带"背景 / 跟 X 的区别 / 个人解读"色块的是 Claude 加的上下文。
+</div>
+
+</div><!-- /col-main -->
+
+<aside class="col-side" aria-label="术语速查">
+
+  <div class="pin">
+    <span class="pin-label">§ 02 · 名词</span>
+    <code>frame</code>：47ms 一帧（21 Hz）。每帧 10 个 codebook token 还原 ~47ms 音频。
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 02 · 数字</span>
+    <code>4B + 400M</code>：慢 AR 4B 参数预测 1 个主 codebook；快 AR 400M 参数顺序预测 9 个残差 codebook。
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 03 · 名词</span>
+    <code>RVQ</code> 残差量化 = N 层 codebook，第 k 层量化前 k-1 层的残差。每层各自学，整体联合训。
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 04 · 名词</span>
+    <code>GRPO</code> 同 prompt 采 G 条响应，组内 normalize reward 当 advantage。无 critic。
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 04 · 名词</span>
+    <code>reward hacking</code>：policy 学到的是骗 reward model 而不是真变好。GRPO + self-rewarding 缓解这条。
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 05 · 名词</span>
+    <code>continuous batching</code>：vLLM 提的。批次里某条请求完成时立即用新请求填充，不等整批结束。
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 06 · 名词</span>
+    <code>G2P</code> = Grapheme-to-Phoneme。"文本字 → 发音符号"。传统 TTS 必备组件，fish-speech 不需要。
+  </div>
+
+  <div class="pin">
+    <span class="pin-label">§ 07 · 名词</span>
+    <code>WER</code> = Word Error Rate。把生成音频再用 ASR 转回文字，跟目标文本对比的错字率。
+  </div>
+
+</aside>
+
+</div><!-- /page -->
+
+<script>
+// ============ Fig 1 · Dual-AR ============
+// fast row 每帧 9 个圆点
+const fastRows = document.querySelectorAll('.ar-fast-row');
+fastRows.forEach(row => {
+  for (let i = 0; i < 9; i++) {
+    const dot = document.createElement('span');
+    dot.className = 'ar-tok fast';
+    dot.dataset.idx = i;
+    row.appendChild(dot);
+  }
+});
+
+let arTimers = [];
+function resetAR() {
+  arTimers.forEach(t => clearTimeout(t));
+  arTimers = [];
+  document.querySelectorAll('.ar-tok').forEach(d => d.classList.remove('on'));
+  document.querySelectorAll('.ar-audio').forEach(a => a.classList.remove('on'));
+}
+function playAR() {
+  resetAR();
+  // 每帧用 ~600ms: 慢 AR 0ms, 快 AR 9 个均匀 100ms-540ms, audio 580ms
+  const FRAME_MS = 700;
+  const FAST_STAGGER = 50;
+  for (let f = 0; f < 5; f++) {
+    const base = f * FRAME_MS;
+    // slow AR
+    const slow = document.querySelector(`.ar-tok.slow[data-frame="${f}"]`);
+    arTimers.push(setTimeout(() => slow.classList.add('on'), base));
+    // fast AR 9 dots staggered
+    const fastDots = document.querySelectorAll(`.ar-fast-row[data-frame="${f}"] .ar-tok.fast`);
+    fastDots.forEach((d, i) => {
+      arTimers.push(setTimeout(() => d.classList.add('on'), base + 120 + i * FAST_STAGGER));
+    });
+    // audio chunk
+    const audio = document.querySelector(`.ar-audio[data-frame="${f}"]`);
+    arTimers.push(setTimeout(() => audio.classList.add('on'), base + 620));
+  }
+}
+
+// ============ Fig 3 · RVQ residual quantization (mechanism view) ============
+const RQ_CB_CELLS = 8;            // codebook 显示 8 个格子（实际 1024+，这里示意）
+const RQ_PICKS = [3, 1, 5];        // 每层挑哪个 cell 作"最近邻"
+
+function buildRVQ() {
+  document.querySelectorAll('.rq-codebook').forEach(cb => {
+    // 移除已有 cells (保留 label)
+    cb.querySelectorAll('.cell').forEach(c => c.remove());
+    for (let i = 0; i < RQ_CB_CELLS; i++) {
+      const c = document.createElement('span');
+      c.className = 'cell';
+      c.dataset.idx = i;
+      c.textContent = i;
+      cb.appendChild(c);
+    }
+  });
+}
+buildRVQ();
+
+let rqTimers = [];
+function resetRVQ() {
+  rqTimers.forEach(t => clearTimeout(t));
+  rqTimers = [];
+  document.querySelectorAll('.rq-codebook .cell').forEach(c => c.classList.remove('shown', 'picked'));
+  document.querySelectorAll('.rq-bar').forEach(b => b.style.width = '0');
+  document.querySelectorAll('.rq-mag').forEach(m => m.classList.remove('on'));
+}
+
+function playRVQ() {
+  resetRVQ();
+  // step 0: input bar
+  rqTimers.push(setTimeout(() => {
+    const ib = document.getElementById('rq-input');
+    ib.style.width = ib.dataset.w + '%';
+    document.getElementById('rq-input-mag').classList.add('on');
+  }, 200));
+
+  // step 1, 2, 3: each layer plays in sequence (~1500ms per layer)
+  const PER_LAYER = 1500;
+  [1, 2, 3].forEach((layerN, lIdx) => {
+    const base = 900 + lIdx * PER_LAYER;
+    // codebook cells fade in
+    const cells = document.querySelectorAll(`.rq-codebook[data-layer="${layerN}"] .cell`);
+    cells.forEach((c, i) => {
+      rqTimers.push(setTimeout(() => c.classList.add('shown'), base + i * 35));
+    });
+    // pick one cell
+    rqTimers.push(setTimeout(() => {
+      const pick = RQ_PICKS[lIdx];
+      cells[pick] && cells[pick].classList.add('picked');
+    }, base + 450));
+    // q bar grows
+    rqTimers.push(setTimeout(() => {
+      const step = document.querySelector(`.rq-step[data-layer="${layerN}"]`);
+      const qBar = step.querySelector('.rq-bar.quant');
+      const qMag = step.querySelectorAll('.rq-mag')[0];
+      qBar.style.width = qBar.dataset.w + '%';
+      qMag.classList.add('on');
+    }, base + 750));
+    // r bar grows
+    rqTimers.push(setTimeout(() => {
+      const step = document.querySelector(`.rq-step[data-layer="${layerN}"]`);
+      const rBar = step.querySelector('.rq-bar.resid');
+      const rMag = step.querySelectorAll('.rq-mag')[1];
+      rBar.style.width = rBar.dataset.w + '%';
+      rMag.classList.add('on');
+    }, base + 1100));
+  });
+
+  // step 4: reconstruction
+  rqTimers.push(setTimeout(() => {
+    const finalStep = document.querySelector('.rq-step.final-row');
+    const recon = finalStep.querySelector('.rq-bar.recon');
+    const mag = finalStep.querySelector('.rq-mag');
+    recon.style.width = recon.dataset.w + '%';
+    mag.classList.add('on');
+  }, 900 + 3 * PER_LAYER + 400));
+}
+
+// ============ Fig 2 · Neural Codec ============
+const NC_CELLS = 12;
+const NC_PICK = 4; // 高亮哪一格作"最近邻"
+
+function buildNC() {
+  const cb = document.getElementById('nc-cb');
+  if (!cb) return;
+  cb.innerHTML = '';
+  for (let i = 0; i < NC_CELLS; i++) {
+    const c = document.createElement('span');
+    c.className = 'cell';
+    c.dataset.idx = i;
+    c.textContent = i;
+    cb.appendChild(c);
+  }
+}
+buildNC();
+
+let ncTimers = [];
+function resetNC() {
+  ncTimers.forEach(t => clearTimeout(t));
+  ncTimers = [];
+  document.querySelectorAll('.nc-stage, .nc-arrow, .nc-codebook-zone, .nc-token-row').forEach(e => e.classList.remove('on'));
+  document.querySelectorAll('#nc-cb .cell').forEach(c => c.classList.remove('picked'));
+}
+
+function playNC() {
+  resetNC();
+  // 1. encode column top → bottom: waveform_in → arrow → encoder → arrow → z
+  const encodeSteps = ['1', '2', '3', '4', '5'];
+  encodeSteps.forEach((step, i) => {
+    ncTimers.push(setTimeout(() => {
+      const el = document.querySelector(`.nc-col.encode [data-step="${step}"]`);
+      el && el.classList.add('on');
+    }, 200 + i * 350));
+  });
+  // 2. codebook appears, pick highlights (after z is shown)
+  ncTimers.push(setTimeout(() => document.querySelector('.nc-codebook-zone').classList.add('on'), 2150));
+  ncTimers.push(setTimeout(() => {
+    const cell = document.querySelector(`#nc-cb .cell[data-idx="${NC_PICK}"]`);
+    cell && cell.classList.add('picked');
+  }, 2600));
+  // 3. token pill appears (encode side complete)
+  ncTimers.push(setTimeout(() => document.querySelector('.nc-token-row').classList.add('on'), 3100));
+  // 4. decode column bottom → top: ẑ → arrow → decoder → arrow → waveform_out
+  const decodeSteps = ['9', '10', '11', '12', '13'];
+  decodeSteps.forEach((step, i) => {
+    ncTimers.push(setTimeout(() => {
+      const el = document.querySelector(`.nc-col.decode [data-step="${step}"]`);
+      el && el.classList.add('on');
+    }, 3500 + i * 350));
+  });
+}
+
+// ============ Fig 4 · GRPO ============
+const grpoSamples = [
+  { name: 's₁', r: 0.82 },
+  { name: 's₂', r: 0.41 },
+  { name: 's₃', r: 0.93 },
+  { name: 's₄', r: 0.55 },
+  { name: 's₅', r: 0.68 },
+  { name: 's₆', r: 0.28 },
+  { name: 's₇', r: 0.79 },
+  { name: 's₈', r: 0.49 },
+];
+
+function buildGRPO() {
+  const group = document.getElementById('grpo-group');
+  group.innerHTML = '';
+  grpoSamples.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.className = 'grpo-sample';
+    div.dataset.idx = i;
+    div.innerHTML = `
+      <div class="sname">${s.name}</div>
+      <div class="sr">${s.r.toFixed(2)}</div>
+      <div class="sadv" data-idx="${i}">adv = —</div>
+    `;
+    group.appendChild(div);
+  });
+}
+buildGRPO();
+
+let grpoTimers = [];
+function resetGRPO() {
+  grpoTimers.forEach(t => clearTimeout(t));
+  grpoTimers = [];
+  document.querySelectorAll('.grpo-sample').forEach(s => {
+    s.classList.remove('on', 'win', 'lose', 'scored');
+  });
+  document.getElementById('grpo-stats').classList.remove('on');
+  document.getElementById('g-mean').textContent = '—';
+  document.getElementById('g-std').textContent = '—';
+}
+
+function playGRPO() {
+  resetGRPO();
+  // step 1: samples pop in
+  grpoSamples.forEach((s, i) => {
+    grpoTimers.push(setTimeout(() => {
+      document.querySelector(`.grpo-sample[data-idx="${i}"]`).classList.add('on');
+    }, 200 + i * 90));
+  });
+  // step 2: compute mean/std, show
+  const rs = grpoSamples.map(s => s.r);
+  const mean = rs.reduce((a, b) => a + b, 0) / rs.length;
+  const variance = rs.reduce((a, b) => a + (b - mean) ** 2, 0) / rs.length;
+  const std = Math.sqrt(variance);
+  grpoTimers.push(setTimeout(() => {
+    document.getElementById('g-mean').textContent = mean.toFixed(2);
+    document.getElementById('g-std').textContent = std.toFixed(2);
+    document.getElementById('grpo-stats').classList.add('on');
+  }, 1300));
+  // step 3: each sample gets advantage, colored win/lose
+  grpoSamples.forEach((s, i) => {
+    const adv = (s.r - mean) / std;
+    grpoTimers.push(setTimeout(() => {
+      const card = document.querySelector(`.grpo-sample[data-idx="${i}"]`);
+      const advEl = card.querySelector('.sadv');
+      advEl.textContent = 'adv = ' + (adv >= 0 ? '+' : '') + adv.toFixed(2);
+      card.classList.add('scored');
+      card.classList.add(adv >= 0 ? 'win' : 'lose');
+    }, 1700 + i * 100));
+  });
+}
+
+// ============ Fig 5 · Benchmark bars ============
+function playBench() {
+  const bars = document.querySelectorAll('#bench-chart .bench-bar');
+  bars.forEach(b => b.style.width = '0');
+  setTimeout(() => {
+    bars.forEach((b, i) => {
+      // data-w 已经是 0-100 反演 WER 得到的"优势百分比"(长 = 强), 直接用
+      setTimeout(() => { b.style.width = b.dataset.w + '%'; }, i * 110);
+    });
+  }, 50);
+}
+
+// ============ Auto-play on first view ============
+function obs(target, fn) {
+  if (!target) return;
+  const o = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { fn(); o.disconnect(); } });
+  }, { threshold: 0.3 });
+  o.observe(target);
+}
+obs(document.querySelector('.ar-frame'), playAR);
+obs(document.querySelector('.nc-frame'), playNC);
+obs(document.querySelector('.rvq-frame'), playRVQ);
+obs(document.querySelector('.grpo-frame'), playGRPO);
+obs(document.getElementById('bench-chart'), playBench);
+
+// ============ Scroll progress ============
+const pb = document.getElementById('progressBar');
+window.addEventListener('scroll', () => {
+  const h = document.documentElement;
+  const p = (h.scrollTop) / (h.scrollHeight - h.clientHeight);
+  pb.style.width = (p * 100) + '%';
+});
+</script>
+
+</body>
+</html>

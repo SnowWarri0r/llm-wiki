@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>In-Context Learning · ICL · 在 prompt 里现学 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · in-context-learning</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>In-Context Learning · ICL · 在 prompt 里现学</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p><strong>模型权重一个不动</strong>，在 prompt 里给几个 (input, output) 示例，模型就能从这些示例里"现学"任务规则，然后在新输入上应用。</p>
+<h2>直觉</h2>
+<p>传统机器学习：要让模型做新任务 → 收集标注数据 → 训练（更新权重）→ 部署。整个循环数周到数月。</p>
+<p>In-context learning：要让模型做新任务 → 在 prompt 里给几个例子 → 直接问。整个循环 5 分钟。</p>
+<p>类比：传统 ML 是"上岗培训"（改 weights = 改大脑），ICL 是"<strong>给你一份范例文档让你照着办</strong>"（不改大脑，只看示例推断模式）。</p>
+<p><strong>关键洞察</strong>：GPT-3 在预训练时见过<strong>无数次</strong>"几个示例 + 新任务"格式的文本（百科 / 教程 / 翻译对照表 / 问答论坛），它学会了一个通用元能力：<strong>遇到这种"示例 + ?"格式，要从示例里抽规则套到 ?上</strong>。</p>
+<h2>三档形态</h2>
+<p><strong>Zero-shot</strong>（GPT-2 已经能做）：</p>
+<pre><code>Translate to French: &quot;Hello, world.&quot;
+French:
+</code></pre>
+<p>（只描述任务，没给例子）</p>
+<p><strong>One-shot</strong>（GPT-3 提出）：</p>
+<pre><code>Translate to French.
+
+English: Hello.
+French: Bonjour.
+
+English: Hello, world.
+French:
+</code></pre>
+<p>（给 1 个例子）</p>
+<p><strong>Few-shot</strong>（GPT-3 论文重点）：</p>
+<pre><code>Translate to French.
+
+English: Hello.
+French: Bonjour.
+
+English: Goodbye.
+French: Au revoir.
+
+English: Thank you.
+French: Merci.
+
+English: Hello, world.
+French:
+</code></pre>
+<p>（给 K 个例子，K 通常 3-30）</p>
+<p>GPT-3 论文 Fig 1.2 用 SuperGLUE 类任务展示：从 zero-shot → few-shot，准确度稳步提升。这是<strong>不改 weights 的"学习"</strong>。</p>
+<h2>为什么不改权重也能"学"</h2>
+<p>这是 open question，至今没完全理解。主流假设：</p>
+<ol>
+<li><strong>Pattern matching</strong>：模型在 attention 里识别 prompt 里的 (x, y) 对，在新 x 出现时去 attend 已有 (x, y) 推断答案</li>
+<li><strong>Implicit gradient descent</strong>：attention layer 内部相当于在做小规模的 in-weight optimization（"meta-learning"）。形式上有证明，工程上待验证</li>
+<li><strong>Function approximation</strong>：transformer 学到的不是"具体任务"，是"从示例里抽函数"的元能力 —— prompt 触发的是这个元能力的应用</li>
+</ol>
+<p>无论哪种解释，<strong>实证现象</strong>都是：scale 上去后 ICL 能力浮现，prompt 里给例子能稳定提升性能。</p>
+<h2>它的局限</h2>
+<ul>
+<li><strong>prompt 敏感</strong>：同一任务用不同例子或者不同顺序，性能可能差 10-20 个点</li>
+<li><strong>长上下文成本高</strong>：few-shot 把 prompt 撑得很长 → 推理算力变大</li>
+<li><strong>不可控</strong>：模型经常输出格式不对、忽略部分示例</li>
+<li><strong>不及 finetune 极致 SOTA</strong>：finetune 能学到更深的任务知识，ICL 只能学浅模式</li>
+</ul>
+<p>但<strong>"够好 + 极快"赢了"最好 + 极慢"</strong> —— ICL 工程门槛低到 5 分钟出 demo，finetune 要工程一周。这是 LLM 时代的真正颠覆点。</p>
+<h2>演化线</h2>
+<ul>
+<li><strong>GPT-1</strong> · input transformations (用特殊 token + finetune)</li>
+<li><strong>GPT-2</strong> · zero-shot prompting (不 finetune，自然语言 prompt)</li>
+<li><strong>GPT-3</strong> · few-shot in-context learning (prompt 里给几个例子)</li>
+<li><strong>ChatGPT</strong> · system + user + assistant chat template (角色化的 ICL)</li>
+<li><strong>Claude / GPT-4</strong> · 长上下文 ICL + 工具使用 + reasoning</li>
+</ul>
+<p>一条直接的演化线。ICL 是中间最关键的一步。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/gpt-3.html">gpt-3</a> · 提出论文</li>
+<li><a href="../papers/gpt-2.html">gpt-2</a> · zero-shot 前身</li>
+<li><a href="../concepts/input-transformations.html">input-transformations</a> · 更早的祖先</li>
+<li><a href="../concepts/emergent-abilities.html">emergent-abilities</a> · ICL 本身就是一个 emergent ability</li>
+<li><a href="../concepts/language-modeling-as-multitask.html">language-modeling-as-multitask</a> · ICL 的理论解释</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 7 处</span>
+  <ul><li><a href="../papers/gpt-3.html"><span class="cat">paper</span>GPT-3 · Language Models are Few-Shot Learners</a></li><li><a href="../concepts/emergent-abilities.html"><span class="cat">concept</span>Emergent Abilities · 涌现能力 · 小模型 ≈ 0 大模型突然能</a></li><li><a href="../concepts/few-shot-learning.html"><span class="cat">concept</span>Few-Shot Learning · 少样本学习</a></li><li><a href="../concepts/input-transformations.html"><span class="cat">concept</span>Input Transformations · 用输入格式喂任务</a></li><li><a href="../concepts/language-modeling-as-multitask.html"><span class="cat">concept</span>Language Modeling as Multitask Learning · LM 即多任务学习</a></li><li><a href="../concepts/pretrain-finetune-paradigm.html"><span class="cat">concept</span>Pretrain-Finetune Paradigm · 先预训练再微调</a></li><li><a href="../concepts/zero-shot-transfer.html"><span class="cat">concept</span>Zero-Shot Transfer · 不 finetune 直接用 prompt 触发任务</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/in-context-learning.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

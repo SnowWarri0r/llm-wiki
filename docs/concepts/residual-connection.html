@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Residual Connection · 残差连接 / Skip Connection · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · residual-connection</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Residual Connection · 残差连接 / Skip Connection</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>在每个 block 里加一条 <code>+ x</code> 的"快车道"，让网络默认输出 = 输入，layer 只学<strong>跟默认值的差</strong>。</p>
+<h2>直觉</h2>
+<p>深网络反向传播时梯度要穿过每一层的权重链式相乘，层数多了几乎必衰减到零（梯度消失）或爆炸。</p>
+<p><strong>两个并发的好处</strong>：</p>
+<ol>
+<li><strong>梯度高速路</strong>：<code>y = F(x) + x</code> 求导出来是 <code>dy/dx = dF/dx + 1</code>，那个 <code>+1</code> 让梯度永远有一条不衰减的路回上游。100 层照样训得动。</li>
+<li><strong>identity 是默认值</strong>：如果某 layer 完全没用，它只要把 F 的所有权重学成 0 就行（很容易），输出自动等于输入。<strong>SGD 学"什么都不做"比学"恒等映射"简单得多</strong>——这是 ResNet 论文的核心洞察。</li>
+</ol>
+<p>类比：办公楼里如果每层都必须重新设计电梯井，盖到 50 层就完了；如果有一条贯穿所有楼层的固定电梯井（identity path），每层只考虑自己的"装修"，就能盖到 152 层。</p>
+<h2>怎么做的</h2>
+<pre><code># block 内部
+def residual_block(x):
+    out = conv1(x)         # F 的第一部分
+    out = bn(out)
+    out = relu(out)
+    out = conv2(out)       # F 的第二部分
+    out = bn(out)
+    return relu(out + x)   # 关键：+ x 这条快车道
+</code></pre>
+<p>如果 <code>out.shape</code> 跟 <code>x.shape</code> 不同（比如 stride=2 或通道变了），加一条 1×1 conv 的投影 <code>W·x</code>，论文叫 projection shortcut。</p>
+<h2>在 Transformer 里</h2>
+<p>完全同款，只是 F 换成 attention/FFN：</p>
+<pre><code class="language-python">def transformer_sublayer(x, sublayer):
+    return layernorm(x + sublayer(x))
+</code></pre>
+<p>每个 encoder/decoder layer 里都有两个这样的 sublayer（多头 attention + FFN），都包了 residual。</p>
+<h2>后续变种</h2>
+<ul>
+<li><strong>DenseNet</strong>：不是 <code>+</code>，是 <code>concat</code>（沿通道方向拼），更激进</li>
+<li><strong>Highway Network</strong>：早于 ResNet，用 gate <code>T(x)·F(x) + (1-T(x))·x</code> 控制比例。ResNet 等于把 T 固定成 0.5</li>
+<li><strong>Pre-activation ResNet (Identity Mappings)</strong>：原版是 <code>relu(F(x) + x)</code>，改成 <code>F(x) + x</code> 不过 relu，BN 和 ReLU 挪到 F 内部 → 训得更稳</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/resnet.html">resnet</a> · 起源论文</li>
+<li><a href="../papers/attention-is-all-you-need.html">attention-is-all-you-need</a> · 在 transformer block 里复用</li>
+<li><a href="../concepts/transformer-architecture.html">transformer-architecture</a> · 怎么嵌入 sublayer</li>
+<li><a href="../concepts/degradation-problem.html">degradation-problem</a> · 残差连接解决的问题</li>
+<li><a href="../concepts/batchnorm.html">batchnorm</a> · 配套训练技巧</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 6 处</span>
+  <ul><li><a href="../papers/resnet.html"><span class="cat">paper</span>Deep Residual Learning · 残差连接的起源</a></li><li><a href="../concepts/batchnorm.html"><span class="cat">concept</span>Batch Normalization · BN</a></li><li><a href="../concepts/bottleneck-block.html"><span class="cat">concept</span>Bottleneck Block · 瓶颈残差块</a></li><li><a href="../concepts/degradation-problem.html"><span class="cat">concept</span>Degradation Problem · 深网络反而变差</a></li><li><a href="../concepts/residual-layernorm.html"><span class="cat">concept</span>Residual + LayerNorm</a></li><li><a href="../concepts/resnet-architecture.html"><span class="cat">concept</span>ResNet Architecture · 残差网络堆叠结构</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/residual-connection.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

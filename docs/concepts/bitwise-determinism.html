@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Bitwise Determinism · 位级确定性 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · bitwise-determinism</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Bitwise Determinism · 位级确定性</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>同样的输入，训练 kernel 和推理 kernel 跑出来的浮点数在<strong>二进制位上完全相同</strong>。</p>
+<h2>直觉</h2>
+<p>你以为浮点运算"一样的输入 = 一样的输出"。其实<strong>不是</strong>：</p>
+<ul>
+<li>GPU kernel 为了效率会改 reduce 顺序（先加哪两个）</li>
+<li>Tensor parallel 切分会让不同卡算的部分汇总顺序变</li>
+<li>同一份代码跑两次，最后几位浮点可能不同</li>
+</ul>
+<p>对推理影响不大（人感知不到末位差异）。但对 <strong>RL 训练 + 长 session 对话</strong>就是大坑：</p>
+<ul>
+<li>RL 训练时用一套训练 kernel 算梯度</li>
+<li>Rollout / sampling 时换一套推理 kernel</li>
+<li>学到的 policy 行为分布 ≠ sampler 实际产生的分布 → 训练发散 / 不稳定</li>
+</ul>
+<h2>TML 怎么做到</h2>
+<p>用 <a href="../concepts/batch-invariant-kernel.html">batch-invariant-kernel</a> —— "对 batch 划分不敏感"的算子：</p>
+<ul>
+<li>同一个样本无论跟谁同批，单独算出来的数值都一样</li>
+<li>强制结果只依赖样本本身，不依赖同批 buddy</li>
+<li>代价：~5% 性能损失（值得）</li>
+</ul>
+<p>具体 kernel 改动包括：</p>
+<ul>
+<li>Attention 走固定的 <a href="../concepts/split-kv.html">split-kv</a> 切法（prefill 和 decode 走同一种切，结果 bit-for-bit 一致）</li>
+<li>Reduce 走固定顺序的实现</li>
+<li>MoE 路由走可重现的 deterministic 实现</li>
+</ul>
+<h2>为什么 fish-speech 不需要这条</h2>
+<p>fish-speech 也做 <a href="../concepts/grpo.html">grpo</a> RL 对齐 —— 理论上同样会吃这个亏。猜测原因：</p>
+<ul>
+<li>fish-speech 用 SGLang 推理，推理基建相对固定</li>
+<li>TTS reward 信号相对短 horizon（一句话内），漂移容忍度高</li>
+<li>而 TML 的对话 RL 是长 horizon + 多模态，bitwise 漂移会被放大</li>
+</ul>
+<p>这条值得做成 thread 问一下：<a href="../threads/fish-speech-grpo-determinism-question.html">fish-speech-grpo-determinism-question</a></p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/interaction-models-tml.html">interaction-models-tml</a> · 论文</li>
+<li><a href="../concepts/batch-invariant-kernel.html">batch-invariant-kernel</a> · 实现手段</li>
+<li><a href="../concepts/split-kv.html">split-kv</a> · Attention 的具体保 bit 手段</li>
+<li><a href="../concepts/grpo.html">grpo</a> · RL 训练对它的依赖</li>
+<li><a href="../concepts/prefill-decode.html">prefill-decode</a> · 两阶段必须保 bit</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 7 处</span>
+  <ul><li><a href="../papers/interaction-models-tml.html"><span class="cat">paper</span>Interaction Models · Thinking Machines Lab</a></li><li><a href="../concepts/batch-invariant-kernel.html"><span class="cat">concept</span>Batch-Invariant Kernel · 批大小不变算子</a></li><li><a href="../concepts/grouped-gemm-vs-gemv.html"><span class="cat">concept</span>Grouped GEMM vs GEMV</a></li><li><a href="../concepts/grpo.html"><span class="cat">concept</span>GRPO · Group Relative Policy Optimization</a></li><li><a href="../concepts/split-kv.html"><span class="cat">concept</span>Split-KV · 沿 KV 序列切分 attention</a></li><li><a href="../threads/fish-speech-grpo-determinism-question.html"><span class="cat">thread</span>Fish Speech GRPO Determinism Question</a></li><li><a href="../threads/open-questions.html"><span class="cat">thread</span>待回答的问题（attached: 每个都该新开一页）</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/bitwise-determinism.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

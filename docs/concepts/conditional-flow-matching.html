@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Conditional Flow Matching · 条件流匹配 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · conditional-flow-matching</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Conditional Flow Matching · 条件流匹配</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把难算的全局 velocity field 训练目标，换成"给定一对噪声和数据样本时该往哪走"的可监督回归。</p>
+<h2>直觉</h2>
+<p>真正想学的是：任意位置 <code>x_t</code>、任意时间 <code>t</code>，整个数据分布应该往哪流。这个目标要对所有可能的数据配对取平均，很难直接算。</p>
+<p>Conditional Flow Matching 退一步：训练时先抽一对 <code>(noise, data)</code>，在这对之间造一条路径，然后让模型预测这条路径上的速度。论文证明这样训练出来的梯度方向等价于原目标，但工程上简单很多。</p>
+<h2>怎么做的</h2>
+<ol>
+<li>采样噪声 <code>x0</code> 和数据 <code>x1</code></li>
+<li>随机采样时间 <code>t</code></li>
+<li>用路径公式得到中间点 <code>x_t</code></li>
+<li>目标速度通常近似为从 <code>x0</code> 指向 <code>x1</code> 的方向</li>
+<li>模型输入 <code>(x_t, t, condition)</code>，回归速度</li>
+</ol>
+<h2>代码出处</h2>
+<p>Flow Matching 论文的核心训练目标；TML 用它解释音频输出 head 的选择。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · 总概念</li>
+<li><a href="../concepts/velocity-field.html">velocity-field</a> · 模型学的对象</li>
+<li><a href="../concepts/probability-path.html">probability-path</a> · 路径怎么选</li>
+<li><a href="../concepts/optimal-transport.html">optimal-transport</a> · 常见路径选择</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/flow-matching.html"><span class="cat">paper</span>Flow Matching · 流匹配</a></li><li><a href="../concepts/velocity-field.html"><span class="cat">concept</span>Velocity Field · 速度场 · v(x, t)</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/conditional-flow-matching.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

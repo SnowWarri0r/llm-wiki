@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>数学符号速查 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · math-symbols</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>数学符号速查</h1>
+</header>
+
+<article class="concept-body">
+<p>ML paper 里反复出现的数学符号 + 它们对应的"工程意思"。看到不认识的就翻这页。</p>
+<h2>微积分相关</h2>
+<h3><code>∂</code> · 偏导数（partial derivative）</h3>
+<p>"对某个变量求导，把其他变量当常数"。</p>
+<p>例子：<code>∂y/∂x</code> = "y 怎么随 x 变"。当 y 还依赖别的变量（比如 z），∂ 表示<strong>只关心 x 这个轴</strong>，其他变量当固定。</p>
+<p>工程类比：<code>gradient[x]</code> —— 多维空间里只看一个坐标方向的斜率。</p>
+<h3><code>∇</code> · nabla / 梯度（gradient）</h3>
+<p>对一个标量函数，<strong>对所有变量都求偏导，打包成一个向量</strong>。</p>
+<p>例子：<code>∇f(x, y, z) = (∂f/∂x, ∂f/∂y, ∂f/∂z)</code> —— 一个 3 维向量，指向 f 增长最快的方向。</p>
+<p>工程类比：<code>torch.autograd.grad(f, [x, y, z])</code> 返回的那个向量。</p>
+<h3><code>∇·</code> · 散度（divergence）</h3>
+<p>对一个<strong>向量场</strong> v(x)，∇·v 是<strong>每个点"流出 vs 流入"的差</strong>。</p>
+<p>例子：风场里某点的散度大于 0 → 气流从这点向外发散；小于 0 → 气流向这点汇聚。</p>
+<p>为什么 flow matching 关心散度：<a href="../concepts/continuity-equation.html">continuity-equation</a> <code>∂p/∂t + ∇·(p·v) = 0</code> 就是说"粒子既不凭空冒出来也不凭空消失"（守恒）。</p>
+<h3><code>Δ</code> / <code>δ</code> · delta · 小变化</h3>
+<p><code>Δt</code> = "时间的一小步"，<code>δx</code> = "x 的微小扰动"。在 ODE 里 <code>x_{t+Δt} = x_t + v·Δt</code> 就是"沿速度走一小步"。</p>
+<h2>概率相关</h2>
+<h3><code>p(x)</code> · 概率密度</h3>
+<p>"x 这个值出现的相对密集程度"。不是概率，是密度（在连续情况下）。</p>
+<p>数据分布 <code>p_data(x)</code> = 训练数据的密度，标准高斯 <code>N(0, I)</code> = <code>p_0(x) = (2π)^{-d/2}·exp(-||x||²/2)</code>。</p>
+<h3><code>E[·]</code> 或 <code>𝔼[·]</code> · 期望（expectation）</h3>
+<p>"概率加权平均"。</p>
+<pre><code class="language-python">E_{x ~ p}[f(x)]  # 等价于
+# (1/N) * sum(f(x_i) for x_i in samples_from_p)  当 N → ∞
+</code></pre>
+<p>flow matching loss 公式里的 <code>E_{t, x_0, x_1}[...]</code> = "对所有 (t, x_0, x_1) 的组合求平均"。</p>
+<h3><code>log p(x)</code> · 对数概率</h3>
+<p>直接用 p 数值范围太广（10⁻¹⁰ 到 1.0），取 log 后变成 -23 到 0 这种神经网络友好的范围。</p>
+<h3><code>∇log p(x)</code> · score</h3>
+<p>就是上面"梯度"应用到"对数概率"。直觉上：<strong>这个向量指向概率密度更大的方向</strong>。详见 <a href="../concepts/score-function.html">score-function</a>。</p>
+<h3><code>ε</code> · epsilon · 噪声</h3>
+<p>通常表示 <code>ε ~ N(0, I)</code> —— 一个标准高斯噪声向量。diffusion 加噪 / flow matching 起点都用它。</p>
+<h2>线性代数相关</h2>
+<h3><code>||x||</code> · 向量的 norm（长度）</h3>
+<p>默认是 L2 norm：<code>||x|| = sqrt(x₁² + x₂² + ... + x_d²)</code> —— 欧几里得距离。</p>
+<p><code>||x||²</code> 就是去掉根号：<code>x₁² + ... + x_d²</code>。loss 函数里常见的 <code>||a - b||²</code> 是 MSE 的向量版。</p>
+<h3><code>Q · Kᵀ</code> · 矩阵乘 + 转置</h3>
+<ul>
+<li><code>·</code> 矩阵乘法（在 numpy/torch 里写成 <code>@</code>）</li>
+<li><code>Kᵀ</code> = K 的转置（行列互换）</li>
+</ul>
+<p>attention 里的 <code>Q · Kᵀ</code> 是 [seq, d] @ [d, seq] = [seq, seq] —— 每对 (i, j) 算一个 attention score。</p>
+<h3><code>I</code> · 单位矩阵 / identity matrix</h3>
+<p>对角线 1，其他位置 0。<code>N(0, I)</code> = 各维独立的标准高斯。</p>
+<h3><code>√</code> · 平方根</h3>
+<p>注意 <code>√d_k</code> 在 attention 里是 d_k 的<strong>标量</strong>平方根，不是矩阵开根。<code>sqrt(64) = 8</code>，用来除 attention score 防 softmax 饱和。</p>
+<h2>函数相关</h2>
+<h3><code>f_θ(x)</code> · 参数化函数</h3>
+<p>下标 θ 表示"这个函数由参数 θ 决定"。神经网络通常写成 <code>u_θ</code>、<code>f_θ</code> —— θ 就是 weights。训练 = 找最优 θ。</p>
+<h3><code>~</code> · 采样自</h3>
+<p><code>x ~ N(0, I)</code> = "x 从标准高斯里采样"。
+<code>t ~ U(0, 1)</code> = "t 从 [0, 1] 均匀分布采样"。</p>
+<h3><code>→</code> / <code>↦</code> · 映射 / 函数</h3>
+<p><code>f: ℝᵈ → ℝᵏ</code> = "f 把 d 维向量映射到 k 维"。</p>
+<h3><code>argmin</code> / <code>argmax</code></h3>
+<p><code>argmin_x f(x)</code> = "让 f 最小的那个 x"。训练 loss 是 <code>argmin_θ L(θ)</code>。</p>
+<h2>微分方程相关</h2>
+<h3>ODE · 普通微分方程</h3>
+<p><code>dx/dt = v(x, t)</code> —— 给定 v，给定 x_0，<strong>解唯一</strong>。flow matching 用这个。</p>
+<p>求解：欧拉法 <code>x_{t+Δt} = x_t + v(x_t, t)·Δt</code>，或更高阶的 RK4。</p>
+<h3>SDE · 随机微分方程</h3>
+<p><code>dx = f(x, t)·dt + g(t)·dW</code> —— 比 ODE 多了 <code>dW</code>（Wiener process，布朗运动），<strong>带随机扰动</strong>。同样 x_0 跑两次结果不同。diffusion 用这个。</p>
+<p>详见 <a href="../concepts/ode-vs-sde.html">ode-vs-sde</a>。</p>
+<h3><code>dW</code> · Wiener process 增量</h3>
+<p>布朗运动的微小变化。可理解为 <code>dW ~ N(0, dt)</code> 的小随机扰动。</p>
+<h2>希腊字母速查（常用）</h2>
+<table>
+<thead>
+<tr>
+<th>字母</th>
+<th>读音</th>
+<th>通常含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>α (alpha)</td>
+<td>alpha</td>
+<td>noise schedule 系数（如 ᾱ_t）</td>
+</tr>
+<tr>
+<td>β (beta)</td>
+<td>beta</td>
+<td>regularization / noise variance</td>
+</tr>
+<tr>
+<td>γ (gamma)</td>
+<td>gamma</td>
+<td>learning rate / discount</td>
+</tr>
+<tr>
+<td>δ (delta)</td>
+<td>delta</td>
+<td>微小变化</td>
+</tr>
+<tr>
+<td>ε (epsilon)</td>
+<td>epsilon</td>
+<td>噪声 / 容差</td>
+</tr>
+<tr>
+<td>θ (theta)</td>
+<td>theta</td>
+<td>模型参数</td>
+</tr>
+<tr>
+<td>λ (lambda)</td>
+<td>lambda</td>
+<td>权重系数 / 特征值</td>
+</tr>
+<tr>
+<td>μ (mu)</td>
+<td>mu</td>
+<td>均值</td>
+</tr>
+<tr>
+<td>σ (sigma)</td>
+<td>sigma</td>
+<td>标准差</td>
+</tr>
+<tr>
+<td>τ (tau)</td>
+<td>tau</td>
+<td>温度 / 时间常数</td>
+</tr>
+<tr>
+<td>φ (phi)</td>
+<td>phi</td>
+<td>函数（如 phi 网络）</td>
+</tr>
+<tr>
+<td>ψ (psi)</td>
+<td>psi</td>
+<td>另一个函数</td>
+</tr>
+<tr>
+<td>ω (omega)</td>
+<td>omega</td>
+<td>频率 / 权重</td>
+</tr>
+</tbody>
+</table>
+<p>带 bar 的（如 ᾱ）通常表示"累积的"或"平均的"。带 hat 的（如 x̂）表示"估计的 / 预测的"。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/ode-vs-sde.html">ode-vs-sde</a> · ODE vs SDE 详细</li>
+<li><a href="../concepts/score-function.html">score-function</a> · score 详细</li>
+<li><a href="../concepts/velocity-field.html">velocity-field</a> · flow matching 学的东西</li>
+<li><a href="../concepts/probability-path.html">probability-path</a> · 概率密度演化路径</li>
+<li><a href="../concepts/continuity-equation.html">continuity-equation</a> · 粒子守恒方程详解</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../concepts/continuity-equation.html"><span class="cat">concept</span>Continuity Equation · 连续性方程</a></li><li><a href="../concepts/score-function.html"><span class="cat">concept</span>Score Function · ∇log p(x) · 对数概率梯度</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/math-symbols.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

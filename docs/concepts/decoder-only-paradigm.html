@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Decoder-Only Paradigm · 解码器路线 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · decoder-only-paradigm</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Decoder-Only Paradigm · 解码器路线</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>只用 Transformer 的 decoder 部分（带 causal mask 的 self-attention），目标是<strong>预测序列里每个位置的下一个 token</strong> —— 训练完后天然能做生成。</p>
+<h2>直觉</h2>
+<p>Transformer 原论文是 encoder-decoder（翻译任务）。2018 三条路同时出现：</p>
+<ul>
+<li><strong>encoder-only</strong>：BERT · 双向 attention · 输出表征 → 理解任务</li>
+<li><strong>decoder-only</strong>：GPT · 因果 mask · 输出下一 token → 生成任务</li>
+<li><strong>encoder-decoder</strong>：T5 / BART · 两边都有 · seq2seq</li>
+</ul>
+<p>Decoder-only 的核心选择是<strong>"因果 mask"换"训练 = 推理"</strong>：训练时每个位置就是在做"预测下一个 token"，推理时只是把生成的 token 接回输入再 forward 一次 —— 训练目标和推理使用方式完全一致。这种一致性极大简化了 scaling。</p>
+<h2>结构差异</h2>
+<p><strong>GPT decoder layer</strong>（因果）：</p>
+<pre><code class="language-python">y = LayerNorm(x + MaskedMultiHeadAttention(x, x, x))  # 带 causal mask
+y = LayerNorm(y + FFN(y))
+</code></pre>
+<p><strong>BERT encoder layer</strong>（双向）：</p>
+<pre><code class="language-python">y = LayerNorm(x + MultiHeadAttention(x, x, x))   # 没 mask，所有位置互看
+y = LayerNorm(y + FFN(y))
+</code></pre>
+<p>差别只在 attention 的 mask。<strong>架构几乎一模一样，训练目标决定一切</strong>。</p>
+<h2>为什么这条路最后赢了</h2>
+<p>2018 时大家觉得 encoder-only（BERT）更强 —— 双向上下文嘛，理解任务通吃。但 2020 之后 decoder-only 反超的原因：</p>
+<ol>
+<li><strong>训练信号密集</strong>：CLM 每个位置都算 loss，MLM 只在 15% mask 处。同等数据下 decoder-only 看到的预测任务多</li>
+<li><strong>生成天然支持</strong>：BERT 需要外挂 decoder 才能生成，decoder-only 直接拿来就用</li>
+<li><strong>Scale 行为更顺</strong>：GPT-2 (2019) → GPT-3 (2020) → GPT-4 (2023) 一路 scale 都涨，BERT 线 scale 上去边际收益递减</li>
+<li><strong>In-context learning 浮现</strong>：GPT-3 发现"在 prompt 里给几个例子就行"，根本不用 finetune。BERT 系做不到这种 prompt-only 任务</li>
+</ol>
+<p>→ decoder-only 从 2020 开始统治大模型，BERT 系退到嵌入 / 检索领域</p>
+<h2>各代表</h2>
+<ul>
+<li><strong>GPT-1</strong> (2018) · 117M · 12 层 · 第一个证明可行</li>
+<li><strong>GPT-2</strong> (2019) · 1.5B · 48 层 · 发现 zero-shot 浮现</li>
+<li><strong>GPT-3</strong> (2020) · 175B · 96 层 · in-context learning</li>
+<li><strong>GPT-4 / Claude / Llama / Qwen</strong> · 一路 decoder-only 到底</li>
+</ul>
+<h2>跟 encoder-only 的根本对照</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>decoder-only</th>
+<th>encoder-only</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Attention</td>
+<td>因果</td>
+<td>双向</td>
+</tr>
+<tr>
+<td>主任务</td>
+<td>生成下一 token</td>
+<td>还原 / 分类 / 表征</td>
+</tr>
+<tr>
+<td>训练信号密度</td>
+<td>每位置</td>
+<td>稀疏（仅 mask 处）</td>
+</tr>
+<tr>
+<td>推理与训练</td>
+<td>完全一致</td>
+<td>不一致（finetune 时换 head）</td>
+</tr>
+<tr>
+<td>适合</td>
+<td>生成 / 通用 / 大模型</td>
+<td>理解 / 嵌入 / 小模型</td>
+</tr>
+<tr>
+<td>扩展性</td>
+<td>极强（→ 100B+）</td>
+<td>中等（330M 顶天）</td>
+</tr>
+</tbody>
+</table>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/gpt-1.html">gpt-1</a> · decoder-only 路线起点</li>
+<li><a href="../papers/bert.html">bert</a> · encoder-only 对照</li>
+<li><a href="../concepts/causal-language-model.html">causal-language-model</a> · decoder-only 配套的训练目标</li>
+<li><a href="../concepts/transformer-architecture.html">transformer-architecture</a> · 它的子集</li>
+<li><a href="../concepts/encoder-only-paradigm.html">encoder-only-paradigm</a> · 另一条路</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 5 处</span>
+  <ul><li><a href="../papers/gpt-1.html"><span class="cat">paper</span>GPT-1 · Improving Language Understanding by Generative Pre-Training</a></li><li><a href="../papers/gpt-2.html"><span class="cat">paper</span>GPT-2 · Language Models are Unsupervised Multitask Learners</a></li><li><a href="../papers/gpt-3.html"><span class="cat">paper</span>GPT-3 · Language Models are Few-Shot Learners</a></li><li><a href="../concepts/causal-language-model.html"><span class="cat">concept</span>Causal Language Model · CLM · 自回归语言模型</a></li><li><a href="../concepts/cross-attention.html"><span class="cat">concept</span>Cross-Attention · 交叉注意力</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/decoder-only-paradigm.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Cross-Attention · 交叉注意力 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · cross-attention</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Cross-Attention · 交叉注意力</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>Decoder 用自己的 Query，去查 Encoder 输出的 Key/Value，让生成过程能看见输入序列。</p>
+<h2>直觉</h2>
+<p>Self-attention 是"班里同学互相看"；cross-attention 是"写答案的人翻参考资料"。翻译任务里，encoder 先读完整个源语言句子；decoder 每生成一个目标词，就用 cross-attention 回头查源句里相关位置。</p>
+<h2>怎么做的</h2>
+<p>在 Transformer decoder block 里通常有三段：</p>
+<ol>
+<li>masked self-attention：decoder 看自己已经生成的前缀</li>
+<li>cross-attention：decoder 的 hidden state 做 Q，encoder 输出做 K/V</li>
+<li>FFN：逐 token 处理</li>
+</ol>
+<p>Decoder-only GPT 路线把 encoder 和 cross-attention 都砍掉，统一变成前缀条件生成。</p>
+<h2>代码出处</h2>
+<p>Transformer 原论文架构图里的 "multi-head attention over encoder output" 子层。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/transformer-architecture.html">transformer-architecture</a> · cross-attention 的位置</li>
+<li><a href="../concepts/multi-head-attention.html">multi-head-attention</a> · 具体 attention 机制</li>
+<li><a href="../concepts/decoder-only-paradigm.html">decoder-only-paradigm</a> · 为什么后来的 GPT 路线不用它</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/attention-is-all-you-need.html"><span class="cat">paper</span>Attention Is All You Need · Transformer 始祖</a></li><li><a href="../concepts/transformer-architecture.html"><span class="cat">concept</span>Transformer Architecture · 整体架构</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/cross-attention.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

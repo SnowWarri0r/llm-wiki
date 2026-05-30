@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>GRPO · Group Relative Policy Optimization · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · grpo</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>GRPO · Group Relative Policy Optimization</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>PPO 的简化版：不用 value network，用<strong>同 prompt 一组采样</strong>之间的相对 reward 当 advantage。</p>
+<h2>直觉</h2>
+<p>PPO 训 LLM 的痛点：要养一个 value network（critic）单独学每个状态的价值，跟 policy 一样大，训练成本翻倍且不稳定。</p>
+<p>GRPO 砍了 critic，做法是：</p>
+<ul>
+<li>对同一个 prompt 一次性采样 <strong>G 条响应</strong></li>
+<li>算每条的 reward</li>
+<li>用组内 mean / std 标准化 reward → 当 advantage</li>
+</ul>
+<p>类比：考试不需要"绝对分数模型"，只要看你在班里的排名相对位置就够了。</p>
+<h2>怎么做的</h2>
+<pre><code>for prompt in batch:
+    sample G responses {r_1, ..., r_G}
+    rewards = [R(r_i) for r_i in responses]
+    advantages = (rewards - mean(rewards)) / std(rewards)
+    loss = clipped_pg_loss(advantages) + KL_penalty(policy || ref_policy)
+</code></pre>
+<ul>
+<li><strong>无 critic</strong> → 只训 policy，省内存省计算</li>
+<li><strong>组相对</strong> → 自动消除 reward scale 漂移</li>
+<li><strong>KL 约束</strong> → 限制 policy 偏离参考模型太远，防止跑偏</li>
+</ul>
+<p>来源：DeepSeek-Math 的 GRPO 论文（也用在 DeepSeek-R1 训练里）。</p>
+<h2>fish-speech S2 怎么用</h2>
+<ul>
+<li>不只一个 reward —— <strong>多维 reward</strong>：语义准确（ASR WER）+ 指令遵循（情感 tag 命中）+ 音色相似（SIM）+ 声学偏好（人评 / proxy 模型）</li>
+<li><strong>Reward model = 数据清洗 / 标注用的同一套模型</strong> → 解决传统 RLHF 的 distribution mismatch：reward model 训在另一份数据上 vs policy 训在 pre-train 数据上，那条 gap 消失</li>
+</ul>
+<h2>跟 TML 的关系</h2>
+<p>TML 也提到 RL 训练 → bitwise determinism 是为它服务的。<a href="../concepts/bitwise-determinism.html">bitwise-determinism</a> 缺失会让 GRPO / PPO 这类 RL loop 不稳定甚至发散，因为训练时算梯度的 kernel 和推理时采样的 kernel 数值不一致 → 学到的 policy 偏离 sampler 的真实行为分布。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/fish-speech-s2-pro.html">fish-speech-s2-pro</a> · 这里 RL 对齐</li>
+<li><a href="../concepts/bitwise-determinism.html">bitwise-determinism</a> · RL 训练稳定性前提</li>
+<li><a href="../concepts/dual-ar.html">dual-ar</a> · GRPO 在 Dual-AR 之上做 post-training</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/fish-speech-s2-pro.html"><span class="cat">paper</span>Fish Audio S2 Pro</a></li><li><a href="../concepts/bitwise-determinism.html"><span class="cat">concept</span>Bitwise Determinism · 位级确定性</a></li><li><a href="../concepts/dual-ar.html"><span class="cat">concept</span>Dual-AR · 双自回归</a></li><li><a href="../threads/fish-speech-grpo-determinism-question.html"><span class="cat">thread</span>Fish Speech GRPO Determinism Question</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/grpo.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

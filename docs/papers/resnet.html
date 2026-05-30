@@ -1,0 +1,1474 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Deep Residual Learning · ResNet</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6;
+  --paper-2: #e8e0c8;
+  --paper-3: #faf4e1;
+  --paper-card: #f7f1de;
+  --ink: #181410;
+  --ink-2: #3a3128;
+  --muted: #7a6f5d;
+  --rule: #bfb398;
+  --brick: #9b2c2c;
+  --brick-soft: #efd6c8;
+  --ochre: #b8841c;
+  --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a;
+  --moss-soft: #d8e6ce;
+  --deep: #1f3a5f;
+  --deep-soft: #c8d4e2;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body {
+  font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(155,44,44,0.025) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(31,58,95,0.025) 0%, transparent 40%);
+}
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply; opacity: 0.5;
+}
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+
+.masthead {
+  border-top: 4px double var(--ink);
+  border-bottom: 1px solid var(--rule);
+  padding: 14px 0;
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ink-2);
+  margin-bottom: 48px;
+}
+.masthead .l { font-weight: 700; }
+.masthead .r { color: var(--muted); }
+
+.hero { margin-bottom: 64px; }
+.hero .issue {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--deep); font-weight: 700;
+  margin-bottom: 18px;
+  display: flex; align-items: center; gap: 12px;
+}
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+
+h1.title {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1;
+  font-weight: 700;
+  font-size: clamp(56px, 9vw, 96px);
+  line-height: 0.92;
+  letter-spacing: -0.035em;
+  margin: 0 0 12px;
+}
+h1.title .em {
+  font-style: italic;
+  font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1;
+  color: var(--deep);
+}
+
+.byline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  margin: 18px 0 6px;
+}
+.hero .dek {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-variation-settings: "opsz" 36;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(20px, 2.2vw, 26px);
+  line-height: 1.4;
+  color: var(--ink-2);
+  max-width: 720px;
+  margin: 16px 0 16px;
+}
+
+.tldr {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--deep);
+  padding: 22px 26px;
+  margin: 32px 0;
+  border-radius: 0 4px 4px 0;
+}
+.tldr .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--deep); font-weight: 700;
+  display: block; margin-bottom: 8px;
+}
+.tldr p { margin: 6px 0; }
+
+h2 {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1;
+  font-weight: 700;
+  font-size: 38px;
+  letter-spacing: -0.02em;
+  margin: 72px 0 20px;
+  display: flex; align-items: baseline; gap: 18px;
+}
+h2 .num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--deep); font-weight: 700;
+  min-width: 56px;
+}
+
+h3 {
+  font-family: 'Fraunces', 'Noto Serif SC', serif;
+  font-size: 22px;
+  font-weight: 600;
+  margin: 36px 0 12px;
+  letter-spacing: -0.01em;
+}
+
+p { margin: 12px 0; }
+strong { font-weight: 700; color: var(--ink); }
+code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.88em;
+  background: var(--paper-3);
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid var(--rule);
+}
+.kbd { background: #fff; }
+
+a { color: var(--deep); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { color: var(--brick); }
+
+.jr {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  vertical-align: super;
+  background: var(--ochre-soft);
+  color: var(--ink-2);
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid var(--ochre);
+  text-decoration: none !important;
+  margin: 0 2px;
+  cursor: pointer;
+}
+.jr:hover { background: var(--ochre); color: var(--paper); }
+
+figure {
+  margin: 40px 0;
+  padding: 28px;
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+}
+figcaption {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--rule);
+  display: flex; justify-content: space-between; align-items: center;
+}
+figcaption .fnum { color: var(--deep); font-weight: 700; }
+
+.note {
+  background: var(--paper-3);
+  border-left: 3px solid var(--moss);
+  padding: 14px 18px;
+  margin: 18px 0;
+  font-size: 16px;
+  color: var(--ink-2);
+}
+.note.deep { border-left-color: var(--deep); }
+.note.brick { border-left-color: var(--brick); }
+.note .l {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--moss); font-weight: 700;
+  display: block; margin-bottom: 4px;
+}
+.note.deep .l { color: var(--deep); }
+.note.brick .l { color: var(--brick); }
+
+/* Fig 01: degradation curve */
+.deg-fig { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.deg-panel {
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 18px;
+}
+.deg-panel h4 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  margin: 0 0 8px; color: var(--ink-2);
+}
+.deg-panel.plain h4 { color: var(--brick); }
+.deg-panel.res h4 { color: var(--moss); }
+.deg-chart { position: relative; height: 220px; margin: 8px 0 14px; }
+.deg-chart svg { width: 100%; height: 100%; }
+.deg-line {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 800;
+  stroke-dashoffset: 800;
+  transition: stroke-dashoffset 2.2s ease-in-out;
+}
+.deg-fig.play .deg-line { stroke-dashoffset: 0; }
+.deg-line.shallow { stroke: var(--ochre); }
+.deg-line.deep { stroke: var(--brick); }
+.deg-panel.res .deg-line.shallow { stroke: var(--ochre); }
+.deg-panel.res .deg-line.deep { stroke: var(--moss); }
+.deg-axis line { stroke: var(--rule); stroke-width: 1; }
+.deg-axis text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  fill: var(--muted);
+}
+.deg-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  fill: var(--ink-2);
+  font-weight: 700;
+}
+.deg-legend {
+  display: flex; gap: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; color: var(--muted);
+}
+.deg-legend .sw {
+  display: inline-block; width: 14px; height: 2px; vertical-align: middle;
+  margin-right: 4px;
+}
+
+/* Fig 02: residual block */
+.rb-fig { padding-top: 12px; }
+.rb-canvas {
+  position: relative;
+  height: 460px;
+  margin: 0 auto;
+  max-width: 720px;
+}
+.rb-canvas svg { width: 100%; height: 100%; }
+.rb-fade { opacity: 0; transition: opacity 0.7s; }
+.rb-fig.s1 .rb-show-1, .rb-fig.s2 .rb-show-1,
+.rb-fig.s3 .rb-show-1, .rb-fig.s4 .rb-show-1 { opacity: 1; }
+.rb-fig.s2 .rb-show-2, .rb-fig.s3 .rb-show-2,
+.rb-fig.s4 .rb-show-2 { opacity: 1; }
+.rb-fig.s3 .rb-show-3, .rb-fig.s4 .rb-show-3 { opacity: 1; }
+.rb-fig.s4 .rb-show-4 { opacity: 1; }
+.rb-step-ctrl {
+  display: flex; justify-content: center; gap: 10px;
+  margin-top: 16px;
+}
+.rb-step {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+  background: var(--paper-3); border: 1px solid var(--rule);
+  color: var(--ink-2);
+  padding: 5px 10px; border-radius: 3px; cursor: pointer;
+}
+.rb-step.active { background: var(--deep); color: var(--paper); border-color: var(--deep); }
+
+.rb-box rect { fill: var(--paper-2); stroke: var(--ink); stroke-width: 1.5; }
+.rb-box.f rect { fill: var(--brick-soft); stroke: var(--brick); }
+.rb-box.identity rect { fill: var(--moss-soft); stroke: var(--moss); stroke-dasharray: 4 3; }
+.rb-box.sum rect { fill: var(--ochre-soft); stroke: var(--ochre); }
+.rb-box text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  fill: var(--ink);
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+.rb-arrow {
+  stroke: var(--ink);
+  stroke-width: 2;
+  fill: none;
+  marker-end: url(#rb-tri);
+}
+.rb-arrow.identity { stroke: var(--moss); stroke-dasharray: 6 4; }
+.rb-arrow.grad { stroke: var(--brick); stroke-width: 3; }
+.rb-arrow.grad-id { stroke: var(--moss); stroke-width: 3; }
+.rb-arrow.grad-id.flash {
+  animation: gradFlash 1.4s ease-in-out infinite;
+}
+@keyframes gradFlash {
+  0%, 100% { opacity: 0.4; stroke-width: 3; }
+  50% { opacity: 1; stroke-width: 4.5; }
+}
+.rb-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  fill: var(--muted);
+  text-anchor: middle;
+}
+.rb-formula {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  fill: var(--ink);
+  text-anchor: middle;
+  font-weight: 700;
+}
+.rb-formula tspan.acc { fill: var(--moss); }
+.rb-formula tspan.brick { fill: var(--brick); }
+
+/* Fig 03: identity-as-default */
+.idd-fig {}
+.idd-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+}
+.idd-cell {
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 18px;
+}
+.idd-cell h4 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  margin: 0 0 6px;
+}
+.idd-cell.plain h4 { color: var(--brick); }
+.idd-cell.res h4 { color: var(--moss); }
+.idd-vec {
+  display: flex; gap: 4px; margin: 10px 0;
+  align-items: flex-end;
+  height: 50px;
+}
+.idd-vec .cell {
+  flex: 1;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: 1px;
+  transition: height 1.2s ease, background 0.5s;
+  position: relative;
+}
+.idd-vec .cell .v {
+  position: absolute;
+  bottom: -16px;
+  left: 50%; transform: translateX(-50%);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+}
+.idd-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: 1.5px;
+  color: var(--ink-2);
+  margin: 16px 0 4px;
+  text-transform: uppercase;
+}
+.idd-task {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  background: var(--paper);
+  border: 1px dashed var(--rule);
+  padding: 8px 12px;
+  margin-top: 12px;
+  border-radius: 2px;
+  color: var(--ink-2);
+}
+.idd-task .tag { color: var(--deep); font-weight: 700; }
+
+/* Fig 02 v2: residual block + gradient comparison */
+.rb-v2-fig {}
+.rb-v2 {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 24px;
+}
+.rb-block {
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 18px;
+}
+.rb-block h4 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--ink-2);
+  margin: 0 0 12px;
+}
+.rb-svg { width: 100%; height: 360px; display: block; }
+.rb-svg .box { fill: var(--paper-2); stroke: var(--ink); stroke-width: 1.5; }
+.rb-svg .box.f { fill: var(--brick-soft); stroke: var(--brick); }
+.rb-svg .box.sum { fill: var(--ochre-soft); stroke: var(--ochre); }
+.rb-svg text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; fill: var(--ink);
+  text-anchor: middle; dominant-baseline: middle;
+}
+.rb-svg .label { font-size: 10px; fill: var(--muted); }
+.rb-svg .arrow {
+  stroke: var(--ink); stroke-width: 2; fill: none;
+  marker-end: url(#rb-tri);
+}
+.rb-svg .arrow.id-line {
+  stroke: var(--moss); stroke-dasharray: 6 4; stroke-width: 2.2;
+}
+.rb-cap {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+}
+.rb-cap .tag {
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.rb-cap .tag-brick { background: var(--brick-soft); color: var(--brick); border: 1px solid var(--brick); }
+.rb-cap .tag-moss { background: var(--moss-soft); color: var(--moss); border: 1px solid var(--moss); }
+.rb-cap .tag-ochre { background: var(--ochre-soft); color: var(--ochre); border: 1px solid var(--ochre); }
+
+.gr-eq {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--paper);
+  padding: 12px 14px;
+  border-radius: 3px;
+  border: 1px solid var(--rule);
+  font-size: 12px;
+  line-height: 1.9;
+  margin-bottom: 8px;
+}
+.gr-eq .acc { color: var(--moss); font-weight: 700; }
+.gr-eq .brick { color: var(--brick); font-weight: 700; }
+.gr-caption {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  margin-bottom: 14px;
+}
+.gr-row-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin: 6px 0 4px;
+}
+.gr-row-label.brick { color: var(--brick); }
+.gr-row-label.moss { color: var(--moss); }
+.gr-bars {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  align-items: end;
+  height: 70px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 5px;
+}
+.gr-bar {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.gr-bar .fill {
+  background: var(--brick);
+  border-radius: 2px 2px 0 0;
+  height: 0;
+  transition: height 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.gr-bars.res .gr-bar .fill { background: var(--moss); }
+.gr-bar .v {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  text-align: center;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.gr-row-cap {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  margin: 6px 0 0;
+}
+.gr-row-cap.brick { color: var(--brick); }
+.gr-row-cap.moss { color: var(--moss); font-weight: 700; }
+
+/* Fig 03 v2: random-init scrambling */
+.ri-fig {}
+.ri-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+.ri-cell {
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 18px;
+}
+.ri-cell h4 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  margin: 0 0 4px;
+}
+.ri-cell.plain h4 { color: var(--brick); }
+.ri-cell.res h4 { color: var(--moss); }
+.ri-cell .sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.ri-step {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  margin: 14px 0 4px;
+}
+.ri-bars {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 3px;
+  height: 56px;
+  align-items: end;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 4px;
+}
+.ri-bars .bar {
+  width: 100%;
+  background: var(--ochre);
+  border-radius: 1px 1px 0 0;
+  height: 0;
+  transition: height 0.6s, background 0.6s;
+}
+.ri-bars.scrambled .bar { background: var(--brick); }
+.ri-bars.near-zero .bar { background: var(--moss); opacity: 0.5; }
+.ri-bars.preserved .bar { background: var(--ochre); }
+.ri-task {
+  margin-top: 14px;
+  font-size: 14px;
+  padding: 10px 12px;
+  background: var(--paper);
+  border: 1px dashed var(--rule);
+  border-radius: 3px;
+  color: var(--ink-2);
+}
+.ri-task .l {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; letter-spacing: 1.5px;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 4px;
+}
+.ri-cell.plain .ri-task .l { color: var(--brick); }
+.ri-cell.res .ri-task .l { color: var(--moss); }
+
+/* Fig 05 v2: bottleneck math */
+.bk-math {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.bk-math-row {
+  display: flex; justify-content: space-between;
+  padding: 2px 0;
+}
+.bk-math-row.total {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--rule);
+  font-weight: 700;
+  color: var(--ink);
+}
+.bk-math-row.total b { color: var(--moss); }
+
+/* highlighted key sentence */
+.key-line {
+  background: var(--ochre-soft);
+  border-left: 3px solid var(--ochre);
+  padding: 12px 16px;
+  margin: 18px 0;
+  font-size: 17px;
+}
+
+/* Fig 04: depth comparison */
+.depth-fig {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+  align-items: end;
+}
+.depth-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.depth-stack {
+  width: 100%;
+  display: flex; flex-direction: column-reverse;
+  gap: 1px;
+  margin-bottom: 8px;
+  position: relative;
+}
+.depth-block {
+  height: 2px;
+  background: var(--paper-2);
+  border-left: 2px solid var(--rule);
+  width: 100%;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 0.025s, transform 0.025s;
+}
+.depth-col.vgg .depth-block { border-left-color: var(--ochre); background: var(--ochre-soft); }
+.depth-col.gn .depth-block { border-left-color: var(--brick); background: var(--brick-soft); }
+.depth-col.r34 .depth-block { border-left-color: var(--moss); background: var(--moss-soft); }
+.depth-col.r50 .depth-block { border-left-color: var(--moss); background: var(--moss-soft); }
+.depth-col.r152 .depth-block { border-left-color: var(--deep); background: var(--deep-soft); }
+.depth-col.show .depth-block {
+  opacity: 1;
+  transform: translateX(0);
+}
+.depth-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--ink-2);
+  font-weight: 700;
+  text-align: center;
+}
+.depth-stat {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 3px;
+}
+.depth-stat .err { color: var(--brick); font-weight: 700; }
+.depth-stat .errg { color: var(--moss); font-weight: 700; }
+
+/* Fig 05: bottleneck block */
+.bk-fig {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.bk-col {
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 20px;
+}
+.bk-col h4 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  margin: 0 0 12px;
+  color: var(--ink-2);
+}
+.bk-col.basic h4 { color: var(--brick); }
+.bk-col.btn h4 { color: var(--moss); }
+.bk-stack {
+  display: flex; flex-direction: column;
+  gap: 6px;
+}
+.bk-layer {
+  background: var(--paper-2);
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  padding: 6px 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  display: flex; justify-content: space-between;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.4s, transform 0.4s;
+}
+.bk-fig.play .bk-layer.show-1 { opacity: 1; transform: translateY(0); transition-delay: 0.1s; }
+.bk-fig.play .bk-layer.show-2 { opacity: 1; transform: translateY(0); transition-delay: 0.3s; }
+.bk-fig.play .bk-layer.show-3 { opacity: 1; transform: translateY(0); transition-delay: 0.5s; }
+.bk-fig.play .bk-layer.show-4 { opacity: 1; transform: translateY(0); transition-delay: 0.7s; }
+.bk-fig.play .bk-layer.show-5 { opacity: 1; transform: translateY(0); transition-delay: 0.9s; }
+.bk-layer.reduce { background: var(--ochre-soft); border-color: var(--ochre); }
+.bk-layer.compute { background: var(--moss-soft); border-color: var(--moss); }
+.bk-layer.expand { background: var(--ochre-soft); border-color: var(--ochre); }
+.bk-meta {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  display: flex; justify-content: space-between;
+}
+.bk-meta b { color: var(--ink); }
+
+/* Fig 06: transformer inheritance */
+.tx-fig {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.tx-col {
+  background: var(--paper-3);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 22px;
+  position: relative;
+}
+.tx-col h4 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  margin: 0 0 16px;
+}
+.tx-col.resnet h4 { color: var(--moss); }
+.tx-col.transformer h4 { color: var(--deep); }
+.tx-svg {
+  width: 100%;
+  height: 280px;
+}
+.tx-svg .tx-box { fill: var(--paper-2); stroke: var(--ink); stroke-width: 1.5; }
+.tx-svg .tx-box.f { fill: var(--brick-soft); stroke: var(--brick); }
+.tx-svg .tx-box.sum { fill: var(--ochre-soft); stroke: var(--ochre); }
+.tx-svg text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+.tx-svg .tx-arrow {
+  stroke: var(--ink); stroke-width: 1.6; fill: none;
+  marker-end: url(#tx-tri);
+}
+.tx-svg .tx-skip { stroke: var(--moss); stroke-width: 2; stroke-dasharray: 5 3; fill: none; marker-end: url(#tx-tri-moss); }
+.tx-fig figcaption .same {
+  background: var(--moss-soft); color: var(--moss);
+  padding: 2px 8px; border-radius: 2px; font-weight: 700;
+}
+
+/* Glossary */
+.gloss {
+  margin-top: 64px;
+  padding-top: 32px;
+  border-top: 2px solid var(--rule);
+}
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li {
+  counter-increment: g;
+  padding: 14px 0 14px 50px;
+  position: relative;
+  border-bottom: 1px dashed var(--rule);
+  font-size: 16px;
+}
+.gloss li::before {
+  content: counter(g, decimal-leading-zero);
+  position: absolute; left: 0; top: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--deep);
+  font-weight: 700;
+}
+.gloss li:target {
+  background: var(--ochre-soft);
+  border-radius: 4px;
+  animation: glossPulse 1.8s ease-out;
+}
+@keyframes glossPulse {
+  0% { background: var(--brick-soft); }
+  100% { background: var(--ochre-soft); }
+}
+.gloss .term {
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--ink);
+}
+
+/* Colophon */
+.colophon {
+  margin-top: 80px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  display: flex; justify-content: space-between;
+}
+
+@media (max-width: 720px) {
+  .deg-fig, .bk-fig, .tx-fig, .rb-v2, .ri-grid { grid-template-columns: 1fr; }
+  .depth-fig { grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .rb-svg { height: 300px; }
+  .gr-bars { grid-template-columns: repeat(6, 1fr); }
+  .ri-bars { grid-template-columns: repeat(8, 1fr); }
+}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · resnet</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · CVPR 2016</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 2015 · Microsoft Research Asia</div>
+  <h1 class="title">Deep Residual<br /><span class="em">Learning.</span></h1>
+  <div class="byline">He · Zhang · Ren · Sun · CVPR 2016 · best paper</div>
+  <p class="dek">用一行 <code>+ x</code> 把"网络越深越好"从口号变成现实。ImageNet 一举从 22 层跳到 152 层，也悄悄给两年后的 Transformer 留好了 sublayer 模板。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>2015 大家堆深堆不动了 —— plain CNN 堆到 56 层<a class="jr" href="#g-01">1</a>，训练集上的 loss 比 20 层还高。不是过拟合，是 SGD 学不会"什么都不做"。</p>
+  <p><strong>残差连接的洞察</strong>：让 block 输出 <code>F(x) + x</code>，identity 变成默认输出 —— layer 只学跟 identity 的差。</p>
+  <p>这同时也是 <a href="../concepts/transformer-architecture.html">transformer-architecture</a> 每个 sublayer 那个 <code>x + Sublayer(x)</code> 的源头。</p>
+</div>
+
+<h2><span class="num">§ 01</span>故事背景</h2>
+<p>2014–2015 大家发现：在 ImageNet 上，更深的网络往往更准 —— VGG 19 层、GoogLeNet 22 层依次刷新 SOTA。所以下一步看起来理所当然：再加深一倍。</p>
+
+<p>但加到 50 层左右就开始崩。各种试：换激活函数、调初始化、加 batchnorm<a class="jr" href="#g-02">2</a>。 BatchNorm 缓解了梯度数值层面的问题，深层网络至少 forward 不爆炸了。可是<strong>训练集上的 loss 还是比浅网络高</strong>。</p>
+
+<p>这反直觉得有点离谱：理论上，56 层网络只要把多出的 36 层学成<strong>恒等映射</strong><a class="jr" href="#g-03">3</a>，就一定能复刻 20 层网络的表现 —— 既然 20 层都做到了 9% error，56 层至少不该更差。可 SGD 就是找不到这条路。</p>
+
+<h2><span class="num">§ 02</span>Degradation Problem<a class="jr" href="#g-06">6</a> · 反直觉的崩塌</h2>
+<p>论文 Fig 1 用 CIFAR-10 演示了这个现象，下面是同样意思的复刻 —— 左边 plain net，深的训练 loss 反而<strong>更高</strong>；右边加上残差连接，深的训练 loss<strong>更低</strong>。</p>
+
+<figure>
+  <figcaption>
+    <span>Fig 01 · Plain 网络 越深越差 ↔ ResNet 越深越好</span>
+    <span class="fnum">CIFAR-10 · 复刻 paper Fig 1</span>
+  </figcaption>
+  <div class="deg-fig" id="deg-fig">
+    <div class="deg-panel plain">
+      <h4>Plain CNN · 不带残差</h4>
+      <div class="deg-chart">
+        <svg viewBox="0 0 320 220" preserveAspectRatio="none">
+          <!-- axes -->
+          <g class="deg-axis">
+            <line x1="40" y1="190" x2="310" y2="190"/>
+            <line x1="40" y1="20" x2="40" y2="190"/>
+            <text x="175" y="210" text-anchor="middle">iter (k)</text>
+            <text x="20" y="105" text-anchor="middle" transform="rotate(-90 20 105)">train error</text>
+            <text x="44" y="200" text-anchor="start">0</text>
+            <text x="175" y="200" text-anchor="middle">30</text>
+            <text x="305" y="200" text-anchor="end">60</text>
+            <text x="36" y="190" text-anchor="end">0%</text>
+            <text x="36" y="105" text-anchor="end">10</text>
+            <text x="36" y="25" text-anchor="end">20</text>
+          </g>
+          <!-- 56-layer plain (worse) -->
+          <path class="deg-line deep" d="M 40 24 C 80 32, 110 48, 130 78 S 170 130, 200 142 C 230 152, 270 152, 305 150"/>
+          <!-- 20-layer plain (better) -->
+          <path class="deg-line shallow" d="M 40 30 C 80 50, 110 75, 130 100 S 170 145, 200 162 C 230 170, 270 173, 305 172"/>
+          <!-- labels -->
+          <text class="deg-label" x="280" y="148" text-anchor="end">plain-56 · error 13.6%</text>
+          <text class="deg-label" x="280" y="170" text-anchor="end">plain-20 · error 9.3%</text>
+        </svg>
+      </div>
+      <div class="deg-legend">
+        <span><span class="sw" style="background:var(--brick)"></span> 56 layer</span>
+        <span><span class="sw" style="background:var(--ochre)"></span> 20 layer</span>
+      </div>
+    </div>
+    <div class="deg-panel res">
+      <h4>ResNet · 同套骨架 + 残差</h4>
+      <div class="deg-chart">
+        <svg viewBox="0 0 320 220" preserveAspectRatio="none">
+          <g class="deg-axis">
+            <line x1="40" y1="190" x2="310" y2="190"/>
+            <line x1="40" y1="20" x2="40" y2="190"/>
+            <text x="175" y="210" text-anchor="middle">iter (k)</text>
+            <text x="20" y="105" text-anchor="middle" transform="rotate(-90 20 105)">train error</text>
+            <text x="44" y="200" text-anchor="start">0</text>
+            <text x="175" y="200" text-anchor="middle">30</text>
+            <text x="305" y="200" text-anchor="end">60</text>
+            <text x="36" y="190" text-anchor="end">0%</text>
+            <text x="36" y="105" text-anchor="end">10</text>
+            <text x="36" y="25" text-anchor="end">20</text>
+          </g>
+          <!-- 56-layer resnet (better) -->
+          <path class="deg-line deep" d="M 40 24 C 80 50, 110 90, 130 120 S 170 165, 200 175 C 230 181, 270 184, 305 184"/>
+          <!-- 20-layer resnet -->
+          <path class="deg-line shallow" d="M 40 28 C 80 60, 110 95, 130 115 S 170 150, 200 162 C 230 168, 270 171, 305 172"/>
+          <text class="deg-label" x="280" y="170" text-anchor="end">res-20 · error 8.7%</text>
+          <text class="deg-label" x="280" y="186" text-anchor="end">res-56 · error 6.5%</text>
+        </svg>
+      </div>
+      <div class="deg-legend">
+        <span><span class="sw" style="background:var(--moss)"></span> 56 layer · 反超</span>
+        <span><span class="sw" style="background:var(--ochre)"></span> 20 layer</span>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<div class="note brick">
+  <span class="l">这反直觉到什么程度</span>
+  <p>做个白送的思想实验：手上有个 20 层网络，训练 loss 9%。现在我给你 36 层免费加上去 —— 你甚至可以让这 36 层<strong>什么都不做</strong>，就原样把输入传到下一层（identity）。你的 56 层网络最差也该是 9%，因为可以随时把多出来的层"关掉"。</p>
+  <p>但 2015 的 plain CNN 没有"关掉"这个选项。新加的 36 层必须各自从随机初始化通过 SGD 学权重 —— 而 <strong>SGD 学不会让两层 conv 凑成 identity</strong>。所以 56 层非但没保底，反而把 20 层那个好解也丢了。</p>
+  <p>残差连接干的事，本质就是<strong>把"什么都不做"做成架构里自带的选项</strong>。新加的层最差也只是闲置，不会主动破坏前面的成果。</p>
+</div>
+
+<h2><span class="num">§ 03</span>残差 · F 学的是什么</h2>
+
+<p>"加一条 + x"，伪代码两行写完。但要看懂为什么管用，先得弄清那个 <code>F</code> 到底学什么。</p>
+
+<p><strong>对照原版 plain block</strong>：block 直接学一个映射 <code>H(x)</code> —— 输入 x，输出 H(x)。conv 权重决定 H 长什么样。</p>
+
+<p><strong>残差 block</strong>：block 输出 <code>F(x) + x</code>。x 那部分是 identity 免费提供的；conv 权重决定的是 F(x)。</p>
+
+<p>两边换算一下：要让残差 block 的输出等于原版的 H(x)，必须有 <code>F(x) + x = H(x)</code> → <code>F(x) = H(x) − x</code>。</p>
+
+<p class="key-line"><strong>F 学的是 H 跟原值 x 的差</strong>。这就是"残差"两字的字面意思 —— H 减掉 identity 之后<strong>剩下的部分</strong>。跟统计学的 residual 没关系，是这个工程意义。</p>
+
+<div class="note">
+  <span class="l">具体例子</span>
+  <p>假设 layer 想做"把 x 稍微提亮一点点"。</p>
+  <ul style="margin:6px 0; padding-left:20px;">
+    <li>plain 形式 · H 要学 <code>x → 1.05·x</code> —— conv 权重必须凑成"接近放大 1.05 倍"的特殊数</li>
+    <li>残差形式 · F 只学 <code>x → 0.05·x</code> —— 权重只需要小幅幅度。x 那部分由 identity 直接送过来</li>
+  </ul>
+  <p>F 永远比 H 的变化量小 —— 学起来轻得多。<strong>每个 block 不再"重做一遍"，只是"修改前一层的结果"</strong>。</p>
+</div>
+
+<figure class="rb-v2-fig" id="rb-fig">
+  <figcaption>
+    <span>Fig 02 · 残差 block 结构 · 反向梯度通过 5 层</span>
+    <span class="fnum">y = F(x) + x · ∂y/∂x = ∂F/∂x + 1</span>
+  </figcaption>
+  <div class="rb-v2">
+    <!-- LEFT: block diagram -->
+    <div class="rb-block">
+      <h4>Block 结构 · 正向</h4>
+      <svg class="rb-svg" viewBox="0 0 360 350">
+        <defs>
+          <marker id="rb-tri" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="context-stroke"/>
+          </marker>
+        </defs>
+        <!-- input -->
+        <rect class="box" x="110" y="15" width="140" height="34" rx="3"/>
+        <text x="180" y="32">x · 输入</text>
+        <!-- F path -->
+        <rect class="box f" x="95" y="95" width="170" height="34" rx="3"/>
+        <text x="180" y="112">conv + BN + ReLU</text>
+        <rect class="box f" x="95" y="145" width="170" height="34" rx="3"/>
+        <text x="180" y="162">conv + BN</text>
+        <!-- identity bypass curve label -->
+        <text class="label" x="332" y="105" style="font-weight:700; fill:var(--moss);">x</text>
+        <text class="label" x="332" y="120">不变</text>
+        <text class="label" x="332" y="133">穿过</text>
+        <!-- sum + -->
+        <rect class="box sum" x="135" y="220" width="90" height="36" rx="3"/>
+        <text x="180" y="238" style="font-weight:700; font-size:16px;">+</text>
+        <text class="label" x="180" y="278">F(x) 跟 x 相加</text>
+        <!-- output -->
+        <rect class="box" x="110" y="300" width="140" height="34" rx="3"/>
+        <text x="180" y="317">y · 输出</text>
+
+        <!-- forward arrows -->
+        <path class="arrow" d="M 180 49 L 180 93"/>
+        <path class="arrow" d="M 180 129 L 180 143"/>
+        <path class="arrow" d="M 180 179 L 180 218"/>
+        <path class="arrow" d="M 180 256 L 180 298"/>
+        <!-- identity bypass -->
+        <path class="arrow id-line" d="M 250 32 C 320 32, 320 238, 226 238"/>
+      </svg>
+      <div class="rb-cap">
+        <span class="tag tag-brick">F · 学差量</span>
+        <span class="tag tag-moss">x · 免费</span>
+        <span class="tag tag-ochre">+ · 合并</span>
+      </div>
+    </div>
+
+    <!-- RIGHT: gradient comparison -->
+    <div class="rb-block grad">
+      <h4>反向 · 梯度通过 5 个 block 后还剩多少</h4>
+      <div class="gr-eq">
+        plain: ∂y/∂x = <span class="brick">∂H/∂x</span>  → 每层 ≈ 0.5<br/>
+        residual: ∂y/∂x = ∂F/∂x + <span class="acc">1</span>  → 每层 ≈ 1
+      </div>
+      <div class="gr-caption">从最后一层往前传，每经过一个 block 乘一次</div>
+
+      <div class="gr-bars-wrap">
+        <div class="gr-row-label brick">Plain block</div>
+        <div class="gr-bars plain">
+          <div class="gr-bar"><div class="fill" data-h="100"></div><div class="v">1.0</div></div>
+          <div class="gr-bar"><div class="fill" data-h="50"></div><div class="v">.5</div></div>
+          <div class="gr-bar"><div class="fill" data-h="25"></div><div class="v">.25</div></div>
+          <div class="gr-bar"><div class="fill" data-h="12"></div><div class="v">.12</div></div>
+          <div class="gr-bar"><div class="fill" data-h="6"></div><div class="v">.06</div></div>
+          <div class="gr-bar"><div class="fill" data-h="3"></div><div class="v">.03</div></div>
+        </div>
+        <div class="gr-row-cap brick">→ 第 5 层梯度只剩 3%，几乎学不动</div>
+
+        <div class="gr-row-label moss" style="margin-top:18px;">Residual block</div>
+        <div class="gr-bars res">
+          <div class="gr-bar"><div class="fill" data-h="100"></div><div class="v">1.0</div></div>
+          <div class="gr-bar"><div class="fill" data-h="100"></div><div class="v">1.0</div></div>
+          <div class="gr-bar"><div class="fill" data-h="100"></div><div class="v">1.0</div></div>
+          <div class="gr-bar"><div class="fill" data-h="100"></div><div class="v">1.0</div></div>
+          <div class="gr-bar"><div class="fill" data-h="100"></div><div class="v">1.0</div></div>
+          <div class="gr-bar"><div class="fill" data-h="100"></div><div class="v">1.0</div></div>
+        </div>
+        <div class="gr-row-cap moss">→ 那个 "+ 1" 让梯度永远有一条不衰减的路</div>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<p>看右侧那张图就是<strong>梯度高速路</strong>的具体含义：链式法则求导出来，残差 block 的 ∂y/∂x 多了个常数 1。无论 ∂F/∂x 多小、网络多深，梯度通过 identity 那条路始终是 1，不衰减<a class="jr" href="#g-04">4</a>。152 层能训得动，靠的是这个。</p>
+
+<div style="background:var(--ochre-soft); border:1px solid var(--ochre); border-left:3px solid var(--ochre); border-radius:3px; padding:12px 16px; margin:12px 0 22px; font-size:14px;">
+  <span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ochre); font-weight:700; display:block; margin-bottom:8px;">📐 符号速查</span>
+  <p style="margin:4px 0; line-height:1.7;"><code style="background:var(--paper); border:1px solid var(--rule); padding:1px 5px; border-radius:2px;">∂y/∂x</code> = "y 怎么随 x 变化"（偏导数 · 反向传播算的就是这个）<br/>
+  <code style="background:var(--paper); border:1px solid var(--rule); padding:1px 5px; border-radius:2px;">∂(F(x) + x)/∂x = ∂F/∂x + ∂x/∂x = ∂F/∂x + 1</code><br/>
+  <strong>→ 那个 "+ 1" 是 identity (恒等 x) 对自身求导出来的常数</strong>。这一项不依赖网络多深、F 学得多差，永远是 1 —— 这就是"不衰减"的来源。<br/>
+  <em>完整数学符号字典：<a href="../concepts/math-symbols.html" style="color:var(--deep); font-weight:700;">math-symbols</a>。</em></p>
+</div>
+
+<h2><span class="num">§ 04</span>+ x 为什么管用 · 两个独立的好处</h2>
+
+<p>一个加号管用，是因为它<strong>同时解决了两个独立的问题</strong> —— Highway Network 早于 ResNet 几个月用类似 gated skip<a class="jr" href="#g-08">8</a>，但效果没这么好；后来研究发现 Highway 的 gate 让 identity 不再"免费"，只抓到一半。</p>
+
+<h3>角度 1 · 梯度高速路（已在 Fig 02 演示）</h3>
+<p>反向传播链式法则下，plain 每层 Jacobian < 1，乘到深层归零。残差的 <code>+ 1</code> 让梯度恒有一条不衰减的路。这是<strong>训得动</strong>的保证。</p>
+
+<h3>角度 2 · identity 是免费起点（看 Fig 03）</h3>
+<p>训得动只是不掉链子。残差还有一个更深的好处：<strong>随机初始化下，残差 block 输出就近似 identity</strong> —— 不像 plain 那样把输入打成一团乱码再让 SGD 慢慢"恢复"。</p>
+
+<figure class="ri-fig" id="ri-fig">
+  <figcaption>
+    <span>Fig 03 · 随机初始化时，block 的输出长什么样</span>
+    <span class="fnum">这是 SGD 训练的起点 · 越接近 identity 越好走</span>
+  </figcaption>
+  <div class="ri-grid">
+
+    <div class="ri-cell plain">
+      <h4>Plain block · y = H(x)</h4>
+      <div class="sub">权重随机初始化，没人保证输出像 x</div>
+
+      <div class="ri-step">x · 输入（有结构的特征）</div>
+      <div class="ri-bars input" data-pattern="input"></div>
+
+      <div class="ri-step">↓ 两层随机 conv（权重 ~ 𝒩(0, 0.02)）</div>
+
+      <div class="ri-step">= y · 输出</div>
+      <div class="ri-bars scrambled" data-pattern="scrambled"></div>
+
+      <div class="ri-task">
+        <span class="l">SGD 的起点</span>
+        输出跟输入毫无关系 —— 是被随机 conv 揉碎重组的噪声。SGD 要从这里学回 identity，再学有用变换。<strong>多绕一圈。</strong>
+      </div>
+    </div>
+
+    <div class="ri-cell res">
+      <h4>Residual block · y = F(x) + x</h4>
+      <div class="sub">F 权重 ≈ 0 时，F(x) ≈ 0 → y ≈ x</div>
+
+      <div class="ri-step">x · 输入（同一组）</div>
+      <div class="ri-bars input" data-pattern="input"></div>
+
+      <div class="ri-step">↓ F(x) · 两层随机 conv 输出 ≈ 微小噪声</div>
+      <div class="ri-bars near-zero" data-pattern="nearzero"></div>
+
+      <div class="ri-step">↓ + x</div>
+      <div class="ri-step">= y · 输出 ≈ x</div>
+      <div class="ri-bars preserved" data-pattern="input"></div>
+
+      <div class="ri-task">
+        <span class="l">SGD 的起点</span>
+        输出 ≈ identity。已经在好解附近，SGD 只需在 identity 之上学"差量"。<strong>不绕路。</strong>
+      </div>
+    </div>
+  </div>
+</figure>
+
+<div class="note deep">
+  <span class="l">这两个好处不重叠</span>
+  <p>梯度高速路解决<strong>能不能训</strong>；identity 免费起点解决<strong>训出来好不好</strong>。Highway Network 因为 gate 上有 sigmoid，identity 不再纯净（gate 值变了 identity 也跟着变），只保住了角度 1；而梯度衰减问题在它身上也只解决了一半。<strong>ResNet 选了"完全没参数的纯加法"</strong><a class="jr" href="#g-12">12</a>，两个好处一起拿到 —— 这是它能赢的关键。当 shortcut 跨的两端 shape 不同（stride=2 或通道变了），就走 projection shortcut<a class="jr" href="#g-09">9</a>（一个 1×1 conv）补齐维度，例外仅此一处。残差也是 skip connection<a class="jr" href="#g-11">11</a> 这一族里最简单的成员。</p>
+</div>
+
+<h2><span class="num">§ 05</span>怎么把它做得能用</h2>
+<p>"加一条 + x"在伪代码里一行，做成可训练的真网络要解决很多工程细节。</p>
+
+<h3>5.1 ResNet 系列 · 把深度从瓶颈变成廉价资源</h3>
+<figure id="depth-fig">
+  <figcaption>
+    <span>Fig 04 · 2014–2015 ImageNet 顶流网络 · 层数 vs Top-5 错误率</span>
+    <span class="fnum">同等算力预算下，ResNet 还能再深 7 倍</span>
+  </figcaption>
+  <div class="depth-fig">
+    <div class="depth-col vgg">
+      <div class="depth-stack" data-n="19"></div>
+      <div class="depth-name">VGG-19</div>
+      <div class="depth-stat">19 layer · 19.6 GF<br/><span class="err">top-5 7.3%</span></div>
+    </div>
+    <div class="depth-col gn">
+      <div class="depth-stack" data-n="22"></div>
+      <div class="depth-name">GoogLeNet</div>
+      <div class="depth-stat">22 layer · 1.5 GF<br/><span class="err">top-5 6.7%</span></div>
+    </div>
+    <div class="depth-col r34">
+      <div class="depth-stack" data-n="34"></div>
+      <div class="depth-name">ResNet-34</div>
+      <div class="depth-stat">34 layer · 3.6 GF<br/><span class="errg">top-5 5.6%</span></div>
+    </div>
+    <div class="depth-col r50">
+      <div class="depth-stack" data-n="50"></div>
+      <div class="depth-name">ResNet-50</div>
+      <div class="depth-stat">50 layer · 3.8 GF<br/><span class="errg">top-5 4.5%</span></div>
+    </div>
+    <div class="depth-col r152">
+      <div class="depth-stack" data-n="152"></div>
+      <div class="depth-name">ResNet-152</div>
+      <div class="depth-stat">152 layer · 11.3 GF<br/><span class="errg">top-5 3.6%</span></div>
+    </div>
+  </div>
+</figure>
+
+<p>注意 GoogLeNet 和 ResNet-50 算力几乎一样（1.5 vs 3.8 GFlops），但 ResNet 多了 28 层并且错误率从 6.7% 掉到 4.5%。<strong>残差让"深 + 省"同时成立</strong>，关键在下一节的 bottleneck 块。</p>
+
+<h3>5.2 Bottleneck<a class="jr" href="#g-07">7</a> · 为什么 1×1 → 3×3 → 1×1 能省算力</h3>
+
+<p>3×3 conv 的<strong>每个空间位置</strong>都要做 <code>in_channels × out_channels × 9</code> 次乘法（9 是 3×3 的 kernel 面积）。<strong>通道数是平方关系</strong> —— 通道翻 4 倍，算力 ×16。</p>
+
+<p>所以：想要 256 通道的表达能力，又不想付 256 通道 3×3 的算力，就先用便宜的 1×1 把通道压下来再算 3×3。</p>
+
+<figure class="bk-fig" id="bk-fig">
+  <figcaption>
+    <span>Fig 05 · Basic vs Bottleneck · 同样 256ch 表达力，cost 差 8 倍</span>
+    <span class="fnum">3×3 永远在小通道数上算</span>
+  </figcaption>
+  <div class="bk-col basic">
+    <h4>直接做 · 不用 bottleneck</h4>
+    <div class="bk-stack">
+      <div class="bk-layer compute show-1">
+        <span>conv 3×3</span><span>256 → 256</span>
+      </div>
+      <div class="bk-layer compute show-2">
+        <span>conv 3×3</span><span>256 → 256</span>
+      </div>
+      <div class="bk-layer show-3" style="background:var(--ochre-soft); border-color:var(--ochre);">
+        <span>+ x · identity shortcut</span><span>—</span>
+      </div>
+    </div>
+    <div class="bk-math">
+      <div class="bk-math-row"><span>3×3 layer 1</span><span>256 × 256 × 9 = <b>590K</b></span></div>
+      <div class="bk-math-row"><span>3×3 layer 2</span><span>256 × 256 × 9 = <b>590K</b></span></div>
+      <div class="bk-math-row total"><span>total · per spatial</span><span><b>1.18 M</b></span></div>
+    </div>
+  </div>
+  <div class="bk-col btn">
+    <h4>Bottleneck · 3×3 在窄腰上算</h4>
+    <div class="bk-stack">
+      <div class="bk-layer reduce show-1">
+        <span>conv 1×1 · reduce</span><span>256 → 64</span>
+      </div>
+      <div class="bk-layer compute show-2">
+        <span>conv 3×3 · compute</span><span>64 → 64</span>
+      </div>
+      <div class="bk-layer expand show-3">
+        <span>conv 1×1 · expand</span><span>64 → 256</span>
+      </div>
+      <div class="bk-layer show-4" style="background:var(--ochre-soft); border-color:var(--ochre);">
+        <span>+ x · identity shortcut</span><span>—</span>
+      </div>
+    </div>
+    <div class="bk-math">
+      <div class="bk-math-row"><span>1×1 reduce</span><span>256 × 64 × 1 = <b>16K</b></span></div>
+      <div class="bk-math-row"><span>3×3 compute</span><span>64 × 64 × 9 = <b>37K</b></span></div>
+      <div class="bk-math-row"><span>1×1 expand</span><span>64 × 256 × 1 = <b>16K</b></span></div>
+      <div class="bk-math-row total"><span>total · per spatial</span><span><b>69 K · 1/17</b></span></div>
+    </div>
+  </div>
+</figure>
+
+<p>核心是<strong>1×1 conv 在通道维度上廉价（没有空间 kernel size）</strong>。它的工作只是"重排通道、改通道数"，远便宜于真正抓空间结构的 3×3 conv。Bottleneck 让 3×3 永远在窄腰（64ch）上算，结果 cost 降到 1/17，但因为前后还是 256ch 进出，整个 stack 对外接口跟 256ch 直连完全一样 —— 别的层不知道也不关心你中间偷偷压扁了。</p>
+
+<div class="note">
+  <span class="l">类比</span>
+  <p>跟数据库索引一样：你不会对全表做全字段排序，而是先 SELECT 出几个关键字段、排序、再 JOIN 回去取剩余字段。Bottleneck 在 conv 上做同样的事 —— <strong>用便宜的操作把维度压低，让贵的操作只看少数维度</strong>。</p>
+</div>
+
+<h2><span class="num">§ 06</span>它真正改变的是什么</h2>
+<p>2015 当时大家以为 ResNet 只是 CNN 的事。回头看，它的影响远远不止 CV：</p>
+
+<figure class="tx-fig" id="tx-fig">
+  <figcaption>
+    <span>Fig 06 · ResNet block 和 Transformer sublayer 是同款结构</span>
+    <span class="same">同款</span>
+  </figcaption>
+  <div class="tx-col resnet">
+    <h4>ResNet · CV · 2015</h4>
+    <svg class="tx-svg" viewBox="0 0 280 280">
+      <defs>
+        <marker id="tx-tri" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="context-stroke"/></marker>
+        <marker id="tx-tri-moss" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#4a6b3a"/></marker>
+      </defs>
+      <rect class="tx-box" x="80" y="15" width="120" height="32" rx="3"/>
+      <text x="140" y="32">x · feature map</text>
+
+      <rect class="tx-box f" x="80" y="80" width="120" height="32" rx="3"/>
+      <text x="140" y="96">conv + BN + ReLU</text>
+
+      <rect class="tx-box f" x="80" y="130" width="120" height="32" rx="3"/>
+      <text x="140" y="146">conv + BN</text>
+
+      <rect class="tx-box sum" x="100" y="190" width="80" height="32" rx="3"/>
+      <text x="140" y="208">+</text>
+
+      <rect class="tx-box" x="80" y="240" width="120" height="32" rx="3"/>
+      <text x="140" y="258">y</text>
+
+      <path class="tx-arrow" d="M 140 47 L 140 78"/>
+      <path class="tx-arrow" d="M 140 112 L 140 128"/>
+      <path class="tx-arrow" d="M 140 162 L 140 188"/>
+      <path class="tx-arrow" d="M 140 222 L 140 238"/>
+      <path class="tx-skip" d="M 200 30 C 250 30, 250 200, 180 205"/>
+      <text x="225" y="120" style="fill:var(--moss);">identity</text>
+    </svg>
+  </div>
+  <div class="tx-col transformer">
+    <h4>Transformer · NLP · 2017</h4>
+    <svg class="tx-svg" viewBox="0 0 280 280">
+      <rect class="tx-box" x="80" y="15" width="120" height="32" rx="3"/>
+      <text x="140" y="32">x · token vector</text>
+
+      <rect class="tx-box f" x="80" y="80" width="120" height="32" rx="3"/>
+      <text x="140" y="96">LayerNorm</text>
+
+      <rect class="tx-box f" x="80" y="130" width="120" height="32" rx="3"/>
+      <text x="140" y="146">Multi-Head Attn</text>
+
+      <rect class="tx-box sum" x="100" y="190" width="80" height="32" rx="3"/>
+      <text x="140" y="208">+</text>
+
+      <rect class="tx-box" x="80" y="240" width="120" height="32" rx="3"/>
+      <text x="140" y="258">y</text>
+
+      <path class="tx-arrow" d="M 140 47 L 140 78"/>
+      <path class="tx-arrow" d="M 140 112 L 140 128"/>
+      <path class="tx-arrow" d="M 140 162 L 140 188"/>
+      <path class="tx-arrow" d="M 140 222 L 140 238"/>
+      <path class="tx-skip" d="M 200 30 C 250 30, 250 200, 180 205"/>
+      <text x="225" y="120" style="fill:var(--moss);">identity</text>
+    </svg>
+  </div>
+</figure>
+
+<p>左边 <code>y = ReLU(Conv(BN(x)) + x)</code>，右边 <code>y = LayerNorm(MHA(x) + x)</code>。把里头的 sublayer 换一下，跳连结构一模一样<a class="jr" href="#g-05">5</a>。Vaswani et al. 在论文里也直接致谢了 ResNet。</p>
+
+<div class="note deep">
+  <span class="l">两根支柱</span>
+  <p><strong>ResNet</strong> 让"深"变得便宜，<strong>Transformer</strong> 让"并行处理序列"变得可能。两件事都不解决你也堆不出 100B 参数；只解决一件也不行 —— 早期 Transformer encoder 堆到 6 层就够了，是因为每个 sublayer 已经有了残差。GPT-3 96 层、Claude 这种百层级的网络，本质上是这俩 idea 的合体复利。后续 pre-activation ResNet<a class="jr" href="#g-10">10</a> 还把 BN/ReLU 挪到 conv 之前，让 + x 那条路完全干净 —— 1000 层照样训。</p>
+</div>
+
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">Plain CNN</span> · 没有残差连接的"朴素"卷积网络。VGG / GoogLeNet 在某种意义上都是 plain，但 GoogLeNet 已经用了 inception 模块和一些辅助分类头帮训练。论文里的 plain 指的是去掉残差后的 ResNet 骨架，控制变量。</li>
+    <li id="g-02"><span class="term">Batch Normalization</span> · Ioffe & Szegedy 2015。对一个 mini-batch 在 channel 维度做 z-score 归一化 + 可学的 scale/shift。让中间层分布不漂移，间接稳住训练。在 ResNet 里跟 residual 配套使用。详见 <a href="../concepts/batchnorm.html">batchnorm</a>。</li>
+    <li id="g-03"><span class="term">Identity mapping · 恒等映射</span> · 输出完全等于输入的映射，<code>H(x) = x</code>。Plain net 在 56 层时连这个最简单的映射都学不会，这是 degradation problem 的核心。</li>
+    <li id="g-04"><span class="term">SGD 的"白送好起点"</span> · 当随机初始化把 F 的权重摆在 0 附近，残差块自然就接近 identity。这意味着新加的层一开始几乎不影响网络，训练过程再慢慢从 identity"出发"学差量。Plain net 不享受这个属性 —— 随机初始化的 conv 远不是 identity。</li>
+    <li id="g-05"><span class="term">Sublayer · Transformer 子层</span> · Vaswani 2017 把 encoder/decoder 内部的 self-attention 和 FFN 各算一个 sublayer，每个 sublayer 都包成 <code>LayerNorm(x + Sublayer(x))</code>。这个外套结构是 ResNet 的直接遗产。详见 <a href="../concepts/transformer-architecture.html">transformer-architecture</a>、<a href="../concepts/residual-connection.html">residual-connection</a>。</li>
+    <li id="g-06"><span class="term">Degradation Problem</span> · 深网络在<strong>训练集</strong>上 loss 高于浅网络的现象。不是过拟合（test loss 也更高），不是表达力不够（浅网络的能力是子集），是优化器找不到那个本来存在的好解。详见 <a href="../concepts/degradation-problem.html">degradation-problem</a>。</li>
+    <li id="g-07"><span class="term">Bottleneck block</span> · 1×1 reduce → 3×3 → 1×1 expand 的三明治结构。让 3×3 在小通道数上算，整体算力比同表达力的 basic block 省 3 倍。ResNet-50/101/152 都用这种 block。</li>
+    <li id="g-08"><span class="term">Highway Network</span> · Srivastava et al. 2015，比 ResNet 早几个月发。用 <code>y = T(x)·F(x) + (1−T(x))·x</code>，T 是可学的 gate。ResNet 等于把 T 固定成 0.5。Highway 的 gate 增加了优化复杂度，实际效果不如 ResNet 的纯加法。</li>
+    <li id="g-09"><span class="term">Projection shortcut</span> · 当 F(x) 的输出形状跟 x 不一样（比如 stride=2 下采样、或通道变了），shortcut 走一个 1×1 conv W·x 把维度匹配上。"+"才能算。</li>
+    <li id="g-10"><span class="term">Pre-activation ResNet</span> · 同作者 2016 follow-up paper "Identity Mappings in Deep Residual Networks"。把 BN/ReLU 挪到 conv 之前，让 <code>+ x</code> 这条路完全不经过 BN/ReLU，identity 真正干净。1000 层都能训。</li>
+    <li id="g-11"><span class="term">Skip connection</span> · 同义词，泛指所有"跨层直接连过去"的结构。ResNet 的残差只是 skip connection 的一种最简单实现（identity）。U-Net 的 skip 是 concat，DenseNet 的 skip 是全连接，本质都是 skip 这一族。</li>
+    <li id="g-12"><span class="term">+ x 是免费的（计算意义上）</span> · 跳连本身是个纯加法，不带任何参数（除了 projection shortcut 那种小例外）。所以加跳连不增加模型参数，几乎不增加 flops。这跟 attention 的"加 head 也几乎不增加参数"是一脉相承的工程美学 —— 用结构换 capacity。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>Authored / ResNet · He, Zhang, Ren, Sun · 2015</span>
+  <span>Index / <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+
+<script>
+// ===== Fig 01: degradation curves =====
+{
+  const fig = document.getElementById('deg-fig');
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting) {
+        fig.classList.add('play');
+        obs.disconnect();
+      }
+    });
+  }, { threshold: 0.3 });
+  obs.observe(fig);
+}
+
+// ===== Fig 02 v2: gradient bars =====
+{
+  const fig = document.getElementById('rb-fig');
+  const fills = fig.querySelectorAll('.gr-bar .fill');
+  fills.forEach(f => { f.style.height = '0%'; });
+
+  function animate() {
+    fills.forEach((f, i) => {
+      const h = parseFloat(f.dataset.h);
+      setTimeout(() => { f.style.height = h + '%'; }, 80 * i + 200);
+    });
+  }
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting) { animate(); obs.disconnect(); }
+    });
+  }, { threshold: 0.3 });
+  obs.observe(fig);
+}
+
+// ===== Fig 03 v2: random init scrambling =====
+{
+  const fig = document.getElementById('ri-fig');
+  // deterministic pseudo-random for visual reproducibility
+  function seeded(s) {
+    let x = s;
+    return () => { x = (x * 9301 + 49297) % 233280; return x / 233280; };
+  }
+  const inputPattern = [0.72, 0.18, 0.55, 0.35, 0.85, 0.42, 0.6, 0.25, 0.78, 0.5, 0.3, 0.65];
+  // scrambled: same magnitudes but reordered + noise
+  const r = seeded(7);
+  const scrambled = inputPattern.map(() => 0.15 + r() * 0.8);
+  const nearzero = inputPattern.map(() => (r() - 0.5) * 0.12 + 0.08);
+
+  function fillBars(el, vals) {
+    el.innerHTML = '';
+    vals.forEach(v => {
+      const b = document.createElement('div');
+      b.className = 'bar';
+      b.dataset.target = v;
+      el.appendChild(b);
+    });
+  }
+
+  fig.querySelectorAll('.ri-bars').forEach(el => {
+    const p = el.dataset.pattern;
+    const vals = (p === 'input') ? inputPattern :
+                 (p === 'scrambled') ? scrambled :
+                 (p === 'nearzero') ? nearzero : inputPattern;
+    fillBars(el, vals);
+  });
+
+  function animate() {
+    fig.querySelectorAll('.ri-bars').forEach((row, ri) => {
+      row.querySelectorAll('.bar').forEach((b, i) => {
+        const target = parseFloat(b.dataset.target);
+        setTimeout(() => { b.style.height = (target * 100) + '%'; }, ri * 600 + i * 30);
+      });
+    });
+  }
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting) { animate(); obs.disconnect(); }
+    });
+  }, { threshold: 0.25 });
+  obs.observe(fig);
+}
+
+// ===== Fig 04: depth stacks =====
+{
+  const fig = document.getElementById('depth-fig');
+  const cols = fig.querySelectorAll('.depth-col');
+  cols.forEach(col => {
+    const stack = col.querySelector('.depth-stack');
+    const n = parseInt(stack.dataset.n);
+    for (let i = 0; i < n; i++) {
+      const b = document.createElement('div');
+      b.className = 'depth-block';
+      stack.appendChild(b);
+    }
+  });
+  function animate() {
+    cols.forEach((col, ci) => {
+      col.classList.add('show');
+      const blocks = col.querySelectorAll('.depth-block');
+      blocks.forEach((b, i) => {
+        const delay = ci * 200 + i * 12;
+        setTimeout(() => {
+          b.style.opacity = '1';
+          b.style.transform = 'translateX(0)';
+        }, delay);
+      });
+    });
+  }
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting) { animate(); obs.disconnect(); }
+    });
+  }, { threshold: 0.25 });
+  obs.observe(fig);
+}
+
+// ===== Fig 05: bottleneck =====
+{
+  const fig = document.getElementById('bk-fig');
+  const obs = new IntersectionObserver((es) => {
+    es.forEach(e => {
+      if (e.isIntersecting) { fig.classList.add('play'); obs.disconnect(); }
+    });
+  }, { threshold: 0.3 });
+  obs.observe(fig);
+}
+</script>
+
+</body>
+</html>
