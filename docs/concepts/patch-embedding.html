@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Patch Embedding · 图像切块成 token · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · patch-embedding</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Patch Embedding · 图像切块成 token</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把图片切成固定大小（如 16×16）的方块, 每块拉平成一个向量, 通过一个 linear 层投影到 hidden dim —— <strong>图像就这样变成了一串 token</strong>。</p>
+<h2>直觉 · 为什么不一个像素一个 token</h2>
+<p>最朴素的想法: 一张 224×224 的 RGB 图, 50176 个像素, 每个像素当一个 token, 喂给 Transformer。</p>
+<p>不行, 三个理由:</p>
+<ol>
+<li><strong>算不动</strong>: self-attention 是 O(N²), N=50176 直接爆显存</li>
+<li><strong>没意义</strong>: 单个像素信息量极低, 单看一个 RGB 三元组完全不知道这是脸还是猫</li>
+<li><strong>太长了</strong>: 50176 个 token 序列, 模型学不到长程结构</li>
+</ol>
+<p>中间方案: <strong>把图切成 patch, 每个 patch 当 token</strong>。</p>
+<p>224×224 切成 16×16 的 patch → 14×14 = <strong>196 个 token</strong>。这个数量 Transformer 处理得动, 而且每个 patch 自带局部信息（一个 patch 已经能看出"这是耳朵还是眼睛"了）。</p>
+<h2>具体怎么做</h2>
+<pre><code class="language-python"># 输入: (B, 3, 224, 224) 的图像 batch
+# 切 patch + 拉平 + 投影 (用一个 Conv2d 一步搞定, 等价于切+拉平+linear)
+patch_size = 16
+hidden_dim = 768
+
+# Conv2d 的 stride=patch_size, 等价于&quot;不重叠切块&quot;
+patch_embed = Conv2d(
+    in_channels=3,
+    out_channels=hidden_dim,
+    kernel_size=patch_size,
+    stride=patch_size,
+)
+
+# 输出: (B, 768, 14, 14) → 拉平最后两维 → (B, 196, 768)
+x = patch_embed(image)             # (B, 768, 14, 14)
+x = x.flatten(2).transpose(1, 2)   # (B, 196, 768)
+
+# 加 [CLS] token, 跟 BERT 一样
+cls = nn.Parameter(torch.zeros(1, 1, 768))
+x = torch.cat([cls.expand(B, -1, -1), x], dim=1)   # (B, 197, 768)
+
+# 加位置编码（学习式, 不是 sin/cos）
+pos_embed = nn.Parameter(torch.zeros(1, 197, 768))
+x = x + pos_embed
+</code></pre>
+<p>到这一步, 一张图就变成了一个 (197, 768) 的"token 序列", 后面塞给标准的 Transformer encoder 就行。</p>
+<p><strong>关键洞察</strong>: 那个 <code>Conv2d</code> 不是真的在做卷积特征提取, 它就是 "切块 + 拉平 + 线性变换" 三步合一的工程实现。可以理解成 "<strong>唯一的卷积层, 只用一次, 用完就再也不用了</strong>"。</p>
+<h2>跟 NLP token embedding 的对应</h2>
+<table>
+<thead>
+<tr>
+<th>NLP (BERT/GPT)</th>
+<th>ViT</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>把字符串 tokenize → token id</td>
+<td>把图切成 patch</td>
+</tr>
+<tr>
+<td>Embedding 矩阵 <code>(vocab_size, hidden)</code> 查表</td>
+<td>Linear 投影 <code>(patch_size² × 3, hidden)</code></td>
+</tr>
+<tr>
+<td>加位置编码（学习式 or RoPE）</td>
+<td>加位置编码（学习式 1D 或 2D）</td>
+</tr>
+<tr>
+<td><code>[CLS]</code> token 用于分类</td>
+<td><code>[CLS]</code> token 用于分类</td>
+</tr>
+<tr>
+<td>输出: (B, seq_len, hidden)</td>
+<td>输出: (B, num_patches+1, hidden)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>完全同构</strong>。所以 ViT 实现上可以直接复用 BERT 的代码, 只换 embedding 这一层。</p>
+<h2>Trade-off · patch size 怎么选</h2>
+<table>
+<thead>
+<tr>
+<th>Patch size</th>
+<th>Token 数 (224×224)</th>
+<th>计算量</th>
+<th>细节保留</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>32×32</td>
+<td>49</td>
+<td>极小</td>
+<td>丢细节</td>
+</tr>
+<tr>
+<td>16×16</td>
+<td>196</td>
+<td>中等（ViT 默认）</td>
+<td>平衡</td>
+</tr>
+<tr>
+<td>14×14</td>
+<td>256</td>
+<td>略大</td>
+<td>略好</td>
+</tr>
+<tr>
+<td>8×8</td>
+<td>784</td>
+<td>很大</td>
+<td>接近像素级</td>
+</tr>
+</tbody>
+</table>
+<p>ViT 选 16×16 是工程妥协: 再小算不动, 再大丢细节。后来 Swin Transformer 用层次化窗口注意力, 才能做到 4×4 patch。</p>
+<h2>为什么这个抽象很重要</h2>
+<p>ViT 之前, 视觉跟语言是两个完全不同的世界 —— 一边是 CNN + 卷积, 一边是 Transformer + token。Patch embedding 把它们抹平了:</p>
+<p><strong>"图像和文本都是 token 序列, 区别只是 token 怎么来的"</strong>。</p>
+<p>这一抽象立起来之后, 多模态（CLIP / DALL-E / Flamingo / LLaVA）就成了顺理成章的事 —— 图像 patch token 和文本 token 都进同一个 Transformer, 跨模态学习就是给两边的 token 做对齐。<strong>ViT 真正的影响力在这里, 不在分类准确率本身</strong>。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/vit.html">vit</a> · 这个概念的源头</li>
+<li><a href="../concepts/inductive-bias.html">inductive-bias</a> · patch 切完后, 空间信息怎么靠 PE 恢复</li>
+<li><a href="../concepts/self-attention.html">self-attention</a> · patch 之间怎么交互</li>
+<li><a href="../concepts/positional-encoding.html">positional-encoding</a> · ViT 用学习式 2D PE</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/vit.html"><span class="cat">paper</span>ViT · An Image is Worth 16×16 Words</a></li><li><a href="../concepts/inductive-bias.html"><span class="cat">concept</span>Inductive Bias · 归纳偏置</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/patch-embedding.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>
