@@ -1,7 +1,7 @@
 ---
 name: scaling-laws
 type: concept
-sources: [gpt-3, vit]
+sources: [gpt-3, vit, clip]
 updated: 2026-05-28
 ---
 

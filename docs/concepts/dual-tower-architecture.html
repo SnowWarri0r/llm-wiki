@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Dual-Tower Architecture · 双塔架构 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · dual-tower-architecture</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Dual-Tower Architecture · 双塔架构</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>两个独立的 encoder, 一个跑图、一个跑文本, <strong>各跑各的最后把输出投影到同一个向量空间</strong> —— 工程上两边可以独立放大缩小, 推理时一边可以预先算好缓存。</p>
+<h2>直觉 · 为什么不用一个大模型直接吃图+文本</h2>
+<p>最朴素的设计: 一个大 Transformer, 把图像 patch token 和文本 token 拼在一起喂进去, 让 attention 跨模态学。这种叫 <strong>single-tower</strong> (或 fusion-style)。</p>
+<p>但 CLIP 选了反过来的设计 —— <strong>dual-tower</strong>, 两个独立 encoder, 各跑各的, 最后只算两个 embedding 的点积。</p>
+<p>为什么? 三个工程原因:</p>
+<ol>
+<li><strong>推理时可以预先算好一边</strong>
+   - 比如做"以图搜图": 库里 1 亿张图都预先 encode 成向量存起来, 用户给个 query 图只算一次 encoding 就行。Single-tower 每次都要把 query 图跟库里每张图一起跑一遍, 算力爆炸</li>
+<li><strong>训练时两边可以独立放大缩小</strong>
+   - 图像端模型变大跟文本端模型变大互不影响, 工程上好优化</li>
+<li><strong>训练目标更纯</strong>
+   - Dual-tower + 对比学习 = "两个 embedding 算点积" —— 训练信号特别干净。Single-tower 加上 cross-attention 后训练动态复杂得多</li>
+</ol>
+<h2>工程上怎么实现</h2>
+<pre><code class="language-python">class CLIPModel(nn.Module):
+    def __init__(self):
+        self.image_encoder = VisionTransformer(...)   # 比如 ViT-B/32
+        self.text_encoder = TextTransformer(...)       # 比如 12-layer BPE Transformer
+        # 两边各自的最后一层投影到同一维度 (比如 512)
+        self.image_projection = nn.Linear(image_hidden, 512)
+        self.text_projection = nn.Linear(text_hidden, 512)
+        self.temperature = nn.Parameter(torch.ones([]) * np.log(1/0.07))
+
+    def encode_image(self, image):
+        x = self.image_encoder(image)              # (B, image_hidden)
+        x = self.image_projection(x)               # (B, 512)
+        return x / x.norm(dim=-1, keepdim=True)    # 单位向量
+
+    def encode_text(self, text):
+        x = self.text_encoder(text)                # (B, text_hidden)
+        x = self.text_projection(x)                # (B, 512)
+        return x / x.norm(dim=-1, keepdim=True)
+
+    def forward(self, image, text):
+        img_emb = self.encode_image(image)
+        txt_emb = self.encode_text(text)
+        sim = img_emb @ txt_emb.T * self.temperature.exp()
+        return sim   # 训练时跟对角线 label 做 cross entropy
+</code></pre>
+<p><strong>关键设计</strong>:</p>
+<ul>
+<li>两边的 encoder 内部完全独立 —— 图像 encoder 不知道文本 encoder 的存在, 反之亦然</li>
+<li><strong>唯一的交互发生在最后</strong> —— 两边各自投影到同一维度, 然后算点积</li>
+<li>投影后做 L2 normalize, 让点积 = cosine similarity (取值 [-1, 1])</li>
+<li>温度参数 <code>temperature</code> 是个可学的标量, 控制 softmax 的尖锐度</li>
+</ul>
+<h2>跟 single-tower / fusion 模型对比</h2>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Dual-Tower (CLIP)</th>
+<th>Single-Tower (Flamingo / LLaVA / GPT-4V)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>架构</td>
+<td>两个独立 encoder + 末端对齐</td>
+<td>一个 Transformer 同时处理图+文本</td>
+</tr>
+<tr>
+<td>跨模态交互时机</td>
+<td>末端 (late fusion)</td>
+<td>早期或全程 (early/mid fusion)</td>
+</tr>
+<tr>
+<td>推理效率</td>
+<td>高 (一边可缓存)</td>
+<td>低 (每次重算)</td>
+</tr>
+<tr>
+<td>表达力</td>
+<td>中 (只能算"配/不配")</td>
+<td>高 (能生成、能问答、能推理)</td>
+</tr>
+<tr>
+<td>训练</td>
+<td>对比学习, batch 越大越好</td>
+<td>next-token prediction, 跟 LLM 训练一致</td>
+</tr>
+<tr>
+<td>代表</td>
+<td>CLIP / SigLIP / ALIGN / Open-vocabulary segmentation</td>
+<td>LLaVA / GPT-4V / Flamingo / DALL-E (跟 CLIP 配合)</td>
+</tr>
+</tbody>
+</table>
+<p>简单说: <strong>检索 / 对齐 / 表征用 dual-tower; 生成 / 推理 / 对话用 single-tower (或 dual-tower 当前端 + LLM)</strong>.</p>
+<h2>现在最常见的混合用法</h2>
+<p>实际系统里 CLIP 经常<strong>当 single-tower 模型的视觉前端</strong>:</p>
+<pre><code>图像 → CLIP image encoder (dual-tower 的一半) → 图像 token 序列
+                                                  ↓
+文本 → tokenizer → 文本 token 序列            和图像 token 拼起来
+                                                  ↓
+                                          喂给一个 LLM (single-tower) → 输出
+</code></pre>
+<p>LLaVA / GPT-4V / Qwen-VL 都是这种结构。<strong>Dual-tower 用来表征图像 (低成本、可缓存), single-tower LLM 用来推理 (高表达力)</strong> —— 两套架构各取所长。</p>
+<h2>双塔的更广义形态</h2>
+<p>Dual-tower 不只用在图文。任何"两端语义对齐"的场景都可以用:</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>Tower 1</th>
+<th>Tower 2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>图文匹配 (CLIP)</td>
+<td>图像 encoder</td>
+<td>文本 encoder</td>
+</tr>
+<tr>
+<td>句子语义相似度 (SBERT)</td>
+<td>文本 encoder</td>
+<td>文本 encoder (孪生)</td>
+</tr>
+<tr>
+<td>多语言对齐 (LASER)</td>
+<td>英文 encoder</td>
+<td>法/中/日 encoder</td>
+</tr>
+<tr>
+<td>推荐系统</td>
+<td>user encoder</td>
+<td>item encoder</td>
+</tr>
+<tr>
+<td>代码搜索 (CodeBERT)</td>
+<td>code encoder</td>
+<td>natural language encoder</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Dual-tower 是"高效检索 / 向量化对齐" 这一类问题的通用解</strong>。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/clip.html">clip</a> · 双塔在多模态的标杆</li>
+<li><a href="../concepts/contrastive-learning.html">contrastive-learning</a> · 双塔最常用的训练目标</li>
+<li><a href="../concepts/zero-shot-image-classification.html">zero-shot-image-classification</a> · 双塔出来的 joint space 直接拿来用</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/clip.html"><span class="cat">paper</span>CLIP · Learning Transferable Visual Models from Natural Language Supervision</a></li><li><a href="../concepts/contrastive-learning.html"><span class="cat">concept</span>Contrastive Learning · 对比学习</a></li><li><a href="../concepts/zero-shot-image-classification.html"><span class="cat">concept</span>Zero-Shot Image Classification · 不训练新模型就能分新类</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/dual-tower-architecture.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

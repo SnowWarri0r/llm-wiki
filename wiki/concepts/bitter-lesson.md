@@ -1,7 +1,7 @@
 ---
 name: bitter-lesson
 type: concept
-sources: [replace-heuristics-with-weights, vit]
+sources: [replace-heuristics-with-weights, vit, clip]
 updated: 2026-05-28
 ---
 
