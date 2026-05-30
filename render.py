@@ -977,15 +977,17 @@ def main():
 
     SLUG_INDEX = build_slug_index(entries)
 
-    # 1. Render auto pages for concepts / topics / threads
+    # 1. Render auto pages for concepts / topics / threads / books
+    #    Skip if a bespoke HTML already exists (allows hand-crafted topic pages)
     auto_rendered = 0
     for e in entries:
         if e.category in ("concepts", "topics", "threads", "books"):
             out_dir = HTML_OUT / e.category
             out_dir.mkdir(exist_ok=True)
             out_path = out_dir / f"{e.slug}.html"
+            if out_path.exists() and "<!-- bespoke -->" in out_path.read_text()[:200]:
+                continue
             out_path.write_text(render_concept_page(e))
-            # Also inject nav strip into the just-rendered page
             inject_nav_strip(out_path, e.category, e.slug)
             auto_rendered += 1
 

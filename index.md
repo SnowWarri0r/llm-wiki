@@ -34,6 +34,7 @@
 
 ## Topics · 综合
 
+- [训练 vs 推理 · 同一个模型的两种跑法](wiki/topics/training-vs-inference.md) — 三种架构训练/推理对比（teacher forcing / causal mask / KV cache / MLM 放在一起看）
 - [音频 token 化：RVQ vs Flow](wiki/topics/audio-tokenization-rvq-vs-flow.md) — 两种主流路线的工程对照
 - [把外挂规则吃进权重](wiki/topics/replace-heuristics-with-weights.md) — 反复出现的范式：VAD、phonemizer、Whisper encoder 都在被收
 
