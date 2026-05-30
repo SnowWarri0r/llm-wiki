@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>RL 直觉打底 · 给懂 LLM 不懂 RL 的人 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · rl-for-llm-people</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>RL 直觉打底 · 给懂 LLM 不懂 RL 的人</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>强化学习里那套"policy / rollout / advantage"的词, 翻译成 LLM 自回归就全是你已经会的东西 —— policy 就是模型那个 softmax 分布, 训练就是在拧这个分布。</p>
+<h2>直觉 · 为什么 PPO 那页看着云里雾里</h2>
+<p>PPO / RLHF 那几页默认你已经有 RL 脑回路。但 RL 跟监督学习不是一套思维: 监督学习数据是死的, RL 的数据是模型自己生出来的、还会过期。这页把地基补上, 全程用 LLM 续写当例子, 不用想"游戏"。</p>
+<h2>§0 顿悟点: LLM 本身就是一个 policy</h2>
+<p><code>policy π(a|s)</code> 听着玄, 其实就是: <strong>给一个局面 state, 吐出"下一步每个动作的概率"</strong>。它就是个神经网络, 输入 state, 输出一个 softmax 分布。</p>
+<p>对 LLM 直接对号入座:</p>
+<table>
+<thead>
+<tr>
+<th>RL 术语</th>
+<th>LLM 里是什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>state <code>s</code></td>
+<td>目前为止的 token 串 (prompt + 已生成部分)</td>
+</tr>
+<tr>
+<td>action <code>a</code></td>
+<td>下一个 token</td>
+</tr>
+<tr>
+<td>policy <code>π(a\|s)</code></td>
+<td>模型最后那层 softmax 输出的分布</td>
+</tr>
+<tr>
+<td>更新 policy</td>
+<td>调权重, 让这个分布变形</td>
+</tr>
+</tbody>
+</table>
+<p>举个具体的。state = <code>"今天天气真"</code>, 模型输出下一个 token 的分布:</p>
+<pre><code>好  : 0.6
+差  : 0.2
+蓝  : 0.05
+... 词表里其它几万个 token 摊掉剩下的 0.15
+</code></pre>
+<p><strong>这个分布就是 π。</strong> 你训练 LLM, 本质就是调权重让它变形。RL 说的"概率分布变化"指的就是这个 —— 没有任何新东西。</p>
+<h2>§1 rollout 与"数据会过期"</h2>
+<p><strong>rollout = 让模型真的按自己的分布走一遍, 把走过的路记下来。</strong></p>
+<p>给个 prompt, 模型按 π 采样: 采到 <code>好</code> → state 变成 <code>"今天天气真好"</code> → 再采下一个 token → …… 直到 <code>&lt;eos&gt;</code>。这整条轨迹 + 最后的打分, 就是一次 rollout。跑很多次, 攒一堆 <code>(state, action, 这条路最终多少分)</code>。</p>
+<p>关键的耦合 —— 这是 RL 跟监督学习<strong>最大的不同</strong>:</p>
+<blockquote>
+<p>这批 rollout 是用<strong>当时那个模型</strong> (叫 π_old) 采的。它记录的是"<strong>在 π_old 的口味下</strong>, 这些路各自值多少分"。</p>
+</blockquote>
+<p>监督学习里数据是死的 (猫的图永远是猫), 你怎么更新模型都不影响数据。但 RL 里<strong>数据是模型自己生出来的</strong>。你一旦更新权重, 模型口味变了 (π_new), 它压根不会再走当初那些路 —— 那批旧数据就开始<strong>过期</strong>:</p>
+<ul>
+<li>π_new 跟 π_old 还像 (小步) → 旧数据描述的路, 新模型大致还会走 → 数据还能用</li>
+<li>π_new 跟 π_old 差很远 (大步) → 旧数据全是"新模型不走的路" → 拿它算梯度纯属误导 → 越训越飞</li>
+</ul>
+<p>所以 PPO 的全部纠结就一句: <strong>别让一步更新把分布推太远, 否则手里的数据立刻作废。</strong> clip 就是这个刹车 (见 <a href="../concepts/clipped-surrogate-objective.html">clipped-surrogate-objective</a>)。</p>
+<h2>§2 它到底怎么就"增加 reward"了</h2>
+<p>光看 clip 那张图看不出 reward 怎么涨 —— 因为中间隔了一条因果链:</p>
+<ol>
+<li><strong>把"想要 reward"翻译成"调每个 token 的概率"</strong>, 靠的是 advantage <code>A</code> (见 <a href="../concepts/advantage-function.html">advantage-function</a>):
+   - <code>A &gt; 0</code>: 这个 action 比平均好 → 想让模型下次<strong>更可能</strong>选它 (概率往上推)
+   - <code>A &lt; 0</code>: 比平均差 → 想让它<strong>更不可能</strong> (概率往下压)</li>
+<li><strong>怎么推概率?</strong> 看简化目标 <code>L = r · A</code>, 其中 <code>r = π_new(a)/π_old(a)</code> = "新模型把这个 token 的概率, 相对老模型放大/缩小了多少倍"。<code>A&gt;0</code> 时把 r 调大 (概率调高) → L 变大 → 梯度上升就去顶大 L → 它就真把这个 token 概率往上拧; <code>A&lt;0</code> 反过来往下压。</li>
+<li><strong>clip 只是限幅器</strong>: 想往上拧?行, 拧到 1.2 倍就够了, 再拧 loss 就 flat、梯度归零、不再给动力。防的就是 §1 那个"推太远数据作废"。</li>
+<li><strong>reward 怎么涨的?</strong> 不是某一个 token 让它涨, 而是成千上万条 rollout, 每条里好 token 往上推一点、坏 token 往下压一点, <strong>统计平均下来整个分布慢慢往高分区域挪</strong>。reward 曲线往上爬, 是这个挪移累积的结果。</li>
+</ol>
+<p>一句话: <strong>advantage 决定每个 token 往哪拧, clip 限制拧多猛, 海量样本平均后分布整体偏向高分。</strong> 详见 <a href="../concepts/policy-gradient.html">policy-gradient</a>。</p>
+<h2>§3 KL(LLM ‖ SFT) 是个啥</h2>
+<p>KL 散度 = <strong>量两个概率分布差多远</strong>的尺子。一模一样 → KL = 0; 越不一样 → 越大 (只增不减, 没有负数)。</p>
+<p><code>KL(LLM ‖ SFT)</code>:</p>
+<ul>
+<li><code>SFT</code> = PPO 开训前那个冻结的模型 (出发点)</li>
+<li><code>LLM</code> = 正在被 PPO 拧的这个</li>
+<li>这一项 = "现在的模型, 输出分布<strong>离出发点漂了多远</strong>"</li>
+</ul>
+<p>为什么要它? 因为 PPO 一门心思冲 reward model 高分, 会把模型训畸形 (只会开头喊 "Certainly!"、疯狂凑字数 —— 这叫 reward hacking, 模型在钻 RM 的 bug)。</p>
+<p>把它想成<strong>一根拴在 SFT 上的橡皮筋</strong>: <code>reward - β·KL</code>。你想往高分跑可以, 但离基线越远橡皮筋拽得越狠; <code>β</code> 是橡皮筋松紧。结果是模型只能"在正常说话的范围内尽量讨喜", 而不是变成只会刷分的怪物。详见 <a href="../concepts/rlhf.html">rlhf</a>。</p>
+<h2>§4 这几个 loss 函数的走势</h2>
+<p>你说对这些函数"没概念", 这是最该补的。形状其实很简单:</p>
+<figure style="margin:32px 0; padding:24px; background:#f7f1de; border:1px solid #bfb398; border-radius:4px;">
+<svg viewBox="0 0 900 340" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">
+
+  <!-- ① cross-entropy -->
+  <g transform="translate(20,60)">
+    <text x="120" y="-30" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#181410">① cross-entropy</text>
+    <text x="120" y="-14" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#7a6f5d">loss = -log(p)</text>
+    <rect x="0" y="0" width="240" height="200" fill="#ffffff" stroke="#bfb398" stroke-width="0.8"/>
+    <line x1="28" y1="20" x2="28" y2="170" stroke="#3a3128" stroke-width="1"/>
+    <line x1="28" y1="170" x2="228" y2="170" stroke="#3a3128" stroke-width="1"/>
+    <text x="24" y="16" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">loss</text>
+    <text x="232" y="183" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">p</text>
+    <text x="40" y="185" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">p→0</text>
+    <text x="214" y="185" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">p=1</text>
+    <text x="42" y="30" font-family="JetBrains Mono,monospace" font-size="11" fill="#9b2c2c" font-weight="700">→∞</text>
+    <path d="M 33 24 C 50 110 96 160 140 165 C 180 169 212 170 228 170" fill="none" stroke="#9b2c2c" stroke-width="2.5"/>
+    <circle cx="228" cy="170" r="3" fill="#4a6b3a"/>
+    <text x="120" y="222" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" fill="#3a3128">答对越没底气, 罚得越狠</text>
+    <text x="120" y="240" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">全对且自信 → 0, 没把握 → 无上限</text>
+  </g>
+
+  <!-- ② policy gradient -->
+  <g transform="translate(330,60)">
+    <text x="120" y="-30" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#181410">② policy gradient</text>
+    <text x="120" y="-14" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#7a6f5d">-log(p) × R</text>
+    <rect x="0" y="0" width="240" height="200" fill="#ffffff" stroke="#bfb398" stroke-width="0.8"/>
+    <line x1="28" y1="20" x2="28" y2="170" stroke="#3a3128" stroke-width="1"/>
+    <line x1="28" y1="170" x2="228" y2="170" stroke="#3a3128" stroke-width="1"/>
+    <text x="232" y="183" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">p</text>
+    <!-- R=1 baseline (ink, thin) -->
+    <path d="M 44 74 C 64 132 104 162 150 166 C 186 169 212 170 228 170" fill="none" stroke="#3a3128" stroke-width="1.4"/>
+    <text x="60" y="92" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">R=1</text>
+    <!-- R big (brick, thick) -->
+    <path d="M 33 24 C 52 92 100 152 150 162 C 186 168 212 170 228 170" fill="none" stroke="#9b2c2c" stroke-width="2.5"/>
+    <text x="72" y="40" font-family="JetBrains Mono,monospace" font-size="10" fill="#9b2c2c" font-weight="700">× R (R 大)</text>
+    <text x="120" y="222" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" fill="#3a3128">同一条 -log, 乘 R 整体拉高 R 倍</text>
+    <text x="120" y="240" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">→ 这条样本梯度放大 R 倍, 学得更猛</text>
+  </g>
+
+  <!-- ③ KL -->
+  <g transform="translate(640,60)">
+    <text x="120" y="-30" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#181410">③ KL(P ‖ Q)</text>
+    <text x="120" y="-14" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#7a6f5d">两分布差多远</text>
+    <rect x="0" y="0" width="240" height="200" fill="#ffffff" stroke="#bfb398" stroke-width="0.8"/>
+    <!-- 上: 重合 -->
+    <text x="120" y="18" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#4a6b3a" font-weight="700">几乎重合 → KL ≈ 0</text>
+    <line x1="20" y1="92" x2="220" y2="92" stroke="#e0d8c0" stroke-width="1"/>
+    <path d="M 30 92 C 70 92 86 44 110 44 C 134 44 150 92 190 92" fill="none" stroke="#3a3128" stroke-width="1.8"/>
+    <path d="M 40 92 C 80 92 96 50 120 50 C 144 50 160 92 200 92" fill="none" stroke="#9b2c2c" stroke-width="1.8"/>
+    <!-- 下: 分叉 -->
+    <text x="120" y="118" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#9b2c2c" font-weight="700">分叉大 → KL 大</text>
+    <line x1="20" y1="184" x2="220" y2="184" stroke="#e0d8c0" stroke-width="1"/>
+    <path d="M 24 184 C 50 184 58 136 80 136 C 102 136 110 184 134 184" fill="none" stroke="#3a3128" stroke-width="1.8"/>
+    <path d="M 110 184 C 138 184 148 136 168 136 C 188 136 198 184 220 184" fill="none" stroke="#9b2c2c" stroke-width="1.8"/>
+    <text x="120" y="222" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" fill="#3a3128">LLM 离 SFT 漂越远, 这项越大</text>
+    <text x="120" y="240" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">就是那根橡皮筋的拉力</text>
+  </g>
+
+</svg>
+</figure>
+
+<ul>
+<li><strong>① cross-entropy <code>-log(p)</code></strong>: p 是模型给正确答案的概率。p=1 → loss=0; p→0 → loss 冲上天 (没上限)。一条从右下飙到左上的曲线。直觉: <strong>答对越没把握, 惩罚越狠。</strong></li>
+<li><strong>② policy gradient <code>-log(p)·R</code></strong>: 跟 ① 同形状, 只是整体乘了权重 <code>R</code>。<code>R</code> 大 = 这条样本特别值得学 → 整条曲线拉高 R 倍, 梯度也放大 R 倍。cross-entropy 管"对不对", <code>R</code> 管"这条值不值得使劲学"。</li>
+<li><strong>③ KL</strong>: 两分布重合 = 0, 越分叉越大 (想成两条概率曲线不重叠的那块面积)。<code>KL(LLM‖SFT)</code> 就是 §3 那根橡皮筋的拉力。</li>
+<li><strong>④ PPO 的 clipped L</strong>: 本该一路线性涨 (<code>r·A</code>), 但 clip 在 <code>1±ε</code> 把它削平, 削平处梯度=0、不再推。它是 ① 那种"无限放大"的反面。走势见 <a href="../papers/ppo.html">ppo</a> 页 Fig 03。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/ppo.html">ppo</a> · 这页是它的前置打底</li>
+<li><a href="../concepts/policy-gradient.html">policy-gradient</a> · §2 的数学版</li>
+<li><a href="../concepts/advantage-function.html">advantage-function</a> · §2 里"往哪拧"的信号</li>
+<li><a href="../concepts/clipped-surrogate-objective.html">clipped-surrogate-objective</a> · §2 的刹车</li>
+<li><a href="../concepts/rlhf.html">rlhf</a> · §3 KL 橡皮筋的实战场景</li>
+<li><a href="../concepts/grpo.html">grpo</a> · PPO 的 LLM 友好简化版</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../concepts/advantage-function.html"><span class="cat">concept</span>Advantage Function · 跟基线比,不是看绝对值</a></li><li><a href="../concepts/grpo.html"><span class="cat">concept</span>GRPO · Group Relative Policy Optimization</a></li><li><a href="../concepts/policy-gradient.html"><span class="cat">concept</span>Policy Gradient · 策略梯度</a></li><li><a href="../concepts/rlhf.html"><span class="cat">concept</span>RLHF · Reinforcement Learning from Human Feedback</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/rl-for-llm-people.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

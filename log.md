@@ -432,3 +432,13 @@ skill 更新:
   - glossary 12 条全有正文跳转 (审计通过)
 - 历史定位: PPO 自身是 2017 RL breakthrough, 但最大遗产是 2022 RLHF (InstructGPT/ChatGPT); 跟 GRPO/DPO 是接力, 不是冲突
 - 工程哲学: clip 是 "粗暴近似打败精确解" 的标杆案例, mirror Adam/SGD 跟 Bayesian DL/MC dropout 的同类规律
+
+## [2026-05-29] query | RL 直觉打底 (用户反馈 PPO 页太进阶)
+
+- 触发: 用户看 PPO 页云里雾里 —— rollout↔分布耦合、指标图怎么增加 reward、KL(LLM‖SFT)、cross-entropy/各 loss 走势都没概念
+- 根因: PPO/RLHF 页默认已有 RL 脑回路, 缺一块打底
+- wiki/concepts/rl-for-llm-people.md (新): 用 LLM 自回归把 RL 术语全翻译 —— §0 LLM 就是 policy (state/action/π 对号入座表) / §1 rollout 与数据过期 / §2 advantage→clip→海量样本平均才"涨 reward" / §3 KL=拴 SFT 的橡皮筋 / §4 loss 走势内联静态三联 SVG (cross-entropy / -logπ·R 加权 / KL 两分布重合 vs 分叉)
+- SVG 自包含 (hex 色 + inline 属性, 无 class 无动画), 验证 python-markdown 块级 HTML 原样透传 → concept 页也能带图
+- docs/papers/ppo.html: TL;DR 下加 "先打底" note 链到该页
+- 回链: policy-gradient / advantage-function / clipped-surrogate-objective / rlhf / grpo 链接段都加 [[rl-for-llm-people]]
+- index.md: 强化学习/对齐 段置顶该页

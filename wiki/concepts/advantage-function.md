@@ -117,6 +117,7 @@ PPO / TRPO / A3C / SAC 全都是 actor-critic 结构。GRPO 是个例外 —— 
 跟监督学习里"输入做 normalize"是同一回事: **去除无关的整体偏移, 只保留有信息的相对值**.
 
 ## 链接
+- [[rl-for-llm-people]] · RL 术语打底 (state/action/分布/loss 走势)
 - [[policy-gradient]] · 它的 loss 权重就是 advantage
 - [[clipped-surrogate-objective]] · PPO 的 clip 作用在 A_t 上
 - [[ppo]] · 用 advantage 配合 clip 训练
