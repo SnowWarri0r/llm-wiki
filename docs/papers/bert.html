@@ -1096,6 +1096,21 @@ figcaption .fnum { color: var(--moss); font-weight: 700; }
   <p>2018-2022 NLP 是 BERT 的天下：理解任务通吃，每个公司都有自己的 BERT-finetuned 模型。2022 之后 GPT-3.5 / ChatGPT 出来，几乎所有"prompt 一个 LLM 就行"的场景把 BERT finetune 路径取代了 —— 包括分类、信息抽取、问答。BERT 系仍在<strong>嵌入 / 检索</strong>里活着，但前沿任务上 decoder-only 赢了。<strong>不是 BERT 错了，是 decoder-only 在规模和泛化上意外地强。</strong></p>
 </div>
 
+<h2><span class="num">§ 07</span>训练 vs 推理 · BERT 不"写"</h2>
+
+<p>BERT 跟 GPT 系列最根本的差异不是架构，是<strong>训练和推理时"干的事"完全不同</strong>：</p>
+
+<p><strong>训练 · 完形填空（MLM）</strong>：随机 mask 15% 的 token，双向 attention 看整个上下文，预测被 mask 的词。全部并行，很快。</p>
+
+<p><strong>推理 · 不生成，出表示</strong>：整个序列一次性过 encoder，输出每个 token 的向量表示。拿这些向量给分类 / NER / 检索等下游任务用。<strong>没有自回归，没有逐 token 生成</strong> —— 这也是为什么 BERT 做分类 / 检索比 GPT 快得多。</p>
+
+<p><strong>代价</strong>：BERT 能"读"（理解文本）但不能"写"（生成新文本）。训练方式（完形填空 vs 预测下一个词）直接决定了能力边界。</p>
+
+<div class="note">
+  <span class="l">三种架构训练/推理对比</span>
+  <p>Encoder-Only / Decoder-Only / Encoder-Decoder 的完整对比 + teacher forcing / causal mask / KV cache → <a href="../topics/training-vs-inference.html">训练 vs 推理 · 全景对比</a></p>
+</div>
+
 <div class="gloss">
   <h2>引用 / 术语表</h2>
   <ol>

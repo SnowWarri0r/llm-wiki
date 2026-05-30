@@ -909,6 +909,21 @@ out = attn @ V</pre>
   <p>2018 大家觉得"预测下一个词"这种任务能学到的能力有限 —— 它能学到表面统计规律（语法、词频），但不可能教出推理。BERT 的"双向理解"被视为更"深刻"的目标。GPT-1 当时 9/12 SOTA 的成绩说明思路可行，但不够震撼。直到 GPT-3 用 175B 参数和 in-context learning 证明这条路<strong>不仅可行还更强</strong>，整个领域才换边。<strong>scale 把表面规律变成了能力</strong> —— 这是当年没人预见到的。</p>
 </div>
 
+<h2><span class="num">§ 07</span>训练 vs 推理 · Causal Mask 的双重作用</h2>
+
+<p>Causal mask（三角矩阵）在 GPT 里同时解决两件事：</p>
+
+<p><strong>训练时</strong>：让所有位置<strong>并行</strong>计算 —— 位置 i 只看 0..i-1（causal mask 挡住后面的）。每个位置预测下一个 token，全部同时出 loss。一个 batch 就算完整个序列。</p>
+
+<p><strong>推理时</strong>：<strong>自回归</strong>逐 token 生成。每步只算一个新 token 的 Q/K/V，跟 KV cache 里存的之前所有 token 的 K/V 做 attention。不重复计算。</p>
+
+<p><strong>Causal mask 让训练和推理"看到的东西一样"</strong> —— 每个位置在训练时被 mask 挡住后面、推理时还没生成后面，信息量对称。这跟 BERT（训练见 [MASK] 推理不见）不同，GPT 没有 train-inference distribution shift 问题。</p>
+
+<div class="note">
+  <span class="l">三种架构训练/推理对比</span>
+  <p>Decoder-Only / Encoder-Decoder / Encoder-Only 的完整对比 + teacher forcing / KV cache / prefill-decode → <a href="../topics/training-vs-inference.html">训练 vs 推理 · 全景对比</a></p>
+</div>
+
 <div class="gloss">
   <h2>引用 / 术语表</h2>
   <ol>
