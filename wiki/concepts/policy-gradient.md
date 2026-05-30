@@ -88,6 +88,7 @@ optimizer.step()
 最后一行是最大的差别 —— **数据分布跟 policy 耦合**, 这是 RL 难训的根本原因。
 
 ## 链接
+- [[rl-for-llm-people]] · 用 LLM 自回归把这套术语翻译成你已会的东西
 - [[ppo]] · 在策略梯度基础上加 clip 防崩
 - [[clipped-surrogate-objective]] · PPO 解决步子问题的方案
 - [[advantage-function]] · 把 raw return 换成"超出基线多少"的稳定信号

@@ -143,6 +143,7 @@
 - [Dual-Tower Architecture](wiki/concepts/dual-tower-architecture.md) — 两个独立 encoder + 末端点积; 推理可缓存, 适合检索
 
 ### 强化学习 / 对齐
+- [RL 直觉打底](wiki/concepts/rl-for-llm-people.md) — 给懂 LLM 不懂 RL 的人: policy/rollout/advantage/KL/loss 走势全翻译成自回归术语 (含 loss 函数走势对照图)
 - [Policy Gradient](wiki/concepts/policy-gradient.md) — RL 的基础: 用 reward 当 loss 权重直接 gradient ascent, 步子大就崩
 - [Clipped Surrogate Objective](wiki/concepts/clipped-surrogate-objective.md) — PPO 核心的一行 clip, 软性 trust region
 - [Advantage Function](wiki/concepts/advantage-function.md) — A = Q - V, "比平均好多少" 比 raw return 信号稳得多

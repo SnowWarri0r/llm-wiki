@@ -43,6 +43,7 @@ for prompt in batch:
 TML 也提到 RL 训练 → bitwise determinism 是为它服务的。[[bitwise-determinism]] 缺失会让 GRPO / PPO 这类 RL loop 不稳定甚至发散，因为训练时算梯度的 kernel 和推理时采样的 kernel 数值不一致 → 学到的 policy 偏离 sampler 的真实行为分布。
 
 ## 链接
+- [[rl-for-llm-people]] · 看不懂 RL 术语先读这个打底
 - [[fish-speech-s2-pro]] · 这里 RL 对齐
 - [[bitwise-determinism]] · RL 训练稳定性前提
 - [[dual-ar]] · GRPO 在 Dual-AR 之上做 post-training
