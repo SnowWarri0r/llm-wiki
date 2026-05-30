@@ -15,6 +15,7 @@
 - [Interaction Models · Thinking Machines](wiki/papers/interaction-models-tml.md) — 把交互能力做进权重的 276B MoE 模型
 - [Fish Audio S2 Pro](wiki/papers/fish-speech-s2-pro.md) — Dual-AR + RVQ + GRPO 的开源 TTS
 - [RoPE · Rotary Position Embedding](wiki/papers/rope.md) — 不加位置向量，旋转 Q/K 让点积天然含相对位置；LLaMA / Mistral / Qwen 全在用
+- [Whisper](wiki/papers/whisper.md) — 68 万小时弱监督训 ASR，zero-shot 碾压精标模型；语音领域的 GPT 时刻
 
 ## Books · 书籍精讲
 
@@ -109,6 +110,10 @@
 - [Log-Mel Spectrogram](wiki/concepts/log-mel-spectrogram.md) — 音频特征基础
 - [Bin Quantization](wiki/concepts/bin-quantization.md) — dMel 的核心，等距分箱量化
 - [dMel](wiki/concepts/dmel.md) — log-mel 直接 bin quantize（避开 codec）
+
+### 语音 / ASR
+- [Weak Supervision at Scale](wiki/concepts/weak-supervision-at-scale.md) — 弱标注 + 量大力飞，Whisper 核心策略
+- [Multitask Speech](wiki/concepts/multitask-speech.md) — 一个模型多任务，靠特殊 token 切换
 
 ### 共享基础设施
 - [KV Cache](wiki/concepts/kv-cache.md) — 流式推理的内存账本
