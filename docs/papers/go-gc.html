@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Go GC · 从 mark-sweep 到 Green Tea</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --accent: var(--deep); --accent-soft: var(--deep-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(48px, 8vw, 84px); line-height: 0.92; letter-spacing: -0.035em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 38px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
+p { margin: 12px 0; } strong { font-weight: 700; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--deep-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--deep); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--deep); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--deep-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--deep-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* gc-specific */
+.gc-svg { width: 100%; height: auto; display: block; }
+.gc-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .gc-rev { opacity: 1; }
+figure.play .gc-rev.d1 { transition-delay: 0.15s; }
+figure.play .gc-rev.d2 { transition-delay: 0.45s; }
+figure.play .gc-rev.d3 { transition-delay: 0.75s; }
+figure.play .gc-rev.d4 { transition-delay: 1.05s; }
+figure.play .gc-rev.d5 { transition-delay: 1.35s; }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · go-gc</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Runtime · Garbage Collection · Go 1.26 · 2026</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · GO RUNTIME · GARBAGE COLLECTION</div>
+  <h1 class="title">Go GC ·<br /><span class="em">从乱跳到顺着扫.</span></h1>
+  <div class="byline">Go Runtime Team · Michael Knyszek 等 · Green Tea GC · Go 1.26 · 2026</div>
+  <p class="dek">Go 的 GC 这些年的主线是"让标记不再卡在等内存"。Go 1.26 默认开的 Green Tea 把工作单元从"对象"换成"8 KiB 页"，把指针追逐的随机访存改成按页顺序扫 —— GC-heavy 程序 GC overhead 降 10–40%，还不用改一行代码。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>Go GC = <strong>三色并发 mark-sweep</strong><a class="jr" href="#g-01">1</a> + <strong>write barrier</strong><a class="jr" href="#g-03">3</a>，标记跟你的程序并发跑，几乎不长时间 STW<a class="jr" href="#g-02">2</a>。触发节奏靠 <strong>GOGC</strong><a class="jr" href="#g-06">6</a>（默认堆涨到 2× live 触发）和 <strong>GOMEMLIMIT</strong><a class="jr" href="#g-07">7</a>（硬上限）控。老的标记是 <strong>graph flood</strong><a class="jr" href="#g-11">11</a> —— 顺着指针在堆里乱跳，mark 时间里 ≥35% 纯 stall 在等内存。Go 1.26 默认开的 <strong>Green Tea</strong><a class="jr" href="#g-12">12</a> 把工作单元换成 <strong>8 KiB 页</strong><a class="jr" href="#g-10">10</a>：每页攒一批待扫对象、按地址顺序一次扫完，随机访存变顺序访存；现代 CPU 上再用 AVX-512 几条指令扫一整页。结果：GC CPU 降 10–40%，语义不变。</p>
+</div>
+
+
+<!-- §01 -->
+<h2><span class="num">§ 01</span>底座 · 三色并发 mark-sweep</h2>
+
+<p>GC 要回答一个问题：<strong>堆上哪些对象还活着，哪些是垃圾</strong>。Go 的答法是 mark-sweep<a class="jr" href="#g-02">2</a> —— 先 mark（从根出发，把所有能到达的对象标记成"活"），再 sweep（没被标到的就是垃圾，回收）。</p>
+
+<p>判断"活"的起点是 <strong>GC roots</strong><a class="jr" href="#g-05">5</a>：每个 goroutine 的栈、全局变量这些"程序直接拿在手里"的指针。从 roots 能顺着指针链到达的，全是活的。</p>
+
+<p>标记过程用 <strong>三色不变式</strong><a class="jr" href="#g-01">1</a> 来跟踪进度。每个对象三种颜色之一：</p>
+
+<figure id="fig-tricolor" class="fig-tricolor">
+  <figcaption>
+    <span>Fig 01 · 三色标记</span>
+    <span class="fnum">mark 波扫过, 剩下的白 = 垃圾</span>
+  </figcaption>
+  <svg class="gc-svg" viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg">
+    <!-- 图例 -->
+    <g class="gc-rev d1">
+      <rect x="20" y="20" width="270" height="44" rx="5" fill="#ffffff" stroke="#bfb398" stroke-width="0.8"/>
+      <circle cx="44" cy="42" r="8" fill="#ffffff" stroke="#3a3128" stroke-width="1.2"/>
+      <text x="62" y="39" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a3128">白 · 还没被标到</text>
+      <text x="62" y="54" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">扫完仍是白 = 垃圾</text>
+    </g>
+    <g class="gc-rev d2">
+      <rect x="305" y="20" width="270" height="44" rx="5" fill="#ffffff" stroke="#bfb398" stroke-width="0.8"/>
+      <circle cx="329" cy="42" r="8" fill="#cdbf8e" stroke="#3a3128" stroke-width="1.2"/>
+      <text x="347" y="39" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a3128">灰 · 被指到, 没扫它指谁</text>
+      <text x="347" y="54" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">标记的"前线"</text>
+    </g>
+    <g class="gc-rev d3">
+      <rect x="590" y="20" width="270" height="44" rx="5" fill="#ffffff" stroke="#bfb398" stroke-width="0.8"/>
+      <circle cx="614" cy="42" r="8" fill="#3a3128"/>
+      <text x="632" y="39" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a3128">黑 · 自己和指向的都处理完</text>
+      <text x="632" y="54" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">不会再回头扫</text>
+    </g>
+
+    <!-- roots -->
+    <text x="70" y="108" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#7a6f5d" class="gc-rev d2">GC roots</text>
+    <text x="70" y="121" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d" class="gc-rev d2">(栈/全局)</text>
+
+    <!-- edges -->
+    <g class="gc-rev d3" fill="none" stroke="#7a6f5d" stroke-width="1.4">
+      <path d="M 92 150 L 168 150" marker-end="url(#gca)"/>
+      <path d="M 92 232 L 168 232" marker-end="url(#gca)"/>
+      <path d="M 212 150 L 288 150" marker-end="url(#gca)"/>
+      <path d="M 212 232 Q 250 232 288 165" marker-end="url(#gca)"/>
+      <path d="M 332 150 L 408 150" marker-end="url(#gca)"/>
+    </g>
+    <g class="gc-rev d4" fill="none" stroke="#9b2c2c" stroke-width="1.2" stroke-dasharray="3 3">
+      <path d="M 700 210 L 744 210" marker-end="url(#gcx)"/>
+    </g>
+
+    <!-- nodes: black roots -->
+    <circle cx="74" cy="150" r="18" fill="#3a3128" class="gc-rev d3"/>
+    <circle cx="74" cy="232" r="18" fill="#3a3128" class="gc-rev d3"/>
+    <circle cx="190" cy="150" r="18" fill="#3a3128" class="gc-rev d3"/>
+    <!-- gray frontier -->
+    <circle cx="310" cy="150" r="18" fill="#cdbf8e" stroke="#3a3128" stroke-width="1" class="gc-rev d4"/>
+    <circle cx="190" cy="232" r="18" fill="#cdbf8e" stroke="#3a3128" stroke-width="1" class="gc-rev d4"/>
+    <!-- white reachable-not-yet -->
+    <circle cx="430" cy="150" r="18" fill="#ffffff" stroke="#3a3128" stroke-width="1.2" class="gc-rev d5"/>
+
+    <!-- garbage cluster (disconnected, white) -->
+    <g class="gc-rev d5">
+      <circle cx="690" cy="210" r="18" fill="#ffffff" stroke="#3a3128" stroke-width="1.2"/>
+      <circle cx="760" cy="210" r="18" fill="#ffffff" stroke="#3a3128" stroke-width="1.2"/>
+      <text x="725" y="170" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" fill="#9b2c2c">没有 root 能到达</text>
+      <text x="725" y="262" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#9b2c2c">→ 始终白 → sweep 回收</text>
+    </g>
+
+    <text x="300" y="300" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" fill="#3a3128" class="gc-rev d5">标记的灰色"前线"从 roots 一路往外推</text>
+
+    <!-- 底部不变式 -->
+    <text x="440" y="338" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#1f3a5f">三色不变式: 黑对象绝不直接指向白对象 —— 这是并发标记不漏的根基</text>
+
+    <defs>
+      <marker id="gca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7a6f5d"/></marker>
+      <marker id="gcx" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#9b2c2c"/></marker>
+    </defs>
+  </svg>
+</figure>
+
+<p>对象在堆上不是随便放的：Go 把同一个 <strong>size class</strong><a class="jr" href="#g-09">9</a> 的对象凑在同一段连续内存（span）里，一个 span 是若干 page。这条"同类对象住一起"的事实，后面 Green Tea 会狠狠用上。</p>
+
+
+<!-- §02 -->
+<h2><span class="num">§ 02</span>并发的代价 · write barrier</h2>
+
+<p>如果 GC 肯让世界停下来（STW）慢慢标记，三色就够了。但 STW 几百毫秒在线上不可接受，所以 Go 的标记是<strong>跟你的程序并发跑的</strong> —— GC 在标记的同时，<strong>mutator</strong><a class="jr" href="#g-04">4</a>（你的业务 goroutine）还在改指针。</p>
+
+<p>这就出事了。考虑这个时序：一个对象已经被标黑（GC 认为它扫完了，不会再看），这时 mutator 把它的某个字段改成指向一个白对象，<strong>同时</strong>那个白对象原本唯一的灰色入口被删掉。结果：白对象只剩黑对象指它，而黑对象不会再被扫 —— 它永远不会被标记，最后被当垃圾回收，留下悬空指针。</p>
+
+<figure id="fig-barrier" class="fig-barrier">
+  <figcaption>
+    <span>Fig 02 · 为什么要 write barrier</span>
+    <span class="fnum">并发改指针 → 漏标 → 误删活对象</span>
+  </figcaption>
+  <svg class="gc-svg" viewBox="0 0 880 380" xmlns="http://www.w3.org/2000/svg">
+    <!-- 左: 没 barrier -->
+    <g transform="translate(20,36)" class="gc-rev d1">
+      <text x="200" y="0" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#9b2c2c">没 write barrier</text>
+      <rect x="0" y="14" width="400" height="290" rx="4" fill="#ffffff" stroke="#bfb398" stroke-width="0.8"/>
+
+      <circle cx="90" cy="80" r="20" fill="#3a3128"/>
+      <text x="90" y="50" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a3128">B (黑)</text>
+      <circle cx="90" cy="220" r="20" fill="#cdbf8e" stroke="#3a3128" stroke-width="1"/>
+      <text x="90" y="258" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a3128">G (灰)</text>
+      <circle cx="300" cy="150" r="20" fill="#ffffff" stroke="#3a3128" stroke-width="1.2"/>
+      <text x="300" y="120" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a3128">W (白)</text>
+
+      <!-- ① 新建 黑→白 -->
+      <path d="M 112 92 Q 220 110 282 140" fill="none" stroke="#9b2c2c" stroke-width="1.8" marker-end="url(#bx)"/>
+      <text x="190" y="100" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#9b2c2c">① B.ptr = W</text>
+      <!-- ② 删 灰→白 -->
+      <path d="M 112 212 Q 220 200 282 162" fill="none" stroke="#7a6f5d" stroke-width="1.4" stroke-dasharray="4 4"/>
+      <line x1="185" y1="178" x2="205" y2="198" stroke="#9b2c2c" stroke-width="2"/>
+      <line x1="205" y1="178" x2="185" y2="198" stroke="#9b2c2c" stroke-width="2"/>
+      <text x="196" y="226" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#7a6f5d">② G→W 这条被删</text>
+
+      <text x="200" y="290" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" fill="#9b2c2c">W 只剩黑指它 → 永不标记 → 被回收 ✗</text>
+    </g>
+
+    <!-- 右: 有 barrier -->
+    <g transform="translate(460,36)" class="gc-rev d3">
+      <text x="200" y="0" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#1f3a5f">有 write barrier</text>
+      <rect x="0" y="14" width="400" height="290" rx="4" fill="#ffffff" stroke="#bfb398" stroke-width="0.8"/>
+
+      <circle cx="90" cy="80" r="20" fill="#3a3128"/>
+      <text x="90" y="50" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a3128">B (黑)</text>
+      <circle cx="300" cy="150" r="20" fill="#cdbf8e" stroke="#3a3128" stroke-width="1.4"/>
+      <text x="300" y="120" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#1f3a5f">W → 灰</text>
+
+      <path d="M 112 92 Q 220 110 282 140" fill="none" stroke="#1f3a5f" stroke-width="1.8" marker-end="url(#bd)"/>
+      <text x="196" y="100" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#1f3a5f">B.ptr = W</text>
+
+      <rect x="120" y="186" width="200" height="48" rx="4" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="1"/>
+      <text x="220" y="206" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#1f3a5f">写指针时 barrier 触发:</text>
+      <text x="220" y="222" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#1f3a5f">顺手把 W 染灰</text>
+
+      <text x="200" y="290" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" fill="#1f3a5f">W 进了灰色前线 → 被标记 → 存活 ✓</text>
+    </g>
+
+    <defs>
+      <marker id="bx" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#9b2c2c"/></marker>
+      <marker id="bd" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#1f3a5f"/></marker>
+    </defs>
+  </svg>
+</figure>
+
+<p><strong>write barrier</strong><a class="jr" href="#g-03">3</a> 就是编译器在每条"写指针"操作前后塞的一小段代码：标记进行时，凡是改指针就顺手把相关对象染灰，保证不破坏三色不变式。代价是每次指针写都多几条指令 —— 这也是为什么 Go 的 GC 只在标记期开启 barrier，标记一结束就关掉。</p>
+
+
+<!-- §03 -->
+<h2><span class="num">§ 03</span>什么时候触发 · GOGC 与 GOMEMLIMIT</h2>
+
+<p>GC 跑得太勤 → 浪费 CPU；跑得太懒 → 堆涨爆内存。这个节奏由 <strong>pacing</strong><a class="jr" href="#g-08">8</a> 控制，两个旋钮：</p>
+
+<p><strong>GOGC</strong><a class="jr" href="#g-06">6</a>（默认 100）：上次 GC 后存活的堆是 <code>live</code>，那么堆涨到 <code>live × (1 + GOGC/100)</code> 就触发下一次。GOGC=100 → 涨到 <strong>2× live</strong> 触发。调大（GOGC=200）→ GC 更少、内存换 CPU；调小 → 反之。</p>
+
+<p><strong>GOMEMLIMIT</strong><a class="jr" href="#g-07">7</a>（1.19+）：一个软硬上限。即使按 GOGC 还没到触发点，只要堆逼近 GOMEMLIMIT，GC 就提前触发，把堆压在限额下 —— 用来防 OOM。代价是逼近限额时 GC 会变得很频繁（GC CPU 飙升），所以它是"别 OOM"的安全网，不是日常调优主力。</p>
+
+<figure id="fig-pacing" class="fig-pacing">
+  <figcaption>
+    <span>Fig 03 · GC 触发节奏</span>
+    <span class="fnum">堆的锯齿 · GOGC 定触发点, GOMEMLIMIT 设天花板</span>
+  </figcaption>
+  <svg class="gc-svg" viewBox="0 0 880 340" xmlns="http://www.w3.org/2000/svg">
+    <!-- 轴 -->
+    <line x1="70" y1="60" x2="70" y2="280" stroke="#3a3128" stroke-width="1" class="gc-rev d1"/>
+    <line x1="70" y1="280" x2="820" y2="280" stroke="#3a3128" stroke-width="1" class="gc-rev d1"/>
+    <text x="60" y="56" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="10" fill="#7a6f5d" class="gc-rev d1">堆大小</text>
+    <text x="820" y="298" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="10" fill="#7a6f5d" class="gc-rev d1">时间 / 分配</text>
+
+    <!-- live 基线 -->
+    <line x1="70" y1="250" x2="820" y2="250" stroke="#4a6b3a" stroke-width="1" stroke-dasharray="5 4" class="gc-rev d2"/>
+    <text x="78" y="244" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#4a6b3a" class="gc-rev d2">live heap (存活)</text>
+
+    <!-- GOGC 触发线 2x -->
+    <line x1="70" y1="150" x2="820" y2="150" stroke="#9b2c2c" stroke-width="1" stroke-dasharray="5 4" class="gc-rev d3"/>
+    <text x="78" y="144" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#9b2c2c" class="gc-rev d3">GOGC=100 触发点 = 2× live</text>
+
+    <!-- GOMEMLIMIT 天花板 -->
+    <line x1="70" y1="90" x2="820" y2="90" stroke="#1f3a5f" stroke-width="1.6" class="gc-rev d4"/>
+    <text x="78" y="84" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#1f3a5f" font-weight="700" class="gc-rev d4">GOMEMLIMIT (硬上限)</text>
+
+    <!-- 锯齿: 正常 GOGC 节奏 (前半) -->
+    <path class="gc-rev d3" d="M 70 250 L 190 150 L 190 248 L 310 150 L 310 246 L 430 150 L 430 244" fill="none" stroke="#3a3128" stroke-width="2"/>
+
+    <!-- 锯齿: 逼近 memlimit, 提前触发 (后半, 更密) -->
+    <path class="gc-rev d4" d="M 430 244 L 500 96 L 500 242 L 560 96 L 560 240 L 620 96 L 620 238 L 680 96 L 680 236" fill="none" stroke="#1f3a5f" stroke-width="2"/>
+
+    <text x="250" y="315" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#3a3128" class="gc-rev d3">每涨到 2× live 触发一次 GC, 锯齿稳定</text>
+    <text x="595" y="315" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#1f3a5f" class="gc-rev d4">live 涨高, 顶到 GOMEMLIMIT → 提前触发, 锯齿变密 (GC CPU↑)</text>
+  </svg>
+</figure>
+
+<p>到这里 Go GC 的"骨架"就齐了：三色并发 mark-sweep + write barrier 保证正确，GOGC/GOMEMLIMIT 控节奏。剩下的故事全是<strong>怎么把 mark 这一步做快</strong> —— 这正是 Green Tea 干的事。</p>
+
+
+<!-- §04 -->
+<h2><span class="num">§ 04</span>痛点 · graph flood 在内存里乱跳</h2>
+
+<p>老的标记叫 <strong>graph flood</strong><a class="jr" href="#g-11">11</a>：从灰色队列取一个对象 → 扫它的指针 → 把引用对象染灰塞回队列 → 取下一个。问题是这本质是<strong>指针追逐</strong> —— 对象之间互相指，但它们在内存里<strong>八竿子打不着</strong>，你顺着指针跳，几乎每跳一次就是一次 cache miss + TLB miss。</p>
+
+<p>官方实测：mark 的时间里，<strong>至少 35% 是纯粹 stall 在等堆内存</strong>。而且这个问题随堆变大、对象变小变碎而恶化，加 CPU 核也救不了 —— 所有核都堵在等内存。mark 从 CPU-bound 退化成 <strong>memory-latency-bound</strong>。</p>
+
+<figure id="fig-flood" class="fig-flood">
+  <figcaption>
+    <span>Fig 04 · graph flood vs Green Tea</span>
+    <span class="fnum">指针追逐乱跳 vs 按页顺序扫</span>
+  </figcaption>
+  <svg class="gc-svg" viewBox="0 0 880 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- 左: graph flood -->
+    <g transform="translate(20,40)" class="gc-rev d1">
+      <text x="200" y="0" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#9b2c2c">graph flood (旧) · 逐对象</text>
+      <!-- 4 个 page -->
+      <g stroke="#bfb398" stroke-width="0.8" fill="#ffffff">
+        <rect x="0" y="20" width="400" height="50"/>
+        <rect x="0" y="90" width="400" height="50"/>
+        <rect x="0" y="160" width="400" height="50"/>
+        <rect x="0" y="230" width="400" height="50"/>
+      </g>
+      <g font-family="JetBrains Mono,monospace" font-size="8" fill="#bfb398">
+        <text x="6" y="33">page A</text><text x="6" y="103">page B</text><text x="6" y="173">page C</text><text x="6" y="243">page D</text>
+      </g>
+      <!-- 对象点 -->
+      <g fill="#cdbf8e" stroke="#3a3128" stroke-width="0.6">
+        <circle cx="70" cy="45" r="7"/><circle cx="150" cy="45" r="7"/><circle cx="230" cy="45" r="7"/><circle cx="310" cy="45" r="7"/>
+        <circle cx="70" cy="115" r="7"/><circle cx="150" cy="115" r="7"/><circle cx="230" cy="115" r="7"/><circle cx="310" cy="115" r="7"/>
+        <circle cx="70" cy="185" r="7"/><circle cx="150" cy="185" r="7"/><circle cx="230" cy="185" r="7"/><circle cx="310" cy="185" r="7"/>
+        <circle cx="70" cy="255" r="7"/><circle cx="150" cy="255" r="7"/><circle cx="230" cy="255" r="7"/><circle cx="310" cy="255" r="7"/>
+      </g>
+      <!-- 乱跳路径 -->
+      <path d="M 70 45 L 230 185 L 150 115 L 310 255 L 70 185 L 230 45 L 150 255 L 310 115" fill="none" stroke="#9b2c2c" stroke-width="1.5" opacity="0.85"/>
+      <text x="200" y="312" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#9b2c2c">跨页乱跳 → cache/TLB miss 满天飞</text>
+      <text x="200" y="330" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" fill="#9b2c2c">≥35% mark 时间 stall 在等内存</text>
+    </g>
+
+    <!-- 右: Green Tea -->
+    <g transform="translate(460,40)" class="gc-rev d3">
+      <text x="200" y="0" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#1f3a5f">Green Tea (新) · 逐页</text>
+      <g stroke="#bfb398" stroke-width="0.8" fill="#ffffff">
+        <rect x="0" y="20" width="400" height="50"/>
+        <rect x="0" y="90" width="400" height="50"/>
+        <rect x="0" y="160" width="400" height="50"/>
+        <rect x="0" y="230" width="400" height="50"/>
+      </g>
+      <g font-family="JetBrains Mono,monospace" font-size="8" fill="#bfb398">
+        <text x="6" y="33">page A</text><text x="6" y="103">page B</text><text x="6" y="173">page C</text><text x="6" y="243">page D</text>
+      </g>
+      <g fill="#cdbf8e" stroke="#3a3128" stroke-width="0.6">
+        <circle cx="70" cy="45" r="7"/><circle cx="150" cy="45" r="7"/><circle cx="230" cy="45" r="7"/><circle cx="310" cy="45" r="7"/>
+        <circle cx="70" cy="115" r="7"/><circle cx="150" cy="115" r="7"/><circle cx="230" cy="115" r="7"/><circle cx="310" cy="115" r="7"/>
+        <circle cx="70" cy="185" r="7"/><circle cx="150" cy="185" r="7"/><circle cx="230" cy="185" r="7"/><circle cx="310" cy="185" r="7"/>
+        <circle cx="70" cy="255" r="7"/><circle cx="150" cy="255" r="7"/><circle cx="230" cy="255" r="7"/><circle cx="310" cy="255" r="7"/>
+      </g>
+      <!-- 顺序扫: 每页 L→R, 页间下移 -->
+      <g fill="none" stroke="#1f3a5f" stroke-width="1.6">
+        <path d="M 70 45 L 310 45" marker-end="url(#fr)"/>
+        <path d="M 70 115 L 310 115" marker-end="url(#fr)"/>
+        <path d="M 70 185 L 310 185" marker-end="url(#fr)"/>
+        <path d="M 70 255 L 310 255" marker-end="url(#fr)"/>
+      </g>
+      <text x="200" y="312" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#1f3a5f">同页对象顺序扫 → 顺序访存, 命中 cache</text>
+      <text x="200" y="330" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" fill="#1f3a5f">CPU 能预取, 不再每步干等</text>
+    </g>
+
+    <text x="440" y="388" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#3a3128" class="gc-rev d4">同样的对象、同样的图 —— 变的只是访问顺序, 而访问顺序就是访存延迟的全部</text>
+
+    <defs>
+      <marker id="fr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#1f3a5f"/></marker>
+    </defs>
+  </svg>
+</figure>
+
+<p>用开车打比方：graph flood 像在城市街道乱开 —— 看不见下个路口，红绿灯随机，走走停停；Green Tea 像上了高速 —— 路直、能看远、CPU 可以放心预取。<strong>对象一个没少、图一点没变，变的只是你按什么顺序去碰内存。</strong></p>
+
+
+<!-- §05 -->
+<h2><span class="num">§ 05</span>Green Tea · 把工作单元从对象换成页</h2>
+
+<p>Green Tea<a class="jr" href="#g-12">12</a> 的核心想法官方自己说"简单得离谱"：<strong>以页为单位干活，不以对象为单位。</strong> Go 的一个 <strong>page 是 8 KiB</strong><a class="jr" href="#g-10">10</a> 对齐内存块，同 size class 的对象住同一页。具体三处变化：</p>
+
+<p>• 工作队列里排的是<strong>页</strong>，不是对象<br/>
+• 一页待扫的对象用 <strong>seen / scanned 两个 bitmap</strong> 在页本地记录，不再全堆维护一个巨大灰色队列<br/>
+• 队列从<strong>栈（后进先出）改成 FIFO（先进先出）</strong> —— 让页在队列里多待一会，把"被指到"的对象攒一批，再一次性按地址顺序扫完</p>
+
+<figure id="fig-greentea" class="fig-greentea">
+  <figcaption>
+    <span>Fig 05 · 一页怎么扫</span>
+    <span class="fnum">seen/scanned bitmap · 攒一批 · AVX-512 整页拿下</span>
+  </figcaption>
+  <svg class="gc-svg" viewBox="0 0 880 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- 8KiB page -->
+    <g class="gc-rev d1">
+      <text x="60" y="44" font-family="JetBrains Mono,monospace" font-size="11" fill="#1f3a5f" font-weight="700">一个 8 KiB page (同 size class 对象住一起)</text>
+      <rect x="60" y="56" width="760" height="46" rx="3" fill="#ffffff" stroke="#1f3a5f" stroke-width="1.2"/>
+      <g stroke="#bfb398" stroke-width="0.6">
+        <line x1="155" y1="56" x2="155" y2="102"/><line x1="250" y1="56" x2="250" y2="102"/><line x1="345" y1="56" x2="345" y2="102"/><line x1="440" y1="56" x2="440" y2="102"/><line x1="535" y1="56" x2="535" y2="102"/><line x1="630" y1="56" x2="630" y2="102"/><line x1="725" y1="56" x2="725" y2="102"/>
+      </g>
+      <g font-family="JetBrains Mono,monospace" font-size="10" fill="#7a6f5d" text-anchor="middle">
+        <text x="107" y="84">obj0</text><text x="202" y="84">obj1</text><text x="297" y="84">obj2</text><text x="392" y="84">obj3</text><text x="487" y="84">obj4</text><text x="582" y="84">obj5</text><text x="677" y="84">obj6</text><text x="772" y="84">obj7</text>
+      </g>
+    </g>
+
+    <!-- bitmaps -->
+    <g class="gc-rev d2" font-family="JetBrains Mono,monospace" font-size="11">
+      <text x="60" y="142" fill="#3a3128">seen   (被指到了吗)</text>
+      <g transform="translate(300,128)">
+        <rect width="20" height="20" x="0" fill="#cdbf8e" stroke="#3a3128" stroke-width="0.6"/><rect width="20" height="20" x="24" fill="#ffffff" stroke="#3a3128" stroke-width="0.6"/><rect width="20" height="20" x="48" fill="#cdbf8e" stroke="#3a3128" stroke-width="0.6"/><rect width="20" height="20" x="72" fill="#cdbf8e" stroke="#3a3128" stroke-width="0.6"/><rect width="20" height="20" x="96" fill="#ffffff" stroke="#3a3128" stroke-width="0.6"/><rect width="20" height="20" x="120" fill="#cdbf8e" stroke="#3a3128" stroke-width="0.6"/><rect width="20" height="20" x="144" fill="#ffffff" stroke="#3a3128" stroke-width="0.6"/><rect width="20" height="20" x="168" fill="#cdbf8e" stroke="#3a3128" stroke-width="0.6"/>
+      </g>
+      <text x="60" y="180" fill="#3a3128">scanned (扫过它指谁了吗)</text>
+      <g transform="translate(300,166)">
+        <rect width="20" height="20" x="0" fill="#3a3128" stroke="#3a3128" stroke-width="0.6"/><rect width="20" height="20" x="24" fill="#ffffff" stroke="#3a3128" stroke-width="0.6"/><rect width="20" height="20" x="48" fill="#ffffff" stroke="#3a3128" stroke-width="0.6"/><rect width="20" height="20" x="72" fill="#3a3128" stroke="#3a3128" stroke-width="0.6"/><rect width="20" height="20" x="96" fill="#ffffff" stroke="#3a3128" stroke-width="0.6"/><rect width="20" height="20" x="120" fill="#ffffff" stroke="#3a3128" stroke-width="0.6"/><rect width="20" height="20" x="144" fill="#ffffff" stroke="#3a3128" stroke-width="0.6"/><rect width="20" height="20" x="168" fill="#ffffff" stroke="#3a3128" stroke-width="0.6"/>
+      </g>
+      <text x="500" y="160" fill="#9b2c2c" font-size="10">seen 且 !scanned = 这一批要扫的</text>
+    </g>
+
+    <!-- 攒批 + 顺序扫 -->
+    <g class="gc-rev d3">
+      <rect x="60" y="210" width="360" height="64" rx="4" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="1"/>
+      <text x="240" y="234" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#1f3a5f" font-weight="700">页在 FIFO 队列里攒一批 seen 对象</text>
+      <text x="240" y="254" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#1f3a5f">再按地址顺序一次扫完 → work list 更小、竞争更少</text>
+    </g>
+
+    <!-- AVX-512 -->
+    <g class="gc-rev d4">
+      <rect x="450" y="210" width="370" height="64" rx="4" fill="#f0e0a8" stroke="#b8841c" stroke-width="1.2"/>
+      <text x="635" y="234" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#b8841c" font-weight="700">AVX-512 (Ice Lake / Zen 4+)</text>
+      <text x="635" y="252" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#3a3128">整页 metadata 装进 2 个 512-bit 寄存器</text>
+      <text x="635" y="267" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#3a3128">几条直线指令扫一页 (GFNI VGF2P8AFFINEQB) · 再省 ~10%</text>
+    </g>
+
+    <text x="440" y="312" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" fill="#3a3128" class="gc-rev d4">老的逐对象指针追逐, 对象大小不一、毫无规律 → 根本没法上向量指令</text>
+    <text x="440" y="360" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="15" font-weight="700" fill="#1f3a5f" class="gc-rev d5">GC CPU 降 10–40% · 语义不变 · 不用改一行代码</text>
+  </svg>
+</figure>
+
+<p>把这些合起来：随机访存变顺序访存，work list 从全堆对象缩成页、竞争和 stall 都降下来，再叠加向量指令。官方 benchmark：<strong>不算向量就有 10–40% 的 GC CPU 下降</strong>，modal（最常见）约 10%；现代 CPU 加上 AVX-512 再多 ~10%。Google 内部大规模上线，结果一致。</p>
+
+<div class="note">
+  <span class="l">一个反直觉的发现</span>
+  <p>官方说：<strong>哪怕一次只扫一页里 2% 的对象，都已经比 graph flood 快。</strong>这说明赢点根本不在"批量摊销开销"，而在 <strong>locality 本身</strong> —— 顺序碰内存这件事的价值，比你直觉以为的大得多。</p>
+</div>
+
+
+<!-- §06 -->
+<h2><span class="num">§ 06</span>实战 · 升 Go 1.26 意味着什么</h2>
+
+<p>Green Tea 在 Go 1.25 是实验开关（<code>GOEXPERIMENT=greenteagc</code>），<strong>Go 1.26 默认开启</strong>。它是<strong>纯 locality 优化</strong> —— GC 语义、GOGC/GOMEMLIMIT 行为全不变，你不用改任何代码。唯一能观察到的就是 <strong>GC CPU% 掉</strong>。</p>
+
+<p>• <strong>谁受益最大</strong>：GC-heavy、小对象 churn 大的服务 —— JSON 重的请求处理、大量短命小分配。GC 本来就轻的几乎无感。<br/>
+• <strong>怎么量</strong>：升级前后用 <code>runtime/metrics</code>（<code>/gc/cycles/total</code>、GC CPU 那几项）或 pprof 对比 GC CPU 占比。<br/>
+• <strong>现代 CPU 额外加成</strong>：跑在 Intel Ice Lake / AMD Zen 4 及更新的机器上，自动吃到 AVX-512 那 ~10%。<br/>
+• <strong>怎么关</strong>：<code>GOEXPERIMENT=nogreenteagc</code>（build 时）。官方明确说：如果因为性能或行为问题关掉它，请提 issue。</p>
+
+<p>典型受益场景：请求里狂分配小对象、JSON 序列化重、GC 压力不小的 Go 服务 —— 升 1.26 后值得拉一下 GC CPU 的前后对比，大概率能看到掉一截，等于白捡的吞吐。</p>
+
+<p>更大的图景：这是 Go GC 演化主线的又一步 —— 从"能并发、低延迟"（三色 + write barrier 时代）走到"<strong>对现代内存层级和 SIMD 友好</strong>"。GC 的瓶颈早就从"算得快不快"变成"等内存等多久"，Green Tea 是第一个正面冲着访存延迟去设计的 Go GC。</p>
+
+
+<!-- glossary -->
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">三色标记 · tri-color marking</span> · 跟踪标记进度的方法。对象分白（没被标到）/ 灰（被指到但还没扫它指谁）/ 黑（自己和指向的都处理完）。核心不变式：黑对象绝不直接指向白对象 —— 这是并发标记不漏活对象的根基。</li>
+    <li id="g-02"><span class="term">mark-sweep · STW</span> · GC 两阶段：mark 从根出发标记所有可达对象，sweep 回收没被标到的。STW（stop-the-world）= 暂停所有业务 goroutine；Go 把 STW 压到极短（亚毫秒），标记主体跟程序并发跑。</li>
+    <li id="g-03"><span class="term">write barrier · 写屏障</span> · 编译器在每条"写指针"操作处插的一小段代码。并发标记时凡改指针就顺手染灰相关对象，保证不破坏三色不变式、不漏标。代价是指针写多几条指令，所以只在标记期开启。</li>
+    <li id="g-04"><span class="term">mutator</span> · GC 视角下的"你的业务代码" —— 那些在 GC 标记的同时还在分配对象、改指针的 goroutine。GC 和 mutator 并发跑，正是 write barrier 存在的原因。</li>
+    <li id="g-05"><span class="term">GC roots · 根集合</span> · 标记的起点：每个 goroutine 的栈、全局变量等"程序直接拿在手里"的指针。从 roots 顺指针能到达的全是活对象，到不了的就是垃圾。</li>
+    <li id="g-06"><span class="term">GOGC</span> · 控 GC 触发频率的主旋钮（默认 100）。上次 GC 后存活堆是 live，堆涨到 live×(1+GOGC/100) 触发下次。GOGC=100 → 涨到 2× live 触发。调大省 CPU 费内存，调小反之。</li>
+    <li id="g-07"><span class="term">GOMEMLIMIT</span> · 内存软上限（Go 1.19+）。堆逼近这个值时 GC 提前触发把堆压在限额下，用来防 OOM。代价是逼近时 GC 很频繁、GC CPU 飙升 —— 它是安全网不是日常调优主力。</li>
+    <li id="g-08"><span class="term">GC pacing · 配速</span> · runtime 决定"何时触发、标记多快"的控制逻辑，目标是在 GOGC 设定的内存预算内，让并发标记刚好在堆撞到触发点时完成，既不早停也不超支。</li>
+    <li id="g-09"><span class="term">size class · span</span> · Go 把对象按大小归到约 70 个 size class，同 class 的对象集中放在同一段连续内存（span，由若干 page 组成）。"同类对象住一起"是 Green Tea 能按页批量扫的前提。</li>
+    <li id="g-10"><span class="term">page · 8 KiB</span> · Go runtime 的内存管理基本块，8 KiB 对齐。Green Tea 把 GC 工作单元从单个对象提升到 page —— 一页里同 size class 的对象一起扫。</li>
+    <li id="g-11"><span class="term">graph flood · 图洪泛</span> · 老的标记算法：逐个对象从灰色队列取出、扫指针、染灰、再取下一个。本质是指针追逐，在堆里随机乱跳，cache/TLB miss 极多 —— mark 时间里 ≥35% 纯 stall 在等内存。</li>
+    <li id="g-12"><span class="term">Green Tea GC</span> · Go 1.26 默认 GC。工作单元从对象换成 8 KiB page，用 seen/scanned 两个 bitmap 在页本地记录，FIFO 队列攒一批再按地址顺序扫 → 随机访存变顺序访存。现代 CPU 用 AVX-512 GFNI（VGF2P8AFFINEQB）几条指令扫整页。GC CPU 降 10–40%，语义不变。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>Authored / 个人学习笔记 · 2026 · 源: go.dev/blog/greenteagc · go.dev/doc/go1.26</span>
+  <span>Index / <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+
+<script>
+{
+  const figs = ['fig-tricolor','fig-barrier','fig-pacing','fig-flood','fig-greentea'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.2 });
+    obs.observe(el);
+  });
+}
+</script>
+
+</body>
+</html>
