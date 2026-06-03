@@ -8,6 +8,18 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css" />
+<style>
+.search { margin: 44px 0 8px; }
+.search input { width: 100%; box-sizing: border-box; font-family: 'JetBrains Mono', monospace; font-size: 15px; padding: 14px 16px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper-card); color: var(--ink); }
+.search input:focus { outline: none; border-color: var(--brick); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.chip { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1px; padding: 5px 13px; border: 1px solid var(--rule); border-radius: 20px; background: transparent; color: var(--ink-2); cursor: pointer; transition: all 0.15s; }
+.chip:hover { border-color: var(--brick); }
+.chip.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.chip .c { opacity: 0.55; font-size: 10px; }
+.pill.dom { font-weight: 700; border-color: var(--ink-2); }
+.nores { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--muted); padding: 36px 0; text-align: center; }
+</style>
 </head>
 <body>
 <div class="page">
@@ -35,539 +47,555 @@
   <p><strong>这页目录也是渲染出来的。</strong><code>render.py</code> 扫 frontmatter 生成，并给 bespoke 页面注入导航、解析 <code>[[wikilink]]</code>。</p>
 </div>
 
+<div class="search">
+  <input id="q" type="search" placeholder="搜索 标题 / 概念 / 术语…  (例: attention, 中枢, GC, 均输)" autocomplete="off" spellcheck="false" />
+  <div class="chips"><button class="chip active" data-dom="">全部 <span class="c">126</span></button><button class="chip" data-dom="ML">ML <span class="c">99</span></button><button class="chip" data-dom="系统">系统 <span class="c">1</span></button><button class="chip" data-dom="金融">金融 <span class="c">3</span></button><button class="chip" data-dom="史">史 <span class="c">1</span></button><button class="chip" data-dom="理财">理财 <span class="c">22</span></button></div>
+</div>
+<div id="nores" class="nores" hidden>没有匹配的条目 — 换个词试试</div>
 
+
+<section class="cat-block">
 <h2><span class="num">§ 01</span>Papers · 论文源</h2>
 <div class="entries">
-<div class="entry paper">
+<div class="entry paper" data-domains="ML" data-s="attention is all you need · transformer 始祖 **砍掉 rnn 的&quot;必须按时间步串行处理&quot;枷锁**，用 self-attention 让序列里每个位置一次性看到所有其他位置，整个模型可并行训练，长程依赖也变成 o(1) 跳。 attention-is-all-you-need paper ml § 01 · the bottleneckrnn 的天花板 § 02 · figure one并行 vs 串行 § 03 · the trickself-attention 机制 § 04 · the expansionmulti-head § 05 · the hackpositional encoding § 06 · the architecture完整架构 § 07 · the legacy改变了什么 § 08 · what to keep个人解读 § 06训练 vs 推理 · 同一个架构两种跑法 § ▼ · vocabulary术语词典 06.1每个子层里发生什么 06.2ffn 是什么">
   <h3><a href="papers/attention-is-all-you-need.html">Attention Is All You Need · Transformer 始祖</a></h3>
   <p class="hook">**砍掉 RNN 的&quot;必须按时间步串行处理&quot;枷锁**，用 self-attention 让序列里每个位置一次性看到所有其他位置，整个模型可并行训练，长程依赖也变成 O(1) 跳。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-05-20</span><a class="pill" href="https://arxiv.org/abs/1706.03762" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-20</span><a class="pill" href="https://arxiv.org/abs/1706.03762" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="ML" data-s="bert · bidirectional encoder representations from transformers **把 transformer 的 encoder stack 单独拿出来，用 masked language model 让它一次性看到双向上下文做预训练**——理解类任务从此进入&quot;先 pretrain 一个，到处 finetune&quot;时代。 bert paper ml § 012018 的分叉路口 § 02mlm · 训练双向的诡计 § 03nsp · 给段间关系一个 pretrain 信号 § 04只要 encoder · 架构对比 § 05pretrain → finetune · 范式革命 § 06当时炸场，今天的遗产 § 07训练 vs 推理 · bert 不&quot;写&quot; 引用 / 术语表 bidirectional context train-inference 分布漂移 roberta · a robustly optimized bert pretraining approach rag 嵌入模型为何还在用 bert 系 &quot;先 pretrain 一个大模型再到处用&quot;成了行业默认 mlm · masked language model nsp · next sentence prediction [cls] / [sep] / segment embedding wordpiece tokenizer bert-base vs bert-large glue benchmark elmo · 2018 前的&quot;双向&quot;半成品">
   <h3><a href="papers/bert.html">BERT · Bidirectional Encoder Representations from Transformers</a></h3>
   <p class="hook">**把 Transformer 的 encoder stack 单独拿出来，用 masked language model 让它一次性看到双向上下文做预训练**——理解类任务从此进入&quot;先 pretrain 一个，到处 finetune&quot;时代。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://arxiv.org/abs/1810.04805" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://arxiv.org/abs/1810.04805" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="金融" data-s="缠论 · 把走势拆成可数的结构 缠论（缠中说禅，李彪 2006–2008《教你炒股票 108 课》）把 k 线走势自下而上拆成一套**可数的结构**：分型 → 笔 → 线段 → 中枢，再用背驰和级别判断买卖点。核心哲学是「走势终完美」—— 任何走势最终都会走完，分析的是当下而非预测。 chan-theory paper 金融 § 01它想干什么 · 走势终完美 § 02地基 · 包含处理与分型 § 03笔与线段 · 往上搭一层 § 04中枢 · 缠论的心脏 § 05级别 · 自相似的俄罗斯套娃 § 06动力学 · 背驰与三类买卖点 § 07怎么看待它 · 自洽不等于有效 引用 / 术语表 缠论 · 缠中说禅 走势终完美 k 线包含处理 分型 · 顶 / 底 笔 线段 中枢 走势类型 · 趋势 / 盘整 级别 · 自相似嵌套 背驰 三类买卖点 主观性争议 · 自洽≠有效">
   <h3><a href="papers/chan-theory.html">缠论 · 把走势拆成可数的结构</a></h3>
   <p class="hook">缠论（缠中说禅，李彪 2006–2008《教你炒股票 108 课》）把 K 线走势自下而上拆成一套**可数的结构**：分型 → 笔 → 线段 → 中枢，再用背驰和级别判断买卖点。核心哲学是「走势终完美」—— 任何走势最终都会走完，分析的是当下而非预测。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-06-03</span><a class="pill" href="https://bigquant.com/wiki/doc/cOsACEKd1x" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-金融">金融</span><span class="pill">paper</span><span class="pill">ingested 2026-06-03</span><a class="pill" href="https://bigquant.com/wiki/doc/cOsACEKd1x" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="ML" data-s="clip · learning transferable visual models from natural language supervision 不用人工打标签, 直接从互联网爬 4 亿张&quot;图 + caption&quot;对子, 让图像和文本在同一个向量空间里对齐 —— **图片识别从&quot;判断这是什么类别&quot;变成&quot;哪句话最配这张图&quot;**, 顺手解锁 zero-shot 分类和所有现代多模态。 clip paper ml § 01痛点 · 一张图一个 label 太浪费 § 02架构 · 双塔 + 末端对齐 § 03对比学习 · 把整个 batch 当训练单元 § 04数据 · 4 亿对子的力量 § 05zero-shot · 分类变成&quot;哪句话最配&quot; § 06下游 · 谁在用 clip § 07历史定位 · 视觉的 gpt-3 时刻 引用 / 术语表 ① 生成模型的 conditioning ② llm 的视觉前端 ③ 大数据集的过滤器 ④ open-vocabulary 检测 / 分割 imagenet 范式 wit · webimagetext 400m 对比学习 · contrastive learning dual-tower architecture · 双塔 zero-shot classification clip joint embedding space gpt-3 弱监督路线 in-batch negatives · 批内负样本 temperature parameter · 温度参数 prompt engineering · 提示词工程 open vocabulary siglip · sigmoid-loss clip">
   <h3><a href="papers/clip.html">CLIP · Learning Transferable Visual Models from Natural Language Supervision</a></h3>
   <p class="hook">不用人工打标签, 直接从互联网爬 4 亿张&quot;图 + caption&quot;对子, 让图像和文本在同一个向量空间里对齐 —— **图片识别从&quot;判断这是什么类别&quot;变成&quot;哪句话最配这张图&quot;**, 顺手解锁 zero-shot 分类和所有现代多模态。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-05-28</span><a class="pill" href="https://arxiv.org/abs/2103.00020" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-28</span><a class="pill" href="https://arxiv.org/abs/2103.00020" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="史" data-s="盐铁论 · 两千年前的国营 vs 民营 公元前 81 年（汉昭帝始元六年）的&quot;盐铁会议&quot;，是中国历史上第一场被完整记录的**国家统制经济 vs 民间自由经济**大辩论：桑弘羊（法家、官营垄断）对阵贤良文学 60 余人（儒家、藏富于民）。桓宽把记录整理成《盐铁论》。两千年后，这场辩论的题目几乎一字未改。 discourses-salt-iron paper 史 § 01那场会议 · 公元前 81 年 § 02桑弘羊的财政机器 § 03核心分歧 · 钱该在谁手里 § 04均输平准 · 国家当总批发商 § 05两千年回声 · 同一道题 引用 / 术语表 盐铁会议 桑弘羊 贤良文学 桓宽 盐铁专卖 均输 平准 酒榷（榷酤） 与民争利 富国强兵 vs 藏富于民 本末之争 · 重农抑末 法家 vs 儒家 · 统制 vs 市场">
   <h3><a href="papers/discourses-salt-iron.html">盐铁论 · 两千年前的国营 vs 民营</a></h3>
   <p class="hook">公元前 81 年（汉昭帝始元六年）的&quot;盐铁会议&quot;，是中国历史上第一场被完整记录的**国家统制经济 vs 民间自由经济**大辩论：桑弘羊（法家、官营垄断）对阵贤良文学 60 余人（儒家、藏富于民）。桓宽把记录整理成《盐铁论》。两千年后，这场辩论的题目几乎一字未改。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-06-03</span><a class="pill" href="https://zh.wikipedia.org/wiki/盐铁论" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-史">史</span><span class="pill">paper</span><span class="pill">ingested 2026-06-03</span><a class="pill" href="https://zh.wikipedia.org/wiki/盐铁论" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="ML" data-s="dmel · speech tokenization made simple **别训 codec 了，直接把 log-mel 按预设 bin 量化成 token** —— 对 speech-llm 训练来说，简单的 bin quantization 跟复杂的 neural rvq codec 效果相当。 dmel paper ml § 01音频 → token · 主流做法的痛点 § 02从波形到 log-mel · 输入是什么 § 03bin quantization · 简单到 20 行代码 § 04dmel vs rvq · 复杂度差一个量级 § 05这是个反复出现的范式 § 06tml 怎么把 dmel 接进 micro-turn § 07历史定位与影响 引用 / 术语表 log-mel spectrogram · 对数 mel 频谱图 rvq codec · residual vector quantization &quot;性能相当&quot;的实证 &quot;主模型变强 · 预处理塌缩&quot; 范式 &quot;端到端&quot;的工程含义 2024-12 tml vocabulary 大小取舍 vmin / vmax 是数据集统计值 vocoder · 把 mel 转回波形 pipeline 简化的工程价值 fish-speech 路线 vs dmel 路线 &quot;先做扎实简单方案&quot;的工程哲学">
   <h3><a href="papers/dmel.html">dMel · Speech Tokenization Made Simple</a></h3>
   <p class="hook">**别训 codec 了，直接把 log-mel 按预设 bin 量化成 token** —— 对 speech-LLM 训练来说，简单的 bin quantization 跟复杂的 neural RVQ codec 效果相当。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://arxiv.org/abs/2407.15835" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://arxiv.org/abs/2407.15835" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="ML" data-s="fish audio s2 pro 用 **dual-ar**（慢 ar 4b + 快 ar 400m）+ **rvq codec**（10 codebook ~21hz）+ **grpo** 对齐做出来的开源 tts，质量超过 seed-tts / minimax speech-02 / qwen3-tts。 fish-speech-s2-pro paper ml § 01 · the bottleneck不可能三角 § 02 · the core trickdual-ar · 慢 + 快 § 03 · the codecneural codec · 编 / 量 / 解 § 04 · the alignmentgrpo · 组相对 rl § 05 · the plumbing推理工程 § 06 · the controls控制与多语言 § 07 · the numbersbenchmark § 08 · what to keep个人解读 § ▼ · vocabulary术语词典 03.1neural codec 全貌 03.2rvq · 把 codebook 摞 10 层 04.1四维 reward 信号 06.115000+ 自由文本 tag 06.280+ 语言不靠 phonemizer 07.5更多基准（一张表）">
   <h3><a href="papers/fish-speech-s2-pro.html">Fish Audio S2 Pro</a></h3>
   <p class="hook">用 **Dual-AR**（慢 AR 4B + 快 AR 400M）+ **RVQ codec**（10 codebook ~21Hz）+ **GRPO** 对齐做出来的开源 TTS，质量超过 Seed-TTS / MiniMax Speech-02 / Qwen3-TTS。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-05-20</span><a class="pill" href="https://arxiv.org/abs/2603.08823" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-20</span><a class="pill" href="https://arxiv.org/abs/2603.08823" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="ML" data-s="flow matching for generative modeling **把噪声→数据的生成问题转成一个&quot;学速度场&quot;的回归问题**。给定起点（噪声）和终点（数据），定义一条路径，让模型学每一时刻应该往哪个方向走。 flow-matching paper ml § 01为什么 diffusion 不够好用 § 02速度场 · flow vs diffusion 的核心差异 § 03velocity field · 具体长什么样 § 04ot 直线 · 为什么 flow matching 推理这么快 § 05training · 跟 diffusion 比有多简单 § 06为什么 tml 选 flow matching 做音频 § 07历史定位与后续 引用 / 术语表 &quot;直接说&quot; vs &quot;绕一圈说&quot; velocity field ↔ probability path 1:1 对应 conditional vs marginal flow matching loss 概率路径自由 tml 选 flow matching 而不是 diffusion 的工程原因 score function · ∇log p(x) 连续性方程 · continuity equation tweedie&#x27;s formula rectified flow · liu et al. 2022 stable diffusion 3 · flux &quot;训练目标 = 想要的东西&quot; 是反复出现的范式 rvq 路线 vs flow matching 路线 · 两种音频生成哲学">
   <h3><a href="papers/flow-matching.html">Flow Matching for Generative Modeling</a></h3>
   <p class="hook">**把噪声→数据的生成问题转成一个&quot;学速度场&quot;的回归问题**。给定起点（噪声）和终点（数据），定义一条路径，让模型学每一时刻应该往哪个方向走。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://arxiv.org/abs/2210.02747" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://arxiv.org/abs/2210.02747" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="ML" data-s="generative agents · interactive simulacra of human behavior 给 llm 加上**记忆流 + 反思 + 规划**三件套，让 25 个 ai agent 在一个虚拟小镇里自主生活 —— 会交朋友、传八卦、组织派对、甚至谈恋爱。这套架构是现在几乎所有&quot;有记忆的 ai agent&quot;的祖宗。 generative-agents paper ml § 01痛点 · llm 没有记忆 § 02agent 架构 · 感知 → 检索 → 反思 → 规划 → 行动 § 03记忆流 · 所有经历存成一条时间线 § 04检索 · 时近度 × 重要性 × 相关性 § 05反思 · 碎片变认知 § 06smallville · 涌现出来的社会行为 § 07工程视角 · 这套东西怎么落地 引用 / 术语表 llm 没有记忆 memory stream · 记忆流 reflection · 反思 planning · 规划 smallville · 虚拟小镇 每步都调 llm 只追加的表 检索排序 rag · retrieval-augmented generation 反思触发阈值 涌现行为 token 成本">
   <h3><a href="papers/generative-agents.html">Generative Agents · Interactive Simulacra of Human Behavior</a></h3>
   <p class="hook">给 LLM 加上**记忆流 + 反思 + 规划**三件套，让 25 个 AI agent 在一个虚拟小镇里自主生活 —— 会交朋友、传八卦、组织派对、甚至谈恋爱。这套架构是现在几乎所有&quot;有记忆的 AI agent&quot;的祖宗。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-05-27</span><a class="pill" href="https://arxiv.org/abs/2304.03442" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-27</span><a class="pill" href="https://arxiv.org/abs/2304.03442" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="系统" data-s="go gc · 从三色 mark-sweep 到 green tea go 的 gc 是**三色并发 mark-sweep + write barrier**，靠 gogc/gomemlimit 控触发节奏；go 1.26 默认开的 **green tea** 把 mark 的工作单元从&quot;对象&quot;换成&quot;8 kib page&quot;，把指针追逐的随机访存改成按页顺序扫，gc-heavy 程序 gc overhead 降 10–40%。 go-gc paper 系统 § 01底座 · 三色并发 mark-sweep § 02并发的代价 · write barrier § 03什么时候触发 · gogc 与 gomemlimit § 04痛点 · graph flood 在内存里乱跳 § 05green tea · 把工作单元从对象换成页 § 06实战 · 升 go 1.26 意味着什么 引用 / 术语表 三色标记 · tri-color marking mark-sweep · stw write barrier · 写屏障 mutator gc roots · 根集合 gogc gomemlimit gc pacing · 配速 size class · span page · 8 kib graph flood · 图洪泛 green tea gc">
   <h3><a href="papers/go-gc.html">Go GC · 从三色 mark-sweep 到 Green Tea</a></h3>
   <p class="hook">Go 的 GC 是**三色并发 mark-sweep + write barrier**，靠 GOGC/GOMEMLIMIT 控触发节奏；Go 1.26 默认开的 **Green Tea** 把 mark 的工作单元从&quot;对象&quot;换成&quot;8 KiB page&quot;，把指针追逐的随机访存改成按页顺序扫，GC-heavy 程序 GC overhead 降 10–40%。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-06-01</span><a class="pill" href="https://go.dev/doc/go1.26" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-系统">系统</span><span class="pill">paper</span><span class="pill">ingested 2026-06-01</span><a class="pill" href="https://go.dev/doc/go1.26" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="ML" data-s="gpt-1 · improving language understanding by generative pre-training **用 transformer decoder 在 bookcorpus 上预训练&quot;预测下一个词&quot;，再 finetune 到各种下游任务** —— 用输入文本格式编码任务结构，避免给每个任务设计新架构。 gpt-1 paper ml § 012018 上半年的赌局 § 02预训练 · causal language model § 03架构 · causal mask 是怎么回事 § 04怎么用 · input transformations § 05跟 bert 的对照 § 06真正的遗产 § 07训练 vs 推理 · causal mask 的双重作用 引用 / 术语表 训练信号密度 bookcorpus auxiliary lm loss &quot;tl;dr:&quot; prompt causal mask autoregressive generation · 自回归生成 12 项 benchmark bookcorpus + lm = 117m 训练几天能搞定 decoder-only 的最终胜出 为什么 gpt-1 不能 zero-shot prompting · 提示工程 generative vs discriminative pre-training">
   <h3><a href="papers/gpt-1.html">GPT-1 · Improving Language Understanding by Generative Pre-Training</a></h3>
   <p class="hook">**用 Transformer decoder 在 BookCorpus 上预训练&quot;预测下一个词&quot;，再 finetune 到各种下游任务** —— 用输入文本格式编码任务结构，避免给每个任务设计新架构。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://openai.com/research/language-unsupervised" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://openai.com/research/language-unsupervised" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="ML" data-s="gpt-2 · language models are unsupervised multitask learners **同一个 transformer decoder 架构放大到 1.5b + 用 webtext 训，发现 zero-shot 可以触发摘要 / 翻译 / 阅读理解 —— 不用 finetune 也能跨任务工作**。 gpt-2 paper ml § 01gpt-1 之后的下一步 § 024 个 size · 把 scaling 摆出来 § 03zero-shot · prompt 就能触发任务 § 04webtext · 把人类注意力当数据 filter § 05gpt-1 → gpt-2 · 什么变了 / 什么没变 § 06&quot;too dangerous to release&quot; · staged release 的开端 § 07真正的遗产 引用 / 术语表 zero-shot transfer · 零样本迁移 &quot;language models are unsupervised multitask learners&quot; perplexity · 困惑度 scaling laws · kaplan et al. 2020 &quot;tl;dr:&quot; trick 隐式任务示例 reddit karma ≥ 3 启发式 staged release · 分阶段释放 为什么 thesis 钉死重要 prompt engineering gpt-3 在哪赢 webtext 没开源">
   <h3><a href="papers/gpt-2.html">GPT-2 · Language Models are Unsupervised Multitask Learners</a></h3>
   <p class="hook">**同一个 Transformer decoder 架构放大到 1.5B + 用 WebText 训，发现 zero-shot 可以触发摘要 / 翻译 / 阅读理解 —— 不用 finetune 也能跨任务工作**。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://openai.com/research/better-language-models" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://openai.com/research/better-language-models" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="ML" data-s="gpt-3 · language models are few-shot learners **模型 scale 到 175b 后，prompt 里塞几个例子就能让模型现学任务 —— in-context learning 是 emergent ability**。gpt 系列从 &quot;pretrain + finetune&quot; 演化到 &quot;pretrain + prompt&quot;，finetune 阶段在前沿模型上从此退场。 gpt-3 paper ml § 01把同架构再放 100 倍 · 175b 是怎么来的 § 02in-context learning · 论文真正的 surprise § 03emergence · 小模型 ≈ 0 大模型突然能 § 04scaling laws · 算出来的 175b § 05真正的遗产 引用 / 术语表 in-context learning · icl · 上下文内学习 emergent abilities · 涌现能力 scaling laws · 标度律 sparse attention · 稀疏注意力 implicit gradient descent $4.6m 训练成本 8 size 系列 &quot;够好 + 极快&quot;赢&quot;最好 + 极慢&quot; chinchilla 修正 · hoffmann et al. 2022 rlhf 引爆链 · 2022 instructgpt → chatgpt trajectory 视角 vs snapshot 视角 icl 的扩展 · cot / 工具 / 长上下文 / reasoning">
   <h3><a href="papers/gpt-3.html">GPT-3 · Language Models are Few-Shot Learners</a></h3>
   <p class="hook">**模型 scale 到 175B 后，prompt 里塞几个例子就能让模型现学任务 —— in-context learning 是 emergent ability**。GPT 系列从 &quot;pretrain + finetune&quot; 演化到 &quot;pretrain + prompt&quot;，finetune 阶段在前沿模型上从此退场。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://arxiv.org/abs/2005.14165" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://arxiv.org/abs/2005.14165" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="ML" data-s="interaction models · thinking machines lab 当前 chat 模型是&quot;轮次制&quot;（你说一段我说一段）；tml 主张把交互能力做进模型本体，做成 **200ms 微回合 + 时间对齐**的并发流。 interaction-models-tml paper ml § 01 · the bottleneck协作瓶颈 § 02 · figure one轮次制 vs 时间对齐 § 03 · what unlocks六种原生能力 § 04 · system shape双模型架构 § 05 · the core trick200ms 微回合 § 06 · the plumbing技术细节 § 07 · the numbersbenchmark 对比 § 08 · what to keep个人解读 § ▼ · vocabulary术语词典 06.1encoder-free early fusion · 无独立编码器的早融合 06.1·flow matching · 音频输出怎么从噪声里&quot;流&quot;出来 06.2streaming sessions · 流式会话 06.3trainer-sampler 一致性 06.4安全 07.5常规基准（不是 tml 自造的）">
   <h3><a href="papers/interaction-models-tml.html">Interaction Models · Thinking Machines Lab</a></h3>
   <p class="hook">当前 chat 模型是&quot;轮次制&quot;（你说一段我说一段）；TML 主张把交互能力做进模型本体，做成 **200ms 微回合 + 时间对齐**的并发流。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-05-20</span><a class="pill" href="https://thinkingmachines.ai/blog/interaction-models/" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-20</span><a class="pill" href="https://thinkingmachines.ai/blog/interaction-models/" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="金融" data-s="康波周期 · 50–60 年的经济四季 康德拉季耶夫 1920 年代发现资本主义经济有 ~50–60 年的长波，schumpeter 把成因归到**成簇出现的技术革命**；一个周期分繁荣/衰退/萧条/回升四季，每季约 10–15 年。周金涛把它本土化成「人生发财靠康波」。**但主流经济学多不认它，定年和成因都无共识，不能拿来精确择时。** kondratiev-wave paper 金融 § 01长波 · 经济的四季 § 02引擎 · 技术革命成簇出现 § 03四季 · 大类资产各有各的天 § 04嵌套 · 你看到的经济是四条周期的合力 § 05本土化 · 人生发财靠康波 § 06怎么看待它 · 罗盘, 不是钟表 引用 / 术语表 康波 · 康德拉季耶夫长波 a 相 / b 相 schumpeter · 技术革命归因 创造性破坏 · 创新成簇 五次浪潮 四季 · 繁荣/衰退/萧条/回升 基钦周期 朱格拉周期 库兹涅茨周期 周金涛 人生发财靠康波 主流质疑">
   <h3><a href="papers/kondratiev-wave.html">康波周期 · 50–60 年的经济四季</a></h3>
   <p class="hook">康德拉季耶夫 1920 年代发现资本主义经济有 ~50–60 年的长波，Schumpeter 把成因归到**成簇出现的技术革命**；一个周期分繁荣/衰退/萧条/回升四季，每季约 10–15 年。周金涛把它本土化成「人生发财靠康波」。**但主流经济学多不认它，定年和成因都无共识，不能拿来精确择时。**</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-06-03</span><a class="pill" href="https://zh.wikipedia.org/wiki/康德拉季耶夫长波" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-金融">金融</span><span class="pill">paper</span><span class="pill">ingested 2026-06-03</span><a class="pill" href="https://zh.wikipedia.org/wiki/康德拉季耶夫长波" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="ML" data-s="memgpt · towards llms as operating systems 把 llm 的 context window 当成 ram，外部存储当硬盘 —— 让 llm **通过 function call 自己管自己的记忆**：哪些塞进 context、哪些挪到外部、什么时候要回看老对话。**操作系统级别的记忆管理思路套在 agent 身上**。 memgpt paper ml § 01痛点 · context 装不下，谁来管？ § 02核心隐喻 · os 的虚拟内存 § 03三层记忆 · 像 cpu 寄存器 / ram / 硬盘 § 04核心循环 · context 满了怎么办 § 05vs generative agents · 一对孪生兄弟 § 06实际场景 · 长对话不丢人设 § 07历史定位 · 后来变成了 letta 引用 / 术语表 外部编排 llm 自己当 os function calling 调度记忆 三层记忆 · core / recall / archival function calling · 函数调用 操作系统虚拟内存 context 90% 阈值 外部编排 vs llm 自治 超长对话一致性 letta · 论文的产品化">
   <h3><a href="papers/memgpt.html">MemGPT · Towards LLMs as Operating Systems</a></h3>
   <p class="hook">把 LLM 的 context window 当成 RAM，外部存储当硬盘 —— 让 LLM **通过 function call 自己管自己的记忆**：哪些塞进 context、哪些挪到外部、什么时候要回看老对话。**操作系统级别的记忆管理思路套在 agent 身上**。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-05-28</span><a class="pill" href="https://arxiv.org/abs/2310.08560" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-28</span><a class="pill" href="https://arxiv.org/abs/2310.08560" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="金融" data-s="净利润断层 · 业绩惊喜 + 跳空缺口 净利润断层 = **净利润惊喜（业绩超预期）** + **断层（盈余公告次日股价向上跳空缺口）** 两个条件同时成立才买。它本质是 a 股版的 **pead（盈余公告后漂移）**：好消息公布后股价不会一步到位，而是朝超预期方向慢慢漂，断层就是漂移启动的信号。 net-profit-gap paper 金融 § 01什么是&quot;断层&quot; § 02两个要素 · 缺一不可 § 03它抓的是 pead · 一个老异象 § 04缺口回补 · 证伪信号 § 05为什么有效 · 又为什么衰减 引用 / 术语表 净利润断层 净利润惊喜 · 业绩超预期 断层 · 跳空缺口 pead · 盈余公告后漂移 ball &amp; brown 1968 sue · 标准化预期外盈余 缺口回补 业绩预告抢跑 信息缓慢扩散 · 反应不足 因子拥挤 · 衰减 有效市场假说违背 基本面 + 技术面结合">
   <h3><a href="papers/net-profit-gap.html">净利润断层 · 业绩惊喜 + 跳空缺口</a></h3>
   <p class="hook">净利润断层 = **净利润惊喜（业绩超预期）** + **断层（盈余公告次日股价向上跳空缺口）** 两个条件同时成立才买。它本质是 A 股版的 **PEAD（盈余公告后漂移）**：好消息公布后股价不会一步到位，而是朝超预期方向慢慢漂，断层就是漂移启动的信号。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-06-03</span><a class="pill" href="https://en.wikipedia.org/wiki/Post–earnings-announcement_drift" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-金融">金融</span><span class="pill">paper</span><span class="pill">ingested 2026-06-03</span><a class="pill" href="https://en.wikipedia.org/wiki/Post–earnings-announcement_drift" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="ML" data-s="ppo · proximal policy optimization 强化学习里**最关键也最容易翻车**的一件事是更新步子的大小 —— ppo 用一行 `clip` 把&quot;别走太远&quot;这个约束硬塞进 loss 里, **简单到能在 200 行代码内复现, 又稳到撑起了 chatgpt 的对齐**。 ppo paper ml § 01rl 基本设定 · agent ↔ env 一来一回 § 02痛点 · 步子大就崩 § 03核心 · 一行 clip 干掉所有麻烦 § 04顺手白送 · 数据重用 k 个 epoch § 05杀手级应用 · rlhf 训出 chatgpt § 06遗产 · grpo · dpo · 跟它们的关系 § 07它真正改变的是什么 引用 / 术语表 grpo (deepseek 2024) dpo (2023) 当前生态 policy gradient · 策略梯度 trpo · trust region policy optimization clipped surrogate objective k-epoch data reuse rlhf · reinforcement learning from human feedback rl 训练信号迟来 步子大就崩 advantage function · 优势函数 kl penalty · 防 reward hacking grpo · group relative policy optimization gae · generalized advantage estimation dpo · direct preference optimization">
   <h3><a href="papers/ppo.html">PPO · Proximal Policy Optimization</a></h3>
   <p class="hook">强化学习里**最关键也最容易翻车**的一件事是更新步子的大小 —— PPO 用一行 `clip` 把&quot;别走太远&quot;这个约束硬塞进 loss 里, **简单到能在 200 行代码内复现, 又稳到撑起了 ChatGPT 的对齐**。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-05-28</span><a class="pill" href="https://arxiv.org/abs/1707.06347" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-28</span><a class="pill" href="https://arxiv.org/abs/1707.06347" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="ML" data-s="deep residual learning · 残差连接的起源 **别让网络从零学一个映射，让它学跟&quot;输入直接复制过去&quot;的差距**——加一条 `+ x` 的&quot;快车道&quot;，让深层网络的梯度有路可走、参数有路可不学。 resnet paper ml § 01故事背景 § 02degradation problem6 · 反直觉的崩塌 § 03残差 · f 学的是什么 § 04+ x 为什么管用 · 两个独立的好处 § 05怎么把它做得能用 § 06它真正改变的是什么 引用 / 术语表 角度 1 · 梯度高速路（已在 fig 02 演示） 角度 2 · identity 是免费起点（看 fig 03） 5.1 resnet 系列 · 把深度从瓶颈变成廉价资源 5.2 bottleneck7 · 为什么 1×1 → 3×3 → 1×1 能省算力 plain cnn batch normalization identity mapping · 恒等映射 sgd 的&quot;白送好起点&quot; sublayer · transformer 子层 degradation problem bottleneck block highway network projection shortcut pre-activation resnet skip connection + x 是免费的（计算意义上）">
   <h3><a href="papers/resnet.html">Deep Residual Learning · 残差连接的起源</a></h3>
   <p class="hook">**别让网络从零学一个映射，让它学跟&quot;输入直接复制过去&quot;的差距**——加一条 `+ x` 的&quot;快车道&quot;，让深层网络的梯度有路可走、参数有路可不学。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://arxiv.org/abs/1512.03385" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://arxiv.org/abs/1512.03385" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="ML" data-s="roformer · rotary position embedding (rope) 把位置信息编码成 q/k 向量的**旋转角度**，让 attention 的点积天然就能感知相对位置 —— 不用额外参数，不用改架构，现在几乎所有主流 llm 都用这个。 rope paper ml § 01为什么需要新的 pe § 02核心直觉 · 时钟指针 § 03怎么做 · 多频率旋转 § 04为什么管用 § 05历史定位 · 静悄悄改变了整个行业 引用 / 术语表 点积天然含相对位置 远距离自动衰减 attention 对顺序无感 sinusoidal pe · 原版位置编码 旋转 q/k 相对位置 vs 绝对位置 kv cache 2d 子空间分解 多频率 = 多尺度位置指纹 元素级实现 正交变换 · 保角性 远距离自动衰减 苏剑林 · jianlin su 上下文扩展 · ntk-aware / yarn">
   <h3><a href="papers/rope.html">RoFormer · Rotary Position Embedding (RoPE)</a></h3>
   <p class="hook">把位置信息编码成 Q/K 向量的**旋转角度**，让 attention 的点积天然就能感知相对位置 —— 不用额外参数，不用改架构，现在几乎所有主流 LLM 都用这个。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-05-25</span><a class="pill" href="https://arxiv.org/abs/2104.09864" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-25</span><a class="pill" href="https://arxiv.org/abs/2104.09864" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="ML" data-s="vit · an image is worth 16×16 words 把图片切成 16×16 的小块，每块当一个&quot;词&quot;，剩下的事全交给 transformer —— **cnn 不是必需品，transformer 也能干视觉**，前提是数据够多。 vit paper ml § 01痛点 · 像素当 token 算不动 § 02核心思路 · 把图切成 token § 03patch embedding · 切完拉平投影 § 04归纳偏置 · cnn 的祖传家产被扔了 § 05scaling · 数据量决定胜负 § 06注意力学到了什么 · 自己长出 cnn § 07遗产 · 它真正改变的是什么 引用 / 术语表 ① 跨模态架构统一 ② cnn 时代结束 ③ 视觉吃 scaling law transformer 推平 nlp 16×16 patch 标准 transformer encoder 归纳偏置 · inductive bias jft-300m 视觉的 scaling law vit 的完整 pipeline conv2d 实现 patch embedding 跨模态架构统一 交叉点曲线 注意力的自然层次">
   <h3><a href="papers/vit.html">ViT · An Image is Worth 16×16 Words</a></h3>
   <p class="hook">把图片切成 16×16 的小块，每块当一个&quot;词&quot;，剩下的事全交给 Transformer —— **CNN 不是必需品，Transformer 也能干视觉**，前提是数据够多。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-05-28</span><a class="pill" href="https://arxiv.org/abs/2010.11929" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
-</div><div class="entry paper">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-28</span><a class="pill" href="https://arxiv.org/abs/2010.11929" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div><div class="entry paper" data-domains="ML" data-s="whisper · robust speech recognition via large-scale weak supervision 用 68 万小时互联网音频 + 带噪字幕做弱监督训练，训出来的 asr 比用几千小时精标数据的模型鲁棒性强一个数量级 —— 跟 gpt-3 同一套&quot;量大力飞&quot;哲学。 whisper paper ml § 01痛点 · 精标数据的天花板 § 02数据策略 · 量大力飞 § 03架构 · 极度保守 § 04多任务 · 一个模型干所有事 § 05规模 · 从 tiny 到 large § 06鲁棒性 · 最反直觉的结果 § 07历史定位 · 语音领域的 gpt 时刻 § 08训练 vs 推理 · 跟原版 transformer 一样 引用 / 术语表 精标数据 + 自监督预训练 68 万小时互联网音频 弱监督 · weak supervision 标准 encoder-decoder transformer 多任务统一格式 wer · word error rate wav2vec 2.0 ctc · connectionist temporal classification conformer log-mel spectrogram · 输入格式 bpe · byte pair encoding 模型尺寸 · tiny → large">
   <h3><a href="papers/whisper.html">Whisper · Robust Speech Recognition via Large-Scale Weak Supervision</a></h3>
   <p class="hook">用 68 万小时互联网音频 + 带噪字幕做弱监督训练，训出来的 ASR 比用几千小时精标数据的模型鲁棒性强一个数量级 —— 跟 GPT-3 同一套&quot;量大力飞&quot;哲学。</p>
-  <div class="pills"><span class="pill">paper</span><span class="pill">ingested 2026-05-25</span><a class="pill" href="https://arxiv.org/abs/2212.04356" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-25</span><a class="pill" href="https://arxiv.org/abs/2212.04356" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
 </div>
 </div>
+</section>
 
 
+<section class="cat-block">
 <h2><span class="num">§ 02</span>Books · 书籍精讲</h2>
 <div class="entries">
-<div class="entry book">
+<div class="entry book" data-domains="理财" data-s="ch01 · no one&#x27;s crazy · 没有人是疯子 旁人用钱做的&quot;傻事&quot;，在他自己眼里一点都不傻 —— 他是用自己亲眼见过的那一小块世界，做了在他那套经验里最讲得通的选择。 pom-ch01-no-ones-crazy chapter 理财 本章核心命题 两个故事 · 命运正好相反 经历塑造金钱观 万分之一塑造 80% 反直觉例子 · 美国彩票 还有一层 · 现代理财本身就是新东西 自检清单 · 下次做决定前先问 跟其他书 / 概念的关联 一句话带走 美国版对照 中国版对照（同样的事） 中国版同形对照">
   <h3><a href="books/pom-ch01-no-ones-crazy.html">Ch01 · No One&#x27;s Crazy · 没有人是疯子</a></h3>
   <p class="hook">旁人用钱做的&quot;傻事&quot;，在他自己眼里一点都不傻 —— 他是用自己亲眼见过的那一小块世界，做了在他那套经验里最讲得通的选择。</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-24</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-24</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="ch02 · luck &amp; risk · 运气与风险，一对双胞胎 任何一个结果，从来不是&quot;能力 + 努力&quot;两项就算得出的。运气和风险这对双胞胎永远站在公式后头加一项，只不过大多数时候被偷偷抹掉了 —— 成功了归自己，失败了甩环境。 pom-ch02-luck-and-risk chapter 理财 本章核心命题 bill gates 的故事 · 百万分之一的好运 同一张幸运彩票的反面 · 风险 vanderbilt 故事 · 运气好叫天才，运气差叫罪犯 工程师视角 · 算式被偷工减料 不要从极端案例里抄个体细节 反过来对自己 · 别把所有功劳和锅都揽自己头上 中国语境的几个反直觉对照 自检清单 · 怎么把那两项加回去 实操原则 · 不学个体，学模式 跟其他书 / 概念的关联 一句话带走">
   <h3><a href="books/pom-ch02-luck-and-risk.html">Ch02 · Luck &amp; Risk · 运气与风险，一对双胞胎</a></h3>
   <p class="hook">任何一个结果，从来不是&quot;能力 + 努力&quot;两项就算得出的。运气和风险这对双胞胎永远站在公式后头加一项，只不过大多数时候被偷偷抹掉了 —— 成功了归自己，失败了甩环境。</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="ch03 · never enough · 永远不够 理财最难的一关，不是怎么赚到钱，是**知道什么时候算够了**。 pom-ch03-never-enough chapter 理财 本章核心命题 joseph heller 的那句话 rajat gupta · 已经站上山顶还要再往上凑 bernie madoff · 合法那一面早就足够吃几辈子 long-term capital management · 把自己有的赌掉去换自己不需要的 四条 lesson 中国语境的几个 never enough 自检清单 · 怎么知道自己的胃口管住了没 跟其他书 / 概念的关联 一句话带走 1 · 最难的财务技能是知道在哪喊停 2 · 社会比较的天花板根本不存在 3 · &quot;够&quot;不是少，是认清反面会把你推过头 4 · 有些东西，不论收益多大都不值得去赌">
   <h3><a href="books/pom-ch03-never-enough.html">Ch03 · Never Enough · 永远不够</a></h3>
   <p class="hook">理财最难的一关，不是怎么赚到钱，是**知道什么时候算够了**。</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="ch04 · confounding compounding · 反直觉的复利 复利这件事，**人脑是算不出来的**。我们的直觉是线性的（一年挣多少 × 多少年 = 一辈子挣多少），但真实世界里很多最重要的东西按指数走，差几年起点能差一个数量级。 pom-ch04-confounding-compounding chapter 理财 本章核心命题 冰川的故事 · 真正决定结果的不是大力气 线性思维 vs 指数思维 · 我们脑子是缺一根弦的 巴菲特真正的秘密 · 不是收益率，是命长 jim simons 反例 · 收益率最高的反而不是最有钱的 &quot;shut up and wait&quot; · 最该写但没人写的那本书 中国语境 · 复利在哪些地方真正起作用 反直觉里最反直觉的一点 · 时间比技巧重要太多 工龄不到 5 年的人最大的 alpha 自检清单 · 怎么判断自己是不是在跟复利逆行 跟其他书 / 概念的关联 一句话带走">
   <h3><a href="books/pom-ch04-confounding-compounding.html">Ch04 · Confounding Compounding · 反直觉的复利</a></h3>
   <p class="hook">复利这件事，**人脑是算不出来的**。我们的直觉是线性的（一年挣多少 × 多少年 = 一辈子挣多少），但真实世界里很多最重要的东西按指数走，差几年起点能差一个数量级。</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="ch05 · getting wealthy vs staying wealthy · 致富与守富 致富有一百种路子。**守富只有一种 —— 抠门 + 偏执**。 pom-ch05-getting-vs-staying-wealthy chapter 理财 本章核心命题 jesse livermore · 一天赚 30 亿，4 年后破产自杀 abraham germansky · 同一天的悲剧另一面 两人共同的特点 致富 vs 守富 · 具体差在哪 sequoia 的秘密 · 一直害怕破产 巴菲特真正的秘密 · 不是他做了什么，是他没做什么 数字证明 · 大多数赢家最后没守住 中国语境的几个&quot;会赚不会守&quot; 致富 vs 守富 这件事，不只在钱上 自检清单 · 你现在在哪一档 一种实操心法 · 偏执地保留可选项 跟其他书 / 概念的关联 一句话带走">
   <h3><a href="books/pom-ch05-getting-vs-staying-wealthy.html">Ch05 · Getting Wealthy vs Staying Wealthy · 致富与守富</a></h3>
   <p class="hook">致富有一百种路子。**守富只有一种 —— 抠门 + 偏执**。</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="ch06 · tails, you win · 真正决定一切的是尾部 **极少数的极端事件，决定了绝大部分的结果。** pom-ch06-tails-you-win chapter 理财 本章核心命题 heinz berggruen 的故事 · 99% 买错了也没关系 walt disney · 83 分钟撑起整个公司 顶级 vc 的真实数据 你以为更稳的公开市场，分布几乎一样 公司内部，再次 tail driven sue / jim / tom 实验 · 一辈子真正决定结果的就 22% soros / buffett · 对错率不重要，重要的是赔率 jeff bezos / reed hastings · 失败是正常配置 chris rock 反例 · 你看到的从来不是全过程 中国语境的 tail driven 几个反直觉的推论 自检清单 · 你在 tail 思维上跑得对吗 一种实操心法 · 多上场 + 不破产 + 等 跟其他书 / 概念的关联 一句话带走 1 · 失败的频率会比你想象的高得多 2 · 把 tail 当默认，不要当奇迹 3 · 不被 dud 打死，比追 tail 更重要 4 · 你应该期待大多数事是噪声">
   <h3><a href="books/pom-ch06-tails-you-win.html">Ch06 · Tails, You Win · 真正决定一切的是尾部</a></h3>
   <p class="hook">**极少数的极端事件，决定了绝大部分的结果。**</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="ch07 · freedom · 钱真正能买到的东西 钱最高的红利不是物质 —— 不是更大的房、更贵的车、更好的表，是 —— pom-ch07-freedom chapter 理财 本章核心命题 angus campbell 的研究 · 幸福最强的预测变量 控制力的梯度 housel 自己的投行实习 · 4 个月只撑了 1 个月 reactance · 心理学解释为什么 derek sivers · $12000 改变了一辈子 美国数据 · 钱翻倍但幸福没动 rockefeller 的怪 · 思考型工作的真相 行业结构变迁 · 体力工 → 知识工 → 24/7 上班 1000 个老人的总结 中国语境的几个 freedom paradox 钱该买什么 · 一个排序 自检清单 一种实操心法 · 拒绝单变量优化 跟其他书 / 概念的关联 一句话带走">
   <h3><a href="books/pom-ch07-freedom.html">Ch07 · Freedom · 钱真正能买到的东西</a></h3>
   <p class="hook">钱最高的红利不是物质 —— 不是更大的房、更贵的车、更好的表，是 ——</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="ch08 · man in the car paradox · 没人在看你这个人 你以为豪车 / 名表 / 名牌包 / 大平层能让别人高看你。 pom-ch08-man-in-the-car-paradox chapter 理财 本章核心命题 housel 的 valet 经历 · 一个少年的幻想破灭 悖论在哪 housel 给儿子的信里那段话 推论 · 适用范围比你以为的广 中国语境的几个典型 反面 · 真正能换来尊重的是什么 自检清单 跟 ch07 / ch09 的关联 一句话带走">
   <h3><a href="books/pom-ch08-man-in-the-car-paradox.html">Ch08 · Man in the Car Paradox · 没人在看你这个人</a></h3>
   <p class="hook">你以为豪车 / 名表 / 名牌包 / 大平层能让别人高看你。</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="ch09 · wealth is what you don&#x27;t see · 真正有钱的人你看不出来 **财富 = 你没花掉的钱**。不是你买了的东西，是你**没买的东西**。 pom-ch09-wealth-is-what-you-dont-see chapter 理财 本章核心命题 roger 的故事 · porsche 消失的那天 你唯一能确定的事 rich 和 wealthy 是两件完全不同的事 健身的类比 · 最直觉的一个 rihanna 的故事 · 花掉钱之后你就只剩东西了 为什么 wealthy 这么难学 中国语境 · rich vs wealthy 到处都是 &quot;看不见&quot;为什么这么值钱 自检清单 一句话带走">
   <h3><a href="books/pom-ch09-wealth-is-what-you-dont-see.html">Ch09 · Wealth is What You Don&#x27;t See · 真正有钱的人你看不出来</a></h3>
   <p class="hook">**财富 = 你没花掉的钱**。不是你买了的东西，是你**没买的东西**。</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="ch10 · save money · 存钱这件事 过了基本生存线之后，**你能攒下多少钱，跟你挣多少钱的关系远没有跟你&quot;需要&quot;多少钱的关系大**。 pom-ch10-save-money chapter 理财 本章核心命题 能源的类比 · 不是赚更多，是需要更少 投资回报 12% vs 生活效率翻倍 · 谁赢 &quot;需要&quot;多少 · 大部分是虚荣心 存钱不需要理由 存款的回报算不出来 全球化竞争 · 存款变成了竞争优势 中国语境 · 存钱 vs 不存钱的真实分叉 自检清单 一句话带走">
   <h3><a href="books/pom-ch10-save-money.html">Ch10 · Save Money · 存钱这件事</a></h3>
   <p class="hook">过了基本生存线之后，**你能攒下多少钱，跟你挣多少钱的关系远没有跟你&quot;需要&quot;多少钱的关系大**。</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="ch11 · reasonable &gt; rational · 合理比最优重要 **你不是一个电子表格。你是一个情绪化的、会纠结的、会在凌晨三点焦虑的人。** pom-ch11-reasonable-gt-rational chapter 理财 本章核心命题 发烧的故事 · &quot;最优解&quot;可能没人执行得下去 诺贝尔奖得主自己怎么投资 技术上对但没人做得到 那些&quot;不理性但合理&quot;的事 核心逻辑 · 为什么&quot;合理&quot;赢了&quot;理性&quot; 中国语境 · &quot;理性&quot;害了多少人 自检清单 跟前后章的连接 一句话带走">
   <h3><a href="books/pom-ch11-reasonable-gt-rational.html">Ch11 · Reasonable &gt; Rational · 合理比最优重要</a></h3>
   <p class="hook">**你不是一个电子表格。你是一个情绪化的、会纠结的、会在凌晨三点焦虑的人。**</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="ch12 · surprise! · 历史没法告诉你未来 斯坦福教授 scott sagan 说过一句话，值得贴在所有关注经济和投资的人的墙上： pom-ch12-surprise chapter 理财 本章核心命题 为什么历史不能当预言书 连锁反应 · 意外是怎么滚雪球的 世界在变，比你以为的快 从意外里学到的正确教训 中国语境 · &quot;这次不一样&quot;vs &quot;从没发生过的事一直在发生&quot; 自检清单 跟前后章的连接 一句话带走">
   <h3><a href="books/pom-ch12-surprise.html">Ch12 · Surprise! · 历史没法告诉你未来</a></h3>
   <p class="hook">斯坦福教授 Scott Sagan 说过一句话，值得贴在所有关注经济和投资的人的墙上：</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-27</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-27</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="ch13 · room for error · 留余地 benjamin graham 的一句话顶一整章： pom-ch13-room-for-error chapter 理财 本章核心命题 21 点算牌 · 赢面在你这边你也不能 all-in graham 那句话为什么这么狠 两种被忽略的余地 &quot;俄罗斯轮盘赌应该在统计上管用&quot; 这章最重要的一句话 中国语境 · 没留余地翻车的几个典型 怎么给自己留余地 · 实操清单 跟前后章的连接 一句话带走 1 · 情绪层面的余地 2 · 给未知留余地">
   <h3><a href="books/pom-ch13-room-for-error.html">Ch13 · Room for Error · 留余地</a></h3>
   <p class="hook">Benjamin Graham 的一句话顶一整章：</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-27</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-27</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="ch14 · you&#x27;ll change · 你今天定的目标，未来的你大概率不同意 **人是糟糕的未来自己预测者**。 pom-ch14-youll-change chapter 理财 本章核心命题 当医生的朋友 &quot;历史的终结&quot;幻觉 这件事对财务规划的影响 巴菲特和 ronald read 为什么能成 中庸策略 · 在每个阶段都&quot;够用&quot; 沉没成本陷阱 · 让过去的你绑架现在的你 中国语境 · 几个&quot;未来的你不同意&quot;的典型 自检清单 跟前后章的连接 一句话带走">
   <h3><a href="books/pom-ch14-youll-change.html">Ch14 · You&#x27;ll Change · 你今天定的目标，未来的你大概率不同意</a></h3>
   <p class="hook">**人是糟糕的未来自己预测者**。</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="ch15 · nothing&#x27;s free · 一切都有标价 **任何回报都有价格**。投资的回报，价格是**波动 + 不确定 + 自我怀疑**。 pom-ch15-nothings-free chapter 理财 本章核心命题 netflix 的真实表现 三种应对策略 关键认知 · 波动是费用，不是罚单 ge 的故事 · 想白嫖回报的代价 中国语境 · 波动是费用的几个版本 自检清单 跟前后章的连接 一句话带走">
   <h3><a href="books/pom-ch15-nothings-free.html">Ch15 · Nothing&#x27;s Free · 一切都有标价</a></h3>
   <p class="hook">**任何回报都有价格**。投资的回报，价格是**波动 + 不确定 + 自我怀疑**。</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="ch16 · you &amp; me · 你跟他玩的不是同一个游戏 同一个市场里的两个人，**可能在玩完全不同的游戏**。他们的时间窗口、目标、风险承受度都不一样。 pom-ch16-you-and-me chapter 理财 本章核心命题 yahoo! 1999 的故事 泡沫不是疯狂，是游戏切换 你跟他不同的几个维度 这件事对你意味着什么 解药 · 想清楚自己在玩什么游戏 中国语境 · 玩不同游戏的人撞在一起的几个典型 自检清单 跟前后章的连接 一句话带走">
   <h3><a href="books/pom-ch16-you-and-me.html">Ch16 · You &amp; Me · 你跟他玩的不是同一个游戏</a></h3>
   <p class="hook">同一个市场里的两个人，**可能在玩完全不同的游戏**。他们的时间窗口、目标、风险承受度都不一样。</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="ch17 · the seduction of pessimism · 悲观主义为什么这么诱人 **乐观对大多数人来说是更好的下注** —— 因为世界对大多数人在大多数时间里都在变好。 pom-ch17-seduction-of-pessimism chapter 理财 本章核心命题 一句话点穿这件事 悲观为什么听起来更聪明 2009 年的那篇荒诞预言 战后日本的反向思想实验 媒体放大器 · 1% 涨 vs 1% 跌 飞机的故事 · 突破性创新被否认得多彻底 进步是看不见的 stephen hawking 的反向智慧 中国语境 · 悲观叙事 vs 真实进步 这件事对理财意味着什么 自检清单 一个降低预期的实操 跟前后章的连接 一句话带走">
   <h3><a href="books/pom-ch17-seduction-of-pessimism.html">Ch17 · The Seduction of Pessimism · 悲观主义为什么这么诱人</a></h3>
   <p class="hook">**乐观对大多数人来说是更好的下注** —— 因为世界对大多数人在大多数时间里都在变好。</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="ch18 · when you&#x27;ll believe anything · 当你想要某个结果，你会相信任何通向它的故事 人对一件事**越想要它是真的**，就**越容易接受证据不够的故事**。理财里这件事的杀伤力最大 —— 因为钱牵动情绪，情绪让你放下质疑。 pom-ch18-when-youll-believe-anything chapter 理财 本章核心命题 2009 年纽约的外星人 &quot;诱人虚构&quot;是怎么形成的 鼠疫年代的&quot;绝对预防药&quot; 主动基金 5 万亿美元的悖论 政策制定者的诱人虚构 hindsight illusion · 事后诸葛亮的幻觉 想要 vs 真的 中国语境 · 几个集体诱人虚构 自检清单 一个实操对策 · 主动找反对证据 跟前后章的连接 一句话带走">
   <h3><a href="books/pom-ch18-when-youll-believe-anything.html">Ch18 · When You&#x27;ll Believe Anything · 当你想要某个结果，你会相信任何通向它的故事</a></h3>
   <p class="hook">人对一件事**越想要它是真的**，就**越容易接受证据不够的故事**。理财里这件事的杀伤力最大 —— 因为钱牵动情绪，情绪让你放下质疑。</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="ch19 · all together now · 全书原则速查清单 到这里 18 章读完了。这章是 housel 的速查表 —— 把前面所有原则浓缩成一组**可以贴在墙上**的实操清单。 pom-ch19-all-together-now chapter 理财 本章核心命题 牙医的故事 · 一个让 housel 印象深刻的开场 12 条原则速查 一条额外的元原则 · 尊重混乱 怎么用这张清单 自检清单的清单 跟最后一章的连接 一句话带走 1 · 想成功就要谦卑，失败时要原谅自己 2 · 少自我，多财富 3 · 让你睡得着觉 &gt; 让数学最优 4 · 想成为更好的投资人，最有效的杠杆是延长时间窗口 5 · 接受&quot;很多事会出错&quot; 6 · 用钱买时间控制权 7 · 谦逊和善意比马力管用 8 · 存钱不需要理由 9 · 定义成功的代价并愿意付 10 · 留余地 11 · 避开极端的财务承诺 12 · 弄清楚你在玩什么游戏，别被玩不同游戏的人影响">
   <h3><a href="books/pom-ch19-all-together-now.html">Ch19 · All Together Now · 全书原则速查清单</a></h3>
   <p class="hook">到这里 18 章读完了。这章是 Housel 的速查表 —— 把前面所有原则浓缩成一组**可以贴在墙上**的实操清单。</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="ch20 · confessions · 我自己怎么做 整本书 19 章都在讲&quot;原则&quot;。这章 housel **第一次也是唯一一次讲他自己**： pom-ch20-confessions chapter 理财 本章核心命题 sandy gottesman 的面试题 housel 自己的财务设置 他这套方案对应了哪些章节 这章最反直觉的一点 housel 没说但暗示的 中国语境 · 怎么把 housel 的方案套到本土 自检清单 一句话带走 1 · 房子是付清的（没有房贷） 2 · 现金储备远超普通建议 3 · 投资 = 低成本指数基金 + 定投 4 · 整个家庭资产构成">
   <h3><a href="books/pom-ch20-confessions.html">Ch20 · Confessions · 我自己怎么做</a></h3>
   <p class="hook">整本书 19 章都在讲&quot;原则&quot;。这章 Housel **第一次也是唯一一次讲他自己**：</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="postscript · 美国消费者心理简史 整本书前 20 章都在讲**&quot;应该怎么想&quot;**。这章讲一件相反的事 —— **&quot;美国人现在的金钱观念是怎么变出来的&quot;**。 pom-postscript-us-consumer-history chapter 理财 这章是干嘛的 1945 年 · 没人知道接下来会怎样 三股力量 · 把美国推进黄金时代 1945-1965 · 一起繁荣 1973 · 故事第一次破 1980 + · 故事完全变了 关键洞察 · 期望没跟着现实变 这章对你的意义 实际意义 · 怎么不被这段历史绑架 这本书整本的元结论 一句话带走 力量 1 · 利率被人为压到地板 力量 2 · 政府补贴的消费信贷 力量 3 · 1930 年代隐藏的生产力爆炸">
   <h3><a href="books/pom-postscript-us-consumer-history.html">Postscript · 美国消费者心理简史</a></h3>
   <p class="hook">整本书前 20 章都在讲**&quot;应该怎么想&quot;**。这章讲一件相反的事 —— **&quot;美国人现在的金钱观念是怎么变出来的&quot;**。</p>
-  <div class="pills"><span class="pill">chapter</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry book">
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">chapter</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry book" data-domains="理财" data-s="the psychology of money · 金钱心理学 财富不是数学题，是行为题 —— **怎么算账只占 10%，怎么和自己的情绪、欲望、偏见相处占 90%**。 psychology-of-money book 理财 一句话 它要回答的根本问题 作者背景 20 章结构 整本书的核心三条线 阅读进度 链接">
   <h3><a href="books/psychology-of-money.html">The Psychology of Money · 金钱心理学</a></h3>
   <p class="hook">财富不是数学题，是行为题 —— **怎么算账只占 10%，怎么和自己的情绪、欲望、偏见相处占 90%**。</p>
-  <div class="pills"><span class="pill">book</span><span class="pill">updated 2026-05-22</span><span class="pill">ingested 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+  <div class="pills"><span class="pill dom dom-理财">理财</span><span class="pill">book</span><span class="pill">updated 2026-05-22</span><span class="pill">ingested 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
 </div>
 </div>
+</section>
 
 
+<section class="cat-block">
 <h2><span class="num">§ 03</span>Topics · 综合</h2>
 <div class="entries">
-<div class="entry topic">
+<div class="entry topic" data-domains="ML" data-s="音频 token 化：rvq vs flow matching 两条**当前主流**路线的对照。fish-speech 走前者，tml 走后者。 audio-tokenization-rvq-vs-flow topic ml 范式区别 选哪条的判断 我的解读 一个延展问题 链接">
   <h3><a href="topics/audio-tokenization-rvq-vs-flow.html">音频 token 化：RVQ vs Flow Matching</a></h3>
   <p class="hook">两条**当前主流**路线的对照。fish-speech 走前者，TML 走后者。</p>
-  <div class="pills"><span class="pill">topic</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry topic">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">topic</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry topic" data-domains="ML" data-s="把外挂规则吃进模型权重 这是这次 ingest 的两个源都在做的**反复出现的范式**，工程系统里也有同形状的事。 replace-heuristics-with-weights topic ml 主张 例子 例外 / 反例 链接 tml 干掉的：vad（voice activity detection） fish-speech 干掉的：phonemizer / g2p tml 干掉的：whisper-style 独立编码器 工程系统里同形状的事">
   <h3><a href="topics/replace-heuristics-with-weights.html">把外挂规则吃进模型权重</a></h3>
   <p class="hook">这是这次 ingest 的两个源都在做的**反复出现的范式**，工程系统里也有同形状的事。</p>
-  <div class="pills"><span class="pill">topic</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry topic">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">topic</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry topic" data-domains="ML" data-s="训练 vs 推理 · 同一个模型的两种运行方式 训练时看得见答案（并行、快），推理时看不见（自回归、慢）。同一个 transformer 架构在两种模式下的执行流程完全不同。 training-vs-inference topic ml § 01encoder-decoder · transformer / whisper § 02decoder-only · gpt 系列 § 03encoder-only · bert § 04三种架构一张表 几个关键概念的位置 一句话总结">
   <h3><a href="topics/training-vs-inference.html">训练 vs 推理 · 同一个模型的两种运行方式</a></h3>
   <p class="hook">训练时看得见答案（并行、快），推理时看不见（自回归、慢）。同一个 Transformer 架构在两种模式下的执行流程完全不同。</p>
-  <div class="pills"><span class="pill">topic</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">topic</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
 </div>
 </div>
+</section>
 
 
+<section class="cat-block">
 <h2><span class="num">§ 04</span>Concepts · 概念</h2>
 <div class="entries">
-<div class="entry concept">
+<div class="entry concept" data-domains="ML" data-s="advantage function · 跟基线比,不是看绝对值 &quot;这一步赚了多少&quot;比&quot;这一步总共拿了多少&quot;信号更稳定 —— **优势函数 = 实际回报 − 预期回报**, 让训练不会因 reward 整体偏移就乱掉。 advantage-function concept ml 一句话 直觉 · 为什么 raw return 不够好 advantage = 这步比平均好多少 实际怎么估计 advantage actor-critic 架构 reward 偏移不变性 (advantage 的关键性质) 链接">
   <h3><a href="concepts/advantage-function.html">Advantage Function · 跟基线比,不是看绝对值</a></h3>
   <p class="hook">&quot;这一步赚了多少&quot;比&quot;这一步总共拿了多少&quot;信号更稳定 —— **优势函数 = 实际回报 − 预期回报**, 让训练不会因 reward 整体偏移就乱掉。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="agent reflection · 反思 · 从碎片到认知 定期把大量低层观察总结成高层认知 —— &quot;我看到 a/b/c/d → 我觉得 x&quot;。反思结果存回 [[memory-stream]]，下次检索时跟原始观察一起参与排序。 agent-reflection concept ml 一句话 直觉 怎么做的 反思的层级 代码出处 链接">
   <h3><a href="concepts/agent-reflection.html">Agent Reflection · 反思 · 从碎片到认知</a></h3>
   <p class="hook">定期把大量低层观察总结成高层认知 —— &quot;我看到 A/B/C/D → 我觉得 X&quot;。反思结果存回 [[memory-stream]]，下次检索时跟原始观察一起参与排序。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-27</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-27</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="batch-invariant kernel · 批大小不变算子 同一条样本不管跟谁凑 batch，kernel 都尽量按同一顺序做浮点运算，结果保持 bit-for-bit 一致。 batch-invariant-kernel concept ml 一句话 直觉 怎么做的 代码出处 链接">
   <h3><a href="concepts/batch-invariant-kernel.html">Batch-Invariant Kernel · 批大小不变算子</a></h3>
   <p class="hook">同一条样本不管跟谁凑 batch，kernel 都尽量按同一顺序做浮点运算，结果保持 bit-for-bit 一致。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="batch normalization · bn 对一个 mini-batch 在每个 channel 内做归一化（减均值/除方差），让中间层的分布**不要剧烈漂移**，间接稳住训练。 batchnorm concept ml 一句话 直觉 在 resnet 里的位置 它的坑 transformer 为什么不用 bn 链接">
   <h3><a href="concepts/batchnorm.html">Batch Normalization · BN</a></h3>
   <p class="hook">对一个 mini-batch 在每个 channel 内做归一化（减均值/除方差），让中间层的分布**不要剧烈漂移**，间接稳住训练。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="bin quantization · 等距分箱量化 把连续值（如某个频道的能量）切成 k 个等距 bin，每个值映射到它所在 bin 的索引 —— 1 行 numpy 代码搞定。 bin-quantization concept ml 一句话 直觉 对比&quot;学出来的 codebook&quot; 为什么这么 naive 的方案能 work 它的局限 链接">
   <h3><a href="concepts/bin-quantization.html">Bin Quantization · 等距分箱量化</a></h3>
   <p class="hook">把连续值（如某个频道的能量）切成 K 个等距 bin，每个值映射到它所在 bin 的索引 —— 1 行 numpy 代码搞定。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="bitter lesson · 苦涩教训 长期看，能利用算力和数据持续 scale 的学习方法，会吃掉大量人手写规则。 bitter-lesson concept ml 一句话 直觉 怎么做的 代码出处 链接">
   <h3><a href="concepts/bitter-lesson.html">Bitter Lesson · 苦涩教训</a></h3>
   <p class="hook">长期看，能利用算力和数据持续 scale 的学习方法，会吃掉大量人手写规则。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="bitwise determinism · 位级确定性 同样的输入，训练 kernel 和推理 kernel 跑出来的浮点数在**二进制位上完全相同**。 bitwise-determinism concept ml 一句话 直觉 tml 怎么做到 为什么 fish-speech 不需要这条 链接">
   <h3><a href="concepts/bitwise-determinism.html">Bitwise Determinism · 位级确定性</a></h3>
   <p class="hook">同样的输入，训练 kernel 和推理 kernel 跑出来的浮点数在**二进制位上完全相同**。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="bottleneck block · 瓶颈残差块 用 `1×1 → 3×3 → 1×1` 先降维、再做空间卷积、再升维，让深层 resnet 便宜很多。 bottleneck-block concept ml 一句话 直觉 怎么做的 代码出处 链接">
   <h3><a href="concepts/bottleneck-block.html">Bottleneck Block · 瓶颈残差块</a></h3>
   <p class="hook">用 `1×1 → 3×3 → 1×1` 先降维、再做空间卷积、再升维，让深层 ResNet 便宜很多。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="causal language model · clm · 自回归语言模型 给定前 n 个 token，预测第 n+1 个 token。训练时每个位置都做这个预测 —— 每个 token 都贡献一份 loss。 causal-language-model concept ml 一句话 直觉 怎么做的 为什么训练效率高 推理时怎么生成 跟其他训练目标的对比 链接">
   <h3><a href="concepts/causal-language-model.html">Causal Language Model · CLM · 自回归语言模型</a></h3>
   <p class="hook">给定前 N 个 token，预测第 N+1 个 token。训练时每个位置都做这个预测 —— 每个 token 都贡献一份 loss。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="clipped surrogate objective · ppo 的核心一行 clip 不让新策略的概率比&quot;老策略大太多 / 小太多&quot; —— ppo 把这个约束**写进 loss 函数本身**, 一行 `torch.clamp` 干掉了 trpo 那套复杂的 kl 约束 + 共轭梯度。 clipped-surrogate-objective concept ml 一句话 直觉 · 概率比值是策略距离的代理 公式 一张图就能看懂 sample efficiency 暴涨的副作用 为什么这套粗暴的 clip 实际工程上够用 链接 当 a_t &gt; 0 (这个 action 是好的) 当 a_t &lt; 0 (这个 action 是坏的) min 函数干啥的">
   <h3><a href="concepts/clipped-surrogate-objective.html">Clipped Surrogate Objective · PPO 的核心一行 clip</a></h3>
   <p class="hook">不让新策略的概率比&quot;老策略大太多 / 小太多&quot; —— PPO 把这个约束**写进 loss 函数本身**, 一行 `torch.clamp` 干掉了 TRPO 那套复杂的 KL 约束 + 共轭梯度。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="conditional flow matching · 条件流匹配 把难算的全局 velocity field 训练目标，换成&quot;给定一对噪声和数据样本时该往哪走&quot;的可监督回归。 conditional-flow-matching concept ml 一句话 直觉 怎么做的 代码出处 链接">
   <h3><a href="concepts/conditional-flow-matching.html">Conditional Flow Matching · 条件流匹配</a></h3>
   <p class="hook">把难算的全局 velocity field 训练目标，换成&quot;给定一对噪声和数据样本时该往哪走&quot;的可监督回归。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="continuity equation · 连续性方程 &quot;粒子不凭空冒、不凭空消&quot;的数学化身。**密度变化 = 净流入** —— 仅此而已。 continuity-equation concept ml 一句话 直觉 三个图像化的例子 跟 flow matching 的关系 为什么它叫&quot;守恒律&quot; 编程角度 符号速查 链接">
   <h3><a href="concepts/continuity-equation.html">Continuity Equation · 连续性方程</a></h3>
   <p class="hook">&quot;粒子不凭空冒、不凭空消&quot;的数学化身。**密度变化 = 净流入** —— 仅此而已。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="contrastive learning · 对比学习 不告诉模型&quot;这张图是什么类别&quot;, 只告诉它&quot;这张图配这句话, 不配那 n 句话&quot; —— **靠正样本互相吸引、负样本互相推开**, 让模型自己学出语义对齐。 contrastive-learning concept ml 一句话 直觉 · 为什么&quot;对比&quot;比&quot;分类&quot;更好 怎么训出来 in-batch negatives · 为什么 batch 要大 跟 cross entropy 分类的对比 对比学习的家族 链接">
   <h3><a href="concepts/contrastive-learning.html">Contrastive Learning · 对比学习</a></h3>
   <p class="hook">不告诉模型&quot;这张图是什么类别&quot;, 只告诉它&quot;这张图配这句话, 不配那 N 句话&quot; —— **靠正样本互相吸引、负样本互相推开**, 让模型自己学出语义对齐。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="cross-attention · 交叉注意力 decoder 用自己的 query，去查 encoder 输出的 key/value，让生成过程能看见输入序列。 cross-attention concept ml 一句话 直觉 怎么做的 代码出处 链接">
   <h3><a href="concepts/cross-attention.html">Cross-Attention · 交叉注意力</a></h3>
   <p class="hook">Decoder 用自己的 Query，去查 Encoder 输出的 Key/Value，让生成过程能看见输入序列。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="decoder-only paradigm · 解码器路线 只用 transformer 的 decoder 部分（带 causal mask 的 self-attention），目标是&lt;strong&gt;预测序列里每个位置的下一个 token&lt;/strong&gt; —— 训练完后天然能做生成。 decoder-only-paradigm concept ml 一句话 直觉 结构差异 为什么这条路最后赢了 各代表 跟 encoder-only 的根本对照 链接">
   <h3><a href="concepts/decoder-only-paradigm.html">Decoder-Only Paradigm · 解码器路线</a></h3>
   <p class="hook">只用 Transformer 的 decoder 部分（带 causal mask 的 self-attention），目标是&lt;strong&gt;预测序列里每个位置的下一个 token&lt;/strong&gt; —— 训练完后天然能做生成。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="degradation problem · 深网络反而变差 深网络（比如 56 层）在**训练集**上的表现比浅网络（20 层）还差——不是过拟合，是 sgd 学不到&quot;白送的好解&quot;。 degradation-problem concept ml 一句话 直觉 实验证据（resnet 论文 fig 1） 为什么残差能解决 链接">
   <h3><a href="concepts/degradation-problem.html">Degradation Problem · 深网络反而变差</a></h3>
   <p class="hook">深网络（比如 56 层）在**训练集**上的表现比浅网络（20 层）还差——不是过拟合，是 SGD 学不到&quot;白送的好解&quot;。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="dmel · 离散 mel 频谱 把 log-mel 频谱图按预设 bin 量化成离散 token，让音频能像文本一样直接喂进 transformer —— 不用训 codec。 dmel concept ml 一句话 直觉 跟 rvq codec 的对比 tml 怎么用 链接">
   <h3><a href="concepts/dmel.html">dMel · 离散 Mel 频谱</a></h3>
   <p class="hook">把 log-mel 频谱图按预设 bin 量化成离散 token，让音频能像文本一样直接喂进 transformer —— 不用训 codec。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="dual-ar · 双自回归 慢 ar 写主旋律（语义骨架），快 ar 写配器（声学细节），主从串成两层 ar。 dual-ar concept ml 一句话 直觉 怎么做的 为什么不一层搞定 跟 tml interaction model 的对照 代码出处 链接">
   <h3><a href="concepts/dual-ar.html">Dual-AR · 双自回归</a></h3>
   <p class="hook">慢 AR 写主旋律（语义骨架），快 AR 写配器（声学细节），主从串成两层 AR。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="dual-model architecture · 双模型架构 **前台 always-on 低延迟模型** + **后台异步深推理模型**，共享 context，前台委托后台干慢活。 dual-model-architecture concept ml 一句话 直觉 怎么做的 为什么不全用一个大模型 跟 fish-speech dual-ar 的对照 跟工程系统的对照 链接">
   <h3><a href="concepts/dual-model-architecture.html">Dual-Model Architecture · 双模型架构</a></h3>
   <p class="hook">**前台 always-on 低延迟模型** + **后台异步深推理模型**，共享 context，前台委托后台干慢活。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="dual-tower architecture · 双塔架构 两个独立的 encoder, 一个跑图、一个跑文本, **各跑各的最后把输出投影到同一个向量空间** —— 工程上两边可以独立放大缩小, 推理时一边可以预先算好缓存。 dual-tower-architecture concept ml 一句话 直觉 · 为什么不用一个大模型直接吃图+文本 工程上怎么实现 跟 single-tower / fusion 模型对比 现在最常见的混合用法 双塔的更广义形态 链接">
   <h3><a href="concepts/dual-tower-architecture.html">Dual-Tower Architecture · 双塔架构</a></h3>
   <p class="hook">两个独立的 encoder, 一个跑图、一个跑文本, **各跑各的最后把输出投影到同一个向量空间** —— 工程上两边可以独立放大缩小, 推理时一边可以预先算好缓存。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="early fusion · 无独立编码器的早融合 各模态用**轻量预处理**直接进同一个 transformer，不用 whisper / vit 那种独立大编码器再拼。 early-fusion concept ml 一句话 直觉 tml 怎么做的 为什么&quot;轻量预处理&quot;还要保留 重要 trade-off 链接">
   <h3><a href="concepts/early-fusion.html">Early Fusion · 无独立编码器的早融合</a></h3>
   <p class="hook">各模态用**轻量预处理**直接进同一个 transformer，不用 Whisper / ViT 那种独立大编码器再拼。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="emergent abilities · 涌现能力 · 小模型 ≈ 0 大模型突然能 某些任务上小模型的表现接近随机，到了某个模型 size 阈值后&lt;strong&gt;突然&lt;/strong&gt;跳到接近完美。这种&quot;相变&quot;叫 emergence。 emergent-abilities concept ml 一句话 直觉 gpt-3 论文里看到的例子 为什么会有 emergence 跟 scaling laws 的关系 工程含义 后续争议 链接">
   <h3><a href="concepts/emergent-abilities.html">Emergent Abilities · 涌现能力 · 小模型 ≈ 0 大模型突然能</a></h3>
   <p class="hook">某些任务上小模型的表现接近随机，到了某个模型 size 阈值后&lt;strong&gt;突然&lt;/strong&gt;跳到接近完美。这种&quot;相变&quot;叫 emergence。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="encoder-only paradigm · 编码器路线 只用 transformer 的 encoder 部分（双向 self-attention，没有 causal mask），目标是&lt;strong&gt;产生表征&lt;/strong&gt;而不是&lt;strong&gt;生成 token&lt;/strong&gt;。 encoder-only-paradigm concept ml 一句话 直觉 结构差异 各代表 现在还活着吗 跟 decoder-only 的根本对照 链接">
   <h3><a href="concepts/encoder-only-paradigm.html">Encoder-Only Paradigm · 编码器路线</a></h3>
   <p class="hook">只用 Transformer 的 encoder 部分（双向 self-attention，没有 causal mask），目标是&lt;strong&gt;产生表征&lt;/strong&gt;而不是&lt;strong&gt;生成 token&lt;/strong&gt;。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="few-shot learning · 少样本学习 在 prompt 里给几个输入输出例子，让模型不改权重就照着模式完成新样本。 few-shot-learning concept ml 一句话 直觉 怎么做的 代码出处 链接">
   <h3><a href="concepts/few-shot-learning.html">Few-Shot Learning · 少样本学习</a></h3>
   <p class="hook">在 prompt 里给几个输入输出例子，让模型不改权重就照着模式完成新样本。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="flow matching · 流匹配 不直接预测音频样本，而是学一个**速度场**，从噪声出发沿场积分若干步到目标音频。 flow-matching concept ml 一句话 直觉 tml 为什么用它做音频输出 跟 rvq 的对比 开放问题 链接">
   <h3><a href="concepts/flow-matching.html">Flow Matching · 流匹配</a></h3>
   <p class="hook">不直接预测音频样本，而是学一个**速度场**，从噪声出发沿场积分若干步到目标音频。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="grouped gemm vs gemv moe 推理里，小 batch 常像很多个 gemv；把同 expert 的 token 凑起来可变成 grouped gemm，吞吐更好但会增加调度等待。 grouped-gemm-vs-gemv concept ml 一句话 直觉 怎么做的 代码出处 链接">
   <h3><a href="concepts/grouped-gemm-vs-gemv.html">Grouped GEMM vs GEMV</a></h3>
   <p class="hook">MoE 推理里，小 batch 常像很多个 GEMV；把同 expert 的 token 凑起来可变成 grouped GEMM，吞吐更好但会增加调度等待。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="grpo · group relative policy optimization ppo 的简化版：不用 value network，用**同 prompt 一组采样**之间的相对 reward 当 advantage。 grpo concept ml 一句话 直觉 怎么做的 rm ≠ critic · grpo 到底砍了哪个 fish-speech s2 怎么用 跟 tml 的关系 链接">
   <h3><a href="concepts/grpo.html">GRPO · Group Relative Policy Optimization</a></h3>
   <p class="hook">PPO 的简化版：不用 value network，用**同 prompt 一组采样**之间的相对 reward 当 advantage。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-31</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-31</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="hmlp · hierarchical mlp tml 用来处理视频 patch 的轻量预处理器：先保留空间局部性，再把图像块压成 transformer 能吃的 token。 hmlp concept ml 一句话 直觉 怎么做的 代码出处 链接">
   <h3><a href="concepts/hmlp.html">hMLP · Hierarchical MLP</a></h3>
   <p class="hook">TML 用来处理视频 patch 的轻量预处理器：先保留空间局部性，再把图像块压成 transformer 能吃的 token。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="in-context learning · icl · 在 prompt 里现学 **模型权重一个不动**，在 prompt 里给几个 (input, output) 示例，模型就能从这些示例里&quot;现学&quot;任务规则，然后在新输入上应用。 in-context-learning concept ml 一句话 直觉 三档形态 为什么不改权重也能&quot;学&quot; 它的局限 演化线 链接">
   <h3><a href="concepts/in-context-learning.html">In-Context Learning · ICL · 在 prompt 里现学</a></h3>
   <p class="hook">**模型权重一个不动**，在 prompt 里给几个 (input, output) 示例，模型就能从这些示例里&quot;现学&quot;任务规则，然后在新输入上应用。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="inductive bias · 归纳偏置 模型架构里**预先写死的&quot;对世界的假设&quot;** —— 你越早写得对, 数据少时越省; 数据多时反而是包袱。 inductive-bias concept ml 一句话 直觉 · 老员工 vs 新员工 cnn 的归纳偏置 vit 的&quot;无知&quot; 数据 vs 偏置的 trade-off 这是个更一般的规律 工程上的实战含义 链接">
   <h3><a href="concepts/inductive-bias.html">Inductive Bias · 归纳偏置</a></h3>
   <p class="hook">模型架构里**预先写死的&quot;对世界的假设&quot;** —— 你越早写得对, 数据少时越省; 数据多时反而是包袱。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="inline emotion tags · 内联情绪标签 在输入文本里直接插入 `[whisper]`、`[laugh]` 这类标签，让 tts 模型控制语气、情绪或副语言声音。 inline-emotion-tags concept ml 一句话 直觉 怎么做的 代码出处 链接">
   <h3><a href="concepts/inline-emotion-tags.html">Inline Emotion Tags · 内联情绪标签</a></h3>
   <p class="hook">在输入文本里直接插入 `[whisper]`、`[laugh]` 这类标签，让 TTS 模型控制语气、情绪或副语言声音。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="input transformations · 用输入格式喂任务 不为每个下游任务设计新的网络结构，而是&lt;strong&gt;把任务结构编码进输入文本&lt;/strong&gt; —— 用分隔符、拼接顺序告诉模型&quot;这是哪种任务&quot;。 input-transformations concept ml 一句话 直觉 gpt-1 论文里的 4 种格式 为什么这套设计影响深远 跟 bert 的对比 链接">
   <h3><a href="concepts/input-transformations.html">Input Transformations · 用输入格式喂任务</a></h3>
   <p class="hook">不为每个下游任务设计新的网络结构，而是&lt;strong&gt;把任务结构编码进输入文本&lt;/strong&gt; —— 用分隔符、拼接顺序告诉模型&quot;这是哪种任务&quot;。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="kv cache transformer 每层 attention 算过的 key / value 矩阵存下来，下一个 token 直接复用，不重算前面所有 token。 kv-cache concept ml 一句话 直觉 关键场景 链接">
   <h3><a href="concepts/kv-cache.html">KV Cache</a></h3>
   <p class="hook">Transformer 每层 attention 算过的 Key / Value 矩阵存下来，下一个 token 直接复用，不重算前面所有 token。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="language modeling as multitask learning · lm 即多任务学习 gpt-2 论文标题点破的核心 thesis：训练 lm 预测下一词的过程&lt;strong&gt;已经在学无数个具体任务&lt;/strong&gt;，多任务能力是预训练的天然副产品。 language-modeling-as-multitask concept ml 一句话 直觉 怎么&quot;读懂&quot;训练数据 为什么这个 thesis 重要 它的局限 链接">
   <h3><a href="concepts/language-modeling-as-multitask.html">Language Modeling as Multitask Learning · LM 即多任务学习</a></h3>
   <p class="hook">GPT-2 论文标题点破的核心 thesis：训练 LM 预测下一词的过程&lt;strong&gt;已经在学无数个具体任务&lt;/strong&gt;，多任务能力是预训练的天然副产品。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="layernorm · 层归一化 对每个 token 自己的 hidden 维度做归一化，不依赖 batch 里其他样本。 layernorm concept ml 一句话 直觉 怎么做的 代码出处 链接">
   <h3><a href="concepts/layernorm.html">LayerNorm · 层归一化</a></h3>
   <p class="hook">对每个 token 自己的 hidden 维度做归一化，不依赖 batch 里其他样本。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="log-mel spectrogram · 对数 mel 频谱图 把 1d 音频波形转成 2d `[频道 × 时间]` 的能量矩阵 —— 跟人耳听到的&quot;哪个时刻、哪个频段、有多响&quot;对应。 log-mel-spectrogram concept ml 一句话 直觉 为什么用 mel 而不是 hz 为什么取 log 跟 raw waveform 的对比 dmel 在这之上做什么 链接">
   <h3><a href="concepts/log-mel-spectrogram.html">Log-Mel Spectrogram · 对数 Mel 频谱图</a></h3>
   <p class="hook">把 1D 音频波形转成 2D `[频道 × 时间]` 的能量矩阵 —— 跟人耳听到的&quot;哪个时刻、哪个频段、有多响&quot;对应。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="masked language model · mlm 随机把句子里 15% 的 token 换成 `[mask]`，让模型用&lt;strong&gt;剩下所有位置&lt;/strong&gt;（左右都行）的信息预测被遮住的词。 masked-language-model concept ml 一句话 直觉 怎么做的 为什么是 15% 为什么 80/10/10 跟 gpt 的对比 链接">
   <h3><a href="concepts/masked-language-model.html">Masked Language Model · MLM</a></h3>
   <p class="hook">随机把句子里 15% 的 token 换成 `[MASK]`，让模型用&lt;strong&gt;剩下所有位置&lt;/strong&gt;（左右都行）的信息预测被遮住的词。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="数学符号速查 ml paper 里反复出现的数学符号 + 它们对应的&quot;工程意思&quot;。看到不认识的就翻这页。 math-symbols concept ml 微积分相关 概率相关 线性代数相关 函数相关 微分方程相关 希腊字母速查（常用） 链接 ∂ · 偏导数（partial derivative） ∇ · nabla / 梯度（gradient） ∇· · 散度（divergence） δ / δ · delta · 小变化 p(x) · 概率密度 e[·] 或 𝔼[·] · 期望（expectation） log p(x) · 对数概率 ∇log p(x) · score ε · epsilon · 噪声 ||x|| · 向量的 norm（长度） q · kᵀ · 矩阵乘 + 转置 i · 单位矩阵 / identity matrix √ · 平方根 f_θ(x) · 参数化函数 ~ · 采样自 → / ↦ · 映射 / 函数 argmin / argmax ode · 普通微分方程 sde · 随机微分方程 dw · wiener process 增量">
   <h3><a href="concepts/math-symbols.html">数学符号速查</a></h3>
   <p class="hook">ML paper 里反复出现的数学符号 + 它们对应的&quot;工程意思&quot;。看到不认识的就翻这页。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="memory stream · 记忆流 agent 看到的、听到的、做的所有事，按时间顺序存成一条流 —— 每条记忆带时间戳和重要性评分，需要的时候检索出来塞进 prompt。 memory-stream concept ml 一句话 直觉 怎么做的 跟数据库的类比 链接">
   <h3><a href="concepts/memory-stream.html">Memory Stream · 记忆流</a></h3>
   <p class="hook">Agent 看到的、听到的、做的所有事，按时间顺序存成一条流 —— 每条记忆带时间戳和重要性评分，需要的时候检索出来塞进 prompt。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-27</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-27</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="micro-turn · 200ms 微回合 把时间切成 200ms 一片，每片里**输入和输出同时发生**，模型看到的是一条单一交错 token 流。 micro-turn concept ml 一句话 直觉 为什么是 200ms 它替代了什么 工程支撑 跟 fish-speech 流式的对照 链接">
   <h3><a href="concepts/micro-turn.html">Micro-Turn · 200ms 微回合</a></h3>
   <p class="hook">把时间切成 200ms 一片，每片里**输入和输出同时发生**，模型看到的是一条单一交错 token 流。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="moe · mixture of experts 模型养着许多&quot;专家&quot;子网，每次推理一个 token 只激活其中少数几个 —— 总参大但计算路径小。 moe concept ml 一句话 直觉 怎么做的 推理的工程坑 链接">
   <h3><a href="concepts/moe.html">MoE · Mixture of Experts</a></h3>
   <p class="hook">模型养着许多&quot;专家&quot;子网，每次推理一个 token 只激活其中少数几个 —— 总参大但计算路径小。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="multi-head attention · 多头注意力 把 attention 跑 **h 次**（论文 h=8），每次用不同的 q/k/v 投影 → 每个 head 学不同的关系模式 → concat 后再线性。 multi-head-attention concept ml 一句话 直觉 怎么做的 各 head 真的学到了不同模式吗 链接">
   <h3><a href="concepts/multi-head-attention.html">Multi-Head Attention · 多头注意力</a></h3>
   <p class="hook">把 attention 跑 **h 次**（论文 h=8），每次用不同的 Q/K/V 投影 → 每个 head 学不同的关系模式 → concat 后再线性。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="multitask speech · 一个模型干多件事 whisper 一个模型同时做语音转录、语音翻译、语言识别、时间戳对齐 —— 全靠输入序列里的**特殊 token** 区分任务，不改架构。 multitask-speech concept ml 一句话 直觉 怎么做的 为什么这种设计好 链接">
   <h3><a href="concepts/multitask-speech.html">Multitask Speech · 一个模型干多件事</a></h3>
   <p class="hook">Whisper 一个模型同时做语音转录、语音翻译、语言识别、时间戳对齐 —— 全靠输入序列里的**特殊 token** 区分任务，不改架构。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="next sentence prediction · nsp 给 bert 两段文本 a 和 b，让 [cls] 这个位置的表征做二分类：b 是不是 a 在原文里的下一段？ next-sentence-prediction concept ml 一句话 直觉 怎么做的 它的问题（roberta 2019 证伪） 后续替代 我的判断 链接">
   <h3><a href="concepts/next-sentence-prediction.html">Next Sentence Prediction · NSP</a></h3>
   <p class="hook">给 BERT 两段文本 A 和 B，让 [CLS] 这个位置的表征做二分类：B 是不是 A 在原文里的下一段？</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="nvls · nvidia low-latency sharp nvidia/nccl 生态里的低延迟集合通信路径，用来减少多 gpu 之间 all-reduce / reduce-scatter 这类同步成本。 nvls concept ml 一句话 直觉 怎么做的 代码出处 链接">
   <h3><a href="concepts/nvls.html">NVLS · NVIDIA Low-Latency SHARP</a></h3>
   <p class="hook">NVIDIA/NCCL 生态里的低延迟集合通信路径，用来减少多 GPU 之间 all-reduce / reduce-scatter 这类同步成本。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="ode vs sde · 确定性 vs 随机性流 flow matching 用 ode（确定性流），diffusion 用 sde（随机性流）。差别是&lt;strong&gt;路径上有没有噪声项&lt;/strong&gt;。 ode-vs-sde concept ml 一句话 ode · 确定性 sde · 随机性 训练目标 推理步数 但 sde 有它的优势 ode 推理为什么不简单等于&quot;积分速度场&quot; 跟 tml 的关系 链接">
   <h3><a href="concepts/ode-vs-sde.html">ODE vs SDE · 确定性 vs 随机性流</a></h3>
   <p class="hook">flow matching 用 ODE（确定性流），diffusion 用 SDE（随机性流）。差别是&lt;strong&gt;路径上有没有噪声项&lt;/strong&gt;。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="optimal transport · 最优传输 在生成模型里，ot path 可以理解成让噪声分布搬到数据分布时尽量少绕路。 optimal-transport concept ml 一句话 直觉 怎么做的 代码出处 链接">
   <h3><a href="concepts/optimal-transport.html">Optimal Transport · 最优传输</a></h3>
   <p class="hook">在生成模型里，OT path 可以理解成让噪声分布搬到数据分布时尽量少绕路。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="patch embedding · 图像切块成 token 把图片切成固定大小（如 16×16）的方块, 每块拉平成一个向量, 通过一个 linear 层投影到 hidden dim —— **图像就这样变成了一串 token**。 patch-embedding concept ml 一句话 直觉 · 为什么不一个像素一个 token 具体怎么做 跟 nlp token embedding 的对应 trade-off · patch size 怎么选 为什么这个抽象很重要 链接">
   <h3><a href="concepts/patch-embedding.html">Patch Embedding · 图像切块成 token</a></h3>
   <p class="hook">把图片切成固定大小（如 16×16）的方块, 每块拉平成一个向量, 通过一个 linear 层投影到 hidden dim —— **图像就这样变成了一串 token**。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="policy gradient · 策略梯度 跟监督学习&quot;猜对答案给奖、猜错给罚&quot;不同, 强化学习只能拿到一个迟来的 reward 信号 —— 策略梯度把这个 reward **当成 loss 的&quot;梯度乘子&quot;**, 让模型自己悟出&quot;做这个 action 是该多还是该少做&quot;。 policy-gradient concept ml 一句话 直觉 · 跟监督学习的根本区别 数学表达 (不重要, 看个意思就行) 实现起来就是一行代码 为啥它脆弱 · 步子大小决定生死 跟监督学习的 cross-entropy 类比 链接">
   <h3><a href="concepts/policy-gradient.html">Policy Gradient · 策略梯度</a></h3>
   <p class="hook">跟监督学习&quot;猜对答案给奖、猜错给罚&quot;不同, 强化学习只能拿到一个迟来的 reward 信号 —— 策略梯度把这个 reward **当成 loss 的&quot;梯度乘子&quot;**, 让模型自己悟出&quot;做这个 action 是该多还是该少做&quot;。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="positional encoding · 位置编码 attention 本身**对位置不敏感**（&quot;dog bites man&quot; 和 &quot;man bites dog&quot; 算出来一样），所以要显式给每个位置加一个独特的&quot;位置向量&quot;。 positional-encoding concept ml 一句话 直觉 sinusoidal pe（论文用的） 后续改进 链接">
   <h3><a href="concepts/positional-encoding.html">Positional Encoding · 位置编码</a></h3>
   <p class="hook">Attention 本身**对位置不敏感**（&quot;dog bites man&quot; 和 &quot;man bites dog&quot; 算出来一样），所以要显式给每个位置加一个独特的&quot;位置向量&quot;。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="prefill / decode llm 推理两阶段：**prefill** 一次性吃整段输入并行算所有 token，**decode** 一个一个往外吐。 prefill-decode concept ml 一句话 直觉 微回合场景下变了 链接">
   <h3><a href="concepts/prefill-decode.html">Prefill / Decode</a></h3>
   <p class="hook">LLM 推理两阶段：**prefill** 一次性吃整段输入并行算所有 token，**decode** 一个一个往外吐。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="pretrain-finetune paradigm · 先预训练再微调 先在&lt;strong&gt;无标注&lt;/strong&gt;大语料上用自监督任务（mlm / lm）预训练一个 transformer，再在每个下游任务的&lt;strong&gt;小标注集&lt;/strong&gt;上 finetune —— 一个 backbone 万能。 pretrain-finetune-paradigm concept ml 一句话 直觉 怎么做的 为什么这条路赢了 后续演化 在 bert 论文里的具体演示 链接">
   <h3><a href="concepts/pretrain-finetune-paradigm.html">Pretrain-Finetune Paradigm · 先预训练再微调</a></h3>
   <p class="hook">先在&lt;strong&gt;无标注&lt;/strong&gt;大语料上用自监督任务（MLM / LM）预训练一个 transformer，再在每个下游任务的&lt;strong&gt;小标注集&lt;/strong&gt;上 finetune —— 一个 backbone 万能。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="probability path · 概率路径 一族随时间 t ∈ [0, 1] 变化的概率密度 p_t(x)，从 p_0（噪声分布，如标准高斯）连续演化到 p_1（数据分布）。 probability-path concept ml 一句话 直觉 路径的设计自由 ot 路径为什么特别 反例 · 弯路 path 数学约束 链接">
   <h3><a href="concepts/probability-path.html">Probability Path · 概率路径</a></h3>
   <p class="hook">一族随时间 t ∈ [0, 1] 变化的概率密度 p_t(x)，从 p_0（噪声分布，如标准高斯）连续演化到 p_1（数据分布）。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="relative position encoding · 相对位置编码 不告诉模型&quot;你在第 5 个位置&quot;，而是告诉模型&quot;你跟那个词差 3 个位置&quot; —— **相对距离比绝对地址有用得多**。 relative-position-encoding concept ml 一句话 直觉 几种主要做法 为什么相对位置好 链接">
   <h3><a href="concepts/relative-position-encoding.html">Relative Position Encoding · 相对位置编码</a></h3>
   <p class="hook">不告诉模型&quot;你在第 5 个位置&quot;，而是告诉模型&quot;你跟那个词差 3 个位置&quot; —— **相对距离比绝对地址有用得多**。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="residual connection · 残差连接 / skip connection 在每个 block 里加一条 `+ x` 的&quot;快车道&quot;，让网络默认输出 = 输入，layer 只学**跟默认值的差**。 residual-connection concept ml 一句话 直觉 怎么做的 在 transformer 里 后续变种 链接">
   <h3><a href="concepts/residual-connection.html">Residual Connection · 残差连接 / Skip Connection</a></h3>
   <p class="hook">在每个 block 里加一条 `+ x` 的&quot;快车道&quot;，让网络默认输出 = 输入，layer 只学**跟默认值的差**。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="residual + layernorm transformer block 里每个子层都配 `x + sublayer(x)` 和 [[layernorm]]，让深层网络既能传梯度又能稳住激活尺度。 residual-layernorm concept ml 一句话 直觉 怎么做的 代码出处 链接">
   <h3><a href="concepts/residual-layernorm.html">Residual + LayerNorm</a></h3>
   <p class="hook">Transformer block 里每个子层都配 `x + sublayer(x)` 和 [[layernorm]]，让深层网络既能传梯度又能稳住激活尺度。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="resnet architecture · 残差网络堆叠结构 resnet 按 stage 堆叠残差块：空间分辨率逐级减半，通道数逐级翻倍，深度靠重复 block 拉上去。 resnet-architecture concept ml 一句话 直觉 怎么做的 代码出处 链接">
   <h3><a href="concepts/resnet-architecture.html">ResNet Architecture · 残差网络堆叠结构</a></h3>
   <p class="hook">ResNet 按 stage 堆叠残差块：空间分辨率逐级减半，通道数逐级翻倍，深度靠重复 block 拉上去。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="retrieval scoring · 记忆检索排序 从 [[memory-stream]] 里捞记忆时，按 **时近度 × 重要性 × 相关性** 三个维度加权排序 —— 不是最新的就最好，也不是最重要的就最好，是三者的乘积最高的。 retrieval-scoring concept ml 一句话 直觉 怎么做的 为什么三个维度都要 跟 rag 的关系 链接">
   <h3><a href="concepts/retrieval-scoring.html">Retrieval Scoring · 记忆检索排序</a></h3>
   <p class="hook">从 [[memory-stream]] 里捞记忆时，按 **时近度 × 重要性 × 相关性** 三个维度加权排序 —— 不是最新的就最好，也不是最重要的就最好，是三者的乘积最高的。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-27</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-27</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="rl 直觉打底 · 给懂 llm 不懂 rl 的人 强化学习里那套&quot;policy / rollout / advantage&quot;的词, 翻译成 llm 自回归就全是你已经会的东西 —— policy 就是模型那个 softmax 分布, 训练就是在拧这个分布。 rl-for-llm-people concept ml 一句话 直觉 · 为什么 ppo 那页看着云里雾里 §0 顿悟点: llm 本身就是一个 policy §1 rollout 与&quot;数据会过期&quot; §2 它到底怎么就&quot;增加 reward&quot;了 §3 kl(llm ‖ sft) 是个啥 §4 这几个 loss 函数的走势 链接">
   <h3><a href="concepts/rl-for-llm-people.html">RL 直觉打底 · 给懂 LLM 不懂 RL 的人</a></h3>
   <p class="hook">强化学习里那套&quot;policy / rollout / advantage&quot;的词, 翻译成 LLM 自回归就全是你已经会的东西 —— policy 就是模型那个 softmax 分布, 训练就是在拧这个分布。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-29</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-29</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="rlhf · reinforcement learning from human feedback **人类用排序代替评分**: 把&quot;哪个回答更好&quot;这种廉价标注转成 reward model, 再用 ppo 把 llm 训成&quot;按人类偏好回答&quot;的样子 —— 这是 chatgpt 从&quot;会预测下一个 token 的模型&quot;变成&quot;会聊天的助手&quot;的关键一步。 rlhf concept ml 一句话 直觉 · 预训练 + sft 还不够, 为什么 三步流程 kl penalty: 防止 reward hacking 历史定位 · chatgpt 的关键一步 跟传统 rl 的区别 链接 step 1: sft (监督微调) step 2: 训 reward model step 3: ppo 用 rm 当 reward 训 llm">
   <h3><a href="concepts/rlhf.html">RLHF · Reinforcement Learning from Human Feedback</a></h3>
   <p class="hook">**人类用排序代替评分**: 把&quot;哪个回答更好&quot;这种廉价标注转成 reward model, 再用 PPO 把 LLM 训成&quot;按人类偏好回答&quot;的样子 —— 这是 ChatGPT 从&quot;会预测下一个 token 的模型&quot;变成&quot;会聊天的助手&quot;的关键一步。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="rotary position embedding · rope · 旋转位置编码 不给 embedding 加位置向量，而是**按位置旋转 q 和 k** —— 让 attention 点积天然包含相对位置信息。 rotary-position-embedding concept ml 一句话 直觉 · 时钟指针 跟 sinusoidal pe 对比 · 为什么旋转比加法好 怎么做的 · 伪代码版 多频率 · 跟音乐的类比 为什么点积能捕获相对位置 距离衰减 · 远的词影响自然变小 代码出处 链接">
   <h3><a href="concepts/rotary-position-embedding.html">Rotary Position Embedding · RoPE · 旋转位置编码</a></h3>
   <p class="hook">不给 embedding 加位置向量，而是**按位置旋转 Q 和 K** —— 让 attention 点积天然包含相对位置信息。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="rvq codec · 残差向量量化 把音频压成 **n 层堆叠的 codebook**，第 k 层负责前 k-1 层量化剩下的&quot;误差&quot;。 rvq-codec concept ml 一句话 直觉 怎么做的 跟 tml dmel 的区别 链接">
   <h3><a href="concepts/rvq-codec.html">RVQ Codec · 残差向量量化</a></h3>
   <p class="hook">把音频压成 **N 层堆叠的 codebook**，第 k 层负责前 k-1 层量化剩下的&quot;误差&quot;。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="scaling laws · 模型 size 跟 loss 的经验公式 kaplan et al. 2020 (openai) 通过大量训练实验拟合出：**lm 的 loss 跟参数量 / 数据量 / 算力满足 power law**（幂律），给出可外推的预测公式。 scaling-laws concept ml 一句话 直觉 为什么这事重要 chinchilla 修正（2022） 实践意义 它的局限 跟 emergent abilities 的关系 链接">
   <h3><a href="concepts/scaling-laws.html">Scaling Laws · 模型 size 跟 loss 的经验公式</a></h3>
   <p class="hook">Kaplan et al. 2020 (OpenAI) 通过大量训练实验拟合出：**LM 的 loss 跟参数量 / 数据量 / 算力满足 power law**（幂律），给出可外推的预测公式。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="score function · ∇log p(x) · 对数概率梯度 对一个概率密度 p(x)，**score = ∇log p(x)** —— 指向&quot;概率密度更大的方向&quot;的向量。diffusion 模型学这个，flow matching 不学这个。 score-function concept ml 一句话 直觉 为什么是 log 为什么 diffusion 学 score 而不是 p 本身 diffusion 怎么学 score flow matching 怎么避开 score 跟 energy-based model 的关系 链接">
   <h3><a href="concepts/score-function.html">Score Function · ∇log p(x) · 对数概率梯度</a></h3>
   <p class="hook">对一个概率密度 p(x)，**score = ∇log p(x)** —— 指向&quot;概率密度更大的方向&quot;的向量。diffusion 模型学这个，flow matching 不学这个。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="self-attention · 自注意力 对序列里每个位置，用 q·kᵀ/√dₖ 算它跟所有位置的相似度，softmax 当权重，加权求和 v → 输出。 self-attention concept ml 一句话 直觉 怎么做的 跟 rnn attention 的区别 重要变种 链接">
   <h3><a href="concepts/self-attention.html">Self-Attention · 自注意力</a></h3>
   <p class="hook">对序列里每个位置，用 Q·Kᵀ/√dₖ 算它跟所有位置的相似度，softmax 当权重，加权求和 V → 输出。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="sglang inference sglang 是 llm 推理服务栈；fish-speech 复用它来拿到高效 batching、kv cache 管理和 serving 基建。 sglang-inference concept ml 一句话 直觉 怎么做的 代码出处 链接">
   <h3><a href="concepts/sglang-inference.html">SGLang Inference</a></h3>
   <p class="hook">SGLang 是 LLM 推理服务栈；fish-speech 复用它来拿到高效 batching、KV cache 管理和 serving 基建。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="sparse attention · 稀疏注意力 不让每个 token 看序列里所有其他 token（o(n²) 太贵），而是&lt;strong&gt;限制只看部分位置&lt;/strong&gt;（如局部窗口 / 跨步采样），把复杂度降到 o(n·√n) 或 o(n·log n)。 sparse-attention concept ml 一句话 直觉 gpt-3 用的方案 主流 sparse 方案 为什么不能全用 sparse 后来的发展 链接">
   <h3><a href="concepts/sparse-attention.html">Sparse Attention · 稀疏注意力</a></h3>
   <p class="hook">不让每个 token 看序列里所有其他 token（O(N²) 太贵），而是&lt;strong&gt;限制只看部分位置&lt;/strong&gt;（如局部窗口 / 跨步采样），把复杂度降到 O(N·√N) 或 O(N·log N)。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="split-kv · 沿 kv 序列切分 attention 把 attention 里的 key/value 缓存按序列维切成几段并行算，再用稳定归约合回来。 split-kv concept ml 一句话 直觉 怎么做的 代码出处 链接">
   <h3><a href="concepts/split-kv.html">Split-KV · 沿 KV 序列切分 attention</a></h3>
   <p class="hook">把 attention 里的 Key/Value 缓存按序列维切成几段并行算，再用稳定归约合回来。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="transformer architecture · 整体架构 encoder 6 层 + decoder 6 层，每层都是&quot;multi-head attention + ffn + residual + layernorm&quot;的标准块。decoder 多一个 cross-attention 子层看 encoder 输出。 transformer-architecture concept ml 一句话 encoder 单层 decoder 单层 输入处理 输出 配置（论文 base 版） 现代变种 链接">
   <h3><a href="concepts/transformer-architecture.html">Transformer Architecture · 整体架构</a></h3>
   <p class="hook">Encoder 6 层 + Decoder 6 层，每层都是&quot;multi-head attention + FFN + residual + layernorm&quot;的标准块。Decoder 多一个 cross-attention 子层看 encoder 输出。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="vad · voice activity detection 判断音频里什么时候有人声、什么时候静音/噪声的传统语音模块。 vad concept ml 一句话 直觉 怎么做的 代码出处 链接">
   <h3><a href="concepts/vad.html">VAD · Voice Activity Detection</a></h3>
   <p class="hook">判断音频里什么时候有人声、什么时候静音/噪声的传统语音模块。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="velocity field · 速度场 · v(x, t) 对每个 (位置 x, 时间 t)，告诉你这个粒子应该往哪个方向、以多快的速度走。flow matching 就是让神经网络学这个函数。 velocity-field concept ml 一句话 直觉 数学上的本质 训练时怎么学 推理时怎么用 跟 score 的对比 链接">
   <h3><a href="concepts/velocity-field.html">Velocity Field · 速度场 · v(x, t)</a></h3>
   <p class="hook">对每个 (位置 x, 时间 t)，告诉你这个粒子应该往哪个方向、以多快的速度走。flow matching 就是让神经网络学这个函数。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="virtual context management · 虚拟上下文管理 把 llm 的 context window 当 ram、外部存储当硬盘 —— llm 自己通过 function call 决定哪些信息留在 context 里、哪些挪出去。**os 的虚拟内存思路套在 agent 身上**。 virtual-context-management concept ml 一句话 直觉 · os 怎么管内存的 三层记忆架构 关键：page fault 的处理 跟 generative agents 的关键区别 工程落地的取舍 链接 core memory · 核心区 recall memory · 对话记忆 archival memory · 归档记忆">
   <h3><a href="concepts/virtual-context-management.html">Virtual Context Management · 虚拟上下文管理</a></h3>
   <p class="hook">把 LLM 的 context window 当 RAM、外部存储当硬盘 —— LLM 自己通过 function call 决定哪些信息留在 context 里、哪些挪出去。**OS 的虚拟内存思路套在 agent 身上**。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="voice cloning reference · 声音克隆参考音频 给 tts 模型一段参考音频，让它抽取说话人音色、韵律和风格条件，再生成同风格的新语音。 voice-cloning-reference concept ml 一句话 直觉 怎么做的 代码出处 链接">
   <h3><a href="concepts/voice-cloning-reference.html">Voice Cloning Reference · 声音克隆参考音频</a></h3>
   <p class="hook">给 TTS 模型一段参考音频，让它抽取说话人音色、韵律和风格条件，再生成同风格的新语音。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="weak supervision at scale · 大规模弱监督 不花钱请人标数据，用互联网上天然存在的&quot;音频 + 自动字幕&quot;配对 —— 质量差但量大，最终效果碾压精标小数据。 weak-supervision-at-scale concept ml 一句话 直觉 怎么做的 为什么管用 跟 gpt-3 的关系 代码出处 链接">
   <h3><a href="concepts/weak-supervision-at-scale.html">Weak Supervision at Scale · 大规模弱监督</a></h3>
   <p class="hook">不花钱请人标数据，用互联网上天然存在的&quot;音频 + 自动字幕&quot;配对 —— 质量差但量大，最终效果碾压精标小数据。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-25</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="webtext · gpt-2 用的数据集 openai 为 gpt-2 自建的 ~40gb 高质量网页数据集 —— 爬 reddit 上至少 3 karma 的外链页面（&quot;人筛过的网页&quot;）。 webtext concept ml 一句话 直觉 数据规模 为什么&quot;reddit karma&quot;作为信号能 work 它的局限 openai 没开源 webtext 链接">
   <h3><a href="concepts/webtext.html">WebText · GPT-2 用的数据集</a></h3>
   <p class="hook">OpenAI 为 GPT-2 自建的 ~40GB 高质量网页数据集 —— 爬 Reddit 上至少 3 karma 的外链页面（&quot;人筛过的网页&quot;）。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="zero-shot image classification · 不训练新模型就能分新类 不再问&quot;这是 1000 类里的哪一类&quot;, 而是问&quot;我列的这几句话, 哪句话最配这张图&quot; —— **分类变成了图文匹配**, 想分什么类直接写句话就行。 zero-shot-image-classification concept ml 一句话 直觉 · 从&quot;猜类别&quot;到&quot;配文字&quot; prompt engineering 也来到视觉 优势 vs 局限 工程上怎么用 实际工程里它最常被用作哪种功能? 链接">
   <h3><a href="concepts/zero-shot-image-classification.html">Zero-Shot Image Classification · 不训练新模型就能分新类</a></h3>
   <p class="hook">不再问&quot;这是 1000 类里的哪一类&quot;, 而是问&quot;我列的这几句话, 哪句话最配这张图&quot; —— **分类变成了图文匹配**, 想分什么类直接写句话就行。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry concept">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-28</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry concept" data-domains="ML" data-s="zero-shot transfer · 不 finetune 直接用 prompt 触发任务 预训练完的 lm &lt;strong&gt;不改一个参数&lt;/strong&gt;，直接在 prompt 里写任务格式，让模型续写出答案。 zero-shot-transfer concept ml 一句话 直觉 怎么做的 跟 gpt-1 input transformations 的关系 它的局限 链接">
   <h3><a href="concepts/zero-shot-transfer.html">Zero-Shot Transfer · 不 finetune 直接用 prompt 触发任务</a></h3>
   <p class="hook">预训练完的 LM &lt;strong&gt;不改一个参数&lt;/strong&gt;，直接在 prompt 里写任务格式，让模型续写出答案。</p>
-  <div class="pills"><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-05-21</span><span class="pill ready">auto HTML ✓</span></div>
 </div>
 </div>
+</section>
 
 
+<section class="cat-block">
 <h2><span class="num">§ 05</span>Threads · 思考</h2>
 <div class="entries">
-<div class="entry thread">
+<div class="entry thread" data-domains="ML" data-s="fish speech grpo determinism question fish-speech 做 grpo/rl 对齐时，训练采样和推理 serving 的 kernel 不一致会不会影响 reward 归因？ fish-speech-grpo-determinism-question thread ml 一句话 问题背景 需要查什么 暂时判断 链接">
   <h3><a href="threads/fish-speech-grpo-determinism-question.html">Fish Speech GRPO Determinism Question</a></h3>
   <p class="hook">fish-speech 做 GRPO/RL 对齐时，训练采样和推理 serving 的 kernel 不一致会不会影响 reward 归因？</p>
-  <div class="pills"><span class="pill">thread</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
-</div><div class="entry thread">
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">thread</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div><div class="entry thread" data-domains="ML" data-s="待回答的问题（attached: 每个都该新开一页） 按&quot;看了什么源、还不懂什么&quot;的清单。每条之后展开成自己的 thread 页。 open-questions thread ml 来自 tml interaction models 来自 fish-speech 跨源问题 链接">
   <h3><a href="threads/open-questions.html">待回答的问题（attached: 每个都该新开一页）</a></h3>
   <p class="hook">按&quot;看了什么源、还不懂什么&quot;的清单。每条之后展开成自己的 thread 页。</p>
-  <div class="pills"><span class="pill">thread</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">thread</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
 </div>
 </div>
+</section>
 
 
 <div class="colophon">
@@ -575,5 +603,40 @@
 </div>
 
 </div>
+<script>
+(function(){
+  var q = document.getElementById('q');
+  var chips = [].slice.call(document.querySelectorAll('.chip'));
+  var entries = [].slice.call(document.querySelectorAll('.entry'));
+  var blocks = [].slice.call(document.querySelectorAll('.cat-block'));
+  var nores = document.getElementById('nores');
+  var dom = '';
+  function apply(){
+    var term = q.value.trim().toLowerCase();
+    var shown = 0;
+    entries.forEach(function(el){
+      var okT = !term || (el.getAttribute('data-s') || '').indexOf(term) !== -1;
+      var okD = !dom || (el.getAttribute('data-domains') || '').split(' ').indexOf(dom) !== -1;
+      var vis = okT && okD;
+      el.style.display = vis ? '' : 'none';
+      if (vis) shown++;
+    });
+    blocks.forEach(function(b){
+      var any = [].slice.call(b.querySelectorAll('.entry')).some(function(e){ return e.style.display !== 'none'; });
+      b.style.display = any ? '' : 'none';
+    });
+    nores.hidden = shown !== 0;
+  }
+  q.addEventListener('input', apply);
+  chips.forEach(function(c){
+    c.addEventListener('click', function(){
+      chips.forEach(function(x){ x.classList.remove('active'); });
+      c.classList.add('active');
+      dom = c.getAttribute('data-dom') || '';
+      apply();
+    });
+  });
+})();
+</script>
 </body>
 </html>

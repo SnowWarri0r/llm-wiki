@@ -1,6 +1,7 @@
 ---
 name: go-gc
 type: paper
+tags: [系统]
 source: https://go.dev/blog/greenteagc
 upstream: https://go.dev/doc/go1.26
 ingested: 2026-06-01

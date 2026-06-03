@@ -1,6 +1,7 @@
 ---
 name: net-profit-gap
 type: paper
+tags: [金融]
 source: https://bigquant.com/square/paper/a2ea19aa-dce7-403b-ad27-450f94a6c1b7
 upstream: https://en.wikipedia.org/wiki/Post–earnings-announcement_drift
 ingested: 2026-06-03
