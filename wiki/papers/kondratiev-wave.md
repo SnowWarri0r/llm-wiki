@@ -1,6 +1,7 @@
 ---
 name: kondratiev-wave
 type: paper
+tags: [金融]
 source: https://zh.wikipedia.org/wiki/康德拉季耶夫长波
 upstream: https://zh.wikipedia.org/wiki/康德拉季耶夫长波
 ingested: 2026-06-03

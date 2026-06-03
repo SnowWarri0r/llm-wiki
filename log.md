@@ -499,3 +499,15 @@ skill 更新:
 - 净利润断层 (moss 绿): WebSearch 核准(两要素=净利润惊喜+断层跳空; 本质 PEAD/Ball&Brown 1968; SUE; 缺口回补证伪; 业绩预告抢跑衰减). 5 figs: 跳空缺口K线 / 惊喜 AND 断层 / PEAD漂移曲线 / 缺口守住vs回补 / 有效vs衰减两栏. 顶部 warn: 有学术底子但会拥挤失效, 非必胜.
 - 两页 glossary 各 12 闭环; 串到 kondratiev/chan/psychology-of-money(框架管纪律不保证必胜)
 - 隐私 grep 干净 (这次每页 commit 前都跑)
+
+## [2026-06-03] feature | index 加领域分类 + 搜索
+
+- 触发: 内容多了(126 条目), papers 里 ML/系统/金融/史 混一起, 需要分类+搜索
+- render.py:
+  - 支持 frontmatter `tags: [系统/金融/史/...]` 领域标签; 无 tags 时按 category 推断(books→理财, 其余→ML)
+  - entry_search_text(): 抽 标题+hook+slug+领域 + 从渲染后 HTML 抽 h2/h3 章节标题 + glossary 术语(class="term") → data-s 索引
+  - 每卡片加 data-domains + data-s; 每段包 cat-block 便于整段隐藏; 领域 pill
+  - index 顶部: 搜索框 + 领域 chip(全部/ML/系统/金融/史/理财, 带计数) + 无结果提示
+  - 纯前端 JS: 输入实时 substring 过滤 + chip 领域过滤, 组合生效, 空段自动隐藏
+- 5 个非 ML 页加 tags: go-gc[系统] / kondratiev-wave·chan-theory·net-profit-gap[金融] / discourses-salt-iron[史]
+- 验证: 搜"均输"→盐铁论、"multi-head"→attention(只在glossary的词也能命中); 领域分布 ML99/理财22/金融3/系统1/史1=126
