@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Classifier-Free Guidance · CFG · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · classifier-free-guidance</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Classifier-Free Guidance · CFG</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>让模型同一步算两遍 —— 一遍看着 prompt、一遍蒙着眼，再把"看着 prompt 多走的那部分"放大，逼它更听话。</p>
+<h2>直觉</h2>
+<p>扩散模型每一步要预测"往哪个方向去噪"。问题：光按 prompt 算一遍，模型对 prompt 的"听话程度"不够。CFG（Ho &amp; Salimans 2022）的招很贼：</p>
+<ul>
+<li><strong>条件支</strong>：带着 prompt 算一个方向 <code>v_cond</code></li>
+<li><strong>无条件支</strong>：不给 prompt 算一个方向 <code>v_uncond</code></li>
+<li><strong>放大差值</strong>：<code>v = v_uncond + w · (v_cond − v_uncond)</code>，<code>w</code> 是 guidance scale</li>
+</ul>
+<p><code>v_cond − v_uncond</code> 就是"因为有了 prompt 而多走的那部分"。把它乘 <code>w</code>（常 7 左右）放大，模型就更贴 prompt。代价是 <code>w</code> 太大画面会过饱和、失真。</p>
+<p><strong>为什么叫"classifier-free"</strong>：早期要靠一个单独的分类器算梯度来引导，CFG 把它去掉了，只用模型自己的条件/无条件两次前向。</p>
+<h2>非对称 CFG（Ideogram 4 的变体）</h2>
+<p>标准 CFG 的无条件支是"把文本换成 padding"。Ideogram 4 改成 <strong>把文本 token 整个丢掉</strong>，无条件支只在图像 token 上跑（单流架构天然能这么做）。好处：</p>
+<ul>
+<li>两支可以<strong>独立调</strong>，把"prompt 听话程度"和"画质"分开 schedule</li>
+<li>例：<code>V4_QUALITY_48</code> 跑 45 步 gw=7（强听话）+ 3 步 polish gw=3（收细节不过饱和）</li>
+</ul>
+<h2>怎么做的</h2>
+<pre><code class="language-python">v_cond   = dit(z_t, t, text_tokens)     # 看着 prompt
+v_uncond = dit(z_t, t, no_text)         # 非对称: 文本整个 drop
+v = v_uncond + w * (v_cond - v_uncond)  # 放大差值
+z_next = euler_step(z_t, v, t)          # flow matching 积分一步
+</code></pre>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/ideogram-4.html">ideogram-4</a> · 非对称 CFG + polish tail</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · CFG 作用在速度场上</li>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · 条件/无条件两支都跑 DiT</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/ideogram-4.html"><span class="cat">paper</span>Ideogram 4.0 · 9.3B 单流 DiT, 把排版做进权重</a></li><li><a href="../concepts/diffusion-transformer.html"><span class="cat">concept</span>Diffusion Transformer · DiT</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/classifier-free-guidance.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

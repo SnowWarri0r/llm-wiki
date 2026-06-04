@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Ideogram 4.0 · 9.3B 单流 DiT</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --accent: var(--brick); --accent-soft: var(--brick-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(44px, 7vw, 78px); line-height: 0.95; letter-spacing: -0.03em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 36px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
+p { margin: 12px 0; } strong { font-weight: 700; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.86em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--brick-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--brick); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--brick); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+table.spec { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+table.spec td { border-bottom: 1px dashed var(--rule); padding: 7px 10px; }
+table.spec td:first-child { color: var(--muted); width: 42%; }
+table.spec td:last-child { color: var(--ink); font-weight: 700; }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--brick-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--brick-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* ig-specific */
+.ig-svg { width: 100%; height: auto; display: block; }
+.ig-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .ig-rev { opacity: 1; }
+figure.play .ig-rev.d1 { transition-delay: 0.15s; }
+figure.play .ig-rev.d2 { transition-delay: 0.45s; }
+figure.play .ig-rev.d3 { transition-delay: 0.75s; }
+figure.play .ig-rev.d4 { transition-delay: 1.05s; }
+figure.play .ig-rev.d5 { transition-delay: 1.35s; }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · ideogram-4</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · T2I · Ideogram · 2026-06-03</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 文生图 · 开源权重</div>
+  <h1 class="title">Ideogram 4.0 ·<br /><span class="em">把排版做进权重。</span></h1>
+  <div class="byline">Ideogram Team · 9.3B 单流 DiT · 开源权重 · 2026-06-03</div>
+  <p class="dek">普通文生图吃一句话，版面和文字基本靠运气。Ideogram 4 的赌注：与其让模型从模糊语言里猜，不如把结构（位置、颜色、文字）显式写进 JSON，训练和推理都用它 —— 9.3B 的体量，把文本渲染和版面控制做到了开源第一。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>Ideogram 第一个开源权重模型（9.3B）。骨架是<strong>单流 Diffusion Transformer</strong><a class="jr" href="#g-01">1</a>（34 层，文本+图像 token 一条序列、共享投影<a class="jr" href="#g-02">2</a>，对比 SD3/FLUX 的双流 MMDiT<a class="jr" href="#g-03">3</a>）。两个特别之处：文本编码器用 <strong>Qwen3-VL（VLM）</strong><a class="jr" href="#g-04">4</a>，且吃它 <strong>13 个中间层 hidden state 拼接</strong><a class="jr" href="#g-05">5</a>；模型<strong>只用结构化 JSON caption 训练</strong><a class="jr" href="#g-08">8</a>，显式给 bounding box<a class="jr" href="#g-09">9</a> 和调色板<a class="jr" href="#g-10">10</a>。训练目标 <strong>flow matching</strong><a class="jr" href="#g-06">6</a>，采样用 <strong>非对称 CFG</strong><a class="jr" href="#g-07">7</a>。frozen <strong>KL-VAE</strong><a class="jr" href="#g-11">11</a> 解码到像素。结果：9.3B 的文本渲染碾压 20B/32B/80B 的开源对手，设计 ELO 全开源第一、逼近闭源 GPT Image 2。</p>
+</div>
+
+
+<!-- §01 -->
+<h2><span class="num">§ 01</span>一张图看懂 pipeline</h2>
+
+<p>整条推理链四个部件，<strong>只有中间那个 DiT 是训练的</strong>，两头的文本编码器和 VAE 都是 frozen 复用：</p>
+
+<figure id="fig-pipe" class="fig-pipe">
+  <figcaption>
+    <span>Fig 01 · 端到端 pipeline</span>
+    <span class="fnum">两个 frozen 模型夹着一个 trained DiT</span>
+  </figcaption>
+  <svg class="ig-svg" viewBox="0 0 880 300" xmlns="http://www.w3.org/2000/svg">
+    <text x="30" y="150" font-family="JetBrains Mono,monospace" font-size="10" fill="#7a6f5d" class="ig-rev d1">prompt</text>
+    <!-- 01 encoder -->
+    <g class="ig-rev d1">
+      <rect x="70" y="95" width="160" height="110" rx="6" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="1.4"/>
+      <text x="150" y="120" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#1f3a5f">01 · ENCODER</text>
+      <text x="150" y="140" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#1f3a5f">Qwen3-VL-8B</text>
+      <text x="150" y="160" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">VLM 当文本编码器</text>
+      <text x="150" y="174" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">取 13 层 concat</text>
+      <text x="150" y="196" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">❄ FROZEN</text>
+    </g>
+    <path d="M 232 150 L 262 150" fill="none" stroke="#3a3128" stroke-width="1.4" marker-end="url(#iga)" class="ig-rev d2"/>
+    <!-- 02 DiT -->
+    <g class="ig-rev d2">
+      <rect x="265" y="80" width="180" height="140" rx="6" fill="#efd6c8" stroke="#9b2c2c" stroke-width="2"/>
+      <text x="355" y="108" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#9b2c2c">02 · BACKBONE</text>
+      <text x="355" y="130" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#9b2c2c">单流 DiT</text>
+      <text x="355" y="150" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">34 层 · 文本+图像</text>
+      <text x="355" y="164" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">一条序列共享投影</text>
+      <text x="355" y="178" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">QK-RMSNorm · MRoPE</text>
+      <text x="355" y="204" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#9b2c2c" font-weight="700">🔥 9.3B · TRAINED</text>
+    </g>
+    <path d="M 447 150 L 477 150" fill="none" stroke="#3a3128" stroke-width="1.4" marker-end="url(#iga)" class="ig-rev d3"/>
+    <!-- 03 sampler -->
+    <g class="ig-rev d3">
+      <rect x="480" y="95" width="160" height="110" rx="6" fill="#f0e0a8" stroke="#b8841c" stroke-width="1.4"/>
+      <text x="560" y="120" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#b8841c">03 · SAMPLER</text>
+      <text x="560" y="140" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#b8841c">Euler</text>
+      <text x="560" y="158" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">flow-matching + 非对称 CFG</text>
+      <text x="560" y="174" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">12 / 20 / 48 步</text>
+      <text x="560" y="196" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">RUNTIME</text>
+    </g>
+    <path d="M 642 150 L 672 150" fill="none" stroke="#3a3128" stroke-width="1.4" marker-end="url(#iga)" class="ig-rev d4"/>
+    <!-- 04 decoder -->
+    <g class="ig-rev d4">
+      <rect x="675" y="95" width="160" height="110" rx="6" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.4"/>
+      <text x="755" y="120" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#4a6b3a">04 · DECODER</text>
+      <text x="755" y="140" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#4a6b3a">KL VAE</text>
+      <text x="755" y="158" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">latent → 像素</text>
+      <text x="755" y="174" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">8× 空间压缩</text>
+      <text x="755" y="196" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">❄ FROZEN</text>
+    </g>
+    <text x="455" y="270" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" fill="#3a3128" class="ig-rev d5">9.3B 的 DiT 是唯一训练的部件 —— 文本编码器和 VAE 都是拿来即用</text>
+    <defs><marker id="iga" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#3a3128"/></marker></defs>
+  </svg>
+</figure>
+
+<table class="spec">
+  <tr><td>参数量</td><td>9.3B</td></tr>
+  <tr><td>层数 / 头数</td><td>34 层 · 18 头</td></tr>
+  <tr><td>emb_dim / intermediate</td><td>4608 · 12288 (SwiGLU)</td></tr>
+  <tr><td>位置编码</td><td>3D MRoPE · section (24,20,20)</td></tr>
+  <tr><td>latent channels</td><td>32 × 2² = 128 · VAE 8× 压缩</td></tr>
+  <tr><td>分辨率</td><td>256 – 2048 px / 边 · 一套权重</td></tr>
+  <tr><td>量化 / License</td><td>nf4 (24GB 单卡) · fp8 · 非商用</td></tr>
+</table>
+
+
+<!-- §02 -->
+<h2><span class="num">§ 02</span>单流 DiT · 文本图像一条序列</h2>
+
+<p>骨架是 <strong>Diffusion Transformer</strong><a class="jr" href="#g-01">1</a>（把扩散去噪网络从 U-Net 换成 Transformer）。现代文生图都把文本和图像 token 放进 self-attention，但放法分两派：</p>
+
+<figure id="fig-stream" class="fig-stream">
+  <figcaption>
+    <span>Fig 02 · 单流 vs 双流</span>
+    <span class="fnum">共享一套投影 vs 各一套投影</span>
+  </figcaption>
+  <svg class="ig-svg" viewBox="0 0 880 330" xmlns="http://www.w3.org/2000/svg">
+    <!-- 左: 双流 MMDiT -->
+    <g class="ig-rev d1">
+      <text x="220" y="38" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#7a6f5d">双流 / MMDiT (SD3, FLUX)</text>
+      <rect x="50" y="60" width="150" height="44" rx="4" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="1"/>
+      <text x="125" y="87" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#1f3a5f">文本投影 Q/K/V</text>
+      <rect x="240" y="60" width="150" height="44" rx="4" fill="#efd6c8" stroke="#9b2c2c" stroke-width="1"/>
+      <text x="315" y="87" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#9b2c2c">图像投影 Q/K/V</text>
+      <path d="M 125 106 L 175 150" fill="none" stroke="#7a6f5d" stroke-width="1.2"/>
+      <path d="M 315 106 L 265 150" fill="none" stroke="#7a6f5d" stroke-width="1.2"/>
+      <rect x="150" y="152" width="140" height="40" rx="4" fill="#fff" stroke="#3a3128" stroke-width="1"/>
+      <text x="220" y="177" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a3128">仅 attention 互看</text>
+      <path d="M 175 194 L 125 230" fill="none" stroke="#7a6f5d" stroke-width="1.2"/>
+      <path d="M 265 194 L 315 230" fill="none" stroke="#7a6f5d" stroke-width="1.2"/>
+      <rect x="50" y="232" width="150" height="36" rx="4" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="0.8" opacity="0.7"/>
+      <text x="125" y="255" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#1f3a5f">文本 MLP</text>
+      <rect x="240" y="232" width="150" height="36" rx="4" fill="#efd6c8" stroke="#9b2c2c" stroke-width="0.8" opacity="0.7"/>
+      <text x="315" y="255" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#9b2c2c">图像 MLP</text>
+      <text x="220" y="295" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#7a6f5d">两条流并行 · 两套参数</text>
+    </g>
+
+    <!-- 右: 单流 -->
+    <g class="ig-rev d3">
+      <text x="660" y="38" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#9b2c2c">单流 (Ideogram 4)</text>
+      <rect x="500" y="60" width="320" height="44" rx="4" fill="#fff" stroke="#3a3128" stroke-width="1"/>
+      <g font-family="JetBrains Mono,monospace" font-size="10" text-anchor="middle">
+        <rect x="512" y="72" width="40" height="20" fill="#c8d4e2"/><rect x="556" y="72" width="40" height="20" fill="#c8d4e2"/>
+        <rect x="600" y="72" width="40" height="20" fill="#efd6c8"/><rect x="644" y="72" width="40" height="20" fill="#efd6c8"/><rect x="688" y="72" width="40" height="20" fill="#efd6c8"/><rect x="732" y="72" width="40" height="20" fill="#efd6c8"/>
+        <text x="556" y="118" fill="#1f3a5f">文本 tok</text><text x="690" y="118" fill="#9b2c2c">图像 tok</text>
+      </g>
+      <path d="M 660 130 L 660 158" fill="none" stroke="#3a3128" stroke-width="1.4" marker-end="url(#igb)"/>
+      <rect x="520" y="160" width="280" height="44" rx="4" fill="#efd6c8" stroke="#9b2c2c" stroke-width="1.4"/>
+      <text x="660" y="187" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" fill="#9b2c2c">一套共享投影 Q/K/V + MLP</text>
+      <path d="M 660 206 L 660 232" fill="none" stroke="#3a3128" stroke-width="1.4" marker-end="url(#igb)"/>
+      <text x="660" y="252" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a3128">self-attention 整条序列一起</text>
+      <text x="660" y="295" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#9b2c2c">一条序列 · 一套参数 · 更省</text>
+    </g>
+
+    <line x1="445" y1="50" x2="445" y2="300" stroke="#bfb398" stroke-width="1" stroke-dasharray="5 4" class="ig-rev d1"/>
+    <defs><marker id="igb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#3a3128"/></marker></defs>
+  </svg>
+</figure>
+
+<p>每个 block 是标准料：self-attention 带 <strong>QK-RMSNorm</strong><a class="jr" href="#g-12">12</a> 和 <strong>3D Multimodal RoPE</strong>（把文本和图像 token 放进同一个位置系，<a href="../papers/rope.html">RoPE</a> 的多模态版）、SwiGLU MLP，时间步 t 通过 AdaLN 调制每层。详见 <a href="../concepts/diffusion-transformer.html">diffusion-transformer</a>。</p>
+
+
+<!-- §03 -->
+<h2><span class="num">§ 03</span>用 VLM 当文本编码器</h2>
+
+<p>第一个特别之处：文本编码器不是常见的 T5 或 CLIP，而是 <strong>Qwen3-VL-8B-Instruct</strong><a class="jr" href="#g-04">4</a>（一个视觉-语言模型，text-only 模式）。而且 DiT 不只取它最后一层，而是吃 <strong>13 个中间层的 hidden state 拼接</strong><a class="jr" href="#g-05">5</a>。</p>
+
+<figure id="fig-encoder" class="fig-encoder">
+  <figcaption>
+    <span>Fig 03 · VLM 文本编码器</span>
+    <span class="fnum">取 13 个中间层 concat, 不是单层/无</span>
+  </figcaption>
+  <svg class="ig-svg" viewBox="0 0 880 320" xmlns="http://www.w3.org/2000/svg">
+    <!-- Qwen3-VL 层堆 -->
+    <g class="ig-rev d1">
+      <text x="160" y="36" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#1f3a5f">Qwen3-VL-8B (frozen)</text>
+      <g>
+        <rect x="100" y="55" width="120" height="20" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="0.6"/>
+        <rect x="100" y="78" width="120" height="20" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="0.6"/>
+        <rect x="100" y="101" width="120" height="20" fill="#1f3a5f" stroke="#1f3a5f" stroke-width="0.6"/>
+        <rect x="100" y="124" width="120" height="20" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="0.6"/>
+        <rect x="100" y="147" width="120" height="20" fill="#1f3a5f" stroke="#1f3a5f" stroke-width="0.6"/>
+        <rect x="100" y="170" width="120" height="20" fill="#1f3a5f" stroke="#1f3a5f" stroke-width="0.6"/>
+        <rect x="100" y="193" width="120" height="20" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="0.6"/>
+        <rect x="100" y="216" width="120" height="20" fill="#1f3a5f" stroke="#1f3a5f" stroke-width="0.6"/>
+        <rect x="100" y="239" width="120" height="20" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="0.6"/>
+      </g>
+      <text x="160" y="280" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">深蓝 = 被取出的中间层</text>
+    </g>
+
+    <!-- 取出 13 层 → concat -->
+    <g class="ig-rev d3" stroke="#9b2c2c" stroke-width="1" fill="none">
+      <path d="M 222 111 L 360 130"/>
+      <path d="M 222 157 L 360 150"/>
+      <path d="M 222 180 L 360 168"/>
+      <path d="M 222 226 L 360 188"/>
+    </g>
+    <g class="ig-rev d3">
+      <rect x="362" y="115" width="150" height="90" rx="5" fill="#f0e0a8" stroke="#b8841c" stroke-width="1.4"/>
+      <text x="437" y="145" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#b8841c">concat</text>
+      <text x="437" y="166" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#3a3128">13 层 hidden state</text>
+      <text x="437" y="182" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#3a3128">沿特征维拼接</text>
+    </g>
+    <path d="M 514 160 L 560 160" fill="none" stroke="#3a3128" stroke-width="1.4" marker-end="url(#igc)" class="ig-rev d4"/>
+    <g class="ig-rev d4">
+      <rect x="562" y="125" width="150" height="70" rx="5" fill="#efd6c8" stroke="#9b2c2c" stroke-width="1.6"/>
+      <text x="637" y="155" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#9b2c2c">单流 DiT</text>
+      <text x="637" y="175" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">吃文本表示</text>
+    </g>
+
+    <!-- 对比 -->
+    <g class="ig-rev d5" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#7a6f5d">
+      <text x="745" y="240" text-anchor="middle">对比:</text>
+      <text x="745" y="258" text-anchor="middle">Qwen-Image: 单层</text>
+      <text x="745" y="274" text-anchor="middle">FLUX: 无外部编码器</text>
+    </g>
+    <text x="440" y="305" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" fill="#3a3128" class="ig-rev d5">用更懂语言的 VLM、取更多层 → 把更深的语言理解喂进生成</text>
+    <defs><marker id="igc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#3a3128"/></marker></defs>
+  </svg>
+</figure>
+
+
+<!-- §04 -->
+<h2><span class="num">§ 04</span>训练目标 · flow matching + 非对称 CFG</h2>
+
+<p>训练目标是 <strong>flow matching</strong><a class="jr" href="#g-06">6</a>：DiT 学一个<strong>速度场</strong> <code>v(z_t, t)</code>，定义一条从纯噪声到干净 latent 的 ODE。采样时 Euler 把这条 ODE 积出来（12/20/48 步），噪声 schedule 随分辨率自适应。详见 <a href="../concepts/flow-matching.html">flow-matching</a>。</p>
+
+<p>采样的引导用 <strong>非对称 CFG</strong><a class="jr" href="#g-07">7</a>。标准 CFG 同一步算两遍——带 prompt 的条件支、不带的无条件支——把差值放大逼模型听话。Ideogram 4 的"非对称"在于：无条件支<strong>把文本 token 整个丢掉</strong>（只跑图像 token），而不是换成 padding。单流架构天然能这么做。</p>
+
+<pre class="eq">v_cond   = DiT(z_t, t, text)       # 看着 prompt
+v_uncond = DiT(z_t, t, ∅)          # 非对称: 文本整个 drop, 只跑图像 token
+v = v_uncond + w · (v_cond − v_uncond)   # 放大差值</pre>
+
+<p>好处是两支能<strong>独立调</strong>，把"听话程度"和"画质"分开排期：<code>V4_QUALITY_48</code> 跑 45 步强引导（gw=7）+ 3 步 polish（gw=3）收细节，避免整体过饱和。详见 <a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a>。</p>
+
+
+<!-- §05 -->
+<h2><span class="num">§ 05</span>杀手锏 · 结构化 JSON caption</h2>
+
+<p>这是 Ideogram 4 跟所有人最不一样的地方：模型<strong>只</strong>用结构化 JSON caption 训练<a class="jr" href="#g-08">8</a>，不吃自然语言。每条 caption 穷举画面的每个元素 + style 块 + 可选 bbox + 调色板，训练和推理同一套格式，推理前还按 schema 校验。</p>
+
+<figure id="fig-json" class="fig-json">
+  <figcaption>
+    <span>Fig 04 · 结构化 JSON caption</span>
+    <span class="fnum">显式给调色板 / bbox / 文字 → 精确版面</span>
+  </figcaption>
+  <svg class="ig-svg" viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg">
+    <!-- 左: JSON -->
+    <g class="ig-rev d1">
+      <rect x="30" y="40" width="400" height="290" rx="6" fill="#1f2430" stroke="#3a3128" stroke-width="1"/>
+      <g font-family="JetBrains Mono,monospace" font-size="10.5" fill="#c8d4e2">
+        <text x="48" y="66">{</text>
+        <text x="62" y="84" fill="#b8841c">"high_level_description"</text><text x="250" y="84">: "...",</text>
+        <text x="62" y="106" fill="#b8841c">"style_description"</text><text x="208" y="106">: {</text>
+        <text x="80" y="124" fill="#b8841c">"color_palette"</text><text x="200" y="124">:</text>
+        <rect x="210" y="114" width="20" height="13" fill="#1B3A5C"/><rect x="234" y="114" width="20" height="13" fill="#5B8FB9"/>
+        <text x="260" y="124" fill="#7a8a9a">// 最多 16 hex</text>
+        <text x="62" y="142">},</text>
+        <text x="62" y="160" fill="#b8841c">"compositional_..."</text><text x="218" y="160">: {</text>
+        <text x="80" y="178" fill="#b8841c">"elements"</text><text x="158" y="178">: [{</text>
+        <text x="98" y="196" fill="#b8841c">"bbox"</text><text x="146" y="196">: [380,590,</text>
+        <text x="170" y="212">660,720],</text>
+        <text x="270" y="200" fill="#4a6b3a">← 位置</text>
+        <text x="98" y="232" fill="#b8841c">"desc"</text><text x="146" y="232">: "木帆船,</text>
+        <text x="170" y="248">单桅"</text>
+        <text x="80" y="268">}]</text>
+        <text x="62" y="286">}</text>
+        <text x="48" y="304">}</text>
+      </g>
+    </g>
+
+    <path d="M 435 185 L 475 185" fill="none" stroke="#9b2c2c" stroke-width="1.8" marker-end="url(#igd)" class="ig-rev d3"/>
+    <text x="455" y="175" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#9b2c2c" class="ig-rev d3">生成</text>
+
+    <!-- 右: 画布 + bbox + palette -->
+    <g class="ig-rev d4">
+      <rect x="490" y="40" width="360" height="240" rx="4" fill="#2a3a4a" stroke="#3a3128" stroke-width="1"/>
+      <!-- 帆船 bbox -->
+      <rect x="620" y="140" width="110" height="55" fill="none" stroke="#b8841c" stroke-width="1.6" stroke-dasharray="4 3"/>
+      <path d="M 660 195 L 660 130 L 700 175 L 660 175" fill="#1B3A5C" stroke="#5B8FB9" stroke-width="1"/>
+      <text x="675" y="128" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#b8841c">bbox</text>
+      <!-- 水面 -->
+      <line x1="500" y1="210" x2="840" y2="210" stroke="#5B8FB9" stroke-width="1" opacity="0.6"/>
+      <!-- palette swatches -->
+      <rect x="505" y="252" width="22" height="18" fill="#1B3A5C"/><rect x="529" y="252" width="22" height="18" fill="#5B8FB9"/>
+      <text x="575" y="265" font-family="JetBrains Mono,monospace" font-size="9" fill="#c8d4e2">调色板锁定主色</text>
+    </g>
+    <text x="665" y="305" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#3a3128" class="ig-rev d5">bbox 用 0–1000 归一化坐标, 靠 MRoPE 位置系落到框里</text>
+    <text x="440" y="340" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#9b2c2c" class="ig-rev d5">caption 把越多关系钉死, 每对样本给的监督就越扎实</text>
+    <defs><marker id="igd" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#9b2c2c"/></marker></defs>
+  </svg>
+</figure>
+
+<p>三样普通 prompt 给不了的：<strong>调色板条件</strong><a class="jr" href="#g-10">10</a>（直接用 hex 控主色，每图 16 色）、<strong>bbox 布局</strong><a class="jr" href="#g-09">9</a>（<code>[y_min,x_min,y_max,x_max]</code> 归一化 0–1000，靠 MRoPE 落位）、<strong>文字元素</strong>（一字段放要渲染的字面文字、一字段放它长什么样 → 多行多字体图内文字）。普通用户写一句话也行——一个 "magic prompt" LLM 先把它扩成这套 JSON。详见 <a href="../concepts/structured-caption-conditioning.html">structured-caption-conditioning</a>。</p>
+
+
+<!-- §06 -->
+<h2><span class="num">§ 06</span>结果 · 9.3B 打赢一堆大模型</h2>
+
+<p>最能说明问题的是<strong>参数效率</strong>：9.3B 的 Ideogram 4，文本渲染（X-Omni OCR）打赢了 Qwen-Image (20B)、FLUX.2 dev (32B)、Hunyuan Image 3.0 (80B MoE)：</p>
+
+<figure id="fig-bench" class="fig-bench">
+  <figcaption>
+    <span>Fig 05 · 参数效率 · 文本渲染</span>
+    <span class="fnum">小而强: 9.3B 占住左上角</span>
+  </figcaption>
+  <svg class="ig-svg" viewBox="0 0 880 340" xmlns="http://www.w3.org/2000/svg">
+    <line x1="90" y1="60" x2="90" y2="280" stroke="#3a3128" stroke-width="1" class="ig-rev d1"/>
+    <line x1="90" y1="280" x2="830" y2="280" stroke="#3a3128" stroke-width="1" class="ig-rev d1"/>
+    <text x="80" y="54" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d" class="ig-rev d1">文本渲染 OCR ↑</text>
+    <text x="828" y="298" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d" class="ig-rev d1">参数量 (B) →</text>
+
+    <!-- 点: x=params映射(90..820 = 0..90B), y=ocr(280=0.5..70=1.0) -->
+    <!-- Ideogram 4 9.3B ocr0.97 -->
+    <g class="ig-rev d2">
+      <circle cx="166" cy="92" r="8" fill="#9b2c2c"/>
+      <text x="180" y="88" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" fill="#9b2c2c">Ideogram 4 (9.3B)</text>
+      <text x="180" y="103" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">OCR 0.97 · 全开源最佳</text>
+    </g>
+    <!-- Z-Image 6.15B -->
+    <g class="ig-rev d3"><circle cx="140" cy="150" r="5" fill="#7a6f5d"/><text x="150" y="146" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">Z-Image 6.15B</text></g>
+    <!-- Qwen-Image 20B -->
+    <g class="ig-rev d3"><circle cx="252" cy="175" r="5" fill="#7a6f5d"/><text x="262" y="171" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">Qwen-Image 20B</text></g>
+    <!-- FLUX.2 dev 32B -->
+    <g class="ig-rev d4"><circle cx="350" cy="200" r="5" fill="#7a6f5d"/><text x="360" y="196" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">FLUX.2 dev 32B</text></g>
+    <!-- Hunyuan 80B -->
+    <g class="ig-rev d4"><circle cx="740" cy="215" r="5" fill="#7a6f5d"/><text x="730" y="232" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">Hunyuan v3 80B MoE</text></g>
+
+    <text x="300" y="120" font-family="Fraunces,serif" font-style="italic" font-size="12" fill="#9b2c2c" class="ig-rev d5">↖ 越靠左上 = 越小越强</text>
+  </svg>
+</figure>
+
+<p>其它轴也硬：<strong>版面控制</strong>（7Bench mIoU 0.69，比所有闭源还高）、文本渲染 X-Omni OCR 0.97、空间推理 0.76、prompt 对齐 0.89。设计师盲评 ELO（4366 票）Ideogram 4 排<strong>第 2、全开源第 1</strong>，只输给闭源 GPT Image 2。</p>
+
+<div class="note">
+  <span class="l">放进 wiki 这条线</span>
+  <p>9.3B 打赢 80B，再次印证 dMel / Whisper / fish-speech 那条主线：<strong>监督的形态 > 纯堆参数</strong>。Ideogram 4 的"形态"就是结构化 JSON caption —— "caption 把越多关系钉死，每对样本给的监督越扎实"。这跟 fish-speech 把对齐做进权重、dMel 把预处理塌缩是同一招的视觉版：<strong>把结构做进训练，而不是推理时拼 prompt。</strong></p>
+</div>
+
+
+<!-- glossary -->
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">Diffusion Transformer · DiT</span> · 把扩散去噪网络从卷积 U-Net 换成 Transformer（Peebles &amp; Xie 2023）。图像 latent 切成 token 进 self-attention，时间步用 AdaLN 调制。现代文生图（SD3/FLUX/Ideogram）的共同底座。详见 <a href="../concepts/diffusion-transformer.html">diffusion-transformer</a>。</li>
+    <li id="g-02"><span class="term">单流 · single-stream</span> · 文本和图像 token 共享同一套投影（Q/K/V、MLP），每层就是一条 self-attention 序列。Ideogram 4（34 层）、Z-Image、Hunyuan 3 走这条。结构更简、参数更省。</li>
+    <li id="g-03"><span class="term">双流 · MMDiT</span> · 文本和图像各有一套独立投影，只在 attention 那一步互看，两条流并行（SD3、FLUX）。表达力强但参数多。单流是它的简化对照。</li>
+    <li id="g-04"><span class="term">Qwen3-VL 文本编码器</span> · Ideogram 4 的文本编码器是 Qwen3-VL-8B-Instruct（一个视觉-语言模型）的 text-only 模式，frozen 复用。用更懂语言的 VLM 替代常见的 T5/CLIP 文本编码器。</li>
+    <li id="g-05"><span class="term">13 层 hidden state 拼接</span> · DiT 不只取文本编码器最后一层，而是把 Qwen3-VL 的 13 个中间层 hidden state 沿特征维拼接喂进去。对比 Qwen-Image 取单层、FLUX 无外部编码器 —— 取更多层 = 喂更丰富的语言表示。</li>
+    <li id="g-06"><span class="term">flow matching</span> · Ideogram 4 的训练目标。DiT 学一个速度场 v(z_t,t)，定义从纯噪声到干净 latent 的 ODE；采样用 Euler 积分。比 diffusion 的 score matching 更直观。详见 <a href="../concepts/flow-matching.html">flow-matching</a>。</li>
+    <li id="g-07"><span class="term">非对称 CFG</span> · Classifier-Free Guidance 的变体。标准 CFG 无条件支把文本换 padding；Ideogram 4 把文本 token 整个丢掉，无条件支只跑图像 token。两支独立调，能把"听话程度"和"画质"分开排期（如 45 步强引导 + 3 步 polish）。详见 <a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a>。</li>
+    <li id="g-08"><span class="term">结构化 JSON caption</span> · Ideogram 4 的核心差异点：只用 JSON caption 训练，不吃自然语言。每条穷举画面每个元素 + style + bbox + 调色板，训练/推理同格式、推理前按 schema 校验。详见 <a href="../concepts/structured-caption-conditioning.html">structured-caption-conditioning</a>。</li>
+    <li id="g-09"><span class="term">bounding-box 布局控制</span> · JSON 里每个元素可带 bbox，格式 [y_min,x_min,y_max,x_max] 归一化到 0–1000。模型靠共享的 MRoPE 位置系把元素放进框里 —— 布局控制不是外挂模块，是借位置编码天然实现的。7Bench mIoU 0.69 比闭源还高。</li>
+    <li id="g-10"><span class="term">调色板条件</span> · JSON 里用 hex 色直接指定主色调（每图最多 16 色、每元素 5 色），不靠"蓝色调"这种形容词。让配色可控、可复现。</li>
+    <li id="g-11"><span class="term">KL VAE latent · 8× 压缩</span> · frozen 的 KL 自编码器（潜空间扩散的标配），把图像压成 8× 空间压缩的 latent（32×2²=128 通道），DiT 在 latent 空间去噪，最后 VAE 解码回 RGB 像素。</li>
+    <li id="g-12"><span class="term">MRoPE · QK-RMSNorm</span> · 3D Multimodal RoPE 把文本和图像 token 放进同一个位置系（section 24/20/20），是 bbox 布局能落位的关键；QK-RMSNorm 对 attention 的 Q/K 做归一化稳训练。都是现代 Transformer 的标准件。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>Authored / 个人学习笔记 · 2026 · 源: ideogram.ai/blog/ideogram-4.0 · github.com/ideogram-oss/ideogram4</span>
+  <span>Index / <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+
+<script>
+{
+  const figs = ['fig-pipe','fig-stream','fig-encoder','fig-json','fig-bench'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.2 });
+    obs.observe(el);
+  });
+}
+</script>
+
+</body>
+</html>
