@@ -526,3 +526,18 @@ skill 更新:
 - 顶部 warn + §07: 经验派、高度主观、易事后解释、无学术实证、生态随量化监管变
 - 串点: 量价背离=缠论背驰=净利润断层缺口回补, 三套语言同一问题"价格还有没有资金跟"; 链 kondratiev/chan/net-profit-gap/psychology-of-money
 - glossary 12 闭环; 隐私 grep 干净
+
+## [2026-06-04] ingest | Ideogram 4.0 · 9.3B 单流 DiT (文生图开源权重)
+
+- 用户要做 Ideogram 4.0 (2026-06-03 开源). WebFetch 博客 403(Cloudflare 挡数据中心 IP), 改用 Claude-in-Chrome 开 ideogram.ai/blog/ideogram-4.0 读全文 + gh 拉 github README 核准架构
+- 核准: 9.3B 单流 DiT 34层(文本+图像 token 一序列共享投影, vs SD3/FLUX 双流 MMDiT); 文本编码器 Qwen3-VL-8B 取13中间层 concat; flow matching + 非对称 CFG(无条件支整 drop 文本); frozen KL-VAE 8×; 只用结构化 JSON caption 训练(color_palette 16色/bbox 0-1000归一/文字元素); 2K 原生; emb4608/18头/SwiGLU12288/MRoPE; 文本渲染碾压 Qwen20B/FLUX32B/Hunyuan80B, 设计ELO #2全开源#1
+- wiki/papers/ideogram-4.md + docs/papers/ideogram-4.html: bespoke, **brick accent**, ML 领域, 5 figures:
+  - Fig 01 · pipeline (Qwen3-VL frozen → 单流DiT trained → Euler flow+非对称CFG → KL-VAE frozen) + spec 表
+  - Fig 02 · 单流 vs 双流 (共享投影一序列 vs MMDiT 两套投影)
+  - Fig 03 · VLM 文本编码器 (Qwen3-VL 取13层 concat, 对比单层/无)
+  - Fig 04 · 结构化 JSON caption (JSON→画布 bbox+调色板+文字)
+  - Fig 05 · 参数效率散点 (9.3B 文本渲染占左上, 打赢 20/32/80B)
+  - glossary 12 闭环
+- 3 新 concept: diffusion-transformer / classifier-free-guidance / structured-caption-conditioning; flow-matching concept sources 加 ideogram-4
+- 主线呼应: 9.3B>80B 印证 dMel/Whisper/fish-speech "监督形态>堆参数"; JSON caption = 把结构做进训练
+- 隐私 grep 干净
