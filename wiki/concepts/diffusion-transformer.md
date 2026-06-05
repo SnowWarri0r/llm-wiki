@@ -37,5 +37,6 @@ for block in layers:                       # 34 层
 - [[ideogram-4]] · 9.3B 单流 DiT
 - [[flow-matching]] · DiT 的训练目标（预测速度场）
 - [[transformer-architecture]] · DiT 的骨架就是它
-- [[rope]] · 多模态 RoPE 把文本图像放一个位置系
+- [[mrope]] · 多模态 RoPE 把文本图像放一个位置系
+- [[kl-vae]] · DiT 去噪的 latent 空间由它压缩出来
 - [[classifier-free-guidance]] · 采样时怎么用 DiT 的条件/无条件两支
