@@ -18,7 +18,7 @@ Ideogram 第一个开源权重模型（2026-06-03）：9.3B 的**单流 Diffusio
 
 ## 核心贡献
 - **单流 DiT**（34 层）：文本和图像 token 共享同一条 self-attention 序列、每层共享投影 —— 对比 SD3/FLUX 的双流 MMDiT（文本图像各一套投影）。结构更简、参数更省。详见 [[diffusion-transformer]]。
-- **VLM 当文本编码器**：文本编码器是 Qwen3-VL-8B-Instruct（text-only 模式），而且 DiT 吃它**13 个中间层的 hidden state 拼接**，不是单层、也不是无外部编码器。更深的语言理解喂给生成。
+- **VLM 当文本编码器**：文本编码器是 [[qwen3-vl]]-8B-Instruct（text-only 模式），而且 DiT 吃它**13 个中间层的 hidden state 拼接**，不是单层、也不是无外部编码器。更深的语言理解喂给生成。
 - **结构化 JSON caption（最大差异点）**：模型**只**在结构化 JSON 上训练，每条 caption 穷举画面每个元素 + style 块 + 可选 bbox + 调色板。训练/推理同格式，推理前还按 schema 校验。详见 [[structured-caption-conditioning]]。
 - **flow matching + 非对称 CFG**：训练目标是 flow matching（预测速度场，ODE 从噪声到干净 latent，见 [[flow-matching]]）；采样用 Euler，**非对称 CFG**——无条件支整个丢掉文本只跑图像 token，两支独立调，能分开调"听话程度"和"画质"。详见 [[classifier-free-guidance]]。
 - **2K 原生 + 透明背景 + 一套权重多分辨率**：噪声 schedule 随分辨率自适应，256–2048px 一套权重通吃。
@@ -28,10 +28,13 @@ Ideogram 第一个开源权重模型（2026-06-03）：9.3B 的**单流 Diffusio
 - [[classifier-free-guidance]] · 非对称 CFG
 - [[structured-caption-conditioning]] · JSON caption 训练
 - [[flow-matching]] · 训练目标（速度场）
-- [[rope]] · 3D Multimodal RoPE 把文本图像放一个位置系
+- [[kl-vae]] · DiT 工作的 latent 空间由它压缩出来（地基）
+- [[qwen3-vl]] · 当文本编码器的 VLM，取 13 个中间层
+- [[mrope]] · 3D Multimodal RoPE 把文本图像放一个位置系，bbox 靠它 honor
+- [[qk-rmsnorm]] · 单流 DiT 深层 attention 的稳训手段
 
 ## 我的批注 / 疑问
 - 这是 fish-speech 那条"把启发式塞进权重"主线的视觉版：与其在推理时拼 prompt 工程，不如训练时就用结构化监督——"the more relationships each caption pins down, the more grounded supervision"。
 - 9.3B 打赢 80B Hunyuan 的文本渲染，再次印证**数据/监督形态 > 纯堆参数**（dMel、Whisper 同款规律）。
-- bbox 用 MRoPE 的位置系来 honor，这点很漂亮：布局控制不是外挂模块，是借位置编码天然实现的。
+- bbox 用 [[mrope]] 的位置系来 honor，这点很漂亮：布局控制不是外挂模块，是借位置编码天然实现的。
 - License 非商用，商用要付费；nf4 量化能塞进单张 24GB。

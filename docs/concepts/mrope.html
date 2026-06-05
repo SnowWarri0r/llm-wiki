@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>M-RoPE · 多模态旋转位置编码 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · mrope</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>M-RoPE · 多模态旋转位置编码</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把 RoPE 的"一个位置数字"升级成<strong>三元组 (时间, 行, 列)</strong> —— 让同一套 attention 既能数文字的先后，又能知道图像 patch 在画面的第几行第几列。</p>
+<h2>直觉 · 一维的尺子量不了二维的画</h2>
+<p><a href="../concepts/rotary-position-embedding.html">rotary-position-embedding</a>（RoPE）给每个 token 一个<strong>位置 = 一个整数</strong>：第 0 个、第 1 个、第 2 个……这对纯文本够用，文字本来就是一条直线排下来的。</p>
+<p>但图像不是一条线。你把一张图切成 patch 喂进 transformer，如果只给它们排成 <code>0,1,2,...,255</code> 的一维序号，模型就只知道"这是第 137 块",<strong>不知道它在画面的左上还是右下</strong>。第 137 块和第 138 块在序号上挨着，可它俩可能一个在画面左边缘、一个在右边缘（只是同一行的头尾）。一维序号把二维空间结构压扁了。</p>
+<p>M-RoPE（Multimodal RoPE，Qwen2-VL 提出）的办法：<strong>别用一个数字，用三个</strong>——</p>
+<ul>
+<li><strong>t</strong>：时间轴（第几帧 / 文字的第几个 token）</li>
+<li><strong>h</strong>：高度轴（在画面第几行）</li>
+<li><strong>w</strong>：宽度轴（在画面第几列）</li>
+</ul>
+<p>一个 patch 的位置变成 <code>(t=10, h=4, w=7)</code> = "第 10 个时刻、第 4 行、第 7 列"。位置编码第一次<strong>带上了画面坐标</strong>。</p>
+<h2>怎么做的 · 把旋转维度劈成三份</h2>
+<p>RoPE 的本体是"按位置旋转 Q/K"，旋转角 = 位置 × 一组频率。M-RoPE 只改一件事：<strong>把那组旋转维度切成三段，每段用三元组里的一个分量去转</strong>。</p>
+<pre><code class="language-python"># RoPE: 所有维度都用同一个 position 转
+angles = position * freqs            # position 是标量
+
+# M-RoPE: 维度分成 3 段，分别用 t / h / w 转
+angles_t = t * freqs[:, group_t]     # 前 1/N 段 → 时间
+angles_h = h * freqs[:, group_h]     # 中间段   → 行
+angles_w = w * freqs[:, group_w]     # 后段     → 列
+# 拼回去，照样做 Q·K^T
+</code></pre>
+<p>点积出来后，attention score 里同时含了<strong>时间差、行差、列差</strong>三种相对位置。模型一次就能问出"这两块 patch 隔了几行几列"。</p>
+<h2>关键 · 文字会自动塌回普通 RoPE</h2>
+<p>最漂亮的设计：<strong>纯文本 token 的三元组三个分量相等</strong> <code>(t=5, h=5, w=5)</code>。三段旋转角一样 → M-RoPE 退化成普通一维 RoPE。</p>
+<figure style="margin:26px 0; padding:22px; background:#eef2f7; border:1px solid #9fb3c8; border-radius:4px;">
+<svg viewBox="0 0 700 260" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:monospace;">
+  <!-- 文本 -->
+  <text x="20" y="30" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#1f3a5f">文本 token：三轴相等 → 等价一维 RoPE</text>
+  <g font-size="11" fill="#3a3128">
+    <rect x="30" y="45" width="60" height="32" fill="#c8d4e2" stroke="#1f3a5f"/>
+    <text x="60" y="65" text-anchor="middle">(2,2,2)</text>
+    <rect x="100" y="45" width="60" height="32" fill="#c8d4e2" stroke="#1f3a5f"/>
+    <text x="130" y="65" text-anchor="middle">(3,3,3)</text>
+    <rect x="170" y="45" width="60" height="32" fill="#c8d4e2" stroke="#1f3a5f"/>
+    <text x="200" y="65" text-anchor="middle">(4,4,4)</text>
+    <text x="245" y="65" fill="#7a6f5d">… 像普通文字一样一个接一个</text>
+  </g>
+  <!-- 图像 -->
+  <text x="20" y="120" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#9b2c2c">图像 patch：t 固定，(h,w) = 行列坐标</text>
+  <g font-size="10" fill="#3a3128">
+    <!-- 3x3 patch grid, t=10 fixed -->
+    <rect x="30"  y="135" width="48" height="34" fill="#f3d9d9" stroke="#9b2c2c"/><text x="54"  y="156" text-anchor="middle">10,0,0</text>
+    <rect x="82"  y="135" width="48" height="34" fill="#f3d9d9" stroke="#9b2c2c"/><text x="106" y="156" text-anchor="middle">10,0,1</text>
+    <rect x="134" y="135" width="48" height="34" fill="#f3d9d9" stroke="#9b2c2c"/><text x="158" y="156" text-anchor="middle">10,0,2</text>
+    <rect x="30"  y="171" width="48" height="34" fill="#f3d9d9" stroke="#9b2c2c"/><text x="54"  y="192" text-anchor="middle">10,1,0</text>
+    <rect x="82"  y="171" width="48" height="34" fill="#f3d9d9" stroke="#9b2c2c"/><text x="106" y="192" text-anchor="middle">10,1,1</text>
+    <rect x="134" y="171" width="48" height="34" fill="#f3d9d9" stroke="#9b2c2c"/><text x="158" y="192" text-anchor="middle">10,1,2</text>
+    <rect x="30"  y="207" width="48" height="34" fill="#f3d9d9" stroke="#9b2c2c"/><text x="54"  y="228" text-anchor="middle">10,2,0</text>
+    <rect x="82"  y="207" width="48" height="34" fill="#f3d9d9" stroke="#9b2c2c"/><text x="106" y="228" text-anchor="middle">10,2,1</text>
+    <rect x="134" y="207" width="48" height="34" fill="#f3d9d9" stroke="#9b2c2c"/><text x="158" y="228" text-anchor="middle">10,2,2</text>
+  </g>
+  <text x="200" y="180" font-size="11" fill="#7a6f5d">同一张图 t 都=10（同时出现），</text>
+  <text x="200" y="198" font-size="11" fill="#7a6f5d">靠 (h,w) 区分它在画面哪一格。</text>
+  <text x="200" y="216" font-size="11" fill="#3a3128">→ 第几行第几列写进了位置本身</text>
+</svg>
+</figure>
+
+<p>这就是为什么一套 attention 能同时吃文字和图：<strong>文字是退化的图（行列恒等），图是展开的文字</strong>。</p>
+<h2>跟 Ideogram 4 的关系 · bbox 不是外挂</h2>
+<p><a href="../papers/ideogram-4.html">ideogram-4</a> 让你在 JSON caption 里给元素指定 bounding box，模型还真能 honor。它不靠额外的布局模块，<strong>就是借 M-RoPE 的位置系</strong>：你说"这个文字块在画面右上 (h,w) 区间"，等于直接给生成 token 指定了那片 (h,w) 坐标。布局控制天然长在位置编码里，这是 M-RoPE 给 T2I 的红利。</p>
+<h2>Qwen3-VL 的 Interleaved-MRoPE · 别让时间只拿到低频</h2>
+<p>原版 M-RoPE 把频率<strong>按段切</strong>：时间拿一整段低频、行拿中段、列拿高频。问题是时间轴只分到低频 → 长视频里时间分辨率不够。</p>
+<p>Qwen3-VL 的 <strong>Interleaved-MRoPE</strong> 改成<strong>交错分配</strong>：t/h/w 三个轴都横跨从低到高的全频段（像 <a href="../concepts/rotary-position-embedding.html">rotary-position-embedding</a> 里"低音鼓标大拍、高音钹标小拍"那样，每个轴都拿到完整的多尺度）。代价几乎为零，长视频时序推理明显更稳。</p>
+<h2>代码出处</h2>
+<ul>
+<li>M-RoPE 原始提法：Qwen2-VL 技术报告（2024）</li>
+<li>Interleaved-MRoPE：Qwen3-VL 技术报告 arXiv 2511.21631（2025-11）</li>
+<li>HuggingFace transformers <code>Qwen2VLRotaryEmbedding</code> / <code>Qwen3VL</code> 是参考实现</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/rotary-position-embedding.html">rotary-position-embedding</a> · 一维原版，M-RoPE 的地基</li>
+<li><a href="../concepts/positional-encoding.html">positional-encoding</a> · 位置编码家族全景</li>
+<li><a href="../concepts/qwen3-vl.html">qwen3-vl</a> · Interleaved-MRoPE 就出自这里</li>
+<li><a href="../papers/ideogram-4.html">ideogram-4</a> · 用 M-RoPE 的位置系实现 bbox 布局控制</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/ideogram-4.html"><span class="cat">paper</span>Ideogram 4.0 · 9.3B 单流 DiT, 把排版做进权重</a></li><li><a href="../concepts/qwen3-vl.html"><span class="cat">concept</span>Qwen3-VL · 当文本编码器用的视觉语言模型</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/mrope.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>
