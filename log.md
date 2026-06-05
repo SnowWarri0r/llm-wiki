@@ -566,3 +566,8 @@ skill 更新:
 - 诚实: 两篇都带 note/争议(MACD面积主观/背驰钝化/级别选择主观/走势终完美不可证伪)
 - 串点: 背驰=资金面量价背离; 只做当下=爱在冰川"按规则不预测"
 - 隐私 grep 干净
+
+## [2026-06-05] ingest | ideogram-4 前置概念补全
+- 新增 4 概念页：kl-vae / qwen3-vl / mrope / qk-rmsnorm（Ideogram 4 读不懂的前置零件）
+- 修 ideogram-4.md `[[rope]]` 死链 → 拆成 [[mrope]]（实际 rope 页是 rotary-position-embedding）
+- 关键概念段补 4 链接 + 正文 Qwen3-VL/MRoPE 加 wikilink

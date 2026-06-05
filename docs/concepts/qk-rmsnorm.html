@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>QK-Norm · 给 Q/K 做归一化稳住训练 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · qk-rmsnorm</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>QK-Norm · 给 Q/K 做归一化稳住训练</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>在算 attention 分数之前，先对 Query 和 Key 各做一次 RMSNorm —— <strong>防止点积越训越大、attention 塌成 one-hot 而炸训练</strong>。</p>
+<h2>直觉 · 麦克风别开到爆音</h2>
+<p>attention 的核心是 <code>softmax(Q·K^T / √d)</code>。点积 Q·K 越大，softmax 出来的分布越尖。</p>
+<p>深层大模型训着训着会出一个毛病：<strong>Q 和 K 的数值幅度悄悄涨上去</strong>（logit drift）。点积是两个大向量相乘，结果更大。一旦某个 logit 远超其它，softmax 几乎把全部权重压到一个 token 上 → attention 变成<strong>near one-hot</strong>：每个位置只盯死一个邻居，别的全看不见。</p>
+<p>后果有两层：</p>
+<ul>
+<li><strong>表达力没了</strong>：attention 本来该是"软地分配注意力到多个 token"，塌成 one-hot 等于退化成硬选择。</li>
+<li><strong>梯度炸了</strong>：softmax 在尖锐区的梯度极不稳，loss 开始发散。ViT-22B 不加 QK-Norm 直接训不动。</li>
+</ul>
+<p>类比：麦克风增益开太大，稍微有点声音就爆音削顶，细节全糊。<strong>QK-Norm = 在进 softmax 这个"放大器"之前先把音量拉回标准档</strong>。</p>
+<h2>怎么做的 · 一行 RMSNorm</h2>
+<pre><code class="language-python"># 普通 attention
+q = q_proj(x)
+k = k_proj(x)
+attn = softmax(q @ k.transpose() / sqrt(d))
+
+# 加了 QK-Norm
+q = q_proj(x)
+k = k_proj(x)
+q = rms_norm(q)          # ← 多这两行
+k = rms_norm(k)          #   把 Q/K 的模长归一化
+attn = softmax(q @ k.transpose() / sqrt(d))
+</code></pre>
+<p>RMSNorm 做的事：把向量除以它自己的均方根，<strong>模长被拉到一个固定尺度</strong>，只保留方向。这样不管训练把 Q/K 的幅度推到多大，进点积前都被压回标准档，logit 不会无限制膨胀。</p>
+<p>为什么用 RMSNorm 不用 LayerNorm：RMSNorm 少算一个减均值，更省、更快，效果在这里没差别——现代模型（LLaMA 系、Qwen 系）默认都用它。</p>
+<h2>一个易错点 · 在 RoPE 之前</h2>
+<p>顺序是 <strong>proj → QK-Norm → RoPE → 点积</strong>。先归一化稳住幅度，再做 <a href="../concepts/rotary-position-embedding.html">rotary-position-embedding</a> 的旋转（旋转是正交变换、不改模长，所以放归一化后面不会破坏它）。反过来先 RoPE 再 norm 也有人做，但主流实现是 norm 在前。</p>
+<h2>为什么算"免费的午餐"</h2>
+<p>它几乎零成本：每层多两次 RMSNorm（相对整个 attention 的开销可忽略），换来的是<strong>能开更高学习率、训练不发散、深层不塌缩</strong>。所以从 ViT-22B 之后，大模型、现代扩散模型（含单流 <a href="../concepts/diffusion-transformer.html">diffusion-transformer</a>）几乎都标配 QK-Norm —— <a href="../papers/ideogram-4.html">ideogram-4</a> 的 9.3B 单流 DiT 也用它来稳住深层 attention。</p>
+<h2>代码出处</h2>
+<ul>
+<li>提出：Scaling ViT to 22B Parameters, arXiv 2302.05442（QK-Norm 是其能稳训的关键之一）</li>
+<li>现代实现：几乎所有新 LLM / DiT 的 attention 模块里都有 <code>q_norm</code> / <code>k_norm</code></li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/layernorm.html">layernorm</a> · 归一化家族，RMSNorm 是它的简化版</li>
+<li><a href="../concepts/self-attention.html">self-attention</a> · QK-Norm 作用在 Q·K^T 之前</li>
+<li><a href="../concepts/rotary-position-embedding.html">rotary-position-embedding</a> · 顺序上 QK-Norm 在 RoPE 之前</li>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · 单流 DiT 也靠它稳深层训练</li>
+<li><a href="../papers/ideogram-4.html">ideogram-4</a> · 9.3B DiT 的 attention 用到</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/ideogram-4.html"><span class="cat">paper</span>Ideogram 4.0 · 9.3B 单流 DiT, 把排版做进权重</a></li><li><a href="../concepts/qwen3-vl.html"><span class="cat">concept</span>Qwen3-VL · 当文本编码器用的视觉语言模型</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/qk-rmsnorm.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

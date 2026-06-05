@@ -138,6 +138,10 @@
 - [Diffusion Transformer](wiki/concepts/diffusion-transformer.md) — 去噪网络从 U-Net 换成 Transformer；单流 vs 双流 MMDiT
 - [Classifier-Free Guidance](wiki/concepts/classifier-free-guidance.md) — 条件/无条件两支放大差值逼模型听话；Ideogram 的非对称变体
 - [结构化 Caption 条件](wiki/concepts/structured-caption-conditioning.md) — 不喂一句话喂 JSON，把位置/颜色/文字显式做进训练
+- [KL-VAE](wiki/concepts/kl-vae.md) — 把图压成 latent 的地基；扩散在压缩空间画画省 48 倍计算
+- [Qwen3-VL](wiki/concepts/qwen3-vl.md) — 当文本编码器用的 VLM；翻译官水平决定画师上限，取 13 个中间层
+- [M-RoPE](wiki/concepts/mrope.md) — 位置从一个数字升级成 (时间,行,列) 三元组；bbox 布局靠它
+- [QK-Norm](wiki/concepts/qk-rmsnorm.md) — 给 Q/K 做 RMSNorm 防 attention 塌成 one-hot 炸训练
 
 ### 音频 tokenization
 - [Log-Mel Spectrogram](wiki/concepts/log-mel-spectrogram.md) — 音频特征基础
