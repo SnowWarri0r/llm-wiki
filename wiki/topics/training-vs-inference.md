@@ -17,9 +17,10 @@ updated: 2026-05-25
 - [[gpt-1]] / [[gpt-2]] / [[gpt-3]] · decoder-only
 - [[bert]] · encoder-only
 - [[whisper]] · encoder-decoder（语音版）
-- [[rope]] · 位置编码在两种模式下的行为
+- [[rotary-position-embedding]] · 位置编码在两种模式下的行为
 
 ## 关键概念
+- [[next-token-forward-pass]] · 一次前向每个组件到底算了什么（QKV→两个softmax→token）
 - [[kv-cache]] · 推理加速的核心
 - [[prefill-decode]] · LLM 推理两阶段
 - [[causal-language-model]] · 训练时的 causal mask
