@@ -576,3 +576,7 @@ skill 更新:
 - 端到端走一遍前向：token→embedding→QKV→注意力softmax→堆N层→末位向量→LM head(撞词表)→输出softmax→挑token
 - 核心拆"两个softmax不是一回事"(位置 vs 词表)；"匹配token"=向量相似度点积；weight tying
 - 从 training-vs-inference topic 链入；顺手修该 topic 的 [[rope]] 死链
+
+## [2026-06-05] lint/expand | transformer-architecture 加"深度 vs 多头"节
+- 补"两个容易混的层数"：堆N层(竖/顺序接力) vs 多头(横/一层内并行concat) + 对比配图
+- next-token-forward-pass ④ 处加引流注解
