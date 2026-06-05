@@ -60,6 +60,64 @@
 <li>训练目标：重建图要像原图（L1/L2 + 感知损失 + 常配一个 GAN 判别器让细节更锐）。</li>
 </ul>
 <p>那 <strong>KL</strong> 是什么？VAE 的 encoder 输出的不是一个固定 latent，而是一个高斯分布（均值+方差），再采样。<strong>KL 项把这个分布往标准正态 N(0,1) 拉</strong>，作用是让 latent 空间<strong>平滑、规整、没有空洞</strong> —— 这样扩散模型在里面"游走加噪去噪"时，每个点都对应一张合理的图，不会采样到一片无意义的死区。</p>
+<figure style="margin:26px 0; padding:22px; background:#f4f1ea; border:1px solid #c4bba6; border-radius:4px;">
+<svg viewBox="0 0 720 410" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">
+  <!-- 顶部说明：encoder 吐的是云不是点 -->
+  <g font-family="JetBrains Mono,monospace">
+    <text x="20" y="26" font-size="11" fill="#3a3128">encoder 输出 = 一朵高斯云（均值±方差），采样取其中一点：</text>
+    <circle cx="470" cy="22" r="14" fill="#9b2c2c" opacity="0.12"/>
+    <circle cx="470" cy="22" r="9"  fill="#9b2c2c" opacity="0.18"/>
+    <circle cx="470" cy="22" r="4"  fill="#9b2c2c" opacity="0.30"/>
+    <circle cx="468" cy="24" r="2.2" fill="#9b2c2c"/>
+    <text x="492" y="26" font-size="10" fill="#7a6f5d">← 模糊一团，不是一个硬点</text>
+  </g>
+
+  <!-- ===== 左panel：没有 KL ===== -->
+  <text x="190" y="62" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#9b2c2c">没有 KL · 每张图各占一座孤岛</text>
+  <rect x="40" y="75" width="300" height="280" fill="#ffffff" stroke="#c4bba6" stroke-width="1"/>
+  <!-- 孤岛（彼此分开，中间大片空白） -->
+  <g>
+    <circle cx="100" cy="135" r="26" fill="#9b2c2c" opacity="0.10"/><circle cx="100" cy="135" r="13" fill="#9b2c2c" opacity="0.20"/><circle cx="100" cy="135" r="4" fill="#9b2c2c"/>
+    <circle cx="285" cy="120" r="24" fill="#4a6b3a" opacity="0.10"/><circle cx="285" cy="120" r="12" fill="#4a6b3a" opacity="0.20"/><circle cx="285" cy="120" r="4" fill="#4a6b3a"/>
+    <circle cx="115" cy="300" r="25" fill="#1f3a5f" opacity="0.10"/><circle cx="115" cy="300" r="12" fill="#1f3a5f" opacity="0.20"/><circle cx="115" cy="300" r="4" fill="#1f3a5f"/>
+    <circle cx="290" cy="295" r="24" fill="#b8841c" opacity="0.12"/><circle cx="290" cy="295" r="12" fill="#b8841c" opacity="0.22"/><circle cx="290" cy="295" r="4" fill="#b8841c"/>
+  </g>
+  <!-- 死区标记 -->
+  <text x="195" y="212" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="22" fill="#b03030">✗</text>
+  <text x="195" y="232" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#b03030">死区</text>
+  <text x="195" y="246" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">采样到这=噪声</text>
+  <!-- 游走箭头：从孤岛掉进死区 -->
+  <path d="M100,135 Q150,170 190,205" fill="none" stroke="#3a3128" stroke-width="1.4" stroke-dasharray="4 3"/>
+  <polygon points="190,205 183,199 187,209" fill="#3a3128"/>
+  <text x="60" y="345" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#7a6f5d">岛与岛之间是空的 → 游不过去</text>
+
+  <!-- ===== 右panel：有 KL ===== -->
+  <text x="530" y="62" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#1f3a5f">有 KL · 被拉向 N(0,1) 挤成连续一团</text>
+  <rect x="380" y="75" width="300" height="280" fill="#ffffff" stroke="#c4bba6" stroke-width="1"/>
+  <!-- N(0,1) 单位圈 -->
+  <circle cx="530" cy="215" r="105" fill="#1f3a5f" opacity="0.06"/>
+  <circle cx="530" cy="215" r="105" fill="none" stroke="#1f3a5f" stroke-width="1" stroke-dasharray="5 4"/>
+  <text x="530" y="120" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#1f3a5f">N(0,1)</text>
+  <!-- 密集点云：处处有图，没有空洞 -->
+  <g fill="#1f3a5f">
+    <circle cx="530" cy="215" r="3.4"/>
+    <circle cx="500" cy="200" r="3"/><circle cx="560" cy="205" r="3"/><circle cx="515" cy="240" r="3"/><circle cx="552" cy="238" r="3"/>
+    <circle cx="485" cy="225" r="3"/><circle cx="575" cy="228" r="3"/><circle cx="525" cy="180" r="3"/><circle cx="500" cy="170" r="2.7"/>
+    <circle cx="555" cy="175" r="2.7"/><circle cx="470" cy="205" r="2.7"/><circle cx="590" cy="200" r="2.7"/><circle cx="540" cy="265" r="2.7"/>
+    <circle cx="505" cy="268" r="2.7"/><circle cx="478" cy="250" r="2.7"/><circle cx="582" cy="252" r="2.7"/><circle cx="525" cy="150" r="2.5"/>
+    <circle cx="490" cy="245" r="2.5"/><circle cx="565" cy="195" r="2.5"/><circle cx="510" cy="215" r="2.7"/><circle cx="548" cy="218" r="2.7"/>
+    <circle cx="460" cy="225" r="2.4"/><circle cx="600" cy="222" r="2.4"/><circle cx="530" cy="285" r="2.4"/><circle cx="520" cy="195" r="2.7"/>
+  </g>
+  <!-- 游走箭头：处处落点都有效 -->
+  <path d="M485,200 Q530,235 575,210" fill="none" stroke="#9b2c2c" stroke-width="1.6" stroke-dasharray="4 3"/>
+  <polygon points="575,210 567,207 570,217" fill="#9b2c2c"/>
+  <text x="412" y="345" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#1f3a5f">挨在一起 → 中间每个点也是合理的图</text>
+</svg>
+</figure>
+
+<blockquote>
+<p>一句话看图：<strong>没 KL，latent 散成孤岛，岛之间是死区</strong>——扩散模型一旦游走到空白处，解出来就是噪声。<strong>有 KL，所有图被拉向原点挤成连续一团</strong>，中间任何一个点都对应一张合理的图，可以平滑地加噪去噪、插值过渡。</p>
+</blockquote>
 <h2>关键 · 这里的 KL 权重很小</h2>
 <p>这是常被误解的点：latent diffusion 用的 VAE，<strong>KL 权重压得极低</strong>。</p>
 <p>为什么？KL 太强 → latent 被硬塞进 N(0,1)，会丢细节、重建糊。这里要的不是一个"会生成图的强 VAE"，而是一个<strong>高保真的压缩器</strong>，只加一丁点 KL 把 latent 空间约束得别太野。</p>
