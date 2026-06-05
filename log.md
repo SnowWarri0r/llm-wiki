@@ -580,3 +580,7 @@ skill 更新:
 ## [2026-06-05] lint/expand | transformer-architecture 加"深度 vs 多头"节
 - 补"两个容易混的层数"：堆N层(竖/顺序接力) vs 多头(横/一层内并行concat) + 对比配图
 - next-token-forward-pass ④ 处加引流注解
+
+## [2026-06-05] expand | cross-attention 动画图 (动画试点)
+- 加自带动画 SVG (SMIL, 不依赖页面 JS): Q decoder→比对K→猫命中→V抄回→解出cat 循环
+- 概念页动画方案确立: SMIL <animate>/<animateTransform> 内联, render.py 原样放行
