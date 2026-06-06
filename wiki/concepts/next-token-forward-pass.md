@@ -31,45 +31,61 @@ Transformer 里有**两个完全不同的 softmax**，初学者几乎都会混�
     <marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#1f3a5f"/></marker>
   </defs>
   <!-- token -->
-  <rect x="20" y="95" width="74" height="40" rx="3" fill="#ffffff" stroke="#1f3a5f"/>
-  <text x="57" y="112" text-anchor="middle" font-size="11" fill="#3a3128">"垫"</text>
-  <text x="57" y="127" text-anchor="middle" font-size="8.5" fill="#7a6f5d">token id</text>
-  <line x1="94" y1="115" x2="118" y2="115" stroke="#1f3a5f" stroke-width="1.4" marker-end="url(#ar)"/>
+  <g class="reveal d1">
+    <rect x="20" y="95" width="74" height="40" rx="3" fill="#ffffff" stroke="#1f3a5f"/>
+    <text x="57" y="112" text-anchor="middle" font-size="11" fill="#3a3128">"垫"</text>
+    <text x="57" y="127" text-anchor="middle" font-size="8.5" fill="#7a6f5d">token id</text>
+    <line x1="94" y1="115" x2="118" y2="115" stroke="#1f3a5f" stroke-width="1.4" marker-end="url(#ar)"/>
+  </g>
   <!-- embedding -->
-  <rect x="120" y="90" width="86" height="50" rx="3" fill="#dbe6f0" stroke="#1f3a5f"/>
-  <text x="163" y="109" text-anchor="middle" font-size="10" fill="#3a3128">查表→向量</text>
-  <text x="163" y="124" text-anchor="middle" font-size="8.5" fill="#7a6f5d">[768]</text>
-  <line x1="206" y1="115" x2="230" y2="115" stroke="#1f3a5f" stroke-width="1.4" marker-end="url(#ar)"/>
+  <g class="reveal d2">
+    <rect x="120" y="90" width="86" height="50" rx="3" fill="#dbe6f0" stroke="#1f3a5f"/>
+    <text x="163" y="109" text-anchor="middle" font-size="10" fill="#3a3128">查表→向量</text>
+    <text x="163" y="124" text-anchor="middle" font-size="8.5" fill="#7a6f5d">[768]</text>
+    <line x1="206" y1="115" x2="230" y2="115" stroke="#1f3a5f" stroke-width="1.4" marker-end="url(#ar)"/>
+  </g>
   <!-- N layers -->
-  <rect x="232" y="78" width="150" height="74" rx="3" fill="#c8d4e2" stroke="#1f3a5f"/>
-  <text x="307" y="98" text-anchor="middle" font-size="10" font-weight="700" fill="#1f3a5f">× N 层</text>
-  <text x="307" y="116" text-anchor="middle" font-size="9" fill="#3a3128">QKV → attn softmax</text>
-  <text x="307" y="130" text-anchor="middle" font-size="9" fill="#3a3128">→ 加权和V → FFN</text>
-  <text x="307" y="145" text-anchor="middle" font-size="8" fill="#7a6f5d">每个位置仍是 [768]</text>
-  <line x1="382" y1="115" x2="406" y2="115" stroke="#1f3a5f" stroke-width="1.4" marker-end="url(#ar)"/>
+  <g class="reveal d3">
+    <rect x="232" y="78" width="150" height="74" rx="3" fill="#c8d4e2" stroke="#1f3a5f"/>
+    <text x="307" y="98" text-anchor="middle" font-size="10" font-weight="700" fill="#1f3a5f">× N 层</text>
+    <text x="307" y="116" text-anchor="middle" font-size="9" fill="#3a3128">QKV → attn softmax</text>
+    <text x="307" y="130" text-anchor="middle" font-size="9" fill="#3a3128">→ 加权和V → FFN</text>
+    <text x="307" y="145" text-anchor="middle" font-size="8" fill="#7a6f5d">每个位置仍是 [768]</text>
+    <line x1="382" y1="115" x2="406" y2="115" stroke="#1f3a5f" stroke-width="1.4" marker-end="url(#ar)"/>
+  </g>
   <!-- final vector -->
-  <rect x="408" y="90" width="92" height="50" rx="3" fill="#dbe6f0" stroke="#1f3a5f"/>
-  <text x="454" y="106" text-anchor="middle" font-size="9.5" fill="#3a3128">末位向量</text>
-  <text x="454" y="120" text-anchor="middle" font-size="8.5" fill="#7a6f5d">[768]</text>
-  <text x="454" y="132" text-anchor="middle" font-size="8" fill="#9b2c2c">"接下来"的浓缩</text>
-  <line x1="500" y1="115" x2="524" y2="115" stroke="#1f3a5f" stroke-width="1.4" marker-end="url(#ar)"/>
+  <g class="reveal d4">
+    <rect x="408" y="90" width="92" height="50" rx="3" fill="#dbe6f0" stroke="#1f3a5f"/>
+    <text x="454" y="106" text-anchor="middle" font-size="9.5" fill="#3a3128">末位向量</text>
+    <text x="454" y="120" text-anchor="middle" font-size="8.5" fill="#7a6f5d">[768]</text>
+    <text x="454" y="132" text-anchor="middle" font-size="8" fill="#9b2c2c">"接下来"的浓缩</text>
+    <line x1="500" y1="115" x2="524" y2="115" stroke="#1f3a5f" stroke-width="1.4" marker-end="url(#ar)"/>
+  </g>
   <!-- LM head -->
-  <rect x="526" y="82" width="86" height="66" rx="3" fill="#f3d9d9" stroke="#9b2c2c"/>
-  <text x="569" y="100" text-anchor="middle" font-size="9.5" font-weight="700" fill="#9b2c2c">LM head</text>
-  <text x="569" y="114" text-anchor="middle" font-size="8.5" fill="#3a3128">撞整个词表</text>
-  <text x="569" y="127" text-anchor="middle" font-size="8.5" fill="#3a3128">→ logits</text>
-  <text x="569" y="140" text-anchor="middle" font-size="8" fill="#7a6f5d">[50257]</text>
-  <line x1="612" y1="115" x2="636" y2="115" stroke="#9b2c2c" stroke-width="1.4" marker-end="url(#ar)"/>
+  <g class="reveal d5">
+    <rect x="526" y="82" width="86" height="66" rx="3" fill="#f3d9d9" stroke="#9b2c2c"/>
+    <text x="569" y="100" text-anchor="middle" font-size="9.5" font-weight="700" fill="#9b2c2c">LM head</text>
+    <text x="569" y="114" text-anchor="middle" font-size="8.5" fill="#3a3128">撞整个词表</text>
+    <text x="569" y="127" text-anchor="middle" font-size="8.5" fill="#3a3128">→ logits</text>
+    <text x="569" y="140" text-anchor="middle" font-size="8" fill="#7a6f5d">[50257]</text>
+    <line x1="612" y1="115" x2="636" y2="115" stroke="#9b2c2c" stroke-width="1.4" marker-end="url(#ar)"/>
+  </g>
   <!-- softmax + token -->
-  <rect x="638" y="90" width="66" height="50" rx="3" fill="#ffffff" stroke="#9b2c2c"/>
-  <text x="671" y="106" text-anchor="middle" font-size="9" fill="#9b2c2c">softmax</text>
-  <text x="671" y="119" text-anchor="middle" font-size="8" fill="#7a6f5d">→概率→挑</text>
-  <text x="671" y="133" text-anchor="middle" font-size="11" fill="#3a3128">"子"</text>
+  <g class="reveal d6">
+    <rect x="638" y="90" width="66" height="50" rx="3" fill="#ffffff" stroke="#9b2c2c"/>
+    <text x="671" y="106" text-anchor="middle" font-size="9" fill="#9b2c2c">softmax</text>
+    <text x="671" y="119" text-anchor="middle" font-size="8" fill="#7a6f5d">→概率→挑</text>
+    <text x="671" y="133" text-anchor="middle" font-size="11" fill="#3a3128">"子"</text>
+  </g>
   <!-- two softmax labels -->
-  <text x="307" y="185" text-anchor="middle" font-size="9" fill="#1f3a5f">↑ 注意力 softmax（在位置上，N 次）</text>
-  <text x="569" y="205" text-anchor="middle" font-size="9" fill="#9b2c2c">↑ 输出 softmax（在词表上，1 次）</text>
-  <line x1="307" y1="152" x2="307" y2="176" stroke="#1f3a5f" stroke-width="0.8" stroke-dasharray="3 2"/>
-  <line x1="569" y1="148" x2="569" y2="196" stroke="#9b2c2c" stroke-width="0.8" stroke-dasharray="3 2"/>
+  <g class="reveal d4">
+    <text x="307" y="185" text-anchor="middle" font-size="9" fill="#1f3a5f">↑ 注意力 softmax（在位置上，N 次）</text>
+    <line x1="307" y1="152" x2="307" y2="176" stroke="#1f3a5f" stroke-width="0.8" stroke-dasharray="3 2"/>
+  </g>
+  <g class="reveal d6">
+    <text x="569" y="205" text-anchor="middle" font-size="9" fill="#9b2c2c">↑ 输出 softmax（在词表上，1 次）</text>
+    <line x1="569" y1="148" x2="569" y2="196" stroke="#9b2c2c" stroke-width="0.8" stroke-dasharray="3 2"/>
+  </g>
 </svg>
 </figure>
 
@@ -119,10 +135,11 @@ logits  = h · W_outᵀ       # 一次算完 → [50257] 个分数，每个 toke
 
 <figure style="margin:26px 0; padding:22px; background:#f4eee2; border:1px solid #c4bba6; border-radius:4px;">
 <svg viewBox="0 0 700 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:JetBrains Mono,monospace;">
+  <defs><marker id="ar2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#9b2c2c"/></marker></defs>
   <!-- hidden vector h -->
-  <text x="70" y="30" text-anchor="middle" font-size="11" font-weight="700" fill="#9b2c2c">末位向量 h</text>
-  <text x="70" y="44" text-anchor="middle" font-size="8.5" fill="#7a6f5d">[768]</text>
-  <g>
+  <g class="reveal d1">
+    <text x="70" y="30" text-anchor="middle" font-size="11" font-weight="700" fill="#9b2c2c">末位向量 h</text>
+    <text x="70" y="44" text-anchor="middle" font-size="8.5" fill="#7a6f5d">[768]</text>
     <rect x="52" y="55" width="36" height="18" fill="#9b2c2c" opacity="0.7"/>
     <rect x="52" y="73" width="36" height="18" fill="#9b2c2c" opacity="0.35"/>
     <rect x="52" y="91" width="36" height="18" fill="#9b2c2c" opacity="0.85"/>
@@ -130,36 +147,43 @@ logits  = h · W_outᵀ       # 一次算完 → [50257] 个分数，每个 toke
     <text x="70" y="143" text-anchor="middle" font-size="9" fill="#7a6f5d">⋮</text>
   </g>
   <!-- dot with each row -->
-  <text x="200" y="30" text-anchor="middle" font-size="10" fill="#3a3128">跟每个 token 的代表向量点积</text>
-  <g font-size="10" fill="#3a3128">
-    <text x="150" y="62">"子"  · h →</text>
-    <text x="150" y="92">"垫"  · h →</text>
-    <text x="150" y="122">"猫"  · h →</text>
-    <text x="150" y="152">"香蕉" · h →</text>
-    <text x="150" y="178" font-size="9" fill="#7a6f5d">…5 万个…</text>
+  <g class="reveal d2">
+    <text x="200" y="30" text-anchor="middle" font-size="10" fill="#3a3128">跟每个 token 的代表向量点积</text>
+    <g font-size="10" fill="#3a3128">
+      <text x="150" y="62">"子"  · h →</text>
+      <text x="150" y="92">"垫"  · h →</text>
+      <text x="150" y="122">"猫"  · h →</text>
+      <text x="150" y="152">"香蕉" · h →</text>
+      <text x="150" y="178" font-size="9" fill="#7a6f5d">…5 万个…</text>
+    </g>
   </g>
   <!-- logits -->
-  <text x="330" y="30" text-anchor="middle" font-size="10" font-weight="700" fill="#3a3128">logits（原始分）</text>
-  <g font-size="10" fill="#3a3128">
-    <text x="330" y="62" text-anchor="middle">8.2</text>
-    <text x="330" y="92" text-anchor="middle">2.1</text>
-    <text x="330" y="122" text-anchor="middle">1.5</text>
-    <text x="330" y="152" text-anchor="middle">-3.0</text>
+  <g class="reveal d3">
+    <text x="330" y="30" text-anchor="middle" font-size="10" font-weight="700" fill="#3a3128">logits（原始分）</text>
+    <g font-size="10" fill="#3a3128">
+      <text x="330" y="62" text-anchor="middle">8.2</text>
+      <text x="330" y="92" text-anchor="middle">2.1</text>
+      <text x="330" y="122" text-anchor="middle">1.5</text>
+      <text x="330" y="152" text-anchor="middle">-3.0</text>
+    </g>
+    <line x1="370" y1="100" x2="400" y2="100" stroke="#9b2c2c" stroke-width="1.4" marker-end="url(#ar2)"/>
+    <text x="430" y="30" text-anchor="middle" font-size="10" font-weight="700" fill="#9b2c2c">softmax</text>
+    <text x="430" y="44" text-anchor="middle" font-size="8" fill="#7a6f5d">→概率</text>
   </g>
-  <line x1="370" y1="100" x2="400" y2="100" stroke="#9b2c2c" stroke-width="1.4" marker-end="url(#ar2)"/>
-  <defs><marker id="ar2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#9b2c2c"/></marker></defs>
-  <text x="430" y="30" text-anchor="middle" font-size="10" font-weight="700" fill="#9b2c2c">softmax</text>
-  <text x="430" y="44" text-anchor="middle" font-size="8" fill="#7a6f5d">→概率</text>
-  <!-- prob bars -->
+  <!-- prob bars：从左生长，错峰 -->
+  <rect class="grow-x reveal d4" x="470" y="54" width="180" height="16" fill="#9b2c2c"/>
+  <rect class="grow-x reveal d5" x="470" y="84" width="34" height="16" fill="#9b2c2c" opacity="0.6"/>
+  <rect class="grow-x reveal d6" x="470" y="114" width="20" height="16" fill="#9b2c2c" opacity="0.45"/>
+  <rect class="grow-x reveal d7" x="470" y="144" width="4" height="16" fill="#9b2c2c" opacity="0.3"/>
   <g>
-    <rect x="470" y="54" width="180" height="16" fill="#9b2c2c"/><text x="658" y="66" font-size="9" fill="#3a3128">"子" 0.89</text>
-    <rect x="470" y="84" width="34" height="16" fill="#9b2c2c" opacity="0.6"/><text x="512" y="96" font-size="9" fill="#3a3128">"垫" 0.06</text>
-    <rect x="470" y="114" width="20" height="16" fill="#9b2c2c" opacity="0.45"/><text x="498" y="126" font-size="9" fill="#3a3128">"猫" 0.03</text>
-    <rect x="470" y="144" width="4" height="16" fill="#9b2c2c" opacity="0.3"/><text x="482" y="156" font-size="9" fill="#3a3128">"香蕉" 0.00</text>
+    <text class="reveal d4" x="658" y="66" font-size="9" fill="#3a3128">"子" 0.89</text>
+    <text class="reveal d5" x="512" y="96" font-size="9" fill="#3a3128">"垫" 0.06</text>
+    <text class="reveal d6" x="498" y="126" font-size="9" fill="#3a3128">"猫" 0.03</text>
+    <text class="reveal d7" x="482" y="156" font-size="9" fill="#3a3128">"香蕉" 0.00</text>
   </g>
-  <text x="470" y="195" font-size="10" fill="#1f3a5f">↑ 在【整个词表】上归一化，加起来=1 → 这才是"下一个 token 的概率分布"</text>
-  <text x="470" y="225" font-size="10" fill="#9b2c2c">挑最高的 → 输出 "子"（贪心）</text>
-  <text x="470" y="245" font-size="9" fill="#7a6f5d">或按概率随机抽（temperature / top-k / top-p）</text>
+  <text class="reveal d7" x="470" y="195" font-size="10" fill="#1f3a5f">↑ 在【整个词表】上归一化，加起来=1 → 这才是"下一个 token 的概率分布"</text>
+  <text class="reveal d8" x="470" y="225" font-size="10" fill="#9b2c2c">挑最高的 → 输出 "子"（贪心）</text>
+  <text class="reveal d8" x="470" y="245" font-size="9" fill="#7a6f5d">或按概率随机抽（temperature / top-k / top-p）</text>
 </svg>
 </figure>
 

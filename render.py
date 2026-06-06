@@ -641,8 +641,11 @@ figure svg .draw.d5 { transition-delay: 1.15s; }
 figure svg .pulse { opacity: 0; transition: opacity .5s ease; }
 figure.play svg .pulse { opacity: 1; animation: figPulse 1.1s ease-out .9s; }
 @keyframes figPulse { 0%,100% { opacity: .85; } 45% { opacity: .35; } }
+/* 横向生长：条形从左长出（概率条/量柱）。配合 .reveal.dN 可错峰 */
+figure svg .grow-x { transform: scaleX(0); transform-box: fill-box; transform-origin: left center; transition: transform .7s ease; }
+figure.play svg .grow-x { transform: scaleX(1); }
 @media (prefers-reduced-motion: reduce) {
-  figure svg .reveal, figure svg .draw, figure svg .pulse { transition: none; opacity: 1; stroke-dashoffset: 0; animation: none; }
+  figure svg .reveal, figure svg .draw, figure svg .pulse, figure svg .grow-x { transition: none; opacity: 1; stroke-dashoffset: 0; transform: none; animation: none; }
 }
 """
 
