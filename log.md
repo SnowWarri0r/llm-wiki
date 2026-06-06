@@ -450,3 +450,18 @@ skill 更新:
 - wiki/concepts/grpo.md: 加 "RM ≠ critic" 段 —— RM/critic 对照表 + 静态对比图 (PPO 半边 critic 高亮"GRPO 砍的就是它" vs GRPO 半边组内 mean/std 占位) + "你以为/其实" 澄清; advantage 算法对比 A=r−V(s) vs A=(rᵢ−均值)/std
 - 关键点: GRPO = 省了 critic 的 PPO 变体, loss 还是 clip+KL 几乎没变; reasoning 场景 GRPO 常用规则 reward 连 RM 都不训
 - updated 28→31
+
+## [2026-06-01] ingest | Go GC · 从 mark-sweep 到 Green Tea (首个非 ML / systems 页)
+
+- 触发: 用户聊到 Go 1.26 的 Green Tea GC, 让做成 HTML; 选定"完整 Go GC 故事 + bespoke 精装页"
+- 先 WebFetch 核实: 官方 go.dev/blog/greenteagc + go1.26 notes —— 1.26 默认开 (1.25 实验), GC overhead 降 10–40%, Ice Lake/Zen 4+ 用 AVX-512 GFNI(VGF2P8AFFINEQB)再 ~10%, 关闭 GOEXPERIMENT=nogreenteagc; mark ≥35% 时间 stall 等内存; 工作单元 page(8KiB) 非 object; seen/scanned bitmap; FIFO 非 LIFO
+- wiki/papers/go-gc.md: scaffold (非 ML, source=greenteagc blog)
+- docs/papers/go-gc.html: bespoke, **deep 蓝 accent** (基础设施色), 5 figures:
+  - Fig 01 · 三色标记 (白/灰/黑图例 + roots 推进的灰色前线 + 不可达白簇被回收 + 三色不变式)
+  - Fig 02 · write barrier (左没 barrier: B.ptr=W 制造黑→白 + 删 G→W → W 漏标误删 ✗ / 右有 barrier: 写时染灰 W → 存活 ✓)
+  - Fig 03 · GC pacing 锯齿 (live 基线 / GOGC=100 触发线 2× / GOMEMLIMIT 天花板 → 逼近时锯齿变密)
+  - Fig 04 · graph flood vs Green Tea (左跨页乱跳红线"≥35% stall" / 右逐页 L→R 顺序扫; 城市街道 vs 高速类比) ← 主图
+  - Fig 05 · 一页怎么扫 (8KiB page + seen/scanned bitmap + FIFO 攒批 + AVX-512 整页 2 寄存器)
+  - glossary 12 条全闭环 (审计通过)
+- 工程落点: 纯 locality 优化不改代码, GC CPU% 掉; JSON 重/小对象 churn 大的服务值得量前后; 反直觉"扫一页 2% 就比 graph flood 快" → locality 本身才是赢点
+- 形态决策: 非 ML 系统页也走 docs/papers/ bespoke; 暂不抽 concept 页 (island, 避免孤儿), 术语全收 glossary
