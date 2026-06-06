@@ -465,3 +465,17 @@ skill 更新:
   - glossary 12 条全闭环 (审计通过)
 - 工程落点: 纯 locality 优化不改代码, GC CPU% 掉; JSON 重/小对象 churn 大的服务值得量前后; 反直觉"扫一页 2% 就比 graph flood 快" → locality 本身才是赢点
 - 形态决策: 非 ML 系统页也走 docs/papers/ bespoke; 暂不抽 concept 页 (island, 避免孤儿), 术语全收 glossary
+
+## [2026-06-03] ingest | 康波周期 · 经济的四季 (理财/决策线, 有争议框架)
+
+- 触发: 用户要做康波周期 + 缠论两页; 先做康波
+- 先 WebSearch/WebFetch 核实: Kondratiev 1920s 长波, Schumpeter 技术革命归因; 五次浪潮 Perez 定年 1771/1829/1875/1908/1971; A相扩张/B相收缩; 主流(新古典)多不认, "概念硬套统计数据", 定年成因无共识; 周金涛"人生发财靠康波"本土化
+- wiki/papers/kondratiev-wave.md + docs/papers/kondratiev-wave.html: bespoke, **ochre 金 accent**, 5 figures:
+  - Fig 01 · 长波与四季 (正弦曲线 stroke draw 动画 + 四季底色带 + 繁荣顶/萧条底 + A/B相)
+  - Fig 02 · 五次技术浪潮 (timeline 5 humps + 年份技术 + 第六波 AI 虚线)
+  - Fig 03 · 四季资产轮动 (十字四象限钟: 回升→股/繁荣→商品/衰退→债/萧条→现金黄金 + 顺时针箭头)
+  - Fig 04 · 多周期嵌套 (基钦3-4y/朱格拉7-11y/库兹涅茨15-25y/康波50-60y 四条 + 叠加=实际)
+  - Fig 05 · 一生 vs 一个康波 (康波曲线 + A顺风/B逆风 两人黄金期落不同段)
+  - glossary 12 闭环
+- 诚实标争议: 顶部 warn 块 + §06 整节讲"罗盘不是钟表"; 跟 Psychology of Money "behavior>择时" 对照, 链到 psychology-of-money.html
+- 隐私: 全程只讲理论, 无个人持仓/工作语境; commit 前隐私 grep 干净 (吸取 go-gc 教训)
