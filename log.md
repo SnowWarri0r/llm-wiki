@@ -584,3 +584,8 @@ skill 更新:
 ## [2026-06-05] expand | cross-attention 动画图 (动画试点)
 - 加自带动画 SVG (SMIL, 不依赖页面 JS): Q decoder→比对K→猫命中→V抄回→解出cat 循环
 - 概念页动画方案确立: SMIL <animate>/<animateTransform> 内联, render.py 原样放行
+
+## [2026-06-05] infra | 概念页动画 harness (对齐 bespoke 质感)
+- render.py: CSS 加 .reveal/.draw/.pulse + figPulse + prefers-reduced-motion; CONCEPT_PAGE_TEMPLATE 注入 IntersectionObserver(滚动进视口加.play, 播一次)
+- cross-attention 重做: 循环SMIL → 滚动触发/描线/分阶段揭示 (Q比对K描线→猫pulse→V弧线抄回→=cat)
+- 后续静态图可按需用同 class 升级
