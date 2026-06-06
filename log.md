@@ -479,3 +479,16 @@ skill 更新:
   - glossary 12 闭环
 - 诚实标争议: 顶部 warn 块 + §06 整节讲"罗盘不是钟表"; 跟 Psychology of Money "behavior>择时" 对照, 链到 psychology-of-money.html
 - 隐私: 全程只讲理论, 无个人持仓/工作语境; commit 前隐私 grep 干净 (吸取 go-gc 教训)
+
+## [2026-06-03] ingest | 缠论 · 把走势拆成可数的结构 (技术分析, brick accent)
+
+- 接康波之后第二页; 先 WebSearch 核准定义: 形态学(分型/笔/线段/中枢)+动力学(背驰/级别); 中枢=连续三个次级别走势重叠区间[ZD,ZG]; 三类买卖点(1买跌破中枢后背驰/2买回调不破前低/3买突破中枢回测不进); 走势终完美; 李彪《教你炒股票108课》2006-2008
+- wiki/papers/chan-theory.md + docs/papers/chan-theory.html: bespoke, **brick 红 accent**, 5 figures:
+  - Fig 01 · 分型 (顶分型/底分型 各 3 根 K线, 中间最高/最低 + 包含处理)
+  - Fig 02 · 笔→线段 (折线分型点 底/顶 + 5 笔 + 线段 bracket ≥3笔)
+  - Fig 03 · 中枢 (三段次级别走势 + ZG上沿/ZD下沿重叠带 box)
+  - Fig 04 · 级别嵌套 (30分→5分→1分 自相似放大, 小级别一整段=大级别一笔)
+  - Fig 05 · 三类买卖点 (价格路径 + 中枢 box + 1买背驰底/2买回调不破/3买突破回测不进)
+  - glossary 12 闭环
+- 诚实标争议: 顶部 warn + §07 整节 "自洽≠有效, 事后总对, 划分主观, 无实证超额收益"; 两个 note 串康波(坐标系不是预言机) + psychology-of-money(behavior>预测)
+- 隐私 grep 干净 (内部服务名/个人持仓/做T 全无)
