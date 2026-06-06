@@ -571,3 +571,8 @@ skill 更新:
 - 新增 4 概念页：kl-vae / qwen3-vl / mrope / qk-rmsnorm（Ideogram 4 读不懂的前置零件）
 - 修 ideogram-4.md `[[rope]]` 死链 → 拆成 [[mrope]]（实际 rope 页是 rotary-position-embedding）
 - 关键概念段补 4 链接 + 正文 Qwen3-VL/MRoPE 加 wikilink
+
+## [2026-06-05] ingest | next-token-forward-pass 概念页
+- 端到端走一遍前向：token→embedding→QKV→注意力softmax→堆N层→末位向量→LM head(撞词表)→输出softmax→挑token
+- 核心拆"两个softmax不是一回事"(位置 vs 词表)；"匹配token"=向量相似度点积；weight tying
+- 从 training-vs-inference topic 链入；顺手修该 topic 的 [[rope]] 死链
