@@ -76,6 +76,69 @@ target_tokens → embedding → + positional_encoding → 进 decoder
 <li>dropout 0.1</li>
 <li>总参数 65M</li>
 </ul>
+<h2>两个容易混的"层数" · 深度(N层) vs 多头(h头)</h2>
+<p>初学者几乎都会把"堆 N 层"和"多头"混成一团。它们是<strong>两个垂直的轴</strong>：</p>
+<ul>
+<li><strong>堆 N 层 = 深度，竖着叠</strong>。把上面那个完整 block（多头注意力 + FFN + Add&amp;Norm）上下叠 N 个，第 1 层输出喂第 2 层，<strong>顺序接力</strong>。GPT-2 small = 12 层。</li>
+<li><strong>多头 = 宽度，横着拆</strong>。在<strong>一层内部</strong>，把注意力拆成 h 个并行的头，各看一种关系，算完<strong>立刻 concat 汇总</strong>成这一层的输出（详见 <a href="../concepts/multi-head-attention.html">multi-head-attention</a>）。GPT-2 small 每层 12 头。</li>
+</ul>
+<p>所以 GPT-2 small = <strong>12 层 × 每层 12 头</strong>，但<strong>第 1 层的头和第 2 层的头是各自独立的两批</strong>，不是同一组头穿过所有层。</p>
+<figure style="margin:26px 0; padding:22px; background:#eef2f7; border:1px solid #9fb3c8; border-radius:4px;">
+<svg viewBox="0 0 700 360" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:JetBrains Mono,monospace;">
+  <defs><marker id="au" markerWidth="8" markerHeight="8" refX="3" refY="1" orient="auto"><path d="M0,6 L3,0 L6,6 Z" fill="#1f3a5f"/></marker>
+  <marker id="ad" markerWidth="8" markerHeight="8" refX="3" refY="5" orient="auto"><path d="M0,0 L3,6 L6,0 Z" fill="#9b2c2c"/></marker></defs>
+
+  <!-- ===== 左：深度（竖着堆 N 层） ===== -->
+  <text x="160" y="28" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#1f3a5f">深度 · 竖着堆 N 层（顺序接力）</text>
+  <!-- input -->
+  <text x="160" y="330" text-anchor="middle" font-size="9" fill="#7a6f5d">输入向量序列</text>
+  <line x1="160" y1="320" x2="160" y2="300" stroke="#1f3a5f" stroke-width="1.6" marker-end="url(#au)"/>
+  <!-- layer 1 -->
+  <rect x="90" y="262" width="140" height="36" rx="3" fill="#c8d4e2" stroke="#1f3a5f"/><text x="160" y="285" text-anchor="middle" font-size="10" fill="#1f3a5f">Layer 1 · 词法/局部</text>
+  <line x1="160" y1="262" x2="160" y2="242" stroke="#1f3a5f" stroke-width="1.6" marker-end="url(#au)"/>
+  <!-- layer 2 -->
+  <rect x="90" y="204" width="140" height="36" rx="3" fill="#c8d4e2" stroke="#1f3a5f"/><text x="160" y="227" text-anchor="middle" font-size="10" fill="#1f3a5f">Layer 2 · 短语/句法</text>
+  <line x1="160" y1="204" x2="160" y2="184" stroke="#1f3a5f" stroke-width="1.6" marker-end="url(#au)"/>
+  <!-- dots -->
+  <text x="160" y="172" text-anchor="middle" font-size="14" fill="#7a6f5d">⋮</text>
+  <line x1="160" y1="158" x2="160" y2="138" stroke="#1f3a5f" stroke-width="1.6" marker-end="url(#au)"/>
+  <!-- layer N -->
+  <rect x="90" y="100" width="140" height="36" rx="3" fill="#aec4da" stroke="#1f3a5f"/><text x="160" y="123" text-anchor="middle" font-size="10" fill="#1f3a5f">Layer N · 语义/意图</text>
+  <line x1="160" y1="100" x2="160" y2="80" stroke="#1f3a5f" stroke-width="1.6" marker-end="url(#au)"/>
+  <text x="160" y="70" text-anchor="middle" font-size="9" fill="#9b2c2c">末位向量（层层精炼后的浓缩）</text>
+  <!-- one layer pointer -->
+  <line x1="230" y1="222" x2="370" y2="200" stroke="#9b2c2c" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="300" y="248" text-anchor="middle" font-size="8.5" fill="#9b2c2c">放大任意一层 →</text>
+
+  <!-- ===== 右：宽度（一层内部 h 个头） ===== -->
+  <text x="530" y="28" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#9b2c2c">宽度 · 一层里 h 个头（并行汇总）</text>
+  <rect x="400" y="46" width="260" height="248" rx="4" fill="#ffffff" stroke="#9b2c2c" stroke-dasharray="5 3"/>
+  <text x="530" y="64" text-anchor="middle" font-size="9" fill="#7a6f5d">这就是 Layer 2 内部（任意一层都一样）</text>
+  <!-- in -->
+  <line x1="530" y1="72" x2="530" y2="92" stroke="#9b2c2c" stroke-width="1.4" marker-end="url(#ad)"/>
+  <!-- heads -->
+  <g font-size="8.5">
+    <rect x="412" y="94" width="54" height="40" rx="3" fill="#f3d9d9" stroke="#9b2c2c"/><text x="439" y="111" text-anchor="middle" fill="#3a3128">head1</text><text x="439" y="125" text-anchor="middle" fill="#7a6f5d">句法</text>
+    <rect x="472" y="94" width="54" height="40" rx="3" fill="#f3d9d9" stroke="#9b2c2c"/><text x="499" y="111" text-anchor="middle" fill="#3a3128">head2</text><text x="499" y="125" text-anchor="middle" fill="#7a6f5d">语义</text>
+    <rect x="532" y="94" width="54" height="40" rx="3" fill="#f3d9d9" stroke="#9b2c2c"/><text x="559" y="111" text-anchor="middle" fill="#3a3128">head3</text><text x="559" y="125" text-anchor="middle" fill="#7a6f5d">共指</text>
+    <rect x="592" y="94" width="54" height="40" rx="3" fill="#f3d9d9" stroke="#9b2c2c"/><text x="619" y="111" text-anchor="middle" fill="#3a3128">…h</text><text x="619" y="125" text-anchor="middle" fill="#7a6f5d">…</text>
+  </g>
+  <!-- lines to concat -->
+  <line x1="439" y1="134" x2="530" y2="158" stroke="#bfa46a" stroke-width="0.9"/>
+  <line x1="499" y1="134" x2="530" y2="158" stroke="#bfa46a" stroke-width="0.9"/>
+  <line x1="559" y1="134" x2="530" y2="158" stroke="#bfa46a" stroke-width="0.9"/>
+  <line x1="619" y1="134" x2="530" y2="158" stroke="#bfa46a" stroke-width="0.9"/>
+  <rect x="455" y="158" width="150" height="26" rx="3" fill="#f0e2c4" stroke="#b8841c"/><text x="530" y="175" text-anchor="middle" font-size="9" fill="#7a5a12">concat + 线性 W_O（当场汇总）</text>
+  <line x1="530" y1="184" x2="530" y2="200" stroke="#9b2c2c" stroke-width="1.4" marker-end="url(#ad)"/>
+  <rect x="470" y="202" width="120" height="26" rx="3" fill="#dbe6f0" stroke="#1f3a5f"/><text x="530" y="219" text-anchor="middle" font-size="9" fill="#1f3a5f">FFN + Add&amp;Norm</text>
+  <line x1="530" y1="228" x2="530" y2="262" stroke="#9b2c2c" stroke-width="1.4" marker-end="url(#ad)"/>
+  <text x="530" y="280" text-anchor="middle" font-size="9" fill="#9b2c2c">这一层的输出 → 喂给上一层</text>
+</svg>
+</figure>
+
+<blockquote>
+<p>一句话记牢：<strong>头是"一层里横向并行、当场 concat"，层是"纵向逐层接力、越叠越抽象"</strong>。多头扩的是单层的表达力，堆层扩的是组合的深度——跟 CNN 浅层认边缘、深层认物体一个道理。</p>
+</blockquote>
 <h2>现代变种</h2>
 <ul>
 <li><strong>GPT 系列</strong>：去掉 encoder，纯 decoder + causal mask（用 decoder 做完整任务）</li>
