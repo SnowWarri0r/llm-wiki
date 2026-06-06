@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>KL-VAE · 把图压进 latent 的那层地基 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · kl-vae</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>KL-VAE · 把图压进 latent 的那层地基</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>一个轻度正则的自编码器，把 512×512×3 的像素图压成 64×64×4 的小 latent —— <strong>扩散模型不在像素上画画，在这个压缩空间里画，省 48 倍计算</strong>。</p>
+<h2>直觉 · 别在 4K 画布上猜噪声</h2>
+<p>直接在像素上做扩散（512×512×3 ≈ 78 万个数）太贵：每一步去噪都要在这么大的张量上跑一遍网络，2K 图更是天文数字。</p>
+<p>观察是：<strong>自然图像有巨大冗余</strong>。隔壁像素几乎一样，整片天空就一个颜色。真正的"信息"远少于像素数。</p>
+<p>所以 latent diffusion 的套路（Stable Diffusion / FLUX / <a href="../papers/ideogram-4.html">ideogram-4</a> 全是这路子）：</p>
+<ol>
+<li>先训一个 <strong>VAE</strong>，把图压成一张小得多的 latent（64×64×4，约 1.6 万个数，缩了 48 倍）。</li>
+<li><strong>扩散模型（DiT）只在这张小 latent 上工作</strong> —— 加噪、去噪、flow matching 全在 latent 空间。</li>
+<li>画完的 latent 再用 VAE 的 decoder 还原成像素图。</li>
+</ol>
+<p><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> 那条"ODE 从噪声到干净 latent"里的 latent，就是这个 VAE 定义出来的。VAE 是地基，DiT 在上面盖楼。</p>
+<h2>怎么做的 · encoder / decoder + 一点 KL</h2>
+<pre><code>像素图 ──encoder──▶ latent (64×64×4) ──decoder──▶ 重建图
+   512×512×3          压缩 48×            还原回像素
+</code></pre>
+<ul>
+<li><strong>Encoder</strong>：一串卷积下采样，把图压成低分辨率多通道的 latent。</li>
+<li><strong>Decoder</strong>：反过来上采样，把 latent 还原成像素。</li>
+<li>训练目标：重建图要像原图（L1/L2 + 感知损失 + 常配一个 GAN 判别器让细节更锐）。</li>
+</ul>
+<p>那 <strong>KL</strong> 是什么？VAE 的 encoder 输出的不是一个固定 latent，而是一个高斯分布（均值+方差），再采样。<strong>KL 项把这个分布往标准正态 N(0,1) 拉</strong>，作用是让 latent 空间<strong>平滑、规整、没有空洞</strong> —— 这样扩散模型在里面"游走加噪去噪"时，每个点都对应一张合理的图，不会采样到一片无意义的死区。</p>
+<h2>关键 · 这里的 KL 权重很小</h2>
+<p>这是常被误解的点：latent diffusion 用的 VAE，<strong>KL 权重压得极低</strong>。</p>
+<p>为什么？KL 太强 → latent 被硬塞进 N(0,1)，会丢细节、重建糊。这里要的不是一个"会生成图的强 VAE"，而是一个<strong>高保真的压缩器</strong>，只加一丁点 KL 把 latent 空间约束得别太野。</p>
+<p>所以它更像"<strong>一个带轻微正则的自编码器</strong>"，而不是教科书里那种靠自己采样生成的 VAE。生成能力全交给上面的扩散模型，VAE 只负责忠实地压缩和还原。</p>
+<h2>一个数字直觉</h2>
+<ul>
+<li>像素：512×512×3 = 786,432 个数</li>
+<li>latent：64×64×4 = 16,384 个数</li>
+<li>DiT 每一步去噪的计算量直接缩到 ~1/48 —— 这就是 latent diffusion 能跑 2K 原生图的底气。</li>
+</ul>
+<h2>代码出处</h2>
+<ul>
+<li>提出：Latent Diffusion Models (LDM), Rombach et al. 2021, arXiv 2112.10752</li>
+<li>参考实现：diffusers 库 <code>AutoencoderKL</code></li>
+<li>Ideogram / FLUX / SD3 都在自家训练的 KL-VAE latent 上做 DiT</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · DiT 工作的 latent 空间就是 VAE 给的</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · 速度场学的是 latent 空间里噪声→干净的路径</li>
+<li><a href="../concepts/patch-embedding.html">patch-embedding</a> · DiT 把 latent 再切 patch 喂进 transformer</li>
+<li><a href="../papers/ideogram-4.html">ideogram-4</a> · 单流 DiT 在 KL-VAE 的 latent 上做生成</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/ideogram-4.html"><span class="cat">paper</span>Ideogram 4.0 · 9.3B 单流 DiT, 把排版做进权重</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/kl-vae.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>
