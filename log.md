@@ -511,3 +511,18 @@ skill 更新:
   - 纯前端 JS: 输入实时 substring 过滤 + chip 领域过滤, 组合生效, 空段自动隐藏
 - 5 个非 ML 页加 tags: go-gc[系统] / kondratiev-wave·chan-theory·net-profit-gap[金融] / discourses-salt-iron[史]
 - 验证: 搜"均输"→盐铁论、"multi-head"→attention(只在glossary的词也能命中); 领域分布 ML99/理财22/金融3/系统1/史1=126
+
+## [2026-06-04] ingest | 资金面 · 量能与共识 (资金量能+资金共识合一页)
+
+- 用户先前分开提"资金量能"+"资金共识", 经确认合成一页(一体两面: 量能=燃料, 共识=方向)
+- WebSearch 核准游资框架: 分歧转一致(分歧日爆量/一致日缩量封板, 仅龙头+板块逻辑)、筹码集中度、抱团、量价关系(放量/缩量×涨/跌)、量在价先
+- wiki/papers/capital-flow.md + docs/papers/capital-flow.html: bespoke, **deep 蓝 accent**, tags:[金融], 5 figures:
+  - Fig 01 · 量价四象限 (放量涨/放量跌/缩量涨/缩量跌 各含义)
+  - Fig 02 · 量价配合 vs 顶背离 (价量齐升 / 价新高量萎缩; 量柱递增vs递减)
+  - Fig 03 · 分歧转一致 (分歧日爆量震荡K线 → 一致日缩量封板)
+  - Fig 04 · 筹码集中 vs 分散 (资金扎堆龙头 vs 撒胡椒面)
+  - Fig 05 · 量能×共识 二维四象限 (主升浪/缩量推升/分歧博弈/无人问津)
+  - 修了 Fig 05 defs 在 svg 外的 bug
+- 顶部 warn + §07: 经验派、高度主观、易事后解释、无学术实证、生态随量化监管变
+- 串点: 量价背离=缠论背驰=净利润断层缺口回补, 三套语言同一问题"价格还有没有资金跟"; 链 kondratiev/chan/net-profit-gap/psychology-of-money
+- glossary 12 闭环; 隐私 grep 干净
