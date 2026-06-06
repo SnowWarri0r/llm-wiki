@@ -27,6 +27,7 @@
 - [盐铁论 · 两千年前的国营 vs 民营](wiki/papers/discourses-salt-iron.md) — 史/政治经济学: 公元前81年盐铁会议, 桑弘羊财政机器 vs 贤良文学民本, 富国强兵 vs 藏富于民; 两千年回声
 - [净利润断层 · 业绩惊喜 + 跳空缺口](wiki/papers/net-profit-gap.md) — 交易/事件驱动: 净利润惊喜 + 断层缺口, 本质捕捉 PEAD(Ball&Brown 1968); 有学术底子但会衰减
 - [资金面 · 量能与共识](wiki/papers/capital-flow.md) — 交易/盘口经验派: 量能(量价关系) + 共识(游资分歧转一致/筹码集中/抱团); 经验派语言, 易事后解释
+- [爱在冰川 · 低吸待涨的道法术](wiki/papers/aizai-bingchuan.md) — 交易/短线经验派: 道(低吸待涨极简循环)→法(横盘龙头低吸/大智大勇/潜伏)→术(揉搓线/做小T); 从公开复盘合集提炼, 非荐股
 - [Ideogram 4.0 · 9.3B 单流 DiT](wiki/papers/ideogram-4.md) — 文生图开源权重: 单流 DiT + Qwen3-VL 文本编码器 + 结构化 JSON caption(bbox/调色板); 9.3B 文本渲染碾压 80B
 
 ## Books · 书籍精讲
