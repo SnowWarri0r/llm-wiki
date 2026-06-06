@@ -442,3 +442,11 @@ skill 更新:
 - docs/papers/ppo.html: TL;DR 下加 "先打底" note 链到该页
 - 回链: policy-gradient / advantage-function / clipped-surrogate-objective / rlhf / grpo 链接段都加 [[rl-for-llm-people]]
 - index.md: 强化学习/对齐 段置顶该页
+
+## [2026-05-31] query | RM ≠ critic (用户问 GRPO 是不是也要训 RM)
+
+- 触发: 用户问"GRPO 不也得训奖励模型吗, 跟 PPO 区别不大吧" —— 把 reward model 和 critic 搞混
+- 澄清: GRPO 砍的是 critic (value 网络 V(s), 跟 policy 同样大), 不是 RM; RM 是 RLHF 上游, PPO/GRPO 共用, 不是区分点
+- wiki/concepts/grpo.md: 加 "RM ≠ critic" 段 —— RM/critic 对照表 + 静态对比图 (PPO 半边 critic 高亮"GRPO 砍的就是它" vs GRPO 半边组内 mean/std 占位) + "你以为/其实" 澄清; advantage 算法对比 A=r−V(s) vs A=(rᵢ−均值)/std
+- 关键点: GRPO = 省了 critic 的 PPO 变体, loss 还是 clip+KL 几乎没变; reasoning 场景 GRPO 常用规则 reward 连 RM 都不训
+- updated 28→31
