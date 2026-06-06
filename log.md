@@ -589,3 +589,8 @@ skill 更新:
 - render.py: CSS 加 .reveal/.draw/.pulse + figPulse + prefers-reduced-motion; CONCEPT_PAGE_TEMPLATE 注入 IntersectionObserver(滚动进视口加.play, 播一次)
 - cross-attention 重做: 循环SMIL → 滚动触发/描线/分阶段揭示 (Q比对K描线→猫pulse→V弧线抄回→=cat)
 - 后续静态图可按需用同 class 升级
+
+## [2026-06-05] expand | kl-vae + 前向链路 升级动画
+- kl-vae 死区图: 孤岛reveal→游走线draw→死区reveal; 右N(0,1)reveal→点云reveal→有效线draw
+- 前向链路图: 6盒子分阶段揭示组(d1-d6); LM head匹配图: 概率条 grow-x 从左生长错峰
+- render.py 加 .grow-x (transform-box:fill-box 横向生长) + reduced-motion 兜底
