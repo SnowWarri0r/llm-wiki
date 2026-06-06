@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>缠论 · 把走势拆成可数的结构</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --accent: var(--brick); --accent-soft: var(--brick-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(46px, 7.5vw, 80px); line-height: 0.94; letter-spacing: -0.03em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+.warn { background: #f6e7d4; border: 1px solid var(--ochre); border-left: 4px solid var(--brick); padding: 16px 20px; margin: 24px 0; border-radius: 0 4px 4px 0; font-size: 16px; color: var(--ink-2); }
+.warn .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--brick); font-weight: 700; display: block; margin-bottom: 4px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 36px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
+p { margin: 12px 0; } strong { font-weight: 700; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--brick-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--brick); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--brick); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--brick-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--brick-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* ch-specific */
+.ch-svg { width: 100%; height: auto; display: block; }
+.ch-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .ch-rev { opacity: 1; }
+figure.play .ch-rev.d1 { transition-delay: 0.15s; }
+figure.play .ch-rev.d2 { transition-delay: 0.45s; }
+figure.play .ch-rev.d3 { transition-delay: 0.75s; }
+figure.play .ch-rev.d4 { transition-delay: 1.05s; }
+figure.play .ch-rev.d5 { transition-delay: 1.35s; }
+.ch-draw { stroke-dasharray: 2000; stroke-dashoffset: 2000; transition: stroke-dashoffset 2.2s ease; }
+figure.play .ch-draw { stroke-dashoffset: 0; }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · chan-theory</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">技术分析 · 缠中说禅 · 自洽但主观</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 技术分析 · 缠中说禅</div>
+  <h1 class="title">缠论 ·<br /><span class="em">把走势拆成积木。</span></h1>
+  <div class="byline">缠中说禅 · 李彪 · 《教你炒股票 108 课》 · 2006–2008</div>
+  <p class="dek">普通技术分析靠"形态像不像"，主观。缠论想把 K 线走势拆成一套有递归定义的积木 —— 分型、笔、线段、中枢 —— 让"现在是什么结构、该等什么"变得可判定。一套自洽得惊人、但也主观得惊人的系统。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>缠论<a class="jr" href="#g-01">1</a>（缠中说禅，李彪）把走势自下而上拆成可数结构：<strong>K 线包含处理</strong><a class="jr" href="#g-03">3</a> → <strong>分型</strong><a class="jr" href="#g-04">4</a> → <strong>笔</strong><a class="jr" href="#g-05">5</a> → <strong>线段</strong><a class="jr" href="#g-06">6</a> → <strong>中枢</strong><a class="jr" href="#g-07">7</a>（连续三个次级别走势的重叠区间，体系核心）。再用<strong>走势类型</strong><a class="jr" href="#g-08">8</a>（趋势/盘整）、<strong>级别自相似嵌套</strong><a class="jr" href="#g-09">9</a>、<strong>背驰</strong><a class="jr" href="#g-10">10</a>（动能减弱，看 MACD）判断<strong>三类买卖点</strong><a class="jr" href="#g-11">11</a>。哲学是「<strong>走势终完美</strong>」<a class="jr" href="#g-02">2</a> —— 任何走势都会走完，分析当下不预测。<strong>但它自洽不等于有效，划分高度主观</strong><a class="jr" href="#g-12">12</a>。</p>
+</div>
+
+<div class="warn">
+  <span class="l">先说清楚</span>
+  <p>这页讲的是一套<strong>技术分析流派的结构与术语</strong>，不是被验证的盈利方法，也不是投资建议。缠论内部逻辑严密、能解释任何走势 —— 但"能解释一切"也意味着<strong>事后总对</strong>，且笔/线段/中枢的划分因人而异。当成"把走势说清楚的坐标系"，<strong>别当成稳赢信号</strong>。</p>
+</div>
+
+
+<!-- §01 -->
+<h2><span class="num">§ 01</span>它想干什么 · 走势终完美</h2>
+
+<p>缠论<a class="jr" href="#g-01">1</a> 是网名"缠中说禅"的李彪 2006–2008 年在博客连载的《教你炒股票 108 课》里搭出来的体系。普通技术分析说"这看着像头肩顶" —— 主观、靠感觉。缠论的野心是把走势拆成<strong>有明确递归定义的积木</strong>，让"现在是什么结构、下一步该等什么"变得可判定。</p>
+
+<p>贯穿全篇的哲学是「<strong>走势终完美</strong>」<a class="jr" href="#g-02">2</a>：任何一段走势类型最终都会走完、走"完美"。它的潜台词是 —— 你不是去<strong>预测</strong>未来，而是在<strong>当下</strong>识别"现在走到了哪一步、还差什么才完美"，然后按规则应对。这跟"我觉得要涨"的拍脑袋是两种思路。</p>
+
+<p>下面自下而上搭这套积木：K 线 → 分型 → 笔 → 线段 → 中枢 → 买卖点。</p>
+
+
+<!-- §02 -->
+<h2><span class="num">§ 02</span>地基 · 包含处理与分型</h2>
+
+<p>先去噪：相邻两根 K 线如果一根完全包含另一根，按当前方向<strong>合并成一根</strong><a class="jr" href="#g-03">3</a>，消掉细碎杂讯。处理完的 K 线再找<strong>分型</strong><a class="jr" href="#g-04">4</a> —— 走势的局部拐点：</p>
+
+<figure id="fig-fractal" class="fig-fractal">
+  <figcaption>
+    <span>Fig 01 · 分型</span>
+    <span class="fnum">三根 K 线定一个局部顶 / 底</span>
+  </figcaption>
+  <svg class="ch-svg" viewBox="0 0 880 330" xmlns="http://www.w3.org/2000/svg">
+    <!-- 顶分型 -->
+    <g class="ch-rev d1">
+      <text x="230" y="40" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="15" font-weight="700" fill="#9b2c2c">顶分型</text>
+      <rect x="100" y="80" width="260" height="180" rx="4" fill="none" stroke="#9b2c2c" stroke-width="1" stroke-dasharray="4 4"/>
+      <!-- candle 1 -->
+      <line x1="160" y1="150" x2="160" y2="230" stroke="#3a3128" stroke-width="1.4"/>
+      <rect x="150" y="170" width="20" height="40" fill="#9b2c2c"/>
+      <!-- candle 2 (中间最高) -->
+      <line x1="230" y1="100" x2="230" y2="180" stroke="#3a3128" stroke-width="1.4"/>
+      <rect x="220" y="120" width="20" height="40" fill="#efd6c8" stroke="#9b2c2c" stroke-width="1"/>
+      <!-- candle 3 -->
+      <line x1="300" y1="145" x2="300" y2="225" stroke="#3a3128" stroke-width="1.4"/>
+      <rect x="290" y="165" width="20" height="40" fill="#9b2c2c"/>
+      <circle cx="230" cy="100" r="4" fill="#9b2c2c"/>
+      <text x="230" y="282" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a3128">中间那根 高点最高、低点也最高</text>
+    </g>
+
+    <!-- 底分型 -->
+    <g class="ch-rev d3">
+      <text x="650" y="40" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="15" font-weight="700" fill="#4a6b3a">底分型</text>
+      <rect x="520" y="80" width="260" height="180" rx="4" fill="none" stroke="#4a6b3a" stroke-width="1" stroke-dasharray="4 4"/>
+      <line x1="580" y1="110" x2="580" y2="190" stroke="#3a3128" stroke-width="1.4"/>
+      <rect x="570" y="130" width="20" height="40" fill="#4a6b3a"/>
+      <!-- 中间最低 -->
+      <line x1="650" y1="160" x2="650" y2="240" stroke="#3a3128" stroke-width="1.4"/>
+      <rect x="640" y="180" width="20" height="40" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1"/>
+      <line x1="720" y1="115" x2="720" y2="195" stroke="#3a3128" stroke-width="1.4"/>
+      <rect x="710" y="135" width="20" height="40" fill="#4a6b3a"/>
+      <circle cx="650" cy="240" r="4" fill="#4a6b3a"/>
+      <text x="650" y="282" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a3128">中间那根 低点最低、高点也最低</text>
+    </g>
+
+    <text x="440" y="312" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" fill="#7a6f5d" class="ch-rev d5">分型是最小的拐点单位 —— 顶分型见顶, 底分型见底</text>
+  </svg>
+</figure>
+
+
+<!-- §03 -->
+<h2><span class="num">§ 03</span>笔与线段 · 往上搭一层</h2>
+
+<p>一个<strong>底分型</strong>到相邻<strong>顶分型</strong>（中间隔几根独立 K 线）连成一<strong>笔</strong><a class="jr" href="#g-05">5</a> —— 最小的走势单元。至少 3 笔、且彼此有重叠，组成更高一层的<strong>线段</strong><a class="jr" href="#g-06">6</a>。</p>
+
+<figure id="fig-bi" class="fig-bi">
+  <figcaption>
+    <span>Fig 02 · 笔 → 线段</span>
+    <span class="fnum">分型连成笔, 至少 3 笔成线段</span>
+  </figcaption>
+  <svg class="ch-svg" viewBox="0 0 880 320" xmlns="http://www.w3.org/2000/svg">
+    <!-- 走势折线 -->
+    <polyline class="ch-draw" points="80,250 220,110 340,200 480,80 600,180 740,70" fill="none" stroke="#9b2c2c" stroke-width="2.5"/>
+
+    <!-- 分型点 -->
+    <g class="ch-rev d3">
+      <circle cx="80" cy="250" r="5" fill="#4a6b3a"/><text x="80" y="275" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#4a6b3a">底</text>
+      <circle cx="220" cy="110" r="5" fill="#9b2c2c"/><text x="220" y="100" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#9b2c2c">顶</text>
+      <circle cx="340" cy="200" r="5" fill="#4a6b3a"/><text x="340" y="223" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#4a6b3a">底</text>
+      <circle cx="480" cy="80" r="5" fill="#9b2c2c"/><text x="480" y="70" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#9b2c2c">顶</text>
+      <circle cx="600" cy="180" r="5" fill="#4a6b3a"/><text x="600" y="203" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#4a6b3a">底</text>
+      <circle cx="740" cy="70" r="5" fill="#9b2c2c"/><text x="740" y="60" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#9b2c2c">顶</text>
+    </g>
+
+    <!-- 笔标注 -->
+    <g class="ch-rev d4" font-family="JetBrains Mono,monospace" font-size="10" fill="#7a6f5d">
+      <text x="150" y="170" text-anchor="middle">笔1</text>
+      <text x="280" y="170" text-anchor="middle">笔2</text>
+      <text x="410" y="135" text-anchor="middle">笔3</text>
+      <text x="540" y="140" text-anchor="middle">笔4</text>
+      <text x="670" y="135" text-anchor="middle">笔5</text>
+    </g>
+
+    <!-- 线段 bracket -->
+    <g class="ch-rev d5">
+      <path d="M 80 295 L 80 285 L 480 285 L 480 295" fill="none" stroke="#1f3a5f" stroke-width="1.2"/>
+      <text x="280" y="310" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#1f3a5f" font-weight="700">线段 (≥3 笔, 有重叠)</text>
+    </g>
+  </svg>
+</figure>
+
+
+<!-- §04 -->
+<h2><span class="num">§ 04</span>中枢 · 缠论的心脏</h2>
+
+<p><strong>中枢</strong><a class="jr" href="#g-07">7</a> 是整个体系的核心，定义干脆：<strong>连续三个次级别走势的重叠区间</strong>。把前三段的高点取最小值（记 ZG）、低点取最大值（记 ZD），<code>[ZD, ZG]</code> 这个被三段共同覆盖的价格带，就是中枢 —— 多空在这里反复争夺的盘整区。</p>
+
+<figure id="fig-zhongshu" class="fig-zhongshu">
+  <figcaption>
+    <span>Fig 03 · 中枢</span>
+    <span class="fnum">三段重叠的价格带 = ZG 上沿 / ZD 下沿</span>
+  </figcaption>
+  <svg class="ch-svg" viewBox="0 0 880 330" xmlns="http://www.w3.org/2000/svg">
+    <!-- 中枢区间 box -->
+    <rect class="ch-rev d4" x="170" y="130" width="520" height="70" fill="#efd6c8" opacity="0.6" stroke="#9b2c2c" stroke-width="1.2"/>
+    <!-- ZG / ZD 线 -->
+    <g class="ch-rev d4" font-family="JetBrains Mono,monospace" font-size="10">
+      <line x1="120" y1="130" x2="740" y2="130" stroke="#9b2c2c" stroke-width="1" stroke-dasharray="4 4"/>
+      <text x="748" y="134" fill="#9b2c2c" font-weight="700">ZG (高点的最小值)</text>
+      <line x1="120" y1="200" x2="740" y2="200" stroke="#1f3a5f" stroke-width="1" stroke-dasharray="4 4"/>
+      <text x="748" y="204" fill="#1f3a5f" font-weight="700">ZD (低点的最大值)</text>
+    </g>
+
+    <!-- 三段次级别走势 (各自上下穿过重叠带) -->
+    <polyline class="ch-draw" points="90,250 200,90 290,230 400,110 500,235 610,95 700,240" fill="none" stroke="#3a3128" stroke-width="2"/>
+
+    <g class="ch-rev d5" font-family="JetBrains Mono,monospace" font-size="10" fill="#7a6f5d" text-anchor="middle">
+      <text x="200" y="78">段1</text>
+      <text x="400" y="98">段2</text>
+      <text x="610" y="83">段3</text>
+    </g>
+
+    <text x="430" y="172" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#9b2c2c" class="ch-rev d4">中枢 = 三段共同覆盖的那条价格带</text>
+    <text x="430" y="305" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" fill="#3a3128" class="ch-rev d5">趋势 = 同向至少两个中枢; 盘整 = 只有一个中枢</text>
+  </svg>
+</figure>
+
+<p>有了中枢，<strong>走势类型</strong><a class="jr" href="#g-08">8</a> 就能定义：同方向连着至少<strong>两个</strong>中枢叫趋势（上涨/下跌），只有<strong>一个</strong>中枢叫盘整。走势就是"中枢 + 连接中枢的段"不断接龙。</p>
+
+
+<!-- §05 -->
+<h2><span class="num">§ 05</span>级别 · 自相似的俄罗斯套娃</h2>
+
+<p>缠论最像分形的地方：这套定义在<strong>每个级别重复</strong><a class="jr" href="#g-09">9</a>。1 分钟的中枢和走势，组成 5 分钟的一笔/一段；5 分钟的中枢，组成 30 分钟的走势…… 同一套"分型→笔→线段→中枢"在 1 分、5 分、30 分、日线、周线层层嵌套，自相似。</p>
+
+<figure id="fig-level" class="fig-level">
+  <figcaption>
+    <span>Fig 04 · 级别嵌套</span>
+    <span class="fnum">小级别的一整段 = 大级别的一笔</span>
+  </figcaption>
+  <svg class="ch-svg" viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg">
+    <!-- 30分 大走势 -->
+    <g class="ch-rev d1">
+      <text x="60" y="60" font-family="JetBrains Mono,monospace" font-size="11" fill="#9b2c2c" font-weight="700">30 分</text>
+      <polyline points="150,90 320,40 490,90 660,30" fill="none" stroke="#9b2c2c" stroke-width="2.6"/>
+      <rect x="150" y="32" width="170" height="66" fill="none" stroke="#1f3a5f" stroke-width="1.2" stroke-dasharray="4 3"/>
+      <text x="235" y="22" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#1f3a5f">这一笔放大 ↓</text>
+    </g>
+
+    <!-- 5分 放大 -->
+    <g class="ch-rev d3">
+      <text x="60" y="170" font-family="JetBrains Mono,monospace" font-size="11" fill="#b8841c" font-weight="700">5 分</text>
+      <polyline points="150,200 250,150 330,190 430,140 510,185 610,135" fill="none" stroke="#b8841c" stroke-width="2.2"/>
+      <rect x="150" y="135" width="200" height="65" fill="none" stroke="#1f3a5f" stroke-width="1.2" stroke-dasharray="4 3"/>
+      <text x="250" y="128" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#1f3a5f">这一笔再放大 ↓</text>
+    </g>
+
+    <!-- 1分 放大 -->
+    <g class="ch-rev d4">
+      <text x="60" y="290" font-family="JetBrains Mono,monospace" font-size="11" fill="#4a6b3a" font-weight="700">1 分</text>
+      <polyline points="150,320 210,285 260,312 320,280 370,308 430,275 490,305 560,270" fill="none" stroke="#4a6b3a" stroke-width="1.8"/>
+    </g>
+
+    <!-- 放大连线 -->
+    <g class="ch-rev d4" stroke="#1f3a5f" stroke-width="0.8" stroke-dasharray="3 3" fill="none">
+      <path d="M 150 98 L 150 135"/>
+      <path d="M 320 98 L 350 135"/>
+      <path d="M 150 200 L 150 248"/>
+      <path d="M 350 200 L 560 250"/>
+    </g>
+
+    <text x="700" y="200" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#3a3128" class="ch-rev d5">同一套定义<tspan x="700" dy="20">在每个级别</tspan><tspan x="700" dy="20">重复 —— 分形</tspan></text>
+  </svg>
+</figure>
+
+<p>级别是缠论操作的关键：你得先说清"在哪个级别交易"。大级别定方向、小级别找买卖点，<strong>同级别分解</strong>保证不把不同尺度的信号混着看。</p>
+
+
+<!-- §06 -->
+<h2><span class="num">§ 06</span>动力学 · 背驰与三类买卖点</h2>
+
+<p>结构搭好了，靠什么判断进出？<strong>背驰</strong><a class="jr" href="#g-10">10</a>：价格创了新高/新低，但动能（常看 MACD 红绿柱的面积）反而比上一次<strong>弱</strong> —— 力气跟不上了，趋势可能要尽。背驰是三类买卖点的发令枪。</p>
+
+<figure id="fig-bsp" class="fig-bsp">
+  <figcaption>
+    <span>Fig 05 · 三类买卖点</span>
+    <span class="fnum">1买背驰底 · 2买回调不破低 · 3买突破回测不进中枢</span>
+  </figcaption>
+  <svg class="ch-svg" viewBox="0 0 880 380" xmlns="http://www.w3.org/2000/svg">
+    <!-- 中枢 box -->
+    <rect class="ch-rev d3" x="300" y="170" width="260" height="70" fill="#efd6c8" opacity="0.55" stroke="#9b2c2c" stroke-width="1"/>
+    <text x="430" y="210" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#9b2c2c" class="ch-rev d3">中枢</text>
+
+    <!-- 价格路径 -->
+    <polyline class="ch-draw" points="60,90 140,180 200,140 280,300 360,190 420,240 500,185 540,235 620,120 700,165 820,70" fill="none" stroke="#3a3128" stroke-width="2.4"/>
+
+    <!-- 买点 -->
+    <g class="ch-rev d4" font-family="JetBrains Mono,monospace">
+      <circle cx="280" cy="300" r="6" fill="#9b2c2c"/>
+      <text x="280" y="330" text-anchor="middle" font-size="11" font-weight="700" fill="#9b2c2c">1 买</text>
+      <text x="280" y="345" text-anchor="middle" font-size="9" fill="#7a6f5d">下跌背驰底</text>
+
+      <circle cx="420" cy="240" r="6" fill="#b8841c"/>
+      <text x="420" y="268" text-anchor="middle" font-size="11" font-weight="700" fill="#b8841c">2 买</text>
+      <text x="420" y="283" text-anchor="middle" font-size="9" fill="#7a6f5d">回调不破前低</text>
+
+      <circle cx="700" cy="165" r="6" fill="#4a6b3a"/>
+      <text x="700" y="150" text-anchor="middle" font-size="11" font-weight="700" fill="#4a6b3a">3 买</text>
+      <text x="700" y="138" text-anchor="middle" font-size="9" fill="#7a6f5d">突破后回测不进中枢</text>
+    </g>
+
+    <!-- 背驰标注 -->
+    <text x="150" y="240" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="11" fill="#9b2c2c" class="ch-rev d5">价创新低但动能减弱 = 背驰</text>
+
+    <text x="440" y="368" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" fill="#3a3128" class="ch-rev d5">1 买搏反转, 2 买稳一档, 3 买确认趋势延续 —— 卖点完全对称</text>
+  </svg>
+</figure>
+
+<p>三类买卖点<a class="jr" href="#g-11">11</a> 的味道各不同：<strong>1 买</strong>在下跌趋势背驰处搏反转（风险最大、最便宜）；<strong>2 买</strong>是 1 买后第一次回调不破前低（确认了一点）；<strong>3 买</strong>在价格突破中枢、回测又不重新跌回中枢时进（最稳、但已经涨了一段）。卖点对称。</p>
+
+
+<!-- §07 -->
+<h2><span class="num">§ 07</span>怎么看待它 · 自洽不等于有效</h2>
+
+<p>得诚实说<a class="jr" href="#g-12">12</a>：</p>
+
+<p>• <strong>自洽 ≠ 有效</strong>：缠论逻辑严密、能解释任何走势。但"能解释一切"的另一面是<strong>事后总对</strong> —— 走完了你总能找到一种"完美"的分解。「走势终完美」近乎不可证伪。<br/>
+• <strong>划分高度主观</strong>：笔/线段/中枢从哪起、级别从哪个周期算，不同人画出来不一样。同一张图能有好几种都"符合规则"的分解，当下未走完时尤其难定。<br/>
+• <strong>没有严格证据</strong>它能带来超额收益。学术上没有公认的实证支持它跑赢基准。</p>
+
+<div class="note">
+  <span class="l">那它的价值在哪</span>
+  <p>缠论真正有用的，是<strong>逼你结构化地看走势</strong>：现在是中枢震荡还是趋势？我等的是几买？在哪个级别操作？—— 这种把模糊直觉变成明确问题的纪律本身有价值，跟"用它能不能稳赚"是两码事。当成一套<strong>把走势讲清楚的坐标系</strong>，别当预言机。</p>
+</div>
+
+<div class="note">
+  <span class="l">跟 康波 / Psychology of Money 串起来</span>
+  <p><a href="kondratiev-wave.html">康波</a>是宏观的"季节方位感"，缠论是微观的"走势结构感" —— 都是<strong>坐标系，不是预言机</strong>。它们能帮你把"现在大概在哪、该等什么"说清楚，但都不给你"精确抄底逃顶"的能力。这跟 <a href="../books/psychology-of-money.html">Psychology of Money</a> 的"behavior &gt; 预测、活下来才能复利"是同一个底色：<strong>框架管方位与纪律，不管必胜。</strong></p>
+</div>
+
+
+<!-- glossary -->
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">缠论 · 缠中说禅</span> · 网名"缠中说禅"的李彪 2006–2008 年在博客连载《教你炒股票 108 课》搭出的技术分析体系。形态学（分型/笔/线段/中枢）+ 动力学（背驰/级别）两套。李彪 2008 年去世。</li>
+    <li id="g-02"><span class="term">走势终完美</span> · 缠论的核心哲学：任何一段走势类型最终都会走完、走"完美"。潜台词是分析当下（识别走到哪一步、还差什么），而非预测未来。也因此近乎不可证伪。</li>
+    <li id="g-03"><span class="term">K 线包含处理</span> · 预处理：相邻 K 线若一根完全包含另一根，按当前走势方向合并成一根，消掉细碎杂讯，再在处理过的 K 线上找分型。</li>
+    <li id="g-04"><span class="term">分型 · 顶 / 底</span> · 走势的最小局部拐点。顶分型 = 三根处理过的 K 线里中间那根高点最高、低点也最高；底分型 = 中间那根低点最低、高点也最低。</li>
+    <li id="g-05"><span class="term">笔</span> · 一个底分型到相邻顶分型（中间隔几根独立 K 线）连成的最小走势单元。上升笔 = 底分型 + 上升 + 顶分型，下降笔反之。</li>
+    <li id="g-06"><span class="term">线段</span> · 比笔高一层的走势单元，至少由 3 笔组成且彼此有重叠。笔是砖，线段是墙。</li>
+    <li id="g-07"><span class="term">中枢</span> · 体系核心。连续三个次级别走势的重叠区间 [ZD, ZG]：ZG = 三段高点的最小值（上沿），ZD = 三段低点的最大值（下沿）。多空反复争夺的盘整带。</li>
+    <li id="g-08"><span class="term">走势类型 · 趋势 / 盘整</span> · 趋势 = 同方向连着至少两个中枢（上涨/下跌）；盘整 = 只有一个中枢。走势 = 中枢 + 连接中枢的段不断接龙。</li>
+    <li id="g-09"><span class="term">级别 · 自相似嵌套</span> · 缠论是分形的：同一套"分型→笔→线段→中枢"在 1 分/5 分/30 分/日/周每个级别重复。小级别的一整段 = 大级别的一笔。操作前必须先定级别。</li>
+    <li id="g-10"><span class="term">背驰</span> · 动能减弱信号：价格创新高/新低，但动能（常看 MACD 红绿柱面积）反而比上一次弱 → 趋势可能将尽。分趋势背驰、盘整背驰。是三类买卖点的发令枪。</li>
+    <li id="g-11"><span class="term">三类买卖点</span> · 1 买：下跌趋势跌破最后一个中枢后的背驰低点（搏反转）。2 买：1 买后第一次回调不破前低。3 买：突破中枢后回测不重新进入中枢区间（确认趋势延续）。卖点对称。</li>
+    <li id="g-12"><span class="term">主观性争议 · 自洽≠有效</span> · 缠论能解释任何走势，但"能解释一切"=事后总对，「走势终完美」近乎不可证伪；笔/线段/中枢/级别划分因人而异，同图多解；没有公认实证支持它跑赢基准。是坐标系，不是圣杯。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>Authored / 个人学习笔记 · 2026 · 源: 缠中说禅《教你炒股票 108 课》</span>
+  <span>Index / <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+
+<script>
+{
+  const figs = ['fig-fractal','fig-bi','fig-zhongshu','fig-level','fig-bsp'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.2 });
+    obs.observe(el);
+  });
+}
+</script>
+
+</body>
+</html>

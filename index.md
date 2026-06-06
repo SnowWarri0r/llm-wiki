@@ -23,6 +23,7 @@
 - [PPO · Proximal Policy Optimization](wiki/papers/ppo.md) — 一行 clip 干掉 TRPO 的复杂; RLHF 的训练发动机, 撑起 ChatGPT 的对齐
 - [Go GC · 从 mark-sweep 到 Green Tea](wiki/papers/go-gc.md) — 系统/runtime 深度页: 三色并发 mark-sweep + write barrier + GOGC/GOMEMLIMIT, 到 Go 1.26 默认的 Green Tea 按页扫优化
 - [康波周期 · 经济的四季](wiki/papers/kondratiev-wave.md) — 宏观/有争议框架: 50–60 年长波 + 五次技术浪潮 + 四季资产轮动 + 多周期嵌套 + 周金涛本土化; 当罗盘不当钟表
+- [缠论 · 把走势拆成可数的结构](wiki/papers/chan-theory.md) — 技术分析/自洽但主观: 分型→笔→线段→中枢 + 级别自相似 + 背驰 + 三类买卖点; 坐标系不是预言机
 
 ## Books · 书籍精讲
 
