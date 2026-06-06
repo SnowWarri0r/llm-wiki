@@ -1,6 +1,7 @@
 ---
 name: discourses-salt-iron
 type: paper
+tags: [史]
 source: https://zh.wikipedia.org/wiki/盐铁论
 upstream: https://zh.wikipedia.org/wiki/盐铁论
 ingested: 2026-06-03

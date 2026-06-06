@@ -1,6 +1,7 @@
 ---
 name: chan-theory
 type: paper
+tags: [金融]
 source: https://www.chanluns.com/chzhshch/
 upstream: https://bigquant.com/wiki/doc/cOsACEKd1x
 ingested: 2026-06-03
