@@ -2,7 +2,9 @@
 
 按类别组织。每条 `[标题](路径) — 一句话钩子`。
 
-## Papers · 源页
+## 精读页 · Deep Dives
+
+> 手工打磨的 bespoke 深读页（不只论文）：ML 论文 + 系统 + 金融 + 史。live 站按领域分小标题 + 顶部领域 chip 筛选。
 
 - [Deep Residual Learning · ResNet](wiki/papers/resnet.md) — 残差连接的起源，把"网络越深越好"做成现实，也给两年后的 Transformer 留好 sublayer 模板
 - [Attention Is All You Need](wiki/papers/attention-is-all-you-need.md) — Transformer 始祖，整个 LLM 时代的奠基
