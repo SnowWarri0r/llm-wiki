@@ -1,8 +1,8 @@
 ---
 name: flow-matching
 type: concept
-sources: [interaction-models-tml]
-updated: 2026-05-20
+sources: [interaction-models-tml, ideogram-4]
+updated: 2026-06-04
 ---
 
 # Flow Matching · 流匹配

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>结构化 Caption 条件 · Structured JSON Caption · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · structured-caption-conditioning</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>结构化 Caption 条件 · Structured JSON Caption</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>不喂模型一句话，喂它一份 JSON —— 把画面的每个元素、位置、颜色、文字都显式列出来，训练和推理都用这套结构。</p>
+<h2>直觉</h2>
+<p>普通 T2I 用自然语言 prompt："夕阳下湖面一艘帆船"。模型得自己猜：帆船多大？放哪？什么色调？—— <strong>模糊语言里藏着大量没说清的关系</strong>，模型只能瞎蒙，所以版面和文字经常翻车。</p>
+<p>Ideogram 4 的赌注：与其让模型猜，不如<strong>把结构显式写进 caption</strong>。每条训练 caption 是一份 JSON，穷举画面里每个元素：</p>
+<ul>
+<li><code>high_level_description</code>：整体一句话</li>
+<li><code>style_description</code>：风格 + <code>color_palette</code>（最多 16 个 hex 色）</li>
+<li><code>compositional_deconstruction.elements[]</code>：每个元素的描述 + 可选 <code>bbox</code>（位置）</li>
+</ul>
+<p>关键洞察："<strong>the more relationships each caption pins down, the more grounded supervision the model extracts per training pair</strong>" —— caption 把越多关系钉死，每对训练样本给的监督就越扎实。这跟 fish-speech 把对齐做进权重、dMel 把预处理塌缩是同一条主线：<strong>把结构做进训练，而不是推理时拼 prompt</strong>。</p>
+<h2>怎么做的</h2>
+<p>训练和推理共用一套格式，推理前按 schema 校验、不合法直接拒：</p>
+<pre><code class="language-json">{
+  &quot;high_level_description&quot;: &quot;夕阳下湖面一艘木帆船, 冷蓝调&quot;,
+  &quot;style_description&quot;: {
+    &quot;lighting&quot;: &quot;冷色暮光, 低对比&quot;,
+    &quot;color_palette&quot;: [&quot;#1B3A5C&quot;, &quot;#5B8FB9&quot;]
+  },
+  &quot;compositional_deconstruction&quot;: {
+    &quot;elements&quot;: [
+      { &quot;type&quot;: &quot;obj&quot;, &quot;bbox&quot;: [380, 590, 660, 720],
+        &quot;desc&quot;: &quot;右三分线上的木帆船, 单桅&quot; }
+    ]
+  }
+}
+</code></pre>
+<p>三样普通 prompt 给不了的：</p>
+<ul>
+<li><strong>调色板条件</strong>：直接用 hex 色控主色调（每图 16 色、每元素 5 色），不靠形容词</li>
+<li><strong>bbox 布局</strong>：<code>[y_min, x_min, y_max, x_max]</code> 归一化到 0–1000，模型靠共享的 MRoPE 位置系把元素放到框里</li>
+<li><strong>文字元素</strong>：一个字段放"要渲染的字面文字"，另一个字段放"它长什么样" → 多行多字体的图内文字</li>
+</ul>
+<p>普通用户写一句话也行：一个 "magic prompt" LLM 先把它扩成这套 JSON。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/ideogram-4.html">ideogram-4</a> · 只用结构化 JSON caption 训练</li>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · bbox 靠 DiT 的 MRoPE 位置系落地</li>
+<li><a href="../papers/rope.html">rope</a> · 多模态 RoPE 承载 bbox 的空间位置</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/ideogram-4.html"><span class="cat">paper</span>Ideogram 4.0 · 9.3B 单流 DiT, 把排版做进权重</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/structured-caption-conditioning.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+</body>
+</html>

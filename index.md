@@ -27,6 +27,7 @@
 - [盐铁论 · 两千年前的国营 vs 民营](wiki/papers/discourses-salt-iron.md) — 史/政治经济学: 公元前81年盐铁会议, 桑弘羊财政机器 vs 贤良文学民本, 富国强兵 vs 藏富于民; 两千年回声
 - [净利润断层 · 业绩惊喜 + 跳空缺口](wiki/papers/net-profit-gap.md) — 交易/事件驱动: 净利润惊喜 + 断层缺口, 本质捕捉 PEAD(Ball&Brown 1968); 有学术底子但会衰减
 - [资金面 · 量能与共识](wiki/papers/capital-flow.md) — 交易/盘口经验派: 量能(量价关系) + 共识(游资分歧转一致/筹码集中/抱团); 经验派语言, 易事后解释
+- [Ideogram 4.0 · 9.3B 单流 DiT](wiki/papers/ideogram-4.md) — 文生图开源权重: 单流 DiT + Qwen3-VL 文本编码器 + 结构化 JSON caption(bbox/调色板); 9.3B 文本渲染碾压 80B
 
 ## Books · 书籍精讲
 
@@ -129,6 +130,9 @@
 - [Optimal Transport](wiki/concepts/optimal-transport.md) — 让噪声到数据尽量走直路的路径选择
 - [Continuity Equation](wiki/concepts/continuity-equation.md) — 粒子守恒：密度变化 = 净流入
 - [ODE vs SDE](wiki/concepts/ode-vs-sde.md) — flow（确定性）vs diffusion（随机性）
+- [Diffusion Transformer](wiki/concepts/diffusion-transformer.md) — 去噪网络从 U-Net 换成 Transformer；单流 vs 双流 MMDiT
+- [Classifier-Free Guidance](wiki/concepts/classifier-free-guidance.md) — 条件/无条件两支放大差值逼模型听话；Ideogram 的非对称变体
+- [结构化 Caption 条件](wiki/concepts/structured-caption-conditioning.md) — 不喂一句话喂 JSON，把位置/颜色/文字显式做进训练
 
 ### 音频 tokenization
 - [Log-Mel Spectrogram](wiki/concepts/log-mel-spectrogram.md) — 音频特征基础
