@@ -474,3 +474,31 @@ a.wikilink-missing {
   text-underline-offset: 2px;
 }
 .page.concept .colophon a:hover { color: var(--ochre); }
+
+/* === Figure animation harness (scroll-triggered, play once) ===
+   同 bespoke paper 页的观感：滚动进视口 → figure 加 .play → 子元素分阶段揭示 / 描线。
+   概念页 SVG 用 class="reveal d1..d6" / "draw" 即可，JS 在 CONCEPT_PAGE_TEMPLATE 注入。 */
+figure svg .reveal { opacity: 0; transition: opacity .55s ease; }
+figure.play svg .reveal { opacity: 1; }
+figure.play svg .reveal.d1 { transition-delay: .15s; }
+figure.play svg .reveal.d2 { transition-delay: .40s; }
+figure.play svg .reveal.d3 { transition-delay: .65s; }
+figure.play svg .reveal.d4 { transition-delay: .90s; }
+figure.play svg .reveal.d5 { transition-delay: 1.15s; }
+figure.play svg .reveal.d6 { transition-delay: 1.40s; }
+figure.play svg .reveal.d7 { transition-delay: 1.65s; }
+figure.play svg .reveal.d8 { transition-delay: 1.90s; }
+/* 描线：路径从无到有画出来（需在元素上设 pathLength="1000"） */
+figure svg .draw { stroke-dasharray: 1000; stroke-dashoffset: 1000; transition: stroke-dashoffset 1.4s ease; }
+figure.play svg .draw { stroke-dashoffset: 0; }
+figure svg .draw.d2 { transition-delay: .40s; }
+figure svg .draw.d3 { transition-delay: .65s; }
+figure svg .draw.d4 { transition-delay: .90s; }
+figure svg .draw.d5 { transition-delay: 1.15s; }
+/* 高亮脉冲：命中元素轻微放大+亮一下（一次性） */
+figure svg .pulse { opacity: 0; transition: opacity .5s ease; }
+figure.play svg .pulse { opacity: 1; animation: figPulse 1.1s ease-out .9s; }
+@keyframes figPulse { 0%,100% { opacity: .85; } 45% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) {
+  figure svg .reveal, figure svg .draw, figure svg .pulse { transition: none; opacity: 1; stroke-dashoffset: 0; animation: none; }
+}

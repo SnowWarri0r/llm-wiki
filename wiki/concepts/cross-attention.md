@@ -19,49 +19,50 @@ Self-attention 是"班里同学互相看"；cross-attention 是"写答案的人�
 
 <figure style="margin:26px 0; padding:22px; background:#eef2f7; border:1px solid #9fb3c8; border-radius:4px;">
 <svg viewBox="0 0 720 330" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:JetBrains Mono,monospace;">
-  <text x="130" y="40" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#1f3a5f">Encoder 输出（源句 我爱猫）</text>
-  <text x="600" y="40" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#9b2c2c">Decoder（已生成 I love…）</text>
+  <defs>
+    <marker id="ca-q" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#9b2c2c"/></marker>
+    <marker id="ca-v" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#4a6b3a"/></marker>
+  </defs>
+  <text x="130" y="38" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#1f3a5f">Encoder 输出（源句 我爱猫）</text>
+  <text x="600" y="38" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#9b2c2c">Decoder（已生成 I love…）</text>
 
-  <!-- Encoder 三个词 K/V -->
+  <!-- Encoder 三个词 K/V（静态底） -->
   <g>
     <rect x="65" y="70" width="130" height="46" rx="3" fill="#dbe6f0" stroke="#1f3a5f"/>
-    <rect x="65" y="70" width="130" height="46" rx="3" fill="#b8841c"><animate attributeName="opacity" dur="6s" repeatCount="indefinite" keyTimes="0;0.18;0.24;0.30;1" values="0;0;0.25;0;0"/></rect>
     <text x="130" y="92" text-anchor="middle" font-size="13" fill="#1f3a5f">我</text><text x="130" y="108" text-anchor="middle" font-size="8.5" fill="#5b6b7d">K · V</text>
   </g>
   <g>
     <rect x="65" y="142" width="130" height="46" rx="3" fill="#dbe6f0" stroke="#1f3a5f"/>
-    <rect x="65" y="142" width="130" height="46" rx="3" fill="#b8841c"><animate attributeName="opacity" dur="6s" repeatCount="indefinite" keyTimes="0;0.24;0.30;0.36;1" values="0;0;0.28;0;0"/></rect>
     <text x="130" y="164" text-anchor="middle" font-size="13" fill="#1f3a5f">爱</text><text x="130" y="180" text-anchor="middle" font-size="8.5" fill="#5b6b7d">K · V</text>
   </g>
   <g>
     <rect x="65" y="214" width="130" height="46" rx="3" fill="#dbe6f0" stroke="#1f3a5f"/>
-    <rect x="65" y="214" width="130" height="46" rx="3" fill="#b8841c"><animate attributeName="opacity" dur="6s" repeatCount="indefinite" keyTimes="0;0.30;0.38;0.80;0.90;1" values="0;0;0.85;0.85;0;0"/></rect>
-    <text x="130" y="236" text-anchor="middle" font-size="13" fill="#1f3a5f">猫</text><text x="130" y="252" text-anchor="middle" font-size="8.5" fill="#5b6b7d">K · V ←命中</text>
+    <!-- 命中高亮：pulse -->
+    <rect class="pulse" x="65" y="214" width="130" height="46" rx="3" fill="#b8841c" opacity="0"/>
+    <text x="130" y="236" text-anchor="middle" font-size="13" fill="#1f3a5f">猫</text><text x="130" y="252" text-anchor="middle" font-size="8.5" fill="#5b6b7d">K · V</text>
   </g>
 
-  <!-- Decoder 当前位置 -->
-  <rect x="535" y="142" width="150" height="64" rx="3" fill="#f3d9d9" stroke="#9b2c2c"/>
-  <text x="610" y="166" text-anchor="middle" font-size="10" fill="#9b2c2c">当前位置 → 出 Q</text>
-  <text x="610" y="190" text-anchor="middle" font-size="13" fill="#3a3128">= cat<animate attributeName="opacity" dur="6s" repeatCount="indefinite" keyTimes="0;0.80;0.86;0.96;1" values="0;0;1;1;0"/></text>
+  <!-- Decoder 当前位置（静态底） -->
+  <rect x="535" y="140" width="150" height="64" rx="3" fill="#f3d9d9" stroke="#9b2c2c"/>
+  <text x="610" y="164" text-anchor="middle" font-size="10" fill="#9b2c2c">当前位置 → 出 Q</text>
+  <text class="reveal d6" x="610" y="190" text-anchor="middle" font-size="14" font-weight="700" fill="#3a3128">= cat</text>
 
-  <!-- Q packet: decoder → 猫 -->
-  <g>
-    <animateTransform attributeName="transform" type="translate" dur="6s" repeatCount="indefinite" keyTimes="0;0.06;0.34;0.5;1" values="0,0;0,0;-320,75;-320,75;-320,75"/>
-    <animate attributeName="opacity" dur="6s" repeatCount="indefinite" keyTimes="0;0.03;0.45;0.5;1" values="0;1;1;0;0"/>
-    <circle cx="525" cy="162" r="13" fill="#9b2c2c"/>
-    <text x="525" y="166" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">Q</text>
-  </g>
+  <!-- ① Q 逐个比对每个 K：三条线描出来 -->
+  <text class="reveal d1" x="360" y="60" text-anchor="middle" font-size="10" fill="#9b2c2c">① Q 拿去跟每个 K 比对</text>
+  <path class="draw d2" pathLength="1000" d="M535,172 L197,93"  fill="none" stroke="#b9a07a" stroke-width="1.3" stroke-dasharray="5 3" marker-end="url(#ca-q)"/>
+  <path class="draw d2" pathLength="1000" d="M535,172 L197,165" fill="none" stroke="#b9a07a" stroke-width="1.3" stroke-dasharray="5 3" marker-end="url(#ca-q)"/>
+  <path class="draw d2" pathLength="1000" d="M535,172 L197,237" fill="none" stroke="#9b2c2c" stroke-width="2.4" marker-end="url(#ca-q)"/>
 
-  <!-- V packet: 猫 → decoder -->
-  <g>
-    <animateTransform attributeName="transform" type="translate" dur="6s" repeatCount="indefinite" keyTimes="0;0.55;0.80;1" values="0,0;0,0;320,-75;320,-75"/>
-    <animate attributeName="opacity" dur="6s" repeatCount="indefinite" keyTimes="0;0.53;0.56;0.80;0.84;1" values="0;0;1;1;0;0"/>
-    <circle cx="205" cy="237" r="13" fill="#4a6b3a"/>
-    <text x="205" y="241" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">V</text>
-  </g>
+  <!-- ② 命中 -->
+  <text class="reveal d4" x="250" y="282" text-anchor="middle" font-size="10" fill="#7a5a12">②「猫」命中·权重最高</text>
 
-  <!-- 流程标注 -->
-  <text x="360" y="300" text-anchor="middle" font-size="10" fill="#7a6f5d">① Q 飞去逐个比对 K　② "猫"命中、权重最高（黄高亮）　③ 抄回它的 V → 解出 cat</text>
+  <!-- ③ 把猫的 V 抄回 decoder：弧线描出来 -->
+  <text class="reveal d5" x="430" y="300" text-anchor="middle" font-size="10" fill="#4a6b3a">③ 抄回它的 V → 解出 cat</text>
+  <path class="draw d5" pathLength="1000" d="M197,250 Q380,315 533,196" fill="none" stroke="#4a6b3a" stroke-width="2.4" marker-end="url(#ca-v)"/>
+
+  <!-- Q / V 标签球 -->
+  <g class="reveal d1"><circle cx="520" cy="172" r="12" fill="#9b2c2c"/><text x="520" y="176" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">Q</text></g>
+  <g class="reveal d5"><circle cx="205" cy="250" r="12" fill="#4a6b3a"/><text x="205" y="254" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">V</text></g>
 </svg>
 </figure>
 
