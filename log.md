@@ -541,3 +541,18 @@ skill 更新:
 - 3 新 concept: diffusion-transformer / classifier-free-guidance / structured-caption-conditioning; flow-matching concept sources 加 ideogram-4
 - 主线呼应: 9.3B>80B 印证 dMel/Whisper/fish-speech "监督形态>堆参数"; JSON caption = 把结构做进训练
 - 隐私 grep 干净
+
+## [2026-06-04] ingest | 爱在冰川 · 低吸待涨的道法术 (从复盘合集提炼)
+
+- 用户下了 ~3000 PDF (2017-2026 公开论坛/公众号复盘+战法) 在 Downloads; 确认是公开发布、可写; 放公开 wiki
+- 通读策略: 3000 篇没法逐篇, 抽 29 篇成体系系列帖(道/术/法/潜伏/低吸/短线客) pypdf 抽文本精读, 砍评论区噪声; 每日复盘原则会在系列里重复
+- wiki/papers/aizai-bingchuan.md + docs/papers/aizai-bingchuan.html: bespoke, **ochre accent**(交易子簇里未被纯交易页用过的色), tags:[金融], 5 figures:
+  - Fig 01 · 道法术金字塔 (模式心法→战法→技术)
+  - Fig 02 · 低吸待涨循环 (复盘找逻辑→开盘买→次日了结/持/割, 复利循环)
+  - Fig 03 · 低吸 vs 追高 vs 打板 (分时+均价线, 打板跟最激进的人一起反而安全)
+  - Fig 04 · 横盘龙头低吸 (一字断档→分歧震荡→空转多→二波; 一致→分歧→再一致)
+  - Fig 05 · 情绪周期(沸点续沸/冰点续冰) + 涨停板复盘四看
+  - glossary 12 闭环
+- 版权处理: 用自己的话复述, **原文/PDF 不入库** (确认无 pdf 进 git); warn + §07 标经验派/散户难复制/幸存者偏差/时代变, 反复带"非荐股"
+- 串点: 一致→分歧→再一致 = 资金面分歧转一致 = 缠论中枢震荡; "模式越做越简单/用规则替盘感" 呼应 psychology-of-money behavior>预测
+- 隐私 grep 干净(不与用户个人持仓/做T 混淆)
