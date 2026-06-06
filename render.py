@@ -30,7 +30,7 @@ WIKI = ROOT / "wiki"
 HTML_OUT = ROOT / "docs"
 CATEGORIES = ["papers", "books", "topics", "concepts", "threads"]
 CATEGORY_LABELS = {
-    "papers": "Papers · 论文源",
+    "papers": "精读页 · Deep Dives",
     "books": "Books · 书籍精讲",
     "topics": "Topics · 综合",
     "concepts": "Concepts · 概念",
@@ -39,6 +39,14 @@ CATEGORY_LABELS = {
 
 # 领域标签：frontmatter 里写 tags: [系统] / [金融] / [史] ... 覆盖默认
 DOMAIN_ORDER = ["ML", "系统", "金融", "史", "理财"]
+# 精读页段内按领域分的小标题
+DOMAIN_SUBLABEL = {
+    "ML": "ML · 论文",
+    "系统": "系统 · Systems",
+    "金融": "金融 · Trading & Macro",
+    "史": "史 · Classics",
+    "理财": "理财 · Personal Finance",
+}
 
 
 def entry_domains(e) -> list:
@@ -621,17 +629,16 @@ def render_index(entries: list[Entry]) -> str:
         items = by_cat[cat]
         if not items:
             continue
-        rows = []
-        for e in items:
+        def make_card(e):
             href = None
             ready = False
             if e.bespoke_path:
-                href = f"{cat}/{e.slug}.html"
+                href = f"{e.category}/{e.slug}.html"
                 ready = True
             doms = entry_domains(e)
             stext = entry_search_text(e)
             pills = [f'<span class="pill dom dom-{html.escape(d)}">{html.escape(d)}</span>' for d in doms]
-            pills.append(f'<span class="pill">{e.meta.get("type", cat[:-1] if cat.endswith("s") else cat)}</span>')
+            pills.append(f'<span class="pill">{e.meta.get("type", e.category[:-1] if e.category.endswith("s") else e.category)}</span>')
             if "updated" in e.meta:
                 pills.append(f'<span class="pill">updated {html.escape(str(e.meta["updated"]))}</span>')
             if "ingested" in e.meta:
@@ -647,20 +654,36 @@ def render_index(entries: list[Entry]) -> str:
             title_link = (
                 f'<a href="{href}">{html.escape(e.title)}</a>' if href else html.escape(e.title)
             )
-            entry_class = f"entry {cat[:-1] if cat.endswith('s') else cat}"
+            entry_class = f"entry {e.category[:-1] if e.category.endswith('s') else e.category}"
             if not ready:
                 entry_class += " todo"
-            rows.append(f"""<div class="{entry_class}" data-domains="{html.escape(' '.join(doms))}" data-s="{html.escape(stext, quote=True)}">
+            return f"""<div class="{entry_class}" data-domains="{html.escape(' '.join(doms))}" data-s="{html.escape(stext, quote=True)}">
   <h3>{title_link}</h3>
   {'<p class="hook">' + html.escape(e.hook) + '</p>' if e.hook else ''}
   <div class="pills">{''.join(pills)}</div>
-</div>""")
+</div>"""
+
+        if cat == "papers":
+            # 精读页：段内按领域分小标题（ML 论文 / 系统 / 金融 / 史 ...）
+            by_dom: dict = {}
+            for e in items:
+                by_dom.setdefault(entry_domains(e)[0], []).append(e)
+            dom_order = [d for d in DOMAIN_ORDER if d in by_dom] + sorted(d for d in by_dom if d not in DOMAIN_ORDER)
+            inner_parts = []
+            for d in dom_order:
+                sub_label = DOMAIN_SUBLABEL.get(d, d)
+                cards = "".join(make_card(e) for e in by_dom[d])
+                inner_parts.append(
+                    f'<h3 class="domsub">{html.escape(sub_label)} <span class="domsub-n">{len(by_dom[d])}</span></h3>\n'
+                    f'<div class="entries">\n{cards}\n</div>'
+                )
+            body_inner = "\n".join(inner_parts)
+        else:
+            body_inner = f'<div class="entries">\n{"".join(make_card(e) for e in items)}\n</div>'
         sections_html.append(f"""
 <section class="cat-block">
 <h2><span class="num">§ 0{i}</span>{CATEGORY_LABELS[cat]}</h2>
-<div class="entries">
-{''.join(rows)}
-</div>
+{body_inner}
 </section>
 """)
 
@@ -697,6 +720,8 @@ def render_index(entries: list[Entry]) -> str:
 .chip.active {{ background: var(--ink); color: var(--paper); border-color: var(--ink); }}
 .chip .c {{ opacity: 0.55; font-size: 10px; }}
 .pill.dom {{ font-weight: 700; border-color: var(--ink-2); }}
+.domsub {{ font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); font-weight: 700; margin: 30px 0 2px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }}
+.domsub-n {{ color: var(--muted); font-size: 10px; opacity: 0.7; font-weight: 400; }}
 .nores {{ font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--muted); padding: 36px 0; text-align: center; }}
 </style>
 </head>
@@ -756,6 +781,12 @@ def render_index(entries: list[Entry]) -> str:
       var vis = okT && okD;
       el.style.display = vis ? '' : 'none';
       if (vis) shown++;
+    }});
+    [].slice.call(document.querySelectorAll('.domsub')).forEach(function(h){{
+      var box = h.nextElementSibling;
+      var any = box && [].slice.call(box.querySelectorAll('.entry')).some(function(e){{ return e.style.display !== 'none'; }});
+      h.style.display = any ? '' : 'none';
+      if (box) box.style.display = any ? '' : 'none';
     }});
     blocks.forEach(function(b){{
       var any = [].slice.call(b.querySelectorAll('.entry')).some(function(e){{ return e.style.display !== 'none'; }});
