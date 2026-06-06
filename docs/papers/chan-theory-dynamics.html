@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>缠论 · 动力学 · 背驰与区间套</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --accent: var(--brick); --accent-soft: var(--brick-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(44px, 7vw, 74px); line-height: 0.96; letter-spacing: -0.03em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+.seriesnav { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); margin: 18px 0 0; }
+.seriesnav a { color: var(--accent); }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 36px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
+p { margin: 12px 0; } strong { font-weight: 700; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--brick-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--brick); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--brick); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+.thm { background: #fff; border: 1px solid var(--brick); border-radius: 6px; padding: 16px 20px; margin: 20px 0; font-family: 'Fraunces', serif; font-style: italic; font-size: 18px; color: var(--ink); }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--brick-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--brick-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+.cd-svg { width: 100%; height: auto; display: block; }
+.cd-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .cd-rev { opacity: 1; }
+figure.play .cd-rev.d1 { transition-delay: 0.15s; }
+figure.play .cd-rev.d2 { transition-delay: 0.45s; }
+figure.play .cd-rev.d3 { transition-delay: 0.75s; }
+figure.play .cd-rev.d4 { transition-delay: 1.05s; }
+figure.play .cd-rev.d5 { transition-delay: 1.35s; }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · chan-theory-dynamics</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">技术分析 · 缠论 · 动力学篇 (2/3)</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 缠论深入 · 动力学</div>
+  <h1 class="title">缠论 · 动力学 ·<br /><span class="em">背驰与区间套。</span></h1>
+  <div class="byline">缠中说禅 · 教你炒股票 108 课 · 背驰 / 区间套 / 买卖点篇</div>
+  <p class="dek">形态学告诉你走势"长什么样"，动力学回答"还有没有劲、什么时候转"。背驰是力气衰竭的信号，区间套把它精确到一个点 —— 这是缠论真正区别于普通技术分析、也最唬人的部分。</p>
+  <p class="seriesnav">缠论三篇 · <a href="chan-theory.html">① 形态学（主篇）</a> · ② 动力学（本篇） · <a href="chan-theory-operation.html">③ 操作篇</a></p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>形态学（分型→笔→线段→中枢）讲结构，动力学讲转折。核心是<strong>背驰</strong><a class="jr" href="#g-01">1</a>：同向趋势里，离开第二个中枢的力度比离开第一个弱（<strong>标准结构 a+A+b+B+c</strong><a class="jr" href="#g-02">2</a>），价格还创新高但<strong>劲</strong><a class="jr" href="#g-06">6</a>小了。力度用 <strong>MACD 面积</strong><a class="jr" href="#g-05">5</a> 量。分<strong>趋势背驰</strong><a class="jr" href="#g-03">3</a>（≥2 中枢，大概率反转）和<strong>盘整背驰</strong><a class="jr" href="#g-04">4</a>（1 中枢，弱）。背驰是个区间，<strong>区间套</strong><a class="jr" href="#g-07">7</a>（大级别背驰里套小级别背驰）把它精确到一个点。一条定理钉死动力学与买卖点<a class="jr" href="#g-08">8</a>，三类买卖点<a class="jr" href="#g-09">9</a><a class="jr" href="#g-10">10</a><a class="jr" href="#g-11">11</a>各有出身且<strong>级别嵌套转化</strong><a class="jr" href="#g-12">12</a>。</p>
+</div>
+
+
+<!-- §01 -->
+<h2><span class="num">§ 01</span>背驰 · 力度的比较</h2>
+
+<p><strong>背驰</strong><a class="jr" href="#g-01">1</a> 就一句话：<strong>价格还在创新高/新低，但力气明显小了</strong> —— 趋势快走完了。缠论把它结构化成 <strong>a+A+b+B+c</strong><a class="jr" href="#g-02">2</a>：A、B 是同向趋势里相邻的两个中枢，a/b/c 是连接和离开它们的段。当<strong>离开第二个中枢的 c 段力度 &lt; 离开第一个中枢的 a 段力度</strong>，就是背驰。</p>
+
+<figure id="fig-struct" class="fig-struct">
+  <figcaption>
+    <span>Fig 01 · 背驰结构 a+A+b+B+c</span>
+    <span class="fnum">c 段力度 &lt; a 段力度 = 背驰</span>
+  </figcaption>
+  <svg class="cd-svg" viewBox="0 0 880 300" xmlns="http://www.w3.org/2000/svg">
+    <!-- 两个中枢 box -->
+    <rect class="cd-rev d1" x="180" y="180" width="160" height="55" fill="#efd6c8" opacity="0.6" stroke="#9b2c2c" stroke-width="1.2"/>
+    <text x="260" y="252" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" fill="#9b2c2c" class="cd-rev d1">中枢 A</text>
+    <rect class="cd-rev d3" x="540" y="95" width="160" height="55" fill="#d8e6ce" opacity="0.6" stroke="#4a6b3a" stroke-width="1.2"/>
+    <text x="620" y="88" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" fill="#4a6b3a" class="cd-rev d3">中枢 B (更高)</text>
+
+    <!-- 价格路径: a(强离开A) b(连接) c(弱离开B) -->
+    <path class="cd-rev d2" d="M 60 255 L 110 250 L 180 215" fill="none" stroke="#3a3128" stroke-width="2"/>
+    <path class="cd-rev d2" d="M 180 215 C 230 250 290 185 340 210" fill="none" stroke="#7a6f5d" stroke-width="1.6"/>
+    <path class="cd-rev d2" d="M 340 210 L 420 120 L 460 160 L 540 110" fill="none" stroke="#9b2c2c" stroke-width="2.6"/>
+    <text x="400" y="150" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" fill="#9b2c2c" class="cd-rev d2">a 段 (强)</text>
+
+    <path class="cd-rev d3" d="M 540 110 C 580 140 640 105 700 122" fill="none" stroke="#7a6f5d" stroke-width="1.6"/>
+    <path class="cd-rev d4" d="M 700 122 L 760 75 L 790 92 L 820 60" fill="none" stroke="#4a6b3a" stroke-width="2.6"/>
+    <text x="775" y="48" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" fill="#4a6b3a" class="cd-rev d4">c 段 (弱)</text>
+
+    <text x="440" y="285" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#3a3128" class="cd-rev d5">价格创了新高 (c 顶 &gt; a 顶), 但 c 段斜率/力度明显比 a 段弱 → 背驰</text>
+  </svg>
+</figure>
+
+
+<!-- §02 -->
+<h2><span class="num">§ 02</span>用 MACD 量"力度"</h2>
+
+<p>"力度"不能只靠眼看。缠论用 <strong>MACD</strong><a class="jr" href="#g-05">5</a> 量：B 中枢会把 MACD 黄白线拉回 0 轴附近，然后比较 <strong>c 段和 a 段对应的红绿柱面积</strong>（上涨看红柱、下跌看绿柱）—— c 段面积明显小，就是力度衰竭。</p>
+
+<figure id="fig-macd" class="fig-macd">
+  <figcaption>
+    <span>Fig 02 · MACD 面积比较</span>
+    <span class="fnum">价创新高, 但 c 段红柱面积 &lt; a 段</span>
+  </figcaption>
+  <svg class="cd-svg" viewBox="0 0 880 320" xmlns="http://www.w3.org/2000/svg">
+    <!-- 上: 价格 -->
+    <text x="40" y="40" font-family="JetBrains Mono,monospace" font-size="10" fill="#7a6f5d" class="cd-rev d1">价格</text>
+    <path class="cd-rev d1" d="M 60 130 L 150 80 L 230 110 L 300 95 L 400 50 L 480 78 L 560 40 L 660 60 L 760 30 L 820 42" fill="none" stroke="#3a3128" stroke-width="2"/>
+    <line x1="400" y1="50" x2="400" y2="46" stroke="#9b2c2c" stroke-width="0"/>
+    <circle cx="400" cy="50" r="4" fill="#9b2c2c" class="cd-rev d2"/><text x="400" y="38" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#9b2c2c" class="cd-rev d2">a 顶</text>
+    <circle cx="760" cy="30" r="4" fill="#4a6b3a" class="cd-rev d4"/><text x="760" y="20" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#4a6b3a" class="cd-rev d4">c 顶 (更高)</text>
+
+    <!-- 下: MACD 0轴 -->
+    <line x1="60" y1="240" x2="820" y2="240" stroke="#3a3128" stroke-width="1" class="cd-rev d1"/>
+    <text x="40" y="244" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d" class="cd-rev d1">0</text>
+    <text x="40" y="200" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d" class="cd-rev d1">MACD</text>
+    <!-- a 段红柱 (大面积) -->
+    <g fill="#9b2c2c" class="cd-rev d3">
+      <rect x="330" y="185" width="12" height="55"/><rect x="346" y="170" width="12" height="70"/><rect x="362" y="160" width="12" height="80"/><rect x="378" y="172" width="12" height="68"/><rect x="394" y="190" width="12" height="50"/>
+    </g>
+    <text x="362" y="278" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#9b2c2c" class="cd-rev d3">a 段红柱: 面积大</text>
+    <!-- B 拉回0轴 -->
+    <text x="500" y="232" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d" class="cd-rev d3">B 拉回 0 轴</text>
+    <!-- c 段红柱 (小面积) -->
+    <g fill="#4a6b3a" class="cd-rev d5">
+      <rect x="690" y="212" width="12" height="28"/><rect x="706" y="205" width="12" height="35"/><rect x="722" y="200" width="12" height="40"/><rect x="738" y="210" width="12" height="30"/><rect x="754" y="218" width="12" height="22"/>
+    </g>
+    <text x="722" y="278" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#4a6b3a" class="cd-rev d5">c 段红柱: 面积明显小</text>
+
+    <text x="440" y="305" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#3a3128" class="cd-rev d5">价更高、量化的力度反而更小 = 标准背驰</text>
+  </svg>
+</figure>
+
+
+<!-- §03 -->
+<h2><span class="num">§ 03</span>趋势背驰 vs 盘整背驰</h2>
+
+<p>背驰分两种，级别和可靠性差很多：</p>
+
+<figure id="fig-types" class="fig-types">
+  <figcaption>
+    <span>Fig 03 · 趋势背驰 vs 盘整背驰</span>
+    <span class="fnum">≥2 中枢的趋势末端 vs 1 中枢的盘整</span>
+  </figcaption>
+  <svg class="cd-svg" viewBox="0 0 880 300" xmlns="http://www.w3.org/2000/svg">
+    <!-- 左 趋势背驰 -->
+    <g class="cd-rev d1">
+      <text x="220" y="36" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#9b2c2c">趋势背驰 (强信号)</text>
+      <rect x="80" y="190" width="90" height="36" fill="#efd6c8" opacity="0.6" stroke="#9b2c2c" stroke-width="1"/>
+      <rect x="270" y="120" width="90" height="36" fill="#efd6c8" opacity="0.6" stroke="#9b2c2c" stroke-width="1"/>
+      <path d="M 60 240 L 125 208 L 180 150 L 230 175 L 315 138 L 360 95 L 400 110" fill="none" stroke="#3a3128" stroke-width="2"/>
+      <circle cx="360" cy="95" r="5" fill="#9b2c2c"/>
+      <text x="220" y="265" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a3128">≥2 个同向中枢, 末端背驰</text>
+      <text x="220" y="282" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#9b2c2c">→ 大概率反转 (一买)</text>
+    </g>
+    <!-- 右 盘整背驰 -->
+    <g class="cd-rev d3">
+      <text x="660" y="36" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#b8841c">盘整背驰 (弱信号)</text>
+      <rect x="540" y="140" width="240" height="60" fill="#f0e0a8" opacity="0.5" stroke="#b8841c" stroke-width="1"/>
+      <path d="M 520 200 C 580 150 620 195 660 155 C 700 120 740 175 780 150" fill="none" stroke="#3a3128" stroke-width="2"/>
+      <circle cx="700" cy="120" r="5" fill="#b8841c"/>
+      <text x="660" y="240" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a3128">只 1 个中枢, c 不破中枢、面积变小</text>
+      <text x="660" y="257" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#b8841c">→ 之后有回拉, 但级别小、可靠性低</text>
+    </g>
+    <line x1="450" y1="46" x2="450" y2="270" stroke="#bfb398" stroke-width="1" stroke-dasharray="5 4" class="cd-rev d1"/>
+  </svg>
+</figure>
+
+
+<!-- §04 -->
+<h2><span class="num">§ 04</span>区间套 · 精确到一个点</h2>
+
+<p>背驰是一个<strong>区间</strong>（一段里劲在变小），不是精确的点。<strong>区间套</strong><a class="jr" href="#g-07">7</a> 的招很巧：c 段内部本身至少含两个<strong>次级别</strong>中枢，于是可以在 c 段里再套一个 a+A+b+B+c 做次级别的背驰判断；次级别里还能再套…… <strong>大级别背驰的区间 ∩ 小级别也背驰的那一刻 = 精确买卖点</strong>。</p>
+
+<figure id="fig-nest" class="fig-nest">
+  <figcaption>
+    <span>Fig 04 · 区间套</span>
+    <span class="fnum">大级别背驰里套小级别背驰 → 精确点</span>
+  </figcaption>
+  <svg class="cd-svg" viewBox="0 0 880 300" xmlns="http://www.w3.org/2000/svg">
+    <!-- 大级别 c 段 + 背驰区间 -->
+    <g class="cd-rev d1">
+      <text x="180" y="40" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" fill="#9b2c2c">大级别 c 段</text>
+      <path d="M 60 230 L 130 150 L 180 185 L 280 90" fill="none" stroke="#3a3128" stroke-width="2.2"/>
+      <rect x="240" y="60" width="80" height="80" fill="#efd6c8" opacity="0.4" stroke="#9b2c2c" stroke-width="1" stroke-dasharray="4 3"/>
+      <text x="280" y="160" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#9b2c2c">背驰区间 (模糊)</text>
+    </g>
+    <!-- 放大箭头 -->
+    <path d="M 330 100 L 400 100" fill="none" stroke="#1f3a5f" stroke-width="1.4" marker-end="url(#cda)" class="cd-rev d3"/>
+    <text x="365" y="90" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#1f3a5f" class="cd-rev d3">放大 c 段</text>
+    <!-- 次级别 a+A+b+B+c -->
+    <g class="cd-rev d3">
+      <text x="600" y="40" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" fill="#b8841c">次级别: 里面又是一个 a+A+b+B+c</text>
+      <rect x="450" y="150" width="70" height="32" fill="#f0e0a8" opacity="0.6" stroke="#b8841c" stroke-width="1"/>
+      <rect x="640" y="95" width="70" height="32" fill="#d8e6ce" opacity="0.6" stroke="#4a6b3a" stroke-width="1"/>
+      <path d="M 420 200 L 485 166 L 540 110 L 600 130 L 675 80 L 740 95" fill="none" stroke="#3a3128" stroke-width="2"/>
+      <circle cx="675" cy="80" r="6" fill="#9b2c2c"/>
+      <text x="675" y="68" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="#9b2c2c">次级别也背驰</text>
+      <text x="755" y="105" font-family="JetBrains Mono,monospace" font-size="10" font-weight="700" fill="#9b2c2c">= 精确点</text>
+    </g>
+    <text x="440" y="285" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" fill="#3a3128" class="cd-rev d5">层层嵌套, 直到小级别也背驰那一刻 —— 这是缠论"看着很科学"的来源</text>
+    <defs><marker id="cda" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#1f3a5f"/></marker></defs>
+  </svg>
+</figure>
+
+
+<!-- §05 -->
+<h2><span class="num">§ 05</span>定理 · 背驰 ↔ 买卖点</h2>
+
+<p>缠论用一条定理把动力学和买卖点焊死：</p>
+
+<div class="thm">任何级别的背驰<a class="jr" href="#g-08">8</a>，必然制造某级别的买卖点；任何级别的买卖点，必然源自某级别的背驰。</div>
+
+<p>由此三类买卖点各有出身，且会<strong>级别嵌套转化</strong><a class="jr" href="#g-12">12</a>：</p>
+
+<figure id="fig-bsp" class="fig-bsp">
+  <figcaption>
+    <span>Fig 05 · 三类买点 + 级别转化</span>
+    <span class="fnum">某级别的三买 = 更大级别的一/二买</span>
+  </figcaption>
+  <svg class="cd-svg" viewBox="0 0 880 320" xmlns="http://www.w3.org/2000/svg">
+    <rect class="cd-rev d3" x="300" y="150" width="240" height="70" fill="#efd6c8" opacity="0.5" stroke="#9b2c2c" stroke-width="1"/>
+    <text x="420" y="190" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#9b2c2c" class="cd-rev d3">中枢</text>
+    <!-- 价格路径 -->
+    <path class="cd-rev d1" d="M 60 90 L 150 240 L 230 175 L 300 215 L 360 165 L 420 205 L 540 130 L 620 165 L 760 70" fill="none" stroke="#3a3128" stroke-width="2.2"/>
+    <!-- 买点 -->
+    <g class="cd-rev d2" font-family="JetBrains Mono,monospace">
+      <circle cx="150" cy="240" r="6" fill="#9b2c2c"/><text x="150" y="265" text-anchor="middle" font-size="11" font-weight="700" fill="#9b2c2c">1 买</text>
+      <text x="150" y="280" text-anchor="middle" font-size="8.5" fill="#7a6f5d">背驰反转</text>
+      <circle cx="300" cy="215" r="6" fill="#b8841c"/><text x="300" y="240" text-anchor="middle" font-size="11" font-weight="700" fill="#b8841c">2 买</text>
+      <text x="300" y="254" text-anchor="middle" font-size="8.5" fill="#7a6f5d">次级别回调结束</text>
+      <circle cx="620" cy="165" r="6" fill="#4a6b3a"/><text x="620" y="148" text-anchor="middle" font-size="11" font-weight="700" fill="#4a6b3a">3 买</text>
+      <text x="620" y="134" text-anchor="middle" font-size="8.5" fill="#7a6f5d">突破中枢回试不回</text>
+    </g>
+    <!-- 级别转化 -->
+    <g class="cd-rev d5">
+      <circle cx="620" cy="165" r="14" fill="none" stroke="#1f3a5f" stroke-width="1.6" stroke-dasharray="3 3"/>
+      <path d="M 634 165 L 700 165" fill="none" stroke="#1f3a5f" stroke-width="1.2" marker-end="url(#cdb)"/>
+      <text x="760" y="200" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#1f3a5f">这个三买,<tspan x="760" dy="14">可能是更大级别的</tspan><tspan x="760" dy="14">一买 / 二买</tspan></text>
+    </g>
+    <text x="300" y="305" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" fill="#3a3128" class="cd-rev d5">买卖点在级别之间套娃 —— 小级别的终点是大级别的起点</text>
+    <defs><marker id="cdb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#1f3a5f"/></marker></defs>
+  </svg>
+</figure>
+
+<div class="note">
+  <span class="l">硬核, 但仍有主观空间</span>
+  <p>背驰 + 区间套是缠论最唬人的部分，给了普通技术分析没有的精确感。但 <strong>MACD 面积怎么比、c 段从哪算、套到哪个级别停</strong> 仍靠判断；背驰<strong>钝化</strong>（劲小了还继续走）是著名的坑。当成"趋势可能衰竭的预警 + 定位工具"，不是必然反转信号。完整争议见 <a href="chan-theory.html">形态学主篇</a>。</p>
+</div>
+
+<p>下一篇 <a href="chan-theory-operation.html">操作篇</a> 讲怎么把这套变成能下单的操作：走势分解定理 + 同级别分解。</p>
+
+
+<!-- glossary -->
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">背驰</span> · 价格还在创新高/新低，但力度明显比上一段弱 → 趋势将尽。是缠论动力学的核心，跟普通技术分析的"背离"思路一致但有严格的结构和级别定义。</li>
+    <li id="g-02"><span class="term">标准结构 a+A+b+B+c</span> · 背驰的判断框架。A、B 是同向趋势里相邻的两个中枢，a/b/c 是连接与离开它们的段。比较"离开第二个中枢的 c 段"和"离开第一个中枢的 a 段"的力度。</li>
+    <li id="g-03"><span class="term">趋势背驰</span> · 发生在有≥2 个同向中枢的趋势末端，c 段走完 MACD 面积小于 a 段 → 标准背驰，大概率反转，制造第一类买卖点。可靠性高。</li>
+    <li id="g-04"><span class="term">盘整背驰</span> · 发生在只有 1 个中枢的盘整里，c 段不破中枢、MACD 面积变小 → 之后有回拉。级别小、可靠性低于趋势背驰。</li>
+    <li id="g-05"><span class="term">MACD 面积 / 黄白线</span> · 缠论量化"力度"的工具。中枢会把 MACD 黄白线拉回 0 轴附近；比较两段的红绿柱面积（涨看红、跌看绿）+ 黄白线回拉高度，面积明显小 = 力度衰竭。</li>
+    <li id="g-06"><span class="term">力度</span> · 一段走势"劲有多大"，体现为斜率/速度，量化为 MACD 面积。背驰的本质就是"价更极端但力度更小"。</li>
+    <li id="g-07"><span class="term">区间套</span> · 把背驰从"区间"精确到"点"的方法。c 段内含次级别中枢，可在 c 段里再做次级别背驰判断，层层嵌套；大级别背驰区间 ∩ 小级别也背驰的那一刻 = 精确买卖点。</li>
+    <li id="g-08"><span class="term">背驰-买卖点定理</span> · 缠论把动力学和买卖点焊死的定理：任何级别的背驰必然制造某级别的买卖点；任何级别的买卖点必然源自某级别的背驰。</li>
+    <li id="g-09"><span class="term">第一类买点</span> · 下跌趋势背驰后的反转最低点，由背驰直接造出来。风险最大、最便宜。</li>
+    <li id="g-10"><span class="term">第二类买点</span> · 一买后第一次次级别回调结束、不破新低的点，本质 = 次级别回调走完。</li>
+    <li id="g-11"><span class="term">第三类买点</span> · 中枢被向上突破后、回试不重新跌回中枢的点，确认中枢级别升级、趋势延续。最稳但已涨一段。</li>
+    <li id="g-12"><span class="term">级别嵌套转化</span> · 买卖点在级别之间套娃：某级别的第三类买点，往往就是更大级别的第一/二类买点。小级别的终点是大级别的起点。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>Authored / 个人学习笔记 · 2026 · 缠中说禅《教你炒股票 108 课》动力学篇</span>
+  <span>Index / <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+
+<script>
+{
+  const figs = ['fig-struct','fig-macd','fig-types','fig-nest','fig-bsp'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.2 });
+    obs.observe(el);
+  });
+}
+</script>
+
+</body>
+</html>
