@@ -37,6 +37,35 @@ CATEGORY_LABELS = {
     "threads": "Threads · 思考",
 }
 
+# 领域标签：frontmatter 里写 tags: [系统] / [金融] / [史] ... 覆盖默认
+DOMAIN_ORDER = ["ML", "系统", "金融", "史", "理财"]
+
+
+def entry_domains(e) -> list:
+    """页面的领域标签。显式 tags 优先，否则按 category 推断默认。"""
+    tags = e.meta.get("tags")
+    if tags:
+        return [str(t) for t in (tags if isinstance(tags, list) else [tags])]
+    if e.category == "books":
+        return ["理财"]
+    return ["ML"]
+
+
+def _strip_html(s: str) -> str:
+    return html.unescape(re.sub(r"<[^>]+>", "", s)).strip()
+
+
+def entry_search_text(e) -> str:
+    """搜索索引文本：标题 + 一句话 + slug + 领域 + 章节标题 + glossary 术语。"""
+    parts = [e.title, e.hook, e.slug, str(e.meta.get("type", ""))]
+    parts += entry_domains(e)
+    page = HTML_OUT / e.category / f"{e.slug}.html"
+    if page.exists():
+        h = page.read_text()
+        for pat in (r"<h2[^>]*>(.*?)</h2>", r"<h3[^>]*>(.*?)</h3>", r'class="term">(.*?)</span>'):
+            parts += [_strip_html(m) for m in re.findall(pat, h, re.S)]
+    return re.sub(r"\s+", " ", " ".join(p for p in parts if p)).strip().lower()
+
 
 @dataclass
 class Entry:
@@ -599,7 +628,10 @@ def render_index(entries: list[Entry]) -> str:
             if e.bespoke_path:
                 href = f"{cat}/{e.slug}.html"
                 ready = True
-            pills = [f'<span class="pill">{e.meta.get("type", cat[:-1] if cat.endswith("s") else cat)}</span>']
+            doms = entry_domains(e)
+            stext = entry_search_text(e)
+            pills = [f'<span class="pill dom dom-{html.escape(d)}">{html.escape(d)}</span>' for d in doms]
+            pills.append(f'<span class="pill">{e.meta.get("type", cat[:-1] if cat.endswith("s") else cat)}</span>')
             if "updated" in e.meta:
                 pills.append(f'<span class="pill">updated {html.escape(str(e.meta["updated"]))}</span>')
             if "ingested" in e.meta:
@@ -618,19 +650,32 @@ def render_index(entries: list[Entry]) -> str:
             entry_class = f"entry {cat[:-1] if cat.endswith('s') else cat}"
             if not ready:
                 entry_class += " todo"
-            rows.append(f"""<div class="{entry_class}">
+            rows.append(f"""<div class="{entry_class}" data-domains="{html.escape(' '.join(doms))}" data-s="{html.escape(stext, quote=True)}">
   <h3>{title_link}</h3>
   {'<p class="hook">' + html.escape(e.hook) + '</p>' if e.hook else ''}
   <div class="pills">{''.join(pills)}</div>
 </div>""")
         sections_html.append(f"""
+<section class="cat-block">
 <h2><span class="num">§ 0{i}</span>{CATEGORY_LABELS[cat]}</h2>
 <div class="entries">
 {''.join(rows)}
 </div>
+</section>
 """)
 
     body = "\n".join(sections_html)
+
+    # 领域 chip：只出现实际存在的领域，DOMAIN_ORDER 优先，其余按字母补后面
+    dom_count: dict = {}
+    for e in entries:
+        for d in entry_domains(e):
+            dom_count[d] = dom_count.get(d, 0) + 1
+    ordered = [d for d in DOMAIN_ORDER if d in dom_count] + sorted(d for d in dom_count if d not in DOMAIN_ORDER)
+    chips = [f'<button class="chip active" data-dom="">全部 <span class="c">{len(entries)}</span></button>']
+    for d in ordered:
+        chips.append(f'<button class="chip" data-dom="{html.escape(d)}">{html.escape(d)} <span class="c">{dom_count[d]}</span></button>')
+    chips_html = "".join(chips)
 
     return f"""<!doctype html>
 <html lang="zh-CN">
@@ -642,6 +687,18 @@ def render_index(entries: list[Entry]) -> str:
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css" />
+<style>
+.search {{ margin: 44px 0 8px; }}
+.search input {{ width: 100%; box-sizing: border-box; font-family: 'JetBrains Mono', monospace; font-size: 15px; padding: 14px 16px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper-card); color: var(--ink); }}
+.search input:focus {{ outline: none; border-color: var(--brick); }}
+.chips {{ display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }}
+.chip {{ font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1px; padding: 5px 13px; border: 1px solid var(--rule); border-radius: 20px; background: transparent; color: var(--ink-2); cursor: pointer; transition: all 0.15s; }}
+.chip:hover {{ border-color: var(--brick); }}
+.chip.active {{ background: var(--ink); color: var(--paper); border-color: var(--ink); }}
+.chip .c {{ opacity: 0.55; font-size: 10px; }}
+.pill.dom {{ font-weight: 700; border-color: var(--ink-2); }}
+.nores {{ font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--muted); padding: 36px 0; text-align: center; }}
+</style>
 </head>
 <body>
 <div class="page">
@@ -669,6 +726,12 @@ def render_index(entries: list[Entry]) -> str:
   <p><strong>这页目录也是渲染出来的。</strong><code>render.py</code> 扫 frontmatter 生成，并给 bespoke 页面注入导航、解析 <code>[[wikilink]]</code>。</p>
 </div>
 
+<div class="search">
+  <input id="q" type="search" placeholder="搜索 标题 / 概念 / 术语…  (例: attention, 中枢, GC, 均输)" autocomplete="off" spellcheck="false" />
+  <div class="chips">{chips_html}</div>
+</div>
+<div id="nores" class="nores" hidden>没有匹配的条目 — 换个词试试</div>
+
 {body}
 
 <div class="colophon">
@@ -676,6 +739,41 @@ def render_index(entries: list[Entry]) -> str:
 </div>
 
 </div>
+<script>
+(function(){{
+  var q = document.getElementById('q');
+  var chips = [].slice.call(document.querySelectorAll('.chip'));
+  var entries = [].slice.call(document.querySelectorAll('.entry'));
+  var blocks = [].slice.call(document.querySelectorAll('.cat-block'));
+  var nores = document.getElementById('nores');
+  var dom = '';
+  function apply(){{
+    var term = q.value.trim().toLowerCase();
+    var shown = 0;
+    entries.forEach(function(el){{
+      var okT = !term || (el.getAttribute('data-s') || '').indexOf(term) !== -1;
+      var okD = !dom || (el.getAttribute('data-domains') || '').split(' ').indexOf(dom) !== -1;
+      var vis = okT && okD;
+      el.style.display = vis ? '' : 'none';
+      if (vis) shown++;
+    }});
+    blocks.forEach(function(b){{
+      var any = [].slice.call(b.querySelectorAll('.entry')).some(function(e){{ return e.style.display !== 'none'; }});
+      b.style.display = any ? '' : 'none';
+    }});
+    nores.hidden = shown !== 0;
+  }}
+  q.addEventListener('input', apply);
+  chips.forEach(function(c){{
+    c.addEventListener('click', function(){{
+      chips.forEach(function(x){{ x.classList.remove('active'); }});
+      c.classList.add('active');
+      dom = c.getAttribute('data-dom') || '';
+      apply();
+    }});
+  }});
+}})();
+</script>
 </body>
 </html>
 """
