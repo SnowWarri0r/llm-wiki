@@ -63,8 +63,8 @@ Decoder 最后一层 → linear → softmax → 词表上的概率分布
 
 <figure style="margin:26px 0; padding:22px; background:#eef2f7; border:1px solid #9fb3c8; border-radius:4px;">
 <svg viewBox="0 0 700 360" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:JetBrains Mono,monospace;">
-  <defs><marker id="au" markerWidth="8" markerHeight="8" refX="3" refY="1" orient="auto"><path d="M0,6 L3,0 L6,6 Z" fill="#1f3a5f"/></marker>
-  <marker id="ad" markerWidth="8" markerHeight="8" refX="3" refY="5" orient="auto"><path d="M0,0 L3,6 L6,0 Z" fill="#9b2c2c"/></marker></defs>
+  <defs><marker id="au" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#1f3a5f"/></marker>
+  <marker id="ad" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#9b2c2c"/></marker></defs>
 
   <!-- ===== 左：深度（竖着堆 N 层） ===== -->
   <text x="160" y="28" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#1f3a5f">深度 · 竖着堆 N 层（顺序接力）</text>
