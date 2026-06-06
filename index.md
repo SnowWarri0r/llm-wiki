@@ -23,7 +23,9 @@
 - [PPO · Proximal Policy Optimization](wiki/papers/ppo.md) — 一行 clip 干掉 TRPO 的复杂; RLHF 的训练发动机, 撑起 ChatGPT 的对齐
 - [Go GC · 从 mark-sweep 到 Green Tea](wiki/papers/go-gc.md) — 系统/runtime 深度页: 三色并发 mark-sweep + write barrier + GOGC/GOMEMLIMIT, 到 Go 1.26 默认的 Green Tea 按页扫优化
 - [康波周期 · 经济的四季](wiki/papers/kondratiev-wave.md) — 宏观/有争议框架: 50–60 年长波 + 五次技术浪潮 + 四季资产轮动 + 多周期嵌套 + 周金涛本土化; 当罗盘不当钟表
-- [缠论 · 把走势拆成可数的结构](wiki/papers/chan-theory.md) — 技术分析/自洽但主观: 分型→笔→线段→中枢 + 级别自相似 + 背驰 + 三类买卖点; 坐标系不是预言机
+- [缠论 · 把走势拆成可数的结构](wiki/papers/chan-theory.md) — 技术分析/自洽但主观: 分型→笔→线段→中枢 + 级别自相似 + 背驰 + 三类买卖点; 坐标系不是预言机 ｜ 形态学(主篇)
+- [缠论 · 动力学 · 背驰与区间套](wiki/papers/chan-theory-dynamics.md) — 缠论深入②: 背驰精判(MACD面积/趋势vs盘整) + 区间套精确定位 + 背驰↔买卖点定理 + 级别嵌套转化
+- [缠论 · 操作 · 走势分解](wiki/papers/chan-theory-operation.md) — 缠论深入③: 走势类型定理(趋势/盘整) + 同级别分解 + 中枢震荡 + 走势多义性 + 只做当下
 - [盐铁论 · 两千年前的国营 vs 民营](wiki/papers/discourses-salt-iron.md) — 史/政治经济学: 公元前81年盐铁会议, 桑弘羊财政机器 vs 贤良文学民本, 富国强兵 vs 藏富于民; 两千年回声
 - [净利润断层 · 业绩惊喜 + 跳空缺口](wiki/papers/net-profit-gap.md) — 交易/事件驱动: 净利润惊喜 + 断层缺口, 本质捕捉 PEAD(Ball&Brown 1968); 有学术底子但会衰减
 - [资金面 · 量能与共识](wiki/papers/capital-flow.md) — 交易/盘口经验派: 量能(量价关系) + 共识(游资分歧转一致/筹码集中/抱团); 经验派语言, 易事后解释
