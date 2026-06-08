@@ -33,6 +33,7 @@
 - [资金面 · 量能与共识](wiki/papers/capital-flow.md) — 交易/盘口经验派: 量能(量价关系) + 共识(游资分歧转一致/筹码集中/抱团); 经验派语言, 易事后解释
 - [爱在冰川 · 低吸待涨的道法术](wiki/papers/aizai-bingchuan.md) — 交易/短线经验派: 道(低吸待涨极简循环)→法(横盘龙头低吸/大智大勇/潜伏)→术(揉搓线/做小T); 从公开复盘合集提炼, 非荐股
 - [Ideogram 4.0 · 9.3B 单流 DiT](wiki/papers/ideogram-4.md) — 文生图开源权重: 单流 DiT + Qwen3-VL 文本编码器 + 结构化 JSON caption(bbox/调色板); 9.3B 文本渲染碾压 80B
+- [MiniMind-O · 0.1B 端到端 Omni](wiki/papers/minimind-o.md) — 从0实现的听看说 Omni: Thinker–Talker 双路径 + MTP 出8层 Mimi codes + 冻结编码器/projector; fish-speech 的麻雀版
 
 ## Books · 书籍精讲
 
@@ -161,6 +162,11 @@
 - [Contrastive Learning](wiki/concepts/contrastive-learning.md) — 拉近正样本 + 推开负样本, in-batch negatives 白送 N²-N 个负例
 - [Zero-Shot Image Classification](wiki/concepts/zero-shot-image-classification.md) — 分类变成"哪句话最配这张图", 类别由文本定义
 - [Dual-Tower Architecture](wiki/concepts/dual-tower-architecture.md) — 两个独立 encoder + 末端点积; 推理可缓存, 适合检索
+
+### Omni / 语音交互
+- [Thinker–Talker](wiki/concepts/thinker-talker.md) — 想的(语义文本)和说的(渲染音频codes)分两路解耦; Talker 吃 Thinker 中间层条件
+- [Multi-Token Prediction](wiki/concepts/multi-token-prediction.md) — 同帧并行预测多层 RVQ codebook, 避免 8 倍序列膨胀; 共享主体+轻量 adapter
+- [Modality Projector](wiki/concepts/modality-projector.md) — 两层 MLP 把冻结编码器特征翻译进 LLM 隐空间占位符, 小投影撬动大编码器
 
 ### 强化学习 / 对齐
 - [RL 直觉打底](wiki/concepts/rl-for-llm-people.md) — 给懂 LLM 不懂 RL 的人: policy/rollout/advantage/KL/loss 走势全翻译成自回归术语 (含 loss 函数走势对照图)
