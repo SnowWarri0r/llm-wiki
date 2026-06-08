@@ -21,6 +21,7 @@ Ideogram 第一个开源权重模型（2026-06-03）：9.3B 的**单流 Diffusio
 - **VLM 当文本编码器**：文本编码器是 [[qwen3-vl]]-8B-Instruct（text-only 模式），而且 DiT 吃它**13 个中间层的 hidden state 拼接**，不是单层、也不是无外部编码器。更深的语言理解喂给生成。
 - **结构化 JSON caption（最大差异点）**：模型**只**在结构化 JSON 上训练，每条 caption 穷举画面每个元素 + style 块 + 可选 bbox + 调色板。训练/推理同格式，推理前还按 schema 校验。详见 [[structured-caption-conditioning]]。
 - **flow matching + 非对称 CFG**：训练目标是 flow matching（预测速度场，ODE 从噪声到干净 latent，见 [[flow-matching]]）；采样用 Euler，**非对称 CFG**——无条件支整个丢掉文本只跑图像 token，两支独立调，能分开调"听话程度"和"画质"。详见 [[classifier-free-guidance]]。
+- **不是自回归（易混点）**：走 Transformer ≠ 自回归。自回归循环在**位置**上（token 逐个生成、causal mask、N token=N 次前向）；Ideogram 循环在**去噪步**上（整张 latent 并行进 DiT，~25 步由糊变清，无 mask 双向）。训练是 flow matching 的 MSE，不是预测下一个 token 的 cross-entropy。对照 [[next-token-forward-pass]]（那张图是自回归）。
 - **2K 原生 + 透明背景 + 一套权重多分辨率**：噪声 schedule 随分辨率自适应，256–2048px 一套权重通吃。
 
 ## 关键概念 → 概念页
