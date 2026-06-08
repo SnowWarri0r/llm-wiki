@@ -291,7 +291,7 @@ figure.play .mo-rev.d6 { transition-delay: 1.65s; }
 <!-- §04 -->
 <h2><span class="num">§ 04</span>Talker · MTP 一次出 8 层 Mimi codes</h2>
 
-<p>Talker 要把语义状态变成可解码的音频。Mimi<a class="jr" href="#g-04">4</a> 是 <strong>RVQ</strong><a class="jr" href="#g-05">5</a> 神经码：每帧 8 层 codebook（第 1 层粗轮廓，往后逐层补残差），12.5 Hz、24 kHz。要是像普通自回归一个 code 一个 code 吐，序列瞬间 8 倍长。<strong>MTP</strong><a class="jr" href="#g-06">6</a> 的办法：同一帧<strong>一次把 8 层都预测出来</strong>，序列不膨胀。</p>
+<p>Talker 要把语义状态变成可解码的音频。Mimi<a class="jr" href="#g-04">4</a> 是 <strong>RVQ</strong><a class="jr" href="#g-05">5</a> 神经码：每帧 8 层 codebook（第 1 层粗轮廓，往后逐层补残差），12.5 Hz、24 kHz。要是像普通自回归一个 code 一个 code 吐，序列瞬间 8 倍长。<strong>MTP</strong><a class="jr" href="#g-06">6</a> 的办法：每个解码步<strong>并行吐多层</strong>，配<strong>延迟错位</strong>让残差依赖沿对角线保住（不是粗暴丢掉），序列不膨胀。</p>
 
 <figure id="fig-mtp" class="fig-mtp">
   <figcaption>
@@ -418,7 +418,7 @@ figure.play .mo-rev.d6 { transition-delay: 1.65s; }
     <li id="g-03"><span class="term">bridge 中间层</span> · Thinker 传给 Talker 的条件取自中间层（默认 层数//2−1），不取 embedding（语义薄）也不取末层（被 LM head 往 next-token 过度塑形）。中间层上下文+跨模态已融、又未被输出目标污染。</li>
     <li id="g-04"><span class="term">Mimi codec</span> · Kyutai 的神经音频编解码器：8 层 codebook、12.5 Hz、24 kHz。把波形量化成离散 code 供模型预测，再增量解码回波形。MiniMind-O 里冻结。</li>
     <li id="g-05"><span class="term">RVQ · 残差向量量化</span> · 多层 codebook，每层量化上一层的残差：第 1 层粗轮廓，往后逐层补细节。Mimi 是 RVQ 神经码。详见 <a href="../concepts/rvq-codec.html">rvq-codec</a>。</li>
-    <li id="g-06"><span class="term">MTP · Multi-Token Prediction</span> · 同一帧位置一次并行预测多层 codebook（这里 8 层），避免把多层拆成 8 倍长的链路。共享主体 + 轻量 codebook adapter。详见 <a href="../concepts/multi-token-prediction.html">multi-token-prediction</a>。</li>
+    <li id="g-06"><span class="term">MTP · Multi-Token Prediction</span> · 每个解码步并行吐多层 codebook，配延迟错位（delay pattern）让 RVQ 残差依赖沿对角线保住，既不膨胀序列也不丢依赖。共享主体 + 轻量 codebook adapter。详见 <a href="../concepts/multi-token-prediction.html">multi-token-prediction</a>。</li>
     <li id="g-07"><span class="term">modality projector</span> · 两层 MLP，把冻结编码器的特征投影到 LLM 隐空间、填进占位符 token（audio 512→768、vision 768→768）。详见 <a href="../concepts/modality-projector.html">modality-projector</a>。</li>
     <li id="g-08"><span class="term">SenseVoice / SigLIP2</span> · 冻结的外部编码器：SenseVoice-Small 抽 16kHz 语音特征（234M）、SigLIP2 把 256×256 图编成 64 patch token（94.55M）。只抽特征，不参与训练。</li>
     <li id="g-09"><span class="term">in-context voice cloning</span> · 参考音频先编成 voice prompt 当上下文条件喂给 Talker，换音色只替换条件，不微调权重、不改 prompt。详见 <a href="../concepts/voice-cloning-reference.html">voice-cloning-reference</a>。</li>
