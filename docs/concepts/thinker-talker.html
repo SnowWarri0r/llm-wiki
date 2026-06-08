@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Thinker–Talker · 想的和说的分两条路 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · thinker-talker</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Thinker–Talker · 想的和说的分两条路</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把"理解+思考"和"发声"拆成两个模块：<strong>Thinker</strong> 读多模态、出语义文本；<strong>Talker</strong> 在 Thinker 的语义状态上渲染语音 token —— 一个负责想，一个负责说。</p>
+<h2>直觉 · 人也是先想好再开口</h2>
+<p>让一个 0.1B 的小模型既听懂图文语音、又能说出自然的流式语音，要是塞进一条链路会互相拖累：语言理解要的是"抓语义"，语音生成要的是"逐帧把声学细节铺出来"，两件事的目标不一样。</p>
+<p>Thinker–Talker（Qwen-Omni、minimind-o 走这条）的办法是<strong>解耦</strong>：</p>
+<ul>
+<li><strong>Thinker</strong> = 一个语言主干（minimind-o 里是 8 层 MiniMind Transformer）。吃文本 token + 注入进来的语音/图像特征，像平常 LLM 一样<strong>输出语义层面的文本回复</strong>。</li>
+<li><strong>Talker</strong> = 一组独立的小 Transformer block（minimind-o 里 4 层）。它不重新理解世界，只接 Thinker 给的<strong>语义条件</strong>，把它<strong>渲染成可解码的音频 codes</strong>（见 <a href="../concepts/rvq-codec.html">rvq-codec</a> 的 Mimi codec）。</li>
+</ul>
+<p>类比：Thinker 是编剧（想清楚说什么），Talker 是配音演员（把台词用声音演出来）。配音演员不需要再读一遍剧本背景，只要拿到台词和情绪就能开口。</p>
+<h2>怎么做的 · Talker 吃的是中间层，不是最后一层</h2>
+<p>最关键的设计点：Thinker 传给 Talker 的不是 embedding、也不是最后一层，而是<strong>中间层</strong>的表征。</p>
+<ul>
+<li>embedding 层：还没融合上下文，语义太薄</li>
+<li>最后一层：已经被 LM head 往"预测下一个文本 token"的方向过度塑形，丢了适合发声的信息</li>
+<li><strong>中间层</strong>：上下文和跨模态信息已经融好，又没被输出目标带偏 —— 最适合当语音生成的条件</li>
+</ul>
+<p>minimind-o 默认 <code>bridge_layer = 层数//2 − 1</code>。这一刀切在"理解够了、还没被文本输出目标污染"的位置。</p>
+<pre><code>多模态输入 ─▶ [Thinker 8层] ──┬─▶ 末层 → 文本回复
+                              │
+                     中间层(bridge) ─▶ [Talker 4层] ─MTP─▶ 8层 Mimi codes ─▶ 流式语音
+</code></pre>
+<h2>为什么对小模型特别划算</h2>
+<p>Thinker/Talker 解耦后，<strong>语言理解和跨模态融合都压在 Thinker</strong>，Talker 只在语义条件上渲染声音。所以 Talker 可以做得很小（minimind-o 实验里 Talker 768 维、4 层就够），整条 Omni 链路压在 0.1B 量级。真正的瓶颈在输出端：Talker 面对的是 <a href="../concepts/multi-token-prediction.html">multi-token-prediction</a> 出来的 8 层 Mimi codebook，不是单路 next-token。</p>
+<h2>代码出处</h2>
+<ul>
+<li>minimind-o <code>model/model_omni.py</code>（Thinker / Talker / bridge）</li>
+<li>谱系：Qwen2.5-Omni / Qwen3-Omni 的 Thinker-Talker；minimind-o 是 0.1B 的从零复现</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/multi-token-prediction.html">multi-token-prediction</a> · Talker 一次预测多层 codes 的方式</li>
+<li><a href="../concepts/modality-projector.html">modality-projector</a> · 语音/图像怎么注入 Thinker</li>
+<li><a href="../concepts/rvq-codec.html">rvq-codec</a> · Talker 输出的 Mimi codes 就是 RVQ 神经码</li>
+<li><a href="../concepts/next-token-forward-pass.html">next-token-forward-pass</a> · Thinker 出文本走的是这条自回归链</li>
+<li><a href="../papers/minimind-o.html">minimind-o</a> · 0.1B 端到端 Omni</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/minimind-o.html"><span class="cat">paper</span>MiniMind-O · 0.1B 端到端 Omni</a></li><li><a href="../concepts/modality-projector.html"><span class="cat">concept</span>Modality Projector · 把别的模态翻译进 LLM 的隐空间</a></li><li><a href="../concepts/multi-token-prediction.html"><span class="cat">concept</span>Multi-Token Prediction · MTP · 一步预测好几个</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/thinker-talker.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
