@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>CNN · 卷积神经网络</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --accent: var(--deep); --accent-soft: var(--deep-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(44px, 7vw, 78px); line-height: 0.95; letter-spacing: -0.03em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 36px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
+p { margin: 12px 0; } strong { font-weight: 700; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.86em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--deep-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--deep); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--deep); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+table.spec { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+table.spec td, table.spec th { border-bottom: 1px dashed var(--rule); padding: 7px 10px; text-align: left; }
+table.spec th { color: var(--accent); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+table.spec td:first-child { color: var(--muted); }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--deep-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--deep-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* cn-specific (滚动进视口分阶段揭示) */
+.cn-svg { width: 100%; height: auto; display: block; }
+.cn-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .cn-rev { opacity: 1; }
+figure.play .cn-rev.d1 { transition-delay: 0.15s; }
+figure.play .cn-rev.d2 { transition-delay: 0.45s; }
+figure.play .cn-rev.d3 { transition-delay: 0.75s; }
+figure.play .cn-rev.d4 { transition-delay: 1.05s; }
+figure.play .cn-rev.d5 { transition-delay: 1.35s; }
+figure.play .cn-rev.d6 { transition-delay: 1.65s; }
+/* 卷积核滑窗：滚动进视口后一次性滑遍 9 个位置，停在末位 */
+@keyframes cnSlide {
+  0%,9%    { transform: translate(0,0); }
+  11%,20%  { transform: translate(34px,0); }
+  22%,31%  { transform: translate(68px,0); }
+  33%,42%  { transform: translate(0px,34px); }
+  44%,53%  { transform: translate(34px,34px); }
+  55%,64%  { transform: translate(68px,34px); }
+  66%,75%  { transform: translate(0px,68px); }
+  77%,86%  { transform: translate(34px,68px); }
+  88%,100% { transform: translate(68px,68px); }
+}
+figure.play .cn-slide { animation: cnSlide 5.4s linear 0.5s 1 forwards; }
+@media (prefers-reduced-motion: reduce) { .cn-rev { opacity: 1; transition: none; } figure.play .cn-slide { animation: none; } }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · cnn</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Topic · 视觉骨架 · CNN · foundational</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 视觉骨架 · 基础</div>
+  <h1 class="title">CNN ·<br /><span class="em">一把小尺子，滑过整张图。</span></h1>
+  <div class="byline">卷积神经网络 · LeNet(1989) → ResNet → 被 ViT 填平护城河 · foundational</div>
+  <p class="dek">把图拉平喂全连接，参数上千万、还学不会"猫挪个位置还是猫"。CNN 的全部聪明就一句：用一个小核滑遍全图、一路共用同一套权重 —— 把"局部性 + 平移不变"这两条视觉先验，直接焊进网络结构。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>CNN 的原子操作是<strong>卷积</strong><a class="jr" href="#g-01">1</a>：一个小<strong>核</strong><a class="jr" href="#g-02">2</a>滑过整张图，每停一处做<strong>逐元素相乘求和</strong>得一个数，滑遍 → 一张 <strong>feature map</strong><a class="jr" href="#g-04">4</a>。两条先验焊进结构——<strong>局部连接</strong>（核只看小窗口）+ <strong>权重共享</strong><a class="jr" href="#g-05">5</a>（一套核滑遍全图 → 参数暴降、天生<strong>平移不变</strong><a class="jr" href="#g-06">6</a>）。一层放<strong>很多核</strong>抓不同模式，层层堆叠把<strong>感受野</strong><a class="jr" href="#g-08">8</a>从"看个边"撑到"看整只猫"，配 <strong>pooling</strong><a class="jr" href="#g-07">7</a> 下采样高效扩张。这三条就是 CNN 的<strong>归纳偏置</strong><a class="jr" href="#g-09">9</a>：数据少时是宝、大数据时代被 ViT<a class="jr" href="#g-10">10</a> 用纯注意力填平，但卷积仍是最省最快的视觉底座。</p>
+</div>
+
+
+<!-- §01 -->
+<h2><span class="num">§ 01</span>卷积 · 核滑过每个位置</h2>
+
+<p>原子操作就一句：<strong>一个小核，盖住一块 patch，逐元素相乘再求和 = 一个输出数；右移一格再来，走完一行换下一行</strong>。下图核滑遍 5×5 输入的 9 个位置，每停一处填一个输出格，最后拼成 3×3 的 feature map——<strong>核的权重一路不变</strong>。</p>
+
+<figure id="fig-conv" class="fig-conv">
+  <figcaption>
+    <span>Fig 01 · 卷积滑窗（滚动触发）</span>
+    <span class="fnum">同一套核 · 滑遍全图 · 每处点乘求和</span>
+  </figcaption>
+  <svg class="cn-svg" viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="cn-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f3a5f"/></marker></defs>
+    <!-- 输入 5x5 -->
+    <text x="112" y="36" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#1f3a5f">输入 5×5</text>
+    <g font-family="JetBrains Mono,monospace" font-size="11" fill="#3a3128" text-anchor="middle">
+      <rect x="30" y="48" width="170" height="170" fill="#fbfaf6" stroke="#9fb3c8"/>
+      <g stroke="#dde5ee">
+        <line x1="64" y1="48" x2="64" y2="218"/><line x1="98" y1="48" x2="98" y2="218"/><line x1="132" y1="48" x2="132" y2="218"/><line x1="166" y1="48" x2="166" y2="218"/>
+        <line x1="30" y1="82" x2="200" y2="82"/><line x1="30" y1="116" x2="200" y2="116"/><line x1="30" y1="150" x2="200" y2="150"/><line x1="30" y1="184" x2="200" y2="184"/>
+      </g>
+      <!-- 一些示意值 -->
+      <text x="47" y="70">1</text><text x="81" y="70">0</text><text x="115" y="70">1</text><text x="149" y="70">0</text><text x="183" y="70">1</text>
+      <text x="47" y="104">0</text><text x="81" y="104">1</text><text x="115" y="104">1</text><text x="149" y="104">0</text><text x="183" y="104">0</text>
+      <text x="47" y="138">1</text><text x="81" y="138">1</text><text x="115" y="138">0</text><text x="149" y="138">1</text><text x="183" y="138">0</text>
+      <text x="47" y="172">0</text><text x="81" y="172">0</text><text x="115" y="172">1</text><text x="149" y="172">1</text><text x="183" y="172">1</text>
+      <text x="47" y="206">1</text><text x="81" y="206">0</text><text x="115" y="206">0</text><text x="149" y="206">1</text><text x="183" y="206">0</text>
+    </g>
+    <!-- 滑动核高亮（覆盖 3x3 = 102 宽，从左上 30,48 起步） -->
+    <rect class="cn-slide" x="30" y="48" width="102" height="102" fill="#1f3a5f" opacity="0.15" stroke="#1f3a5f" stroke-width="2.4"/>
+    <!-- 中间运算说明 -->
+    <g class="cn-rev d1" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a3128">
+      <text x="300" y="108" fill="#1f3a5f" font-weight="700">核盖住的 patch</text>
+      <text x="300" y="128">⊙ 核 → 9 个相乘</text>
+      <text x="300" y="148" fill="#1f3a5f" font-weight="700">Σ 求和 = 1 个输出</text>
+      <path d="M300,162 L500,162" fill="none" stroke="#1f3a5f" stroke-width="1.4" marker-end="url(#cn-a)"/>
+    </g>
+    <!-- 输出 3x3 -->
+    <text class="cn-rev d1" x="605" y="36" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#1f3a5f">feature map 3×3</text>
+    <g class="cn-rev d1">
+      <rect x="554" y="80" width="102" height="102" fill="#fbfaf6" stroke="#9fb3c8"/>
+      <g stroke="#dde5ee"><line x1="588" y1="80" x2="588" y2="182"/><line x1="622" y1="80" x2="622" y2="182"/><line x1="554" y1="114" x2="656" y2="114"/><line x1="554" y1="148" x2="656" y2="148"/></g>
+    </g>
+    <!-- 输出当前格高亮（与核同步滑） -->
+    <rect class="cn-slide" x="554" y="80" width="34" height="34" fill="#1f3a5f" opacity="0.55" stroke="#1f3a5f" stroke-width="1.5"/>
+    <text class="cn-rev d5" x="380" y="252" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#3a3128">左边核停在哪，右边就点亮对应那格 —— 权重一路不变，这就是"权重共享"</text>
+  </svg>
+</figure>
+
+<p>几个旋钮：<strong>stride（步长）</strong>一次滑几格，2 就跳着走、输出更小；<strong>padding</strong>边上补 0 控尺寸。输出边长 ≈ <code>(W − K + 2P) / S + 1</code>。详见 <a href="../concepts/convolution.html">convolution</a>。</p>
+
+
+<!-- §02 -->
+<h2><span class="num">§ 02</span>为什么不直接全连接 · 局部 + 共享</h2>
+
+<p>把 224×224 的图拉平喂全连接（MLP），第一层每个神经元连 ~5 万个输入，几百个神经元就上千万参数；更糟的是<strong>位置写死</strong>——猫在左上角学的权重，猫挪到右下角白学。卷积用两刀砍掉这个浪费。</p>
+
+<figure id="fig-vs" class="fig-vs">
+  <figcaption>
+    <span>Fig 02 · 全连接 vs 卷积</span>
+    <span class="fnum">局部连接 + 权重共享 = 参数暴降 + 平移不变</span>
+  </figcaption>
+  <svg class="cn-svg" viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg">
+    <!-- 左：全连接 -->
+    <text x="190" y="34" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#9b2c2c">全连接：每个输出连所有输入</text>
+    <g class="cn-rev d1">
+      <g fill="#3a3128"><circle cx="80" cy="80" r="5"/><circle cx="80" cy="120" r="5"/><circle cx="80" cy="160" r="5"/><circle cx="80" cy="200" r="5"/></g>
+      <g fill="#9b2c2c"><circle cx="300" cy="110" r="6"/><circle cx="300" cy="170" r="6"/></g>
+      <g stroke="#d8b0a8" stroke-width="0.7">
+        <line x1="85" y1="80" x2="295" y2="110"/><line x1="85" y1="120" x2="295" y2="110"/><line x1="85" y1="160" x2="295" y2="110"/><line x1="85" y1="200" x2="295" y2="110"/>
+        <line x1="85" y1="80" x2="295" y2="170"/><line x1="85" y1="120" x2="295" y2="170"/><line x1="85" y1="160" x2="295" y2="170"/><line x1="85" y1="200" x2="295" y2="170"/>
+      </g>
+    </g>
+    <text class="cn-rev d2" x="190" y="240" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#9b2c2c">参数 = 输入数 × 输出数 → 上千万 · 位置写死</text>
+    <!-- 中缝 -->
+    <line x1="380" y1="50" x2="380" y2="250" stroke="#bfb398" stroke-width="1" stroke-dasharray="5 4"/>
+    <!-- 右：卷积 -->
+    <text x="575" y="34" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#1f3a5f">卷积：只连局部 + 一套核滑遍</text>
+    <g class="cn-rev d3">
+      <g fill="#3a3128"><circle cx="450" cy="80" r="5"/><circle cx="450" cy="110" r="5"/><circle cx="450" cy="140" r="5"/><circle cx="450" cy="170" r="5"/><circle cx="450" cy="200" r="5"/></g>
+      <g fill="#1f3a5f"><circle cx="660" cy="110" r="6"/><circle cx="660" cy="170" r="6"/></g>
+      <!-- 只连局部 3 个，且两组用同色=同一套权重 -->
+      <g stroke="#1f3a5f" stroke-width="1.4">
+        <line x1="455" y1="80" x2="655" y2="110"/><line x1="455" y1="110" x2="655" y2="110"/><line x1="455" y1="140" x2="655" y2="110"/>
+      </g>
+      <g stroke="#1f3a5f" stroke-width="1.4" stroke-dasharray="3 2">
+        <line x1="455" y1="140" x2="655" y2="170"/><line x1="455" y1="170" x2="655" y2="170"/><line x1="455" y1="200" x2="655" y2="170"/>
+      </g>
+    </g>
+    <text class="cn-rev d4" x="575" y="228" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#1f3a5f">每个输出只看 3 个邻居</text>
+    <text class="cn-rev d4" x="575" y="244" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#1f3a5f">两个输出用同一套权重(实/虚=同色) → 平移不变</text>
+  </svg>
+</figure>
+
+<p>两刀：<strong>局部连接</strong>（核只看小窗口，吃"局部性"先验）+ <strong>权重共享</strong>（同一套核滑遍全图，吃"平移不变"先验）。参数从上千万降到"几个核 × 9 个数"，而且猫在画面哪都用同一套核认得出。详见 <a href="../concepts/convolution.html">convolution</a>、<a href="../concepts/inductive-bias.html">inductive-bias</a>。</p>
+
+
+<!-- §03 -->
+<h2><span class="num">§ 03</span>多核 → 层级特征</h2>
+
+<p>一个核只抓<strong>一种</strong>局部模式（比如竖边）。所以一层放<strong>很多核</strong>（64、128…），各抓一种，输出一摞 feature map。下一层的核在这摞上再滑，<strong>把简单模式组合成复杂的</strong>——边缘 → 纹理 → 部件 → 物体，越深越抽象。</p>
+
+<figure id="fig-hier" class="fig-hier">
+  <figcaption>
+    <span>Fig 03 · 层级特征</span>
+    <span class="fnum">边缘 → 纹理 → 部件 → 物体</span>
+  </figcaption>
+  <svg class="cn-svg" viewBox="0 0 760 220" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="cn-h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7a6f5d"/></marker></defs>
+    <g class="cn-rev d1">
+      <rect x="40" y="70" width="120" height="80" rx="4" fill="#dde5ee" stroke="#1f3a5f"/>
+      <text x="100" y="100" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#1f3a5f">浅层</text>
+      <text x="100" y="122" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#3a3128">边缘 / 颜色块</text>
+      <text x="100" y="138" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#7a6f5d">感受野小</text>
+    </g>
+    <path class="cn-rev d2" d="M164,110 L196,110" stroke="#7a6f5d" stroke-width="1.4" marker-end="url(#cn-h)"/>
+    <g class="cn-rev d2">
+      <rect x="200" y="70" width="120" height="80" rx="4" fill="#cdd9e6" stroke="#1f3a5f"/>
+      <text x="260" y="100" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#1f3a5f">中层</text>
+      <text x="260" y="122" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#3a3128">纹理 / 角 / 曲线</text>
+    </g>
+    <path class="cn-rev d3" d="M324,110 L356,110" stroke="#7a6f5d" stroke-width="1.4" marker-end="url(#cn-h)"/>
+    <g class="cn-rev d3">
+      <rect x="360" y="70" width="120" height="80" rx="4" fill="#b9c9da" stroke="#1f3a5f"/>
+      <text x="420" y="100" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#1f3a5f">深层</text>
+      <text x="420" y="122" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#3a3128">部件（眼/轮/耳）</text>
+    </g>
+    <path class="cn-rev d4" d="M484,110 L516,110" stroke="#7a6f5d" stroke-width="1.4" marker-end="url(#cn-h)"/>
+    <g class="cn-rev d4">
+      <rect x="520" y="70" width="120" height="80" rx="4" fill="#1f3a5f" stroke="#1f3a5f"/>
+      <text x="580" y="100" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#fff">最深 / 输出</text>
+      <text x="580" y="122" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#dde5ee">物体（猫）</text>
+      <text x="580" y="138" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#c8d4e2">感受野≈全图</text>
+    </g>
+    <text class="cn-rev d5" x="680" y="114" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">通道↑</text>
+    <text class="cn-rev d5" x="340" y="190" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#3a3128">每层多核抓多模式，下一层把它们组合 → 越深越抽象、感受野越大</text>
+  </svg>
+</figure>
+
+
+<!-- §04 -->
+<h2><span class="num">§ 04</span>pooling + 感受野 · 看得越来越宽</h2>
+
+<p>单个 3×3 卷积只看原图一小块，怎么认出需要全局的"猫"？靠<strong>层层叠加把视野撑大</strong>——这个"一个输出能看到原图多大一片"就是<strong>感受野</strong><a class="jr" href="#g-08">8</a>。光堆卷积，感受野线性长；插一刀<strong>下采样</strong>（<strong>pooling</strong><a class="jr" href="#g-07">7</a> 或 stride=2 卷积）把分辨率砍半，感受野就<strong>指数级</strong>往上窜。</p>
+
+<figure id="fig-rf" class="fig-rf">
+  <figcaption>
+    <span>Fig 04 · 下采样撑感受野</span>
+    <span class="fnum">分辨率砍半 → 一个点覆盖原图翻倍</span>
+  </figcaption>
+  <svg class="cn-svg" viewBox="0 0 760 230" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="cn-r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f3a5f"/></marker></defs>
+    <!-- 三级网格，越来越粗 -->
+    <g class="cn-rev d1">
+      <text x="100" y="36" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a3128">conv: 8×8</text>
+      <rect x="52" y="50" width="96" height="96" fill="#fbfaf6" stroke="#9fb3c8"/>
+      <g stroke="#dde5ee"><line x1="64" y1="50" x2="64" y2="146"/><line x1="76" y1="50" x2="76" y2="146"/><line x1="88" y1="50" x2="88" y2="146"/><line x1="100" y1="50" x2="100" y2="146"/><line x1="112" y1="50" x2="112" y2="146"/><line x1="124" y1="50" x2="124" y2="146"/><line x1="136" y1="50" x2="136" y2="146"/><line x1="52" y1="62" x2="148" y2="62"/><line x1="52" y1="74" x2="148" y2="74"/><line x1="52" y1="86" x2="148" y2="86"/><line x1="52" y1="98" x2="148" y2="98"/><line x1="52" y1="110" x2="148" y2="110"/><line x1="52" y1="122" x2="148" y2="122"/><line x1="52" y1="134" x2="148" y2="134"/></g>
+      <rect x="52" y="50" width="24" height="24" fill="#1f3a5f" opacity="0.5"/>
+      <text x="100" y="166" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#7a6f5d">一个点看原图 ▣ 小</text>
+    </g>
+    <path class="cn-rev d2" d="M156,98 L210,98" stroke="#1f3a5f" stroke-width="1.5" marker-end="url(#cn-r)"/>
+    <text class="cn-rev d2" x="183" y="88" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#1f3a5f">pool /2</text>
+    <g class="cn-rev d3">
+      <text x="280" y="36" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a3128">pool: 4×4</text>
+      <rect x="232" y="50" width="96" height="96" fill="#fbfaf6" stroke="#9fb3c8"/>
+      <g stroke="#dde5ee"><line x1="256" y1="50" x2="256" y2="146"/><line x1="280" y1="50" x2="280" y2="146"/><line x1="304" y1="50" x2="304" y2="146"/><line x1="232" y1="74" x2="328" y2="74"/><line x1="232" y1="98" x2="328" y2="98"/><line x1="232" y1="122" x2="328" y2="122"/></g>
+      <rect x="232" y="50" width="24" height="24" fill="#1f3a5f" opacity="0.5"/>
+      <text x="280" y="166" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#7a6f5d">同样 3×3 核 → 覆盖原图更大</text>
+    </g>
+    <path class="cn-rev d4" d="M336,98 L390,98" stroke="#1f3a5f" stroke-width="1.5" marker-end="url(#cn-r)"/>
+    <text class="cn-rev d4" x="363" y="88" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#1f3a5f">pool /2</text>
+    <g class="cn-rev d5">
+      <text x="460" y="36" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a3128">pool: 2×2</text>
+      <rect x="412" y="50" width="96" height="96" fill="#fbfaf6" stroke="#9fb3c8"/>
+      <line x1="460" y1="50" x2="460" y2="146" stroke="#dde5ee"/><line x1="412" y1="98" x2="508" y2="98" stroke="#dde5ee"/>
+      <rect x="412" y="50" width="48" height="48" fill="#1f3a5f" opacity="0.5"/>
+      <text x="460" y="166" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#7a6f5d">一个点≈看半张图</text>
+    </g>
+    <text class="cn-rev d6" x="620" y="98" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#3a3128"><tspan x="620" dy="0">每下采样一次，</tspan><tspan x="620" dy="18">感受野翻倍 →</tspan><tspan x="620" dy="18">很快盖住全图</tspan></text>
+  </svg>
+</figure>
+
+<p>Max pooling 在小窗口取最大（"有没有这特征"，丢"精确在哪"），降计算、扩感受野、还带一点平移鲁棒。现代骨干常用 stride=2 卷积替掉它，但末端的 <strong>global average pooling</strong> 几乎人人还用——把每张 feature map 压成一个数，替掉老式 CNN 末端那坨全连接。详见 <a href="../concepts/pooling.html">pooling</a>、<a href="../concepts/receptive-field.html">receptive-field</a>。</p>
+
+
+<!-- §05 -->
+<h2><span class="num">§ 05</span>谱系 · LeNet → ResNet → 被 ViT 填平</h2>
+
+<p>CNN 的发展史就是"<strong>怎么把卷积网络做得更深</strong>"，直到 Transformer 从另一条路杀进视觉。</p>
+
+<figure id="fig-line" class="fig-line">
+  <figcaption>
+    <span>Fig 05 · CNN 谱系</span>
+    <span class="fnum">越做越深 → 残差解决退化 → 注意力填平护城河</span>
+  </figcaption>
+  <svg class="cn-svg" viewBox="0 0 760 200" xmlns="http://www.w3.org/2000/svg">
+    <line class="cn-rev d1" x1="40" y1="150" x2="720" y2="150" stroke="#3a3128" stroke-width="1"/>
+    <g font-family="JetBrains Mono,monospace" text-anchor="middle">
+      <g class="cn-rev d1"><circle cx="90" cy="150" r="5" fill="#1f3a5f"/><text x="90" y="138" font-size="10" font-weight="700" fill="#1f3a5f">LeNet</text><text x="90" y="172" font-size="8.5" fill="#7a6f5d">'98 · 手写数字</text></g>
+      <g class="cn-rev d2"><circle cx="230" cy="150" r="5" fill="#1f3a5f"/><text x="230" y="138" font-size="10" font-weight="700" fill="#1f3a5f">AlexNet</text><text x="230" y="172" font-size="8.5" fill="#7a6f5d">'12 · ImageNet 引爆</text></g>
+      <g class="cn-rev d3"><circle cx="370" cy="150" r="5" fill="#1f3a5f"/><text x="370" y="138" font-size="10" font-weight="700" fill="#1f3a5f">VGG</text><text x="370" y="172" font-size="8.5" fill="#7a6f5d">'14 · 堆 3×3 加深</text></g>
+      <g class="cn-rev d4"><circle cx="510" cy="150" r="6" fill="#9b2c2c"/><text x="510" y="136" font-size="10" font-weight="700" fill="#9b2c2c">ResNet</text><text x="510" y="172" font-size="8.5" fill="#7a6f5d">'15 · 残差破退化, 上百层</text></g>
+      <g class="cn-rev d5"><circle cx="660" cy="150" r="6" fill="#4a6b3a"/><text x="660" y="136" font-size="10" font-weight="700" fill="#4a6b3a">ViT</text><text x="660" y="172" font-size="8.5" fill="#7a6f5d">'20 · 注意力换掉卷积</text></g>
+    </g>
+    <text class="cn-rev d5" x="380" y="60" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#3a3128">卷积"靠深度慢慢撑感受野"，注意力"一层即全局"——</text>
+    <text class="cn-rev d6" x="380" y="84" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#3a3128">数据足够大时，焊死的视觉先验反而成了束缚</text>
+  </svg>
+</figure>
+
+<div class="note">
+  <span class="l">放进 wiki 这条线</span>
+  <p>CNN 和 Transformer 是"<strong>先验</strong> vs <strong>通用</strong>"的两端。卷积把"局部性+平移不变"焊进结构 → 数据少时高效、省参、收敛快；注意力（<a href="../concepts/self-attention.html">self-attention</a>）几乎不带空间先验、一层即全局 → 要更多数据喂，但天花板更高。<a href="../papers/resnet.html">ResNet</a> 是 CNN 做深的终点也是 Transformer sublayer 模板的起点；<a href="../papers/vit.html">ViT</a> 用 <a href="../concepts/patch-embedding.html">patch-embedding</a> 把图切成 token、用纯注意力填平了 CNN 的视觉护城河。这正是 <a href="../concepts/inductive-bias.html">inductive-bias</a> 那条主线：<strong>归纳偏置在小数据是宝、大数据是包袱。</strong></p>
+</div>
+
+
+<!-- glossary -->
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">卷积 · convolution</span> · 小核滑过整张图，每处把覆盖的 patch 跟核逐元素相乘求和得一个数。CNN 的原子操作。详见 <a href="../concepts/convolution.html">convolution</a>。</li>
+    <li id="g-02"><span class="term">核 · kernel / filter</span> · 一个小权重矩阵（如 3×3 = 9 个可学的数），代表一种要检测的局部模式。一层放很多个，各抓一种。</li>
+    <li id="g-03"><span class="term">stride / padding</span> · stride = 核一次滑几格（2 = 下采样）；padding = 边上补 0 控制输出尺寸。输出边长 ≈ (W−K+2P)/S+1。</li>
+    <li id="g-04"><span class="term">feature map</span> · 一个核滑遍全图得到的输出图，记录"这种模式在每个位置的响应强度"。一层多核 → 多张 feature map 摞成输出通道。</li>
+    <li id="g-05"><span class="term">权重共享 · weight sharing</span> · 同一套核滑遍全图、所有位置共用，相比全连接参数暴降，也是平移不变的来源。</li>
+    <li id="g-06"><span class="term">平移不变 · translation invariance</span> · 目标在画面哪个位置都用同一套核检测 → 猫挪个地方还是猫。卷积焊进结构的视觉先验之一。</li>
+    <li id="g-07"><span class="term">池化 · pooling</span> · 小窗口取 max/avg 把 feature map 缩小，留"有没有特征"丢"精确在哪"。降计算、扩感受野、带一点平移鲁棒。详见 <a href="../concepts/pooling.html">pooling</a>。</li>
+    <li id="g-08"><span class="term">感受野 · receptive field</span> · 深层一个输出最终由原图多大一块决定。堆卷积线性长，下采样让它指数级扩张。详见 <a href="../concepts/receptive-field.html">receptive-field</a>。</li>
+    <li id="g-09"><span class="term">归纳偏置 · inductive bias</span> · 架构里焊进的先验。CNN 的是局部性+平移不变：小数据时是宝、大数据时成束缚。详见 <a href="../concepts/inductive-bias.html">inductive-bias</a>。</li>
+    <li id="g-10"><span class="term">ViT · 护城河被填平</span> · ViT 把图切成 patch token、用纯 <a href="../concepts/self-attention.html">self-attention</a>（一层即全局），在大数据上打平/超过 CNN，证明视觉不一定要卷积。详见 <a href="../papers/vit.html">vit</a>。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>TOPIC · 视觉骨架 · CNN · foundational</span>
+  <span>INGESTED · 2026-06-09</span>
+</div>
+
+</div>
+<script>
+{
+  const figs = ['fig-conv','fig-vs','fig-hier','fig-rf','fig-line'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.15 });
+    obs.observe(el);
+  });
+}
+</script>
+</body>
+</html>
