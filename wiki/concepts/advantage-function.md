@@ -100,11 +100,14 @@ for rollout in rollouts:
     # critic loss: 监督回归到实际 return
     critic_loss = (V_estimates - returns).pow(2).mean()
     
-    loss = actor_loss + 0.5 * critic_loss
+    # entropy bonus: 鼓励探索, 防过早笃定 (见 entropy-regularization)
+    entropy = action_dist.entropy().mean()
+    
+    loss = actor_loss + 0.5 * critic_loss - 0.01 * entropy   # 完整三项
     loss.backward()
 ```
 
-**Actor 学怎么选, critic 学评估当前局面好坏**. 互相配合.
+**Actor 学怎么选, critic 学评估当前局面好坏**. 互相配合. 注意完整的 PPO loss 是**三项**: clip 策略项 + 价值回归项 + 熵项 —— 少了第三项策略容易过早确定化, 详见 [[entropy-regularization]].
 
 PPO / TRPO / A3C / SAC 全都是 actor-critic 结构。GRPO 是个例外 —— 它**干掉了 critic**, 改用一组采样的相对得分直接当 advantage (省一个网络的开销, 这是 DeepSeek GRPO 的核心简化).
 
@@ -119,6 +122,9 @@ PPO / TRPO / A3C / SAC 全都是 actor-critic 结构。GRPO 是个例外 —— 
 ## 链接
 - [[rl-for-llm-people]] · RL 术语打底 (state/action/分布/loss 走势)
 - [[policy-gradient]] · 它的 loss 权重就是 advantage
+- [[actor-critic]] · 提供 V 估计的 critic + actor 的双网络结构
+- [[gae]] · 用 λ 插值 TD 和 MC 来估优势的标配方法
+- [[entropy-regularization]] · 完整 loss 的第三项
 - [[clipped-surrogate-objective]] · PPO 的 clip 作用在 A_t 上
 - [[ppo]] · 用 advantage 配合 clip 训练
 - [[grpo]] · 不要 critic, 用组内相对得分当 advantage

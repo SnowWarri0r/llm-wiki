@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Entropy Regularization · 花钱买&quot;别太早笃定&quot; · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · entropy-regularization</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Entropy Regularization · 花钱买&quot;别太早笃定&quot;</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>在 loss 里加一笔"保持一点随机性就给奖励", 逼策略多探索一会儿、别一发现点甜头就锁死一招撞死。</p>
+<h2>直觉 · RL 的"过早笃定"病</h2>
+<p>策略会从"乱试"(高熵, 各动作概率差不多)慢慢变"果断"(低熵, 某个动作接近 100%)。这本身是好事 —— 学会了当然该果断。</p>
+<p>坏就坏在<strong>它容易笃定得太早</strong>: 刚发现"一直往右冲"能蹭点分, 就立刻 all-in 这一招, 然后一头撞死在第一个障碍前, <strong>再也不肯试别的</strong>。这叫<strong>过早收敛到局部最优</strong>, 是 RL 最常见的翻车方式。表现就是某个指标(比如每局得分)冲一下就<strong>躺平成一条直线</strong> —— 策略完全确定化, 每局一模一样, 出不来了。</p>
+<p>熵正则就是反制: 给策略<strong>保留好奇心</strong>, 别急着锁死, 多试试别的动作, 说不定能发现更好的玩法(比如"跳过那个障碍")。</p>
+<h2>怎么做的</h2>
+<p>在要最小化的 loss 里<strong>减去</strong>一项熵(等于鼓励熵变大):</p>
+<pre><code>total_loss = 策略损失 + 价值损失 − c · 熵
+                                    ↑
+                              c 就是 ent_coef, 探索力度旋钮
+</code></pre>
+<p><code>ent_coef</code> 这个系数就是旋钮:</p>
+<ul>
+<li><code>0</code> (关掉) → 完全贪心, 发现啥好立刻锁死 → <strong>容易钻死胡同</strong></li>
+<li><code>0.01</code> (常用默认) → 轻轻逼它多探索一会儿</li>
+<li><code>0.05+</code> (很大) → 拼命逼它瞎试 → <strong>可能永远不肯定下来</strong>, 一直乱按学不精</li>
+</ul>
+<p>最优在中间: 前期多探索找好策略, 后期收敛到果断执行。</p>
+<p><strong>一个隐藏前提</strong>: 熵奖励要起作用, <strong>奖励的数值尺度得正常</strong>。如果环境给的 reward 是几百上千, 那一点点熵奖励会被<strong>淹没</strong>, 熵照样秒崩。所以实战里熵正则常和<strong>奖励归一化</strong>(把 reward 压到 ±1 尺度)配套用 —— 尺度不对, 调熵也白搭。</p>
+<p>这套思想往大了讲叫<strong>最大熵强化学习</strong> (maximum entropy RL): 在追高分的同时尽量保持策略多样性, 代表算法是 SAC。<code>ent_coef</code> 是它最朴素的一个旋钮。</p>
+<h2>代码出处</h2>
+<p>stable-baselines3 <code>ppo.py</code>: <code>entropy_loss = -th.mean(entropy)</code>, 再 <code>loss = policy_loss + ent_coef * entropy_loss + vf_coef * value_loss</code>。默认 <code>ent_coef=0.0</code>(图像任务常手动调到 0.01)。日志里的 <code>entropy_loss</code> 就是当前熵的相反数, 看它有没有过早塌到 0。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/actor-critic.html">actor-critic</a> · 这一项加在 actor 的 loss 上</li>
+<li><a href="../papers/ppo.html">ppo</a> · PPO 完整 loss 的第三项(前两项是 clip + 价值回归)</li>
+<li><a href="../concepts/advantage-function.html">advantage-function</a> · 奖励偏移不变性让尺度问题更可控, 但熵仍需奖励归一化配套</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/ppo.html"><span class="cat">paper</span>PPO · Proximal Policy Optimization</a></li><li><a href="../concepts/actor-critic.html"><span class="cat">concept</span>Actor-Critic · 一个动手, 一个打分</a></li><li><a href="../concepts/advantage-function.html"><span class="cat">concept</span>Advantage Function · 跟基线比,不是看绝对值</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/entropy-regularization.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

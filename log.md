@@ -620,3 +620,8 @@ skill 更新:
 - §01 卷积滑窗用 CSS keyframe(cnSlide) 滚动触发一次性滑遍9位置, 输入核+输出格同步高亮
 - 新概念: convolution / pooling / receptive-field; 链 inductive-bias/patch-embedding/resnet/vit/self-attention
 - 主线: CNN(先验) vs Transformer(通用); 感受野靠深度撑 vs 注意力一层即全局
+
+## [2026-06-09] expand | ppo 补"另一半" + 3 新概念页
+- ppo.html 加 4 节 4 图(§05-08): actor-critic 双头+优势回路 / GAE γλ 衰减柱+λ谱 / 完整三项 loss 合流 / 训练翻车vs健康双曲线; 原 RLHF/遗产/改变重编号 §09-11; glossary 补 g-13~g-18
+- 新概念: actor-critic / gae / entropy-regularization; 修 advantage-function 的 loss 补熵第三项
+- 动机: 原文偏科"PPO=clip", 补回 critic 怎么训(回归)/GAE 深度直觉/熵正则/三项 loss/训练实战体感(loss不代表进度·explained_variance·奖励归一化·并行env·det vs stochastic)
