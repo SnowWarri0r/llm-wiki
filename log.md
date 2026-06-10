@@ -642,3 +642,8 @@ skill 更新:
 - bespoke 页 docs/papers/hidream-o1.html: plum 新配色, hero+§01-05+4图(UiT总览/像素vs latent/混合注意力mask矩阵/推理agent) + jr术语表8条
 - 新概念: pixel-space-diffusion / unified-transformer; 链 kl-vae(反着用)/qwen3-vl/flow-matching/grpo/ideogram-4
 - 核心: 无VAE像素扩散(patch embed替VAE) + 文本编码器收进主干(Qwen3-VL backbone) + 混合注意力(文本causal/生成full) + O1推理agent
+
+## [2026-06-10] fix/expand | hidream perceptual 理由纠错 + 建 perceptual-loss 页
+- 用户指出 perceptual 没介绍 + 我把"为什么用"写错(写成防L2糊, 论文原话是补长程语义连贯)
+- 核实原文(grep arxiv html): "flow matching loss + perceptual supervision (LPIPS + perceptual DINO loss)" 确在; 理由是 pixel扩散细节够但语义连贯弱
+- 改正 pixel-space-diffusion + hidream §02/§05/g-05 的理由; 新建 perceptual-loss 概念页(LPIPS=VGG纹理/DINO=自监督ViT语义)
