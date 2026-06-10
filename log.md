@@ -636,3 +636,9 @@ skill 更新:
 - looped-transformer 直觉: "for循环类比"展开成3层(省参数不省算力/逼权重共享=偏置/圈数可调=弹性根)
 - elastic-inference ILSD: 从bullet改成一步训练详流程(随机L_int + teacher/student + 三loss表 + stop-grad为何) + 单调精修器收口
 - elt §03 prose 同步补三loss说明
+
+## [2026-06-10] ingest | hidream-o1 (bespoke 精装页)
+- 源: arXiv 2605.11061 HiDream-O1-Image Pixel-level Unified Transformer (HiDream.ai)
+- bespoke 页 docs/papers/hidream-o1.html: plum 新配色, hero+§01-05+4图(UiT总览/像素vs latent/混合注意力mask矩阵/推理agent) + jr术语表8条
+- 新概念: pixel-space-diffusion / unified-transformer; 链 kl-vae(反着用)/qwen3-vl/flow-matching/grpo/ideogram-4
+- 核心: 无VAE像素扩散(patch embed替VAE) + 文本编码器收进主干(Qwen3-VL backbone) + 混合注意力(文本causal/生成full) + O1推理agent
