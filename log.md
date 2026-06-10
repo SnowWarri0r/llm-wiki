@@ -647,3 +647,9 @@ skill 更新:
 - 用户指出 perceptual 没介绍 + 我把"为什么用"写错(写成防L2糊, 论文原话是补长程语义连贯)
 - 核实原文(grep arxiv html): "flow matching loss + perceptual supervision (LPIPS + perceptual DINO loss)" 确在; 理由是 pixel扩散细节够但语义连贯弱
 - 改正 pixel-space-diffusion + hidream §02/§05/g-05 的理由; 新建 perceptual-loss 概念页(LPIPS=VGG纹理/DINO=自监督ViT语义)
+
+## [2026-06-10] ingest | dino + lpips (两个 bespoke 精装页)
+- 应用户"这两个可以各做一章"，把 perceptual-loss 里 LPIPS/DINO 拆成各自 bespoke 页
+- dino.html (deep): 自蒸馏+EMA teacher / multi-crop / centering-sharpening 防坍缩 / 涌现; 3图; 链 elt ILSD 自蒸馏
+- lpips.html (moss): 像素L2烂 / 多层特征+学权重 / 2AFC人类校准 / unreasonable effectiveness; 3图
+- perceptual-loss 退成总览, LPIPS/DINO 子节改成指针; 新 paper md scaffold ×2
