@@ -241,7 +241,7 @@ figure.play .el-rev.d6 { transition-delay: 1.65s; }
   </svg>
 </figure>
 
-<p>代价是训练更复杂（要同时照顾所有档），换的是部署的灵活省事。详见 <a href="../concepts/elastic-inference.html">elastic-inference</a>。</p>
+<p>把 ELT 当图像生成想最顺：循环 = 在同一张画布上反复精修。每个训练步随机抽一个中途圈数 L_int，用同一个头读出 <strong>teacher（满 L_max → F_max，精修到底）</strong>和 <strong>student（L_int 退出 → F_int，粗版）</strong>，三个 loss 全灌进同一套 Θ：<strong>真值(F_max)</strong> 锚住最好档、<strong>λ·真值(F_int)</strong> 让粗版自己也能用、<strong>蒸馏(F_int → stop-grad F_max)</strong> 把粗版拉向精修版。蒸馏 + stop-grad 是灵魂——让循环成为一条<strong>精修轨迹</strong>（多套一圈就更接近 F_max、保证"越多越好"），且只让 student 往 teacher 靠、不让弱的把强的拖down。净效果：共享 block 被逼成一个"<strong>单调精修器</strong>"，任意一圈停下都是张连贯（只是更粗）的输出。代价是训练更复杂。详见 <a href="../concepts/elastic-inference.html">elastic-inference</a>。</p>
 
 
 <!-- §04 -->
