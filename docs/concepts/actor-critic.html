@@ -52,7 +52,7 @@
                                └→ critic 头: → 一个估值数字
 </code></pre>
 <p>有意思的是: 整个网络几乎所有参数都在那个"看懂画面"的 CNN 里, <strong>两个头各自只是一层薄薄的线性映射</strong>(几千个参数)。难的是感知, 决策反而简单。</p>
-<p><strong>critic 怎么越训越准</strong>: 它干的其实就是<strong>监督回归</strong>, 跟你做过的 fine-tune 一回事 —— 预测一个数, 跟实际发生的结果比, 用平方误差往回改:</p>
+<p><strong>critic 怎么越训越准</strong>: 它干的其实就是<strong>监督回归</strong>, 跟普通 fine-tune 一个套路 —— 预测一个数, 跟实际发生的结果比, 用平方误差往回改:</p>
 <pre><code class="language-python">critic_loss = (critic预测的V − 实际拿到的return)² 
 </code></pre>
 <p>唯一不同: 标准答案不是人标的, 是 <strong>agent 自己玩出来的真实回报</strong>。还有个巧妙之处叫 bootstrapping —— 它常拿"自己对下一步的估计"当部分答案来训自己, 像揪着鞋带往上提; 但每步都掺了一点真实 reward 当硬锚, 所以会慢慢被现实拽准。它准到什么程度, 用 <code>explained_variance</code> 这个指标看 (0=瞎猜, 1=神准)。</p>

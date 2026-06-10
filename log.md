@@ -625,3 +625,9 @@ skill 更新:
 - ppo.html 加 4 节 4 图(§05-08): actor-critic 双头+优势回路 / GAE γλ 衰减柱+λ谱 / 完整三项 loss 合流 / 训练翻车vs健康双曲线; 原 RLHF/遗产/改变重编号 §09-11; glossary 补 g-13~g-18
 - 新概念: actor-critic / gae / entropy-regularization; 修 advantage-function 的 loss 补熵第三项
 - 动机: 原文偏科"PPO=clip", 补回 critic 怎么训(回归)/GAE 深度直觉/熵正则/三项 loss/训练实战体感(loss不代表进度·explained_variance·奖励归一化·并行env·det vs stochastic)
+
+## [2026-06-10] ingest | elt (bespoke 精装页)
+- 源: arXiv 2604.09168 ELT Elastic Looped Transformers for Visual Generation (Goyal/Kusupati 等)
+- bespoke 页 docs/papers/elt.html: ochre accent, hero+§01-04+4图(循环展开/elastic Pareto/ILSD/谱系) + jr术语表9条
+- 新概念: looped-transformer / elastic-inference; 链 convolution(权重共享)/diffusion-transformer/kl-vae/ideogram-4
+- 核心: 循环=深度共享权重(N层×L圈, 有效深度N×L 参数看N), 一族深度弹性, ILSD; 4× 参数缩减 FID2.0/FVD72.8
