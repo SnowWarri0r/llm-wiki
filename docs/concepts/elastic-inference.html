@@ -44,15 +44,52 @@
 <p>部署一个模型要面对千差万别的预算：手机要快、服务器能慢工出细活。传统做法是训一堆不同大小的模型（small/base/large），各训各的、各存各的，贵且难维护。</p>
 <p>Elastic（弹性）的思路：<strong>训一个，内部自带多档</strong>。推理时一个旋钮一拨，就在"快而糙"和"慢而精"之间滑动，沿<strong>质量-算力的 Pareto 前沿</strong>走。Matryoshka（套娃）系列把这个旋钮做在"宽度/维度"上；<a href="../concepts/looped-transformer.html">looped-transformer</a> 的 ELT 把它做在<strong>循环圈数 L</strong> 上——多套几圈就多算、更准。</p>
 <h2>怎么做的 · 训练时就把每一档都练好</h2>
-<p>难点不在推理，在训练：怎么保证"中途退出"那些档也好用，而不是只有满配能用？</p>
-<p>ELT 用 <strong>Intra-Loop Self Distillation（ILSD）</strong>：</p>
+<p>难点不在推理，在训练：只有<strong>一套</strong>共享 block，怎么保证"中途退出"的浅档也像样、而不是只有满配能用？如果只拿满圈 L_max 训，这套权重只学会"套满才好"，第 3 圈停下就是半成品。</p>
+<p><strong>naive 想法的坑</strong>：把所有圈数（2/4/6/8）都跑一遍各算真值 loss——① 太贵；② 各圈数可能各出<strong>互不相干</strong>的答案，没人保证"圈数越多越好"。</p>
+<p>ELT 的 <strong>Intra-Loop Self Distillation（ILSD）</strong> 在<strong>一步训练</strong>里解决。拿 ELT 是图像生成想最顺：循环 = "在同一张画布上反复精修"，圈数越多修得越细。</p>
+<p><strong>每个训练步：</strong></p>
+<ol>
+<li><strong>随机抽一个中途圈数 L_int</strong>（这步抽到 3，满配 L_max=8）。每步抽的不一样。</li>
+<li>前向跑循环，用<strong>同一个输出头</strong>读出两个结果：
+   - <strong>teacher = 满 8 圈输出 F_max</strong>（精修到底）
+   - <strong>student = 第 3 圈退出输出 F_int</strong>（只修 3 遍的粗版）</li>
+<li><strong>三个 loss，全灌进同一套共享 Θ</strong>：</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>loss</th>
+<th>干什么</th>
+<th>为什么要它</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>真值(F_max)</code></td>
+<td>满配对齐真实目标</td>
+<td>锚住"最好那档"是真的好</td>
+</tr>
+<tr>
+<td><code>λ·真值(F_int)</code></td>
+<td>中途档也对齐真实目标</td>
+<td>让粗版自己就能用，不只是半成品</td>
+</tr>
+<tr>
+<td><code>蒸馏(F_int→stopgrad F_max)</code></td>
+<td>把粗版拉向精修版</td>
+<td>让"多修几圈"=朝同一张画稳定精修，不是各画各的</td>
+</tr>
+</tbody>
+</table>
+<ol start="4">
+<li>反向传播 → 更新那唯一一套 block 参数。</li>
+</ol>
+<p><strong>三个设计的"为什么"：</strong></p>
 <ul>
-<li><strong>teacher 路</strong>：跑满 L_max 圈，出最好结果。</li>
-<li><strong>student 路</strong>：随机在中间某圈 L_int 提前退出。</li>
-<li><strong>loss</strong>：满配的真值 loss + 中途档的真值 loss（加权）+ <strong>蒸馏 loss</strong>（让中途档去对齐 teacher 的表征，teacher 那侧 stop-grad）。</li>
-<li>两条路<strong>更新同一套共享 block 参数</strong>。</li>
+<li><strong>随机抽 L_int</strong>：一步只多读一个退出点（不是全跑），很多步下来每个深度都被训到 → 便宜（类似 stochastic depth 的抽样）。</li>
+<li><strong>蒸馏 + stop-grad 是灵魂</strong>：蒸馏让"第 3 圈的画"长得像"第 8 圈的低细节版"，于是循环变成一条<strong>精修轨迹</strong>（每多一圈朝 F_max 推进），保证"圈数越多越好"；<strong>stop-grad 冻住 teacher 那侧</strong>，让 student 往 teacher 靠、而不是 teacher 被弱 student 拖down成平庸中间值——<strong>强的拉弱的上来，弱的不拖强的下去</strong>。</li>
 </ul>
-<p>于是这套参数被逼着"<strong>每一圈退出都得是个像样的模型</strong>"，弹性就出来了。</p>
+<p>净效果：这套共享 block 被逼成一个"<strong>单调精修器</strong>"——任意一圈停下都是张连贯（只是更粗）的输出，多套一圈就更精。弹性就这么来的。</p>
 <h2>它换来什么</h2>
 <ul>
 <li><strong>一次训练，覆盖多端</strong>：一个权重文件，手机跑 2 圈、服务器跑 10 圈。</li>
