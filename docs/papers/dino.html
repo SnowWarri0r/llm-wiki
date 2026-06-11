@@ -222,8 +222,8 @@ figure.play .dn-rev.d6 { transition-delay: 1.65s; }
     </g>
     <!-- student 看全部 -->
     <g class="dn-rev d4">
-      <path d="M260,135 L330,135" stroke="#9b2c2c" stroke-width="1.5" marker-end="url(#dn-c)"/>
-      <path d="M260,92 Q300,120 330,150" fill="none" stroke="#1f3a5f" stroke-width="1.2" stroke-dasharray="3 2" marker-end="url(#dn-c)"/>
+      <path d="M260,138 L327,167" fill="none" stroke="#9b2c2c" stroke-width="1.5" marker-end="url(#dn-c)"/>
+      <path d="M260,95 L327,156" fill="none" stroke="#1f3a5f" stroke-width="1.2" stroke-dasharray="3 2" marker-end="url(#dn-c)"/>
       <rect x="332" y="150" width="108" height="38" rx="4" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.6"/>
       <text x="386" y="173" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#4a6b3a">student（全部）</text>
     </g>
@@ -241,7 +241,19 @@ figure.play .dn-rev.d6 { transition-delay: 1.65s; }
 <!-- §04 -->
 <h2><span class="num">§ 04</span>防坍缩 · centering 和 sharpening 两个力</h2>
 
-<p>"两个视角输出一致"有个作弊解：<strong>所有图都输出同一个常数</strong>（也"一致"，但表征废了）= <strong>坍缩</strong>。DINO 不用负样本防坍缩，而是给 teacher 的输出加两个**相反方向**的力，让它们互相拽住：</p>
+<p>"两个视角输出一致"有个作弊解：<strong>所有图都输出同一个常数</strong>（也"一致"，但表征废了）= <strong>坍缩</strong>。DINO 不用负样本防坍缩，而是<strong>都作用在 teacher 输出、进 softmax 之前</strong>，加两个相反方向的力：</p>
+
+<pre class="eq">teacher 分布 = softmax( ( g(x) − c ) / τ_t )
+                         └ center ┘   └sharpen┘
+  · sharpening = 那个很小的<strong>温度 τ_t</strong>(~0.04~0.07)。logits 除以小温度 → softmax 被拉尖。
+  · centering  = 减去一个<strong>中心向量 c</strong>。c 是 teacher 输出的<strong>滑动均值(EMA)</strong>：
+                 每步  c ← m·c + (1−m)·(这个 batch 里 teacher 输出的均值)
+                 减掉这个均值 → 没有哪一维能长期占高位。
+
+student 分布 = softmax( g(x) / τ_s )       # τ_s 较大(~0.1)，不减 c、不锐化
+loss = − Σ  teacher 分布 · log(student 分布)   # 两个软分布的交叉熵</pre>
+
+<p>所以两个力都是 teacher softmax 的"前处理"——<strong>sharpening 是温度旋钮（除以小数→变尖），centering 是减掉平均水位（→变平）</strong>。一个推尖、一个推平，方向相反、互相拽住：</p>
 
 <figure id="fig-collapse" class="fig-collapse">
   <figcaption>
