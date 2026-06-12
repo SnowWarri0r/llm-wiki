@@ -1,8 +1,8 @@
 ---
 name: score-function
 type: concept
-sources: [flow-matching]
-updated: 2026-05-22
+sources: [flow-matching, ode-sde]
+updated: 2026-06-12
 ---
 
 # Score Function · ∇log p(x) · 对数概率梯度
@@ -72,3 +72,4 @@ EBM / score-matching / diffusion 一脉相承，都是"绕过 partition function
 - [[flow-matching]] · 提出不学 score 的方案
 - [[velocity-field]] · flow matching 学的替代目标
 - [[math-symbols]] · ∇ / log / partition function 这些符号的速查
+- [[ode-sde]] · score 是 SDE 反向漂移里的关键项（diffusion 那头）
