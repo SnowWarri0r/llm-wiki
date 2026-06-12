@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>ODE vs SDE · 确定性流与随机流</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --iris: #4a3f9e; --iris-soft: #dad6ef;
+  --accent: var(--iris); --accent-soft: var(--iris-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(44px, 7vw, 78px); line-height: 0.95; letter-spacing: -0.03em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 36px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
+p { margin: 12px 0; } strong { font-weight: 700; }
+ul { margin: 12px 0; padding-left: 24px; } li { margin: 6px 0; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.86em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--iris-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--iris); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--iris); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+table.spec { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+table.spec td, table.spec th { border-bottom: 1px dashed var(--rule); padding: 7px 10px; text-align: left; }
+table.spec th { color: var(--accent); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+table.spec td:first-child { color: var(--muted); }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--iris-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--iris-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* os-specific */
+.os-svg { width: 100%; height: auto; display: block; }
+.os-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .os-rev { opacity: 1; }
+figure.play .os-rev.d1 { transition-delay: 0.15s; }
+figure.play .os-rev.d2 { transition-delay: 0.45s; }
+figure.play .os-rev.d3 { transition-delay: 0.75s; }
+figure.play .os-rev.d4 { transition-delay: 1.05s; }
+figure.play .os-rev.d5 { transition-delay: 1.35s; }
+figure.play .os-rev.d6 { transition-delay: 1.65s; }
+.os-svg .draw { stroke-dasharray: 1000; stroke-dashoffset: 1000; transition: stroke-dashoffset 1.5s ease; }
+figure.play .os-svg .draw { stroke-dashoffset: 0; }
+figure.play .os-svg .draw.d2 { transition-delay: 0.40s; }
+figure.play .os-svg .draw.d3 { transition-delay: 0.70s; }
+figure.play .os-svg .draw.d4 { transition-delay: 1.00s; }
+@media (prefers-reduced-motion: reduce) { .os-rev { opacity: 1; transition: none; } .os-svg .draw { stroke-dashoffset: 0; transition: none; } }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · ode-sde</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Method · 微分方程 · ODE / SDE</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 连续时间 · 确定性 vs 随机</div>
+  <h1 class="title">ODE vs SDE ·<br /><span class="em">跟着箭头走，还是边走边被踹。</span></h1>
+  <div class="byline">Ordinary / Stochastic Differential Equation · 流模型与扩散模型的底层语言</div>
+  <p class="dek">ODE：给你一张"风场地图"，每点都有箭头说往哪走——丢颗弹珠顺着滑，同起点跑一万次走同一条路（确定）。SDE：同一张风场，但每一瞬间额外随机踹你一脚——同起点跑两次，两条不同的路（随机）。流模型走 ODE，扩散模型走 SDE，而它俩其实是同一团概率云的两种看法。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p><strong>ODE</strong><a class="jr" href="#g-01">1</a>：<code>dx/dt = f(x,t)</code>——"现在在哪，就决定下一步往哪走多快"，跟着<strong>速度场（风场）</strong>积分出唯一轨迹，<strong>确定</strong>（同起点→同一条路）。<strong>SDE</strong><a class="jr" href="#g-02">2</a>：<code>dx = f·dt + g·dW</code>——ODE 再加一项<strong>每瞬间的随机踹</strong>（<strong>dW</strong><a class="jr" href="#g-03">3</a> 布朗运动），<strong>随机</strong>（同起点→每次不同→一团落点）。两项分别叫<strong>drift（漂移，确定推力）</strong>和 <strong>diffusion（扩散，噪声）</strong>。关键桥<a class="jr" href="#g-04">4</a>：每个扩散 SDE 都配一个<strong>概率流 ODE</strong>，两者每一刻的<strong>分布完全相同</strong>——SDE 追一个抖动的<u>个体</u>，ODE 追整团密度的<u>平滑水流</u>，同一团云。落点：<a href="flow-matching.html">flow-matching</a> = 纯 ODE；diffusion = SDE（也能当 ODE 跑 → DDIM 少步快采）。数值解：ODE 用 <strong>Euler</strong>，SDE 用 <strong>Euler–Maruyama</strong><a class="jr" href="#g-06">6</a>，噪声乘 <strong>√dt 不是 dt</strong><a class="jr" href="#g-07">7</a>。</p>
+</div>
+
+
+<!-- §01 -->
+<h2><span class="num">§ 01</span>ODE · 跟着风场走的确定轨迹</h2>
+
+<p>先把符号翻译成大白话：<strong>给定你现在在哪，有条规则告诉你下一瞬间往哪挪、挪多快。</strong></p>
+
+<pre class="eq">dx/dt = f(x, t)
+现在位置变化的速度 = 一个只跟"当前位置和时间"有关的函数</pre>
+
+<p>最好的类比是<strong>风场 / 流场地图</strong>：空间里每个点都钉着一个小箭头，说"在这儿就往这个方向、这个速度走"。丢一颗弹珠进去，它顺着箭头滑，整条轨迹靠<strong>一路积分（累加每步的小位移）</strong>得出。<code>f</code> 就是那个速度场。</p>
+
+<p>核心性质：<strong>完全确定</strong>。同一个起点跑一万次，走出来一模一样的路——没有任何随机。像跟着 GPS 一句句指令走，或弹珠在<strong>形状固定的山谷</strong>里滚到底。</p>
+
+<figure id="fig-field" class="fig-field">
+  <figcaption>
+    <span>Fig 01 · 确定性风场</span>
+    <span class="fnum">顺着箭头滑 · 同起点跑 ×N 完全重合</span>
+  </figcaption>
+  <svg class="os-svg" viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="os1-f" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#a9a08a"/></marker>
+    <marker id="os1-b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#4a3f9e"/></marker></defs>
+    <!-- 风场箭头 -->
+    <g class="os-rev d1" stroke="#a9a08a" stroke-width="1.3" fill="none">
+      <line x1="120" y1="70" x2="141" y2="75" marker-end="url(#os1-f)"/><line x1="240" y1="70" x2="261" y2="77" marker-end="url(#os1-f)"/><line x1="360" y1="70" x2="379" y2="81" marker-end="url(#os1-f)"/><line x1="480" y1="70" x2="493" y2="88" marker-end="url(#os1-f)"/>
+      <line x1="120" y1="140" x2="142" y2="142" marker-end="url(#os1-f)"/><line x1="240" y1="140" x2="262" y2="143" marker-end="url(#os1-f)"/><line x1="360" y1="140" x2="382" y2="144" marker-end="url(#os1-f)"/><line x1="480" y1="140" x2="500" y2="150" marker-end="url(#os1-f)"/>
+      <line x1="120" y1="210" x2="142" y2="209" marker-end="url(#os1-f)"/><line x1="240" y1="210" x2="262" y2="208" marker-end="url(#os1-f)"/><line x1="360" y1="210" x2="382" y2="207" marker-end="url(#os1-f)"/><line x1="480" y1="210" x2="501" y2="202" marker-end="url(#os1-f)"/>
+    </g>
+    <!-- 终点 basin -->
+    <g class="os-rev d2"><circle cx="560" cy="180" r="20" fill="none" stroke="#bfb398"/><circle cx="560" cy="180" r="11" fill="none" stroke="#bfb398"/><circle cx="560" cy="180" r="4" fill="#4a6b3a"/></g>
+    <!-- 起点 -->
+    <circle class="os-rev d2" cx="120" cy="70" r="6" fill="#4a3f9e"/>
+    <text class="os-rev d2" x="120" y="58" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#4a3f9e">起点</text>
+    <!-- 确定轨迹 -->
+    <path class="draw d3" pathLength="1000" d="M120,70 Q250,92 360,128 T556,180" fill="none" stroke="#4a3f9e" stroke-width="3" marker-end="url(#os1-b)"/>
+    <text class="os-rev d4" x="300" y="238" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#4a3f9e">弹珠顺着箭头滑 → 跑 3 次、跑 100 次，全是这一条线</text>
+  </svg>
+</figure>
+
+<div class="note">
+  <span class="l">放进你学的</span>
+  <p><a href="flow-matching.html">flow-matching</a> 学的就是这个速度场 <code>f</code>；采样时从噪声出发<strong>解一个 ODE 一路积分到数据</strong>（"probability flow ODE"）。所以 flow-matching 的采样本质就是"在学好的风场里放颗弹珠，看它滑到哪"。</p>
+</div>
+
+
+<!-- §02 -->
+<h2><span class="num">§ 02</span>SDE · ODE 再加每步随机踹一脚</h2>
+
+<p>SDE 就是 ODE，<strong>但每一瞬间额外加一个随机抖动</strong>：</p>
+
+<pre class="eq">dx  =  f(x,t)·dt   +   g(t)·dW
+       └ drift 漂移 ┘     └ diffusion 扩散 ┘
+       跟 ODE 一样的确定推力   每一刻灌进的随机噪声</pre>
+
+<ul>
+<li><strong>drift（漂移）</strong>：那个确定推力，跟 ODE 那项一模一样——"大方向往哪走"。</li>
+<li><strong>diffusion（扩散）</strong>：<code>dW</code> 是每瞬间的随机踹一脚（<strong>布朗运动 / 维纳过程</strong>，一连串微小高斯抖动），<code>g(t)</code> 是踹多狠。</li>
+</ul>
+
+<p>类比是<strong>醉汉走夜路回家</strong>：大体朝家走（drift 的确定拉力），但每一步都在随机踉跄（diffusion 的噪声）。于是——<strong>同一个起点跑两次，走出两条不同的路</strong>；你拿到的不是一条轨迹，是一<strong>团</strong>可能落点（一个分布）。也像溪水里的叶子：水流整体冲它下去（drift）+ 湍流不停晃它（diffusion）。</p>
+
+<figure id="fig-drunk" class="fig-drunk">
+  <figcaption>
+    <span>Fig 02 · 随机的醉汉路径</span>
+    <span class="fnum">同起点 → 三条不同的路 → 一团落点</span>
+  </figcaption>
+  <svg class="os-svg" viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="os2-f" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#cdc4ae"/></marker></defs>
+    <!-- 淡风场（drift 同上） -->
+    <g class="os-rev d1" stroke="#cdc4ae" stroke-width="1.1" fill="none">
+      <line x1="200" y1="80" x2="220" y2="86" marker-end="url(#os2-f)"/><line x1="340" y1="80" x2="359" y2="92" marker-end="url(#os2-f)"/><line x1="200" y1="150" x2="221" y2="152" marker-end="url(#os2-f)"/><line x1="340" y1="150" x2="361" y2="156" marker-end="url(#os2-f)"/><line x1="460" y1="115" x2="479" y2="126" marker-end="url(#os2-f)"/>
+    </g>
+    <text class="os-rev d1" x="250" y="74" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#a9a08a">淡箭头 = 同一个 drift 大方向</text>
+    <!-- 起点 -->
+    <circle class="os-rev d1" cx="110" cy="70" r="6" fill="#3a3128"/>
+    <text class="os-rev d1" x="110" y="58" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">同一起点</text>
+    <!-- 三条抖动路径 -->
+    <polyline class="draw d2" pathLength="1000" points="110,70 178,104 250,86 318,140 392,118 452,150 540,168" fill="none" stroke="#9b2c2c" stroke-width="2"/>
+    <polyline class="draw d3" pathLength="1000" points="110,70 184,92 262,138 342,116 418,166 486,150 552,200" fill="none" stroke="#1f3a5f" stroke-width="2"/>
+    <polyline class="draw d4" pathLength="1000" points="110,70 190,128 272,158 358,140 438,176 500,156 560,138" fill="none" stroke="#4a6b3a" stroke-width="2"/>
+    <!-- 落点云 -->
+    <g class="os-rev d5">
+      <circle cx="540" cy="168" r="5" fill="#9b2c2c"/><circle cx="552" cy="200" r="5" fill="#1f3a5f"/><circle cx="560" cy="138" r="5" fill="#4a6b3a"/>
+      <ellipse cx="550" cy="168" rx="34" ry="44" fill="none" stroke="#7a6f5d" stroke-dasharray="4 3"/>
+      <text x="600" y="170" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">一团落点</text><text x="600" y="183" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">= 一个分布</text>
+    </g>
+    <text class="os-rev d6" x="290" y="238" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#9b2c2c">同样的 drift，但每步随机踹 → 三条路、三个落点</text>
+  </svg>
+</figure>
+
+<div class="note">
+  <span class="l">放进你学的</span>
+  <p><strong>扩散模型</strong>就是这个：前向过程是个 SDE，drift 把图往 0 拉、diffusion 不停灌高斯噪声，把图糊成纯噪声；<strong>反向过程也是个 SDE</strong>（把噪声一点点抽走）——那就是采样。它学的是 <a href="../concepts/score-function.html">score 函数</a>（噪声该往哪去），而不是 flow-matching 直接学的速度场。</p>
+</div>
+
+
+<!-- §03 -->
+<h2><span class="num">§ 03</span>桥 · 同一团云的两种看法</h2>
+
+<p>这是最值钱的一点。Song 等人（2021）证明：<strong>每个扩散 SDE，都对应一个"概率流 ODE"，两者在每个时刻的<u>分布完全一样</u>。</strong>于是同一个模型，采样可以走两条路。</p>
+
+<p>类比：一群人散场出体育场。<strong>SDE 盯着<u>某一个人</u></strong>在人潮里乱撞的抖动轨迹；<strong>ODE 盯着<u>整团人群密度</u>的平滑水流</strong>（平均的洋流）。两者描述的是<strong>同一团</strong>正在散开的云——一个追抖动的个体、一个追整体的河。</p>
+
+<figure id="fig-bridge" class="fig-bridge">
+  <figcaption>
+    <span>Fig 03 · SDE 追个体 · ODE 追密度</span>
+    <span class="fnum">同一团概率云 · 每一刻边际分布相同</span>
+  </figcaption>
+  <svg class="os-svg" viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="os3-i" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#4a3f9e"/></marker></defs>
+    <!-- 扩散中的云：三时刻 -->
+    <g class="os-rev d1" fill="#dad6ef" stroke="#b8b0dd" opacity="0.7">
+      <ellipse cx="150" cy="135" rx="26" ry="34"/><ellipse cx="380" cy="135" rx="52" ry="62"/><ellipse cx="600" cy="135" rx="80" ry="92"/>
+    </g>
+    <g class="os-rev d1" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d" text-anchor="middle">
+      <text x="150" y="218">t₀ 紧</text><text x="380" y="218">t₁</text><text x="600" y="240">t₂ 散开</text>
+    </g>
+    <!-- ODE 平滑水流 -->
+    <g class="os-rev d2" fill="none" stroke="#4a3f9e" stroke-width="1.8">
+      <path d="M150,118 Q380,96 668,74" marker-end="url(#os3-i)"/>
+      <path d="M150,135 Q380,135 668,135" marker-end="url(#os3-i)"/>
+      <path d="M150,152 Q380,174 668,196" marker-end="url(#os3-i)"/>
+    </g>
+    <text class="os-rev d3" x="120" y="48" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#4a3f9e">ODE：密度的平滑水流（紫）</text>
+    <!-- SDE 个体抖动 -->
+    <polyline class="draw d3" pathLength="1000" points="150,135 206,112 252,158 318,120 372,166 430,108 498,162 560,114 632,158" fill="none" stroke="#9b2c2c" stroke-width="2.2"/>
+    <text class="os-rev d4" x="150" y="245" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#9b2c2c">SDE：一个抖动的个体（红）</text>
+    <text class="os-rev d5" x="555" y="48" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#3a3128">两条路画的是同一团云怎么散开</text>
+  </svg>
+</figure>
+
+<table class="spec">
+  <tr><th>采样走哪条</th><th>SDE 路（随机）</th><th>ODE 路（确定）</th></tr>
+  <tr><td>走法</td><td>每步注入新噪声</td><td>纯跟着箭头走</td></tr>
+  <tr><td>同起点结果</td><td>每次不同 → 多样、更稳</td><td>每次一样 → 可复现、可反推</td></tr>
+  <tr><td>步数 / 速度</td><td>慢（要小步补偿噪声）</td><td>快（能少步）· DDIM 走这条</td></tr>
+  <tr><td>附赠</td><td>噪声每步重随机 → 冲掉累积误差</td><td>可逆 → 精确似然 + latent 插值/编辑</td></tr>
+</table>
+
+<p>所以不是 ODE 全面赢：<strong>SDE 的噪声能纠错、给更多样更鲁棒的样本</strong>，<strong>ODE 确定、可逆、能少步快采</strong>。一句话——<strong>多样性/鲁棒 ↔ 速度/可逆</strong> 的取舍。（这条线在 ML 落地上更细的对比见 <a href="../concepts/ode-vs-sde.html">ode-vs-sde 概念页</a>：训练目标、推理步数、为什么 SD3/Flux 都转向 flow-matching。）</p>
+
+
+<!-- §04 -->
+<h2><span class="num">§ 04</span>怎么数值解 · 用真数字砸实</h2>
+
+<p>"解"这俩方程，计算机做不到连续积分，只能<strong>切成一小步一小步地累加</strong>。光看公式太抽象，我们拿一个具体例子，把数字一步步走出来。</p>
+
+<div class="note">
+  <span class="l">设定（两边共用）</span>
+  <p>取一个最简单的 drift：<code>f(x) = −x</code>（把值往 0 拉，像去噪——离 0 越远拉得越狠）。步长 <code>dt = 0.5</code>，噪声强度 <code>g = 2</code>，所以 <code>√dt = √0.5 ≈ 0.707</code>。两边都从 <strong>x = 10</strong> 出发。</p>
+</div>
+
+<h3>① ODE → Euler：每步 <code>x += f(x)·dt</code></h3>
+
+<p>没有噪声，每步就是"当前位置 + 速度×步长"。<code>f(x)·dt = (−x)(0.5)</code>，等于每步把 x <strong>砍掉一半</strong>：</p>
+
+<table class="spec">
+  <tr><th>步</th><th>当前 x</th><th>drift = f(x)·dt = −x·0.5</th><th>新 x</th></tr>
+  <tr><td>0</td><td>10.00</td><td>−5.00</td><td>5.00</td></tr>
+  <tr><td>1</td><td>5.00</td><td>−2.50</td><td>2.50</td></tr>
+  <tr><td>2</td><td>2.50</td><td>−1.25</td><td>1.25</td></tr>
+  <tr><td>3</td><td>1.25</td><td>−0.625</td><td>0.625 → 平滑奔 0</td></tr>
+</table>
+
+<p><strong>关键：这张表是写死的。</strong>跑 1 次、跑 1 万次，第一步永远 10→5、第二步永远 →2.5。确定，没有"运气"。</p>
+
+<h3>② SDE → Euler–Maruyama：<code>x += f·dt + √dt·g·z</code></h3>
+
+<p>多一项噪声：<code>√dt·g·z = 0.707×2×z = 1.414·z</code>，其中 <code>z</code> 是每步现抽的标准正态随机数 <code>N(0,1)</code>。<strong>同样从 10 出发，抽到的 z 不同，路就不同</strong>。跑两次看看：</p>
+
+<table class="spec">
+  <tr><th>跑 A · 步</th><th>起点 x</th><th>drift −x·0.5</th><th>这步抽到 z → 噪声 1.414·z</th><th>新 x</th></tr>
+  <tr><td>0</td><td>10.00</td><td>−5.00</td><td>z=+0.8 → +1.13</td><td>6.13</td></tr>
+  <tr><td>1</td><td>6.13</td><td>−3.07</td><td>z=−0.3 → −0.42</td><td>2.64</td></tr>
+  <tr><td>2</td><td>2.64</td><td>−1.32</td><td>z=+1.1 → +1.56</td><td>2.88</td></tr>
+</table>
+
+<table class="spec">
+  <tr><th>跑 B · 步</th><th>起点 x</th><th>drift −x·0.5</th><th>这步抽到 z → 噪声 1.414·z</th><th>新 x</th></tr>
+  <tr><td>0</td><td>10.00</td><td>−5.00</td><td>z=−1.2 → −1.70</td><td>3.30</td></tr>
+  <tr><td>1</td><td>3.30</td><td>−1.65</td><td>z=+0.5 → +0.71</td><td>2.36</td></tr>
+  <tr><td>2</td><td>2.36</td><td>−1.18</td><td>z=−0.7 → −0.99</td><td>0.19</td></tr>
+</table>
+
+<p>对比就出来了：<strong>第一步，ODE 永远落 5.00；SDE 跑 A 落 6.13、跑 B 落 3.30</strong>——同一个起点、同一条规则，只因为每步那个随机 z 不同，整条路就岔开了。把无数次跑 SDE 的落点收集起来，就是一团分布。</p>
+
+<figure id="fig-num" class="fig-num">
+  <figcaption>
+    <span>Fig 04 · 同起点 x=10 · 三条路</span>
+    <span class="fnum">ODE 一条确定线 · SDE 两次跑两条岔路</span>
+  </figcaption>
+  <svg class="os-svg" viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg">
+    <!-- 轴 -->
+    <g class="os-rev d1" stroke="#bfb398" stroke-width="1">
+      <line x1="80" y1="60" x2="80" y2="230"/><line x1="80" y1="230" x2="660" y2="230"/>
+    </g>
+    <g class="os-rev d1" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">
+      <text x="72" y="64" text-anchor="end">10</text><text x="72" y="139" text-anchor="end">5</text><text x="72" y="214" text-anchor="end">1.25</text>
+      <text x="130" y="246" text-anchor="middle">步0</text><text x="280" y="246" text-anchor="middle">步1</text><text x="430" y="246" text-anchor="middle">步2</text><text x="580" y="246" text-anchor="middle">步3</text>
+      <text x="668" y="234" text-anchor="end" fill="#9f9078">步 →</text>
+    </g>
+    <!-- 起点 -->
+    <circle class="os-rev d2" cx="130" cy="60" r="6" fill="#3a3128"/>
+    <text class="os-rev d2" x="130" y="50" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">都从 10 出发</text>
+    <!-- ODE 确定线 -->
+    <polyline class="draw d2" pathLength="1000" points="130,60 280,135 430,172 580,191" fill="none" stroke="#4a3f9e" stroke-width="3"/>
+    <g class="os-rev d4" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#4a3f9e">
+      <circle cx="280" cy="135" r="3.5"/><circle cx="430" cy="172" r="3.5"/><circle cx="580" cy="191" r="3.5"/>
+      <text x="592" y="190">ODE 5→2.5→1.25（写死）</text>
+    </g>
+    <!-- SDE 跑 A -->
+    <polyline class="draw d3" pathLength="1000" points="130,60 280,118 430,170 580,167" fill="none" stroke="#9b2c2c" stroke-width="2" stroke-dasharray="1 0"/>
+    <g class="os-rev d5" fill="#9b2c2c" font-family="JetBrains Mono,monospace" font-size="8.5">
+      <circle cx="280" cy="118" r="3.5"/><text x="276" y="110" text-anchor="end">6.13</text>
+      <text x="592" y="165">SDE 跑A</text>
+    </g>
+    <!-- SDE 跑 B -->
+    <polyline class="draw d4" pathLength="1000" points="130,60 280,160 430,175 580,207" fill="none" stroke="#1f3a5f" stroke-width="2"/>
+    <g class="os-rev d6" fill="#1f3a5f" font-family="JetBrains Mono,monospace" font-size="8.5">
+      <circle cx="280" cy="160" r="3.5"/><text x="290" y="172">3.30</text>
+      <text x="592" y="206">SDE 跑B</text>
+    </g>
+    <text class="os-rev d6" x="370" y="270" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#3a3128">紫线跑几次都重合；红蓝是 SDE 两次跑，第一步就从 10 岔成 6.13 / 3.30</text>
+  </svg>
+</figure>
+
+<div class="note">
+  <span class="l">为什么噪声乘 √dt 不是 dt</span>
+  <p>把步长 <code>dt</code> 砍一半（0.5→0.25）：drift 每步的贡献也老实砍一半（−x·0.25）；<strong>但噪声项只缩到 √0.25/√0.5 = 1/√2 ≈ 0.71 倍</strong>——比 drift 顽固。这正是布朗运动的签名：<strong>随机游走走的距离按 √时间 长，不是按时间长</strong>（走 4 倍步数，确定位移 ×4，但随机扩散只 ×2）。所以 SDE 想算准，步长得切得比 ODE 更碎，这也是扩散采样比流模型慢的根。</p>
+</div>
+
+
+<!-- §05 -->
+<h2><span class="num">§ 05</span>一句话收口</h2>
+
+<p><strong>ODE = 风场里放颗弹珠，确定地滑出一条路；SDE = 同一个风场，但每步随机踹一脚，滑出一团落点。</strong>两者由"概率流 ODE = 扩散 SDE 的同分布替身"这座桥连起来：<a href="flow-matching.html">flow-matching</a> 站 ODE 这头（直接学速度场、少步快采），diffusion 站 SDE 那头（学 <a href="../concepts/score-function.html">score</a>、噪声纠错更稳），而它能切到 ODE 模式（DDIM）借速度。数值上 ODE 用 Euler、SDE 用 Euler–Maruyama，记牢那个 <strong>√dt</strong>——它是"随机比确定更顽固"的全部来历。</p>
+
+
+<!-- glossary -->
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">ODE · 常微分方程</span> · <code>dx/dt=f(x,t)</code>。给定起点 + 速度场，轨迹<strong>唯一确定</strong>。类比：风场里放颗弹珠顺箭头滑。flow-matching 的采样就是解它。</li>
+    <li id="g-02"><span class="term">SDE · 随机微分方程</span> · <code>dx=f·dt+g·dW</code>。ODE 加一项每瞬间的随机踹，结果<strong>随机</strong>。同起点跑两次两条路。扩散模型的前向/反向都是它。</li>
+    <li id="g-03"><span class="term">drift / diffusion / dW</span> · drift=确定推力（同 ODE）；diffusion=噪声强度 g；dW=布朗运动/维纳过程，一串微小高斯抖动。</li>
+    <li id="g-04"><span class="term">概率流 ODE（桥）</span> · Song 2021：每个扩散 SDE 配一个 ODE，两者每一刻<strong>边际分布相同</strong>。SDE 追抖动个体、ODE 追密度水流，同一团云。</li>
+    <li id="g-05"><span class="term">score 函数</span> · <code>∇log p_t(x)</code>，"概率密度上升最快的方向"。SDE/扩散学它来构造反向漂移；对照 flow-matching 直接学速度场。</li>
+    <li id="g-06"><span class="term">Euler / Euler–Maruyama</span> · 数值解法。ODE：<code>x+=f·dt</code>。SDE：<code>x+=f·dt+√dt·g·z</code>（z∼N(0,1)）。后者多了随机项。</li>
+    <li id="g-07"><span class="term">√dt 缩放</span> · 噪声项乘 √dt 而非 dt。源于随机游走"按 √时间扩散"：步长砍半，drift 贡献砍半但噪声只缩 1/√2。SDE 要更小步才算准。</li>
+    <li id="g-08"><span class="term">DDIM</span> · 把训练好的扩散模型当概率流 ODE 来确定性采样，少步、可复现、可做 latent 插值。即"扩散借 ODE 的速度"。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>SOURCE · Song et al. 2021 (Score-Based Generative Modeling through SDEs) · 微分方程基础</span>
+  <span>INGESTED · 2026-06-12</span>
+</div>
+
+</div>
+<script>
+{
+  const figs = ['fig-field','fig-drunk','fig-bridge','fig-num'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.15 });
+    obs.observe(el);
+  });
+}
+</script>
+</body>
+</html>
