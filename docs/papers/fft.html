@@ -328,10 +328,27 @@ X[k+N/2]   = E[k] − w^k · O[k]      ← 减（因为 w 转半圈反号）</pr
   </svg>
 </figure>
 
-<div class="note">
-  <span class="l">两个实现小坑</span>
-  <p>① <strong>radix-2</strong>（每次折半）要求 N 是 2 的幂；一般长度走 mixed-radix / Bluestein 等变体。② 递归地"偶/奇"重排到底，输入顺序正好是<strong>把下标二进制位反过来</strong>的排列（<strong>bit-reversal</strong>）——很多 FFT 实现先做一遍位反转重排，再就地做蝴蝶。③ <strong>逆变换 IFFT</strong> 同一套算法，twiddle 取共轭、最后除以 N，就能从频谱<strong>变回</strong>信号。</p>
-</div>
+<h3>三个实现细节 · 拿 N=8 砸实</h3>
+
+<p><strong>① 为什么非得 2 的幂（radix-2）。</strong>折半要能一路折到底：<code>8 → 4 → 2 → 1</code> 干净。但 <strong>6 折一次到 3 就卡住</strong>——3 是奇数，没法再对半切成两个整数半边。遇到非 2 幂长度有三条路：<strong>补零</strong>凑到 8（zero-pad）、按 <code>6=2×3</code> 走 <strong>mixed-radix</strong>、或用 <strong>Bluestein</strong> 把任意长度变成一个卷积再拿 2 幂 FFT 算。</p>
+
+<p><strong>② bit-reversal 到底重排成什么样。</strong>把下标 0–7 反复按偶/奇拆到底，叶子顺序变成 <code>0 4 2 6 1 5 3 7</code>。这串数正好是<strong>把下标的二进制位左右翻过来</strong>：比如 <code>1=001</code> 翻成 <code>100=4</code>，<code>3=011</code> 翻成 <code>110=6</code>。所以实现里常先按这张表把输入重排一遍，再就地叠蝴蝶：</p>
+
+<table class="spec">
+  <tr><th>原下标</th><th>二进制</th><th>位翻转</th><th>→ 新位置</th></tr>
+  <tr><td>0</td><td>000</td><td>000</td><td>0</td></tr>
+  <tr><td>1</td><td>001</td><td>100</td><td>4</td></tr>
+  <tr><td>2</td><td>010</td><td>010</td><td>2</td></tr>
+  <tr><td>3</td><td>011</td><td>110</td><td>6</td></tr>
+  <tr><td>4</td><td>100</td><td>001</td><td>1</td></tr>
+  <tr><td>5</td><td>101</td><td>101</td><td>5</td></tr>
+  <tr><td>6</td><td>110</td><td>011</td><td>3</td></tr>
+  <tr><td>7</td><td>111</td><td>111</td><td>7</td></tr>
+</table>
+
+<p>把最后一列从上往下读：<code>0 4 2 6 1 5 3 7</code> —— 跟上面 Fig 03 那棵树最底层叶子的顺序<strong>一字不差</strong>。所谓"递归偶奇拆分"和"位翻转重排"是同一件事的两种说法。</p>
+
+<p><strong>③ IFFT 怎么"变回去"。</strong>逆变换用<strong>同一套蝴蝶</strong>，只改两处：twiddle 的旋转方向取反（共轭，<code>e^(+…)</code> 而不是 <code>e^(−…)</code>），最后每个数除以 N。举个最小例子——常数信号 <code>[1,1,1,1]</code> 做 FFT → <code>[4,0,0,0]</code>（只有"直流"那一根亮，因为它压根没有任何起伏的频率）；把 <code>[4,0,0,0]</code> 喂回 IFFT、跑同样的蝴蝶、最后除以 4 → 又老老实实变回 <code>[1,1,1,1]</code>。</p>
 
 
 <!-- §05 -->
