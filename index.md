@@ -16,6 +16,8 @@
 - [GPT-3](wiki/papers/gpt-3.md) — 同架构再 scale 100× 到 175B，prompt 里给几个例子模型现学（ICL），ChatGPT 时代由此开始
 - [Flow Matching](wiki/papers/flow-matching.md) — 把 diffusion 的 score matching 换成"学速度场 + ODE 积分"，简单 + 少步推理
 - [ODE vs SDE · 确定性流与随机流](wiki/papers/ode-sde.md) — 方法底层页: ODE=风场弹珠确定/SDE=醉汉每步随机踹; 桥=同一团云两看法; Euler 真数字演算(同起点ODE永远落5/SDE跑出6.13与3.30); 接 flow-matching + diffusion
+- [Generative Modeling via Drifting](wiki/papers/drifting-models.md) — 一步生成新范式(Kaiming He组): 吸引真数据+排斥自己的漂移场, 反对称→q=p场归零; 把迭代从推理时搬进训练时, 推理1步; ImageNet256 FID 1.54; 像无判别器GAN
+- [DiffusionOPD · 扩散的 On-Policy 蒸馏](wiki/papers/diffusion-opd.md) — 多奖励对齐扩散: 先各训单任务专家老师, 再沿学生rollout轨迹蒸进一个学生; 扩散=高斯马尔可夫链→同协方差KL塌成均值MSE; 接 ppo+ode-sde+cross-entropy
 - [dMel](wiki/papers/dmel.md) — 跳过 neural codec 直接 bin quantize log-mel，简单方案跟 RVQ 一样好
 - [Interaction Models · Thinking Machines](wiki/papers/interaction-models-tml.md) — 把交互能力做进权重的 276B MoE 模型
 - [Fish Audio S2 Pro](wiki/papers/fish-speech-s2-pro.md) — Dual-AR + RVQ + GRPO 的开源 TTS
