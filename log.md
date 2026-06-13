@@ -610,3 +610,7 @@ skill 更新:
 - 用户(fish-speech背景)指出 fish 帧内串行 vs MTP 并行的矛盾 → MTP 实为 delay pattern 阶梯并行
 - MTP 页加 delay pattern 阶梯 SVG(对角线=帧f0残差链, 列=不同帧并行) + 三档对比表(裸并行/阶梯/fish串行)
 - 纠正口径: 依赖非丢, 沿对角线保住; minimind-o §04 + g-06 同步
+
+## [2026-06-08] expand | MTP 页补"共享主体+adapter=每层LoRA"(读真源码)
+- 从 model_omni.py:57-76 读 TalkerHead/TalkerEmbedding: base全尺寸 + 每层 rank=256 低秩adapter, 输出 base+adapter, 输入 8层均值
+- 补 LoRA 类比(用户做过LoRA) + 省参表 + bridge融合(model_omni.py:301 可学scale)
