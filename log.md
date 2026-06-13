@@ -664,3 +664,8 @@ skill 更新:
 - adam bespoke(brick): SGD窄沟抖→动量(一阶EMA)→RMSprop(二阶EMA除√v)→Adam合体+bias correction; 4图; arXiv 1412.6980
 - 主线: Adam=EMA两连击(滚梯度/滚梯度平方); 接 dino/batchnorm 同款EMA
 - fix lpips Fig03: 绿箭头压住"哪个更像参考?"文字 → 改单箭头穿过、问题文字浮上方
+
+## [2026-06-12] add | fft bespoke 精装页（新 teal accent）
+- fft bespoke(teal #1a6a64): 棱镜拆频率→绕线机测频率→偶奇分治树 N²→NlogN→蝴蝶+twiddle→卷积定理; 5 图全本地 headless 验证; Cooley-Tukey 1965
+- 主线: 分治(折半再合,同卷积/归并) + 单位根对称(转半圈反号→一次乘喂两输出); 接 convolution(卷积定理) + log-mel-spectrogram(STFT)
+- 回链: convolution / log-mel-spectrogram 加 fft source + 链接; index papers 段置顶(基础算法)
