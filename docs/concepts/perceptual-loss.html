@@ -48,40 +48,36 @@
 </ul>
 <p>根因：人不是逐像素看图的，是看<strong>纹理、结构、语义</strong>。所以把两张图都过一个<strong>预训练网络</strong>，比它们的<strong>深层特征</strong>——特征近 = 网络（也大致是人）觉得像。这就是 perceptual loss。</p>
 <p>类比：像素 L2 = <strong>逐字母</strong>比两篇文章；perceptual loss = 让一个<strong>读者读完两篇、比"意思像不像"</strong>。读者不同，比的侧重也不同。</p>
-<h2>LPIPS · 经典的那一个</h2>
-<p><strong>LPIPS</strong>（Learned Perceptual Image Patch Similarity, Zhang 2018）：</p>
+<h2>两种特征 · LPIPS vs DINO loss</h2>
+<p>用哪个网络的特征，决定了你比的是"哪种像"：</p>
 <ul>
-<li>拿一个预训练 CNN（VGG/AlexNet），把两张图都过一遍，取<strong>多个层</strong>的特征。</li>
-<li>每个通道乘一组<strong>学出来的权重</strong>（这组权重是拿人类"这两张哪个更像"的判断<strong>校准</strong>出来的）。</li>
-<li>各层 L2 距离加起来 = LPIPS。<strong>低 = 人觉得像。</strong></li>
-<li>偏低层到中层特征 → 对<strong>纹理 / 局部结构 / 风格</strong>敏感。</li>
+<li><strong><a href="../papers/lpips.html">lpips</a></strong>（Zhang 2018）：用预训练 CNN（VGG/AlexNet）多层特征 + 一组拿<strong>人类 2AFC 判断</strong>校准的线性权重。偏<strong>纹理 / 局部结构 / 风格</strong>。是这套思想最经典的奠基实例。</li>
+<li><strong>DINO loss</strong>：用 <strong><a href="../papers/dino.html">dino</a></strong>（自监督 ViT，无标签自蒸馏训出来的）的特征比。DINO 特征出了名地<strong>抓语义和物体结构</strong>，所以偏<strong>高层语义 / 全局连贯</strong>。<a href="../papers/hidream-o1.html">hidream-o1</a> 用它正是因为像素扩散细节够、缺的是长程语义连贯。</li>
 </ul>
-<h2>DINO loss · 偏语义那一个</h2>
-<p><strong>DINO</strong>（self-DIstillation with NO labels, Caron 2021）是个<strong>自监督 ViT</strong>——没用任何标签、纯靠自蒸馏训出来的。它的特征出了名地<strong>抓语义和物体结构</strong>（DINO 特征能直接分割物体、找跨图对应）。</p>
-<p><strong>perceptual DINO loss</strong> = 在 DINO 的特征空间里比两张图 → 逼生成图匹配<strong>高层语义 / 全局结构</strong>，不只是局部纹理。这正是 <a href="../papers/hidream-o1.html">hidream-o1</a> 用它的原因：像素空间扩散<strong>细节够、长程语义连贯弱</strong>，DINO 特征编码全局语义，拿它当 loss 就把<strong>语义连贯</strong>补回来。</p>
 <blockquote>
-<p>一句话分工：<strong>LPIPS 管"纹理/风格像不像"（VGG 特征），DINO 管"语义/结构像不像"（自监督 ViT 特征）。</strong></p>
+<p>一句话分工：<strong>LPIPS 管"纹理/风格像不像"，DINO 管"语义/结构像不像"。</strong> 各自细节见 <a href="../papers/lpips.html">lpips</a> / <a href="../papers/dino.html">dino</a> 专页。</p>
 </blockquote>
 <h2>怎么当 loss 用</h2>
 <p>训练时，除了主目标（<a href="../concepts/flow-matching.html">flow-matching</a> 预测速度场），还把模型<strong>解出来的预测图</strong>跟 ground-truth 图算 LPIPS + DINO 距离，一起反传。<strong>感知网络（VGG / DINO）全程冻结</strong>，只当一把"会看图的尺子"，不更新。</p>
 <h2>代码出处</h2>
 <ul>
-<li>LPIPS：Zhang et al. 2018，<code>lpips</code> 包是标准实现</li>
-<li>DINO：Caron et al. 2021（自监督 ViT）</li>
+<li>LPIPS：Zhang et al. 2018，<code>lpips</code> 包是标准实现（详见 <a href="../papers/lpips.html">lpips</a>）</li>
+<li>DINO：Caron et al. 2021，自监督 ViT（详见 <a href="../papers/dino.html">dino</a>）</li>
 <li>用法见 HiDream-O1-Image arXiv 2605.11061（flow matching + LPIPS + perceptual DINO loss）</li>
 </ul>
 <h2>链接</h2>
 <ul>
+<li><a href="../papers/lpips.html">lpips</a> · 最经典的实例（VGG 特征 + 人类校准）</li>
+<li><a href="../papers/dino.html">dino</a> · DINO loss 的特征来源（自监督 ViT，偏语义）</li>
 <li><a href="../concepts/pixel-space-diffusion.html">pixel-space-diffusion</a> · 像素空间为何需要它补语义连贯</li>
 <li><a href="../papers/hidream-o1.html">hidream-o1</a> · flow matching 之外加 LPIPS + DINO</li>
 <li><a href="../concepts/flow-matching.html">flow-matching</a> · 主训练目标，perceptual 是附加监督</li>
-<li><a href="../concepts/contrastive-learning.html">contrastive-learning</a> · DINO 自监督的亲戚思路</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 1 处</span>
-  <ul><li><a href="../concepts/pixel-space-diffusion.html"><span class="cat">concept</span>Pixel-Space Diffusion · 直接在原始像素上扩散</a></li></ul>
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/dino.html"><span class="cat">paper</span>DINO · 自监督 ViT · 自蒸馏无标签</a></li><li><a href="../papers/lpips.html"><span class="cat">paper</span>LPIPS · 深层特征当感知度量</a></li><li><a href="../concepts/pixel-space-diffusion.html"><span class="cat">concept</span>Pixel-Space Diffusion · 直接在原始像素上扩散</a></li></ul>
 </div>
 
 <div class="colophon">

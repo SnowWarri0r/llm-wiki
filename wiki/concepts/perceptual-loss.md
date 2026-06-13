@@ -20,30 +20,26 @@ updated: 2026-06-10
 
 类比：像素 L2 = **逐字母**比两篇文章；perceptual loss = 让一个**读者读完两篇、比"意思像不像"**。读者不同，比的侧重也不同。
 
-## LPIPS · 经典的那一个
-**LPIPS**（Learned Perceptual Image Patch Similarity, Zhang 2018）：
-- 拿一个预训练 CNN（VGG/AlexNet），把两张图都过一遍，取**多个层**的特征。
-- 每个通道乘一组**学出来的权重**（这组权重是拿人类"这两张哪个更像"的判断**校准**出来的）。
-- 各层 L2 距离加起来 = LPIPS。**低 = 人觉得像。**
-- 偏低层到中层特征 → 对**纹理 / 局部结构 / 风格**敏感。
+## 两种特征 · LPIPS vs DINO loss
 
-## DINO loss · 偏语义那一个
-**DINO**（self-DIstillation with NO labels, Caron 2021）是个**自监督 ViT**——没用任何标签、纯靠自蒸馏训出来的。它的特征出了名地**抓语义和物体结构**（DINO 特征能直接分割物体、找跨图对应）。
+用哪个网络的特征，决定了你比的是"哪种像"：
 
-**perceptual DINO loss** = 在 DINO 的特征空间里比两张图 → 逼生成图匹配**高层语义 / 全局结构**，不只是局部纹理。这正是 [[hidream-o1]] 用它的原因：像素空间扩散**细节够、长程语义连贯弱**，DINO 特征编码全局语义，拿它当 loss 就把**语义连贯**补回来。
+- **[[lpips]]**（Zhang 2018）：用预训练 CNN（VGG/AlexNet）多层特征 + 一组拿**人类 2AFC 判断**校准的线性权重。偏**纹理 / 局部结构 / 风格**。是这套思想最经典的奠基实例。
+- **DINO loss**：用 **[[dino]]**（自监督 ViT，无标签自蒸馏训出来的）的特征比。DINO 特征出了名地**抓语义和物体结构**，所以偏**高层语义 / 全局连贯**。[[hidream-o1]] 用它正是因为像素扩散细节够、缺的是长程语义连贯。
 
-> 一句话分工：**LPIPS 管"纹理/风格像不像"（VGG 特征），DINO 管"语义/结构像不像"（自监督 ViT 特征）。**
+> 一句话分工：**LPIPS 管"纹理/风格像不像"，DINO 管"语义/结构像不像"。** 各自细节见 [[lpips]] / [[dino]] 专页。
 
 ## 怎么当 loss 用
 训练时，除了主目标（[[flow-matching]] 预测速度场），还把模型**解出来的预测图**跟 ground-truth 图算 LPIPS + DINO 距离，一起反传。**感知网络（VGG / DINO）全程冻结**，只当一把"会看图的尺子"，不更新。
 
 ## 代码出处
-- LPIPS：Zhang et al. 2018，`lpips` 包是标准实现
-- DINO：Caron et al. 2021（自监督 ViT）
+- LPIPS：Zhang et al. 2018，`lpips` 包是标准实现（详见 [[lpips]]）
+- DINO：Caron et al. 2021，自监督 ViT（详见 [[dino]]）
 - 用法见 HiDream-O1-Image arXiv 2605.11061（flow matching + LPIPS + perceptual DINO loss）
 
 ## 链接
+- [[lpips]] · 最经典的实例（VGG 特征 + 人类校准）
+- [[dino]] · DINO loss 的特征来源（自监督 ViT，偏语义）
 - [[pixel-space-diffusion]] · 像素空间为何需要它补语义连贯
 - [[hidream-o1]] · flow matching 之外加 LPIPS + DINO
 - [[flow-matching]] · 主训练目标，perceptual 是附加监督
-- [[contrastive-learning]] · DINO 自监督的亲戚思路

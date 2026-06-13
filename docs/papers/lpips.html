@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>LPIPS · 深层特征当感知度量</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --accent: var(--moss); --accent-soft: var(--moss-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(44px, 7vw, 78px); line-height: 0.95; letter-spacing: -0.03em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 36px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
+p { margin: 12px 0; } strong { font-weight: 700; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.86em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--moss-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--moss); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--moss); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+table.spec { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+table.spec td, table.spec th { border-bottom: 1px dashed var(--rule); padding: 7px 10px; text-align: left; }
+table.spec th { color: var(--accent); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+table.spec td:first-child { color: var(--muted); }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--moss-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--moss-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* lp-specific */
+.lp-svg { width: 100%; height: auto; display: block; }
+.lp-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .lp-rev { opacity: 1; }
+figure.play .lp-rev.d1 { transition-delay: 0.15s; }
+figure.play .lp-rev.d2 { transition-delay: 0.45s; }
+figure.play .lp-rev.d3 { transition-delay: 0.75s; }
+figure.play .lp-rev.d4 { transition-delay: 1.05s; }
+figure.play .lp-rev.d5 { transition-delay: 1.35s; }
+@media (prefers-reduced-motion: reduce) { .lp-rev { opacity: 1; transition: none; } }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · lpips</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · 感知度量 · LPIPS · 2018</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 感知度量 · 深层特征</div>
+  <h1 class="title">LPIPS ·<br /><span class="em">像不像，让网络说了算。</span></h1>
+  <div class="byline">Zhang · Isola · Efros · Shechtman · Wang · CVPR 2018 · arXiv 1801.03924</div>
+  <p class="dek">逐像素比两张图（L2/PSNR）跟人眼差得离谱：平移一像素 L2 暴增却看着没变，糊成一团 L2 反而小。LPIPS 的答案：把两张图都喂进一个预训练网络、比深层特征——深度特征作为"像不像"的尺子，好得不讲道理。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>LPIPS（Learned Perceptual Image Patch Similarity）= 在<strong>预训练网络的特征空间</strong>里量"两张图像不像"<a class="jr" href="#g-01">1</a>。把两图过一个 frozen 的 CNN（VGG/AlexNet），取<strong>多个层</strong>的特征、通道<strong>单位归一化</strong>、乘一组<strong>学出来的线性权重</strong><a class="jr" href="#g-02">2</a>，算 L2、空间平均、各层求和。那组权重是拿 <strong>BAPPS 数据集</strong><a class="jr" href="#g-03">3</a> 的<strong>人类 2AFC 判断</strong><a class="jr" href="#g-04">4</a>（"这两个哪个更像参考？"）校准的。核心发现——<strong>深层特征作为感知度量好得"不讲道理"</strong><a class="jr" href="#g-05">5</a>，几乎任何预训练网络都远胜 L2/SSIM，说明感知相似是深度表征的<strong>涌现属性</strong>。既是度量，也常被当<strong>训练损失</strong>（见 <a href="../concepts/perceptual-loss.html">perceptual-loss</a>）。</p>
+</div>
+
+
+<!-- §01 -->
+<h2><span class="num">§ 01</span>像素 L2 是个烂尺子</h2>
+
+<p>PSNR / L2 逐像素比，假设"像素值接近 = 看着像"。但这假设错得离谱：</p>
+
+<figure id="fig-l2" class="fig-l2">
+  <figcaption>
+    <span>Fig 01 · 像素 L2 跟人眼不符</span>
+    <span class="fnum">看着一样 L2 大 · 看着不对 L2 小</span>
+  </figcaption>
+  <svg class="lp-svg" viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg">
+    <!-- 左：平移 -->
+    <g class="lp-rev d1" font-family="JetBrains Mono,monospace" font-size="9" text-anchor="middle">
+      <text x="160" y="36" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#4a6b3a">整体平移 1 像素</text>
+      <rect x="70" y="54" width="76" height="76" fill="#dbe6f0" stroke="#3a3128"/><circle cx="100" cy="84" r="11" fill="#b8841c"/><polygon points="82,124 110,90 138,124" fill="#4a6b3a"/>
+      <text x="108" y="146" fill="#7a6f5d">参考</text>
+      <rect x="178" y="56" width="76" height="76" fill="#dbe6f0" stroke="#3a3128"/><circle cx="210" cy="86" r="11" fill="#b8841c"/><polygon points="192,126 220,92 248,126" fill="#4a6b3a"/>
+      <text x="216" y="148" fill="#7a6f5d">平移版</text>
+      <text x="160" y="180" fill="#3a3128" font-size="10">人眼：一模一样</text>
+      <text x="160" y="198" fill="#9b2c2c" font-size="11" font-weight="700">像素 L2：巨大 ✗</text>
+    </g>
+    <line x1="380" y1="50" x2="380" y2="210" stroke="#bfb398" stroke-width="1" stroke-dasharray="5 4"/>
+    <!-- 右：模糊 -->
+    <g class="lp-rev d2" font-family="JetBrains Mono,monospace" font-size="9" text-anchor="middle">
+      <text x="560" y="36" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#4a6b3a">糊成一团</text>
+      <rect x="470" y="54" width="76" height="76" fill="#dbe6f0" stroke="#3a3128"/><circle cx="500" cy="84" r="11" fill="#b8841c"/><polygon points="482,124 510,90 538,124" fill="#4a6b3a"/>
+      <text x="508" y="146" fill="#7a6f5d">参考</text>
+      <rect x="578" y="54" width="76" height="76" fill="#dbe6f0" stroke="#3a3128"/><circle cx="608" cy="84" r="11" fill="#b8841c" opacity="0.4"/><polygon points="590,124 618,90 646,124" fill="#4a6b3a" opacity="0.4"/>
+      <text x="616" y="146" fill="#7a6f5d">模糊版</text>
+      <text x="560" y="180" fill="#3a3128" font-size="10">人眼：明显变糊</text>
+      <text x="560" y="198" fill="#9b2c2c" font-size="11" font-weight="700">像素 L2：很小 ✗</text>
+    </g>
+    <text class="lp-rev d3" x="380" y="234" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#3a3128">像素值的距离 ≠ 人觉得像不像 → 需要换个空间量</text>
+  </svg>
+</figure>
+
+
+<!-- §02 -->
+<h2><span class="num">§ 02</span>怎么算 · 深层特征 + 学出的权重</h2>
+
+<p>LPIPS 不在像素上量，在<strong>预训练网络的特征空间</strong>里量。两张图都过同一个 frozen 网络，取若干层的特征图对比——再用一组学出来的权重把各通道/各层加起来。</p>
+
+<figure id="fig-pipe" class="fig-pipe">
+  <figcaption>
+    <span>Fig 02 · LPIPS 计算流程</span>
+    <span class="fnum">多层特征 → 归一化 → 学权重 → L2 求和</span>
+  </figcaption>
+  <svg class="lp-svg" viewBox="0 0 760 270" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="lp-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4a6b3a"/></marker></defs>
+    <!-- 两张图 -->
+    <g class="lp-rev d1" font-family="JetBrains Mono,monospace" font-size="9" text-anchor="middle">
+      <rect x="28" y="64" width="50" height="50" fill="#dbe6f0" stroke="#3a3128"/><text x="53" y="128" fill="#3a3128">图 x</text>
+      <rect x="28" y="150" width="50" height="50" fill="#dbe6f0" stroke="#3a3128"/><text x="53" y="214" fill="#3a3128">图 x₀</text>
+    </g>
+    <!-- frozen net -->
+    <g class="lp-rev d2">
+      <rect x="110" y="74" width="96" height="120" rx="4" fill="#eceae2" stroke="#7a6f5d" stroke-dasharray="4 3"/>
+      <text x="158" y="124" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#7a6f5d">预训练 CNN</text>
+      <text x="158" y="142" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#3a3128">VGG/AlexNet ❄</text>
+      <text x="158" y="158" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#7a6f5d">两图共用</text>
+      <line x1="78" y1="89" x2="108" y2="100" stroke="#4a6b3a" marker-end="url(#lp-a)"/>
+      <line x1="78" y1="175" x2="108" y2="168" stroke="#4a6b3a" marker-end="url(#lp-a)"/>
+    </g>
+    <!-- 多层特征差 -->
+    <g class="lp-rev d3" font-family="JetBrains Mono,monospace" font-size="8" text-anchor="middle">
+      <text x="300" y="58" fill="#3a3128">取多层特征, 通道单位归一化, 算逐层差</text>
+      <g fill="#d8e6ce" stroke="#4a6b3a">
+        <rect x="250" y="74" width="40" height="28"/><rect x="250" y="110" width="40" height="28"/><rect x="250" y="146" width="40" height="28"/><rect x="250" y="182" width="40" height="28"/>
+      </g>
+      <text x="270" y="92" fill="#3a3128">层1 差</text><text x="270" y="128" fill="#3a3128">层2 差</text><text x="270" y="164" fill="#3a3128">层3 差</text><text x="270" y="200" fill="#3a3128">层4 差</text>
+      <line x1="206" y1="134" x2="248" y2="120" stroke="#4a6b3a" marker-end="url(#lp-a)"/>
+    </g>
+    <!-- 学权重 -->
+    <g class="lp-rev d4" font-family="JetBrains Mono,monospace" font-size="8.5" text-anchor="middle">
+      <text x="400" y="58" fill="#4a6b3a">× 学出的权重 w</text>
+      <text x="400" y="92" fill="#4a6b3a">w₁ ×</text><text x="400" y="128" fill="#4a6b3a">w₂ ×</text><text x="400" y="164" fill="#4a6b3a">w₃ ×</text><text x="400" y="200" fill="#4a6b3a">w₄ ×</text>
+      <line x1="290" y1="88" x2="382" y2="88" stroke="#4a6b3a" marker-end="url(#lp-a)"/>
+      <line x1="290" y1="124" x2="382" y2="124" stroke="#4a6b3a" marker-end="url(#lp-a)"/>
+      <line x1="290" y1="160" x2="382" y2="160" stroke="#4a6b3a" marker-end="url(#lp-a)"/>
+      <line x1="290" y1="196" x2="382" y2="196" stroke="#4a6b3a" marker-end="url(#lp-a)"/>
+    </g>
+    <!-- 求和 -->
+    <g class="lp-rev d5" text-anchor="middle">
+      <path d="M430,142 Q470,142 488,142" fill="none" stroke="#4a6b3a" stroke-width="1.5" marker-end="url(#lp-a)"/>
+      <rect x="490" y="118" width="110" height="48" rx="4" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.6"/>
+      <text x="545" y="138" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#4a6b3a">Σ = LPIPS</text>
+      <text x="545" y="156" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#7a6f5d">越低 = 越像</text>
+      <text x="680" y="138" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">空间平均</text>
+      <text x="680" y="152" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">+ 各层求和</text>
+    </g>
+    <text class="lp-rev d5" x="380" y="252" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">网络冻结只当尺子 · 只有那组线性权重 w 是学出来的（很轻）</text>
+  </svg>
+</figure>
+
+
+<!-- §03 -->
+<h2><span class="num">§ 03</span>权重哪来 · 人类 2AFC 校准</h2>
+
+<p>那组线性权重不是拍脑袋，是拿<strong>人类判断</strong>校准的。作者建了 <strong>BAPPS 数据集</strong>：给人看一个<strong>参考图</strong> + <strong>两个失真版本</strong>，问"<strong>哪个更像参考？</strong>"（这叫 <strong>2AFC</strong>，二选一强制选择）。收一堆人的票，再调 LPIPS 的权重让它的打分<strong>跟人投的票一致</strong>。</p>
+
+<figure id="fig-2afc" class="fig-2afc">
+  <figcaption>
+    <span>Fig 03 · 2AFC 人类判断</span>
+    <span class="fnum">哪个更像参考？ → 用人票校准权重</span>
+  </figcaption>
+  <svg class="lp-svg" viewBox="0 0 760 220" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="lp-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#4a6b3a"/></marker></defs>
+    <g class="lp-rev d1" font-family="JetBrains Mono,monospace" font-size="9" text-anchor="middle">
+      <rect x="40" y="70" width="64" height="64" fill="#dbe6f0" stroke="#3a3128"/><circle cx="66" cy="96" r="10" fill="#b8841c"/><polygon points="50,130 72,102 94,130" fill="#4a6b3a"/>
+      <text x="72" y="150" fill="#3a3128">参考</text>
+    </g>
+    <g class="lp-rev d2" font-family="JetBrains Mono,monospace" font-size="9" text-anchor="middle">
+      <rect x="180" y="46" width="58" height="58" fill="#dbe6f0" stroke="#3a3128"/><circle cx="204" cy="70" r="9" fill="#b8841c"/><polygon points="188,100 209,74 230,100" fill="#4a6b3a"/>
+      <text x="209" y="118" fill="#7a6f5d">失真 A</text>
+      <rect x="180" y="128" width="58" height="58" fill="#dbe6f0" stroke="#3a3128"/><circle cx="204" cy="152" r="9" fill="#b8841c" opacity="0.5"/><polygon points="188,182 209,156 230,182" fill="#4a6b3a" opacity="0.5"/>
+      <text x="209" y="200" fill="#7a6f5d">失真 B</text>
+      <line x1="104" y1="92" x2="178" y2="74" stroke="#7a6f5d" marker-end="url(#lp-b)"/>
+      <line x1="104" y1="112" x2="178" y2="156" stroke="#7a6f5d" marker-end="url(#lp-b)"/>
+    </g>
+    <g class="lp-rev d3" font-family="JetBrains Mono,monospace" font-size="10" text-anchor="middle">
+      <text x="320" y="100" fill="#3a3128">问人：</text>
+      <text x="320" y="120" fill="#9b2c2c" font-weight="700">"哪个更像参考?"</text>
+      <text x="320" y="142" fill="#7a6f5d" font-size="8.5">2AFC · 收一堆人的票</text>
+      <path d="M238,116 L296,116" stroke="#4a6b3a" stroke-width="1.4" marker-end="url(#lp-b)"/>
+    </g>
+    <g class="lp-rev d4" text-anchor="middle">
+      <path d="M360,116 L406,116" stroke="#4a6b3a" stroke-width="1.5" marker-end="url(#lp-b)"/>
+      <rect x="408" y="92" width="150" height="48" rx="4" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.6"/>
+      <text x="483" y="112" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#4a6b3a">调 LPIPS 权重 w</text>
+      <text x="483" y="130" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#7a6f5d">让打分跟人票一致</text>
+    </g>
+    <text class="lp-rev d5" x="640" y="116" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">→ LPIPS 学会</text>
+    <text class="lp-rev d5" x="640" y="132" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">"像人一样判断"</text>
+  </svg>
+</figure>
+
+
+<!-- §04 -->
+<h2><span class="num">§ 04</span>"不讲道理的好" · 当度量也当损失</h2>
+
+<p>论文标题就是结论：<strong>The Unreasonable Effectiveness of Deep Features</strong>——深层特征当感知度量好得"不讲道理"。最反直觉的发现：<strong>几乎任何</strong>预训练网络的特征（VGG / AlexNet / SqueezeNet，甚至自监督、甚至随机初始化都比像素强）都远胜 PSNR/SSIM。说明<strong>"感知相似"是深度视觉表征自带的涌现属性</strong>，不是某个特定网络的功劳。</p>
+
+<table class="spec">
+  <tr><th>度量</th><th>跟人类判断的吻合</th></tr>
+  <tr><td>L2 / PSNR</td><td>差（前面那些反例全踩）</td></tr>
+  <tr><td>SSIM 等传统</td><td>好一点，仍有限</td></tr>
+  <tr><td>LPIPS（深层特征）</td><td>显著更好，接近人</td></tr>
+</table>
+
+<div class="note">
+  <span class="l">放进 wiki 这条线</span>
+  <p>LPIPS 既是<strong>度量</strong>（比 PSNR/SSIM 更准地评图像质量），也是<strong>损失</strong>：生成模型训练时把"预测图 vs 真值图"的 LPIPS 距离加进 loss，逼输出在<strong>感知上</strong>像，而不是像素上像。<a href="../papers/hidream-o1.html">HiDream-O1</a> 就拿 LPIPS + <a href="../papers/dino.html">DINO</a> perceptual loss 一起当附加监督。要点：<strong>把"像不像"从像素空间挪到一个懂图的网络的特征空间</strong>——跟 <a href="../concepts/perceptual-loss.html">perceptual loss</a> 是一回事，LPIPS 是它最经典的实例。</p>
+</div>
+
+
+<!-- glossary -->
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">LPIPS</span> · Learned Perceptual Image Patch Similarity。在预训练网络特征空间里量两图距离的感知度量/损失，越低越像。详见 <a href="../concepts/perceptual-loss.html">perceptual-loss</a>。</li>
+    <li id="g-02"><span class="term">学出的线性权重</span> · 取多层特征、通道单位归一化后，每通道乘一个学出来的权重再 L2 求和。网络冻结，只有这组很轻的权重是训出来的——所以叫 "learned"。</li>
+    <li id="g-03"><span class="term">BAPPS 数据集</span> · Berkeley-Adobe Perceptual Patch Similarity。作者收集的人类感知判断数据，用来训练/评估感知度量。</li>
+    <li id="g-04"><span class="term">2AFC · 二选一强制选择</span> · 给参考图 + 两个失真版，问人"哪个更像参考"。比让人打绝对分更稳。LPIPS 的权重就拿这些票校准。</li>
+    <li id="g-05"><span class="term">unreasonable effectiveness</span> · 论文核心发现：几乎任何预训练网络的深层特征当感知度量都远胜 L2/SSIM → 感知相似是深度表征的涌现属性，不依赖特定网络。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>SOURCE · arXiv 1801.03924 · The Unreasonable Effectiveness of Deep Features as a Perceptual Metric (CVPR 2018)</span>
+  <span>INGESTED · 2026-06-10</span>
+</div>
+
+</div>
+<script>
+{
+  const figs = ['fig-l2','fig-pipe','fig-2afc'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.15 });
+    obs.observe(el);
+  });
+}
+</script>
+</body>
+</html>
