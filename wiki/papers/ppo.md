@@ -57,6 +57,9 @@ PPO 在 LLM 圈被**疯狂使用**的地方是 [[rlhf]] (Reinforcement Learning 
 - [[policy-gradient]] · 策略梯度, RL 的基础
 - [[clipped-surrogate-objective]] · PPO 的核心创新 (一行 clip)
 - [[advantage-function]] · 比 raw reward 信号更稳的"超出预期多少"
+- [[actor-critic]] · PPO 跑在其上的双网络结构 (clip 只是 actor 那半)
+- [[gae]] · 把优势算得又稳又准的 λ 插值法 (工程上比 clip 还关键)
+- [[entropy-regularization]] · 完整 loss 的第三项, 防过早笃定
 - [[rlhf]] · PPO 在 LLM 端的杀手级应用
 - [[grpo]] · PPO 的后继简化版, 你已经熟悉的
 
@@ -67,4 +70,6 @@ PPO 在 LLM 圈被**疯狂使用**的地方是 [[rlhf]] (Reinforcement Learning 
 - 现在 (2024-2025) PPO 在 LLM 端逐渐被 **DPO** (Direct Preference Optimization) 替代 —— DPO 用对比学习的思路直接 skip 掉 reward model, 训练更稳。但 DPO 跟 PPO 不是冲突, 是接力 —— 大模型 alignment 用 DPO 多, 但需要 online 探索的场景 (比如 GRPO 在 reasoning 训练) 还是 PPO 系
 - 一个误解: 很多人以为 "PPO = clipped objective". 实际上 PPO 论文给了两个版本, "clipped" 和 "KL penalty", **clipped 版本简单且效果稍好, 所以工程界几乎都用 clipped**。论文里的 KL penalty 版本基本没人提
 - 工程坑: PPO 训练时 "advantage 怎么算" 比 "clip" 本身重要得多。GAE (Generalized Advantage Estimation) 是 PPO 的标配, 但调好 λ 参数 (一般 0.95) 需要经验
+- **"PPO = clip" 是只看了一半**: clip 是 actor 那半, 但 PPO 跑在 [[actor-critic]] 结构上 —— 还有个 critic 在用监督回归估 V, [[gae]] 拿它算优势, 完整 loss 是**三项**(clip 策略项 + 价值回归项 + [[entropy-regularization]] 熵项), 不是论文公式里那一个 $L^{CLIP}$。少了 critic 优势没法算, 少了熵项策略容易过早确定化 —— 自己动手训过才会发现, clip 只是冰山一角
+- 训练实战体感 (论文不写但一跑就懂): ① RL 的 `loss` 不代表学得好坏 (跟监督学习直觉相反), 要看 reward 走势; ② `explained_variance` 是 critic 的成绩单 (0→1 越准); ③ 奖励数值太大会淹没熵奖励 → 熵秒崩 → 策略躺平, 所以要奖励归一化; ④ on-policy 怕经验单一, 多开并行环境收集去相关的数据; ⑤ 没收敛的策略别用 deterministic (argmax) 评估, 会低估它 —— 该用随机采样
 - 疑问: PPO 的 KL 散度约束做不到精确边界 —— `clip(r, 1-ε, 1+ε)` 只保证概率比值有界, 但不保证 KL 有界。**为什么这种"近似 trust region" 反而工程上够用**? 看起来跟梯度下降的"局部线性近似"是一脉相承的: 在小邻域内, 近似就足够准

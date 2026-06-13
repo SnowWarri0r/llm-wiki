@@ -109,10 +109,13 @@ for rollout in rollouts:
     # critic loss: 监督回归到实际 return
     critic_loss = (V_estimates - returns).pow(2).mean()
 
-    loss = actor_loss + 0.5 * critic_loss
+    # entropy bonus: 鼓励探索, 防过早笃定 (见 entropy-regularization)
+    entropy = action_dist.entropy().mean()
+
+    loss = actor_loss + 0.5 * critic_loss - 0.01 * entropy   # 完整三项
     loss.backward()
 </code></pre>
-<p><strong>Actor 学怎么选, critic 学评估当前局面好坏</strong>. 互相配合.</p>
+<p><strong>Actor 学怎么选, critic 学评估当前局面好坏</strong>. 互相配合. 注意完整的 PPO loss 是<strong>三项</strong>: clip 策略项 + 价值回归项 + 熵项 —— 少了第三项策略容易过早确定化, 详见 <a href="../concepts/entropy-regularization.html">entropy-regularization</a>.</p>
 <p>PPO / TRPO / A3C / SAC 全都是 actor-critic 结构。GRPO 是个例外 —— 它<strong>干掉了 critic</strong>, 改用一组采样的相对得分直接当 advantage (省一个网络的开销, 这是 DeepSeek GRPO 的核心简化).</p>
 <h2>Reward 偏移不变性 (advantage 的关键性质)</h2>
 <p>如果环境的 reward 整体加一个常数 C, V 也跟着变 (V_new = V_old + C/(1-γ)). <strong>A 不变</strong>.</p>
@@ -122,6 +125,9 @@ for rollout in rollouts:
 <ul>
 <li><a href="../concepts/rl-for-llm-people.html">rl-for-llm-people</a> · RL 术语打底 (state/action/分布/loss 走势)</li>
 <li><a href="../concepts/policy-gradient.html">policy-gradient</a> · 它的 loss 权重就是 advantage</li>
+<li><a href="../concepts/actor-critic.html">actor-critic</a> · 提供 V 估计的 critic + actor 的双网络结构</li>
+<li><a href="../concepts/gae.html">gae</a> · 用 λ 插值 TD 和 MC 来估优势的标配方法</li>
+<li><a href="../concepts/entropy-regularization.html">entropy-regularization</a> · 完整 loss 的第三项</li>
 <li><a href="../concepts/clipped-surrogate-objective.html">clipped-surrogate-objective</a> · PPO 的 clip 作用在 A_t 上</li>
 <li><a href="../papers/ppo.html">ppo</a> · 用 advantage 配合 clip 训练</li>
 <li><a href="../concepts/grpo.html">grpo</a> · 不要 critic, 用组内相对得分当 advantage</li>
@@ -129,8 +135,8 @@ for rollout in rollouts:
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 5 处</span>
-  <ul><li><a href="../papers/ppo.html"><span class="cat">paper</span>PPO · Proximal Policy Optimization</a></li><li><a href="../concepts/clipped-surrogate-objective.html"><span class="cat">concept</span>Clipped Surrogate Objective · PPO 的核心一行 clip</a></li><li><a href="../concepts/policy-gradient.html"><span class="cat">concept</span>Policy Gradient · 策略梯度</a></li><li><a href="../concepts/rl-for-llm-people.html"><span class="cat">concept</span>RL 直觉打底 · 给懂 LLM 不懂 RL 的人</a></li><li><a href="../concepts/rlhf.html"><span class="cat">concept</span>RLHF · Reinforcement Learning from Human Feedback</a></li></ul>
+  <span class="label">引用此页的内容 · 8 处</span>
+  <ul><li><a href="../papers/ppo.html"><span class="cat">paper</span>PPO · Proximal Policy Optimization</a></li><li><a href="../concepts/actor-critic.html"><span class="cat">concept</span>Actor-Critic · 一个动手, 一个打分</a></li><li><a href="../concepts/clipped-surrogate-objective.html"><span class="cat">concept</span>Clipped Surrogate Objective · PPO 的核心一行 clip</a></li><li><a href="../concepts/entropy-regularization.html"><span class="cat">concept</span>Entropy Regularization · 花钱买&quot;别太早笃定&quot;</a></li><li><a href="../concepts/gae.html"><span class="cat">concept</span>GAE · 把&quot;超出预期多少&quot;算得又稳又准</a></li><li><a href="../concepts/policy-gradient.html"><span class="cat">concept</span>Policy Gradient · 策略梯度</a></li><li><a href="../concepts/rl-for-llm-people.html"><span class="cat">concept</span>RL 直觉打底 · 给懂 LLM 不懂 RL 的人</a></li><li><a href="../concepts/rlhf.html"><span class="cat">concept</span>RLHF · Reinforcement Learning from Human Feedback</a></li></ul>
 </div>
 
 <div class="colophon">
