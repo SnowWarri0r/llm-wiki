@@ -16,7 +16,7 @@ year: 2021
 监督学习要海量人工标签。自监督想从数据本身造监督信号，但"同一图两视角输出该一致"有个作弊解：全输出常数（坍缩）。DINO 在不用负样本、不用标签的前提下把这件事做稳。
 
 ## 核心贡献
-- **自蒸馏 + EMA teacher**：student 梯度更新去对齐 teacher 的输出分布（交叉熵）；teacher = student 的指数滑动平均（动量、stop-grad）。student 追一个更稳更慢的自己。
+- **自蒸馏 + EMA teacher**：student 梯度更新去对齐 teacher 的输出分布（[[cross-entropy]]）；teacher = student 的指数滑动平均（动量、stop-grad）。student 追一个更稳更慢的自己。
 - **multi-crop**：每图 2 全局 + 8 局部裁剪，student 看全部、teacher 只看全局 → 逼"局部预测出全局语义"。
 - **centering + sharpening 防坍缩**：两个相反的力（推平 vs 推尖）平衡，不用负样本就稳住。
 - **涌现属性**：ViT [CLS] 注意力无监督聚焦物体 ≈ 免费分割；k-NN 特征强分类；下游通吃。

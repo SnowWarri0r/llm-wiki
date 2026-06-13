@@ -653,3 +653,8 @@ skill 更新:
 - dino.html (deep): 自蒸馏+EMA teacher / multi-crop / centering-sharpening 防坍缩 / 涌现; 3图; 链 elt ILSD 自蒸馏
 - lpips.html (moss): 像素L2烂 / 多层特征+学权重 / 2AFC人类校准 / unreasonable effectiveness; 3图
 - perceptual-loss 退成总览, LPIPS/DINO 子节改成指针; 新 paper md scaffold ×2
+
+## [2026-06-11] add/fix | cross-entropy 概念页 + DINO 箭头/§04 公式
+- 新建 cross-entropy 概念页(−log曲线图 + 两分布/one-hot vs软标签 + 交叉熵=熵+KL); index + dino backlink
+- 修 DINO Fig02 multi-crop: 局部/全局→student 箭头原落在框上方空白(y=135 vs 框y=150), 改成扎进框
+- DINO §04 加 centering/sharpening 具体公式: softmax((g−c)/τ_t), c=EMA滑动均值, sharpen=小温度
