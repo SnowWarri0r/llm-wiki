@@ -594,3 +594,8 @@ skill 更新:
 - kl-vae 死区图: 孤岛reveal→游走线draw→死区reveal; 右N(0,1)reveal→点云reveal→有效线draw
 - 前向链路图: 6盒子分阶段揭示组(d1-d6); LM head匹配图: 概率条 grow-x 从左生长错峰
 - render.py 加 .grow-x (transform-box:fill-box 横向生长) + reduced-motion 兜底
+
+## [2026-06-08] expand | ideogram-4 加 §05 训练/推理(非自回归)
+- bespoke 页插 §05"为什么不是自回归" + Fig 04 AR-vs-扩散对比图(ig-rev 动画, fig-paradigm 入 observer)
+- JSON→§06/Fig05, 结果→§07/Fig06 顺延; md scaffold 补"非自回归"bullet
+- 核心: AR循环在位置(causal/串行) vs 扩散循环在去噪步(并行/无mask); 训练 flow-matching MSE 非 cross-entropy
