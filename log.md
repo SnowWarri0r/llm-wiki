@@ -658,3 +658,9 @@ skill 更新:
 - 新建 cross-entropy 概念页(−log曲线图 + 两分布/one-hot vs软标签 + 交叉熵=熵+KL); index + dino backlink
 - 修 DINO Fig02 multi-crop: 局部/全局→student 箭头原落在框上方空白(y=135 vs 框y=150), 改成扎进框
 - DINO §04 加 centering/sharpening 具体公式: softmax((g−c)/τ_t), c=EMA滑动均值, sharpen=小温度
+
+## [2026-06-11] add | ema 概念页 + adam bespoke 精装页 + fix lpips 2AFC 遮挡
+- ema 概念页(一行更新 + 指数衰减 + 抖动信号vs平滑EMA图); 被 dino/batchnorm/adam 引用
+- adam bespoke(brick): SGD窄沟抖→动量(一阶EMA)→RMSprop(二阶EMA除√v)→Adam合体+bias correction; 4图; arXiv 1412.6980
+- 主线: Adam=EMA两连击(滚梯度/滚梯度平方); 接 dino/batchnorm 同款EMA
+- fix lpips Fig03: 绿箭头压住"哪个更像参考?"文字 → 改单箭头穿过、问题文字浮上方
