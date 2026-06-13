@@ -179,6 +179,9 @@
 - [Policy Gradient](wiki/concepts/policy-gradient.md) — RL 的基础: 用 reward 当 loss 权重直接 gradient ascent, 步子大就崩
 - [Clipped Surrogate Objective](wiki/concepts/clipped-surrogate-objective.md) — PPO 核心的一行 clip, 软性 trust region
 - [Advantage Function](wiki/concepts/advantage-function.md) — A = Q - V, "比平均好多少" 比 raw return 信号稳得多
+- [Actor-Critic](wiki/concepts/actor-critic.md) — 一个动手(actor)一个打分(critic), clip 只是 actor 那半; critic 共享 CNN 用监督回归估 V
+- [GAE](wiki/concepts/gae.md) — 优势的"惊讶值加权和", γλ 相乘衰减, λ 在"稳但偏 ↔ 准但抖"间插值
+- [Entropy Regularization](wiki/concepts/entropy-regularization.md) — 完整 loss 第三项, 花钱买探索防过早笃定撞死
 - [RLHF](wiki/concepts/rlhf.md) — SFT → reward model → PPO 三步, 把人类排序偏好变成 LLM 训练信号
 
 ### Agent 记忆

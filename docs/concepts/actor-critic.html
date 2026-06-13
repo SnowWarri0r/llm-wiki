@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Actor-Critic · 一个动手, 一个打分 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · actor-critic</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Actor-Critic · 一个动手, 一个打分</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>一个网络管"做什么"(actor), 一个管"这局面值多少"(critic), critic 算出的"实际比预期好多少"反过来教 actor —— PPO 就跑在这套结构上。</p>
+<h2>直觉 · 为什么光有 actor 不行</h2>
+<p>只有 actor (纯 <a href="../concepts/policy-gradient.html">policy-gradient</a>) 的训法是: 做完一整局, 看总分, 总分高就把这局所有动作都调得更可能。问题是<strong>总分里全是噪声</strong> —— 你可能开局走了一步臭棋, 但后面运气好救回来赢了, 这步臭棋也跟着被表扬。</p>
+<p>critic 就是来当这个"基线"的。它专门估一个数: <strong>"以我现在的水平, 站在这个局面, 接下来大概能拿多少分?"</strong> 有了这个"预期", 就能算 actor 每一步到底是<strong>超出预期还是低于预期</strong>(这就是 <a href="../concepts/advantage-function.html">advantage-function</a>):</p>
+<pre><code>优势 = 实际拿到的  −  critic 预期的
+</code></pre>
+<p>超出预期 → 这动作调得更可能; 低于预期 → 压低。<strong>critic 不碰手柄, 只在旁边点评"这一波比我想的强/弱", actor 照着点评改打法。</strong> 像球员(actor)和教练(critic): 教练不上场, 但球员靠他的反馈进步。</p>
+<h2>怎么做的</h2>
+<p><strong>结构</strong>: 现代实现里 actor 和 critic 常<strong>共用一套特征提取器</strong>(比如同一个 CNN 把画面看懂, 压成一串特征), 然后<strong>分两个头</strong>:</p>
+<pre><code>画面 → [共享 CNN] → 512 个特征 ┬→ actor 头:  → 各动作的概率
+                               └→ critic 头: → 一个估值数字
+</code></pre>
+<p>有意思的是: 整个网络几乎所有参数都在那个"看懂画面"的 CNN 里, <strong>两个头各自只是一层薄薄的线性映射</strong>(几千个参数)。难的是感知, 决策反而简单。</p>
+<p><strong>critic 怎么越训越准</strong>: 它干的其实就是<strong>监督回归</strong>, 跟你做过的 fine-tune 一回事 —— 预测一个数, 跟实际发生的结果比, 用平方误差往回改:</p>
+<pre><code class="language-python">critic_loss = (critic预测的V − 实际拿到的return)² 
+</code></pre>
+<p>唯一不同: 标准答案不是人标的, 是 <strong>agent 自己玩出来的真实回报</strong>。还有个巧妙之处叫 bootstrapping —— 它常拿"自己对下一步的估计"当部分答案来训自己, 像揪着鞋带往上提; 但每步都掺了一点真实 reward 当硬锚, 所以会慢慢被现实拽准。它准到什么程度, 用 <code>explained_variance</code> 这个指标看 (0=瞎猜, 1=神准)。</p>
+<p><strong>关键区分 · 模型 vs 算法</strong>: actor-critic 是<strong>网络</strong>(被训练的权重), <a href="../papers/ppo.html">ppo</a> 是<strong>训练它的算法</strong>(怎么改这些权重的规程, 本身几乎没有参数)。同一个 actor-critic 网络, 你换 A3C / SAC / PPO 来训都行。训练完拿去用的时候, <strong>算法功成身退, 只剩网络在跑</strong>。</p>
+<h2>代码出处</h2>
+<p>stable-baselines3 <code>ActorCriticPolicy</code> —— <code>policy.pi_features_extractor</code> 与 <code>vf_features_extractor</code> 默认 <code>share_features_extractor=True</code> (同一个对象), 上面接 <code>action_net</code> (→ 动作) 和 <code>value_net</code> (→ 估值)。critic 的回归 loss 见 <code>ppo.py</code> 里 <code>value_loss = F.mse_loss(returns, values)</code>。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/advantage-function.html">advantage-function</a> · critic 提供"预期", 实际减预期 = 优势</li>
+<li><a href="../concepts/gae.html">gae</a> · 把"实际 − 预期"算得又稳又准的具体方法</li>
+<li><a href="../concepts/entropy-regularization.html">entropy-regularization</a> · actor 的 loss 里还会加一项熵, 防它过早笃定</li>
+<li><a href="../concepts/policy-gradient.html">policy-gradient</a> · 只有 actor 的原始版, 噪声大</li>
+<li><a href="../papers/ppo.html">ppo</a> · 训练这个 actor-critic 的算法</li>
+<li><a href="../concepts/grpo.html">grpo</a> · 反过来, 干掉 critic, 用一组样本相对得分代替</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/ppo.html"><span class="cat">paper</span>PPO · Proximal Policy Optimization</a></li><li><a href="../concepts/advantage-function.html"><span class="cat">concept</span>Advantage Function · 跟基线比,不是看绝对值</a></li><li><a href="../concepts/entropy-regularization.html"><span class="cat">concept</span>Entropy Regularization · 花钱买&quot;别太早笃定&quot;</a></li><li><a href="../concepts/gae.html"><span class="cat">concept</span>GAE · 把&quot;超出预期多少&quot;算得又稳又准</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/actor-critic.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

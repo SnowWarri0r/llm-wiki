@@ -108,6 +108,44 @@ figcaption .fnum { color: var(--accent); font-weight: 700; }
 .rlhf-arrow { stroke: var(--ink-2); stroke-width: 1.5; fill: none; opacity: 0; transition: opacity 0.5s ease; }
 .fig-rlhf.play .rlhf-arrow.a1 { opacity: 1; transition-delay: 0.7s; }
 .fig-rlhf.play .rlhf-arrow.a2 { opacity: 1; transition-delay: 1.4s; }
+
+/* fig-ac actor-critic */
+.ac-el { opacity: 0; transition: opacity 0.6s ease; }
+.fig-ac.play .ac-el { opacity: 1; }
+.fig-ac.play .ac-trunk { transition-delay: 0.2s; }
+.fig-ac.play .ac-actor { transition-delay: 0.7s; }
+.fig-ac.play .ac-critic { transition-delay: 1.0s; }
+.fig-ac.play .ac-adv1 { transition-delay: 1.6s; }
+.fig-ac.play .ac-adv2 { transition-delay: 2.0s; }
+.fig-ac.play .ac-adv3 { transition-delay: 2.4s; }
+.fig-ac.play .ac-back { transition-delay: 2.9s; }
+
+/* fig-gae bars + spectrum */
+.gae-bar { transform: scaleY(0); transform-box: fill-box; transform-origin: bottom; transition: transform 0.6s cubic-bezier(.2,.8,.2,1); }
+.fig-gae.play .gae-bar { transform: scaleY(1); }
+.fig-gae.play .gae-bar.b0 { transition-delay: 0.3s; } .fig-gae.play .gae-bar.b1 { transition-delay: 0.45s; }
+.fig-gae.play .gae-bar.b2 { transition-delay: 0.6s; } .fig-gae.play .gae-bar.b3 { transition-delay: 0.75s; }
+.fig-gae.play .gae-bar.b4 { transition-delay: 0.9s; } .fig-gae.play .gae-bar.b5 { transition-delay: 1.05s; }
+.fig-gae.play .gae-bar.b6 { transition-delay: 1.2s; } .fig-gae.play .gae-bar.b7 { transition-delay: 1.35s; }
+.gae-el { opacity: 0; transition: opacity 0.6s ease; }
+.fig-gae.play .gae-el { opacity: 1; transition-delay: 1.5s; }
+.fig-gae.play .gae-spectrum { transition-delay: 1.7s; }
+.fig-gae.play .gae-marker { transition-delay: 2.2s; }
+
+/* fig-loss3 three-term merge */
+.l3-term { opacity: 0; transition: opacity 0.6s ease; }
+.fig-loss3.play .l3-term.t1 { opacity: 1; transition-delay: 0.3s; }
+.fig-loss3.play .l3-term.t2 { opacity: 1; transition-delay: 0.9s; }
+.fig-loss3.play .l3-term.t3 { opacity: 1; transition-delay: 1.5s; }
+.l3-merge { opacity: 0; transition: opacity 0.6s ease; }
+.fig-loss3.play .l3-merge { opacity: 1; transition-delay: 2.1s; }
+
+/* fig-collapse two reward curves */
+.rc-curve { fill: none; stroke-width: 2.6; stroke-dasharray: 760 760; stroke-dashoffset: 760; transition: stroke-dashoffset 1.7s ease; }
+.fig-collapse.play .rc-curve.collapse { stroke-dashoffset: 0; transition-delay: 0.4s; }
+.fig-collapse.play .rc-curve.healthy { stroke-dashoffset: 0; transition-delay: 0.7s; }
+.rc-el { opacity: 0; transition: opacity 0.5s ease; }
+.fig-collapse.play .rc-el { opacity: 1; transition-delay: 2.0s; }
 </style>
 </head>
 <body>
@@ -488,8 +526,251 @@ PPO: 一批 rollout 可以反复跑 <strong>K 个 epoch (K=3~10)</strong>, sampl
 <p><strong>为什么这能 work</strong>: clip 保证了 π_new 离 π_old 不会跑出 [1-ε, 1+ε] 范围, 那批 rollout 数据相对 π_new 还"近似准确"。这是 PPO 工程价值的核心 —— <strong>sample efficiency 翻倍, 同样 wall-clock 时间能训出更好的策略</strong>。</p>
 
 
+<!-- §05 actor-critic -->
+<h2><span class="num">§ 05</span>另一半 · clip 只是 actor 那一半</h2>
+
+<p>到这儿你可能以为 PPO = clip。但 clip 公式里那个 <code>A_t</code> (优势) 是哪来的? 上面一直没说。<strong>答案是: PPO 跑在 actor-critic 结构上</strong><a class="jr" href="#g-13">13</a> —— clip 只是管"怎么调动作"的 actor 那半, 旁边还有一个 <strong>critic</strong><a class="jr" href="#g-14">14</a> 在默默干活, 它才是优势的来源。</p>
+
+<p>分工很简单: <strong>actor 决定做什么, critic 评估"这局面值多少"</strong>。critic 估一个数 —— "以我现在的水平, 站这个局面接下来大概拿多少分"。有了这个"预期", 就能算 actor 每步是<strong>超出预期还是低于预期</strong>, 这个落差就是优势, 拿去推 actor。</p>
+
+<figure id="fig-ac" class="fig-ac">
+  <figcaption>
+    <span>Fig 06 · actor-critic · 一个动手, 一个打分</span>
+    <span class="fnum">优势 = 实际 − critic 的预期</span>
+  </figcaption>
+  <svg class="ppo-svg" viewBox="0 0 880 400" xmlns="http://www.w3.org/2000/svg">
+    <!-- 输入 -->
+    <g class="ac-el ac-trunk">
+      <rect x="20" y="150" width="86" height="60" fill="white" stroke="#7a6f5d" stroke-width="0.8" rx="4"/>
+      <text x="63" y="176" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">画面</text>
+      <text x="63" y="192" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">4×84×84</text>
+      <!-- 共享 CNN -->
+      <rect x="140" y="130" width="190" height="100" fill="#efd6c8" stroke="#9b2c2c" stroke-width="2" rx="6"/>
+      <text x="235" y="166" text-anchor="middle" font-family="Fraunces" font-size="15" font-weight="700" fill="#9b2c2c">共享 CNN</text>
+      <text x="235" y="186" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">把画面压成</text>
+      <text x="235" y="202" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">512 个特征</text>
+      <text x="235" y="220" text-anchor="middle" font-family="JetBrains Mono" font-size="8.5" fill="#7a6f5d">(99.7% 的参数都在这)</text>
+      <path d="M 108 180 L 138 180" stroke="#3a3128" stroke-width="1.4" fill="none" marker-end="url(#arr-ppo)"/>
+    </g>
+    <!-- actor 头 -->
+    <g class="ac-el ac-actor">
+      <path d="M 332 160 Q 380 110 418 100" stroke="#3a3128" stroke-width="1.4" fill="none" marker-end="url(#arr-ppo)"/>
+      <rect x="420" y="74" width="200" height="58" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.6" rx="5"/>
+      <text x="520" y="98" text-anchor="middle" font-family="Fraunces" font-size="13" font-weight="700" fill="#4a6b3a">actor 头</text>
+      <text x="520" y="118" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">→ 7 个动作的概率</text>
+    </g>
+    <!-- critic 头 -->
+    <g class="ac-el ac-critic">
+      <path d="M 332 200 Q 380 250 418 262" stroke="#3a3128" stroke-width="1.4" fill="none" marker-end="url(#arr-ppo)"/>
+      <rect x="420" y="236" width="200" height="58" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="1.6" rx="5"/>
+      <text x="520" y="260" text-anchor="middle" font-family="Fraunces" font-size="13" font-weight="700" fill="#1f3a5f">critic 头</text>
+      <text x="520" y="280" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">→ 估值 V(s) = 这局面值多少</text>
+    </g>
+    <!-- 优势计算链 -->
+    <g class="ac-el ac-adv1">
+      <rect x="650" y="236" width="200" height="58" fill="white" stroke="#1f3a5f" stroke-width="0.9" rx="4"/>
+      <text x="750" y="260" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#1f3a5f">critic 预期: 800</text>
+      <text x="750" y="280" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">"这局面大概值这么多"</text>
+      <path d="M 620 265 L 648 265" stroke="#3a3128" stroke-width="1.2" fill="none" marker-end="url(#arr-ppo)"/>
+    </g>
+    <g class="ac-el ac-adv2">
+      <rect x="650" y="306" width="200" height="40" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="0.9" rx="4"/>
+      <text x="750" y="331" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">实际玩出来: 1000</text>
+    </g>
+    <g class="ac-el ac-adv3">
+      <rect x="430" y="320" width="180" height="56" fill="#f0e0a8" stroke="#b8841c" stroke-width="1.8" rx="5"/>
+      <text x="520" y="343" text-anchor="middle" font-family="Fraunces" font-size="13" font-weight="700" fill="#b8841c">优势 = +200</text>
+      <text x="520" y="362" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#3a3128">实际 1000 − 预期 800</text>
+      <path d="M 648 326 Q 630 348 612 348" stroke="#3a3128" stroke-width="1.2" fill="none" marker-end="url(#arr-ppo)"/>
+    </g>
+    <!-- 优势推回 actor -->
+    <g class="ac-el ac-back">
+      <path d="M 480 320 Q 470 200 510 134" stroke="#b8841c" stroke-width="2" stroke-dasharray="4 3" fill="none" marker-end="url(#arr-ppo)"/>
+      <text x="400" y="186" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="11" fill="#b8841c">优势为正 →</text>
+      <text x="400" y="202" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="11" fill="#b8841c">这动作调得更可能</text>
+    </g>
+    <text x="235" y="40" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="14" font-weight="700" fill="#3a3128">actor 和 critic 共用一双"眼睛"(CNN), 各接一个薄头</text>
+    <text x="235" y="60" text-anchor="middle" font-family="JetBrains Mono" font-size="9.5" fill="#7a6f5d">两个头各自只是一层线性映射, 几千个参数 —— 难的是感知, 决策很简单</text>
+  </svg>
+</figure>
+
+<p><strong>critic 自己怎么越训越准?</strong> 它干的就是<strong>监督回归</strong>, 跟普通 fine-tune 一个套路: 预测一个数 → 跟实际拿到的结果比 → 用平方误差往回改。唯一不同是"标准答案"不是人标的, 是 agent 自己玩出来的真实回报。它准到什么程度, 用 <code>explained_variance</code><a class="jr" href="#g-15">15</a> 这个指标看 (0=瞎猜, 1=神准, 训练里它会慢慢往 1 爬)。详见 <a href="../concepts/actor-critic.html">actor-critic</a>。</p>
+
+
+<!-- §06 gae -->
+<h2><span class="num">§ 06</span>GAE · 把"超出预期"算得又稳又准</h2>
+
+<p>"实际拿到 1000" 这个数听着简单, 其实最难。问题是: 当下这步之后还没玩完, "实际接下来拿多少" 怎么估? 两种极端都不好 —— <strong>看到底</strong>(把剩下每步真实分全加, 准但抖得厉害, 全看运气); <strong>只看一步</strong>(只看下一步 + critic 估值, 稳但太依赖 critic 而偏)。</p>
+
+<p><strong>GAE</strong> (Generalized Advantage Estimation)<a class="jr" href="#g-11">11</a> 就是这两者之间的调和旋钮。它把未来每一步的<strong>"惊讶值"</strong>(实际比 critic 当场预期好/差一点点)加起来, 但<strong>越远的越打折</strong>, 打折率是 <code>γ × λ</code> 相乘:</p>
+
+<figure id="fig-gae" class="fig-gae">
+  <figcaption>
+    <span>Fig 07 · GAE · 未来惊讶值的加权和</span>
+    <span class="fnum">每往后一步, 权重 × γλ ≈ 0.94</span>
+  </figcaption>
+  <svg class="ppo-svg" viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg">
+    <!-- 柱状图: 衰减权重 -->
+    <line x1="60" y1="210" x2="560" y2="210" stroke="#3a3128" stroke-width="1"/>
+    <!-- 8 根柱, 高度 ∝ 0.94^k, 满高 150 -->
+    <rect class="gae-bar b0" x="70"  y="60"  width="44" height="150" fill="#9b2c2c"/>
+    <rect class="gae-bar b1" x="130" y="69"  width="44" height="141" fill="#9b2c2c" opacity="0.92"/>
+    <rect class="gae-bar b2" x="190" y="78"  width="44" height="132" fill="#9b2c2c" opacity="0.84"/>
+    <rect class="gae-bar b3" x="250" y="85"  width="44" height="125" fill="#9b2c2c" opacity="0.76"/>
+    <rect class="gae-bar b4" x="310" y="100" width="44" height="110" fill="#9b2c2c" opacity="0.68"/>
+    <rect class="gae-bar b5" x="370" y="129" width="44" height="81"  fill="#9b2c2c" opacity="0.6"/>
+    <rect class="gae-bar b6" x="430" y="129" width="44" height="81"  fill="#9b2c2c" opacity="0.52"/>
+    <rect class="gae-bar b7" x="490" y="167" width="44" height="43"  fill="#9b2c2c" opacity="0.44"/>
+    <g class="gae-el">
+      <text x="92"  y="226" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">当前</text>
+      <text x="152" y="226" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">+1</text>
+      <text x="212" y="226" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">+2</text>
+      <text x="272" y="226" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">+3</text>
+      <text x="332" y="226" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">+5</text>
+      <text x="392" y="226" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">+10</text>
+      <text x="452" y="226" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">+15</text>
+      <text x="512" y="226" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">+20 步</text>
+      <text x="92"  y="50" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#9b2c2c">1.0</text>
+      <text x="512" y="158" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#9b2c2c">0.29</text>
+      <text x="310" y="252" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="12" fill="#3a3128">越远的惊讶值, 指数级地越不算数</text>
+    </g>
+    <!-- λ 谱 -->
+    <g class="gae-el gae-spectrum">
+      <line x1="620" y1="120" x2="620" y2="240" stroke="#bfb398" stroke-width="1"/>
+      <text x="620" y="100" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="12" font-weight="700" fill="#3a3128">λ 在调什么</text>
+      <line x1="650" y1="135" x2="830" y2="135" stroke="#3a3128" stroke-width="1.4"/>
+      <circle cx="650" cy="135" r="4" fill="#1f3a5f"/>
+      <circle cx="830" cy="135" r="4" fill="#9b2c2c"/>
+      <text x="650" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#1f3a5f">λ=0</text>
+      <text x="830" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#9b2c2c">λ=1</text>
+      <text x="650" y="156" text-anchor="middle" font-family="JetBrains Mono" font-size="8.5" fill="#1f3a5f">只看一步</text>
+      <text x="650" y="168" text-anchor="middle" font-family="JetBrains Mono" font-size="8.5" fill="#7a6f5d">稳但偏</text>
+      <text x="830" y="156" text-anchor="middle" font-family="JetBrains Mono" font-size="8.5" fill="#9b2c2c">看到底</text>
+      <text x="830" y="168" text-anchor="middle" font-family="JetBrains Mono" font-size="8.5" fill="#7a6f5d">准但抖</text>
+    </g>
+    <g class="gae-el gae-marker">
+      <line x1="821" y1="135" x2="821" y2="200" stroke="#b8841c" stroke-width="1.4" stroke-dasharray="3 2"/>
+      <circle cx="821" cy="135" r="5" fill="#b8841c"/>
+      <text x="780" y="218" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#b8841c" font-weight="700">λ=0.95</text>
+      <text x="780" y="232" text-anchor="middle" font-family="JetBrains Mono" font-size="8.5" fill="#7a6f5d">甜点(默认)</text>
+    </g>
+    <text x="310" y="300" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">优势 = δ₀ + (γλ)·δ₁ + (γλ)²·δ₂ + ...   ·   δ = 这步的"惊讶值"</text>
+    <text x="310" y="322" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">γ 因"未来不值钱"衰减, λ 因"远处预测不靠谱"额外再衰减 → 两者相乘</text>
+  </svg>
+</figure>
+
+<p>γ 和 λ <strong>打折的理由不一样</strong>, 所以是相乘: γ 是"未来的钱本来就不值钱"(真实折扣), λ 是"越远的惊讶越靠 critic 瞎猜、噪声越大"(额外再压)。λ=0 退化成只看一步, λ=1 退化成看到底, <strong>0.95 取中间甜点</strong>。论文作者后来说: 工程上"优势怎么算"比 clip 本身还影响训练效果。详见 <a href="../concepts/gae.html">gae</a>。</p>
+
+
+<!-- §07 three-term loss -->
+<h2><span class="num">§ 07</span>完整的 loss · 三项, 不是一项</h2>
+
+<p>前面那个漂亮的 <code>L_CLIP</code> 公式, 其实<strong>只是真实 loss 的一项</strong>。一跑代码就会发现, PPO 实际优化的是<strong>三项相加</strong>:</p>
+
+<figure id="fig-loss3" class="fig-loss3">
+  <figcaption>
+    <span>Fig 08 · PPO 完整 loss 的三项</span>
+    <span class="fnum">论文公式只写了第一项</span>
+  </figcaption>
+  <svg class="ppo-svg" viewBox="0 0 880 340" xmlns="http://www.w3.org/2000/svg">
+    <!-- ① clip 策略项 -->
+    <g class="l3-term t1">
+      <rect x="30" y="40" width="240" height="120" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.8" rx="6"/>
+      <text x="150" y="66" text-anchor="middle" font-family="Fraunces" font-size="14" font-weight="700" fill="#4a6b3a">① clip 策略项</text>
+      <text x="150" y="86" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">L_CLIP (actor)</text>
+      <text x="150" y="106" text-anchor="middle" font-family="JetBrains Mono" font-size="9.5" fill="#7a6f5d">朝优势高的动作推</text>
+      <text x="150" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="9.5" fill="#7a6f5d">但限制步幅</text>
+      <text x="150" y="146" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="9.5" fill="#9b2c2c">少了它: 学不会选动作</text>
+    </g>
+    <!-- ② 价值回归项 -->
+    <g class="l3-term t2">
+      <rect x="320" y="40" width="240" height="120" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="1.8" rx="6"/>
+      <text x="440" y="66" text-anchor="middle" font-family="Fraunces" font-size="14" font-weight="700" fill="#1f3a5f">② 价值回归项</text>
+      <text x="440" y="86" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">(V − return)² (critic)</text>
+      <text x="440" y="106" text-anchor="middle" font-family="JetBrains Mono" font-size="9.5" fill="#7a6f5d">让 critic 估值越来越准</text>
+      <text x="440" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="9.5" fill="#7a6f5d">×0.5 系数</text>
+      <text x="440" y="146" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="9.5" fill="#9b2c2c">少了它: 优势没法算</text>
+    </g>
+    <!-- ③ 熵项 -->
+    <g class="l3-term t3">
+      <rect x="610" y="40" width="240" height="120" fill="#f0e0a8" stroke="#b8841c" stroke-width="1.8" rx="6"/>
+      <text x="730" y="66" text-anchor="middle" font-family="Fraunces" font-size="14" font-weight="700" fill="#b8841c">③ 熵项</text>
+      <text x="730" y="86" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#3a3128">− c · entropy</text>
+      <text x="730" y="106" text-anchor="middle" font-family="JetBrains Mono" font-size="9.5" fill="#7a6f5d">奖励保留随机性</text>
+      <text x="730" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="9.5" fill="#7a6f5d">逼它别太早笃定</text>
+      <text x="730" y="146" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="9.5" fill="#9b2c2c">少了它: 过早躺平撞死</text>
+    </g>
+    <!-- 合并箭头 -->
+    <g class="l3-merge">
+      <path d="M 150 160 Q 150 210 440 210" stroke="#3a3128" stroke-width="1.4" fill="none"/>
+      <path d="M 440 160 L 440 210" stroke="#3a3128" stroke-width="1.4" fill="none"/>
+      <path d="M 730 160 Q 730 210 440 210" stroke="#3a3128" stroke-width="1.4" fill="none"/>
+      <path d="M 440 210 L 440 244" stroke="#3a3128" stroke-width="1.6" fill="none" marker-end="url(#arr-ppo)"/>
+      <rect x="280" y="248" width="320" height="54" fill="#efd6c8" stroke="#9b2c2c" stroke-width="2" rx="6"/>
+      <text x="440" y="272" text-anchor="middle" font-family="JetBrains Mono" font-size="12" fill="#9b2c2c" font-weight="700">total = L_CLIP + 0.5·价值 − c·熵</text>
+      <text x="440" y="292" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="11" fill="#3a3128">一起反向传播, 同时训 actor + critic + 探索</text>
+    </g>
+  </svg>
+</figure>
+
+<p>第三项<strong>熵</strong><a class="jr" href="#g-16">16</a>是论文里最容易被忽略、实操里最容易翻车的一项。它奖励策略"保留一点随机性、别急着锁死一招"。<strong>关掉它, 策略常常一发现点甜头就 all-in, 然后一头撞死在同一个地方, 再也出不来</strong> —— 这就是过早收敛到局部最优。`ent_coef` 是这个探索旋钮 (常用 0.01)。详见 <a href="../concepts/entropy-regularization.html">entropy-regularization</a>。</p>
+
+
+<!-- §08 training in practice -->
+<h2><span class="num">§ 08</span>训练时盯什么 · 论文不写, 一跑就懂</h2>
+
+<p>论文给你公式, 但真把 PPO 跑起来, 有几条"体感"是只有动手才学得到的 —— 也是新手最容易栽的地方。</p>
+
+<figure id="fig-collapse" class="fig-collapse">
+  <figcaption>
+    <span>Fig 09 · 翻车 vs 健康 · 同一套算法两种命</span>
+    <span class="fnum">reward 走势是唯一的成绩单</span>
+  </figcaption>
+  <svg class="ppo-svg" viewBox="0 0 880 340" xmlns="http://www.w3.org/2000/svg">
+    <!-- 左: 翻车 -->
+    <g transform="translate(20,20)">
+      <text x="200" y="14" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="13" font-weight="700" fill="#9b2c2c">熵塌缩 → 躺平</text>
+      <rect x="20" y="28" width="380" height="220" fill="white" stroke="#bfb398" stroke-width="0.8"/>
+      <line x1="40" y1="228" x2="390" y2="228" stroke="#3a3128" stroke-width="0.8"/>
+      <line x1="40" y1="40" x2="40" y2="228" stroke="#3a3128" stroke-width="0.8"/>
+      <!-- 冲一下就躺平的曲线 -->
+      <path class="rc-curve collapse" stroke="#9b2c2c" d="M 40 200 Q 90 70 130 75 Q 170 80 210 150 Q 250 215 300 218 L 390 218"/>
+      <text class="rc-el" x="135" y="60" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#9b2c2c">冲一下</text>
+      <text class="rc-el" x="340" y="210" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#9b2c2c">死死躺平</text>
+      <text class="rc-el" x="210" y="266" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">单环境 + 奖励没归一化 + 熵秒崩</text>
+    </g>
+    <!-- 右: 健康 -->
+    <g transform="translate(460,20)">
+      <text x="200" y="14" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="13" font-weight="700" fill="#4a6b3a">归一化 + 并行 → 稳步爬</text>
+      <rect x="20" y="28" width="380" height="220" fill="white" stroke="#bfb398" stroke-width="0.8"/>
+      <line x1="40" y1="228" x2="390" y2="228" stroke="#3a3128" stroke-width="0.8"/>
+      <line x1="40" y1="40" x2="40" y2="228" stroke="#3a3128" stroke-width="0.8"/>
+      <!-- 阶梯式上爬的曲线 -->
+      <path class="rc-curve healthy" stroke="#4a6b3a" d="M 40 210 Q 90 150 140 140 Q 180 133 210 150 Q 240 165 270 110 Q 300 70 340 58 L 390 48"/>
+      <text class="rc-el" x="250" y="160" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">平台</text>
+      <text class="rc-el" x="350" y="44" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#4a6b3a">突破</text>
+      <text class="rc-el" x="210" y="266" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#7a6f5d">8 并行 + 奖励归一化 + 熵撑住</text>
+    </g>
+    <text x="440" y="318" text-anchor="middle" font-family="Fraunces" font-style="italic" font-size="13" fill="#3a3128">同样的 PPO 代码, 改几个训练设定就是天壤之别</text>
+  </svg>
+</figure>
+
+<p>五条最该记住的体感:</p>
+
+<p>• <strong>RL 的 <code>loss</code> 不代表学得好坏</strong> —— 跟监督学习直觉相反, loss 上蹿下跳很正常, 真正的成绩单是 <strong>reward 走势</strong><br/>
+• <strong><code>explained_variance</code></strong> 是 critic 的成绩单, 0→1 越准; 它和 reward 一起涨才算健康<br/>
+• <strong>奖励数值太大会淹没熵奖励</strong><a class="jr" href="#g-17">17</a> → 熵秒崩 → 策略躺平, 所以图像任务常配<strong>奖励归一化</strong>(把 reward 压到 ±1 尺度)<br/>
+• <strong>on-policy 怕经验单一</strong> → 多开<strong>并行环境</strong>收集去相关的数据, 既防钻牛角尖又提速<br/>
+• <strong>没收敛的策略别用 deterministic 评估</strong><a class="jr" href="#g-18">18</a> —— 关键动作概率还没过 50% 时, 取最高概率(argmax)会一直卡同一个坎, 该用随机采样才看得出真实水平</p>
+
+<div class="note">
+  <span class="l">为什么这些论文不写</span>
+  <p>因为它们不是 PPO 的"创新", 是把任何 RL 算法跑起来都要面对的工程现实。但恰恰是这些 —— 而不是 clip 公式 —— 决定了你的训练是稳步通关还是冲一下就躺平。<strong>clip 是冰山一角, actor-critic + GAE + 熵 + 这些训练设定才是水下的大部分</strong>。</p>
+</div>
+
+
 <!-- §05 -->
-<h2><span class="num">§ 05</span>杀手级应用 · RLHF 训出 ChatGPT</h2>
+<h2><span class="num">§ 09</span>杀手级应用 · RLHF 训出 ChatGPT</h2>
 
 <p>PPO 2017 年出, 在游戏 / 机器人控制圈里跑了 5 年。2022 年 OpenAI 用 PPO 训了 InstructGPT, 把"会预测下一个 token 的 GPT-3" 变成了"会按人类偏好聊天的 ChatGPT"<a class="jr" href="#g-05">5</a>。<strong>这是 PPO 最重要的一笔遗产</strong>。</p>
 
@@ -589,7 +870,7 @@ PPO: 一批 rollout 可以反复跑 <strong>K 个 epoch (K=3~10)</strong>, sampl
 
 
 <!-- §06 -->
-<h2><span class="num">§ 06</span>遗产 · GRPO · DPO · 跟它们的关系</h2>
+<h2><span class="num">§ 10</span>遗产 · GRPO · DPO · 跟它们的关系</h2>
 
 <p>PPO 之后的 RL alignment 演化, 几条主要路线都跟它有渊源:</p>
 
@@ -626,7 +907,7 @@ A_t = (r_i - mean(group)) / std(group) # 一组样本里相对位置</pre>
 
 
 <!-- §07 -->
-<h2><span class="num">§ 07</span>它真正改变的是什么</h2>
+<h2><span class="num">§ 11</span>它真正改变的是什么</h2>
 
 <p>PPO 作为 2017 年的 RL 算法本身的影响:</p>
 
@@ -662,6 +943,12 @@ A_t = (r_i - mean(group)) / std(group) # 一组样本里相对位置</pre>
     <li id="g-10"><span class="term">GRPO · Group Relative Policy Optimization</span> · DeepSeek 2024 提出的 PPO 简化版 —— 干掉 value network, 用一组样本的相对得分直接当 advantage。R1 (2025) 的 reasoning 训练用它取得突破。详见 <a href="../concepts/grpo.html">grpo</a>。</li>
     <li id="g-11"><span class="term">GAE · Generalized Advantage Estimation</span> · Schulman 2015 提出的 advantage 估计方法 —— 在 TD (1-step) 和 MC (whole episode) 之间用 λ 插值。λ=0.95 是 PPO 标准配置。算 GAE 比 clip 本身对训练效果影响还大。</li>
     <li id="g-12"><span class="term">DPO · Direct Preference Optimization</span> · 2023 提出, 跳过 reward model 跟 PPO 循环, 直接用对比学习的思路从偏好数据一步训出对齐的 LLM。比 PPO 简单稳定, 但不能 online 探索, 现在 chat 模型对齐多数选 DPO; reasoning 训练仍用 PPO/GRPO。</li>
+    <li id="g-13"><span class="term">Actor-Critic · 演员-评论家结构</span> · PPO 跑在其上的双网络结构: actor (π, 选动作) + critic (V, 评估局面)。clip 只管 actor 那半, critic 提供"预期"算优势。现代实现里两者常共用一套特征提取器 (CNN), 各接一个薄头。详见 <a href="../concepts/actor-critic.html">actor-critic</a>。</li>
+    <li id="g-14"><span class="term">Critic · 价值估计器 V(s)</span> · 估"以现在水平站这个局面接下来大概拿多少分"。训练方式就是监督回归: 预测 V → 跟实际 return 比 → 平方误差往回改。标准答案不是人标的, 是 agent 自己玩出来的真实回报。GRPO 的核心简化就是干掉它。</li>
+    <li id="g-15"><span class="term">explained_variance · critic 成绩单</span> · 衡量 critic 的预测能解释多少真实回报的波动。0 = 跟瞎猜没区别, 1 = 神准。训练健康时它会从 0 慢慢往 1 爬; 它和 reward 一起涨才算真在学。</li>
+    <li id="g-16"><span class="term">Entropy bonus · 熵项 / ent_coef</span> · PPO 完整 loss 的第三项 (− c·entropy)。奖励策略保留随机性、别太早笃定, 防过早收敛到"撞死"那种局部最优。ent_coef 是探索力度旋钮 (常用 0.01)。论文最易被忽略、实操最易翻车的一项。详见 <a href="../concepts/entropy-regularization.html">entropy-regularization</a>。</li>
+    <li id="g-17"><span class="term">Reward normalization · 奖励归一化</span> · 把环境给的几百上千的 reward 滚动除以标准差, 压到 ±1 尺度。否则巨大的奖励会淹没那一点点熵奖励 → 熵秒崩 → 策略躺平。图像任务里它常是熵正则能起作用的前提 —— 尺度不对, 调熵也白搭。</li>
+    <li id="g-18"><span class="term">Deterministic vs stochastic 评估</span> · 评估策略时取最高概率动作 (deterministic/argmax) vs 按概率采样 (stochastic)。没收敛的策略关键动作概率还没过 50% 时, argmax 会一直卡同一个坎, 严重低估它; 该用随机采样才看得出真实水平。</li>
   </ol>
 </div>
 
@@ -674,7 +961,7 @@ A_t = (r_i - mean(group)) / std(group) # 一组样本里相对位置</pre>
 
 <script>
 {
-  const figs = ['fig-loop','fig-vanilla','fig-clip','fig-tloop','fig-rlhf'];
+  const figs = ['fig-loop','fig-vanilla','fig-clip','fig-tloop','fig-rlhf','fig-ac','fig-gae','fig-loss3','fig-collapse'];
   figs.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
