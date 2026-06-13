@@ -687,3 +687,10 @@ skill 更新:
 - 转子表 w⁰=1/w¹=−i/w²=−1/w³=+i(×−i=转90°); Step1 拆偶奇; Step2 两个2点DFT表(E=[4,−2]/O=[6,−2]); Step3 拼+twiddle 表(X=[10,−2+2i,−2,−2−2i])
 - Fig05 真值流图: [1,3,2,4]→中间→输出, 蓝偶/红奇交叉+twiddle 标签; 朴素 N² 硬算对答案一致
 - note: X₀=10=直流总和; 省了多少 朴素16 vs FFT 2个2点DFT+2twiddle, N翻倍朴素×4/FFT×2
+
+## [2026-06-12] add | drifting-models + diffusion-opd 两个 bespoke 精装页（用户给的两篇 2026 新论文）
+- 用户问 "diffusionOPD" + "drifting model"; AskUserQuestion 确认是两篇具体论文, WebSearch+WebFetch 精读 arxiv 原文（知识截止没覆盖）
+- drifting-models bespoke(rust #bf5a1e): Kaiming He 组 2602.04770; 吸引-排斥漂移场→反对称q=p场归零→stopgrad不动点训练即演化→迭代搬家(推理→训练)1步; 3图; 像无判别器GAN; ImageNet256 FID1.54
+- diffusion-opd bespoke(garnet #9a2f5e): ali-vilab 2605.15055; 多奖励对齐扩散打架/遗忘→On-Policy Distillation(学生自己走老师纠正)→两阶段(各训专家老师→沿学生轨迹蒸一个学生)→扩散=高斯马尔可夫链同协方差KL塌成均值MSE; 3图; 0.929 vs 级联0.851/多任务RL0.763
+- 接线: drifting↔ode-sde/flow-matching(反方向); opd↔ppo+ode-sde+cross-entropy(高斯KL=MSE)
+- 回链: cross-entropy 加 diffusion-opd source+链接; index 接 ode-sde 后; 6图全本地 headless 验证
