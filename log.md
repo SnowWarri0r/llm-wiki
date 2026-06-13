@@ -631,3 +631,8 @@ skill 更新:
 - bespoke 页 docs/papers/elt.html: ochre accent, hero+§01-04+4图(循环展开/elastic Pareto/ILSD/谱系) + jr术语表9条
 - 新概念: looped-transformer / elastic-inference; 链 convolution(权重共享)/diffusion-transformer/kl-vae/ideogram-4
 - 核心: 循环=深度共享权重(N层×L圈, 有效深度N×L 参数看N), 一族深度弹性, ILSD; 4× 参数缩减 FID2.0/FVD72.8
+
+## [2026-06-10] expand | looped-transformer 直觉三层 + ILSD 详写
+- looped-transformer 直觉: "for循环类比"展开成3层(省参数不省算力/逼权重共享=偏置/圈数可调=弹性根)
+- elastic-inference ILSD: 从bullet改成一步训练详流程(随机L_int + teacher/student + 三loss表 + stop-grad为何) + 单调精修器收口
+- elt §03 prose 同步补三loss说明

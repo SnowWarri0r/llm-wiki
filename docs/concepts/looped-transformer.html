@@ -48,7 +48,13 @@
             ↑___________循环 L 次___________↑
        有效深度 = N×L，但参数只看 N
 </code></pre>
-<p>类比：标准 transformer 是把一段代码<strong>复制粘贴 100 遍</strong>；looped 是写一个 <strong>for 循环跑 100 次</strong>。同样的"计算深度"，代码（参数）少一个数量级。这跟 <a href="../concepts/convolution.html">convolution</a> 的权重共享是同一招，只是共享的轴从"空间位置"换成了"深度/迭代"。</p>
+<p>类比：标准 transformer 是把一段代码<strong>复制粘贴 100 遍</strong>；looped 是写一个 <strong>for 循环跑 100 次</strong>。这个类比别只读成"省代码"，它同时说了三件事：</p>
+<ol>
+<li><strong>省的是参数，不是算力</strong>。for 循环跑 100 次，body 还是执行 100 遍——FLOPs 跟复制粘贴 100 段<strong>一样多</strong>。所以同样深度下 looped <strong>不省计算</strong>，省的是<strong>存储/参数</strong>（ELT 的"4× 参数缩减"就是这个：参数少，L 圈算力照付）。</li>
+<li><strong>复制粘贴能逐段改不一样，for 循环逼每次都一样</strong>。标准 transformer 的 100 层是 100 个<strong>不同</strong>权重矩阵（100 个不同函数）；循环 body 每圈必须跑同一段 = <strong>权重共享</strong>。选哪种 = 赌一个归纳偏置：这计算是"100 个各异步骤"还是"<strong>同一步重复 100 遍</strong>"。迭代算法、多跳推理本质是后者，looped 正好对上。</li>
+<li><strong>循环次数是个可运行时调的变量</strong>。<code>for i in range(L)</code> 的 L 随时能改；复制粘贴的"100 段"长度写死在源码里。映回模型：looped 的圈数 L <strong>能在推理时拨</strong>——想久一点就多套几圈（test-time compute / "想得更深"），标准网络深度训死了做不到。<strong>这就是 <a href="../concepts/elastic-inference.html">elastic-inference</a> 弹性深度的根。</strong></li>
+</ol>
+<p>这跟 <a href="../concepts/convolution.html">convolution</a> 的权重共享是同一招，只是共享的轴从"空间位置"换成了"深度/迭代"。</p>
 <h2>怎么做的 · N 层 block × L 圈</h2>
 <ul>
 <li><strong>N</strong>：循环体里有几个 unique 层（决定参数量）。</li>
