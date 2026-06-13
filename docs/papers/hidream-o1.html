@@ -205,7 +205,7 @@ figure.play .hd-rev.d6 { transition-delay: 1.65s; }
       <g stroke="#6e3b52"><line x1="104" y1="198" x2="148" y2="198" marker-end="url(#hd-b)"/><line x1="242" y1="198" x2="286" y2="198" marker-end="url(#hd-b)"/><line x1="362" y1="198" x2="406" y2="198" marker-end="url(#hd-b)"/><line x1="486" y1="198" x2="530" y2="198" marker-end="url(#hd-b)"/></g>
     </g>
     <text class="hd-rev d5" x="380" y="252" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#3a3128">大 patch 直接切原图 → token 数跟 latent 差不多, 但压缩交给模型自己学 · 无瓶颈</text>
-    <text class="hd-rev d6" x="380" y="270" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">直接预测像素易糊 → 加 perceptual loss(LPIPS+DINO) 防糊</text>
+    <text class="hd-rev d6" x="380" y="270" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">像素扩散细节够、长程语义连贯弱 → 加 perceptual(LPIPS+DINO) 补语义连贯</text>
   </svg>
 </figure>
 
@@ -317,7 +317,7 @@ figure.play .hd-rev.d6 { transition-delay: 1.65s; }
 <!-- §05 -->
 <h2><span class="num">§ 05</span>训练 · 结果 · 对照 ideogram</h2>
 
-<p>训练目标 = <strong>flow matching</strong>（预测速度场）+ <strong>perceptual</strong>（LPIPS + DINO，防像素直接预测发糊）。三段渐进 <strong>512 → 1024 → 2048</strong>（基础 T2I+语言+多模态理解 → 加编辑/personalization → 超高分辨率精修），后训 <strong>SFT + RLHF(GRPO)</strong> 优化 OCR/美学/指令遵循/推理质量。8B 从 Qwen3-VL-8B-Instruct 初始化，另有 200B+ 的 Pro。</p>
+<p>训练目标 = <strong>flow matching</strong>（预测速度场）+ <strong>perceptual</strong>（LPIPS + DINO）。论文给的理由是：像素扩散<strong>细节够好但长程语义连贯弱</strong>，perceptual 用深层语义特征<strong>补全局连贯</strong>（不是教科书那套"防 L2 模糊"）。三段渐进 <strong>512 → 1024 → 2048</strong>（基础 T2I+语言+多模态理解 → 加编辑/personalization → 超高分辨率精修），后训 <strong>SFT + RLHF(GRPO)</strong> 优化 OCR/美学/指令遵循/推理质量。8B 从 Qwen3-VL-8B-Instruct 初始化，另有 200B+ 的 Pro。</p>
 
 <table class="spec">
   <tr><th>基准 / 模型</th><th>HiDream-O1 8B</th><th>200B+ Pro</th><th>对手</th></tr>
@@ -343,7 +343,7 @@ figure.play .hd-rev.d6 { transition-delay: 1.65s; }
     <li id="g-02"><span class="term">无 VAE · 像素空间扩散</span> · 扩散直接在原始 RGB 上做，patch embedding 替掉 VAE 的压缩、去掉 latent 瓶颈；token 数靠大 patch 控住。详见 <a href="../concepts/pixel-space-diffusion.html">pixel-space-diffusion</a>。</li>
     <li id="g-03"><span class="term">混合注意力 · hybrid attention</span> · 一条序列里文本/条件 token 用 causal mask（像 LLM 读 prompt）、生成 token 用 full attention（像 DiT 双向去噪）。把 LLM 和 DiT 缝进一个 transformer。</li>
     <li id="g-04"><span class="term">Reasoning-Driven Prompt Agent</span> · 基于 Gemma 的"thinking"，对模糊 query 先显式推理版面/属性/物理/文字，再输出细化 prompt 喂给 UiT。名字里 O1 的来历；后训用高质量推理轨迹 SFT。</li>
-    <li id="g-05"><span class="term">flow matching + perceptual</span> · 训练目标：flow matching 预测速度场（见 <a href="../concepts/flow-matching.html">flow-matching</a>）+ LPIPS/DINO 感知损失。后者必需——直接预测像素纯 L2 会糊。</li>
+    <li id="g-05"><span class="term">flow matching + perceptual</span> · 训练目标：flow matching 预测速度场（见 <a href="../concepts/flow-matching.html">flow-matching</a>）+ LPIPS/DINO 感知损失（在预训练网络特征空间里比图，见 <a href="../concepts/perceptual-loss.html">perceptual-loss</a>）。论文说后者补的是像素扩散缺的<strong>长程语义连贯</strong>（细节本来就够好），不是防 L2 模糊。</li>
     <li id="g-06"><span class="term">Qwen3-VL backbone</span> · 8B 版从 Qwen3-VL-8B-Instruct 初始化，文本走它原生词表 embedding，所以不需要外挂文本编码器。详见 <a href="../concepts/qwen3-vl.html">qwen3-vl</a>。</li>
     <li id="g-07"><span class="term">RLHF · GRPO</span> · 后训用 GRPO 做 RLHF，优化 OCR 准确率、美学、指令遵循、推理质量。详见 <a href="../concepts/grpo.html">grpo</a>。</li>
     <li id="g-08"><span class="term">GenEval / CVTG-2K / GEdit</span> · 评测基准：GenEval 综合组合生成、CVTG-2K 图内文字渲染、GEdit 指令编辑。8B 在这几项打平/超更大模型。</li>
