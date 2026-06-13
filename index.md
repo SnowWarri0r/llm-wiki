@@ -36,6 +36,7 @@
 - [Ideogram 4.0 · 9.3B 单流 DiT](wiki/papers/ideogram-4.md) — 文生图开源权重: 单流 DiT + Qwen3-VL 文本编码器 + 结构化 JSON caption(bbox/调色板); 9.3B 文本渲染碾压 80B
 - [MiniMind-O · 0.1B 端到端 Omni](wiki/papers/minimind-o.md) — 从0实现的听看说 Omni: Thinker–Talker 双路径 + MTP 出8层 Mimi codes + 冻结编码器/projector; fish-speech 的麻雀版
 - [ELT · Elastic Looped Transformers](wiki/papers/elt.md) — looped transformer 进视觉生成: N层block循环L圈(深度共享权重) + 一族深度弹性推理 + ILSD; 同算力 4× 参数缩减
+- [HiDream-O1-Image · 像素级统一 Transformer](wiki/papers/hidream-o1.md) — 文生图反向操作: 无VAE像素空间扩散 + 文本编码器收进主干(Qwen3-VL) + 混合注意力 + O1推理agent先想后画; 8B 超更大模型
 
 ## Books · 书籍精讲
 
@@ -148,6 +149,8 @@
 - [Classifier-Free Guidance](wiki/concepts/classifier-free-guidance.md) — 条件/无条件两支放大差值逼模型听话；Ideogram 的非对称变体
 - [结构化 Caption 条件](wiki/concepts/structured-caption-conditioning.md) — 不喂一句话喂 JSON，把位置/颜色/文字显式做进训练
 - [KL-VAE](wiki/concepts/kl-vae.md) — 把图压成 latent 的地基；扩散在压缩空间画画省 48 倍计算
+- [Pixel-Space Diffusion](wiki/concepts/pixel-space-diffusion.md) — 不要 VAE，直接在原始像素上扩散；patch embedding 替掉 VAE 压缩、去掉 latent 瓶颈
+- [Unified Transformer](wiki/concepts/unified-transformer.md) — 像素+文本+条件一条流 + 混合注意力(文本causal/生成full)；LLM 和 DiT 缝成一个
 - [Qwen3-VL](wiki/concepts/qwen3-vl.md) — 当文本编码器用的 VLM；翻译官水平决定画师上限，取 13 个中间层
 - [M-RoPE](wiki/concepts/mrope.md) — 位置从一个数字升级成 (时间,行,列) 三元组；bbox 布局靠它
 - [QK-Norm](wiki/concepts/qk-rmsnorm.md) — 给 Q/K 做 RMSNorm 防 attention 塌成 one-hot 炸训练

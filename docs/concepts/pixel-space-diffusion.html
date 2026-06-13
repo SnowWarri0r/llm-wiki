@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Pixel-Space Diffusion · 直接在原始像素上扩散 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · pixel-space-diffusion</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Pixel-Space Diffusion · 直接在原始像素上扩散</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>扩散不经 VAE 压成 latent，<strong>直接在原始 RGB 像素上做</strong>——用一个可学的 patch embedding 替掉 VAE 的压缩活，去掉 latent 的信息瓶颈，端到端一个模型。</p>
+<h2>直觉 · 把 VAE 这个外挂收进模型自己</h2>
+<p>主流是 <strong>latent diffusion</strong>：先用 <a href="../concepts/kl-vae.html">kl-vae</a> 把图压 48× 成小 latent，再在 latent 上跑 <a href="../concepts/diffusion-transformer.html">diffusion-transformer</a>。VAE 省了算力，但有两个代价：</p>
+<ol>
+<li><strong>它是个独立的冻结模型</strong>——单独训、单独存，跟生成器两套参数、两个语义空间。</li>
+<li><strong>有信息瓶颈</strong>——压进 latent 时丢掉的高频细节（尤其<strong>文字、小结构</strong>）再也回不来，decoder 只能瞎猜。</li>
+</ol>
+<p>pixel-space 的赌注：<strong>别用外挂 VAE，让模型自己的 patch embedding 干压缩这活</strong>，端到端学，没有瓶颈、没有第二个模型。</p>
+<h2>怎么做的 · 大 patch 控住 token 数</h2>
+<p>"在像素上扩散很贵"是个误解——关键看 <strong>token 数</strong>，而 token 数由 <strong>patch 大小</strong>决定，不是分辨率：</p>
+<pre><code>latent DiT:  512²×3 图 ─[VAE 编码]→ 64²×4 latent ─[切 patch=2]→ ~1024 token
+pixel UiT:   512²×3 图 ───────[直接切 patch≈16]──────────────→ ~1024 token
+</code></pre>
+<p>两条路 token 数<strong>差不多</strong>！区别只在"压缩谁来干":</p>
+<ul>
+<li>latent：一个<strong>单独训练的 VAE</strong> 把图压成 latent（带瓶颈）。</li>
+<li>pixel：<strong>patch embedding 这一层线性投影</strong>把 16×16×3=768 个像素直接吃成一个 token，端到端跟整个模型一起训。</li>
+</ul>
+<p>解码也更简单：不用 VAE decoder，<strong>反 patch（unpatchify）</strong>把 token 摊回像素就行。</p>
+<p>一个必要配套：直接预测像素，纯 L2 loss 会<strong>糊</strong>（像素级均方误差偏爱模糊解）。所以训练在 flow matching 之外加 <strong>perceptual loss</strong>（LPIPS + DINO 感知损失），逼细节锐利。</p>
+<h2>取舍</h2>
+<ul>
+<li><strong>省</strong>：没有独立 VAE（少一个模型、少一套语义空间）、无 latent 瓶颈 → 文字/细节更准。</li>
+<li><strong>付</strong>：patch embedding 的压缩没有专门 VAE 那么狠，超高分辨率更吃训练（HiDream 用 512→1024→2048 三段渐进顶上去）。</li>
+</ul>
+<h2>代码出处</h2>
+<ul>
+<li>HiDream-O1-Image：arXiv 2605.11061（Pixel-level Unified Transformer，无 VAE）</li>
+<li>对照：Stable Diffusion / FLUX / <a href="../papers/ideogram-4.html">ideogram-4</a> 都是 latent + VAE 路线</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/kl-vae.html">kl-vae</a> · 被替掉的那个压缩器（latent 路线的地基）</li>
+<li><a href="../concepts/patch-embedding.html">patch-embedding</a> · 替 VAE 干压缩的那层线性投影</li>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · 在像素 token 上跑的就是它（UiT）</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · 训练目标，外加 perceptual loss 防糊</li>
+<li><a href="../concepts/unified-transformer.html">unified-transformer</a> · 像素+文本+条件一条流的架构</li>
+<li><a href="../papers/hidream-o1.html">hidream-o1</a> · 用 pixel-space 的统一生成模型</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/hidream-o1.html"><span class="cat">paper</span>HiDream-O1-Image · Pixel-level Unified Transformer</a></li><li><a href="../concepts/unified-transformer.html"><span class="cat">concept</span>Unified Transformer · 一个 transformer 同时当 LLM 和 DiT</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/pixel-space-diffusion.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
