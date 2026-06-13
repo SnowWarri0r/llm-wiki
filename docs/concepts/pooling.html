@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Pooling · 池化 · 把 feature map 缩小、抓重点 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · pooling</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Pooling · 池化 · 把 feature map 缩小、抓重点</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>在小窗口里取<strong>最大值（max）或平均值（avg）</strong>代表那一片 —— 把 feature map 分辨率砍半，留下"有没有这个特征"、丢掉"它精确在第几个像素"。</p>
+<h2>直觉 · 认猫不需要数清每根毛</h2>
+<p>卷积出来的 feature map 还很大、很细。但做识别时，你关心的是"<strong>这片有没有竖边</strong>"，不是"竖边精确落在第 137 个像素"。Pooling 就是把一小片（比如 2×2）压成一个数：</p>
+<ul>
+<li><strong>Max pooling</strong>：取这 4 个里最大的 → "这片只要有一处强响应就留住"，最常用。</li>
+<li><strong>Avg pooling</strong>：取平均 → 更平滑，常用在最后一层（global avg pooling）把整张图压成一个向量。</li>
+</ul>
+<p>2×2、stride 2 的 pooling 把宽高各砍一半（面积 1/4）。</p>
+<h2>怎么做的</h2>
+<pre><code>feature map 4×4         max-pool 2×2, stride 2 → 2×2
+[ 1  3 | 2  0 ]
+[ 4  2 | 1  1 ]   每个 2×2 块取最大          [ 4  2 ]
+[ 0  1 | 5  2 ]   ─────────────────▶        [ 6  5 ]
+[ 6  3 | 1  4 ]
+</code></pre>
+<p>没有可学参数，就是个固定的下采样算子。</p>
+<h2>它换来什么 · 三个好处</h2>
+<ul>
+<li><strong>降计算</strong>：分辨率砍半，后面层算得快、占显存少。</li>
+<li><strong>扩感受野</strong>：缩小后，同样 3×3 的核能"看到"原图更大一片（见 <a href="../concepts/receptive-field.html">receptive-field</a>）—— 这是 CNN 逐层"看得越来越宽"的主力。</li>
+<li><strong>一点平移鲁棒</strong>：特征在小窗口里挪一两格，max 结果不变 → 对微小位移不敏感。</li>
+</ul>
+<h2>为什么现代网络在少用它</h2>
+<p>代价是<strong>丢空间信息</strong>（max 把"在哪"扔了）。所以：</p>
+<ul>
+<li>检测/分割这种要精确定位的任务，激进 pooling 会害事。</li>
+<li>很多现代骨干改用 <strong>stride=2 的卷积</strong> 来下采样（既缩尺寸又可学），把 pooling 换掉；但 <strong>global avg pooling</strong>（最后把每张 feature map 压成一个数）几乎人人还在用——它替掉了老式 CNN 末端那坨全连接，省一大把参数。</li>
+</ul>
+<h2>代码出处</h2>
+<ul>
+<li><code>nn.MaxPool2d(2)</code> / <code>nn.AvgPool2d</code> / <code>nn.AdaptiveAvgPool2d(1)</code>（global avg pool）</li>
+<li>经典用法见 <a href="../papers/resnet.html">resnet</a> 末端的 global average pooling</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/convolution.html">convolution</a> · pooling 夹在卷积层之间下采样</li>
+<li><a href="../concepts/receptive-field.html">receptive-field</a> · pooling 是扩感受野的主力</li>
+<li><a href="../papers/cnn.html">cnn</a> · 卷积+池化堆成的完整网络</li>
+<li><a href="../papers/resnet.html">resnet</a> · 末端 global avg pooling 替掉全连接</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/cnn.html"><span class="cat">paper</span>CNN · 卷积神经网络</a></li><li><a href="../concepts/convolution.html"><span class="cat">concept</span>Convolution · 卷积 · 一把小尺子滑过整张图</a></li><li><a href="../concepts/receptive-field.html"><span class="cat">concept</span>Receptive Field · 感受野 · 一个输出能&quot;看到&quot;原图多大一片</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/pooling.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

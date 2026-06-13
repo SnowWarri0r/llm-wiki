@@ -614,3 +614,9 @@ skill 更新:
 ## [2026-06-08] expand | MTP 页补"共享主体+adapter=每层LoRA"(读真源码)
 - 从 model_omni.py:57-76 读 TalkerHead/TalkerEmbedding: base全尺寸 + 每层 rank=256 低秩adapter, 输出 base+adapter, 输入 8层均值
 - 补 LoRA 类比(用户做过LoRA) + 省参表 + bridge融合(model_omni.py:301 可学scale)
+
+## [2026-06-09] ingest | cnn (bespoke 精装页)
+- bespoke 页 docs/papers/cnn.html: deep accent, hero+§01-05+5图 + jr术语表10条
+- §01 卷积滑窗用 CSS keyframe(cnSlide) 滚动触发一次性滑遍9位置, 输入核+输出格同步高亮
+- 新概念: convolution / pooling / receptive-field; 链 inductive-bias/patch-embedding/resnet/vit/self-attention
+- 主线: CNN(先验) vs Transformer(通用); 感受野靠深度撑 vs 注意力一层即全局
