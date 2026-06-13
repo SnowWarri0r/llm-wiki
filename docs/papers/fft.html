@@ -352,7 +352,119 @@ X[k+N/2]   = E[k] − w^k · O[k]      ← 减（因为 w 转半圈反号）</pr
 
 
 <!-- §05 -->
-<h2><span class="num">§ 05</span>搞 ML 为什么该懂：卷积定理 + 频谱</h2>
+<h2><span class="num">§ 05</span>拿 x=[1,2,3,4] 真算一遍</h2>
+
+<p>前面都是图和道理，这节拿一个具体输入 <code>x = [1, 2, 3, 4]</code>，把 N=4 的 FFT <strong>一步步蝴蝶算到底</strong>，再跟朴素 N² 对答案。</p>
+
+<p>先备好 N=4 的 4 个转子（twiddle）。<code>w = e^(−i2π/4)</code> 就是"<strong>每次转 90°（顺时针）</strong>"，所以：</p>
+
+<pre class="eq">w⁰ = 1     （不转）
+w¹ = −i    （转 90°）
+w² = −1    （转 180°）
+w³ = +i    （转 270°）
+带 i 别慌：i 只是"转一个直角"的记号，× (−i) = 顺时针转 90°</pre>
+
+<h3>Step 1 · 按偶/奇拆成两半</h3>
+<p><code>x=[1,2,3,4]</code> → 偶位 <code>[x₀,x₂]=[1,3]</code>、奇位 <code>[x₁,x₃]=[2,4]</code>。</p>
+
+<h3>Step 2 · 各做一个 2 点 DFT（最简单的蝴蝶，twiddle=w⁰=1，纯加减）</h3>
+<table class="spec">
+  <tr><th>半边</th><th>top = 两数相加</th><th>bottom = 两数相减</th></tr>
+  <tr><td>偶 [1,3]</td><td>E₀ = 1+3 = <strong>4</strong></td><td>E₁ = 1−3 = <strong>−2</strong></td></tr>
+  <tr><td>奇 [2,4]</td><td>O₀ = 2+4 = <strong>6</strong></td><td>O₁ = 2−4 = <strong>−2</strong></td></tr>
+</table>
+
+<h3>Step 3 · 拼起来（外层蝴蝶，奇路乘 twiddle）</h3>
+<p>规则：<code>X[k] = E[k] + wᵏ·O[k]</code>，<code>X[k+2] = E[k] − wᵏ·O[k]</code>。</p>
+<table class="spec">
+  <tr><th>k · twiddle</th><th>加 → X[k]</th><th>减 → X[k+2]</th></tr>
+  <tr><td>k=0 · w⁰=1</td><td>X₀ = 4 + 1·6 = <strong>10</strong></td><td>X₂ = 4 − 1·6 = <strong>−2</strong></td></tr>
+  <tr><td>k=1 · w¹=−i</td><td>X₁ = −2 + (−i)(−2) = <strong>−2+2i</strong></td><td>X₃ = −2 − (−i)(−2) = <strong>−2−2i</strong></td></tr>
+</table>
+
+<p>结果 <code>X = [10, −2+2i, −2, −2−2i]</code>。整条流程画出来就是这张图：</p>
+
+<figure id="fig-walk" class="fig-walk">
+  <figcaption>
+    <span>Fig 05 · N=4 FFT 真值流图</span>
+    <span class="fnum">[1,3,2,4] → 两个2点DFT → twiddle 拼 → [10, −2+2i, −2, −2−2i]</span>
+  </figcaption>
+  <svg class="ft-svg" viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg">
+    <!-- 列标题 -->
+    <g class="ft-rev d1" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#7a6f5d" text-anchor="middle">
+      <text x="95" y="30">输入·偶奇重排</text><text x="330" y="30">① 2点DFT</text><text x="600" y="30">② 拼 + twiddle</text>
+    </g>
+    <!-- stage1 边 -->
+    <g class="ft-rev d2" stroke="#cdc4ae" stroke-width="1.3" fill="none">
+      <line x1="120" y1="64" x2="305" y2="64"/><line x1="120" y1="128" x2="305" y2="64"/><line x1="120" y1="64" x2="305" y2="128"/><line x1="120" y1="128" x2="305" y2="128"/>
+      <line x1="120" y1="192" x2="305" y2="192"/><line x1="120" y1="256" x2="305" y2="192"/><line x1="120" y1="192" x2="305" y2="256"/><line x1="120" y1="256" x2="305" y2="256"/>
+    </g>
+    <!-- stage2 边：偶路(实) -->
+    <g class="ft-rev d3" stroke="#b7c4d2" stroke-width="1.3" fill="none">
+      <line x1="355" y1="64" x2="575" y2="64"/><line x1="355" y1="64" x2="575" y2="192"/>
+      <line x1="355" y1="128" x2="575" y2="128"/><line x1="355" y1="128" x2="575" y2="256"/>
+    </g>
+    <!-- stage2 边：奇路(带 twiddle, 红) -->
+    <g class="ft-rev d3" stroke="#d8a59a" stroke-width="1.5" fill="none">
+      <line x1="355" y1="192" x2="575" y2="64"/><line x1="355" y1="192" x2="575" y2="192"/>
+      <line x1="355" y1="256" x2="575" y2="128"/><line x1="355" y1="256" x2="575" y2="256"/>
+    </g>
+    <!-- twiddle 标签 -->
+    <g class="ft-rev d3" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="#9b2c2c" text-anchor="middle">
+      <rect x="438" y="113" width="44" height="17" rx="2" fill="#efd6c8" stroke="#9b2c2c"/><text x="460" y="125">×w⁰=1</text>
+      <rect x="430" y="205" width="58" height="17" rx="2" fill="#efd6c8" stroke="#9b2c2c"/><text x="459" y="217">×w¹=−i</text>
+    </g>
+    <!-- 输入节点 -->
+    <g class="ft-rev d1" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" text-anchor="middle">
+      <rect x="76" y="50" width="44" height="28" rx="3" fill="#cce5e1" stroke="#1a6a64"/><text x="98" y="69" fill="#0f4a45">1</text>
+      <rect x="76" y="114" width="44" height="28" rx="3" fill="#cce5e1" stroke="#1a6a64"/><text x="98" y="133" fill="#0f4a45">3</text>
+      <rect x="76" y="178" width="44" height="28" rx="3" fill="#efd6c8" stroke="#9b2c2c"/><text x="98" y="197" fill="#7a2020">2</text>
+      <rect x="76" y="242" width="44" height="28" rx="3" fill="#efd6c8" stroke="#9b2c2c"/><text x="98" y="261" fill="#7a2020">4</text>
+    </g>
+    <g class="ft-rev d1" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#7a6f5d" text-anchor="start">
+      <text x="124" y="58">x₀</text><text x="124" y="122">x₂</text><text x="124" y="186">x₁</text><text x="124" y="250">x₃</text>
+    </g>
+    <!-- stage1 节点 -->
+    <g class="ft-rev d2" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" text-anchor="middle">
+      <rect x="308" y="50" width="44" height="28" rx="3" fill="#faf4e1" stroke="#1a6a64"/><text x="330" y="69" fill="#0f4a45">4</text>
+      <rect x="308" y="114" width="44" height="28" rx="3" fill="#faf4e1" stroke="#1a6a64"/><text x="330" y="133" fill="#0f4a45">−2</text>
+      <rect x="308" y="178" width="44" height="28" rx="3" fill="#faf4e1" stroke="#9b2c2c"/><text x="330" y="197" fill="#7a2020">6</text>
+      <rect x="308" y="242" width="44" height="28" rx="3" fill="#faf4e1" stroke="#9b2c2c"/><text x="330" y="261" fill="#7a2020">−2</text>
+    </g>
+    <g class="ft-rev d2" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#7a6f5d" text-anchor="start">
+      <text x="356" y="58">E₀</text><text x="356" y="122">E₁</text><text x="356" y="186">O₀</text><text x="356" y="250">O₁</text>
+    </g>
+    <!-- stage2 输出节点 -->
+    <g class="ft-rev d4" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" text-anchor="middle">
+      <rect x="568" y="50" width="80" height="28" rx="3" fill="#f7f1de" stroke="#1a6a64" stroke-width="1.8"/><text x="608" y="69" fill="#0f4a45">10</text>
+      <rect x="568" y="114" width="80" height="28" rx="3" fill="#f7f1de" stroke="#1a6a64" stroke-width="1.8"/><text x="608" y="133" fill="#0f4a45">−2+2i</text>
+      <rect x="568" y="178" width="80" height="28" rx="3" fill="#f7f1de" stroke="#1a6a64" stroke-width="1.8"/><text x="608" y="197" fill="#0f4a45">−2</text>
+      <rect x="568" y="242" width="80" height="28" rx="3" fill="#f7f1de" stroke="#1a6a64" stroke-width="1.8"/><text x="608" y="261" fill="#0f4a45">−2−2i</text>
+    </g>
+    <g class="ft-rev d4" font-family="JetBrains Mono,monospace" font-size="7.5" fill="#7a6f5d" text-anchor="start">
+      <text x="652" y="58">X₀</text><text x="652" y="122">X₁</text><text x="652" y="186">X₂</text><text x="652" y="250">X₃</text>
+    </g>
+    <text class="ft-rev d5" x="360" y="293" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#3a3128">上半蓝=偶路(E)，下半红=奇路(O)带 twiddle；两层蝴蝶就出全部 4 个频率</text>
+  </svg>
+</figure>
+
+<h3>对答案 · 朴素 N² 直接硬算</h3>
+<p>朴素 DFT 每个输出 <code>X[k] = Σ x[n]·wⁿᵏ</code>，4 个数全加权求和：</p>
+<pre class="eq">X₀ = 1 + 2 + 3 + 4                     = 10
+X₁ = 1 + 2(−i) + 3(−1) + 4(i) = 1−2i−3+4i = −2+2i
+X₂ = 1 + 2(−1) + 3(1) + 4(−1)  = 1−2+3−4   = −2
+X₃ = 1 + 2(i) + 3(−1) + 4(−i)  = 1+2i−3−4i = −2−2i</pre>
+<p><strong>一模一样。</strong>FFT 没偷工，只是把重复的加减/乘法重排复用了。</p>
+
+<div class="note">
+  <span class="l">读结果 + 省了多少</span>
+  <p><strong>X₀=10</strong> 是"直流"——就是 4 个数的总和（整体平均水平×4，没有任何起伏）；其余几个复数的<strong>大小</strong>就是对应频率成分的强度。<br>
+  <strong>省了多少：</strong>朴素要算 <code>4×4=16</code> 个 <code>x[n]·wⁿᵏ</code> 乘加；FFT 这边只有 <strong>2 个 2 点 DFT + 2 次 twiddle 乘</strong>。N=4 省得还不明显，但每把 N 翻倍一次，<strong>朴素 ×4、FFT 只 ×2</strong>——到 N=1024 时朴素 ~100 万次、FFT ~1 万次。</p>
+</div>
+
+
+<!-- §06 -->
+<h2><span class="num">§ 06</span>搞 ML 为什么该懂：卷积定理 + 频谱</h2>
 
 <p>这不只是信号处理的老古董，它在你学的东西里反复出现：</p>
 
@@ -432,7 +544,7 @@ X[k+N/2]   = E[k] − w^k · O[k]      ← 减（因为 w 转半圈反号）</pr
 </div>
 <script>
 {
-  const figs = ['fig-prism','fig-wind','fig-split','fig-bfly','fig-conv'];
+  const figs = ['fig-prism','fig-wind','fig-split','fig-bfly','fig-walk','fig-conv'];
   figs.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
