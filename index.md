@@ -104,6 +104,7 @@
 - [Positional Encoding](wiki/concepts/positional-encoding.md) — 给无顺序的 attention 加位置
 - [Rotary Position Embedding](wiki/concepts/rotary-position-embedding.md) — 旋转 Q/K 让点积天然含相对位置，现代 LLM 事实标准
 - [一次前向 · token→下一个token](wiki/concepts/next-token-forward-pass.md) — QKV→注意力softmax→末位向量撞词表→输出softmax→挑token；拆清两个 softmax
+- [Cross-Entropy 交叉熵](wiki/concepts/cross-entropy.md) — −log(你押对的概率)；one-hot时是"别答错"，软标签时整条分布去贴；最小化它=最小化KL
 - [Relative Position Encoding](wiki/concepts/relative-position-encoding.md) — 为什么"差几个位置"比"在第几个位置"好
 - [Transformer Architecture](wiki/concepts/transformer-architecture.md) — Encoder + Decoder 堆叠
 - [LayerNorm](wiki/concepts/layernorm.md) — 每个 token 内部归一化，序列模型比 BN 更顺手
