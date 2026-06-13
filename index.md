@@ -37,6 +37,8 @@
 - [MiniMind-O · 0.1B 端到端 Omni](wiki/papers/minimind-o.md) — 从0实现的听看说 Omni: Thinker–Talker 双路径 + MTP 出8层 Mimi codes + 冻结编码器/projector; fish-speech 的麻雀版
 - [ELT · Elastic Looped Transformers](wiki/papers/elt.md) — looped transformer 进视觉生成: N层block循环L圈(深度共享权重) + 一族深度弹性推理 + ILSD; 同算力 4× 参数缩减
 - [HiDream-O1-Image · 像素级统一 Transformer](wiki/papers/hidream-o1.md) — 文生图反向操作: 无VAE像素空间扩散 + 文本编码器收进主干(Qwen3-VL) + 混合注意力 + O1推理agent先想后画; 8B 超更大模型
+- [DINO · 自监督 ViT](wiki/papers/dino.md) — 无标签自蒸馏: student 对齐 EMA teacher + multi-crop 局部猜全局 + centering/sharpening 防坍缩; 涌现物体注意力, DINO loss 的来历
+- [LPIPS · 深层特征当感知度量](wiki/papers/lpips.md) — 像素L2跟人眼差很远: 过预训练网络比深层特征 + 人类2AFC校准权重; 感知相似是深度表征的涌现属性, 既度量又当损失
 
 ## Books · 书籍精讲
 
