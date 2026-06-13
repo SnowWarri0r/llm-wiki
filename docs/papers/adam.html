@@ -216,6 +216,18 @@ figure.play .ad-rev.d6 { transition-delay: 1.65s; }
   </svg>
 </figure>
 
+<p>"大的变小、小的变大"换个角度才直观：<strong>每个参数都除以"它自己平时的梯度大小"，于是全被归到同一档</strong>。魔法在于分子 <code>m̂ ≈ g</code>、分母 <code>√v̂ ≈ |g|</code>，一除把梯度自己的大小约掉：<code>步 ≈ lr·m̂/√v̂ ≈ lr·(±1)</code>——步子大小跟梯度多大<strong>无关</strong>，只剩方向。举两个参数：</p>
+
+<table class="spec">
+  <tr><th></th><th>参数 A（陡）</th><th>参数 B（平）</th></tr>
+  <tr><td>每步梯度 g</td><td>100</td><td>0.01</td></tr>
+  <tr><td>v = EMA(g²) → √v</td><td>≈ 100</td><td>≈ 0.01</td></tr>
+  <tr><td>SGD 步 lr·g</td><td>lr·100（冲过头）</td><td>lr·0.01（爬）</td></tr>
+  <tr><td>Adam 步 lr·g/√v</td><td>lr·100/100 = lr·1</td><td>lr·0.01/0.01 = lr·1</td></tr>
+</table>
+
+<p>SGD 下 A 的步是 B 的 <strong>1 万倍</strong>；Adam 下两个都 ≈ <strong>lr·1</strong>。A 的 100 除以<strong>它自己的 100</strong>→1，B 的 0.01 除以<strong>它自己的 0.01</strong>→也是 1。像 <strong>z-score 标准化</strong>（√v ≈ 梯度的标准差，除掉它=换算成"几个标准差"），也像<strong>按各自基线打分</strong>——绝对分不重要，相对自己平时才重要。（用 EMA 而非当前 |g| 是为了稳；而且分子带符号、分母只看大小，所以<strong>来回抖的方向 m 相消、比值&lt;1 → 自动走小步</strong>。）</p>
+
 
 <!-- §04 -->
 <h2><span class="num">§ 04</span>Adam = 两者合 + bias correction</h2>
