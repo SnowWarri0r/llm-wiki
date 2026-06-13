@@ -675,3 +675,9 @@ skill 更新:
 - 数值节按用户要求重举例: f(x)=−x/dt=0.5/g=2/起点10, ODE永远10→5; SDE跑A=6.13 跑B=3.30; √dt 解释随机游走按√时间扩散
 - 与已有 concept ode-vs-sde 分工: bespoke=底层+数值, concept=FM-vs-diffusion 工程取舍; 互链
 - 回链: ode-vs-sde / score-function 加 ode-sde source + 链接; index 接 flow-matching 后
+
+## [2026-06-12] fix | fft §04 实现细节去抽象化（N=8 真例子）
+- 用户反馈"两个实现小坑"三条全是结论太抽象; 改成"三个实现细节·拿 N=8 砸实"
+- ① radix-2: 8→4→2→1 vs 6 折到 3 卡住; zero-pad/mixed-radix/Bluestein 三出路
+- ② bit-reversal: 列 0-7 位翻转表(1=001→100=4...), 读出 0 4 2 6 1 5 3 7 跟 Fig03 叶子一字不差
+- ③ IFFT: 最小例 [1,1,1,1]→[4,0,0,0]→同蝴蝶+除N→变回, twiddle 取共轭
