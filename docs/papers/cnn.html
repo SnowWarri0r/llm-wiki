@@ -266,6 +266,76 @@ figure.play .cn-slide { animation: cnSlide 5.4s linear 0.5s 1 forwards; }
   </svg>
 </figure>
 
+<p>初学最容易揉成一团的三件事，分清就顺了：<strong>核</strong>（检测一种模式，<strong>一层内放很多个 → 多通道</strong>，横轴）、<strong>层</strong>（一组核扫一遍，<strong>层层往下堆 → 深度</strong>，纵轴）、<strong>pooling</strong>（<strong>夹在层之间、对整摞 feature map 一起下采样</strong>，不绑某个核）。看一条 shape 流：</p>
+
+<figure id="fig-shape" class="fig-shape">
+  <figcaption>
+    <span>Fig 04 · 一条 shape 流：核 / 层 / pooling 各管什么</span>
+    <span class="fnum">deck 厚度=通道(核数) · 方块大小=分辨率</span>
+  </figcaption>
+  <svg class="cn-svg" viewBox="0 0 760 290" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="cn-s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7a6f5d"/></marker></defs>
+    <text x="380" y="34" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#3a3128">每段 = 若干 conv（多核，加厚通道）+ 一次 pool（缩小分辨率）</text>
+    <!-- S0 input -->
+    <g class="cn-rev d1">
+      <rect x="36" y="100" width="60" height="60" fill="#eef2f7" stroke="#9fb3c8"/>
+      <rect x="30" y="106" width="60" height="60" fill="#dde5ee" stroke="#9fb3c8"/>
+      <text x="60" y="184" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">3 × 224²</text>
+      <text x="60" y="197" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#7a6f5d">RGB 输入</text>
+    </g>
+    <path class="cn-rev d2" d="M100,134 L150,134" stroke="#7a6f5d" stroke-width="1.4" marker-end="url(#cn-s)"/>
+    <text class="cn-rev d2" x="125" y="126" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#7a6f5d">conv·pool</text>
+    <!-- S1 -->
+    <g class="cn-rev d2">
+      <rect x="170" y="106" width="52" height="52" fill="#e3eaf2" stroke="#9fb3c8"/>
+      <rect x="164" y="112" width="52" height="52" fill="#d3dfeb" stroke="#9fb3c8"/>
+      <rect x="158" y="118" width="52" height="52" fill="#c8d4e2" stroke="#9fb3c8"/>
+      <text x="184" y="190" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">64 × 112²</text>
+    </g>
+    <path class="cn-rev d3" d="M222,140 L264,140" stroke="#7a6f5d" stroke-width="1.4" marker-end="url(#cn-s)"/>
+    <text class="cn-rev d3" x="243" y="132" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#7a6f5d">conv·pool</text>
+    <!-- S2 -->
+    <g class="cn-rev d3">
+      <rect x="284" y="116" width="42" height="42" fill="#cdd9e6" stroke="#9fb3c8"/>
+      <rect x="278" y="122" width="42" height="42" fill="#bccddf" stroke="#9fb3c8"/>
+      <rect x="272" y="128" width="42" height="42" fill="#aec4da" stroke="#9fb3c8"/>
+      <text x="296" y="190" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">128 × 56²</text>
+    </g>
+    <path class="cn-rev d4" d="M326,150 L368,150" stroke="#7a6f5d" stroke-width="1.4" marker-end="url(#cn-s)"/>
+    <text class="cn-rev d4" x="347" y="142" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#7a6f5d">conv·pool</text>
+    <!-- S3 -->
+    <g class="cn-rev d4">
+      <rect x="388" y="126" width="34" height="34" fill="#9db9d2" stroke="#7a93ad"/>
+      <rect x="382" y="132" width="34" height="34" fill="#7fa0c0" stroke="#7a93ad"/>
+      <rect x="376" y="138" width="34" height="34" fill="#5d83a8" stroke="#7a93ad"/>
+      <text x="396" y="190" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">256 × 28²</text>
+    </g>
+    <path class="cn-rev d5" d="M422,158 L464,158" stroke="#7a6f5d" stroke-width="1.4" marker-end="url(#cn-s)"/>
+    <text class="cn-rev d5" x="443" y="150" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#7a6f5d">conv·pool</text>
+    <!-- S4 -->
+    <g class="cn-rev d5">
+      <rect x="484" y="134" width="26" height="26" fill="#3a5b80" stroke="#1f3a5f"/>
+      <rect x="478" y="140" width="26" height="26" fill="#2a4a6e" stroke="#1f3a5f"/>
+      <rect x="472" y="146" width="26" height="26" fill="#1f3a5f" stroke="#1f3a5f"/>
+      <text x="490" y="190" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">512 × 14²</text>
+    </g>
+    <path class="cn-rev d6" d="M510,159 L556,159" stroke="#7a6f5d" stroke-width="1.4" marker-end="url(#cn-s)"/>
+    <text class="cn-rev d6" x="533" y="151" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#7a6f5d">GAP</text>
+    <!-- vector + 猫 -->
+    <g class="cn-rev d6">
+      <rect x="568" y="120" width="14" height="78" fill="#1f3a5f"/>
+      <text x="575" y="212" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#3a3128">512 向量</text>
+      <path d="M584,159 L612,159" stroke="#7a6f5d" stroke-width="1.4" marker-end="url(#cn-s)"/>
+      <rect x="616" y="138" width="64" height="42" rx="4" fill="#dde5ee" stroke="#1f3a5f"/>
+      <text x="648" y="156" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#1f3a5f">分类</text>
+      <text x="648" y="172" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">"猫" 0.97</text>
+    </g>
+    <!-- 轴注解 -->
+    <text class="cn-rev d6" x="100" y="244" font-family="JetBrains Mono,monospace" font-size="9" fill="#1f3a5f">横：一层多核 → deck 越叠越厚（通道↑） · □ 越小 = 分辨率↓</text>
+    <text class="cn-rev d6" x="100" y="262" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">纵：层层堆 + 每隔几层 pool → 通道↑ 分辨率↓ 感受野↑ → 边缘…部件…物体</text>
+  </svg>
+</figure>
+
 
 <!-- §04 -->
 <h2><span class="num">§ 04</span>pooling + 感受野 · 看得越来越宽</h2>
@@ -274,7 +344,7 @@ figure.play .cn-slide { animation: cnSlide 5.4s linear 0.5s 1 forwards; }
 
 <figure id="fig-rf" class="fig-rf">
   <figcaption>
-    <span>Fig 04 · 下采样撑感受野</span>
+    <span>Fig 05 · 下采样撑感受野</span>
     <span class="fnum">分辨率砍半 → 一个点覆盖原图翻倍</span>
   </figcaption>
   <svg class="cn-svg" viewBox="0 0 760 230" xmlns="http://www.w3.org/2000/svg">
@@ -319,7 +389,7 @@ figure.play .cn-slide { animation: cnSlide 5.4s linear 0.5s 1 forwards; }
 
 <figure id="fig-line" class="fig-line">
   <figcaption>
-    <span>Fig 05 · CNN 谱系</span>
+    <span>Fig 06 · CNN 谱系</span>
     <span class="fnum">越做越深 → 残差解决退化 → 注意力填平护城河</span>
   </figcaption>
   <svg class="cn-svg" viewBox="0 0 760 200" xmlns="http://www.w3.org/2000/svg">
@@ -367,7 +437,7 @@ figure.play .cn-slide { animation: cnSlide 5.4s linear 0.5s 1 forwards; }
 </div>
 <script>
 {
-  const figs = ['fig-conv','fig-vs','fig-hier','fig-rf','fig-line'];
+  const figs = ['fig-conv','fig-vs','fig-hier','fig-shape','fig-rf','fig-line'];
   figs.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
