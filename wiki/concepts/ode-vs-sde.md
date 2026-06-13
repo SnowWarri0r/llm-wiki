@@ -1,8 +1,8 @@
 ---
 name: ode-vs-sde
 type: concept
-sources: [flow-matching]
-updated: 2026-05-21
+sources: [flow-matching, ode-sde]
+updated: 2026-06-12
 ---
 
 # ODE vs SDE · 确定性 vs 随机性流
@@ -61,6 +61,7 @@ for t in 0, 1/N, 2/N, ..., 1:
 TML 的 200ms micro-turn 需要 <strong>极少步数推理</strong>（200ms 预算 = ~5 次 GPU forward）。flow matching 的 OT 路径让"4-8 步生成一段音频"成为可能，而 diffusion 在这预算下质量崩。这是 TML 选 flow matching 而不是 diffusion 的工程动机。
 
 ## 链接
+- [[ode-sde]] · 底层直觉 + 数值例子（风场/醉汉/桥 + Euler 真数字演算）
 - [[flow-matching]] · 用 ODE
 - [[velocity-field]] · ODE 的核心
 - [[probability-path]] · 路径设计

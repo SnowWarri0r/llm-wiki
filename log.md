@@ -669,3 +669,9 @@ skill 更新:
 - fft bespoke(teal #1a6a64): 棱镜拆频率→绕线机测频率→偶奇分治树 N²→NlogN→蝴蝶+twiddle→卷积定理; 5 图全本地 headless 验证; Cooley-Tukey 1965
 - 主线: 分治(折半再合,同卷积/归并) + 单位根对称(转半圈反号→一次乘喂两输出); 接 convolution(卷积定理) + log-mel-spectrogram(STFT)
 - 回链: convolution / log-mel-spectrogram 加 fft source + 链接; index papers 段置顶(基础算法)
+
+## [2026-06-12] add | ode-sde bespoke 精装页（新 iris 靛紫 accent）
+- ode-sde bespoke(iris #4a3f9e): 风场弹珠(ODE确定)→醉汉多路(SDE随机)→桥(SDE个体 vs ODE密度水流,Song2021同分布)→Euler 真数字演算→一句话收口; 4 图全本地 headless 验证
+- 数值节按用户要求重举例: f(x)=−x/dt=0.5/g=2/起点10, ODE永远10→5; SDE跑A=6.13 跑B=3.30; √dt 解释随机游走按√时间扩散
+- 与已有 concept ode-vs-sde 分工: bespoke=底层+数值, concept=FM-vs-diffusion 工程取舍; 互链
+- 回链: ode-vs-sde / score-function 加 ode-sde source + 链接; index 接 flow-matching 后
