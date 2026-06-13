@@ -312,13 +312,93 @@ v = v_uncond + w · (v_cond − v_uncond)   # 放大差值</pre>
 
 
 <!-- §05 -->
-<h2><span class="num">§ 05</span>杀手锏 · 结构化 JSON caption</h2>
+<h2><span class="num">§ 05</span>训练 / 推理 · 为什么不是自回归</h2>
+
+<p>容易混的一点：<strong>走 Transformer ≠ 自回归</strong>。Transformer 只是积木（attention 块），怎么用它生成是另一回事。GPT 把它当<strong>逐字写作者</strong>（自回归）；Ideogram 4 把它当<strong>反复擦的修图师</strong>（扩散 / flow matching）——<strong>不是自回归</strong>。</p>
+
+<p>差别落在"循环在循环什么"。<strong>自回归</strong>的循环在<strong>位置</strong>上：序列从左一个 token 一个 token 长出来，带 causal mask 只能看左边，N 个 token = N 次前向，串行。<strong>Ideogram</strong> 的循环在<strong>去噪步</strong>上：整张 latent 一次性进 34 层 DiT，预测速度场，Euler 走一小步，重复 ~25 步由糊变清。<strong>所有 patch 每一步都并行</strong>，前向次数 = 去噪步数（固定 ~25），跟图多大、有多少 patch 无关；attention <strong>无 mask、双向</strong>，每个 patch 看所有 patch。</p>
+
+<figure id="fig-paradigm" class="fig-paradigm">
+  <figcaption>
+    <span>Fig 04 · 自回归 vs 扩散：两种循环</span>
+    <span class="fnum">一个循环在位置上，一个循环在去噪步上</span>
+  </figcaption>
+  <svg class="ig-svg" viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg">
+    <!-- 中缝 -->
+    <line x1="440" y1="40" x2="440" y2="330" stroke="#bfb398" stroke-width="1" stroke-dasharray="5 4"/>
+
+    <!-- ===== 左：自回归 ===== -->
+    <text x="215" y="40" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#9b2c2c">自回归 (GPT) · 循环在【位置】</text>
+    <g class="ig-rev d1" font-family="JetBrains Mono,monospace">
+      <rect x="40"  y="86" width="58" height="42" rx="3" fill="#dbe6f0" stroke="#1f3a5f"/><text x="69"  y="112" text-anchor="middle" font-size="13" fill="#1f3a5f">我</text>
+      <rect x="104" y="86" width="58" height="42" rx="3" fill="#dbe6f0" stroke="#1f3a5f"/><text x="133" y="112" text-anchor="middle" font-size="13" fill="#1f3a5f">爱</text>
+      <rect x="168" y="86" width="58" height="42" rx="3" fill="#dbe6f0" stroke="#1f3a5f"/><text x="197" y="112" text-anchor="middle" font-size="13" fill="#1f3a5f">猫</text>
+      <rect x="232" y="86" width="58" height="42" rx="3" fill="#fff" stroke="#9b2c2c" stroke-dasharray="4 3"/><text x="261" y="112" text-anchor="middle" font-size="13" fill="#9b2c2c">?</text>
+      <rect x="296" y="86" width="58" height="42" rx="3" fill="none" stroke="#c4bba6" stroke-dasharray="3 3"/>
+    </g>
+    <g class="ig-rev d2" font-family="JetBrains Mono,monospace">
+      <path d="M261,135 Q175,178 75,150" fill="none" stroke="#9b2c2c" stroke-width="1.5" marker-end="url(#par)"/>
+      <text x="200" y="192" text-anchor="middle" font-size="9.5" fill="#9b2c2c">每次前向只 +1 个 token，回头再来</text>
+    </g>
+    <g class="ig-rev d3" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#7a6f5d">
+      <text x="215" y="232" text-anchor="middle">causal mask：新 token 只看左边</text>
+      <text x="215" y="252" text-anchor="middle" fill="#3a3128">N 个 token = N 次前向 · 串行</text>
+    </g>
+
+    <!-- ===== 右：扩散 ===== -->
+    <text x="660" y="40" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#1f3a5f">扩散 (Ideogram) · 循环在【去噪步】</text>
+    <!-- frame A 纯噪声 -->
+    <g class="ig-rev d1">
+      <rect x="470" y="82" width="84" height="84" rx="3" fill="#eef2f7" stroke="#9fb3c8"/>
+      <g fill="#5b6b7d">
+        <circle cx="486" cy="98" r="2.2"/><circle cx="532" cy="94" r="2.2"/><circle cx="506" cy="110" r="2.2"/><circle cx="544" cy="120" r="2.2"/><circle cx="478" cy="130" r="2.2"/><circle cx="516" cy="128" r="2.2"/><circle cx="494" cy="148" r="2.2"/><circle cx="540" cy="150" r="2.2"/><circle cx="524" cy="158" r="2.2"/><circle cx="500" cy="92" r="2.2"/><circle cx="486" cy="140" r="2.2"/><circle cx="548" cy="104" r="2.2"/>
+      </g>
+    </g>
+    <path class="ig-rev d2" d="M560,124 L596,124" fill="none" stroke="#3a3128" stroke-width="1.4" marker-end="url(#pad)"/>
+    <!-- frame B 半糊 -->
+    <g class="ig-rev d2">
+      <rect x="600" y="82" width="84" height="84" rx="3" fill="#eef2f7" stroke="#9fb3c8"/>
+      <circle cx="642" cy="120" r="15" fill="#b8841c" opacity="0.30"/>
+      <g fill="#5b6b7d" opacity="0.7"><circle cx="616" cy="100" r="2"/><circle cx="668" cy="150" r="2"/><circle cx="628" cy="146" r="2"/><circle cx="662" cy="106" r="2"/></g>
+    </g>
+    <path class="ig-rev d3" d="M690,124 L726,124" fill="none" stroke="#3a3128" stroke-width="1.4" marker-end="url(#pad)"/>
+    <!-- frame C 干净 -->
+    <g class="ig-rev d3">
+      <rect x="730" y="82" width="84" height="84" rx="3" fill="#dbe6f0" stroke="#9fb3c8"/>
+      <circle cx="766" cy="108" r="12" fill="#b8841c"/>
+      <polygon points="742,160 772,124 802,160" fill="#4a6b3a"/>
+    </g>
+    <g class="ig-rev d4" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">
+      <text x="512" y="184" text-anchor="middle">纯噪声 z₀</text>
+      <text x="642" y="184" text-anchor="middle">…~25 步…</text>
+      <text x="772" y="184" text-anchor="middle">干净 z₁ → 出图</text>
+    </g>
+    <g class="ig-rev d5" font-family="JetBrains Mono,monospace">
+      <path d="M512,200 Q640,238 772,200" fill="none" stroke="#1f3a5f" stroke-width="1.5" marker-end="url(#pad2)"/>
+      <text x="642" y="232" text-anchor="middle" font-size="9.5" fill="#1f3a5f">每步整张图并行一次前向</text>
+      <text x="642" y="252" text-anchor="middle" font-size="9.5" fill="#3a3128">步数固定(~25)，与 patch 数无关 · 无 mask 双向</text>
+    </g>
+
+    <text x="440" y="300" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#3a3128">同样是 Transformer：一个当逐字写作者，一个当反复擦的修图师</text>
+    <defs>
+      <marker id="par" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#9b2c2c"/></marker>
+      <marker id="pad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#3a3128"/></marker>
+      <marker id="pad2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#1f3a5f"/></marker>
+    </defs>
+  </svg>
+</figure>
+
+<p>训练同样是两条路。自回归是 teacher forcing + 预测下一个 token + cross-entropy。Ideogram 是 <strong>flow matching</strong>：拿真图经 VAE 压成干净 latent <code>z₁</code>，配随机噪声 <code>z₀</code> 和随机时刻 <code>t</code>，插值 <code>z_t=(1−t)z₀+t·z₁</code>，让 DiT 预测速度 <code>v=z₁−z₀</code>，MSE loss。<strong>没有 causal mask、没有 teacher forcing、没有"预测下一个"</strong>——所有 patch 双向互看、一次性算 loss。那张自回归前向图正好对照：<a href="../concepts/next-token-forward-pass.html">next-token-forward-pass</a>。</p>
+
+
+<!-- §06 -->
+<h2><span class="num">§ 06</span>杀手锏 · 结构化 JSON caption</h2>
 
 <p>这是 Ideogram 4 跟所有人最不一样的地方：模型<strong>只</strong>用结构化 JSON caption 训练<a class="jr" href="#g-08">8</a>，不吃自然语言。每条 caption 穷举画面的每个元素 + style 块 + 可选 bbox + 调色板，训练和推理同一套格式，推理前还按 schema 校验。</p>
 
 <figure id="fig-json" class="fig-json">
   <figcaption>
-    <span>Fig 04 · 结构化 JSON caption</span>
+    <span>Fig 05 · 结构化 JSON caption</span>
     <span class="fnum">显式给调色板 / bbox / 文字 → 精确版面</span>
   </figcaption>
   <svg class="ig-svg" viewBox="0 0 880 360" xmlns="http://www.w3.org/2000/svg">
@@ -371,14 +451,14 @@ v = v_uncond + w · (v_cond − v_uncond)   # 放大差值</pre>
 <p>三样普通 prompt 给不了的：<strong>调色板条件</strong><a class="jr" href="#g-10">10</a>（直接用 hex 控主色，每图 16 色）、<strong>bbox 布局</strong><a class="jr" href="#g-09">9</a>（<code>[y_min,x_min,y_max,x_max]</code> 归一化 0–1000，靠 MRoPE 落位）、<strong>文字元素</strong>（一字段放要渲染的字面文字、一字段放它长什么样 → 多行多字体图内文字）。普通用户写一句话也行——一个 "magic prompt" LLM 先把它扩成这套 JSON。详见 <a href="../concepts/structured-caption-conditioning.html">structured-caption-conditioning</a>。</p>
 
 
-<!-- §06 -->
-<h2><span class="num">§ 06</span>结果 · 9.3B 打赢一堆大模型</h2>
+<!-- §07 -->
+<h2><span class="num">§ 07</span>结果 · 9.3B 打赢一堆大模型</h2>
 
 <p>最能说明问题的是<strong>参数效率</strong>：9.3B 的 Ideogram 4，文本渲染（X-Omni OCR）打赢了 Qwen-Image (20B)、FLUX.2 dev (32B)、Hunyuan Image 3.0 (80B MoE)：</p>
 
 <figure id="fig-bench" class="fig-bench">
   <figcaption>
-    <span>Fig 05 · 参数效率 · 文本渲染</span>
+    <span>Fig 06 · 参数效率 · 文本渲染</span>
     <span class="fnum">小而强: 9.3B 占住左上角</span>
   </figcaption>
   <svg class="ig-svg" viewBox="0 0 880 340" xmlns="http://www.w3.org/2000/svg">
@@ -443,7 +523,7 @@ v = v_uncond + w · (v_cond − v_uncond)   # 放大差值</pre>
 
 <script>
 {
-  const figs = ['fig-pipe','fig-stream','fig-encoder','fig-json','fig-bench'];
+  const figs = ['fig-pipe','fig-stream','fig-encoder','fig-paradigm','fig-json','fig-bench'];
   figs.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
