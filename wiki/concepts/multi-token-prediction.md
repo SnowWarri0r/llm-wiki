@@ -107,9 +107,31 @@ MTP 的办法：**每个解码步一次预测多层**（模型在每个位置有
 
 阶梯是 fish"帧内 8 串行小步（稳但慢）"和"裸并行（快但丢依赖）"之间的折中：**用空间错位换时间并行，不牺牲因果**。它跟 fish 的真正差距不在"吃没吃依赖"，而在 fish 帧内多绕 8 个串行小步更稳、阶梯一步一列更流式友好（质量差更多来自模型大小和一次 forward 提交多帧的 exposure）。详见 [[dual-ar]] 的串行快 AR。
 
-## 参数 · 共享主体 + 轻量 codebook adapter
+## 参数 · 共享主体 + 轻量 codebook adapter（其实就是每层一个 LoRA）
 
-8 层 codebook 分布不一样（粗层 vs 残差层），但给每层都配一整套 embedding + 输出头，参数会爆，0.1B 装不下。minimind-o 的折中：**共享主体** + 每层一个**轻量 codebook adapter** 吸收该层分布差异 —— 既留住各层差异，又不为每层复制一整套参数。
+给 8 层各配一整套 embedding + 输出头，参数会爆，0.1B 装不下。minimind-o 的做法是 **LoRA 式的低秩增量**：一份全尺寸**共享主体**，每层只挂一个**低秩（rank=256）adapter** 做修正。而且**输入侧（embedding）和输出侧（head）对称地都这么干**。
+
+**输出头 `TalkerHead`**（出 8 层 logits，`model/model_omni.py`）：
+
+```python
+self.base = nn.Linear(768, vocab, bias=False)                 # 共享主体：一份全尺寸
+self.adapters = [Linear(768,256)→GELU→Linear(256,vocab)       # 每层一个低秩 adapter
+                 for _ in range(8)]
+def forward(self, x):
+    base_out = self.base(x)                                   # 共享 logits 只算一次
+    return [base_out + adapter(x) for adapter in self.adapters]  # 8 层 = 共享 + 各自低秩增量
+```
+
+最后一行就是 LoRA 的式子 `W·x + (B·A)·x`：8 层共用主体 `W`，每层只学一个瘦 `768→256→vocab` 的增量。模型在赌 **8 层的"hidden→码"映射大体相同、差异是低秩的**。输入侧 `TalkerEmbedding` 对称：每层"共享表 + 低秩 adapter"查嵌入，再**对 8 层求平均**塌成一帧一个向量喂回自回归。
+
+为什么省 + 为什么稳：
+
+| | 给每层配整套 | 共享 base + LoRA |
+|---|---|---|
+| 主体 | 8 ×（768×vocab） | **1 ×（768×vocab）** |
+| 每层额外 | — | 768×256 + 256×vocab（被 rank 卡瘦） |
+
+主体只留一份省参数；每层增量被 rank=256 卡过，**强制各层只能在共享主体上做低秩偏移**，既不跑偏又自带正则。这是 0.1B 里塞下 8 路 codebook 的关键。（Talker 的输入还叠了 Thinker 中间层条件：`embed_proj(bridge)×text_scale + codec_proj(audio_emb)×audio_scale`，scale 是可学标量。）
 
 ## 跟流式的关系 · 边想边补
 
@@ -119,7 +141,8 @@ MTP 的办法：**每个解码步一次预测多层**（模型在每个位置有
 DeepSeek 等用 MTP 指"训练时多预测几个未来 token 当辅助目标 / 加速"。这里 minimind-o 的 MTP 是**同一帧的多层 codebook 并行预测**——同名，但解决的是 RVQ 多层的序列膨胀问题，别混。
 
 ## 代码出处
-- minimind-o Talker 的 MTP audio head（`model/model_omni.py`）
+- minimind-o `model/model_omni.py:57-76` —— `TalkerHead`（共享 base Linear + 8 个低秩 adapter，输出 list of 8 logits）/ `TalkerEmbedding`（共享 base Embedding + 8 个低秩 adapter，对 8 层求平均）
+- Talker 输入融合在 `model_omni.py:301`（bridge 条件 + audio embedding 按可学 scale 相加）
 - 思路谱系：RVQ 多码本的并行/延迟预测（fish-speech 的 dual-AR、MusicGen 的 delay pattern 同源问题）
 
 ## 链接
