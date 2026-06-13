@@ -599,3 +599,9 @@ skill 更新:
 - bespoke 页插 §05"为什么不是自回归" + Fig 04 AR-vs-扩散对比图(ig-rev 动画, fig-paradigm 入 observer)
 - JSON→§06/Fig05, 结果→§07/Fig06 顺延; md scaffold 补"非自回归"bullet
 - 核心: AR循环在位置(causal/串行) vs 扩散循环在去噪步(并行/无mask); 训练 flow-matching MSE 非 cross-entropy
+
+## [2026-06-08] ingest | minimind-o (bespoke 精装页)
+- 源: github.com/jingyaogong/minimind-o (~0.1B 端到端 Omni, arXiv 2605.03937)
+- bespoke 页 docs/papers/minimind-o.html: moss accent, hero+§01-06+5张 mo-rev 动画图(IO总览/Thinker-Talker bridge/projector/MTP 8层codes/训练管线) + jr术语表12条
+- 新概念: thinker-talker / multi-token-prediction / modality-projector; 复用 rvq-codec/vad/voice-cloning-reference/early-fusion/moe
+- 主线: fish-speech 麻雀版; 瓶颈在多码本输出端 + 条件取中间层
