@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Convolution · 卷积 · 一把小尺子滑过整张图 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · convolution</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Convolution · 卷积 · 一把小尺子滑过整张图</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>拿一个小窗口（卷积核）滑过整张图，每停一处就把窗口盖住的像素跟核<strong>逐元素相乘再求和</strong>得到一个数 —— 滑遍全图得到一张新图（feature map）。</p>
+<h2>直觉 · 为什么不直接全连接</h2>
+<p>把一张 224×224 的图拉平喂全连接（MLP）：第一层每个神经元要连 ~5 万个输入，几百个神经元就上千万参数，而且<strong>学到的东西不能挪位置</strong>——猫在左上角学的权重，猫挪到右下角就白学。图像的两个先验它都没利用：</p>
+<ol>
+<li><strong>局部性</strong>：一个像素最相关的是它周围的像素，不是对角线另一头的。</li>
+<li><strong>平移不变</strong>：一只猫是猫，不管它在画面哪。</li>
+</ol>
+<p>卷积把这两条先验<strong>焊进结构</strong>（<a href="../concepts/inductive-bias.html">inductive-bias</a>）：用一个<strong>小核</strong>（只看局部，比如 3×3）<strong>滑遍全图共用同一套权重</strong>（位置无关）。参数从"上千万"降到"几个核 × 9 个数"，而且天生平移不变。</p>
+<h2>怎么做的 · 滑窗点乘求和</h2>
+<figure style="margin:26px 0; padding:22px; background:#eef2f7; border:1px solid #9fb3c8; border-radius:4px;">
+<svg viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:JetBrains Mono,monospace;">
+  <defs><marker id="cv-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1f3a5f"/></marker></defs>
+  <!-- 输入 5x5 -->
+  <text class="reveal d1" x="130" y="34" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#1f3a5f">输入 5×5</text>
+  <g class="reveal d1" font-size="10" fill="#3a3128" text-anchor="middle">
+    <rect x="48" y="46" width="164" height="164" fill="none" stroke="#9fb3c8"/>
+    <line x1="48" y1="79" x2="212" y2="79" stroke="#cdd9e6"/><line x1="48" y1="112" x2="212" y2="112" stroke="#cdd9e6"/><line x1="48" y1="145" x2="212" y2="145" stroke="#cdd9e6"/><line x1="48" y1="178" x2="212" y2="178" stroke="#cdd9e6"/>
+    <line x1="81" y1="46" x2="81" y2="210" stroke="#cdd9e6"/><line x1="114" y1="46" x2="114" y2="210" stroke="#cdd9e6"/><line x1="147" y1="46" x2="147" y2="210" stroke="#cdd9e6"/><line x1="180" y1="46" x2="180" y2="210" stroke="#cdd9e6"/>
+  </g>
+  <!-- 核覆盖左上 3x3 高亮 -->
+  <rect class="reveal d2" x="48" y="46" width="99" height="99" fill="#1f3a5f" opacity="0.14" stroke="#1f3a5f" stroke-width="2"/>
+  <text class="reveal d2" x="97" y="160" text-anchor="middle" font-size="9" fill="#1f3a5f">3×3 核盖住这块 patch</text>
+  <!-- 运算 -->
+  <g class="reveal d3" font-size="11" fill="#3a3128">
+    <text x="250" y="96" fill="#1f3a5f" font-weight="700">patch ⊙ 核</text>
+    <text x="250" y="118">= 9 个数对应相乘</text>
+    <text x="250" y="138" fill="#1f3a5f" font-weight="700">→ Σ 求和</text>
+    <text x="250" y="158">= 1 个输出数</text>
+    <path d="M250,150 L470,150" fill="none" stroke="#1f3a5f" stroke-width="1.4" marker-end="url(#cv-a)"/>
+  </g>
+  <!-- 输出 3x3 -->
+  <text class="reveal d4" x="560" y="34" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#1f3a5f">输出 feature map 3×3</text>
+  <g class="reveal d4" text-anchor="middle">
+    <rect x="510" y="80" width="100" height="100" fill="none" stroke="#9fb3c8"/>
+    <line x1="510" y1="113" x2="610" y2="113" stroke="#cdd9e6"/><line x1="510" y1="146" x2="610" y2="146" stroke="#cdd9e6"/>
+    <line x1="543" y1="80" x2="543" y2="180" stroke="#cdd9e6"/><line x1="576" y1="80" x2="576" y2="180" stroke="#cdd9e6"/>
+    <rect x="510" y="80" width="33" height="33" fill="#1f3a5f" opacity="0.6"/>
+    <text x="526" y="101" font-size="9" fill="#fff">●</text>
+  </g>
+  <text class="reveal d4" x="560" y="200" text-anchor="middle" font-size="9" fill="#7a6f5d">左上 patch → 左上这个输出格</text>
+  <text class="reveal d5" x="360" y="250" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#3a3128">核往右/往下滑一格，重复 → 填满整张 feature map（核的权重一路不变）</text>
+</svg>
+</figure>
+
+<ul>
+<li><strong>核（kernel/filter）</strong>：一个小权重矩阵，比如 3×3 = 9 个可学的数。</li>
+<li><strong>滑窗</strong>：核从左上角开始，盖住一块 patch，点乘求和出一个数；右移一格再来；走完一行换下一行。</li>
+<li><strong>stride（步长）</strong>：一次滑几格，2 就跳着走、输出更小。</li>
+<li><strong>padding（补边）</strong>：边上补一圈 0，让输出不缩水 / 控制尺寸。</li>
+<li>输出尺寸 ≈ <code>(W − K + 2P) / S + 1</code>。</li>
+</ul>
+<h2>多核 → 多张 feature map</h2>
+<p>一个核只能抓<strong>一种</strong>局部模式（比如"竖边")。所以一层放<strong>很多核</strong>（比如 64 个），每个学一种模式（横边、斜边、某种颜色块……），输出 64 张 feature map 摞起来 = 这层的输出通道。下一层的核再在这 64 通道上滑，组合出更复杂的模式（角 → 纹理 → 部件 → 物体）。</p>
+<h2>为什么赢过全连接 · 三个先验焊进结构</h2>
+<ul>
+<li><strong>局部连接</strong>：核只看局部 → 参数少、抓的是空间相邻关系</li>
+<li><strong>权重共享</strong>：同一个核滑遍全图 → 参数再砍一大刀，且<strong>平移不变</strong>（猫在哪都用同一套核认）</li>
+<li><strong>层级组合</strong>：层层堆叠，感受野（<a href="../concepts/receptive-field.html">receptive-field</a>）越来越大，特征从边缘→部件→物体</li>
+</ul>
+<p>这三条就是 CNN 的 <a href="../concepts/inductive-bias.html">inductive-bias</a>：数据少时是宝（自带视觉先验），大数据时代被 <a href="../concepts/patch-embedding.html">patch-embedding</a> 的 ViT 用纯注意力填平了护城河，但卷积仍是最省、最快的视觉底座。</p>
+<h2>代码出处</h2>
+<ul>
+<li><code>nn.Conv2d(in_ch, out_ch, kernel_size, stride, padding)</code> 是所有框架的标准实现</li>
+<li>源头：LeCun 的 LeNet（1989/1998）；现代视觉骨干（<a href="../papers/resnet.html">resnet</a>）全建在卷积上</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/cnn.html">cnn</a> · 卷积堆起来的完整网络故事</li>
+<li><a href="../concepts/receptive-field.html">receptive-field</a> · 堆深了一个输出能"看到"多大范围</li>
+<li><a href="../concepts/pooling.html">pooling</a> · 卷积之间下采样、扩感受野</li>
+<li><a href="../concepts/inductive-bias.html">inductive-bias</a> · 局部性+平移不变是焊进结构的先验</li>
+<li><a href="../concepts/patch-embedding.html">patch-embedding</a> · ViT 用它替掉卷积进视觉</li>
+<li><a href="../papers/resnet.html">resnet</a> · 卷积网络做深的关键</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/cnn.html"><span class="cat">paper</span>CNN · 卷积神经网络</a></li><li><a href="../concepts/pooling.html"><span class="cat">concept</span>Pooling · 池化 · 把 feature map 缩小、抓重点</a></li><li><a href="../concepts/receptive-field.html"><span class="cat">concept</span>Receptive Field · 感受野 · 一个输出能&quot;看到&quot;原图多大一片</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/convolution.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

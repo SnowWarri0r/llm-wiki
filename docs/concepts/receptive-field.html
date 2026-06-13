@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Receptive Field · 感受野 · 一个输出能&quot;看到&quot;原图多大一片 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · receptive-field</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Receptive Field · 感受野 · 一个输出能&quot;看到&quot;原图多大一片</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>深层一个神经元的值，最终是由原图上<strong>多大一块区域</strong>决定的 —— 这块区域就是它的感受野。卷积堆得越深、池化越多，感受野越大，从"看一个边"长到"看整只猫"。</p>
+<h2>直觉 · 一层只看 3×3，怎么认出整只猫</h2>
+<p>单个 3×3 卷积，一个输出只看原图 3×3 一小块——只够认个边角。怎么认出需要全局的"猫"？靠<strong>层层叠加把视野撑大</strong>：</p>
+<ul>
+<li>第 1 层输出的每个点，看原图 3×3。</li>
+<li>第 2 层的 3×3 核，盖住的是第 1 层的 3×3——而第 1 层每个点又各自看原图 3×3，<strong>错开拼起来</strong> → 第 2 层一个点看原图 5×5。</li>
+<li>再叠一层 → 7×7 …… 堆下去，深层一个点最终能"看到"原图一大片。</li>
+</ul>
+<pre><code>原图         L1 (看3×3)      L2 (看5×5)      L3 (看7×7)
+·······      ···             ··
+·▣▣▣···  →   ·■·       →     ·■        →   越深，一个点
+·▣▣▣···      ···             ··            覆盖原图越大
+</code></pre>
+<p>直觉公式（stride 1、k×k 核、堆 L 层）：感受野 ≈ <code>1 + L·(k−1)</code>，线性增长。</p>
+<h2>为什么 pooling / stride 让它长得快</h2>
+<p>光靠堆卷积，感受野<strong>线性</strong>长，要看全图得堆很多层。<strong>下采样</strong>（<a href="../concepts/pooling.html">pooling</a> 或 stride=2 卷积）一步把分辨率砍半 → 之后每个点在原图的"覆盖步长"翻倍，感受野<strong>指数级</strong>往上窜。这就是 CNN 典型结构"卷积几层 → 下采样 → 再卷积几层 → 再下采样"的原因：用下采样高效地把感受野撑到覆盖全图。</p>
+<h2>为什么这事很关键</h2>
+<ul>
+<li><strong>感受野没盖住目标 = 看不全</strong>：要识别大物体，深层感受野必须 ≥ 物体尺寸，否则模型从没"同时看到"它的全部。</li>
+<li>这正是 CNN 跟 <a href="../concepts/self-attention.html">self-attention</a> 的根本差别：卷积的感受野<strong>要靠深度一层层撑大</strong>（局部→全局慢慢来）；注意力<strong>一层就全局</strong>（任意两个位置直接连）。ViT 用注意力换掉卷积，图省的就是这个"慢慢撑"。</li>
+</ul>
+<h2>代码出处</h2>
+<ul>
+<li>不是某个算子，是网络结构的派生量；分析工具如 <code>torchvision</code> 的 receptive field 计算脚本</li>
+<li>经典讨论见各 CNN 骨干（<a href="../papers/resnet.html">resnet</a>）的 stage 设计</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/convolution.html">convolution</a> · 感受野由卷积层叠出来</li>
+<li><a href="../concepts/pooling.html">pooling</a> · 下采样让感受野指数级扩张</li>
+<li><a href="../papers/cnn.html">cnn</a> · 逐层撑大感受野是 CNN 的核心机制</li>
+<li><a href="../concepts/self-attention.html">self-attention</a> · 一层即全局，对照卷积的"慢慢撑"</li>
+<li><a href="../papers/resnet.html">resnet</a> · 深度撑感受野的代表</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/cnn.html"><span class="cat">paper</span>CNN · 卷积神经网络</a></li><li><a href="../concepts/convolution.html"><span class="cat">concept</span>Convolution · 卷积 · 一把小尺子滑过整张图</a></li><li><a href="../concepts/pooling.html"><span class="cat">concept</span>Pooling · 池化 · 把 feature map 缩小、抓重点</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/receptive-field.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

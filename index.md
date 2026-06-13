@@ -6,6 +6,7 @@
 
 > 手工打磨的 bespoke 深读页（不只论文）：ML 论文 + 系统 + 金融 + 史。live 站按领域分小标题 + 顶部领域 chip 筛选。
 
+- [CNN · 卷积神经网络](wiki/papers/cnn.md) — 视觉骨架基础: 小核滑遍全图+权重共享, 把局部性/平移不变焊进结构; 卷积滑窗动画 + LeNet→ResNet→ViT 谱系
 - [Deep Residual Learning · ResNet](wiki/papers/resnet.md) — 残差连接的起源，把"网络越深越好"做成现实，也给两年后的 Transformer 留好 sublayer 模板
 - [Attention Is All You Need](wiki/papers/attention-is-all-you-need.md) — Transformer 始祖，整个 LLM 时代的奠基
 - [BERT](wiki/papers/bert.md) — 只要 Transformer encoder，用 MLM 学双向上下文，立住 pretrain → finetune 范式
@@ -103,6 +104,11 @@
 - [Transformer Architecture](wiki/concepts/transformer-architecture.md) — Encoder + Decoder 堆叠
 - [LayerNorm](wiki/concepts/layernorm.md) — 每个 token 内部归一化，序列模型比 BN 更顺手
 - [Residual + LayerNorm](wiki/concepts/residual-layernorm.md) — 现代 Transformer block 的稳定训练骨架
+
+### CNN 基础
+- [Convolution](wiki/concepts/convolution.md) — 小核滑遍全图、逐元素相乘求和；局部连接+权重共享，省参数又平移不变
+- [Pooling](wiki/concepts/pooling.md) — 小窗取 max/avg 下采样：降计算、扩感受野、带一点平移鲁棒
+- [Receptive Field](wiki/concepts/receptive-field.md) — 一个输出能看到原图多大一片；堆卷积线性长、下采样指数级扩
 
 ### ResNet 系
 - [Residual Connection](wiki/concepts/residual-connection.md) — `+ x` 快车道，identity 是默认值
