@@ -1,8 +1,8 @@
 ---
 name: log-mel-spectrogram
 type: concept
-sources: [dmel, interaction-models-tml, whisper]
-updated: 2026-05-21
+sources: [dmel, interaction-models-tml, whisper, fft]
+updated: 2026-06-12
 ---
 
 # Log-Mel Spectrogram · 对数 Mel 频谱图
@@ -56,3 +56,4 @@ log-mel 仍是连续值（浮点）。dMel 把每个 cell 按 16 bin 量化 → 
 - [[bin-quantization]] · dMel 在它上面做的事
 - [[rvq-codec]] · 对照的另一种"音频 → token"路线
 - [[interaction-models-tml]] · 应用
+- [[fft]] · 频谱怎么算出来的：把信号切窗、每段做一次 FFT（STFT）
