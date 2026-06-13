@@ -605,3 +605,8 @@ skill 更新:
 - bespoke 页 docs/papers/minimind-o.html: moss accent, hero+§01-06+5张 mo-rev 动画图(IO总览/Thinker-Talker bridge/projector/MTP 8层codes/训练管线) + jr术语表12条
 - 新概念: thinker-talker / multi-token-prediction / modality-projector; 复用 rvq-codec/vad/voice-cloning-reference/early-fusion/moe
 - 主线: fish-speech 麻雀版; 瓶颈在多码本输出端 + 条件取中间层
+
+## [2026-06-08] fix/expand | MTP 页纠正"并行=丢依赖" + 加阶梯图
+- 用户(fish-speech背景)指出 fish 帧内串行 vs MTP 并行的矛盾 → MTP 实为 delay pattern 阶梯并行
+- MTP 页加 delay pattern 阶梯 SVG(对角线=帧f0残差链, 列=不同帧并行) + 三档对比表(裸并行/阶梯/fish串行)
+- 纠正口径: 依赖非丢, 沿对角线保住; minimind-o §04 + g-06 同步
