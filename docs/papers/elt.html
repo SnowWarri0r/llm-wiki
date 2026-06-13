@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>ELT · Elastic Looped Transformers</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --accent: var(--ochre); --accent-soft: var(--ochre-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(44px, 7vw, 78px); line-height: 0.95; letter-spacing: -0.03em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 36px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
+p { margin: 12px 0; } strong { font-weight: 700; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.86em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--ochre-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--ochre); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--ochre); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+table.spec { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+table.spec td, table.spec th { border-bottom: 1px dashed var(--rule); padding: 7px 10px; text-align: left; }
+table.spec th { color: var(--accent); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+table.spec td:first-child { color: var(--muted); }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--ochre-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--moss-soft); } 100% { background: var(--ochre-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* el-specific (滚动进视口分阶段揭示) */
+.el-svg { width: 100%; height: auto; display: block; }
+.el-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .el-rev { opacity: 1; }
+figure.play .el-rev.d1 { transition-delay: 0.15s; }
+figure.play .el-rev.d2 { transition-delay: 0.45s; }
+figure.play .el-rev.d3 { transition-delay: 0.75s; }
+figure.play .el-rev.d4 { transition-delay: 1.05s; }
+figure.play .el-rev.d5 { transition-delay: 1.35s; }
+figure.play .el-rev.d6 { transition-delay: 1.65s; }
+@media (prefers-reduced-motion: reduce) { .el-rev { opacity: 1; transition: none; } }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · elt</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · Looped Transformer · 视觉生成 · 2026-04</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 循环 transformer · 视觉生成</div>
+  <h1 class="title">ELT ·<br /><span class="em">写个 for 循环，不要复制粘贴。</span></h1>
+  <div class="byline">Goyal · Kusupati 等 · Elastic Looped Transformers · 视觉生成 · arXiv 2604.09168 · 2026-04</div>
+  <p class="dek">生成模型靠堆很多不同的层换深度，参数也跟着堆上去。ELT 的赌注：把同一个 block 循环套 L 圈 —— 在深度上共享权重，参数只看 block、算力随圈数走，还能一次训练出一族深度，推理时按预算挑快或挑好。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>ELT 把 <strong>looped transformer</strong><a class="jr" href="#g-01">1</a> 带进<strong>视觉生成</strong>（图像 + 视频）。不堆 D 个不同层，而是把 <strong>N 个 unique 层</strong>组成的 block <strong>循环套 L 圈</strong><a class="jr" href="#g-02">2</a>：<strong>有效深度 = N×L</strong>，但<strong>参数只看 N</strong>、算力随 L 涨（<strong>权重共享</strong><a class="jr" href="#g-03">3</a>）。一次训练出一族深度 → <strong>Elastic / Any-Time 推理</strong><a class="jr" href="#g-04">4</a>，推理时挑 L 在质量-算力前沿上滑。训练靠 <strong>Intra-Loop Self Distillation (ILSD)</strong><a class="jr" href="#g-05">5</a>：teacher 跑满圈、student 随机中途退，加蒸馏逼每一档都好用。底座是 <strong>DiT</strong><a class="jr" href="#g-07">7</a>（在 SD VAE latent 上）和 MaskGIT/MAGVIT。结果：<strong>同等推理算力下 4× 参数缩减</strong>，ImageNet 256 FID 2.0、UCF-101 FVD 72.8、TPU v6e 上 3.5× 吞吐。</p>
+</div>
+
+
+<!-- §01 -->
+<h2><span class="num">§ 01</span>循环 · N 层 block 套 L 圈</h2>
+
+<p>标准 transformer 是 D 个<strong>各不相同</strong>的层叠起来，参数随深度涨。ELT 留一个 <strong>N 层的 block</strong>，把它<strong>循环套 L 圈</strong>——<strong>有效深度 = N×L，参数只存这 N 层</strong>。等于把"复制粘贴 100 遍代码"改成"写个 for 循环跑 100 次"。</p>
+
+<figure id="fig-loop" class="fig-loop">
+  <figcaption>
+    <span>Fig 01 · 循环展开</span>
+    <span class="fnum">参数看 N · 算力随 L · L 推理时可调</span>
+  </figcaption>
+  <svg class="el-svg" viewBox="0 0 760 260" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="el-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b8841c"/></marker></defs>
+    <!-- 左：一个 block + 循环箭头 -->
+    <g class="el-rev d1">
+      <rect x="40" y="90" width="130" height="80" rx="5" fill="#f0e0a8" stroke="#b8841c" stroke-width="1.8"/>
+      <text x="105" y="122" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#7a5a12">block</text>
+      <text x="105" y="142" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#3a3128">N 个 unique 层</text>
+      <text x="105" y="157" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#7a6f5d">只存这一份 → 参数=N</text>
+      <!-- 循环回环箭头 -->
+      <path d="M170,100 C210,70 210,190 172,160" fill="none" stroke="#b8841c" stroke-width="1.6" marker-end="url(#el-a)"/>
+      <text x="208" y="134" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#b8841c">× L 圈</text>
+    </g>
+    <text class="el-rev d2" x="262" y="135" text-anchor="middle" font-family="Fraunces,serif" font-size="26" fill="#3a3128">=</text>
+    <!-- 右：展开成 L 份 -->
+    <text class="el-rev d2" x="520" y="50" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#7a5a12">展开（unroll）= 有效深度 N×L</text>
+    <g font-family="JetBrains Mono,monospace" font-size="9" text-anchor="middle">
+      <g class="el-rev d2"><rect x="300" y="80" width="90" height="110" rx="4" fill="#f7ecc8" stroke="#b8841c"/><text x="345" y="140" fill="#7a5a12">block ①</text></g>
+      <g class="el-rev d3"><rect x="402" y="80" width="90" height="110" rx="4" fill="#f3e4b4" stroke="#b8841c"/><text x="447" y="140" fill="#7a5a12">block ②</text></g>
+      <g class="el-rev d4"><rect x="504" y="80" width="90" height="110" rx="4" fill="#efdda0" stroke="#b8841c"/><text x="549" y="140" fill="#7a5a12">block ③</text></g>
+      <g class="el-rev d5"><rect x="606" y="80" width="90" height="110" rx="4" fill="#e8d088" stroke="#b8841c"/><text x="651" y="140" fill="#7a5a12">block ④</text></g>
+      <g class="el-rev d3" stroke="#b8841c"><line x1="390" y1="135" x2="402" y2="135" marker-end="url(#el-a)"/></g>
+      <g class="el-rev d4" stroke="#b8841c"><line x1="492" y1="135" x2="504" y2="135" marker-end="url(#el-a)"/></g>
+      <g class="el-rev d5" stroke="#b8841c"><line x1="594" y1="135" x2="606" y2="135" marker-end="url(#el-a)"/></g>
+    </g>
+    <text class="el-rev d6" x="500" y="212" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#3a3128">同一套权重盖 L 个戳 · 8N×4L = 等效 32 层深, 只存 8 层参数</text>
+    <text class="el-rev d6" x="500" y="232" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#7a5a12">L 不是训死的——推理时多套几圈 = 多算 = 通常更好</text>
+  </svg>
+</figure>
+
+<p>这跟 <a href="../concepts/convolution.html">卷积</a>的权重共享是同一招，只是共享的轴从"空间位置"换成了"<strong>深度 / 迭代</strong>"。详见 <a href="../concepts/looped-transformer.html">looped-transformer</a>。</p>
+
+
+<!-- §02 -->
+<h2><span class="num">§ 02</span>Elastic · 一次训练，一族深度</h2>
+
+<p>循环把 <strong>L 变成一个推理时的旋钮</strong>，于是一个权重文件天然带<strong>多档算力</strong>：手机跑 2 圈、服务器跑 10 圈，沿质量-算力的 Pareto 前沿滑——不用为每个预算单独训一个模型。这就是 <strong>Elastic / Any-Time</strong><a class="jr" href="#g-04">4</a>，跟 Matryoshka<a class="jr" href="#g-06">6</a> 同一条弹性思路，只是旋钮做在循环圈数上。</p>
+
+<figure id="fig-elastic" class="fig-elastic">
+  <figcaption>
+    <span>Fig 02 · 一个模型扫过整条前沿</span>
+    <span class="fnum">挑 L = 在质量↔算力之间滑</span>
+  </figcaption>
+  <svg class="el-svg" viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg">
+    <!-- 轴 -->
+    <g class="el-rev d1" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">
+      <line x1="90" y1="50" x2="90" y2="230" stroke="#3a3128" stroke-width="1"/>
+      <line x1="90" y1="230" x2="700" y2="230" stroke="#3a3128" stroke-width="1"/>
+      <text x="80" y="46" text-anchor="end">质量 ↑</text>
+      <text x="698" y="248" text-anchor="end">算力（循环圈数 L）→</text>
+    </g>
+    <!-- ELT 一条曲线，4 个 L 点 -->
+    <path class="el-rev d2" d="M150,200 Q300,120 660,86" fill="none" stroke="#b8841c" stroke-width="2.4"/>
+    <g class="el-rev d3" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a5a12" text-anchor="middle">
+      <circle cx="150" cy="200" r="6" fill="#b8841c"/><text x="150" y="218">L=2</text>
+      <circle cx="300" cy="146" r="6" fill="#b8841c"/><text x="300" y="164">L=4</text>
+      <circle cx="470" cy="110" r="6" fill="#b8841c"/><text x="470" y="128">L=6</text>
+      <circle cx="660" cy="86" r="6" fill="#b8841c"/><text x="660" y="74">L=10</text>
+    </g>
+    <text class="el-rev d3" x="380" y="100" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#b8841c">一个 ELT 模型 = 整条橙线（推理挑 L）</text>
+    <!-- 对照：传统每点单独训 -->
+    <g class="el-rev d4" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">
+      <circle cx="180" cy="206" r="4" fill="none" stroke="#7a6f5d"/><circle cx="330" cy="158" r="4" fill="none" stroke="#7a6f5d"/><circle cx="500" cy="124" r="4" fill="none" stroke="#7a6f5d"/>
+      <text x="430" y="200" text-anchor="middle">○ 传统：每个预算单独训一个模型 · 各存各的</text>
+    </g>
+    <text class="el-rev d5" x="380" y="262" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#3a3128">训一个权重 → 部署覆盖手机到服务器 · 运行时按算力早退/多套</text>
+  </svg>
+</figure>
+
+
+<!-- §03 -->
+<h2><span class="num">§ 03</span>ILSD · 怎么让每一档都好用</h2>
+
+<p>难点不在推理，在训练：怎么保证"中途退出"的浅档也像样，而不是只有满配能用？ELT 的 <strong>Intra-Loop Self Distillation</strong><a class="jr" href="#g-05">5</a> 在<strong>一步训练里</strong>同时练 teacher 和 student：</p>
+
+<figure id="fig-ilsd" class="fig-ilsd">
+  <figcaption>
+    <span>Fig 03 · Intra-Loop Self Distillation</span>
+    <span class="fnum">teacher 满圈 · student 中途退 · 蒸馏对齐</span>
+  </figcaption>
+  <svg class="el-svg" viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="el-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7a6f5d"/></marker>
+    <marker id="el-d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#9b2c2c"/></marker></defs>
+    <!-- 共享 block 们（一排） -->
+    <g class="el-rev d1" font-family="JetBrains Mono,monospace" font-size="8.5" text-anchor="middle" fill="#7a5a12">
+      <rect x="60" y="110" width="56" height="56" rx="4" fill="#f3e4b4" stroke="#b8841c"/><text x="88" y="142">block ①</text>
+      <rect x="128" y="110" width="56" height="56" rx="4" fill="#f3e4b4" stroke="#b8841c"/><text x="156" y="142">②</text>
+      <rect x="196" y="110" width="56" height="56" rx="4" fill="#f3e4b4" stroke="#b8841c"/><text x="224" y="142">③</text>
+      <rect x="264" y="110" width="56" height="56" rx="4" fill="#f3e4b4" stroke="#b8841c"/><text x="292" y="142">④=Lmax</text>
+      <text x="190" y="98" text-anchor="middle" font-size="9" fill="#3a3128">同一套共享参数 Θ（循环复用）</text>
+    </g>
+    <!-- student 在 ②后退出 -->
+    <g class="el-rev d2">
+      <path d="M184,138 L184,196 L470,196" fill="none" stroke="#7a6f5d" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#el-b)"/>
+      <text x="300" y="212" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">student：随机在 L_int（这里=2）提前退出 → F_int</text>
+    </g>
+    <!-- teacher 跑满 -->
+    <g class="el-rev d3">
+      <path d="M320,138 L470,138" fill="none" stroke="#b8841c" stroke-width="1.8" marker-end="url(#el-b)"/>
+      <text x="395" y="128" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#b8841c">teacher：跑满 L_max → F_max</text>
+    </g>
+    <!-- 输出 + loss -->
+    <g class="el-rev d4" font-family="JetBrains Mono,monospace" font-size="9" text-anchor="middle">
+      <rect x="474" y="120" width="80" height="36" rx="3" fill="#f0e0a8" stroke="#b8841c"/><text x="514" y="142" fill="#7a5a12">F_max</text>
+      <rect x="474" y="178" width="80" height="36" rx="3" fill="#eef2f7" stroke="#9fb3c8"/><text x="514" y="200" fill="#1f3a5f">F_int</text>
+      <text x="610" y="138" text-anchor="start" fill="#3a3128">→ 真值 loss</text>
+      <text x="610" y="196" text-anchor="start" fill="#3a3128">→ 真值 loss ×λ</text>
+    </g>
+    <!-- 蒸馏箭头 teacher→student -->
+    <g class="el-rev d5">
+      <path d="M514,158 L514,176" fill="none" stroke="#9b2c2c" stroke-width="1.6" marker-end="url(#el-d)"/>
+      <text x="566" y="172" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#9b2c2c">蒸馏：student 对齐 teacher（teacher stop-grad）</text>
+    </g>
+    <text class="el-rev d6" x="380" y="256" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#3a3128">两条路更新同一套 Θ → 逼"每一圈退出都得是个像样的模型" → 弹性</text>
+  </svg>
+</figure>
+
+<p>代价是训练更复杂（要同时照顾所有档），换的是部署的灵活省事。详见 <a href="../concepts/elastic-inference.html">elastic-inference</a>。</p>
+
+
+<!-- §04 -->
+<h2><span class="num">§ 04</span>结果 · 4× 参数缩减 · 谱系</h2>
+
+<p>同等推理算力下，ELT 用<strong>循环换掉参数</strong>，质量持平甚至更好：</p>
+
+<table class="spec">
+  <tr><th>任务 / 模型</th><th>配置</th><th>质量</th><th>参数</th></tr>
+  <tr><td>ImageNet 256 · ELT-XL</td><td>7N×4L</td><td>FID 2.0</td><td>111M</td></tr>
+  <tr><td>ImageNet 256 · MaskGIT-XL</td><td>baseline</td><td>FID 2.0</td><td>446M（4×）</td></tr>
+  <tr><td>ImageNet · ELT (diffusion)</td><td>16N×2L</td><td>FID 2.83</td><td>1.1B</td></tr>
+  <tr><td>ImageNet · DiT-32</td><td>baseline</td><td>FID 3.43</td><td>2.1B</td></tr>
+  <tr><td>UCF-101 视频 · ELT</td><td>6N×4L</td><td>FVD 72.8</td><td>76M</td></tr>
+  <tr><td>UCF-101 · MAGVIT-L</td><td>baseline</td><td>FVD 76</td><td>306M</td></tr>
+</table>
+
+<p>外加 TPU v6e 上峰值 3.5× 吞吐。ELT 是 looped transformer 这条线最新的一站——从推理任务杀进了视觉生成：</p>
+
+<figure id="fig-line" class="fig-line">
+  <figcaption>
+    <span>Fig 04 · Looped Transformer 谱系</span>
+    <span class="fnum">从模拟计算机/推理 → 视觉生成</span>
+  </figcaption>
+  <svg class="el-svg" viewBox="0 0 760 180" xmlns="http://www.w3.org/2000/svg">
+    <line class="el-rev d1" x1="40" y1="120" x2="720" y2="120" stroke="#3a3128" stroke-width="1"/>
+    <g font-family="JetBrains Mono,monospace" text-anchor="middle">
+      <g class="el-rev d1"><circle cx="90" cy="120" r="5" fill="#1f3a5f"/><text x="90" y="108" font-size="9.5" font-weight="700" fill="#1f3a5f">Universal T.</text><text x="90" y="142" font-size="8" fill="#7a6f5d">'18 · 同层循环+ACT</text></g>
+      <g class="el-rev d2"><circle cx="240" cy="120" r="5" fill="#1f3a5f"/><text x="240" y="108" font-size="9.5" font-weight="700" fill="#1f3a5f">Prog. Computer</text><text x="240" y="142" font-size="8" fill="#7a6f5d">'23 · 13层模拟计算机</text></g>
+      <g class="el-rev d3"><circle cx="390" cy="120" r="5" fill="#1f3a5f"/><text x="390" y="108" font-size="9.5" font-weight="700" fill="#1f3a5f">Length Gen.</text><text x="390" y="142" font-size="8" fill="#7a6f5d">'24 · 自适应步数泛化</text></g>
+      <g class="el-rev d4"><circle cx="540" cy="120" r="5" fill="#1f3a5f"/><text x="540" y="108" font-size="9.5" font-weight="700" fill="#1f3a5f">Recurrent-Depth</text><text x="540" y="142" font-size="8" fill="#7a6f5d">'25 · 隐空间潜在推理</text></g>
+      <g class="el-rev d5"><circle cx="670" cy="120" r="6" fill="#b8841c"/><text x="670" y="106" font-size="9.5" font-weight="700" fill="#b8841c">ELT</text><text x="670" y="142" font-size="8" fill="#7a6f5d">'26 · 弹性·视觉生成</text></g>
+    </g>
+    <text class="el-rev d5" x="380" y="56" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#3a3128">循环复用 = 深度上共享权重：先证明能算、能推理，</text>
+    <text class="el-rev d6" x="380" y="78" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#3a3128">ELT 把它做成"省参 + 弹性"带进图像/视频生成</text>
+  </svg>
+</figure>
+
+<div class="note">
+  <span class="l">放进 wiki 这条线</span>
+  <p>ELT 是"<strong>权重共享</strong>"主题的又一个面：<a href="../concepts/convolution.html">卷积</a>在空间上共享、looped transformer 在<strong>深度</strong>上共享。两者都把"重复结构"从参数里抽出来，换成一个可复用的算子。它跟 <a href="../papers/ideogram-4.html">ideogram-4</a> 是视觉生成的两条省法：ideogram 省在"监督形态"（结构化 caption），ELT 省在"<strong>参数复用 + 弹性深度</strong>"。共同的味道——<strong>别把规律摊在参数里，把它做成结构。</strong></p>
+</div>
+
+
+<!-- glossary -->
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">looped transformer</span> · 不堆很多不同层，而是把同一个 block 循环套用，在深度上共享权重。详见 <a href="../concepts/looped-transformer.html">looped-transformer</a>。</li>
+    <li id="g-02"><span class="term">N×L · 有效深度</span> · N = 循环体里 unique 层数（定参数）；L = 循环圈数（定算力）。有效深度 = N×L。如 8N×4L = 等效 32 层、只存 8 层参数。L 在推理时可调。</li>
+    <li id="g-03"><span class="term">权重共享 · weight sharing</span> · 同一套参数被多次复用。卷积沿空间共享，looped transformer 沿深度/迭代共享 → 解耦"算多深"和"多少参数"。</li>
+    <li id="g-04"><span class="term">Elastic / Any-Time 推理</span> · 一次训练出一族深度，推理时按算力预算挑 L，在质量-算力 Pareto 前沿上滑，不必为每个预算单独训。详见 <a href="../concepts/elastic-inference.html">elastic-inference</a>。</li>
+    <li id="g-05"><span class="term">ILSD · Intra-Loop Self Distillation</span> · 训练技巧：teacher 跑满 L_max、student 随机在中间 L_int 退出，loss = 满配真值 + 中途真值(×λ) + 蒸馏(student 对齐 teacher，teacher stop-grad)，两路更新同一套 Θ → 逼每一档都好用。</li>
+    <li id="g-06"><span class="term">Matryoshka · 套娃</span> · 一套权重内嵌多个规模、推理时按需取一档的弹性思路（Kusupati 等）。ELT 把这个旋钮从"宽度/维度"挪到"循环圈数"。</li>
+    <li id="g-07"><span class="term">DiT · Diffusion Transformer</span> · 把扩散去噪网络换成 transformer，在 latent（这里 SD v1.4 VAE）上做生成。ELT 把它的层换成循环 block。详见 <a href="../concepts/diffusion-transformer.html">diffusion-transformer</a>、<a href="../concepts/kl-vae.html">kl-vae</a>。</li>
+    <li id="g-08"><span class="term">MaskGIT / MAGVIT · 掩码生成</span> · 另一类视觉生成：BERT 式 transformer 在 VQ token 上迭代地"填空"出图/视频。ELT 也在这套上做了循环版（图像 MaskGIT、视频 MAGVIT）。</li>
+    <li id="g-09"><span class="term">FID / FVD</span> · 生成质量指标（越低越好）：FID 图像、FVD 视频，比真实分布与生成分布的距离。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>SOURCE · arXiv 2604.09168 · ELT: Elastic Looped Transformers for Visual Generation</span>
+  <span>INGESTED · 2026-06-10</span>
+</div>
+
+</div>
+<script>
+{
+  const figs = ['fig-loop','fig-elastic','fig-ilsd','fig-line'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.15 });
+    obs.observe(el);
+  });
+}
+</script>
+</body>
+</html>

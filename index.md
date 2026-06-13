@@ -35,6 +35,7 @@
 - [爱在冰川 · 低吸待涨的道法术](wiki/papers/aizai-bingchuan.md) — 交易/短线经验派: 道(低吸待涨极简循环)→法(横盘龙头低吸/大智大勇/潜伏)→术(揉搓线/做小T); 从公开复盘合集提炼, 非荐股
 - [Ideogram 4.0 · 9.3B 单流 DiT](wiki/papers/ideogram-4.md) — 文生图开源权重: 单流 DiT + Qwen3-VL 文本编码器 + 结构化 JSON caption(bbox/调色板); 9.3B 文本渲染碾压 80B
 - [MiniMind-O · 0.1B 端到端 Omni](wiki/papers/minimind-o.md) — 从0实现的听看说 Omni: Thinker–Talker 双路径 + MTP 出8层 Mimi codes + 冻结编码器/projector; fish-speech 的麻雀版
+- [ELT · Elastic Looped Transformers](wiki/papers/elt.md) — looped transformer 进视觉生成: N层block循环L圈(深度共享权重) + 一族深度弹性推理 + ILSD; 同算力 4× 参数缩减
 
 ## Books · 书籍精讲
 
@@ -150,6 +151,10 @@
 - [Qwen3-VL](wiki/concepts/qwen3-vl.md) — 当文本编码器用的 VLM；翻译官水平决定画师上限，取 13 个中间层
 - [M-RoPE](wiki/concepts/mrope.md) — 位置从一个数字升级成 (时间,行,列) 三元组；bbox 布局靠它
 - [QK-Norm](wiki/concepts/qk-rmsnorm.md) — 给 Q/K 做 RMSNorm 防 attention 塌成 one-hot 炸训练
+
+### Looped / 弹性
+- [Looped Transformer](wiki/concepts/looped-transformer.md) — 同一个 block 循环套 L 圈，深度上共享权重；有效深度 N×L、参数只看 N；写 for 循环不复制粘贴
+- [Elastic Inference](wiki/concepts/elastic-inference.md) — 一次训练一族深度，推理按算力挑一档；旋钮做在循环圈数上，Matryoshka 同思路
 
 ### 音频 tokenization
 - [Log-Mel Spectrogram](wiki/concepts/log-mel-spectrogram.md) — 音频特征基础

@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Elastic Inference · 一个模型，多档算力 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · elastic-inference</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Elastic Inference · 一个模型，多档算力</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>一次训练出一<strong>族</strong>模型，推理时按手头算力<strong>临时挑一档</strong>（快但糙 ↔ 慢但好），不必为每个预算单独训一个模型。</p>
+<h2>直觉 · 别为每块设备各训一个</h2>
+<p>部署一个模型要面对千差万别的预算：手机要快、服务器能慢工出细活。传统做法是训一堆不同大小的模型（small/base/large），各训各的、各存各的，贵且难维护。</p>
+<p>Elastic（弹性）的思路：<strong>训一个，内部自带多档</strong>。推理时一个旋钮一拨，就在"快而糙"和"慢而精"之间滑动，沿<strong>质量-算力的 Pareto 前沿</strong>走。Matryoshka（套娃）系列把这个旋钮做在"宽度/维度"上；<a href="../concepts/looped-transformer.html">looped-transformer</a> 的 ELT 把它做在<strong>循环圈数 L</strong> 上——多套几圈就多算、更准。</p>
+<h2>怎么做的 · 训练时就把每一档都练好</h2>
+<p>难点不在推理，在训练：怎么保证"中途退出"那些档也好用，而不是只有满配能用？</p>
+<p>ELT 用 <strong>Intra-Loop Self Distillation（ILSD）</strong>：</p>
+<ul>
+<li><strong>teacher 路</strong>：跑满 L_max 圈，出最好结果。</li>
+<li><strong>student 路</strong>：随机在中间某圈 L_int 提前退出。</li>
+<li><strong>loss</strong>：满配的真值 loss + 中途档的真值 loss（加权）+ <strong>蒸馏 loss</strong>（让中途档去对齐 teacher 的表征，teacher 那侧 stop-grad）。</li>
+<li>两条路<strong>更新同一套共享 block 参数</strong>。</li>
+</ul>
+<p>于是这套参数被逼着"<strong>每一圈退出都得是个像样的模型</strong>"，弹性就出来了。</p>
+<h2>它换来什么</h2>
+<ul>
+<li><strong>一次训练，覆盖多端</strong>：一个权重文件，手机跑 2 圈、服务器跑 10 圈。</li>
+<li><strong>Any-Time 推理</strong>：算力紧就早退、宽裕就多算，运行时动态权衡。</li>
+<li>代价：训练更复杂（要同时照顾所有档），而且每一档未必比"专门为这档训的单模型"更强——换的是<strong>部署的灵活和省事</strong>。</li>
+</ul>
+<h2>代码出处</h2>
+<ul>
+<li>ELT / ILSD：arXiv 2604.09168</li>
+<li>谱系：Matryoshka Representation Learning、MatFormer（Kusupati 等同一条弹性思路）</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/looped-transformer.html">looped-transformer</a> · ELT 把弹性旋钮做在循环圈数上</li>
+<li><a href="../papers/elt.html">elt</a> · 用 ILSD 训出一族深度的视觉生成模型</li>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · 被做成弹性的底座</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/elt.html"><span class="cat">paper</span>ELT · Elastic Looped Transformers for Visual Generation</a></li><li><a href="../concepts/looped-transformer.html"><span class="cat">concept</span>Looped Transformer · 把同一个 block 循环套用</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/elastic-inference.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
