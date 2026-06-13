@@ -1,8 +1,8 @@
 ---
 name: cross-entropy
 type: concept
-sources: [gpt-2, dino]
-updated: 2026-06-11
+sources: [gpt-2, dino, diffusion-opd]
+updated: 2026-06-12
 ---
 
 # Cross-Entropy · 交叉熵 · −log(你押对的概率)
@@ -80,3 +80,4 @@ updated: 2026-06-11
 - [[dino]] · student 软分布 vs teacher 软分布的交叉熵
 - [[grpo]] · 在交叉熵基础上加 reward 加权 + KL 约束
 - [[rl-for-llm-people]] · KL 散度跟交叉熵的关系在这条线里
+- [[diffusion-opd]] · 同协方差高斯的 KL 退化成均值差的 MSE

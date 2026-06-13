@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Drifting Models · 训练时漂移、一步生成</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --teal: #1a6a64; --teal-soft: #cce5e1;
+  --rust: #bf5a1e; --rust-soft: #f2dcc2;
+  --accent: var(--rust); --accent-soft: var(--rust-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(40px, 6.4vw, 72px); line-height: 0.97; letter-spacing: -0.03em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 36px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
+p { margin: 12px 0; } strong { font-weight: 700; }
+ul { margin: 12px 0; padding-left: 24px; } li { margin: 6px 0; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.86em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--rust-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rust); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--rust); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+table.spec { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+table.spec td, table.spec th { border-bottom: 1px dashed var(--rule); padding: 7px 10px; text-align: left; }
+table.spec th { color: var(--accent); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+table.spec td:first-child { color: var(--muted); }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--rust-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--rust-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* df-specific */
+.df-svg { width: 100%; height: auto; display: block; }
+.df-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .df-rev { opacity: 1; }
+figure.play .df-rev.d1 { transition-delay: 0.15s; }
+figure.play .df-rev.d2 { transition-delay: 0.45s; }
+figure.play .df-rev.d3 { transition-delay: 0.75s; }
+figure.play .df-rev.d4 { transition-delay: 1.05s; }
+figure.play .df-rev.d5 { transition-delay: 1.35s; }
+figure.play .df-rev.d6 { transition-delay: 1.65s; }
+.df-svg .draw { stroke-dasharray: 1000; stroke-dashoffset: 1000; transition: stroke-dashoffset 1.5s ease; }
+figure.play .df-svg .draw { stroke-dashoffset: 0; }
+figure.play .df-svg .draw.d2 { transition-delay: 0.40s; }
+figure.play .df-svg .draw.d3 { transition-delay: 0.70s; }
+@media (prefers-reduced-motion: reduce) { .df-rev { opacity: 1; transition: none; } .df-svg .draw { stroke-dashoffset: 0; transition: none; } }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · drifting-models</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · 生成模型 · Drifting · 2026</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 一步生成 · 训练时演化</div>
+  <h1 class="title">Drifting ·<br /><span class="em">把迭代从推理时，搬进训练时。</span></h1>
+  <div class="byline">Mingyang Deng, He Li, Tianhong Li, Yilun Du, Kaiming He · Generative Modeling via Drifting · arXiv 2602.04770 · 2026</div>
+  <p class="dek">扩散把"反复迭代"放在推理时——生成一张图要跑 250 步去噪。Drifting 反过来：用一个"吸引真数据 + 排斥自己"的漂移场，在<strong>训练时</strong>一点点把生成分布推向真实分布；等它们重合、场归零，生成器就练成了。推理只要<strong>一步</strong>。ImageNet 256 一步 FID 1.54。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p><strong>Drifting Model</strong> 是一种新生成范式：扩散/flow 把复杂的"噪声→数据"映射拆成<strong>推理时的多步迭代</strong>（250+ NFE）；Drifting 把迭代挪到<strong>训练时</strong>，推理就只剩<strong>一步</strong>（1-NFE）。靠一个<strong>漂移场</strong><a class="jr" href="#g-01">1</a> <code>V = V⁺(吸引真数据 p) − V⁻(排斥自生成 q)</code> 推动样本。关键<strong>反对称</strong><a class="jr" href="#g-02">2</a> <code>V_{p,q} = −V_{q,p}</code>：当 <code>q=p</code> 时场<strong>归零 → 平衡</strong>，生成器恰好停在"骗过数据"那刻。训练是个<strong>不动点</strong><a class="jr" href="#g-03">3</a>：把"漂移后的自己"<code>stopgrad</code> 冻成靶子去追，loss = <code>‖f(ε) − stopgrad(f(ε)+V)‖²</code> = 最小化漂移量 <code>‖V‖²</code>。场用<strong>核函数</strong><a class="jr" href="#g-04">4</a> 在预训练特征空间里算（吸近处真样本、斥近处假样本，像粒子间的力）。像<strong>没有判别器的 GAN</strong><a class="jr" href="#g-05">5</a>。结果：ImageNet 256 一步 <strong>FID 1.54</strong>（latent）/ 1.61（pixel），SOTA 单步。</p>
+</div>
+
+
+<!-- §01 -->
+<h2><span class="num">§ 01</span>痛点：迭代卡在推理时</h2>
+
+<p><a href="ode-sde.html">扩散 / flow-matching</a> 的本事，是把"噪声 → 数据"这个超复杂的映射，<strong>拆成一长串小步</strong>：每步只去掉一点噪声，沿着学好的 <a href="ode-sde.html">ODE/SDE</a> 爬。好处是每步好学；代价是<strong>生成一张图要在推理时跑很多步</strong>（几十到几百次网络前向，NFE 高），又慢又贵。</p>
+
+<p>各种"少步采样"（DDIM、蒸馏、consistency）都在<strong>事后压缩</strong>这条推理链。Drifting 换了个根上的想法：<strong>能不能压根不在推理时迭代——把迭代这件事，整个搬到训练时去？</strong></p>
+
+
+<!-- §02 -->
+<h2><span class="num">§ 02</span>漂移场：吸引真数据 + 排斥自己</h2>
+
+<p>把生成器吐出的样本想成一群<strong>粒子</strong>。Drifting 给每个粒子设计一个<strong>漂移场 V</strong>，两股力合成：</p>
+
+<ul>
+<li><strong>吸引</strong> <code>V⁺</code>：把粒子往<strong>真实数据 p</strong> 拉（靠近真样本）。</li>
+<li><strong>排斥</strong> <code>V⁻</code>：把粒子从<strong>当前生成分布 q</strong> 推开（别都挤在自己现在这个团里 → 散开、补上没覆盖到的地方）。</li>
+</ul>
+
+<pre class="eq">V_{p,q}(x) = V⁺_p(x) − V⁻_q(x)
+           = 吸向真数据      − 斥离自生成</pre>
+
+<figure id="fig-field" class="fig-field">
+  <figcaption>
+    <span>Fig 01 · 一个粒子受的两股力</span>
+    <span class="fnum">吸向真数据 p · 斥离自生成 q · 合成净漂移</span>
+  </figcaption>
+  <svg class="df-svg" viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="df1-g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#4a6b3a"/></marker>
+      <marker id="df1-r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#9b2c2c"/></marker>
+      <marker id="df1-o" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#bf5a1e"/></marker>
+    </defs>
+    <!-- 真数据云 -->
+    <g class="df-rev d1" fill="#1a6a64">
+      <circle cx="545" cy="95" r="5"/><circle cx="568" cy="108" r="5"/><circle cx="525" cy="112" r="5"/><circle cx="555" cy="125" r="5"/><circle cx="582" cy="92" r="5"/><circle cx="535" cy="80" r="5"/><circle cx="600" cy="115" r="5"/><circle cx="560" cy="100" r="5"/>
+    </g>
+    <text class="df-rev d1" x="562" y="62" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#1a6a64">真实数据 p</text>
+    <!-- 生成云 -->
+    <g class="df-rev d1" fill="#bf5a1e" opacity="0.85">
+      <circle cx="200" cy="235" r="5"/><circle cx="225" cy="225" r="5"/><circle cx="180" cy="222" r="5"/><circle cx="215" cy="248" r="5"/><circle cx="245" cy="238" r="5"/><circle cx="170" cy="240" r="5"/><circle cx="232" cy="210" r="5"/>
+    </g>
+    <text class="df-rev d1" x="195" y="278" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#bf5a1e">当前生成 q</text>
+    <!-- 选中粒子 -->
+    <circle class="df-rev d2" cx="300" cy="200" r="8" fill="#bf5a1e" stroke="#3a3128" stroke-width="1.5"/>
+    <text class="df-rev d2" x="300" y="186" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a3128">一个生成粒子</text>
+    <!-- 吸引力（绿，朝真数据，陡） -->
+    <line class="df-rev d3" x1="308" y1="195" x2="432" y2="150" stroke="#4a6b3a" stroke-width="2" marker-end="url(#df1-g)"/>
+    <text class="df-rev d3" x="392" y="143" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#4a6b3a">吸引 → 真数据 p</text>
+    <!-- 排斥力（红，离开自生成，浅） -->
+    <line class="df-rev d4" x1="308" y1="203" x2="420" y2="188" stroke="#9b2c2c" stroke-width="2" marker-end="url(#df1-r)"/>
+    <text class="df-rev d4" x="404" y="205" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#9b2c2c">排斥 ← 离开自生成 q</text>
+    <!-- 净漂移（橙，粗，居中） -->
+    <line class="df-rev d5" x1="310" y1="199" x2="452" y2="166" stroke="#bf5a1e" stroke-width="3.4" marker-end="url(#df1-o)"/>
+    <text class="df-rev d5" x="470" y="166" text-anchor="start" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#bf5a1e">= 净漂移 V</text>
+  </svg>
+</figure>
+
+
+<!-- §03 -->
+<h2><span class="num">§ 03</span>反对称 → 平衡：q=p 时场归零</h2>
+
+<p>怎么知道"练好了"该停？靠漂移场的<strong>反对称</strong>性质：</p>
+
+<pre class="eq">V_{p,q}(x) = − V_{q,p}(x)        对所有 x 成立
+⟹  当 q = p 时，V_{p,q}(x) = 0     （场处处归零 → 平衡）</pre>
+
+<p>直白说：<strong>生成分布 q 一旦和真实分布 p 重合，吸引和排斥正好抵消，粒子不再被推动</strong>。生成器恰好停在"q 骗过 p"那一刻——这就是天然的收敛信号，不用判别器、不用额外的停止准则。</p>
+
+<figure id="fig-equil" class="fig-equil">
+  <figcaption>
+    <span>Fig 02 · 没匹配就漂、匹配了就停</span>
+    <span class="fnum">q≠p：场≠0 继续漂 · q=p：场=0 平衡</span>
+  </figcaption>
+  <svg class="df-svg" viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="df2-o" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#bf5a1e"/></marker></defs>
+    <line x1="362" y1="40" x2="362" y2="230" class="df-rev d1" stroke="#bfb398" stroke-width="1" stroke-dasharray="5 4"/>
+    <!-- 左：q≠p -->
+    <text class="df-rev d1" x="180" y="44" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#bf5a1e">q ≠ p</text>
+    <g class="df-rev d2" fill="#1a6a64"><circle cx="250" cy="95" r="5"/><circle cx="272" cy="108" r="5"/><circle cx="258" cy="120" r="5"/><circle cx="288" cy="100" r="5"/><circle cx="238" cy="108" r="5"/></g>
+    <g class="df-rev d2" fill="#bf5a1e" opacity="0.85"><circle cx="105" cy="170" r="5"/><circle cx="128" cy="182" r="5"/><circle cx="118" cy="158" r="5"/><circle cx="92" cy="182" r="5"/><circle cx="140" cy="168" r="5"/></g>
+    <g class="df-rev d3" stroke="#bf5a1e" stroke-width="2" fill="none">
+      <line x1="125" y1="160" x2="180" y2="135" marker-end="url(#df2-o)"/><line x1="148" y1="172" x2="205" y2="145" marker-end="url(#df2-o)"/>
+    </g>
+    <text class="df-rev d3" x="180" y="220" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#bf5a1e">场 V ≠ 0 → 样本继续被推</text>
+    <!-- 右：q=p -->
+    <text class="df-rev d4" x="540" y="44" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#4a6b3a">q = p</text>
+    <g class="df-rev d5"><circle cx="520" cy="120" r="5" fill="#1a6a64"/><circle cx="535" cy="132" r="5" fill="#bf5a1e"/><circle cx="548" cy="118" r="5" fill="#1a6a64"/><circle cx="528" cy="108" r="5" fill="#bf5a1e"/><circle cx="556" cy="132" r="5" fill="#1a6a64"/><circle cx="512" cy="134" r="5" fill="#bf5a1e"/><circle cx="542" cy="146" r="5" fill="#1a6a64"/><circle cx="560" cy="106" r="5" fill="#bf5a1e"/></g>
+    <text class="df-rev d6" x="540" y="190" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="700" fill="#4a6b3a">V_{p,q} = −V_{q,p} ⟹ 场 = 0</text>
+    <text class="df-rev d6" x="540" y="208" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#4a6b3a">两色完全混匀 → 不再漂 → 停</text>
+  </svg>
+</figure>
+
+
+<!-- §04 -->
+<h2><span class="num">§ 04</span>训练即演化：不动点 + stopgrad</h2>
+
+<p>那"漂移"具体怎么训进网络？用一个<strong>不动点</strong>技巧。每一步：算出漂移场会把当前样本推到哪（<code>f(ε)+V</code>），把这个"漂移后的自己"<strong>冻住</strong>（<code>stopgrad</code>，不回传梯度）当靶子，让生成器输出去<strong>追</strong>它：</p>
+
+<pre class="eq">L = E_ε ‖ f_θ(ε) − stopgrad( f_θ(ε) + V_{p,q}(f_θ(ε)) ) ‖²
+  = E_ε ‖ V(f_θ(ε)) ‖²            # 等价于最小化漂移量</pre>
+
+<p>妙处：随着训练一步步走，样本的<strong>隐式轨迹</strong> <code>xᵢ₊₁ = xᵢ + V(xᵢ)</code> 把整个分布 q 一点点漂向 p。<strong>优化器的迭代，本身就是分布的演化</strong>——这正是扩散在推理时用 ODE solver 干的事，被搬到了训练循环里。训练完，<code>V≈0</code>、<code>q≈p</code>，生成器 <code>f_θ(ε)</code> 一次前向直接出图。</p>
+
+<pre class="eq"># Algorithm 1（简化）
+e = randn(M, C)
+x = f(e)                          # 生成样本
+V = compute_V(x, y_真样本, y_neg=x)  # 吸引-排斥力场（核函数）
+x_drift = stopgrad(x + V)         # 漂移后的靶子，冻住
+loss = mse(x, x_drift)            # 追上去</pre>
+
+<figure id="fig-evolve" class="fig-evolve">
+  <figcaption>
+    <span>Fig 03 · 迭代搬家：推理时 → 训练时</span>
+    <span class="fnum">扩散 250 步在推理 · Drifting 迭代在训练、推理 1 步</span>
+  </figcaption>
+  <svg class="df-svg" viewBox="0 0 720 290" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="df3-h" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#7a6f5d"/></marker>
+    <marker id="df3-o" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#bf5a1e"/></marker></defs>
+    <!-- 上：扩散 -->
+    <text class="df-rev d1" x="60" y="40" font-family="JetBrains Mono,monospace" font-size="10" font-weight="700" fill="#1f3a5f">扩散 / flow：迭代在【推理】时</text>
+    <g class="df-rev d1" font-family="JetBrains Mono,monospace" font-size="9.5" text-anchor="middle">
+      <rect x="56" y="56" width="74" height="40" rx="3" fill="#faf4e1" stroke="#1f3a5f"/><text x="93" y="80" fill="#1f3a5f">噪声 ε</text>
+      <rect x="560" y="56" width="92" height="40" rx="3" fill="#c8d4e2" stroke="#1f3a5f"/><text x="606" y="80" fill="#1f3a5f">图像</text>
+    </g>
+    <line class="df-rev d2" x1="132" y1="76" x2="556" y2="76" stroke="#9fb3c8" stroke-width="1.5" stroke-dasharray="6 5" marker-end="url(#df3-h)"/>
+    <g class="df-rev d2" font-family="JetBrains Mono,monospace" font-size="8" fill="#9fb3c8" text-anchor="middle">
+      <circle cx="220" cy="76" r="3"/><circle cx="300" cy="76" r="3"/><circle cx="380" cy="76" r="3"/><circle cx="460" cy="76" r="3"/>
+    </g>
+    <text class="df-rev d2" x="345" y="68" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" font-weight="700" fill="#9b2c2c">× 250 步（NFE 很高，每次生成都跑）</text>
+    <!-- 分隔 -->
+    <line x1="40" y1="128" x2="680" y2="128" class="df-rev d3" stroke="#bfb398" stroke-width="1" stroke-dasharray="4 4"/>
+    <!-- 下：drifting -->
+    <text class="df-rev d3" x="60" y="158" font-family="JetBrains Mono,monospace" font-size="10" font-weight="700" fill="#bf5a1e">Drifting：迭代在【训练】时</text>
+    <!-- 训练循环框 -->
+    <rect class="df-rev d4" x="56" y="172" width="330" height="92" rx="6" fill="#f2dcc2" stroke="#bf5a1e" stroke-width="1.4"/>
+    <text class="df-rev d4" x="221" y="190" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" font-weight="700" fill="#8a3f12">训练循环：吸引+排斥 把 q 漂向 p</text>
+    <g class="df-rev d4">
+      <circle cx="110" cy="226" r="15" fill="none" stroke="#bf5a1e" stroke-width="1.4"/><text x="110" y="229" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#bf5a1e">q₀</text>
+      <circle cx="180" cy="226" r="15" fill="none" stroke="#bf5a1e" stroke-width="1.4"/><text x="180" y="229" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#bf5a1e">q₁</text>
+      <circle cx="250" cy="226" r="15" fill="none" stroke="#bf5a1e" stroke-width="1.4"/><text x="250" y="229" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#bf5a1e">q₂</text>
+      <circle cx="335" cy="226" r="17" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.6"/><text x="335" y="229" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="#4a6b3a">q=p</text>
+      <line x1="127" y1="226" x2="163" y2="226" stroke="#bf5a1e" stroke-width="1.3" marker-end="url(#df3-o)"/>
+      <line x1="197" y1="226" x2="233" y2="226" stroke="#bf5a1e" stroke-width="1.3" marker-end="url(#df3-o)"/>
+      <line x1="267" y1="226" x2="312" y2="226" stroke="#bf5a1e" stroke-width="1.3" marker-end="url(#df3-o)"/>
+    </g>
+    <!-- 推理 1 步 -->
+    <g class="df-rev d5" font-family="JetBrains Mono,monospace" font-size="9.5" text-anchor="middle">
+      <rect x="430" y="180" width="70" height="36" rx="3" fill="#faf4e1" stroke="#bf5a1e"/><text x="465" y="202" fill="#8a3f12">噪声 ε</text>
+      <rect x="600" y="180" width="80" height="36" rx="3" fill="#f2dcc2" stroke="#bf5a1e" stroke-width="1.6"/><text x="640" y="202" fill="#8a3f12">图像</text>
+      <line x1="500" y1="198" x2="596" y2="198" stroke="#bf5a1e" stroke-width="2" marker-end="url(#df3-o)"/>
+      <text x="548" y="190" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="#bf5a1e">1 步</text>
+    </g>
+    <text class="df-rev d6" x="555" y="246" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#bf5a1e">练好后，生成一锤子（1-NFE）</text>
+  </svg>
+</figure>
+
+
+<!-- §05 -->
+<h2><span class="num">§ 05</span>它像谁 · 结果</h2>
+
+<p>这味道很像 <strong>GAN，但没有判别器</strong>：GAN 用一个学出来的判别器给"真/假"打分、推动生成器；Drifting 把这股推力换成<strong>核函数算的漂移场</strong>——吸引近处真样本、排斥近处自生成样本（<code>k(x,y)=exp(−‖x−y‖/τ)</code>），不用训练对抗网络，<strong>排斥自己那项天然防 mode collapse</strong>。场在预训练特征空间（latent-MAE）里算，省掉直接在高维像素上较劲。</p>
+
+<table class="spec">
+  <tr><th>对照</th><th>扩散 / flow</th><th>Drifting</th></tr>
+  <tr><td>迭代发生在</td><td>推理时（固定 ODE/SDE 轨迹）</td><td>训练时（优化器迭代 = 分布演化）</td></tr>
+  <tr><td>推理步数</td><td>多步（250+ NFE）</td><td>一步（1-NFE）</td></tr>
+  <tr><td>收敛信号</td><td>—</td><td>漂移场归零（q=p）</td></tr>
+  <tr><td>ImageNet 256 FID</td><td>多步才到</td><td>1.54（latent）/ 1.61（pixel）· 一步</td></tr>
+</table>
+
+<div class="note">
+  <span class="l">放进 wiki 这条线</span>
+  <p>Drifting 接 <a href="ode-sde.html">ODE/SDE</a> 那条线但走相反方向：扩散把"噪声→数据"的迭代放<strong>推理</strong>时（多步慢）；Drifting 把它放<strong>训练</strong>时，推理一步。机制上像<strong>无判别器的 GAN</strong> / 分布匹配，靠<strong>吸引-排斥漂移场 + 反对称平衡（q=p 场归零）+ stopgrad 不动点</strong>三件套。一句话：<strong>别在生成时反复爬，训练时就把生成器调到"一步到位"。</strong></p>
+</div>
+
+
+<!-- glossary -->
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">漂移场 V_{p,q}</span> · 推动生成粒子的力场，<code>V = V⁺(吸向真数据 p) − V⁻(斥离自生成 q)</code>。loss 等于最小化 <code>‖V‖²</code>。</li>
+    <li id="g-02"><span class="term">反对称 → 平衡</span> · <code>V_{p,q}=−V_{q,p}</code>，所以 <code>q=p</code> 时场处处归零。生成分布骗过真实分布的那刻，粒子停止漂移 = 收敛信号。</li>
+    <li id="g-03"><span class="term">stopgrad 不动点</span> · 把"漂移后的自己"<code>f(ε)+V</code> 冻住当靶子，让生成器回归去追。训练迭代 <code>xᵢ₊₁=xᵢ+V</code> 就是分布演化。</li>
+    <li id="g-04"><span class="term">核漂移场</span> · 用 <code>k(x,y)=exp(−‖x−y‖/τ)</code> 算吸引/排斥，在预训练特征空间（latent-MAE）里做，像粒子间物理力。</li>
+    <li id="g-05"><span class="term">vs GAN</span> · 同样"吸真斥假"，但不用判别器、不打对抗；排斥自生成那项天然防 mode collapse。也可看作分布匹配蒸馏的连续场版本。</li>
+    <li id="g-06"><span class="term">1-NFE / 训练时演化</span> · NFE=网络前向次数。扩散推理几百次；Drifting 把迭代搬进训练，推理只 1 次前向。ImageNet 256 一步 FID 1.54。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>SOURCE · arXiv 2602.04770 · Generative Modeling via Drifting (Deng, Li, Li, Du, He · 2026)</span>
+  <span>INGESTED · 2026-06-12</span>
+</div>
+
+</div>
+<script>
+{
+  const figs = ['fig-field','fig-equil','fig-evolve'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.15 });
+    obs.observe(el);
+  });
+}
+</script>
+</body>
+</html>
