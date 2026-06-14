@@ -694,3 +694,9 @@ skill 更新:
 - diffusion-opd bespoke(garnet #9a2f5e): ali-vilab 2605.15055; 多奖励对齐扩散打架/遗忘→On-Policy Distillation(学生自己走老师纠正)→两阶段(各训专家老师→沿学生轨迹蒸一个学生)→扩散=高斯马尔可夫链同协方差KL塌成均值MSE; 3图; 0.929 vs 级联0.851/多任务RL0.763
 - 接线: drifting↔ode-sde/flow-matching(反方向); opd↔ppo+ode-sde+cross-entropy(高斯KL=MSE)
 - 回链: cross-entropy 加 diffusion-opd source+链接; index 接 ode-sde 后; 6图全本地 headless 验证
+
+## [2026-06-12] add | markov-chain + closed-form-kl 两个前置 concept 页
+- 用户反馈 diffusion-opd g-03 的"高斯马尔可夫链/闭式KL"看不懂(前置没补); 拆成两个 concept
+- markov-chain: 无记忆(跳格子/天气)+高斯转移(钟形雾,雾心μ模型猜/雾胖瘦σ由schedule定)+扩散去噪=反向SDE离散化; 链图
+- closed-form-kl: 闭式(πr² vs 撒豆子估)+同协方差高斯KL塌成均值差²(MSE); 同宽钟形图
+- 回链: diffusion-opd 术语表 g-03/g-04 改成链到这俩新页+"不懂先点进去"; index 生成模型基础段加两条
