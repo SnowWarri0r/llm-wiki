@@ -700,3 +700,10 @@ skill 更新:
 - markov-chain: 无记忆(跳格子/天气)+高斯转移(钟形雾,雾心μ模型猜/雾胖瘦σ由schedule定)+扩散去噪=反向SDE离散化; 链图
 - closed-form-kl: 闭式(πr² vs 撒豆子估)+同协方差高斯KL塌成均值差²(MSE); 同宽钟形图
 - 回链: diffusion-opd 术语表 g-03/g-04 改成链到这俩新页+"不懂先点进去"; index 生成模型基础段加两条
+
+## [2026-06-14] add | qwen3-asr bespoke 精装页 + gspo concept（用户给 Qwen3-ASR，顺带 GSPO）
+- WebSearch+WebFetch 精读 arxiv 2601.21337(Qwen3-ASR) + 2507.18071(GSPO)，知识截止没覆盖
+- qwen3-asr bespoke(steel #3d5a6c, 第10色): 不从头训ASR→预训练Qwen3当解码器+AuT耳朵+projector插头(=modality-projector模式); AuT 8×下采样12.5Hz+动态窗口1s~8s流式/离线; 训练四段; context biasing(prompt热词)+52语言+整首歌BGM+ForcedAligner填槽NAR时间戳; 3图; 带口音英语16.07完胜Whisper21.30
+- gspo concept: GRPO的token级重要性比率→序列级(每token只采一次=高方差噪声易崩, 奖励本就序列级); 稳MoE RL; token级vs序列级对照图
+- 接线: qwen3-asr↔modality-projector/whisper/log-mel-spectrogram/gspo; gspo↔grpo/ppo
+- 回链: modality-projector/log-mel-spectrogram 加 qwen3-asr source; grpo 加 gspo 后继链接; index 加两条; 4图全本地验证
