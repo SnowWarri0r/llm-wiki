@@ -707,3 +707,7 @@ skill 更新:
 - gspo concept: GRPO的token级重要性比率→序列级(每token只采一次=高方差噪声易崩, 奖励本就序列级); 稳MoE RL; token级vs序列级对照图
 - 接线: qwen3-asr↔modality-projector/whisper/log-mel-spectrogram/gspo; gspo↔grpo/ppo
 - 回链: modality-projector/log-mel-spectrogram 加 qwen3-asr source; grpo 加 gspo 后继链接; index 加两条; 4图全本地验证
+
+## [2026-06-14] add | gspo 数字例子 + log-mel/Fbank 五步流水线
+- gspo: 用户嫌 r_seq 公式抽象, 加4token演算(π_old/π_new→r_t 1.2/0.5/1.17/1.1, 序列连乘0.06→0.0462, r_seq=0.77^.25≈0.94=几何平均); 柱状图(0.5探出clip带 vs r_seq稳线); 释 1/|y| 防连乘指数爆塌
+- log-mel-spectrogram: 用户问 Fbank 怎么做没补; 正名(Fbank=本页/MFCC=Fbank+DCT) + 从波形到Fbank五步(分帧/加窗防泄漏/每帧FFT=STFT/Mel三角滤波器组=Fbank名字由来/log) + 六格流水线图; 接 fft 页
