@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>LSTM · 长短期记忆 · 给 RNN 修一条记忆传送带</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --teal: #1a6a64; --teal-soft: #cce5e1;
+  --pine: #2f6e4a; --pine-soft: #cfe6d8;
+  --accent: var(--pine); --accent-soft: var(--pine-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(40px, 6.2vw, 72px); line-height: 0.98; letter-spacing: -0.03em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 36px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
+p { margin: 12px 0; } strong { font-weight: 700; }
+ul { margin: 12px 0; padding-left: 24px; } li { margin: 6px 0; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.86em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--pine-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--pine); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--pine); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+table.spec { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+table.spec td, table.spec th { border-bottom: 1px dashed var(--rule); padding: 7px 10px; text-align: left; }
+table.spec th { color: var(--accent); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+table.spec td:first-child { color: var(--muted); }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--pine-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--pine-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* ls-specific */
+.ls-svg { width: 100%; height: auto; display: block; }
+.ls-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .ls-rev { opacity: 1; }
+figure.play .ls-rev.d1 { transition-delay: 0.15s; }
+figure.play .ls-rev.d2 { transition-delay: 0.45s; }
+figure.play .ls-rev.d3 { transition-delay: 0.75s; }
+figure.play .ls-rev.d4 { transition-delay: 1.05s; }
+figure.play .ls-rev.d5 { transition-delay: 1.35s; }
+figure.play .ls-rev.d6 { transition-delay: 1.65s; }
+.ls-svg .draw { stroke-dasharray: 1000; stroke-dashoffset: 1000; transition: stroke-dashoffset 1.5s ease; }
+figure.play .ls-svg .draw { stroke-dashoffset: 0; }
+@media (prefers-reduced-motion: reduce) { .ls-rev { opacity: 1; transition: none; } .ls-svg .draw { stroke-dashoffset: 0; transition: none; } }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · lstm</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · 序列模型 · LSTM · 1997</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 循环网络 · 记忆传送带</div>
+  <h1 class="title">LSTM ·<br /><span class="em">给 RNN 修一条记得住远处的传送带。</span></h1>
+  <div class="byline">Hochreiter &amp; Schmidhuber · Long Short-Term Memory · Neural Computation · 1997</div>
+  <p class="dek">普通 RNN 一步步往后传隐藏状态，梯度连乘几十步就消失，记不住长程依赖。LSTM 加一条单独的"记忆传送带"（cell state），更新主要靠加法、信息能原样带很远；再配三个阀门（遗忘/输入/输出）决定擦掉什么、写入什么、读出什么。Transformer 之前的序列霸主。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>普通 RNN 反向传播穿过多步 → 梯度连乘 → <strong>消失/爆炸</strong><a class="jr" href="#g-01">1</a>，学不到长程依赖。LSTM 加一条单独的 <strong>cell state（记忆传送带 C）</strong><a class="jr" href="#g-02">2</a>，更新是<strong>加法</strong> <code>C_t = f·C_{t-1} + i·g</code> → 信息和梯度都能带很远。三个<strong>门（0~1 的阀门）</strong>：<strong>遗忘门 f</strong><a class="jr" href="#g-03">3</a>（老记忆留多少）、<strong>输入门 i + 候选 g</strong><a class="jr" href="#g-04">4</a>（写什么新的）、<strong>输出门 o</strong><a class="jr" href="#g-05">5</a>（读出什么当 <code>h_t = o·tanh(C_t)</code>）。梯度不消失的根：加法路径 ≈ 每步乘 1，<strong>同 <a href="resnet.html">ResNet</a> 残差 x+F(x)</strong><a class="jr" href="#g-06">6</a>（LSTM 1997 就用了，ResNet 2015 在深度方向重新发明）。简化版 GRU（2 门）。2014–2017 序列霸主（seq2seq），最早的 attention 加在它上面；后来 <a href="attention-is-all-you-need.html">Attention Is All You Need</a> 把循环全扔了取代它。</p>
+</div>
+
+
+<!-- §01 -->
+<h2><span class="num">§ 01</span>痛点：RNN 记不住远处</h2>
+
+<p>普通 RNN 把序列<strong>一步步</strong>处理，拎着一个隐藏状态 <code>h</code> 往后传，每步 <code>h_t = tanh(W·[h_{t-1}, x_t])</code>。反向传播要<strong>穿过几十上百步</strong>，梯度沿途<strong>连乘</strong>同一批权重和导数：</p>
+
+<ul>
+<li>连乘的数 &lt;1 → 越乘越小 → <strong>梯度消失</strong>（远处的信号传不回来，学不到长程依赖）。</li>
+<li>连乘的数 &gt;1 → 越乘越大 → <strong>梯度爆炸</strong>。</li>
+</ul>
+
+<p>后果：<strong>"那只<u>猫</u>……（隔 50 个词）……<u>是</u>黑色的"</strong>——等要让"是"跟"猫"呼应时，信号早被乘没了。RNN 实际只记得住几步。</p>
+
+
+<!-- §02 -->
+<h2><span class="num">§ 02</span>核心：一条记忆传送带 + 三个阀门</h2>
+
+<p>LSTM 加一条<strong>单独的 cell state（细胞状态 C）</strong>——像一条<strong>传送带 / 记忆高速路</strong>从头通到尾，中间只有很轻的线性改动。关键：<strong>更新 C 主要靠加法</strong>（不是反复乘权重矩阵），信息能原样带很远。三个<strong>门</strong>（各是一个 sigmoid 出 0~1 = "放多少通过"的阀门）控制这条带。</p>
+
+<figure id="fig-cell" class="fig-cell">
+  <figcaption>
+    <span>Fig 01 · LSTM 单元：传送带 + 三个门</span>
+    <span class="fnum">擦(forget×) · 写(input+) · 读(output)</span>
+  </figcaption>
+  <svg class="ls-svg" viewBox="0 0 720 290" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="ls1-h" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#2f6e4a"/></marker>
+    <marker id="ls1-g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#7a6f5d"/></marker></defs>
+    <!-- 传送带 -->
+    <line class="draw d2" pathLength="1000" x1="56" y1="58" x2="624" y2="58" stroke="#2f6e4a" stroke-width="3.4"/>
+    <line class="ls-rev d2" x1="624" y1="58" x2="664" y2="58" stroke="#2f6e4a" stroke-width="3.4" marker-end="url(#ls1-h)"/>
+    <text class="ls-rev d1" x="40" y="50" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="10" font-weight="700" fill="#1f4a30">C_{t−1}</text>
+    <text class="ls-rev d2" x="672" y="50" text-anchor="start" font-family="JetBrains Mono,monospace" font-size="10" font-weight="700" fill="#1f4a30">C_t</text>
+    <text class="ls-rev d2" x="120" y="44" font-family="Fraunces,serif" font-style="italic" font-size="11" font-weight="700" fill="#2f6e4a">记忆传送带（cell state）</text>
+    <!-- 传送带上的 × 和 + -->
+    <circle class="ls-rev d3" cx="230" cy="58" r="13" fill="#fff" stroke="#9b2c2c" stroke-width="1.8"/><text class="ls-rev d3" x="230" y="63" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="13" font-weight="700" fill="#9b2c2c">×</text>
+    <circle class="ls-rev d4" cx="430" cy="58" r="13" fill="#fff" stroke="#1a6a64" stroke-width="1.8"/><text class="ls-rev d4" x="430" y="63" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="13" font-weight="700" fill="#1a6a64">+</text>
+    <circle class="ls-rev d5" cx="600" cy="58" r="11" fill="#fff" stroke="#b8841c" stroke-width="1.6"/><text class="ls-rev d5" x="600" y="62" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="#b8841c">tanh</text>
+    <!-- 输入拼接 -->
+    <g class="ls-rev d1" font-family="JetBrains Mono,monospace" font-size="9" text-anchor="middle">
+      <rect x="40" y="240" width="150" height="32" rx="3" fill="#faf4e1" stroke="#7a6f5d"/><text x="115" y="260" fill="#3a3128">h_{t−1} ‖ x_t（拼接）</text>
+    </g>
+    <!-- 三个门 -->
+    <g class="ls-rev d3" font-family="JetBrains Mono,monospace" font-size="9" text-anchor="middle">
+      <rect x="188" y="150" width="84" height="34" rx="3" fill="#efd6c8" stroke="#9b2c2c"/><text x="230" y="166" fill="#7a2020" font-weight="700">σ 遗忘门 f</text><text x="230" y="178" fill="#7a6f5d" font-size="7.5">留多少老的</text>
+    </g>
+    <g class="ls-rev d4" font-family="JetBrains Mono,monospace" font-size="9" text-anchor="middle">
+      <rect x="346" y="150" width="80" height="34" rx="3" fill="#cce5e1" stroke="#1a6a64"/><text x="386" y="166" fill="#0f4a45" font-weight="700">σ 输入门 i</text><text x="386" y="178" fill="#7a6f5d" font-size="7.5">写多少新的</text>
+      <rect x="346" y="194" width="80" height="30" rx="3" fill="#d8e6ce" stroke="#4a6b3a"/><text x="386" y="213" fill="#3a5a2a">tanh 候选 g</text>
+    </g>
+    <g class="ls-rev d5" font-family="JetBrains Mono,monospace" font-size="9" text-anchor="middle">
+      <rect x="556" y="150" width="84" height="34" rx="3" fill="#f0e0a8" stroke="#b8841c"/><text x="598" y="166" fill="#7a5310" font-weight="700">σ 输出门 o</text><text x="598" y="178" fill="#7a6f5d" font-size="7.5">读出多少</text>
+    </g>
+    <!-- 拼接到三个门 -->
+    <g class="ls-rev d2" stroke="#7a6f5d" stroke-width="1.1" stroke-dasharray="3 2" fill="none">
+      <path d="M150,240 Q200,210 230,186" marker-end="url(#ls1-g)"/>
+      <path d="M170,240 Q330,215 386,226" marker-end="url(#ls1-g)"/>
+      <path d="M190,244 Q470,235 598,186" marker-end="url(#ls1-g)"/>
+    </g>
+    <!-- 门到传送带 -->
+    <line class="ls-rev d3" x1="230" y1="148" x2="230" y2="73" stroke="#9b2c2c" stroke-width="1.5" marker-end="url(#ls1-h)"/>
+    <line class="ls-rev d4" x1="430" y1="148" x2="430" y2="73" stroke="#1a6a64" stroke-width="1.5" marker-end="url(#ls1-h)"/>
+    <text class="ls-rev d4" x="430" y="143" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#1a6a64">i·g 写入量</text>
+    <!-- 输出读出 h_t -->
+    <line class="ls-rev d5" x1="600" y1="69" x2="600" y2="140" stroke="#b8841c" stroke-width="1.5" marker-end="url(#ls1-h)"/>
+    <line class="ls-rev d6" x1="640" y1="167" x2="690" y2="167" stroke="#2f6e4a" stroke-width="1.8" marker-end="url(#ls1-h)"/>
+    <text class="ls-rev d6" x="676" y="160" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" font-weight="700" fill="#1f4a30">h_t</text>
+    <text class="ls-rev d6" x="598" y="236" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#7a5310">h_t = o·tanh(C_t)</text>
+  </svg>
+</figure>
+
+<pre class="eq">f_t = σ(W_f·[h_{t−1}, x_t])        # 遗忘门：老记忆留多少（0~1）
+i_t = σ(W_i·[h_{t−1}, x_t])        # 输入门：新的写多少
+g_t = tanh(W_g·[h_{t−1}, x_t])     # 候选：要写的内容
+C_t = f_t · C_{t−1} + i_t · g_t    # 传送带更新：擦一点 + 加一点（加法！）
+o_t = σ(W_o·[h_{t−1}, x_t])        # 输出门：读出多少
+h_t = o_t · tanh(C_t)              # 这一步的隐藏状态/输出</pre>
+
+
+<!-- §03 -->
+<h2><span class="num">§ 03</span>三个阀门：擦一点、写一点、读一点</h2>
+
+<p>把 cell state 想成一张<strong>长期记忆便签</strong>，每步过三道阀门：</p>
+
+<figure id="fig-valves" class="fig-valves">
+  <figcaption>
+    <span>Fig 02 · 三阀门 = 擦 / 写 / 读</span>
+    <span class="fnum">遗忘→输入→输出</span>
+  </figcaption>
+  <svg class="ls-svg" viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="ls2-h" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#2f6e4a"/></marker></defs>
+    <!-- C_old 便签 -->
+    <g class="ls-rev d1" font-family="JetBrains Mono,monospace" font-size="8" text-anchor="middle">
+      <rect x="34" y="64" width="96" height="96" rx="4" fill="#faf4e1" stroke="#7a6f5d"/><text x="82" y="58" fill="#3a3128" font-size="9">C_老</text>
+      <rect x="44" y="76" width="76" height="18" rx="2" fill="#d8e6ce"/><text x="82" y="89" fill="#3a5a2a">主语:猫</text>
+      <rect x="44" y="100" width="76" height="18" rx="2" fill="#cce5e1"/><text x="82" y="113" fill="#0f4a45">时态:过去</text>
+      <rect x="44" y="124" width="76" height="18" rx="2" fill="#f0e0a8"/><text x="82" y="137" fill="#7a5310">颜色:?</text>
+    </g>
+    <!-- 遗忘阀 -->
+    <g class="ls-rev d2" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8">
+      <path d="M130,112 L182,112" stroke="#9b2c2c" stroke-width="1.5" marker-end="url(#ls2-h)"/>
+      <text x="156" y="104" fill="#9b2c2c" font-weight="700">遗忘阀 f</text><text x="156" y="128" fill="#9b2c2c">擦掉旧的</text>
+    </g>
+    <!-- 输入阀 -->
+    <g class="ls-rev d3" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8">
+      <rect x="190" y="64" width="96" height="96" rx="4" fill="#faf4e1" stroke="#7a6f5d"/>
+      <rect x="200" y="76" width="76" height="18" rx="2" fill="#d8e6ce" opacity="0.4"/><text x="238" y="89" fill="#9b2c2c" font-size="7">主语:猫 ✗擦</text>
+      <rect x="200" y="100" width="76" height="18" rx="2" fill="#cce5e1"/><text x="238" y="113" fill="#0f4a45">时态:过去</text>
+      <rect x="200" y="124" width="76" height="18" rx="2" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.4"/><text x="238" y="137" fill="#3a5a2a" font-size="7">主语:狗 ✎写</text>
+    </g>
+    <g class="ls-rev d4" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8">
+      <path d="M286,112 L338,112" stroke="#1a6a64" stroke-width="1.5" marker-end="url(#ls2-h)"/>
+      <text x="312" y="104" fill="#1a6a64" font-weight="700">输入阀 i·g</text><text x="312" y="128" fill="#1a6a64">写入新的</text>
+    </g>
+    <!-- C_new -->
+    <g class="ls-rev d5" font-family="JetBrains Mono,monospace" font-size="8" text-anchor="middle">
+      <rect x="346" y="64" width="96" height="96" rx="4" fill="#cfe6d8" stroke="#2f6e4a" stroke-width="1.6"/><text x="394" y="58" fill="#1f4a30" font-size="9" font-weight="700">C_新</text>
+      <rect x="356" y="76" width="76" height="18" rx="2" fill="#d8e6ce"/><text x="394" y="89" fill="#3a5a2a">主语:狗</text>
+      <rect x="356" y="100" width="76" height="18" rx="2" fill="#cce5e1"/><text x="394" y="113" fill="#0f4a45">时态:过去</text>
+      <rect x="356" y="124" width="76" height="18" rx="2" fill="#f0e0a8"/><text x="394" y="137" fill="#7a5310">颜色:?</text>
+    </g>
+    <!-- 输出阀 → h_t -->
+    <g class="ls-rev d6" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8">
+      <path d="M442,112 L500,112" stroke="#b8841c" stroke-width="1.5" marker-end="url(#ls2-h)"/>
+      <text x="471" y="104" fill="#b8841c" font-weight="700">输出阀 o</text><text x="471" y="128" fill="#b8841c">读出一部分</text>
+      <rect x="506" y="92" width="120" height="40" rx="4" fill="#f7f1de" stroke="#2f6e4a"/><text x="566" y="110" fill="#1f4a30" font-size="9" font-weight="700">h_t（这步输出）</text><text x="566" y="124" fill="#7a6f5d" font-size="7.5">= o·tanh(C_新)</text>
+    </g>
+    <text class="ls-rev d6" x="360" y="196" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#2f6e4a">看到新主语"狗"→遗忘阀擦掉"猫"、输入阀写"狗"；时态/颜色原样留在带上</text>
+  </svg>
+</figure>
+
+
+<!-- §04 -->
+<h2><span class="num">§ 04</span>为什么梯度不消失：加法高速路</h2>
+
+<p>关键在 cell state 的更新是<strong>加法</strong>：<code>C_t = f_t · C_{t−1} + i_t · g_t</code>。反向传播沿 C 这条路往回走，梯度每步大约只<strong>乘一个遗忘门 f（≈1）</strong>，而不是普通 RNN 那样<strong>乘一个会缩水的"权重×tanh导数"</strong>。所以记忆和梯度都能<strong>流很远</strong>——传送带是给梯度修的一条高速路。</p>
+
+<figure id="fig-grad" class="fig-grad">
+  <figcaption>
+    <span>Fig 03 · 梯度：RNN 衰减 vs LSTM 保持</span>
+    <span class="fnum">连乘缩水 vs 加法 ≈ 乘 1</span>
+  </figcaption>
+  <svg class="ls-svg" viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="ls3-r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#9b2c2c"/></marker>
+      <marker id="ls3-g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#2f6e4a"/></marker>
+    </defs>
+    <!-- RNN 衰减 -->
+    <text class="ls-rev d1" x="60" y="44" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#9b2c2c">普通 RNN：连乘缩水</text>
+    <g class="ls-rev d1" font-family="JetBrains Mono,monospace" font-size="9" text-anchor="middle" fill="#3a3128">
+      <circle cx="90" cy="80" r="13" fill="#9b2c2c"/><circle cx="220" cy="80" r="13" fill="#9b2c2c" opacity="0.65"/><circle cx="350" cy="80" r="13" fill="#9b2c2c" opacity="0.38"/><circle cx="480" cy="80" r="13" fill="#9b2c2c" opacity="0.18"/><circle cx="610" cy="80" r="13" fill="#9b2c2c" opacity="0.07"/>
+    </g>
+    <g class="ls-rev d2" stroke="#9b2c2c" stroke-width="1.3" fill="none">
+      <line x1="103" y1="80" x2="207" y2="80" marker-end="url(#ls3-r)"/><line x1="233" y1="80" x2="337" y2="80" marker-end="url(#ls3-r)"/><line x1="363" y1="80" x2="467" y2="80" marker-end="url(#ls3-r)"/><line x1="493" y1="80" x2="597" y2="80" marker-end="url(#ls3-r)"/>
+    </g>
+    <g class="ls-rev d2" font-family="JetBrains Mono,monospace" font-size="8" fill="#9b2c2c" text-anchor="middle"><text x="155" y="72">×&lt;1</text><text x="285" y="72">×&lt;1</text><text x="415" y="72">×&lt;1</text><text x="545" y="72">×&lt;1</text></g>
+    <text class="ls-rev d2" x="610" y="104" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#9b2c2c">≈0 没了</text>
+    <!-- LSTM 保持 -->
+    <text class="ls-rev d3" x="60" y="152" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#2f6e4a">LSTM cell state：加法 ≈ 乘 1</text>
+    <line class="draw d4" pathLength="1000" x1="80" y1="180" x2="600" y2="180" stroke="#2f6e4a" stroke-width="6"/>
+    <line class="ls-rev d4" x1="600" y1="180" x2="628" y2="180" stroke="#2f6e4a" stroke-width="6" marker-end="url(#ls3-g)"/>
+    <g class="ls-rev d5" font-family="JetBrains Mono,monospace" font-size="8" fill="#2f6e4a" text-anchor="middle"><text x="155" y="172">×f≈1</text><text x="285" y="172">×f≈1</text><text x="415" y="172">×f≈1</text><text x="545" y="172">×f≈1</text></g>
+    <text class="ls-rev d5" x="618" y="204" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#2f6e4a">信号还在</text>
+  </svg>
+</figure>
+
+<div class="note">
+  <span class="l">眼熟吗</span>
+  <p>这跟你学的 <a href="resnet.html">ResNet</a> 残差 <code>x + F(x)</code> 是同一个魂：<strong>给梯度修一条加法直通路</strong>，让它绕过会缩水的非线性。LSTM 1997 年就在<strong>时间方向</strong>这么干了；ResNet 2015 在<strong>深度方向</strong>重新发明同一招。"加法路径 = 梯度高速路"是深度学习反复出现的母题。</p>
+</div>
+
+
+<!-- §05 -->
+<h2><span class="num">§ 05</span>余波：GRU · 被 Transformer 取代</h2>
+
+<p><strong>GRU（Gated Recurrent Unit）</strong>：LSTM 的简化版——只有 2 个门（更新门 + 重置门）、把 cell state 和 hidden state 合一。更省参数、训练更快，很多任务上跟 LSTM 打平。</p>
+
+<p><strong>被 Transformer 取代</strong>：LSTM 是 2014–2017 的序列霸主，<strong>seq2seq</strong> 机器翻译就是 LSTM 编码器→解码器，而<strong>最早的 attention 是<u>加在 LSTM 上</u>的</strong>（让解码器回看编码器各步）。然后 <a href="attention-is-all-you-need.html">Attention Is All You Need</a> 干脆把循环全扔了：</p>
+
+<table class="spec">
+  <tr><th></th><th>LSTM（循环）</th><th>Transformer（注意力）</th></tr>
+  <tr><td>长程依赖</td><td>靠传送带一步步传</td><td>任意两位置<strong>直接互看</strong></td></tr>
+  <tr><td>并行</td><td>难（必须按时间顺序算）</td><td>易（整条序列一起算）</td></tr>
+  <tr><td>路径长度</td><td>O(序列长)</td><td>O(1)</td></tr>
+</table>
+
+<p>所以 LSTM 正是 Transformer 革掉的那个前任——但"门控 + 加法记忆通路"的思想留了下来，到处都是。</p>
+
+<div class="note">
+  <span class="l">放进 wiki 这条线</span>
+  <p>LSTM = 序列建模这条线的起点：<strong>门控阀门 + 加法记忆传送带</strong>治住 RNN 的梯度消失。加法梯度高速路 = <a href="resnet.html">ResNet</a> 残差同构；它撑起 seq2seq 和最早的 attention，最终被 <a href="attention-is-all-you-need.html">Transformer</a> 用"任意位置直接互看 + 可并行"取代。一句话：<strong>RNN 记不住远处；LSTM 修一条加法传送带 + 三个阀门，让记忆和梯度都能流很远。</strong></p>
+</div>
+
+
+<!-- glossary -->
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">梯度消失/爆炸</span> · RNN 反向传播穿过多步、连乘同批权重×导数：&lt;1 越乘越小（消失，学不到长程）、&gt;1 越乘越大（爆炸）。</li>
+    <li id="g-02"><span class="term">cell state · 记忆传送带</span> · 单独一条从头通到尾的记忆通路，更新主要靠加法 <code>C_t=f·C_{t−1}+i·g</code>，信息能原样带很远。</li>
+    <li id="g-03"><span class="term">遗忘门 f</span> · sigmoid 出 0~1，per-cell 决定老记忆留多少。0=忘、1=留。看到新主语就忘掉旧主语。</li>
+    <li id="g-04"><span class="term">输入门 i + 候选 g</span> · i(σ)=新内容写多少，g(tanh)=要写的候选值，写入量 = i·g。</li>
+    <li id="g-05"><span class="term">输出门 o</span> · σ 出 0~1，决定从 cell 读出多少当这步隐藏状态：<code>h_t = o·tanh(C_t)</code>。</li>
+    <li id="g-06"><span class="term">加法梯度高速路</span> · C 加法更新 → 梯度沿 C 每步 ≈ 乘遗忘门(≈1)，不缩水。同 <a href="resnet.html">ResNet</a> 残差 x+F(x)；LSTM 在时间方向、ResNet 在深度方向。</li>
+    <li id="g-07"><span class="term">GRU / seq2seq / 被取代</span> · GRU=2 门简化版；LSTM 撑起 seq2seq + 最早的 attention；后被 <a href="attention-is-all-you-need.html">Transformer</a>（任意位置直接互看 + 可并行）取代。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>SOURCE · Hochreiter &amp; Schmidhuber 1997 · Long Short-Term Memory (Neural Computation 9(8))</span>
+  <span>INGESTED · 2026-06-15</span>
+</div>
+
+</div>
+<script>
+{
+  const figs = ['fig-cell','fig-valves','fig-grad'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.15 });
+    obs.observe(el);
+  });
+}
+</script>
+</body>
+</html>

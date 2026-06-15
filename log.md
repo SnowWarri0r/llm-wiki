@@ -746,3 +746,8 @@ skill 更新:
 - 与现有 qwen3-vl concept(当文本编码器)互补互链
 - fix: dmd-distillation 图 teacher_score−fake_score 文案压在橙箭头上, 文案上移到184/箭头下移到210
 - 回链: index 接 mrt 后; modality-projector 等已有链接覆盖
+
+## [2026-06-15] add | lstm bespoke 精装页 + fix mrt 分层图标签遮挡
+- lstm bespoke(pine #2f6e4a, 第14色): RNN梯度消失→cell state记忆传送带(加法更新C_t=f·C_{t-1}+i·g)+三门(遗忘f/输入i·g/输出o); 加法梯度高速路=ResNet残差x+F(x)同构(时间方向vs深度方向); GRU简化; seq2seq+最早attention→被Transformer取代; 3图(cell单元/三阀门擦写读/梯度高速路); Hochreiter&Schmidhuber 1997 pre-cutoff凭知识写
+- 接线: resnet(加法高速路同构)/attention-is-all-you-need(取代它); index 接 attention 前
+- fix(mrt): Fig01 分层图标签贴右边缘被上层错位盖住→挪到各层露出的左下角(画布/背景/前景logo/前景文字)
