@@ -28,6 +28,7 @@ y = (x - mean(x)) / std(x) * gamma + beta
 Transformer/BERT/GPT block 里每个 attention / FFN 子层旁边都有 LayerNorm 变体。
 
 ## 链接
+- [[normalization]] · 归一化家族对照(BN/LN/GN/RMSNorm 只差对哪根轴)+真数字例子
 - [[residual-layernorm]] · LayerNorm 跟 residual 怎么配
 - [[batchnorm]] · CNN 时代的对照
 - [[transformer-architecture]] · Transformer block 的稳定组件
