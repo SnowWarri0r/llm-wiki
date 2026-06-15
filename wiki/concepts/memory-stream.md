@@ -51,4 +51,6 @@ CREATE TABLE memory_stream (
 ## 链接
 - [[retrieval-scoring]] · 从流里捞记忆的排序公式
 - [[agent-reflection]] · 定期把碎片记忆总结成高层认知
+- [[react-loop]] · 多轮 Observation 的来源
+- [[deep-research]] · 多轮调研攒下的观察存进流里
 - [[generative-agents]] · 论文

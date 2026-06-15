@@ -63,4 +63,5 @@ RAG（检索增强生成）的核心也是"检索 → 塞进 prompt"，但标准
 ## 链接
 - [[memory-stream]] · 被检索的数据源
 - [[agent-reflection]] · 反思结果也参与检索
+- [[deep-research]] · ④轴可信度也靠"哪条证据更该信"
 - [[generative-agents]] · 论文

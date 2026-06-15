@@ -216,6 +216,8 @@
 - [GSPO](wiki/concepts/gspo.md) — GRPO 后继: 重要性比率从 token 级提到序列级(每 token 只采一次→token 级是高方差噪声易崩), 稳住 MoE RL; Qwen3 用
 
 ### Agent 记忆
+- [Deep Research](wiki/concepts/deep-research.md) — 派会上网的研究员: 拆问题→规划→多轮搜读→核对→带引用报告; 4 根轴(脑子/工具/规划/可信)拆任何深度研究系统
+- [ReAct](wiki/concepts/react-loop.md) — 想一步→动一下→看结果, agent 用工具的最小循环; vs Planner-Executor 先规划后执行
 - [Memory Stream](wiki/concepts/memory-stream.md) — 所有观察按时间存成一条流，带重要性评分
 - [Agent Reflection](wiki/concepts/agent-reflection.md) — 碎片观察 → 高层认知，定期提炼
 - [Retrieval Scoring](wiki/concepts/retrieval-scoring.md) — 时近度 × 重要性 × 相关性 三维排序

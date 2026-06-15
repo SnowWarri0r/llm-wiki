@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Deep Research · 深度研究系统 · 派一个会上网的研究员 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · deep-research</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Deep Research · 深度研究系统 · 派一个会上网的研究员</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>你给一个问题，它<strong>自己拆子问题、规划路线、多轮上网搜读、交叉核对、最后综合成一篇带引用的报告</strong>——本质是一个<strong>会用搜索工具的 <a href="../concepts/memory-stream.html">memory-stream</a> agent 循环</strong>，跑几分钟、几十次工具调用，而不是普通 RAG 那种一问一答。</p>
+<h2>直觉 · 从"查字典"到"派实习生"</h2>
+<p>普通 <strong>RAG 聊天</strong>：你问一句 → 检索 top-k 几段 → 塞进 prompt → 答一段。<strong>一来一回，一次检索</strong>，答得快但浅，遇到需要"先查 A 才知道该查 B"的问题就抓瞎。</p>
+<p><strong>Deep Research</strong>：你给一个开放问题（"对比 2024 年三大开源推理模型的训练成本"）→ 它先<strong>拆成子问题</strong>、<strong>定调研计划</strong>，然后开始一轮轮地搜、读、判断"这页有用吗 / 下一步该搜啥"，碰到矛盾信息会<strong>交叉核对</strong>，最后把几十个来源<strong>综合成一篇长报告并逐条标注出处</strong>。</p>
+<p>一句类比：</p>
+<ul>
+<li><strong>RAG</strong> = 让你<strong>查一下字典</strong>——翻一页，念给你听。</li>
+<li><strong>Deep Research</strong> = 派一个<strong>实习研究员</strong>，给他一天时间和一台联网电脑，回来交一份调研报告。</li>
+</ul>
+<p>这篇综述（Xu &amp; Peng 2025，arXiv 2506.12594）盘点了 2023 年以来 <strong>80+ 个</strong> 这类系统（OpenAI / Gemini / Perplexity 的 Deep Research，及一堆开源实现），它不发明新模型，而是提了个<strong>统一的分类框架</strong>——任何一个深度研究系统都能用 4 根轴拆开来对比。</p>
+<h2>四根技术轴 · 拆解任何一个深度研究系统</h2>
+<figure style="margin:26px 0; padding:22px; background:#f3f0ea; border:1px solid #c9bfae; border-radius:4px;">
+<svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:JetBrains Mono,monospace;">
+  <defs>
+    <marker id="dr-h" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#8a5a2b"/></marker>
+    <marker id="dr-loop" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#b8841c"/></marker>
+  </defs>
+
+  <!-- 上半：普通 RAG 单轮 -->
+  <text class="reveal" x="40" y="34" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#7a6f5d">普通 RAG · 一问一答一次检索</text>
+  <g class="reveal" font-size="9.5" text-anchor="middle" fill="#3a3128">
+    <rect x="48" y="48" width="78" height="34" rx="4" fill="#faf4e1" stroke="#7a6f5d"/><text x="87" y="69">问题</text>
+    <rect x="178" y="48" width="92" height="34" rx="4" fill="#faf4e1" stroke="#7a6f5d"/><text x="224" y="69">检索 top-k</text>
+    <rect x="322" y="48" width="78" height="34" rx="4" fill="#faf4e1" stroke="#7a6f5d"/><text x="361" y="69">塞 prompt</text>
+    <rect x="452" y="48" width="78" height="34" rx="4" fill="#e8efe4" stroke="#4a6b3a"/><text x="491" y="69">答一段</text>
+  </g>
+  <g class="reveal" stroke="#7a6f5d" stroke-width="1.4" marker-end="url(#dr-h)">
+    <line x1="126" y1="65" x2="174" y2="65"/><line x1="270" y1="65" x2="318" y2="65"/><line x1="400" y1="65" x2="448" y2="65"/>
+  </g>
+  <text class="reveal" x="560" y="69" font-size="9" fill="#9b2c2c">浅 · 不会"先查A才知查B"</text>
+
+  <line x1="40" y1="100" x2="680" y2="100" class="reveal" stroke="#c9bfae" stroke-width="1" stroke-dasharray="4 4"/>
+
+  <!-- 下半：Deep Research 多轮 agent 循环 -->
+  <text class="reveal" x="40" y="126" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#8a5a2b">Deep Research · 多轮 agent 循环</text>
+
+  <!-- 拆解 / 规划 -->
+  <g class="reveal d1" font-size="9.5" text-anchor="middle" fill="#3a3128">
+    <rect x="40" y="142" width="84" height="34" rx="4" fill="#faf4e1" stroke="#7a6f5d"/><text x="82" y="159">开放问题</text>
+    <rect x="150" y="142" width="96" height="34" rx="4" fill="#fbeed6" stroke="#b8841c"/><text x="198" y="159">拆子问题</text><text x="198" y="170" font-size="7.5" fill="#7a6f5d">③ 规划</text>
+  </g>
+  <g class="reveal d1" stroke="#8a5a2b" stroke-width="1.4" marker-end="url(#dr-h)"><line x1="124" y1="159" x2="146" y2="159"/></g>
+
+  <!-- 中央循环框 -->
+  <rect class="draw d2" x="278" y="132" width="220" height="120" rx="8" fill="none" stroke="#b8841c" stroke-width="1.6" stroke-dasharray="5 4" pathLength="1000"/>
+  <text class="reveal d2" x="388" y="148" text-anchor="middle" font-size="8.5" font-style="italic" font-family="Fraunces,serif" fill="#b8841c">调研循环（跑 N 轮）</text>
+  <g class="reveal d3" font-size="9.5" text-anchor="middle" fill="#3a3128">
+    <rect x="298" y="160" width="68" height="30" rx="4" fill="#e3edf5" stroke="#3d5a6c"/><text x="332" y="179">② 搜索</text>
+    <rect x="410" y="160" width="68" height="30" rx="4" fill="#e3edf5" stroke="#3d5a6c"/><text x="444" y="179">读网页</text>
+    <rect x="354" y="210" width="84" height="30" rx="4" fill="#f1e3ef" stroke="#9a2f5e"/><text x="396" y="229">判断下一步</text>
+  </g>
+  <g class="reveal d4" stroke="#b8841c" stroke-width="1.4" marker-end="url(#dr-loop)">
+    <line x1="366" y1="175" x2="406" y2="175"/>
+    <path d="M444 190 Q444 212 438 222" fill="none"/>
+    <path d="M354 222 Q320 212 332 192" fill="none"/>
+  </g>
+  <text class="reveal d4" x="388" y="252" text-anchor="middle" font-size="7.5" fill="#9a2f5e">够了吗？不够→再搜</text>
+
+  <!-- 综合输出 -->
+  <g class="reveal d5" font-size="9.5" text-anchor="middle" fill="#3a3128">
+    <rect x="524" y="160" width="84" height="34" rx="4" fill="#fbe9e3" stroke="#bf5a1e"/><text x="566" y="177">④ 综合</text><text x="566" y="188" font-size="7.5" fill="#7a6f5d">去重·核对矛盾</text>
+    <rect x="524" y="210" width="84" height="34" rx="4" fill="#e8efe4" stroke="#4a6b3a"/><text x="566" y="227">报告</text><text x="566" y="238" font-size="7.5" fill="#7a6f5d">逐条带引用</text>
+  </g>
+  <g class="reveal d5" stroke="#8a5a2b" stroke-width="1.4" marker-end="url(#dr-h)"><line x1="498" y1="180" x2="520" y2="180"/><line x1="566" y1="194" x2="566" y2="208"/></g>
+
+  <!-- ① 模型底座 -->
+  <text class="reveal d3" x="388" y="288" text-anchor="middle" font-size="9" fill="#7a6f5d">① 基础模型 + 推理引擎 —— 整个循环的"脑子"，是否带长思维链(reasoning)决定它会不会规划</text>
+
+  <text class="reveal d5" x="40" y="324" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#3a3128">四根轴：① 脑子是谁 · ② 手伸多远 · ③ 会不会规划 · ④ 产出可不可信</text>
+  <text class="reveal d5" x="40" y="344" font-size="9" fill="#7a6f5d">看任何"深度研究"产品，套这四轴就能秒拆它强在哪、弱在哪</text>
+</svg>
+</figure>
+
+<p>综述的骨架是这张<strong>分类表</strong>——理解它，你看任何一个深度研究系统都能秒拆：</p>
+<table>
+<thead>
+<tr>
+<th>轴</th>
+<th>管什么</th>
+<th>关键设计选择</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>① <strong>基础模型 + 推理引擎</strong></td>
+<td>谁在思考</td>
+<td>用哪个 LLM；是否带 <strong>reasoning</strong>（o1 那种长思维链，直接决定它会不会规划）；有没有专门为 agent 调过</td>
+</tr>
+<tr>
+<td>② <strong>工具使用 + 环境交互</strong></td>
+<td>怎么够到外部世界</td>
+<td>搜索引擎 / 网页抓取 / 代码执行 / 调 API；用 <strong><a href="../concepts/react-loop.html">react-loop</a></strong>(想一步→动一步) 还是直接函数调用</td>
+</tr>
+<tr>
+<td>③ <strong>任务规划 + 执行控制</strong></td>
+<td>怎么不跑偏、何时停</td>
+<td>先规划后执行(planner-executor) / 边走边想 / 多 agent 分工；<strong>停止准则</strong>(信息够了没)</td>
+</tr>
+<tr>
+<td>④ <strong>知识综合 + 输出生成</strong></td>
+<td>怎么攒成报告</td>
+<td>多源<strong>去重</strong>、<strong>矛盾消解</strong>、<strong>引用对齐</strong>(每句话能追到出处)、长文组织</td>
+</tr>
+</tbody>
+</table>
+<h2>② ③ 轴的核心：两种 agent 循环范式</h2>
+<p>深度研究系统怎么"边查边想"，主要是两套套路：</p>
+<p><strong>ReAct（Reason + Act，边走边想）</strong>：交替<strong>想一句 → 动一下 → 看结果 → 再想</strong>。</p>
+<pre><code>Thought: 我得先知道模型A的参数量    Act: search(&quot;模型A 参数量&quot;)
+Obs: 7B                            Thought: 那训练成本得查它的GPU时
+Act: search(&quot;模型A GPU hours&quot;) ...
+</code></pre>
+<p>好处是<strong>灵活</strong>——下一步搜啥取决于上一步看到啥；坏处是<strong>容易绕远</strong>、没全局观。</p>
+<p><strong>Planner-Executor（先规划后执行）</strong>：先让模型<strong>一次性列出完整调研计划</strong>（子任务 1/2/3…），再逐条执行、最后汇总。
+好处是<strong>有全局观、可并行</strong>（子任务互不依赖时可同时搜）；坏处是计划定死后<strong>不好临场调整</strong>。</p>
+<p>实际系统常<strong>混用</strong>：先 planner 出大纲，每个子任务内部跑 ReAct 小循环；难的还会上<strong>多 agent</strong>——一个主管 agent 拆活、派给多个子 agent 各查一块、再收回综合（<a href="../papers/memgpt.html">memgpt</a>/<a href="../papers/generative-agents.html">generative-agents</a> 那条"LLM 当 OS / 自主体"的思路在这里复用）。</p>
+<h2>④ 轴最难：可信度</h2>
+<p>报告写得漂亮没用，关键是<strong>每句话能不能追到来源、来源之间矛盾了怎么办</strong>。综述把 ④ 轴的难点单列：</p>
+<ul>
+<li><strong>去重</strong>：80 个网页里一半是互相抄的，得识别"同一事实的不同复述"。</li>
+<li><strong>矛盾消解</strong>：来源 A 说成本 50 万、来源 B 说 200 万——是口径不同还是有错？得标注而非硬选一个。</li>
+<li><strong>引用对齐</strong>：生成的每个论断挂到具体出处，这是 Deep Research 区别于"一本正经胡说"的命根子，也接 <a href="../concepts/retrieval-scoring.html">retrieval-scoring</a> 那套"哪条证据更该信"的排序。</li>
+</ul>
+<h2>综述还点了什么</h2>
+<ul>
+<li><strong>覆盖面</strong>：商用(OpenAI/Gemini/Perplexity) + 开源，跨学术/科研/商业/教育多个场景。</li>
+<li><strong>公认挑战</strong>：准确性(幻觉+错误引用)、隐私、知识产权(大量抓别人内容)、可及性(贵、慢)。</li>
+<li><strong>本质判断</strong>：Deep Research 是 <strong>agent 能力 + 信息检索 + 长文综合</strong>的交叉点，是"LLM 从答题者变成调研员"的产品化落点。</li>
+</ul>
+<h2>代码出处 / 来源</h2>
+<ul>
+<li>综述 arXiv 2506.12594《A Comprehensive Survey of Deep Research》(Xu &amp; Peng 2025)，4 维分类法 + 80+ 系统盘点</li>
+<li>代表系统：OpenAI Deep Research、Gemini Deep Research、Perplexity；ReAct 原始 arXiv 2210.03629</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/react-loop.html">react-loop</a> · ②③轴核心循环：想一步→动一步→看结果</li>
+<li><a href="../papers/memgpt.html">memgpt</a> · "LLM 当 OS、自己调度记忆"——多 agent / 长任务的地基</li>
+<li><a href="../papers/generative-agents.html">generative-agents</a> · LLM 自主体(记忆流+反思+规划)，深度研究的 agent 侧近亲</li>
+<li><a href="../concepts/memory-stream.html">memory-stream</a> · 多轮调研攒下的观察怎么存</li>
+<li><a href="../concepts/retrieval-scoring.html">retrieval-scoring</a> · ④轴可信度：哪条证据更该信</li>
+<li><a href="../concepts/virtual-context-management.html">virtual-context-management</a> · 几十轮搜读塞不下 context 时怎么调度</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../concepts/memory-stream.html"><span class="cat">concept</span>Memory Stream · 记忆流</a></li><li><a href="../concepts/react-loop.html"><span class="cat">concept</span>ReAct · Reason + Act · 想一步动一步</a></li><li><a href="../concepts/retrieval-scoring.html"><span class="cat">concept</span>Retrieval Scoring · 记忆检索排序</a></li><li><a href="../concepts/virtual-context-management.html"><span class="cat">concept</span>Virtual Context Management · 虚拟上下文管理</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/deep-research.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
