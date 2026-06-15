@@ -163,6 +163,9 @@
 - [结构化 Caption 条件](wiki/concepts/structured-caption-conditioning.md) — 不喂一句话喂 JSON，把位置/颜色/文字显式做进训练
 - [KL-VAE](wiki/concepts/kl-vae.md) — 把图压成 latent 的地基；扩散在压缩空间画画省 48 倍计算
 - [Pixel-Space Diffusion](wiki/concepts/pixel-space-diffusion.md) — 不要 VAE，直接在原始像素上扩散；patch embedding 替掉 VAE 压缩、去掉 latent 瓶颈
+- [图像质量指标 PSNR/SSIM](wiki/concepts/image-quality-metrics.md) — 重建像不像两把尺子: PSNR逐像素误差(dB)/SSIM局部结构(0-1); PSNR平移即崩→故有LPIPS
+- [DMD 蒸馏 / NFE](wiki/concepts/dmd-distillation.md) — 把40步老师蒸成4步学生: 不抄轨迹只让出图分布匹配(teacher_score−fake_score=吸老师斥自己=Drifting同构); NFE=跑几次网络
+- [渐进式分辨率训练](wiki/concepts/progressive-resolution-training.md) — 256P→512P→2K: 先小图便宜学构图再升大图抠细节; 类比缩略图→放大
 - [Unified Transformer](wiki/concepts/unified-transformer.md) — 像素+文本+条件一条流 + 混合注意力(文本causal/生成full)；LLM 和 DiT 缝成一个
 - [Perceptual Loss](wiki/concepts/perceptual-loss.md) — 不逐像素比图，在预训练网络特征空间里比；LPIPS(VGG·纹理) + DINO(自监督ViT·语义)
 - [Qwen3-VL](wiki/concepts/qwen3-vl.md) — 当文本编码器用的 VLM；翻译官水平决定画师上限，取 13 个中间层

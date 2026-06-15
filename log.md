@@ -730,3 +730,10 @@ skill 更新:
 - 关键: 是 qwen-image-2 "条件→目标、编辑塞原图" 推广成 "任意子集图层当干净条件"
 - 接线: qwen-image-2(同底座+思路升级+同DMD)/diffusion-transformer/kl-vae/closed-form-kl(DMD KL)/drifting-models/diffusion-opd
 - 回链: kl-vae/diffusion-transformer/closed-form-kl 加 mrt source; qwen-image-2 加 mrt 交叉链接; index 接 qwen-image-2 后
+
+## [2026-06-15] add | 三个前置 concept: image-quality-metrics + dmd-distillation + progressive-resolution-training
+- 用户问 qwen-image-2/mrt 里 PSNR/SSIM、256P→512P、DMD·4-NFE 都是啥; 拆成三页
+- image-quality-metrics: PSNR(逐像素MSE→dB,平移即崩)/SSIM(局部亮度对比结构0-1); 双标尺图标VAE 33.42/0.9225; 接 lpips(感知短板)
+- dmd-distillation: NFE=跑几次网络; DMD=不抄轨迹只让出图分布匹配, update∝teacher_score(吸真)−fake_score(斥自己)=Drifting同构; NFE对比+分布匹配图; 接 ode-sde/drifting/diffusion-opd/closed-form-kl
+- progressive-resolution-training: 256P→512P→2K 先小图便宜学构图再升大图抠细节; 阶梯图; 接 qwen-image-2六段/mrt 512→1024
+- 回链: qwen-image-2 g-04/g-05/g-06 + mrt g-05 链到三新页; index 生成模型基础段加三条

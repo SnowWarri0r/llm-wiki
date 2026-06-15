@@ -310,9 +310,9 @@ figure.play .qi-svg .draw { stroke-dashoffset: 0; }
     <li id="g-01"><span class="term">Concat(ℰ_x, h_y) · 条件-目标拼接</span> · 编辑时把原图 VAE latent <code>ℰ_x</code> 和文字嵌入 <code>h_y</code> 拼成一条多模态序列，喂同一个 MMDiT。生成则只有文字。统一两种任务的关键。</li>
     <li id="g-02"><span class="term">天然一致性</span> · 不用额外 mask：原图 latent 当 context，没被指令点名的区域逐像素照抄、只改点名处。</li>
     <li id="g-03"><span class="term">frozen Qwen3-VL 条件编码器</span> · 冻结的 VLM 抽取文字(和图)的语义特征当条件。强 VLM → 指令遵循更好（同 <a href="ideogram-4.html">Ideogram-4</a> 思路）。</li>
-    <li id="g-04"><span class="term">VAE f16c64</span> · 16× 压缩（1.0 是 8×）、64 latent 通道；残差自编码 + 语义对齐损失。79M enc / 259M dec，PSNR 33.42 / SSIM 0.9225。</li>
-    <li id="g-05"><span class="term">六段训练 + Data Flywheel</span> · 256P→512P→多分辨率(到 2K)→SFT 渐进；闭环数据飞轮把失败样本路由到 RL/预训练/prompt 工程补数据。</li>
-    <li id="g-06"><span class="term">DMD 蒸馏 · 4-NFE</span> · Distribution Matching Distillation：把 40 步老师蒸成 4 次前向的学生，保质。辅助 fake-score 用 flow-matching。同 <a href="drifting-models.html">Drifting</a>/<a href="diffusion-opd.html">DiffusionOPD</a> 的少步化线。</li>
+    <li id="g-04"><span class="term">VAE f16c64</span> · 16× 压缩（1.0 是 8×）、64 latent 通道；残差自编码 + 语义对齐损失。79M enc / 259M dec，<a href="../concepts/image-quality-metrics.html">PSNR 33.42 / SSIM 0.9225</a>（重建还原度）。</li>
+    <li id="g-05"><span class="term">六段训练 + Data Flywheel</span> · <a href="../concepts/progressive-resolution-training.html">256P→512P→多分辨率(到 2K) 渐进</a>→SFT；闭环数据飞轮把失败样本路由到 RL/预训练/prompt 工程补数据。</li>
+    <li id="g-06"><span class="term"><a href="../concepts/dmd-distillation.html">DMD 蒸馏 · 4-NFE</a></span> · Distribution Matching Distillation：把 40 步老师蒸成 4 次前向（<a href="../concepts/dmd-distillation.html">NFE</a>）的学生，让学生出图分布匹配老师。辅助 fake-score 用 flow-matching。同 <a href="drifting-models.html">Drifting</a>/<a href="diffusion-opd.html">DiffusionOPD</a> 的少步化线。</li>
     <li id="g-07"><span class="term">MMDiT / MSRoPE</span> · 多模态扩散 Transformer 做联合 condition-target 建模；MSRoPE 给文字+图像 token 算跨模态联合位置。详见 <a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> / <a href="../concepts/mrope.html">M-RoPE</a>。</li>
   </ol>
 </div>
