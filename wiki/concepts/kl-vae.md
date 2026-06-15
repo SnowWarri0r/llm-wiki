@@ -1,8 +1,8 @@
 ---
 name: kl-vae
 type: concept
-sources: [ideogram-4]
-updated: 2026-06-05
+sources: [ideogram-4, qwen-image-2]
+updated: 2026-06-15
 ---
 
 # KL-VAE · 把图压进 latent 的那层地基
