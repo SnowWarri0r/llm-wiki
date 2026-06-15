@@ -116,7 +116,7 @@ figure.play .mr-svg .draw { stroke-dashoffset: 0; }
 
 <div class="tldr">
   <span class="label">TL;DR</span>
-  <p>MRT（20B，建在 <a href="qwen-image-2.html">Qwen-Image</a> 上）做<strong>分层图像</strong>生成与编辑：产出可编辑的 <strong>RGBA 图层</strong><a class="jr" href="#g-01">1</a>（画布+背景+K 前景），不是拍平图。核心一招——<strong>选择性 token masking</strong><a class="jr" href="#g-02">2</a>：哪些图层从<strong>干净 latent（给定、不预测）</strong>初始化、哪些从<strong>噪声（待生成）</strong>初始化，这个开关<strong>本身就是任务</strong>：全噪声=<strong>文生层</strong>；合成图干净/图层噪声=<strong>拆图成层</strong>；已有层干净/新层噪声=<strong>层改层</strong>。干净↔噪声 token 间 <strong>full attention</strong>。这就是 <a href="qwen-image-2.html">Qwen-Image-2.0</a> "条件→目标"的升级版（任意子集当条件）。<strong>Anonymous Region Transformer</strong><a class="jr" href="#g-03">3</a>：每层裁剪成 region token（<a href="../concepts/kl-vae.html">WAN-2.1-VAE</a>），不给身份标签、靠位置+内容推角色 → 可任意重摆。<strong>Overflow 画布层</strong><a class="jr" href="#g-04">4</a>留住溢出边界的像素（60%+ 设计有溢出）。<strong>DMD 蒸馏</strong><a class="jr" href="#g-05">5</a> 50→8 步、6× 提速、~20 层峰值 108.5×。全参数微调、10M+ 多语设计。比 Qwen-Image-Layered 快 10~100×、省 50~90% 显存。</p>
+  <p>MRT（20B，建在 <a href="qwen-image-2.html">Qwen-Image</a> 上）做<strong>分层图像</strong>生成与编辑：产出可编辑的 <strong>RGBA 图层</strong><a class="jr" href="#g-01">1</a>（画布+背景+K 前景），不是拍平图。核心一招——<strong>选择性 token masking</strong><a class="jr" href="#g-02">2</a>：哪些图层从<strong>干净 latent（给定、不预测）</strong>初始化、哪些从<strong>噪声（待生成）</strong>初始化，这个开关<strong>本身就是任务</strong>：全噪声=<strong>文生层</strong>；合成图干净/图层噪声=<strong>拆图成层</strong>；已有层干净/新层噪声=<strong>层改层</strong>。干净↔噪声 token 间 <strong>full attention</strong>。这就是 <a href="qwen-image-2.html">Qwen-Image-2.0</a> "条件→目标"的升级版（任意子集当条件）。<strong>Anonymous Region Transformer</strong><a class="jr" href="#g-03">3</a>：每层裁剪成 region token（<a href="../concepts/video-vae.html">WAN-2.1-VAE</a>），不给身份标签、靠位置+内容推角色 → 可任意重摆。<strong>Overflow 画布层</strong><a class="jr" href="#g-04">4</a>留住溢出边界的像素（60%+ 设计有溢出）。<strong>DMD 蒸馏</strong><a class="jr" href="#g-05">5</a> 50→8 步、6× 提速、~20 层峰值 108.5×。全参数微调、10M+ 多语设计。比 Qwen-Image-Layered 快 10~100×、省 50~90% 显存。</p>
 </div>
 
 
@@ -215,7 +215,7 @@ figure.play .mr-svg .draw { stroke-dashoffset: 0; }
 <!-- §03 -->
 <h2><span class="num">§ 03</span>Anonymous Region Transformer</h2>
 
-<p>每个图层先被<strong>裁剪成一块区域</strong>，用 <a href="../concepts/kl-vae.html">WAN-2.1-VAE</a> 编成各自的 <strong>region token</strong>；所有前景层 token + 背景层 token + 合成图 token 一起做 <strong>full attention</strong>（生成的层能看见给定的层，层间一致）。</p>
+<p>每个图层先被<strong>裁剪成一块区域</strong>，用 <a href="../concepts/video-vae.html">WAN-2.1-VAE</a> 编成各自的 <strong>region token</strong>；所有前景层 token + 背景层 token + 合成图 token 一起做 <strong>full attention</strong>（生成的层能看见给定的层，层间一致）。</p>
 
 <p>"<strong>匿名（anonymous）</strong>"的意思：<strong>不给图层身份标签</strong>，模型纯靠每块区域的<strong>空间位置 + 视觉内容</strong>推断它是什么角色。好处是每个前景层都保留<strong>完整空间信息 → 能任意重新摆位</strong>，复用性拉满。</p>
 
