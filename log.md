@@ -772,3 +772,5 @@ skill 更新:
 ## [2026-06-15] ingest | deep-research + react-loop (survey 2506.12594)
 
 ## [2026-06-16] ingest | ai-memory-hierarchy (PhotonCap SOCAMM selloff)
+
+## [2026-06-16] ingest | stable-diffusion-3-5 + mmdit (SD3 arXiv 2403.03206)

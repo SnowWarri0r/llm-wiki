@@ -1,7 +1,7 @@
 ---
 name: diffusion-transformer
 type: concept
-sources: [ideogram-4, qwen-image-2, mrt]
+sources: [ideogram-4, qwen-image-2, mrt, stable-diffusion-3-5]
 updated: 2026-06-15
 ---
 
@@ -34,6 +34,8 @@ for block in layers:                       # 34 层
 ```
 
 ## 链接
+- [[mmdit]] · 双流多模态 DiT(文字图像同序列、各自权重)，本页"双流"那支的专页
+- [[stable-diffusion-3-5]] · MMDiT 的招牌落地
 - [[ideogram-4]] · 9.3B 单流 DiT
 - [[flow-matching]] · DiT 的训练目标（预测速度场）
 - [[transformer-architecture]] · DiT 的骨架就是它
