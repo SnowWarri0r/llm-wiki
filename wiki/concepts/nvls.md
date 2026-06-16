@@ -27,3 +27,4 @@ NVIDIA/NCCL 生态里的低延迟集合通信路径，用来减少多 GPU 之间
 - [[micro-turn]] · 为什么低延迟通信重要
 - [[moe]] · expert 并行会放大通信需求
 - [[grouped-gemm-vs-gemv]] · 小 batch MoE 的计算侧取舍
+- [[ai-memory-hierarchy]] · 内存池化/光互连跟低延迟通信是同一类"把数据搬得更快"
