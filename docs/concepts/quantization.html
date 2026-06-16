@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>量化 · WxAy · 用更少比特存数字和算 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · quantization</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>量化 · WxAy · 用更少比特存数字和算</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>用<strong>更少的比特</strong>存权重、做计算，省显存 + 提速度。命名 <strong>WxAy</strong> = 权重 x 位、激活 y 位;<strong>W8A8</strong>(都 8 位)能让矩阵乘直接跑在 INT8 上、吞吐翻倍,但激活的"离群值"会坑精度,要靠 SmoothQuant 之类的招。</p>
+<h2>直觉 · 菜谱和食材都四舍五入</h2>
+<p>LLM 默认权重和激活都是 <strong>16 位(BF16)</strong>。量化就是把它们压到 8 位、4 位的整数。命名规则:</p>
+<ul>
+<li><strong>W8A16</strong> = 权重 8 位、激活 16 位(weight-only,只压权重)</li>
+<li><strong>W8A8</strong> = 权重 + 激活<strong>都</strong> 8 位(INT8)</li>
+<li><strong>W4A16</strong> = 权重 4 位、激活 16 位</li>
+</ul>
+<p>一层的计算本质是 <code>输出 = 权重 W × 激活 A</code>(矩阵乘)。关键区别:</p>
+<ul>
+<li><strong>只压权重(W8A16)</strong>:省了权重显存/带宽,但<strong>矩阵乘还得在 16 位里算</strong>(激活 16 位,得把权重升回去) → 主要救内存,不太提算力。适合 batch 小、被显存卡住的解码。</li>
+<li><strong>W8A8</strong>:两个操作数都 INT8 → <strong>矩阵乘直接跑在 INT8 张量核</strong> → 吞吐约 ×2、带宽减半。<strong>这才是真·降延迟</strong>(Lumine 200ms 出一帧靠它)。</li>
+</ul>
+<h2>坑在激活:离群值</h2>
+<p>权重数值乖、分布均匀,好压。<strong>激活不行——有少数"离群值"(几个通道数值巨大)</strong>。naive INT8 一压:这几个巨值把量化范围撑爆,其余正常值全被压成约等于 0 → 精度崩。</p>
+<p><strong>SmoothQuant</strong> 的招:把"难压的责任"<strong>从激活搬一部分到权重</strong>——激活按通道除以系数 <code>s</code>、对应权重乘回 <code>s</code>(数学上输出不变),让两边都变乖、都能干净 INT8:</p>
+<pre><code>Y = (X / s) · (s · W)      # 输出不变，但 X、W 都更平滑 → 都能 INT8
+</code></pre>
+<p>类比:<strong>权重是菜谱</strong>(固定,四舍五入容易);<strong>激活是流进来的食材</strong>(每次不同,偶尔某样爆量)。SmoothQuant 把爆量那样<strong>预先缩小</strong>、把缩放系数<strong>烤进菜谱</strong>,菜谱和食材就都能安心约成整数。</p>
+<h2>怎么做的(几种主流)</h2>
+<pre><code>weight-only:  GPTQ / AWQ        # W4A16，救显存，解码常用
+weight+act :  SmoothQuant       # W8A8，激活难压先平滑搬给权重，提算力
+KV-cache 量化: 把 KV 也压到 8/4 位，长上下文省显存（与上面正交）
+</code></pre>
+<h2>代码出处 / 来源</h2>
+<ul>
+<li><a href="../papers/lumine.html">lumine</a> · W8A8(SmoothQuant) 是它 25.3× 延迟优化的一环</li>
+<li>SmoothQuant(Xiao et al. 2022)、GPTQ、AWQ</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/lumine.html">lumine</a> · 实时 agent 靠 W8A8 把推理塞进 200ms</li>
+<li><a href="../concepts/kv-cache.html">kv-cache</a> · KV-cache 量化是另一条省显存线</li>
+<li><a href="../concepts/bin-quantization.html">bin-quantization</a> · 对照:那是把连续值离散成码本(codec 用)，不是省比特的权重量化</li>
+<li><a href="../concepts/prefill-decode.html">prefill-decode</a> · weight-only 救解码、W8A8 提两阶段算力</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/lumine.html"><span class="cat">paper</span>Lumine · 从像素直接玩 3D 开放世界的通用 agent</a></li><li><a href="../concepts/bin-quantization.html"><span class="cat">concept</span>Bin Quantization · 等距分箱量化</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/quantization.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
