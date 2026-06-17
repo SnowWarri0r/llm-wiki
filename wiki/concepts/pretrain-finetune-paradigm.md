@@ -72,3 +72,4 @@ BERT 论文 Fig 3 给了 4 种典型下游任务的 head 添加方式：
 - [[gpt-1]] · 同期且更早的 paper（也是 pretrain+finetune，只是用 causal LM）
 - [[masked-language-model]] · BERT 的 pretrain 任务
 - [[in-context-learning]] · 替代它的下一代范式
+- [[lora]] · finetune 那步的参数高效版(冻底模、只训低秩小增量)
