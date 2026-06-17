@@ -1,7 +1,7 @@
 ---
 name: dmd-distillation
 type: concept
-sources: [qwen-image-2, mrt, pid-pixel-diffusion]
+sources: [qwen-image-2, mrt, pid-pixel-diffusion, flux-1]
 updated: 2026-06-17
 ---
 
@@ -78,3 +78,4 @@ update ∝  teacher_score(x)  −  fake_score(x)
 - [[closed-form-kl]] · 分布匹配本质是最小化 KL
 - [[qwen-image-2]] · [[mrt]] · 用它把多步压成少步
 - [[pid-pixel-diffusion]] · DMD2 把像素扩散解码蒸到 4 步
+- [[flux-1]] · schnell 的步数蒸馏；与 [[guidance-distillation]] 正交

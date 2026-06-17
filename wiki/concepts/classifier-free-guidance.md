@@ -1,7 +1,7 @@
 ---
 name: classifier-free-guidance
 type: concept
-sources: [ideogram-4]
+sources: [ideogram-4, flux-1]
 updated: 2026-06-04
 ---
 
@@ -39,3 +39,4 @@ z_next = euler_step(z_t, v, t)          # flow matching 积分一步
 - [[ideogram-4]] · 非对称 CFG + polish tail
 - [[flow-matching]] · CFG 作用在速度场上
 - [[diffusion-transformer]] · 条件/无条件两支都跑 DiT
+- [[guidance-distillation]] · 把这两遍前向蒸成一遍([[flux-1]] dev)
