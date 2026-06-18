@@ -44,6 +44,8 @@ output  = weights · V          # N×dᵥ 加权求和
 - **Multi-head** ([[multi-head-attention]])：跑 N 次自注意力，每次用不同投影
 
 ## 链接
+- [[dot-product]] · Q·Kᵀ 注意力分数就是点积
+- [[softmax]] · 分数→权重(和为1)；√d 防它太尖
 - [[attention-is-all-you-need]] · 论文
 - [[multi-head-attention]] · 上层扩展
 - [[positional-encoding]] · 解决 attention 无序问题
