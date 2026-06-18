@@ -235,7 +235,8 @@
 
 ### 共享基础设施
 - [矩阵的秩 · rank](wiki/concepts/matrix-rank.md) — 一个变换"真正有几个独立旋钮"; 低秩=冗余可压(拆成两个瘦矩阵); LoRA/SVD/PCA/注意力瓶颈背后同一件事
-- [SVD · 奇异值分解](wiki/concepts/svd.md) — 任何矩阵=转·各轴拉伸·再转(UΣVᵀ); 奇异值σ排序=各方向强度; 截断前r个=最佳低秩近似(Eckart-Young); PCA/压缩/LoRA 根
+- [特征向量 / 特征值](wiki/concepts/eigenvector.md) — 被矩阵作用后"只缩放不转向"的方向 Wv=λv; 怎么手算(特征方程 det(W−λI)=0 全程); 特征分解 W=QΛQ⁻¹; SVD 的地基
+- [SVD · 奇异值分解](wiki/concepts/svd.md) — 接特征向量: 看 WᵀW 特征向量推广到任意矩阵; W=UΣVᵀ 入方向/拉伸/出方向(U≠V); σ=√特征值; 截断前r个=最佳低秩近似; PCA/压缩/LoRA 根
 - [点积与投影](wiki/concepts/dot-product.md) — a·b=Σaᵢbᵢ=|a||b|cosθ, 衡量"方向多一致+多长"; 注意力分数/检索打分/矩阵乘的最小积木; 投影=影子长度
 - [Softmax · 温度](wiki/concepts/softmax.md) — 一组实数压成和为1的概率(exp再归一); 可导的软argmax; 温度T调软硬(小→尖锐接近argmax/大→平); 注意力权重和采样都用
 - [LoRA](wiki/concepts/lora.md) — 冻底模只训低秩小增量 ΔW=BA; 几十MB加个技能、可插拔; PEFT, 文生图社区标配
