@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>个人 wiki · Threads · 思考</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+<style>
+
+.search { margin: 28px 0 8px; }
+.search input { width: 100%; box-sizing: border-box; font-family: 'JetBrains Mono', monospace; font-size: 15px; padding: 14px 16px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper-card); color: var(--ink); }
+.search input:focus { outline: none; border-color: var(--brick); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.chip { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1px; padding: 5px 13px; border: 1px solid var(--rule); border-radius: 20px; background: transparent; color: var(--ink-2); cursor: pointer; transition: all 0.15s; }
+.chip:hover { border-color: var(--brick); }
+.chip.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.chip .c { opacity: 0.55; font-size: 10px; }
+.pill.dom { font-weight: 700; border-color: var(--ink-2); }
+.nores { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--muted); padding: 36px 0; text-align: center; }
+.entries { margin-top: 18px; }
+
+</style>
+</head>
+<body>
+<div class="page">
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Threads · 思考 · 2 条目</span>
+</div>
+
+<section class="hero">
+  <div class="issue"><a href="index.html" style="color:var(--brick);text-decoration:none;">← index</a> · 按时间倒序</div>
+  <h1 class="title">Threads · 思考</h1>
+  <p class="dek">共 2 条，最新在上。</p>
+</section>
+
+<div class="search">
+  <input id="q" type="search" placeholder="搜索 标题 / 概念 / 术语…" autocomplete="off" spellcheck="false" />
+  <div class="chips"><button class="chip active" data-dom="">全部 <span class="c">2</span></button><button class="chip" data-dom="ML">ML <span class="c">2</span></button></div>
+</div>
+<div id="nores" class="nores" hidden>没有匹配的条目 — 换个词试试</div>
+<div class="entries">
+<div class="entry thread" data-domains="ML" data-s="fish speech grpo determinism question fish-speech 做 grpo/rl 对齐时，训练采样和推理 serving 的 kernel 不一致会不会影响 reward 归因？ fish-speech-grpo-determinism-question thread ml 一句话 问题背景 需要查什么 暂时判断 链接">
+  <h3><a href="threads/fish-speech-grpo-determinism-question.html">Fish Speech GRPO Determinism Question</a></h3>
+  <p class="hook">fish-speech 做 GRPO/RL 对齐时，训练采样和推理 serving 的 kernel 不一致会不会影响 reward 归因？</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">thread</span><span class="pill">updated 2026-05-22</span><span class="pill ready">auto HTML ✓</span></div>
+</div>
+<div class="entry thread" data-domains="ML" data-s="待回答的问题（attached: 每个都该新开一页） 按&quot;看了什么源、还不懂什么&quot;的清单。每条之后展开成自己的 thread 页。 open-questions thread ml 来自 tml interaction models 来自 fish-speech 跨源问题 链接">
+  <h3><a href="threads/open-questions.html">待回答的问题（attached: 每个都该新开一页）</a></h3>
+  <p class="hook">按&quot;看了什么源、还不懂什么&quot;的清单。每条之后展开成自己的 thread 页。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">thread</span><span class="pill">updated 2026-05-20</span><span class="pill ready">auto HTML ✓</span></div>
+</div>
+</div>
+<div class="colophon">
+  Renderer / <code>render.py</code> · Pattern / <a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f" target="_blank">Karpathy LLM Wiki</a> · Source / <a href="https://github.com/SnowWarri0r/llm-wiki" target="_blank">github.com/SnowWarri0r/llm-wiki</a>
+</div>
+
+</div>
+<script>
+
+(function(){
+  var q = document.getElementById('q');
+  var chips = [].slice.call(document.querySelectorAll('.chip'));
+  var entries = [].slice.call(document.querySelectorAll('.entry'));
+  var nores = document.getElementById('nores');
+  var dom = '';
+  function apply(){
+    var term = q.value.trim().toLowerCase();
+    var shown = 0;
+    entries.forEach(function(el){
+      var okT = !term || (el.getAttribute('data-s') || '').indexOf(term) !== -1;
+      var okD = !dom || (el.getAttribute('data-domains') || '').split(' ').indexOf(dom) !== -1;
+      var vis = okT && okD;
+      el.style.display = vis ? '' : 'none';
+      if (vis) shown++;
+    });
+    nores.hidden = shown !== 0;
+  }
+  q.addEventListener('input', apply);
+  chips.forEach(function(c){
+    c.addEventListener('click', function(){
+      chips.forEach(function(x){ x.classList.remove('active'); });
+      c.classList.add('active');
+      dom = c.getAttribute('data-dom') || '';
+      apply();
+    });
+  });
+})();
+
+</script>
+</body>
+</html>
