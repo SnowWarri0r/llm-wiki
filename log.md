@@ -792,3 +792,7 @@ skill 更新:
 ## [2026-06-18] query | tokenization + sampling-decoding (LLM 输入输出两端)
 
 ## [2026-06-18] query | norm-regularization + bayes-probability (数学地基收尾)
+
+## [2026-06-18] query | flash-attention (IO-aware 精确注意力)
+
+## [2026-06-18] ingest | rae-dit + representation-autoencoder (arXiv 2601.16208)

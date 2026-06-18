@@ -47,3 +47,4 @@ latent 扩散（噪声→干净）── 中途早停 ──> 半成品(带噪) 
 - [[dmd-distillation]] · 把解码扩散蒸到 4 步(DMD2)
 - [[diffusion-transformer]] · 主体 latent 生成仍是它
 - [[image-quality-metrics]] · 解码质量怎么量(重建 vs 生成)
+- [[representation-autoencoder]] · 对照:PiD 换解码端、RAE 换编码端

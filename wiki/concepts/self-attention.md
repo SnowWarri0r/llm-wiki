@@ -46,6 +46,7 @@ output  = weights · V          # N×dᵥ 加权求和
 ## 链接
 - [[dot-product]] · Q·Kᵀ 注意力分数就是点积
 - [[softmax]] · 分数→权重(和为1)；√d 防它太尖
+- [[flash-attention]] · 同样的 softmax(QKᵀ)V，但省内存搬运的精确算法
 - [[attention-is-all-you-need]] · 论文
 - [[multi-head-attention]] · 上层扩展
 - [[positional-encoding]] · 解决 attention 无序问题

@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>RAE-DiT · 拿"看懂图的编码器"当扩散的 latent</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --viridian: #157a63; --viridian-soft: #cfe8e0;
+  --accent: var(--viridian); --accent-soft: var(--viridian-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(38px, 6vw, 70px); line-height: 0.98; letter-spacing: -0.03em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 36px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
+p { margin: 12px 0; } strong { font-weight: 700; }
+ul { margin: 12px 0; padding-left: 24px; } li { margin: 6px 0; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.86em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--accent-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--accent); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--accent); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+table.spec { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+table.spec td, table.spec th { border-bottom: 1px dashed var(--rule); padding: 7px 10px; text-align: left; vertical-align: top; }
+table.spec th { color: var(--accent); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+table.spec td:first-child { color: var(--muted); }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--accent-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--accent-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* ra-specific */
+.ra-svg { width: 100%; height: auto; display: block; font-family: 'JetBrains Mono', monospace; }
+.ra-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .ra-rev { opacity: 1; }
+figure.play .ra-rev.d1 { transition-delay: 0.15s; }
+figure.play .ra-rev.d2 { transition-delay: 0.45s; }
+figure.play .ra-rev.d3 { transition-delay: 0.75s; }
+figure.play .ra-rev.d4 { transition-delay: 1.05s; }
+figure.play .ra-rev.d5 { transition-delay: 1.35s; }
+figure.play .ra-rev.d6 { transition-delay: 1.65s; }
+.ra-svg .draw { stroke-dasharray: 1000; stroke-dashoffset: 1000; transition: stroke-dashoffset 1.5s ease; }
+figure.play .ra-svg .draw { stroke-dashoffset: 0; }
+@media (prefers-reduced-motion: reduce) { .ra-rev { opacity: 1; transition: none; } .ra-svg .draw { stroke-dashoffset: 0; transition: none; } }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · rae-dit</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · 文生图/表征 · RAE-DiT · 2026</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 表征自编码器 · 语义 latent 扩散</div>
+  <h1 class="title">RAE-DiT ·<br /><span class="em">在"看懂图"的空间里作画。</span></h1>
+  <div class="byline">NYU 等 · Scaling Text-to-Image Diffusion Transformers with Representation Autoencoders · arXiv 2601.16208 · 2026</div>
+  <p class="dek">主流 latent 扩散先单训一个 VAE 把图压成没语义的低维"压缩坐标"。RAE 改成:拿一个冻结的预训练表征编码器(SigLIP-2 / DINOv2)当 latent 空间、只训一个轻量解码器,让扩散直接在高维语义空间里跑。收敛快 4×、抗过拟合(VAE 64 epoch 崩、RAE 稳到 256)、越 scale 越赢。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>RAE(Representation Autoencoder)把扩散的 latent 从 <a href="../concepts/kl-vae.html">VAE 压缩 latent</a> 换成<strong>冻结表征编码器的高维语义 latent</strong><a class="jr" href="#g-01">1</a>:编码器用 <strong>frozen <a href="../concepts/dino.html">SigLIP-2 / DINOv2</a></strong>(256 token×1152 维),<strong>只训一个轻量解码器</strong>还原像素<a class="jr" href="#g-02">2</a>;扩散(<a href="../concepts/diffusion-transformer.html">DiT</a> + <a href="flow-matching.html">flow matching</a>)直接在这个"已看懂图"的空间里跑。一个**必须**的技术:<strong>维度相关噪声调度</strong>(高维 latent 要按 <code>α=√(m/n)</code> 移时间步,去掉 GenEval 49.6→23.6)<a class="jr" href="#g-03">3</a>。规模放大后<strong>配方反而简化</strong>:宽 diffusion head、噪声增强解码都变得没必要<a class="jr" href="#g-04">4</a>。结果:比 FLUX VAE 基线<strong>收敛快 4.0×</strong>;VAE 微调 64 epoch 过拟合崩、<strong>RAE 稳到 256</strong>;0.5B→9.8B 全程 RAE>VAE<a class="jr" href="#g-05">5</a>。</p>
+</div>
+
+
+<!-- §01 -->
+<h2><span class="num">§ 01</span>痛点：VAE 的 latent 是"压缩坐标"，没语义</h2>
+
+<p>主流做法:先单训一个 <a href="../concepts/kl-vae.html">VAE</a>,把图压成低维 latent(常 &lt;100 维),再让扩散在里头跑。问题是 <strong>VAE 是为"忠实还原"训的</strong>——它的 latent 轴<strong>没有语义含义</strong>(纯压缩编码),还在压缩时丢掉细节。扩散在这种"压缩坐标系"里学,<strong>慢</strong>,而且高质量数据微调时<strong>容易过拟合</strong>。</p>
+
+<p>RAE 的主张:<strong>别再单训压缩器了。已经有一堆"看懂图"的模型(<a href="../concepts/dino.html">DINOv2</a>、SigLIP)——直接拿它们当 latent 空间。</strong></p>
+
+
+<!-- §02 -->
+<h2><span class="num">§ 02</span>RAE：冻结语义编码器 + 只训解码器</h2>
+
+<figure id="fig-vae-rae">
+  <figcaption><span>FIG 01 · 压缩坐标 vs 语义坐标</span><span class="fnum">FROZEN ENCODER, TRAIN ONLY DECODER</span></figcaption>
+  <svg class="ra-svg" viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="rv-h" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#7a6f5d"/></marker>
+      <marker id="rv-g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#157a63"/></marker>
+    </defs>
+    <!-- VAE lane -->
+    <text class="ra-rev d1" x="40" y="30" text-anchor="start" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#9b2c2c">VAE · 单训一个压缩器</text>
+    <g class="ra-rev d1" font-size="8.5" text-anchor="middle" fill="#3a3128">
+      <rect x="48" y="46" width="40" height="40" rx="3" fill="#faf4e1" stroke="#7a6f5d"/><text x="68" y="70">图</text>
+      <rect x="140" y="48" width="92" height="36" rx="3" fill="#f3d9d9" stroke="#9b2c2c"/><text x="186" y="64" font-weight="700" fill="#7a2020">VAE 编码</text><text x="186" y="77" font-size="7.5" fill="#7a6f5d">要训练</text>
+      <rect x="284" y="50" width="78" height="32" rx="3" fill="#efd6c8" stroke="#9b2c2c"/><text x="323" y="66">低维 latent</text><text x="323" y="78" font-size="7" fill="#7a6f5d">压缩坐标·无语义</text>
+    </g>
+    <g class="ra-rev d2" stroke="#7a6f5d" stroke-width="1.2" marker-end="url(#rv-h)"><line x1="88" y1="66" x2="136" y2="66"/><line x1="232" y1="66" x2="280" y2="66"/></g>
+    <text class="ra-rev d2" x="430" y="62" text-anchor="start" font-size="9" fill="#9b2c2c">扩散在压缩坐标里跑</text>
+    <text class="ra-rev d2" x="430" y="77" text-anchor="start" font-size="8.5" fill="#7a6f5d">轴无语义 → 慢、易过拟合</text>
+
+    <line x1="40" y1="108" x2="680" y2="108" class="ra-rev d2" stroke="#c7bca8" stroke-width="1" stroke-dasharray="4 4"/>
+
+    <!-- RAE lane -->
+    <text class="ra-rev d3" x="40" y="138" text-anchor="start" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#157a63">RAE · 冻结语义编码器，只训解码器</text>
+    <g class="ra-rev d3" font-size="8.5" text-anchor="middle" fill="#3a3128">
+      <rect x="48" y="156" width="40" height="40" rx="3" fill="#faf4e1" stroke="#7a6f5d"/><text x="68" y="180">图</text>
+      <rect x="132" y="156" width="108" height="40" rx="3" fill="#cfe8e0" stroke="#157a63" stroke-width="1.6"/><text x="186" y="172" font-weight="700" fill="#0d5a48">SigLIP-2/DINOv2</text><text x="186" y="186" font-size="7.5" fill="#0d5a48">冻结·不训(已看懂图)</text>
+      <rect x="288" y="156" width="92" height="40" rx="3" fill="#cfe8e0" stroke="#157a63"/><text x="334" y="172">高维语义 latent</text><text x="334" y="186" font-size="7" fill="#0d5a48">256 token×1152 维</text>
+    </g>
+    <g class="ra-rev d4" stroke="#157a63" stroke-width="1.2" marker-end="url(#rv-g)"><line x1="88" y1="176" x2="128" y2="176"/><line x1="240" y1="176" x2="284" y2="176"/></g>
+    <text class="ra-rev d4" x="430" y="172" text-anchor="start" font-size="9" fill="#157a63">扩散在"已看懂图"的语义坐标里跑</text>
+    <text class="ra-rev d4" x="430" y="187" text-anchor="start" font-size="8.5" fill="#7a6f5d">附近=语义相似 → 收敛快、自带正则</text>
+    <text class="ra-rev d5" x="334" y="214" text-anchor="middle" font-size="8" fill="#0d5a48">↑ 只这个解码器要训(L1+LPIPS+Gram+对抗)</text>
+
+    <text class="ra-rev d5" x="360" y="252" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#3a3128">VAE=自存的 zip 压缩包(坐标没意义) · RAE=借现成"概念坐标系"作画</text>
+  </svg>
+</figure>
+
+<p><strong>Representation Autoencoder</strong>:编码器 = <strong>冻结的预训练表征模型</strong>(SigLIP-2 So400M / <a href="../concepts/dino.html">DINOv2</a> / WebSSL,就是自监督/对比学出来"看懂图"的那类),输出 <strong>256 token × 1152 维</strong>的高维语义 latent;<strong>只训一个轻量解码器</strong>把这堆语义 embedding 还原成像素(L1 + LPIPS + Gram + 对抗损失,7300 万图)。扩散直接在这个语义空间里跑。</p>
+
+<p>类比:VAE 像把图存成 <strong>zip 压缩包</strong>(紧凑但坐标没意义、有损);RAE 像直接在一个<strong>"已经理解图像"的概念坐标系</strong>里作画——"附近 = 语义相似",扩散学起来顺,再用解码器把概念渲染回像素。</p>
+
+
+<!-- §03 -->
+<h2><span class="num">§ 03</span>唯一不能省的：维度相关噪声调度</h2>
+
+<p>语义 latent 的维度 <code>m = N×d</code> 比 VAE 大得多。高维空间里有个反直觉的事:<strong>加"同样大小"的噪声,相对腐蚀得更少</strong>(噪声被摊到更多维上)。所以扩散的<strong>时间步必须按维度重新缩放</strong>,否则训练时模型见到的"信噪比"全错位。</p>
+
+<figure id="fig-noise">
+  <figcaption><span>FIG 02 · 高维要把时间步往"更多噪声"挪</span><span class="fnum">DIMENSION-DEPENDENT SHIFT</span></figcaption>
+  <svg class="ra-svg" viewBox="0 0 720 210" xmlns="http://www.w3.org/2000/svg">
+    <!-- 低维：同样噪声腐蚀大 -->
+    <text class="ra-rev d1" x="160" y="32" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#9b2c2c">低维 latent</text>
+    <g class="ra-rev d1">
+      <rect x="110" y="46" width="100" height="44" rx="3" fill="#efd6c8" stroke="#9b2c2c"/>
+      <g fill="#9b2c2c" opacity="0.7"><circle cx="124" cy="60" r="3"/><circle cx="150" cy="74" r="3"/><circle cx="178" cy="58" r="3"/><circle cx="196" cy="80" r="3"/><circle cx="138" cy="84" r="3"/></g>
+    </g>
+    <text class="ra-rev d1" x="160" y="106" text-anchor="middle" font-size="8.5" fill="#7a6f5d">少数维 → 同样噪声盖住一大片</text>
+    <!-- 高维：同样噪声腐蚀小 -->
+    <text class="ra-rev d2" x="160" y="140" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#157a63">高维语义 latent</text>
+    <g class="ra-rev d2">
+      <rect x="60" y="152" width="200" height="40" rx="3" fill="#cfe8e0" stroke="#157a63"/>
+      <g fill="#157a63" opacity="0.6"><circle cx="74" cy="164" r="2"/><circle cx="92" cy="178" r="2"/><circle cx="110" cy="160" r="2"/><circle cx="128" cy="184" r="2"/><circle cx="146" cy="166" r="2"/><circle cx="164" cy="180" r="2"/><circle cx="182" cy="162" r="2"/><circle cx="200" cy="182" r="2"/><circle cx="218" cy="168" r="2"/><circle cx="240" cy="178" r="2"/></g>
+    </g>
+    <text class="ra-rev d2" x="160" y="206" text-anchor="middle" font-size="8.5" fill="#7a6f5d">同样噪声摊薄到很多维 → 腐蚀变小</text>
+
+    <!-- 右侧结论 -->
+    <line x1="300" y1="40" x2="300" y2="190" class="ra-rev d2" stroke="#c7bca8" stroke-width="1" stroke-dasharray="5 4"/>
+    <text class="ra-rev d3" x="330" y="60" text-anchor="start" font-size="11" font-weight="700" fill="#157a63">所以高维必须移时间步</text>
+    <text class="ra-rev d3" x="330" y="82" text-anchor="start" font-size="10" fill="#3a3128">按 α=√(m/n) 把 schedule 往</text>
+    <text class="ra-rev d3" x="330" y="98" text-anchor="start" font-size="10" fill="#3a3128">"加更多噪声"那头挪,补回信噪比</text>
+    <rect class="ra-rev d4" x="330" y="118" width="330" height="56" rx="4" fill="#f3d9d9" stroke="#9b2c2c"/>
+    <text class="ra-rev d4" x="495" y="140" text-anchor="middle" font-size="10" font-weight="700" fill="#7a2020">去掉这个 shift:</text>
+    <text class="ra-rev d4" x="495" y="160" text-anchor="middle" font-size="11" font-weight="700" fill="#7a2020">GenEval 49.6 → 23.6(腰斩)</text>
+  </svg>
+</figure>
+
+<p>公式 <code>t_m = α·t_n / (1 + (α−1)·t_n)</code>,<code>α = √(m/n)</code>(参考维度 n=4096)。这是论文里<strong>唯一不能省</strong>的关键技术——去掉它性能直接腰斩。</p>
+
+
+<!-- §04 -->
+<h2><span class="num">§ 04</span>越 scale 越简单 + 抗过拟合</h2>
+
+<p>有意思的是:<strong>模型放大后,一堆小模型需要的补丁都变得没必要了</strong>——</p>
+<table class="spec">
+  <tr><th>设计</th><th>小模型</th><th>放大后(&gt;2.4B)</th></tr>
+  <tr><td>宽 diffusion head</td><td>0.5B 时 +11.2 GenEval</td><td>没必要(主干容量够了)</td></tr>
+  <tr><td>噪声增强解码</td><td>训练早期有用</td><td>没必要(只是早期正则)</td></tr>
+  <tr><td>维度相关噪声调度</td><td>必须</td><td><strong>必须</strong>(唯一不能省)</td></tr>
+</table>
+
+<p>另一个大优势是<strong>抗过拟合</strong>:高质量数据微调时,VAE 模型 <strong>64 epoch 后就崩</strong>(训练 loss 塌向 0、生成质量掉),而 RAE <strong>稳到 256 epoch</strong> 还在涨——高维 + 语义结构提供了<strong>隐式正则</strong>。</p>
+
+<figure id="fig-overfit">
+  <figcaption><span>FIG 03 · VAE 64 epoch 崩 vs RAE 稳到 256</span><span class="fnum">IMPLICIT REGULARIZATION</span></figcaption>
+  <svg class="ra-svg" viewBox="0 0 720 230" xmlns="http://www.w3.org/2000/svg">
+    <!-- 轴 -->
+    <line class="ra-rev d1" x1="70" y1="200" x2="660" y2="200" stroke="#7a6f5d" stroke-width="1"/>
+    <line class="ra-rev d1" x1="70" y1="200" x2="70" y2="48" stroke="#7a6f5d" stroke-width="1"/>
+    <text class="ra-rev d1" x="360" y="222" text-anchor="middle" font-size="9" fill="#7a6f5d">微调 epoch →</text>
+    <text class="ra-rev d1" x="56" y="120" text-anchor="middle" font-size="9" fill="#7a6f5d" transform="rotate(-90 56 120)">生成质量</text>
+    <text class="ra-rev d1" x="215" y="213" text-anchor="middle" font-size="8" fill="#7a6f5d">64</text>
+    <text class="ra-rev d1" x="650" y="213" text-anchor="middle" font-size="8" fill="#7a6f5d">256</text>
+    <!-- 64 epoch 竖虚线 -->
+    <line class="ra-rev d2" x1="215" y1="56" x2="215" y2="200" stroke="#9b2c2c" stroke-width="0.8" stroke-dasharray="3 3"/>
+    <!-- RAE 曲线（升后稳，点都在线上） -->
+    <polyline class="draw d3" points="70,178 215,104 360,80 505,72 650,68" fill="none" stroke="#157a63" stroke-width="2.4" pathLength="1000"/>
+    <!-- VAE 曲线（64 峰后崩） -->
+    <polyline class="draw d4" points="70,182 215,98 360,128 505,160 650,180" fill="none" stroke="#9b2c2c" stroke-width="2.4" pathLength="1000"/>
+    <!-- 图例（右上空白） -->
+    <rect class="ra-rev d5" x="470" y="58" width="13" height="13" rx="2" fill="#157a63"/>
+    <text class="ra-rev d5" x="490" y="69" text-anchor="start" font-size="11" font-weight="700" fill="#157a63">RAE</text>
+    <text class="ra-rev d5" x="528" y="69" text-anchor="start" font-size="9.5" fill="#7a6f5d">稳到 256 还在涨</text>
+    <rect class="ra-rev d5" x="470" y="80" width="13" height="13" rx="2" fill="#9b2c2c"/>
+    <text class="ra-rev d5" x="490" y="91" text-anchor="start" font-size="11" font-weight="700" fill="#9b2c2c">VAE</text>
+    <text class="ra-rev d5" x="528" y="91" text-anchor="start" font-size="9.5" fill="#7a6f5d">64 epoch 后过拟合崩</text>
+    <text class="ra-rev d5" x="215" y="48" text-anchor="middle" font-size="8" fill="#9b2c2c">VAE 在此见顶</text>
+  </svg>
+</figure>
+
+
+<div class="note">
+  <span class="l">放进 wiki 这条线</span>
+  <p>RAE 要替的是 <a href="../concepts/kl-vae.html">VAE latent</a>;编码器就是 <a href="../concepts/dino.html">DINOv2</a> / SigLIP 那类<a href="../concepts/representation-autoencoder.html">表征模型</a>;主干仍是 <a href="../concepts/diffusion-transformer.html">DiT</a> + <a href="flow-matching.html">flow matching</a>。它跟 <a href="pid-pixel-diffusion.html">PiD</a> 是一对:<strong>PiD 换解码端(latent→像素用扩散补)、RAE 换编码端(用语义编码器当 latent 空间)</strong>,都在挑战"VAE 是不是扩散的最佳地基"。一句话:<strong>别单训没语义的压缩器,把扩散搬进一个已经"看懂图"的高维语义空间——快、稳、越大越赢,代价是噪声调度按维度重算。</strong></p>
+</div>
+
+
+<!-- glossary -->
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term"><a href="../concepts/representation-autoencoder.html">Representation Autoencoder · RAE</a></span> · 冻结预训练表征编码器(SigLIP-2/DINOv2)当 encoder + 只训轻量 decoder 还原像素;扩散在这个高维语义 latent 里跑。对照 <a href="../concepts/kl-vae.html">VAE</a> 的低维压缩 latent。</li>
+    <li id="g-02"><span class="term">只训解码器</span> · 编码器冻结不动(已含语义),只训一个轻量解码器把 256×1152 的语义 embedding 还原成像素,损失 = L1 + LPIPS + Gram + 对抗,7300 万图(网络+合成+文字渲染)。</li>
+    <li id="g-03"><span class="term">维度相关噪声调度</span> · 高维 latent 加同样噪声相对腐蚀更小,须按 <code>α=√(m/n)</code> 把时间步往"更多噪声"挪,补回信噪比。唯一不能省:去掉 GenEval 49.6→23.6。</li>
+    <li id="g-04"><span class="term">scale 后配方简化</span> · 宽 diffusion head(小模型 +11.2,&gt;2.4B 没用)、噪声增强解码(只早期正则)放大后都没必要。模型越大,recipe 越简单。</li>
+    <li id="g-05"><span class="term">RAE &gt; VAE 的实证</span> · 比 FLUX VAE 收敛快 4.0×(GenEval)/4.6×(DPG);VAE 微调 64 epoch 过拟合崩、RAE 稳到 256;0.5B→9.8B 全程 RAE 赢、差距随规模变大。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>SOURCE · arXiv 2601.16208 · Scaling T2I Diffusion Transformers with Representation Autoencoders (NYU 等 · 2026)</span>
+  <span>INGESTED · 2026-06-18</span>
+</div>
+
+</div>
+<script>
+{
+  const figs = ['fig-vae-rae','fig-noise','fig-overfit'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.15 });
+    obs.observe(el);
+  });
+}
+</script>
+</body>
+</html>
