@@ -88,3 +88,4 @@ w ← w − lr·(dL/dw) = 3 − 0.1·4 = 2.6
 - [[lstm]] · cell state 的加法更新同理,梯度不消失
 - [[softmax]] · softmax+交叉熵的梯度特别干净
 - [[matrix-rank]] · 反向传播本质是一连串矩阵乘(每层局部导数)
+- [[norm-regularization]] · 正则给梯度多加 λw 一项;梯度裁剪按 L2 范数
