@@ -58,6 +58,8 @@ KL( N(μ_s, σ²I) ‖ N(μ_t, σ²I) ) = ‖μ_s − μ_t‖² / (2σ²)
 - 实践里直接写成 `((mu_s - mu_t)**2).sum() / (2*sigma**2)`，省掉构造分布
 
 ## 链接
+- [[entropy-kl]] · KL = 交叉熵 − 熵 的通用定义；这页是它在高斯上的闭式特例
+- [[covariance-gaussian]] · "同协方差"指什么 + 多元高斯 N(μ,Σ)
 - [[cross-entropy]] · KL = 交叉熵 − 熵；这页是它在高斯上的闭式特例
 - [[markov-chain]] · 同协方差的来历：每步雾胖瘦由 schedule 定、与策略无关
 - [[diffusion-opd]] · 把每步 KL 蒸馏塌成均值 MSE 的那篇

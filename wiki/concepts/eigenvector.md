@@ -108,3 +108,4 @@ W = Q Λ Q⁻¹
 - [[matrix-rank]] · 非零特征值/奇异值的个数 = 秩
 - [[dot-product]] · "正交"= 点积为 0;特征向量是否正交是关键区别
 - [[markov-chain]] · 转移矩阵的最大特征向量 = 稳态分布
+- [[covariance-gaussian]] · 协方差矩阵的特征向量 = 数据椭圆的轴 = PCA

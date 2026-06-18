@@ -53,3 +53,4 @@ def transformer_sublayer(x, sublayer):
 - [[transformer-architecture]] · 怎么嵌入 sublayer
 - [[degradation-problem]] · 残差连接解决的问题
 - [[batchnorm]] · 配套训练技巧
+- [[gradient-backprop]] · 它给梯度修的"高速路"治的就是连乘消失

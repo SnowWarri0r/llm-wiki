@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>熵 / KL 散度 · 多不确定 · 用错分布多浪费多少 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · entropy-kl</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>熵 / KL 散度 · 多不确定 · 用错分布多浪费多少</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p><strong>熵</strong> = 一个分布平均有多"不确定 / 惊讶"(<code>H = −Σ p·log p</code>)。<strong>KL 散度</strong> = 拿一个错分布 Q 去描述真分布 P 时<strong>多花的惊讶</strong> = 交叉熵 − 熵,恒 ≥0、相等才 0。都是 <code>−log</code> 在打底,跟 <a href="../concepts/cross-entropy.html">cross-entropy</a> 一家。</p>
+<h2>直觉 · 惊讶度 → 熵 → KL 三连</h2>
+<p><strong>① 惊讶度 = −log p。</strong> 一件事越不可能(p 小),它真发生时你越惊讶。<code>p=1</code>(必然)惊讶 0;<code>p</code> 越小 <code>−log p</code> 越大。(<a href="../concepts/cross-entropy.html">cross-entropy</a> 的 <code>−log</code> 就是这个。)</p>
+<p><strong>② 熵 = 惊讶度的平均</strong> <code>H(P)=Σ p·(−log p)</code>。一个分布越"摊平、说不准"熵越高;越"集中、笃定"熵越低。</p>
+<ul>
+<li>公平硬币(0.5/0.5):最说不准 → 熵最高。</li>
+<li>几乎总正面(0.99/0.01):基本笃定 → 熵很低。</li>
+<li>熵也是"平均最少要几位编码"的下限(信息论本义)。</li>
+</ul>
+<p><strong>③ KL 散度 = 用错分布的额外浪费。</strong> 真相是 P,但你<strong>误以为</strong>是 Q 去编码 / 下注:</p>
+<pre><code>KL(P ‖ Q) = Σ p·log(p/q) = [用 Q 描述 P 的平均惊讶] − [P 自己的熵]
+          = 交叉熵 H(P,Q)        −        熵 H(P)
+</code></pre>
+<ul>
+<li><strong>恒 ≥ 0</strong>:用错分布只会更浪费,不会更省;<code>P=Q</code> 时正好 0。</li>
+<li><strong>不对称</strong>:<code>KL(P‖Q) ≠ KL(Q‖P)</code>——"把谁当真相"不一样。</li>
+<li>直觉:KL 就是交叉熵里<strong>纯属浪费</strong>的那部分(扣掉 P 本身不可避免的不确定性)。所以训练最小化交叉熵 ≈ 最小化 KL(P 的熵是常数)。</li>
+</ul>
+<h2>数字例子 · 手算(用 log₂,单位 bit)</h2>
+<p><strong>熵</strong>:</p>
+<pre><code>公平硬币 P=[0.5, 0.5]:
+  H = −(0.5·log₂0.5 + 0.5·log₂0.5) = −(0.5·(−1) + 0.5·(−1)) = 1 bit   ← 最不确定
+偏硬币 P=[0.9, 0.1]:
+  H = −(0.9·log₂0.9 + 0.1·log₂0.1) = −(0.9·(−0.152) + 0.1·(−3.32)) ≈ 0.47 bit  ← 笃定多了，熵低
+</code></pre>
+<p><strong>KL</strong>(真相 P=[0.5,0.5],你误用 Q=[0.9,0.1]):</p>
+<pre><code>KL(P‖Q) = 0.5·log₂(0.5/0.9) + 0.5·log₂(0.5/0.1)
+        = 0.5·(−0.848)      + 0.5·(2.322)
+        = −0.424            + 1.161   = 0.737 bit   ← 用错分布每次平均多花 0.74 bit
+</code></pre>
+<p>反过来 <code>KL(Q‖P) = 0.9·log₂(0.9/0.5)+0.1·log₂(0.1/0.5) = 0.9·0.848+0.1·(−2.322) ≈ 0.53 bit</code> —— <strong>数不一样,印证不对称</strong>。</p>
+<h2>落点</h2>
+<ul>
+<li><strong><a href="../concepts/cross-entropy.html">cross-entropy</a></strong>:分类 / 预测下一 token 的损失就是交叉熵 = 熵 + KL;最小化它在把模型分布 Q 推向真分布 P。</li>
+<li><strong><a href="../concepts/closed-form-kl.html">closed-form-kl</a></strong>:两个高斯的 KL 有闭式;同协方差时塌成均值差²。</li>
+<li><strong><a href="../concepts/rl-for-llm-people.html">rl-for-llm-people</a> / RLHF</strong>:KL 当"橡皮筋"惩罚,拽着新策略别离原模型太远。</li>
+<li><strong><a href="../concepts/softmax.html">softmax</a></strong>:这些概率分布大多由 softmax 产生。</li>
+</ul>
+<h2>代码出处 / 来源</h2>
+<ul>
+<li>信息论标准内容:Shannon 熵、KL 散度(相对熵)、交叉熵 = 熵 + KL</li>
+<li>落点:分类损失、VAE 的 KL 项、RLHF 的 KL 惩罚</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/cross-entropy.html">cross-entropy</a> · 交叉熵 = 熵 + KL;<code>−log(p正确)</code> 的平均</li>
+<li><a href="../concepts/closed-form-kl.html">closed-form-kl</a> · 高斯之间 KL 的闭式特例</li>
+<li><a href="../concepts/softmax.html">softmax</a> · 算这些概率分布的常用出口</li>
+<li><a href="../concepts/rl-for-llm-people.html">rl-for-llm-people</a> · KL 散度当训练橡皮筋</li>
+<li><a href="../concepts/markov-chain.html">markov-chain</a> · 熵 / KL 也用来量分布随时间的变化</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../concepts/closed-form-kl.html"><span class="cat">concept</span>闭式 KL · 同协方差高斯 KL = 均值差²</a></li><li><a href="../concepts/cross-entropy.html"><span class="cat">concept</span>Cross-Entropy · 交叉熵 · −log(你押对的概率)</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/entropy-kl.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
