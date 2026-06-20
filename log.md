@@ -784,3 +784,5 @@ skill 更新:
 ## [2026-06-17] query | gaussian-splatting + lora + matrix-rank (Qwen-Image-Edit Gaussian-Splash LoRA)
 
 ## [2026-06-18] query | svd + dot-product + softmax (数学地基补强)
+
+## [2026-06-18] query | eigenvector + svd 重写(首尾串讲, 含特征方程手算)

@@ -95,6 +95,7 @@ W(d×k, 秩 r) = B(d×r) · A(r×k)
 - 模型里的落点:[[lora]](Hu et al. 2021)、注意力 head 维瓶颈、PCA/embedding
 
 ## 链接
+- [[eigenvector]] · 非零特征值/奇异值的个数 = 秩
 - [[svd]] · 秩=非零奇异值个数;截断 SVD = 最佳低秩近似
 - [[lora]] · "low-rank" 就是这页的秩;微调增量低秩 → 拆成 B·A
 - [[multi-head-attention]] · Q/K 投到小 head 维 = 给注意力加秩上限
