@@ -650,195 +650,213 @@ figure.play svg .grow-x { transform: scaleX(1); }
 """
 
 
-def render_index(entries: list[Entry]) -> str:
-    by_cat = {c: [] for c in CATEGORIES}
-    for e in entries:
-        by_cat[e.category].append(e)
+def entry_date(e) -> str:
+    """排序/时间线用：ingested 优先，否则 updated。"""
+    return str(e.meta.get("ingested") or e.meta.get("updated") or "")
 
-    sections_html = []
-    for i, cat in enumerate(CATEGORIES, start=1):
-        items = by_cat[cat]
-        if not items:
-            continue
-        def make_card(e):
-            href = None
-            ready = False
-            if e.bespoke_path:
-                href = f"{e.category}/{e.slug}.html"
-                ready = True
-            doms = entry_domains(e)
-            stext = entry_search_text(e)
-            pills = [f'<span class="pill dom dom-{html.escape(d)}">{html.escape(d)}</span>' for d in doms]
-            pills.append(f'<span class="pill">{e.meta.get("type", e.category[:-1] if e.category.endswith("s") else e.category)}</span>')
-            if "updated" in e.meta:
-                pills.append(f'<span class="pill">updated {html.escape(str(e.meta["updated"]))}</span>')
-            if "ingested" in e.meta:
-                pills.append(f'<span class="pill">ingested {html.escape(str(e.meta["ingested"]))}</span>')
-            if "upstream" in e.meta:
-                pills.append(f'<a class="pill" href="{html.escape(e.meta["upstream"])}" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a>')
-            if ready and e.category == "papers":
-                pills.append('<span class="pill ready">bespoke HTML ✓</span>')
-            elif ready:
-                pills.append('<span class="pill ready">auto HTML ✓</span>')
-            else:
-                pills.append('<span class="pill todo">md only · 待做 bespoke HTML</span>')
-            title_link = (
-                f'<a href="{href}">{html.escape(e.title)}</a>' if href else html.escape(e.title)
-            )
-            entry_class = f"entry {e.category[:-1] if e.category.endswith('s') else e.category}"
-            if not ready:
-                entry_class += " todo"
-            return f"""<div class="{entry_class}" data-domains="{html.escape(' '.join(doms))}" data-s="{html.escape(stext, quote=True)}">
-  <h3>{title_link}</h3>
-  {'<p class="hook">' + html.escape(e.hook) + '</p>' if e.hook else ''}
-  <div class="pills">{''.join(pills)}</div>
-</div>"""
 
-        if cat == "papers":
-            # 精读页：段内按领域分小标题（ML 论文 / 系统 / 金融 / 史 ...）
-            by_dom: dict = {}
-            for e in items:
-                by_dom.setdefault(entry_domains(e)[0], []).append(e)
-            dom_order = [d for d in DOMAIN_ORDER if d in by_dom] + sorted(d for d in by_dom if d not in DOMAIN_ORDER)
-            inner_parts = []
-            for d in dom_order:
-                sub_label = DOMAIN_SUBLABEL.get(d, d)
-                cards = "".join(make_card(e) for e in by_dom[d])
-                inner_parts.append(
-                    f'<h3 class="domsub">{html.escape(sub_label)} <span class="domsub-n">{len(by_dom[d])}</span></h3>\n'
-                    f'<div class="entries">\n{cards}\n</div>'
-                )
-            body_inner = "\n".join(inner_parts)
-        else:
-            body_inner = f'<div class="entries">\n{"".join(make_card(e) for e in items)}\n</div>'
-        sections_html.append(f"""
-<section class="cat-block">
-<h2><span class="num">§ 0{i}</span>{CATEGORY_LABELS[cat]}</h2>
-{body_inner}
-</section>
-""")
+def make_card(e) -> str:
+    href = f"{e.category}/{e.slug}.html" if e.bespoke_path else None
+    ready = bool(e.bespoke_path)
+    doms = entry_domains(e)
+    stext = entry_search_text(e)
+    pills = [f'<span class="pill dom dom-{html.escape(d)}">{html.escape(d)}</span>' for d in doms]
+    pills.append(f'<span class="pill">{e.meta.get("type", e.category[:-1] if e.category.endswith("s") else e.category)}</span>')
+    if "updated" in e.meta:
+        pills.append(f'<span class="pill">updated {html.escape(str(e.meta["updated"]))}</span>')
+    if "ingested" in e.meta:
+        pills.append(f'<span class="pill">ingested {html.escape(str(e.meta["ingested"]))}</span>')
+    if "upstream" in e.meta:
+        pills.append(f'<a class="pill" href="{html.escape(e.meta["upstream"])}" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a>')
+    if ready and e.category == "papers":
+        pills.append('<span class="pill ready">bespoke HTML ✓</span>')
+    elif ready:
+        pills.append('<span class="pill ready">auto HTML ✓</span>')
+    else:
+        pills.append('<span class="pill todo">md only · 待做 bespoke HTML</span>')
+    title_link = f'<a href="{href}">{html.escape(e.title)}</a>' if href else html.escape(e.title)
+    entry_class = f"entry {e.category[:-1] if e.category.endswith('s') else e.category}"
+    if not ready:
+        entry_class += " todo"
+    hook_html = ('<p class="hook">' + html.escape(e.hook) + '</p>') if e.hook else ''
+    return (f'<div class="{entry_class}" data-domains="{html.escape(" ".join(doms))}" data-s="{html.escape(stext, quote=True)}">\n'
+            f'  <h3>{title_link}</h3>\n'
+            f'  {hook_html}\n'
+            f'  <div class="pills">{"".join(pills)}</div>\n'
+            f'</div>')
 
-    body = "\n".join(sections_html)
 
-    # 领域 chip：只出现实际存在的领域，DOMAIN_ORDER 优先，其余按字母补后面
-    dom_count: dict = {}
-    for e in entries:
-        for d in entry_domains(e):
-            dom_count[d] = dom_count.get(d, 0) + 1
-    ordered = [d for d in DOMAIN_ORDER if d in dom_count] + sorted(d for d in dom_count if d not in DOMAIN_ORDER)
-    chips = [f'<button class="chip active" data-dom="">全部 <span class="c">{len(entries)}</span></button>']
-    for d in ordered:
-        chips.append(f'<button class="chip" data-dom="{html.escape(d)}">{html.escape(d)} <span class="c">{dom_count[d]}</span></button>')
-    chips_html = "".join(chips)
+CATEGORY_DESC = {
+    "papers": "手工打磨的论文 / 源码精读页",
+    "books": "非 ML 书籍的章节精讲",
+    "topics": "跨多个源的横向综合",
+    "concepts": "跨论文复用的概念颗粒",
+    "threads": "个人思考线 / 开放问题",
+}
 
-    return f"""<!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8" />
-<title>个人 wiki · index</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css" />
-<style>
-.search {{ margin: 44px 0 8px; }}
-.search input {{ width: 100%; box-sizing: border-box; font-family: 'JetBrains Mono', monospace; font-size: 15px; padding: 14px 16px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper-card); color: var(--ink); }}
-.search input:focus {{ outline: none; border-color: var(--brick); }}
-.chips {{ display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }}
-.chip {{ font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1px; padding: 5px 13px; border: 1px solid var(--rule); border-radius: 20px; background: transparent; color: var(--ink-2); cursor: pointer; transition: all 0.15s; }}
-.chip:hover {{ border-color: var(--brick); }}
-.chip.active {{ background: var(--ink); color: var(--paper); border-color: var(--ink); }}
-.chip .c {{ opacity: 0.55; font-size: 10px; }}
-.pill.dom {{ font-weight: 700; border-color: var(--ink-2); }}
-.domsub {{ font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); font-weight: 700; margin: 30px 0 2px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }}
-.domsub-n {{ color: var(--muted); font-size: 10px; opacity: 0.7; font-weight: 400; }}
-.nores {{ font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--muted); padding: 36px 0; text-align: center; }}
-</style>
-</head>
-<body>
-<div class="page">
+LIST_CSS = """
+.search { margin: 28px 0 8px; }
+.search input { width: 100%; box-sizing: border-box; font-family: 'JetBrains Mono', monospace; font-size: 15px; padding: 14px 16px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper-card); color: var(--ink); }
+.search input:focus { outline: none; border-color: var(--brick); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.chip { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1px; padding: 5px 13px; border: 1px solid var(--rule); border-radius: 20px; background: transparent; color: var(--ink-2); cursor: pointer; transition: all 0.15s; }
+.chip:hover { border-color: var(--brick); }
+.chip.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.chip .c { opacity: 0.55; font-size: 10px; }
+.pill.dom { font-weight: 700; border-color: var(--ink-2); }
+.nores { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--muted); padding: 36px 0; text-align: center; }
+.entries { margin-top: 18px; }
+"""
 
-<div class="masthead">
-  <span class="l">Connectionism · Personal Wiki</span>
-  <span class="r">索引 · {len(entries)} 条目</span>
-</div>
+LANDING_CSS = """
+.catcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; margin: 18px 0 8px; }
+.catcard { display: block; border: 1px solid var(--rule); border-radius: 8px; padding: 18px 20px; background: var(--paper-card); text-decoration: none; color: var(--ink); transition: all 0.15s; }
+.catcard:hover { border-color: var(--brick); transform: translateY(-2px); }
+.catcard .n { font-family: 'JetBrains Mono', monospace; font-size: 30px; font-weight: 700; color: var(--brick); line-height: 1; }
+.catcard .lbl { display: block; font-family: 'Fraunces', serif; font-weight: 700; font-size: 17px; margin-top: 6px; }
+.catcard .d { display: block; font-size: 13px; color: var(--muted); margin-top: 4px; }
+.timeline { margin: 12px 0; }
+.tl-row { display: flex; align-items: baseline; gap: 14px; padding: 11px 4px; border-bottom: 1px dashed var(--rule); text-decoration: none; color: var(--ink); }
+.tl-row:hover { background: var(--paper-3); }
+.tl-date { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); min-width: 80px; flex-shrink: 0; }
+.tl-cat { font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--brick); min-width: 64px; flex-shrink: 0; }
+.tl-title { font-weight: 700; flex-shrink: 0; }
+.tl-hook { color: var(--muted); font-size: 14px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 700px) { .tl-hook { display: none; } }
+"""
 
-<section class="hero">
-  <div class="issue">FIELD NOTES · 个人学习 / 多领域</div>
-  <h1 class="title">Study<br /><span class="em">Index.</span></h1>
-  <p class="dek">按 Karpathy <a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f" target="_blank" style="color:var(--brick);">LLM Wiki</a> 模式：每个主题一份独立的静态 HTML，自己挑动画/图表风格。这一页只做目录。</p>
-  <div class="meta">
-    <span>渲染于 · render.py</span>
-    <span>·</span>
-    <span>md → ER · 这页 → 人</span>
-  </div>
-</section>
-
-<div class="intro">
-  <span class="label">how this wiki works</span>
-  <p><strong>md 是内部 ER / 链接 / 我和 Claude 协作脚手架。</strong>每个主题在 <code>wiki/&lt;category&gt;/&lt;slug&gt;.md</code> 里。</p>
-  <p><strong>papers 是 bespoke HTML，概念/主题/线索页自动渲染。</strong>手工打磨的页面放在 <code>docs/&lt;category&gt;/&lt;slug&gt;.html</code>；概念、主题、thread 则由 Markdown 生成，保证链接不断。</p>
-  <p><strong>这页目录也是渲染出来的。</strong><code>render.py</code> 扫 frontmatter 生成，并给 bespoke 页面注入导航、解析 <code>[[wikilink]]</code>。</p>
-</div>
-
-<div class="search">
-  <input id="q" type="search" placeholder="搜索 标题 / 概念 / 术语…  (例: attention, 中枢, GC, 均输)" autocomplete="off" spellcheck="false" />
-  <div class="chips">{chips_html}</div>
-</div>
-<div id="nores" class="nores" hidden>没有匹配的条目 — 换个词试试</div>
-
-{body}
-
-<div class="colophon">
-  Renderer / <code>render.py</code> · Pattern / <a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f" target="_blank">Karpathy LLM Wiki</a> · Source / <a href="https://github.com/SnowWarri0r/llm-wiki" target="_blank">github.com/SnowWarri0r/llm-wiki</a>
-</div>
-
-</div>
-<script>
-(function(){{
+FILTER_JS = """
+(function(){
   var q = document.getElementById('q');
   var chips = [].slice.call(document.querySelectorAll('.chip'));
   var entries = [].slice.call(document.querySelectorAll('.entry'));
-  var blocks = [].slice.call(document.querySelectorAll('.cat-block'));
   var nores = document.getElementById('nores');
   var dom = '';
-  function apply(){{
+  function apply(){
     var term = q.value.trim().toLowerCase();
     var shown = 0;
-    entries.forEach(function(el){{
+    entries.forEach(function(el){
       var okT = !term || (el.getAttribute('data-s') || '').indexOf(term) !== -1;
       var okD = !dom || (el.getAttribute('data-domains') || '').split(' ').indexOf(dom) !== -1;
       var vis = okT && okD;
       el.style.display = vis ? '' : 'none';
       if (vis) shown++;
-    }});
-    [].slice.call(document.querySelectorAll('.domsub')).forEach(function(h){{
-      var box = h.nextElementSibling;
-      var any = box && [].slice.call(box.querySelectorAll('.entry')).some(function(e){{ return e.style.display !== 'none'; }});
-      h.style.display = any ? '' : 'none';
-      if (box) box.style.display = any ? '' : 'none';
-    }});
-    blocks.forEach(function(b){{
-      var any = [].slice.call(b.querySelectorAll('.entry')).some(function(e){{ return e.style.display !== 'none'; }});
-      b.style.display = any ? '' : 'none';
-    }});
+    });
     nores.hidden = shown !== 0;
-  }}
+  }
   q.addEventListener('input', apply);
-  chips.forEach(function(c){{
-    c.addEventListener('click', function(){{
-      chips.forEach(function(x){{ x.classList.remove('active'); }});
+  chips.forEach(function(c){
+    c.addEventListener('click', function(){
+      chips.forEach(function(x){ x.classList.remove('active'); });
       c.classList.add('active');
       dom = c.getAttribute('data-dom') || '';
       apply();
-    }});
-  }});
-}})();
-</script>
-</body>
-</html>
+    });
+  });
+})();
 """
+
+FONTS_LINK = '<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">'
+
+
+def _doc_head(title_tag: str, extra_css: str = "") -> str:
+    return (
+        '<!doctype html>\n<html lang="zh-CN">\n<head>\n<meta charset="utf-8" />\n'
+        f'<title>{title_tag}</title>\n'
+        '<meta name="viewport" content="width=device-width, initial-scale=1" />\n'
+        '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
+        '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
+        + FONTS_LINK + '\n'
+        '<link rel="stylesheet" href="style.css" />\n'
+        f'<style>\n{extra_css}\n</style>\n</head>\n<body>\n<div class="page">\n'
+    )
+
+
+def _masthead(right: str) -> str:
+    return ('<div class="masthead">\n'
+            '  <span class="l">Connectionism · Personal Wiki</span>\n'
+            f'  <span class="r">{html.escape(right)}</span>\n</div>\n')
+
+
+COLOPHON = ('<div class="colophon">\n'
+            '  Renderer / <code>render.py</code> · Pattern / '
+            '<a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f" target="_blank">Karpathy LLM Wiki</a> · '
+            'Source / <a href="https://github.com/SnowWarri0r/llm-wiki" target="_blank">github.com/SnowWarri0r/llm-wiki</a>\n</div>\n')
+
+
+def render_category_page(cat: str, items: list) -> str:
+    items = sorted(items, key=entry_date, reverse=True)
+    cards = "\n".join(make_card(e) for e in items)
+    dom_count: dict = {}
+    for e in items:
+        for d in entry_domains(e):
+            dom_count[d] = dom_count.get(d, 0) + 1
+    ordered = [d for d in DOMAIN_ORDER if d in dom_count] + sorted(d for d in dom_count if d not in DOMAIN_ORDER)
+    chips = [f'<button class="chip active" data-dom="">全部 <span class="c">{len(items)}</span></button>']
+    for d in ordered:
+        chips.append(f'<button class="chip" data-dom="{html.escape(d)}">{html.escape(d)} <span class="c">{dom_count[d]}</span></button>')
+    chips_html = "".join(chips)
+    label = CATEGORY_LABELS[cat]
+    return (
+        _doc_head(f"个人 wiki · {label}", LIST_CSS)
+        + _masthead(f"{label} · {len(items)} 条目")
+        + '\n<section class="hero">\n'
+          '  <div class="issue"><a href="index.html" style="color:var(--brick);text-decoration:none;">← index</a> · 按时间倒序</div>\n'
+          f'  <h1 class="title">{html.escape(label)}</h1>\n'
+          f'  <p class="dek">共 {len(items)} 条，最新在上。</p>\n</section>\n'
+        + '\n<div class="search">\n'
+          '  <input id="q" type="search" placeholder="搜索 标题 / 概念 / 术语…" autocomplete="off" spellcheck="false" />\n'
+          f'  <div class="chips">{chips_html}</div>\n</div>\n'
+          '<div id="nores" class="nores" hidden>没有匹配的条目 — 换个词试试</div>\n'
+        + f'<div class="entries">\n{cards}\n</div>\n'
+        + COLOPHON
+        + f'\n</div>\n<script>\n{FILTER_JS}\n</script>\n</body>\n</html>\n'
+    )
+
+
+def render_index(entries: list) -> str:
+    by_cat = {c: [] for c in CATEGORIES}
+    for e in entries:
+        by_cat[e.category].append(e)
+    cards = []
+    for cat in CATEGORIES:
+        its = by_cat[cat]
+        if not its:
+            continue
+        cards.append(
+            f'<a class="catcard" href="{cat}.html">'
+            f'<span class="n">{len(its)}</span>'
+            f'<span class="lbl">{html.escape(CATEGORY_LABELS[cat])}</span>'
+            f'<span class="d">{html.escape(CATEGORY_DESC.get(cat, ""))}</span></a>'
+        )
+    cards_html = "\n".join(cards)
+    recent = sorted(entries, key=entry_date, reverse=True)[:14]
+    rows = []
+    for e in recent:
+        href = f"{e.category}/{e.slug}.html" if e.bespoke_path else f"{e.category}.html"
+        catname = e.category[:-1] if e.category.endswith("s") else e.category
+        rows.append(
+            f'<a class="tl-row" href="{href}">'
+            f'<span class="tl-date">{html.escape(entry_date(e) or "—")}</span>'
+            f'<span class="tl-cat">{html.escape(catname)}</span>'
+            f'<span class="tl-title">{html.escape(e.title)}</span>'
+            f'<span class="tl-hook">{html.escape(e.hook)}</span></a>'
+        )
+    rows_html = "\n".join(rows)
+    return (
+        _doc_head("个人 wiki · index", LANDING_CSS)
+        + _masthead(f"索引 · {len(entries)} 条目")
+        + '\n<section class="hero">\n'
+          '  <div class="issue">FIELD NOTES · 个人学习 / 多领域</div>\n'
+          '  <h1 class="title">Study<br /><span class="em">Index.</span></h1>\n'
+          '  <p class="dek">按 Karpathy <a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f" target="_blank" style="color:var(--brick);">LLM Wiki</a> 模式：每个主题一份独立静态 HTML。这页只做目录 —— 按类型进子页，或看最近更新。</p>\n</section>\n'
+        + '\n<h2><span class="num">§ 01</span>浏览 · Browse by type</h2>\n'
+          f'<div class="catcards">\n{cards_html}\n</div>\n'
+        + '\n<h2><span class="num">§ 02</span>最近更新 · Recent</h2>\n'
+          f'<div class="timeline">\n{rows_html}\n</div>\n'
+        + COLOPHON
+        + '\n</div>\n</body>\n</html>\n'
+    )
 
 
 NAV_START = "<!-- wiki-nav:start -->"
@@ -864,7 +882,7 @@ def build_nav_strip(category: str, slug: str) -> str:
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r">{html.escape(category)} · {html.escape(slug)}</span>
+  <span class="ws-r"><a href="../{html.escape(category)}.html" style="color:#b8841c;">{html.escape(category)}</a> · {html.escape(slug)}</span>
 </div>
 {NAV_END}
 """
@@ -1177,9 +1195,17 @@ def main():
             if inject_wikilinks(e.bespoke_path, e.category):
                 linked += 1
 
-    # 3. Render index
+    # 3. Render landing index + per-category sub-pages（按时间倒序）
     (HTML_OUT / "index.html").write_text(render_index(entries))
-    print(f"index.html rendered with {len(entries)} entries")
+    by_cat_pages = defaultdict(list)
+    for e in entries:
+        by_cat_pages[e.category].append(e)
+    cat_pages = 0
+    for cat in CATEGORIES:
+        if by_cat_pages[cat]:
+            (HTML_OUT / f"{cat}.html").write_text(render_category_page(cat, by_cat_pages[cat]))
+            cat_pages += 1
+    print(f"index.html + {cat_pages} category pages rendered with {len(entries)} entries")
     ready = sum(1 for e in entries if e.bespoke_path)
     print(f"  HTML pages ready: {ready}")
     print(f"  待做: {len(entries) - ready}")
