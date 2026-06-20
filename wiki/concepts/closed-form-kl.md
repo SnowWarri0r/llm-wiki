@@ -1,8 +1,8 @@
 ---
 name: closed-form-kl
 type: concept
-sources: [diffusion-opd]
-updated: 2026-06-12
+sources: [diffusion-opd, mrt]
+updated: 2026-06-15
 ---
 
 # 闭式 KL · 同协方差高斯 KL = 均值差²
