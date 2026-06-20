@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>归一化家族 · BatchNorm / LayerNorm / GroupNorm / RMSNorm · 只差&quot;对哪根轴&quot; · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · normalization</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>归一化家族 · BatchNorm / LayerNorm / GroupNorm / RMSNorm · 只差&quot;对哪根轴&quot;</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>所有归一化做的事一样——把一组激活拉回均值 0、方差 1，再配可学的缩放 γ 和偏移 β；<strong>唯一区别是：对<u>哪一组数</u>求那个均值/方差</strong>。</p>
+<h2>直觉 · 对哪根轴平均</h2>
+<p>训练时每层激活会乱飘(太大/太小/分布漂移)，不稳难训。归一化把一组数 <code>x</code> 拉回 <code>(x−μ)/σ</code> 再 <code>·γ+β</code>。把激活看成张量 <strong>[N 批量, C 通道, 空间]</strong>，各变体只是圈不同切片去算 μ/σ：</p>
+<p>一张成绩表 <code>[学生 × 科目]</code> 的类比：</p>
+<ul>
+<li><strong>BatchNorm</strong>：每一<strong>科</strong>在全班拉曲线(按列) → 要全班在场。</li>
+<li><strong>LayerNorm</strong>：每个<strong>学生</strong>在自己各科上拉曲线(按行) → 一个人就能算。</li>
+<li><strong>GroupNorm</strong>：科目<strong>分组</strong>(理/文)，每个学生在每组内拉曲线。</li>
+</ul>
+<h2>举个数字例子 · 同一个矩阵，三种 norm 三种结果</h2>
+<p>设 2 个样本 × 4 个通道(空间=1)：</p>
+<pre><code>        ch1  ch2  ch3  ch4
+样本1     1    2    3    4
+样本2    10   20   30   40
+</code></pre>
+<p><strong>LayerNorm（按行：每个样本的 4 个特征）</strong></p>
+<pre><code>样本1: μ=2.5, σ≈1.118 → [-1.34, -0.45, +0.45, +1.34]
+样本2: μ=25,  σ≈11.18 → [-1.34, -0.45, +0.45, +1.34]
+</code></pre>
+<p>两行归一化后<strong>一模一样</strong>——样本2 是样本1 的 10 倍，行内归一把整体 scale 抹掉了。每个样本自己算，<strong>不看别的样本</strong>。</p>
+<p><strong>BatchNorm（按列：每个通道跨 2 个样本）</strong></p>
+<pre><code>ch1: [1,10]  μ=5.5  σ=4.5  → [-1, +1]
+ch2: [2,20]  μ=11   σ=9    → [-1, +1]   ch3/ch4 同理 → [-1,+1]
+</code></pre>
+<p>每<strong>列</strong>变 [-1,+1]——<strong>必须两个样本都在场</strong>才能算(batch 小/变长就崩)。</p>
+<p><strong>GroupNorm（G=2：每行内分 [ch1,ch2] [ch3,ch4] 两组）</strong></p>
+<pre><code>样本1: 组A[1,2] μ=1.5 σ=0.5 →[-1,+1]; 组B[3,4] μ=3.5 σ=0.5 →[-1,+1]  ⇒ [-1,+1,-1,+1]
+样本2: 组A[10,20]μ=15 σ=5  →[-1,+1]; 组B[30,40]μ=35 σ=5 →[-1,+1]   ⇒ [-1,+1,-1,+1]
+</code></pre>
+<p>每个样本<strong>自己</strong>算(像 LayerNorm 不看 batch)，但只在<strong>组内</strong>(保留点通道局部性)。</p>
+<figure style="margin:26px 0; padding:22px; background:#eef2f7; border:1px solid #9fb3c8; border-radius:4px;">
+<svg viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:JetBrains Mono,monospace;">
+  <!-- 三个面板：同一个 2×4 网格，高亮不同的平均组 -->
+  <!-- Panel LN -->
+  <text class="reveal d1" x="120" y="40" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#1f3a5f">LayerNorm · 按行</text>
+  <g class="reveal d1" font-size="9" text-anchor="middle" fill="#3a3128">
+    <g fill="none" stroke="#bfb398"><rect x="40" y="56" width="36" height="26"/><rect x="76" y="56" width="36" height="26"/><rect x="112" y="56" width="36" height="26"/><rect x="148" y="56" width="36" height="26"/><rect x="40" y="82" width="36" height="26"/><rect x="76" y="82" width="36" height="26"/><rect x="112" y="82" width="36" height="26"/><rect x="148" y="82" width="36" height="26"/></g>
+    <text x="58" y="73">1</text><text x="94" y="73">2</text><text x="130" y="73">3</text><text x="166" y="73">4</text>
+    <text x="58" y="99">10</text><text x="94" y="99">20</text><text x="130" y="99">30</text><text x="166" y="99">40</text>
+  </g>
+  <g class="draw d2" fill="none" stroke="#1f3a5f" stroke-width="2.4"><rect x="38" y="54" width="148" height="28" rx="3" pathLength="1000"/><rect x="38" y="80" width="148" height="28" rx="3" pathLength="1000"/></g>
+  <text class="reveal d3" x="112" y="126" text-anchor="middle" font-size="8.5" fill="#1f3a5f">每行(一个样本)自己归一</text>
+  <!-- Panel BN -->
+  <text class="reveal d1" x="360" y="40" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#9b2c2c">BatchNorm · 按列</text>
+  <g class="reveal d1" font-size="9" text-anchor="middle" fill="#3a3128">
+    <g fill="none" stroke="#bfb398"><rect x="280" y="56" width="36" height="26"/><rect x="316" y="56" width="36" height="26"/><rect x="352" y="56" width="36" height="26"/><rect x="388" y="56" width="36" height="26"/><rect x="280" y="82" width="36" height="26"/><rect x="316" y="82" width="36" height="26"/><rect x="352" y="82" width="36" height="26"/><rect x="388" y="82" width="36" height="26"/></g>
+    <text x="298" y="73">1</text><text x="334" y="73">2</text><text x="370" y="73">3</text><text x="406" y="73">4</text>
+    <text x="298" y="99">10</text><text x="334" y="99">20</text><text x="370" y="99">30</text><text x="406" y="99">40</text>
+  </g>
+  <g class="draw d2" fill="none" stroke="#9b2c2c" stroke-width="2.4"><rect x="278" y="54" width="36" height="56" rx="3" pathLength="1000"/><rect x="314" y="54" width="36" height="56" rx="3" pathLength="1000"/><rect x="350" y="54" width="36" height="56" rx="3" pathLength="1000"/><rect x="386" y="54" width="36" height="56" rx="3" pathLength="1000"/></g>
+  <text class="reveal d3" x="352" y="126" text-anchor="middle" font-size="8.5" fill="#9b2c2c">每列(一个通道)跨样本归一</text>
+  <!-- Panel GN -->
+  <text class="reveal d1" x="600" y="40" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#2f6e4a">GroupNorm · 行内分组</text>
+  <g class="reveal d1" font-size="9" text-anchor="middle" fill="#3a3128">
+    <g fill="none" stroke="#bfb398"><rect x="520" y="56" width="36" height="26"/><rect x="556" y="56" width="36" height="26"/><rect x="592" y="56" width="36" height="26"/><rect x="628" y="56" width="36" height="26"/><rect x="520" y="82" width="36" height="26"/><rect x="556" y="82" width="36" height="26"/><rect x="592" y="82" width="36" height="26"/><rect x="628" y="82" width="36" height="26"/></g>
+    <text x="538" y="73">1</text><text x="574" y="73">2</text><text x="610" y="73">3</text><text x="646" y="73">4</text>
+    <text x="538" y="99">10</text><text x="574" y="99">20</text><text x="610" y="99">30</text><text x="646" y="99">40</text>
+  </g>
+  <g class="draw d2" fill="none" stroke="#2f6e4a" stroke-width="2.4"><rect x="518" y="54" width="74" height="28" rx="3" pathLength="1000"/><rect x="592" y="54" width="74" height="28" rx="3" pathLength="1000"/><rect x="518" y="80" width="74" height="28" rx="3" pathLength="1000"/><rect x="592" y="80" width="74" height="28" rx="3" pathLength="1000"/></g>
+  <text class="reveal d3" x="592" y="126" text-anchor="middle" font-size="8.5" fill="#2f6e4a">每行内分 2 组各自归一</text>
+  <text class="reveal d4" x="360" y="170" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#3a3128">同一个矩阵，圈哪片求 μ/σ 不同 → 这就是全部区别</text>
+  <text class="reveal d4" x="360" y="194" text-anchor="middle" font-size="9" fill="#7a6f5d">BN 要全 batch 在场；LN / GN 一个样本自己就能算</text>
+</svg>
+</figure>
+
+<h2>RMSNorm + 为什么 video-vae 换掉 GroupNorm</h2>
+<p><strong>RMSNorm</strong> = <a href="../concepts/layernorm.html">layernorm</a> 砍掉"减均值"和偏移，只<strong>除以特征的均方根(RMS)×可学缩放</strong> → 更省、效果不输；现代 LLM(LLaMA/Qwen)、<a href="../concepts/qk-rmsnorm.html">qk-rmsnorm</a>、Wan-VAE 都用。</p>
+<p><a href="../concepts/video-vae.html">video-vae</a> 把 <strong>GroupNorm 换成 RMSNorm</strong>：GroupNorm 要在<strong>空间(+组通道)</strong>上求统计，做因果/流式视频时会<strong>跨时间混信息</strong>、破坏逐帧因果和缓存；RMSNorm 只拿<strong>每个位置自己的特征</strong>归一 → 不跨时间 → 保住因果 + 无限长流式。</p>
+<h2>怎么做的</h2>
+<pre><code>通用：y = γ · (x − μ_S) / sqrt(var_S + ε) + β     # S = 求统计的那组数
+BatchNorm   S = 同通道、跨 batch + 空间      （推理用 running 统计 = EMA）
+LayerNorm   S = 一个样本/位置的所有通道
+InstanceNorm S = 一个样本一个通道、跨空间
+GroupNorm   S = 一个样本、一组通道 + 空间    （G=1≈LN，G=C≈IN）
+RMSNorm     不减均值，只除 RMS：y = γ · x / sqrt(mean(x²)+ε)
+</code></pre>
+<h2>代码出处</h2>
+<ul>
+<li><code>torch.nn.BatchNorm2d / LayerNorm / GroupNorm / RMSNorm</code></li>
+<li>GroupNorm 原始：Wu &amp; He 2018；那张经典"对哪根轴"立方体图是它画的</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/batchnorm.html">batchnorm</a> · 按通道跨 batch；推理 running 统计是 <a href="../concepts/ema.html">ema</a></li>
+<li><a href="../concepts/layernorm.html">layernorm</a> · 按 token 自己的特征；Transformer 标配</li>
+<li><a href="../concepts/qk-rmsnorm.html">qk-rmsnorm</a> · RMSNorm 用在 attention 的 Q/K</li>
+<li><a href="../concepts/video-vae.html">video-vae</a> · 把 GroupNorm 换 RMSNorm 保因果</li>
+<li><a href="../concepts/ema.html">ema</a> · BatchNorm 推理统计 = 训练时的 EMA</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../concepts/batchnorm.html"><span class="cat">concept</span>Batch Normalization · BN</a></li><li><a href="../concepts/layernorm.html"><span class="cat">concept</span>LayerNorm · 层归一化</a></li><li><a href="../concepts/video-vae.html"><span class="cat">concept</span>Video VAE · Wan-VAE · VAE 的视频版</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/normalization.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

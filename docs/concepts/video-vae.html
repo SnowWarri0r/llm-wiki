@@ -50,7 +50,7 @@
 </code></pre>
 <p>相邻帧冗余 → 4 帧打包成 1 片几乎不丢 → 视频 latent token 砍掉 3/4，扩散才跑得动。</p>
 <p><strong>② 因果（causal）</strong>：时间方向的卷积是因果的——每个 latent 帧<strong>只依赖过去帧、不看未来</strong>。好处：(a) 能<strong>逐帧流式</strong>处理任意长视频，不必一次塞进显存；(b) 那个 <code>1+T</code> 结构——第一帧是<strong>特殊关键帧</strong>单独处理，于是 <strong>T=0 退化成一张图</strong> → 图像/视频<strong>一套 VAE 通吃</strong>。</p>
-<p><strong>③ 特征缓存 + RMSNorm → 无限长</strong>：因为因果，过去特征定死、可<strong>缓存（feature cache）</strong>、分块往后滚，不回看整段；把 <strong>GroupNorm 换成 RMSNorm</strong>（GroupNorm 跨时间/批混统计、破坏因果与流式）→ 能编解码<strong>无限长 1080P</strong> 不丢历史。</p>
+<p><strong>③ 特征缓存 + RMSNorm → 无限长</strong>：因为因果，过去特征定死、可<strong>缓存（feature cache）</strong>、分块往后滚，不回看整段；把 <strong>GroupNorm 换成 RMSNorm</strong>（GroupNorm 跨时间/批混统计、破坏因果与流式；见 <a href="../concepts/normalization.html">normalization</a> 家族对照）→ 能编解码<strong>无限长 1080P</strong> 不丢历史。</p>
 <figure style="margin:26px 0; padding:22px; background:#eef2f7; border:1px solid #9fb3c8; border-radius:4px;">
 <svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:JetBrains Mono,monospace;">
   <defs><marker id="vv-h" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#2f6db0"/></marker></defs>
@@ -103,8 +103,8 @@
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 1 处</span>
-  <ul><li><a href="../concepts/kl-vae.html"><span class="cat">concept</span>KL-VAE · 把图压进 latent 的那层地基</a></li></ul>
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../concepts/kl-vae.html"><span class="cat">concept</span>KL-VAE · 把图压进 latent 的那层地基</a></li><li><a href="../concepts/normalization.html"><span class="cat">concept</span>归一化家族 · BatchNorm / LayerNorm / GroupNorm / RMSNorm · 只差&quot;对哪根轴&quot;</a></li></ul>
 </div>
 
 <div class="colophon">

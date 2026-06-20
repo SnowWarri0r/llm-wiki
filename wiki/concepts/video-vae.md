@@ -29,7 +29,7 @@ updated: 2026-06-15
 
 **② 因果（causal）**：时间方向的卷积是因果的——每个 latent 帧**只依赖过去帧、不看未来**。好处：(a) 能**逐帧流式**处理任意长视频，不必一次塞进显存；(b) 那个 `1+T` 结构——第一帧是**特殊关键帧**单独处理，于是 **T=0 退化成一张图** → 图像/视频**一套 VAE 通吃**。
 
-**③ 特征缓存 + RMSNorm → 无限长**：因为因果，过去特征定死、可**缓存（feature cache）**、分块往后滚，不回看整段；把 **GroupNorm 换成 RMSNorm**（GroupNorm 跨时间/批混统计、破坏因果与流式）→ 能编解码**无限长 1080P** 不丢历史。
+**③ 特征缓存 + RMSNorm → 无限长**：因为因果，过去特征定死、可**缓存（feature cache）**、分块往后滚，不回看整段；把 **GroupNorm 换成 RMSNorm**（GroupNorm 跨时间/批混统计、破坏因果与流式；见 [[normalization]] 家族对照）→ 能编解码**无限长 1080P** 不丢历史。
 
 <figure style="margin:26px 0; padding:22px; background:#eef2f7; border:1px solid #9fb3c8; border-radius:4px;">
 <svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:JetBrains Mono,monospace;">
