@@ -768,3 +768,5 @@ skill 更新:
 - 真数字例子: 2样本×4通道矩阵[1,2,3,4]/[10,20,30,40] 算三遍 — LN按行(两行都→[-1.34,-.45,.45,1.34],抹scale)/BN按列(每列[-1,1],要全batch)/GN行内分2组([-1,1,-1,1]); 三面板高亮图(行/列/块)
 - RMSNorm + 为啥 video-vae 换掉 GroupNorm(因果/流式)
 - 回链: layernorm/batchnorm/video-vae 加 normalization 链接; index 接 LayerNorm 后
+
+## [2026-06-15] ingest | deep-research + react-loop (survey 2506.12594)
