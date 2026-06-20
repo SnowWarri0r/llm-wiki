@@ -224,6 +224,7 @@
 - [Virtual Context Management](wiki/concepts/virtual-context-management.md) — context 当 RAM，LLM 自己 function call 调度记忆
 
 ### 共享基础设施
+- [AI 服务器内存层级](wiki/concepts/ai-memory-hierarchy.md) — HBM/LPDDR5X-SOCAMM/DDR5/CXL/光互连 的"快但小↔慢但大"阶梯; "NVIDIA 砍内存"砍的是哪层 + 为何走向池化光互连
 - [KV Cache](wiki/concepts/kv-cache.md) — 流式推理的内存账本
 - [Prefill / Decode](wiki/concepts/prefill-decode.md) — LLM 推理两阶段
 - [VAD](wiki/concepts/vad.md) — 判断用户是否说完的传统语音启发式

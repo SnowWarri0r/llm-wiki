@@ -770,3 +770,5 @@ skill 更新:
 - 回链: layernorm/batchnorm/video-vae 加 normalization 链接; index 接 LayerNorm 后
 
 ## [2026-06-15] ingest | deep-research + react-loop (survey 2506.12594)
+
+## [2026-06-16] ingest | ai-memory-hierarchy (PhotonCap SOCAMM selloff)
