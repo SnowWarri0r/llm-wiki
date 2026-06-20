@@ -64,3 +64,4 @@ T2I 圈这两年的共识转向：**文本编码器的语言理解力，是 prom
 - [[qk-rmsnorm]] · Qwen3-VL attention 里的稳训手段
 - [[structured-caption-conditioning]] · 强编码器才吃得动结构化 caption
 - [[transformer-architecture]] · VLM 的解码器主干
+- [[lumine]] · 把 VLM(Qwen2-VL)当游戏 agent 的大脑，看图出键鼠

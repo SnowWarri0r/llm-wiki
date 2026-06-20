@@ -157,3 +157,4 @@ KL 散度 = **量两个概率分布差多远**的尺子。一模一样 → KL = 
 - [[clipped-surrogate-objective]] · §2 的刹车
 - [[rlhf]] · §3 KL 橡皮筋的实战场景
 - [[grpo]] · PPO 的 LLM 友好简化版
+- [[imitation-learning]] · 对照范式:不试错、不要 reward，直接抄专家演示

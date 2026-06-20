@@ -27,6 +27,7 @@
 - [Qwen3-ASR · 给 LLM 接个耳朵](wiki/papers/qwen3-asr.md) — 不从头训ASR: 预训练Qwen3当解码器+AuT音频编码器(8×下采样12.5Hz+动态窗口流式/离线)+projector; modality-projector生产级; prompt塞热词定制转写; RL用GSPO; 带口音英语完胜Whisper
 - [Generative Agents · Smallville](wiki/papers/generative-agents.md) — 给 LLM 加记忆流 + 反思 + 规划，25 个 agent 在虚拟小镇里自主生活
 - [MemGPT · LLMs as Operating Systems](wiki/papers/memgpt.md) — context 当 RAM、外部存储当硬盘，LLM 自己 function call 调度记忆
+- [Lumine · 从像素玩 3D 开放世界](wiki/papers/lumine.md) — VLM(Qwen2-VL)直接吃画面像素吐键鼠, 端到端打通原神5h主线零样本迁移; 动作即文本token + action chunking(5Hz看30Hz动) + hybrid thinking(该想才想); 2424h人类录像纯模仿零RL + W8A8实时
 - [ViT · An Image is Worth 16×16 Words](wiki/papers/vit.md) — 把图切成 16×16 patch 当 token，纯 Transformer 干视觉；CNN 在视觉的护城河被填平
 - [CLIP · Learning Transferable Visual Models](wiki/papers/clip.md) — 4 亿图文对对比学习, 图像和文本对齐到同一向量空间; DALL-E / SD / LLaVA 都靠它
 - [PPO · Proximal Policy Optimization](wiki/papers/ppo.md) — 一行 clip 干掉 TRPO 的复杂; RLHF 的训练发动机, 撑起 ChatGPT 的对齐
@@ -224,9 +225,12 @@
 - [Agent Reflection](wiki/concepts/agent-reflection.md) — 碎片观察 → 高层认知，定期提炼
 - [Retrieval Scoring](wiki/concepts/retrieval-scoring.md) — 时近度 × 重要性 × 相关性 三维排序
 - [Virtual Context Management](wiki/concepts/virtual-context-management.md) — context 当 RAM，LLM 自己 function call 调度记忆
+- [Action Chunking](wiki/concepts/action-chunking.md) — 看一眼预测多步动作; 慢感知喂快控制 + 更连贯少累积误差; 机器人 VLA / Lumine 通用
+- [Imitation Learning](wiki/concepts/imitation-learning.md) — 行为克隆抄专家演示, 不试错不要 reward; 对照 RL; 软肋是误差累积(distribution shift)
 
 ### 共享基础设施
 - [AI 服务器内存层级](wiki/concepts/ai-memory-hierarchy.md) — HBM/LPDDR5X-SOCAMM/DDR5/CXL/光互连 的"快但小↔慢但大"阶梯; "NVIDIA 砍内存"砍的是哪层 + 为何走向池化光互连
+- [量化 · WxAy](wiki/concepts/quantization.md) — 少比特存数字; W8A8(权重激活都INT8)让矩阵乘跑INT8提速; 激活离群值靠 SmoothQuant 搬给权重
 - [KV Cache](wiki/concepts/kv-cache.md) — 流式推理的内存账本
 - [Prefill / Decode](wiki/concepts/prefill-decode.md) — LLM 推理两阶段
 - [VAD](wiki/concepts/vad.md) — 判断用户是否说完的传统语音启发式

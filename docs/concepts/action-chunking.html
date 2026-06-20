@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Action Chunking · 一次推理预测多步动作 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · action-chunking</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Action Chunking · 一次推理预测多步动作</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>看一眼 → <strong>一口气预测未来好几步动作</strong>，而不是"看一眼只走一步"。让慢的感知/推理频率喂出快的控制频率，还顺带让动作更连贯、少抖、少累积误差。</p>
+<h2>直觉 · 瞄一眼乐谱的一个小节</h2>
+<p>慢的不是手，是"看 + 想"。Lumine <strong>每 200ms 才看一帧画面(5Hz)</strong>，但游戏要 <strong>30Hz(每 33ms 一个动作)</strong> 才流畅。如果"看一眼只走一步"，那操作频率就被卡在 5Hz，动作一顿一顿。</p>
+<p><strong>action chunking</strong> 的办法:<strong>一次推理预测未来 6 个动作块</strong>(6×33ms≈200ms)，看一眼就把接下来 200ms 的连续操作全规划好，边执行边等下一帧。</p>
+<p>类比:熟练乐手<strong>瞄一眼乐谱的一个小节，手指就连续把这小节的音符弹完</strong>，而不是每个音符都回头看一次谱子——眼睛慢、手指快，靠"成块读、成块弹"对上。</p>
+<h2>为什么不只是"提速度"</h2>
+<p>chunk 不止解决频率，还有两个附带好处:</p>
+<ul>
+<li><strong>更连贯</strong>:一次性出一串动作，天然平滑(不会每步重新决策导致抖动/反复横跳)。</li>
+<li><strong>少累积误差</strong>:逐步预测时，每步的小误差会喂回输入、越滚越歪(compounding error);成块预测把"喂回"的次数减少。</li>
+</ul>
+<p>代价:chunk 太长 → 来不及对环境突变做反应(规划了 200ms，中途情况变了还在执行旧动作)。所以 chunk 长度是"反应灵敏 ↔ 平滑省算力"的权衡。</p>
+<h2>怎么做的</h2>
+<pre><code># 慢感知、快控制
+obs = see()                      # 200ms 一帧 (5Hz)
+chunk = model(obs)               # 一次推理 → [a1, a2, a3, a4, a5, a6]  各 33ms
+for a in chunk: execute(a)       # 连续执行 6 步 → 等效 30Hz
+# 机器人 VLA(ACT / RT 系 / Diffusion Policy / π0)同款思路
+</code></pre>
+<h2>代码出处 / 来源</h2>
+<ul>
+<li><a href="../papers/lumine.html">lumine</a> · 6 块 × 33ms，用 5Hz 感知喂 30Hz 键鼠控制</li>
+<li>机器人模仿学习里早成标配:ACT(Action Chunking Transformer)、Diffusion Policy、RT/π0 系</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/lumine.html">lumine</a> · 游戏 agent 用 chunking 实时操作</li>
+<li><a href="../concepts/imitation-learning.html">imitation-learning</a> · chunking 多用在模仿学习的控制策略上</li>
+<li><a href="../concepts/react-loop.html">react-loop</a> · 对照:ReAct 是"想一步动一步"，chunking 是"想一次动多步"</li>
+<li><a href="../concepts/kv-cache.html">kv-cache</a> · 一次多吐 token 的自回归生成靠它省重算</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/lumine.html"><span class="cat">paper</span>Lumine · 从像素直接玩 3D 开放世界的通用 agent</a></li><li><a href="../concepts/imitation-learning.html"><span class="cat">concept</span>模仿学习 · 行为克隆 · 抄人类作业</a></li><li><a href="../concepts/react-loop.html"><span class="cat">concept</span>ReAct · Reason + Act · 想一步动一步</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/action-chunking.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

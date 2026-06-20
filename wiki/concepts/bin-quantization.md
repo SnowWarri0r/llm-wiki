@@ -52,3 +52,4 @@ bin quantization 干的事：把连续值除以 bin 宽度，<strong>查表</str
 - [[dmel]] · 提出
 - [[log-mel-spectrogram]] · 应用的输入
 - [[rvq-codec]] · 对照路线
+- [[quantization]] · 对照:那是省比特的权重/激活量化(W8A8)，不是码本离散化

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>模仿学习 · 行为克隆 · 抄人类作业 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · imitation-learning</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>模仿学习 · 行为克隆 · 抄人类作业</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>不靠试错 + reward，而是<strong>看专家(人类)怎么做，学着复现</strong>——把"看到的状态 → 专家的动作"当成监督学习的输入输出对训练。最简单的形态叫<strong>行为克隆(Behavior Cloning)</strong>。</p>
+<h2>直觉 · 抄作业 vs 自己试错</h2>
+<p><a href="../concepts/rl-for-llm-people.html">rl-for-llm-people</a> / <a href="../concepts/policy-gradient.html">policy-gradient</a> 那套强化学习是<strong>自己试错</strong>:做动作 → 拿 reward → 强化得分高的行为。问题是<strong>reward 稀疏</strong>时几乎没法学——比如打通一局 5 小时的游戏才"得一次分",中间全程没人给信号,纯试错撞不出来。</p>
+<p>模仿学习换思路:<strong>别试错了,直接抄人类录像</strong>。把人类玩游戏的<code>(画面, 按了什么键)</code>收集成一大堆样本,当成监督学习——输入画面、预测人会按什么键。这就是 <a href="../papers/lumine.html">lumine</a> 的全部训练范式(2424h 人类原神录像,<strong>零 RL</strong>)。</p>
+<p>类比:学开车,RL 是"自己瞎开,撞了扣分,慢慢摸";模仿学习是"坐副驾看老司机开几千小时,学他每个路况怎么操作"。开放世界这种 reward 极稀疏的场景,抄作业比试错现实得多。</p>
+<h2>它的软肋:误差累积(distribution shift)</h2>
+<p>行为克隆最有名的坑:<strong>训练时只见过"专家走过的状态"</strong>。一旦推理时犯个小错、飘到一个<strong>专家从没到过的状态</strong>,模型不知道怎么办 → 错上加错、越飘越远(compounding error / distribution shift)。</p>
+<p>缓解办法:海量多样数据(覆盖更多状态)、<a href="../concepts/action-chunking.html">action-chunking</a>(减少逐步喂回的次数)、或 DAgger(让专家在模型飘到的新状态上补标动作)。Lumine 靠的就是 2424h 大数据 + chunking + 阶段化课程。</p>
+<h2>怎么做的</h2>
+<pre><code># 行为克隆：纯监督
+收集 D = {(状态 s_i, 专家动作 a_i)}        # 人类演示
+训练 π：minimize  Σ loss(π(s_i), a_i)      # 预测专家会做什么
+# 对照 RL：没有 reward、没有环境交互、不探索
+</code></pre>
+<h2>代码出处 / 来源</h2>
+<ul>
+<li><a href="../papers/lumine.html">lumine</a> · 三阶段纯模仿(预训练行为克隆 → 指令跟随 → 推理),零 RL</li>
+<li>经典:Behavior Cloning、DAgger(Ross et al. 2011)</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/lumine.html">lumine</a> · 用模仿学习替代 RL 玩开放世界</li>
+<li><a href="../concepts/rl-for-llm-people.html">rl-for-llm-people</a> · 对照范式:试错 + reward</li>
+<li><a href="../concepts/policy-gradient.html">policy-gradient</a> · RL 的核心,模仿学习不用它</li>
+<li><a href="../concepts/action-chunking.html">action-chunking</a> · 缓解模仿的误差累积</li>
+<li><a href="../concepts/rlhf.html">rlhf</a> · 先 SFT(本质是模仿)再 RL,两者常组合</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/lumine.html"><span class="cat">paper</span>Lumine · 从像素直接玩 3D 开放世界的通用 agent</a></li><li><a href="../concepts/action-chunking.html"><span class="cat">concept</span>Action Chunking · 一次推理预测多步动作</a></li><li><a href="../concepts/rl-for-llm-people.html"><span class="cat">concept</span>RL 直觉打底 · 给懂 LLM 不懂 RL 的人</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/imitation-learning.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Lumine · 从像素直接玩 3D 开放世界的通用 agent</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --indigo: #3949ab; --indigo-soft: #d6d9f0;
+  --accent: var(--indigo); --accent-soft: var(--indigo-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(38px, 6vw, 70px); line-height: 0.98; letter-spacing: -0.03em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 36px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
+p { margin: 12px 0; } strong { font-weight: 700; }
+ul { margin: 12px 0; padding-left: 24px; } li { margin: 6px 0; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.86em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--accent-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--accent); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--accent); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+table.spec { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+table.spec td, table.spec th { border-bottom: 1px dashed var(--rule); padding: 7px 10px; text-align: left; vertical-align: top; }
+table.spec th { color: var(--accent); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+table.spec td:first-child { color: var(--muted); }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--accent-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--accent-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* lm-specific */
+.lm-svg { width: 100%; height: auto; display: block; font-family: 'JetBrains Mono', monospace; }
+.lm-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .lm-rev { opacity: 1; }
+figure.play .lm-rev.d1 { transition-delay: 0.15s; }
+figure.play .lm-rev.d2 { transition-delay: 0.45s; }
+figure.play .lm-rev.d3 { transition-delay: 0.75s; }
+figure.play .lm-rev.d4 { transition-delay: 1.05s; }
+figure.play .lm-rev.d5 { transition-delay: 1.35s; }
+figure.play .lm-rev.d6 { transition-delay: 1.65s; }
+.lm-svg .draw { stroke-dasharray: 1000; stroke-dashoffset: 1000; transition: stroke-dashoffset 1.5s ease; }
+figure.play .lm-svg .draw { stroke-dashoffset: 0; }
+@media (prefers-reduced-motion: reduce) { .lm-rev { opacity: 1; transition: none; } .lm-svg .draw { stroke-dashoffset: 0; transition: none; } }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · lumine</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · 具身/游戏 agent · Lumine · 2025</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 像素到键鼠 · 通用游戏 agent</div>
+  <h1 class="title">Lumine ·<br /><span class="em">看着屏幕，把原神主线打通。</span></h1>
+  <div class="byline">Tan et al. (ByteDance Seed 等) · An Open Recipe for Building Generalist Agents in 3D Open Worlds · arXiv 2511.08892 · 2025</div>
+  <p class="dek">一个 VLM 当大脑，直接吃游戏画面像素、吐键盘鼠标操作，端到端打通《原神》5 小时蒙德主线，零样本迁移到《鸣潮》《崩铁》。三个关键招：动作当文本 token 生成、看一眼预测多步(action chunking)、该想才想(hybrid thinking)。全程纯模仿人类录像，零 RL。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>Lumine 用 <strong>Qwen2-VL-7B</strong> 当大脑，<strong>直接从屏幕像素 → 键鼠操作</strong>，端到端跑完《原神》5 小时主线、零样本迁移其他游戏。三招：① <strong>动作即文本</strong><a class="jr" href="#g-01">1</a>——没有专门动作头，键鼠操作当普通 token 吐出来（鼠标位移 + 33ms 按键片）；② <a href="../concepts/action-chunking.html"><strong>action chunking</strong></a><a class="jr" href="#g-02">2</a>——<strong>5Hz 看、30Hz 动</strong>，一次推理预测 6 个动作块；③ <strong>hybrid thinking</strong><a class="jr" href="#g-03">3</a>——只在关键转折点触发 <code>&lt;|thought|&gt;</code> 推理，平时反射式出招。训练是 <strong>2424 小时人类录像的纯<a href="../concepts/imitation-learning.html">模仿学习</a></strong>（预训练→指令跟随→推理三段），<strong>零 RL</strong><a class="jr" href="#g-04">4</a>。记忆 = <a href="../concepts/memory-stream.html">context 当记忆</a>(滑窗 20 帧)。靠 <a href="../concepts/quantization.html">W8A8 量化</a>+流式输出+投机解码做到 <strong>25.3× 延迟优化</strong><a class="jr" href="#g-05">5</a> 实时跑。</p>
+</div>
+
+
+<!-- §01 -->
+<h2><span class="num">§ 01</span>痛点：开放世界，纯 RL 练不动</h2>
+
+<p>3D 开放世界游戏（原神这种）对 agent 是地狱级：<strong>任务长达数小时</strong>、要探索 + 战斗 + 解谜 + 跟 NPC 对话、还得实时操作键鼠。你正在玩的 <strong>Mario RL</strong> 那套（强化学习，自己试错 + reward 信号）在这儿基本失灵——<strong>reward 太稀疏</strong>（5 小时才通关一次，中间没人给分）、状态空间太大，纯试错几乎不可能练出来。</p>
+
+<p>Lumine 的选择：<strong>不试错，抄人类作业</strong>。站在一个预训练 VLM 的语言 + 视觉先验上，用<strong>模仿学习</strong>看人怎么玩就学怎么玩，再加"该想才想"的推理。下面三招是它能实时跑长任务的关键。</p>
+
+
+<!-- §02 -->
+<h2><span class="num">§ 02</span>第一招：动作就是"文本"，没有动作头</h2>
+
+<p>最反直觉的设计：它<strong>不给 VLM 加任何专门的"动作输出层"</strong>，而是让模型把键鼠操作<strong>当普通文字 token 直接吐出来</strong>——和写句子一模一样的自回归预测。</p>
+
+<figure id="fig-act">
+  <figcaption><span>FIG 01 · 像素 → VLM → 文本动作</span><span class="fnum">ACTION AS TEXT</span></figcaption>
+  <svg class="lm-svg" viewBox="0 0 720 240" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="la-h" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#3949ab"/></marker>
+    </defs>
+    <!-- 画面 -->
+    <rect class="lm-rev d1" x="40" y="68" width="120" height="78" rx="4" fill="#d6d9f0" stroke="#3949ab"/>
+    <text class="lm-rev d1" x="100" y="103" text-anchor="middle" font-size="10" fill="#28306e">游戏画面</text>
+    <text class="lm-rev d1" x="100" y="120" text-anchor="middle" font-size="8" fill="#7a6f5d">原始像素</text>
+    <text class="lm-rev d1" x="100" y="162" text-anchor="middle" font-size="8" fill="#7a6f5d">每 200ms 一帧 (5Hz)</text>
+    <line class="lm-rev d2" x1="164" y1="107" x2="232" y2="107" stroke="#3949ab" stroke-width="1.5" marker-end="url(#la-h)"/>
+    <!-- VLM -->
+    <rect class="lm-rev d2" x="238" y="78" width="150" height="58" rx="5" fill="#faf4e1" stroke="#3949ab" stroke-width="1.6"/>
+    <text class="lm-rev d2" x="313" y="103" text-anchor="middle" font-size="11" font-weight="700" fill="#28306e">Qwen2-VL-7B</text>
+    <text class="lm-rev d2" x="313" y="120" text-anchor="middle" font-size="8" fill="#7a6f5d">看图 + 想 + 出动作 一体</text>
+    <line class="lm-rev d3" x1="390" y1="107" x2="448" y2="107" stroke="#3949ab" stroke-width="1.5" marker-end="url(#la-h)"/>
+    <!-- 动作 token 串 -->
+    <g class="lm-rev d3" font-size="8.5" text-anchor="middle">
+      <rect x="452" y="90" width="58" height="32" rx="3" fill="#e8efe4" stroke="#4a6b3a"/><text x="481" y="110" fill="#2f5a2a">92 0 0</text>
+      <rect x="514" y="90" width="58" height="32" rx="3" fill="#f0e0a8" stroke="#b8841c"/><text x="543" y="110" fill="#7a5310">Shift W</text>
+      <rect x="576" y="90" width="44" height="32" rx="3" fill="#f0e0a8" stroke="#b8841c"/><text x="598" y="110" fill="#7a5310">F W</text>
+      <rect x="624" y="90" width="36" height="32" rx="3" fill="#f0e0a8" stroke="#b8841c"/><text x="642" y="110" fill="#7a5310">F</text>
+    </g>
+    <text class="lm-rev d4" x="481" y="138" text-anchor="middle" font-size="7.5" fill="#4a6b3a">鼠标位移</text>
+    <text class="lm-rev d4" x="600" y="138" text-anchor="middle" font-size="7.5" fill="#b8841c">按键(每块 33ms)</text>
+    <text class="lm-rev d4" x="556" y="158" text-anchor="middle" font-size="8" fill="#7a6f5d">「右转 92 → 冲刺 → 开宝箱」用分号串成一句</text>
+    <!-- 底注 -->
+    <text class="lm-rev d5" x="360" y="200" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#28306e">没有专门动作头 —— 键鼠操作当普通文本 token 自回归吐出来</text>
+    <text class="lm-rev d5" x="360" y="222" text-anchor="middle" font-size="8.5" fill="#7a6f5d">于是 VLM 的语言/视觉先验直接复用，不必从零学一个控制网络</text>
+  </svg>
+</figure>
+
+<p>一段动作长这样：<code>"92 0 0 ; Shift W ; Shift W ; F W ; F"</code>——鼠标右转 92 单位、按 Shift+W 冲刺、按 F+W 开宝箱。鼠标位移是 <code>[-1000,1000]</code> 的数，按键是分号隔开的 33ms 时间片。<strong>把整个游戏操作翻译成一种"语言"</strong>，VLM 就能用它最擅长的"预测下一个 token"来产出，<a href="../concepts/qwen3-vl.html">视觉语言模型</a>的先验白白捡来用。</p>
+
+
+<!-- §03 -->
+<h2><span class="num">§ 03</span>第二招：看慢动快 · action chunking</h2>
+
+<p>难点：它<strong>每 200ms 才看一帧（5Hz）</strong>，但游戏要 <strong>30Hz（每 33ms 一个动作）</strong>才流畅。慢感知怎么喂出快操作？答案——<strong>一次推理预测未来 6 个动作块</strong>（6×33ms≈200ms），看一眼就把接下来 200ms 的连续操作一口气规划好。</p>
+
+<figure id="fig-chunk">
+  <figcaption><span>FIG 02 · 5Hz 看 → 30Hz 动</span><span class="fnum">ACTION CHUNKING</span></figcaption>
+  <svg class="lm-svg" viewBox="0 0 720 230" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="lc-d" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#3949ab"/></marker>
+    </defs>
+    <!-- 感知行 -->
+    <text class="lm-rev d1" x="40" y="44" text-anchor="start" font-size="9" font-weight="700" fill="#28306e">感知 5Hz（每 200ms 看一帧）</text>
+    <g class="lm-rev d1">
+      <rect x="60" y="54" width="40" height="30" rx="3" fill="#d6d9f0" stroke="#3949ab"/><text x="80" y="73" text-anchor="middle" font-size="8" fill="#28306e">看</text>
+      <rect x="360" y="54" width="40" height="30" rx="3" fill="#d6d9f0" stroke="#3949ab"/><text x="380" y="73" text-anchor="middle" font-size="8" fill="#28306e">看</text>
+      <rect x="660" y="54" width="40" height="30" rx="3" fill="#d6d9f0" stroke="#3949ab" opacity="0.45"/>
+    </g>
+    <text class="lm-rev d1" x="80" y="98" text-anchor="middle" font-size="7.5" fill="#7a6f5d">0ms</text>
+    <text class="lm-rev d1" x="380" y="98" text-anchor="middle" font-size="7.5" fill="#7a6f5d">200ms</text>
+    <text class="lm-rev d1" x="678" y="98" text-anchor="middle" font-size="7.5" fill="#7a6f5d">400ms</text>
+
+    <!-- 一次推理 -> 6 块 -->
+    <text class="lm-rev d2" x="40" y="138" text-anchor="start" font-size="9" font-weight="700" fill="#4a6b3a">控制 30Hz（一次推理 → 6 个动作块，每块 33ms）</text>
+    <g class="lm-rev d3" font-size="8" text-anchor="middle">
+      <rect x="60" y="150" width="46" height="30" rx="2" fill="#e8efe4" stroke="#4a6b3a"/><text x="83" y="169" fill="#2f5a2a">块1</text>
+      <rect x="110" y="150" width="46" height="30" rx="2" fill="#e8efe4" stroke="#4a6b3a"/><text x="133" y="169" fill="#2f5a2a">块2</text>
+      <rect x="160" y="150" width="46" height="30" rx="2" fill="#e8efe4" stroke="#4a6b3a"/><text x="183" y="169" fill="#2f5a2a">块3</text>
+      <rect x="210" y="150" width="46" height="30" rx="2" fill="#e8efe4" stroke="#4a6b3a"/><text x="233" y="169" fill="#2f5a2a">块4</text>
+      <rect x="260" y="150" width="46" height="30" rx="2" fill="#e8efe4" stroke="#4a6b3a"/><text x="283" y="169" fill="#2f5a2a">块5</text>
+      <rect x="310" y="150" width="46" height="30" rx="2" fill="#e8efe4" stroke="#4a6b3a"/><text x="333" y="169" fill="#2f5a2a">块6</text>
+    </g>
+    <!-- 看 → 6块 的箭头 -->
+    <line class="lm-rev d3" x1="80" y1="86" x2="80" y2="146" stroke="#3949ab" stroke-width="1.3" marker-end="url(#lc-d)"/>
+    <!-- 下一窗口 -->
+    <g class="lm-rev d4" font-size="8" text-anchor="middle" opacity="0.85">
+      <rect x="360" y="150" width="46" height="30" rx="2" fill="#eef2e9" stroke="#7a9a6a"/><text x="383" y="169" fill="#4a6b3a">块1</text>
+      <rect x="410" y="150" width="46" height="30" rx="2" fill="#eef2e9" stroke="#7a9a6a"/>
+      <rect x="460" y="150" width="46" height="30" rx="2" fill="#eef2e9" stroke="#7a9a6a"/>
+      <rect x="510" y="150" width="46" height="30" rx="2" fill="#eef2e9" stroke="#7a9a6a"/>
+      <rect x="560" y="150" width="46" height="30" rx="2" fill="#eef2e9" stroke="#7a9a6a"/>
+      <rect x="610" y="150" width="46" height="30" rx="2" fill="#eef2e9" stroke="#7a9a6a"/>
+    </g>
+    <line class="lm-rev d4" x1="380" y1="86" x2="380" y2="146" stroke="#3949ab" stroke-width="1.3" marker-end="url(#lc-d)"/>
+
+    <text class="lm-rev d5" x="360" y="212" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#28306e">瞄一眼乐谱的一个小节，手指连续把 6 个音弹完 —— 而不是每个音都回头看谱</text>
+  </svg>
+</figure>
+
+
+<!-- §04 -->
+<h2><span class="num">§ 04</span>第三招：该想才想 · hybrid thinking</h2>
+
+<p>每步都长篇内心独白太慢。Lumine 学会了<strong>只在"关键转折点"才触发推理</strong>（用 <code>&lt;|thought_start|&gt;…&lt;|thought_end|&gt;</code> 包起来）——环境突变、旧计划失效、冒出新目标时才停下来想；平时<strong>条件反射直接出动作</strong>。要是连续 100 步没想过，就<strong>强制进入思考模式</strong>自救（防卡死）。</p>
+
+<figure id="fig-think">
+  <figcaption><span>FIG 03 · 反射为主，岔路才想</span><span class="fnum">HYBRID THINKING</span></figcaption>
+  <svg class="lm-svg" viewBox="0 0 720 200" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="lt-h" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#7a6f5d"/></marker>
+    </defs>
+    <!-- 主轴 -->
+    <line class="lm-rev d1" x1="40" y1="96" x2="680" y2="96" stroke="#bfb398" stroke-width="1.4" marker-end="url(#lt-h)"/>
+    <!-- 反射步（小圆点） -->
+    <g class="lm-rev d2" fill="#4a6b3a">
+      <circle cx="90" cy="96" r="5"/><circle cx="150" cy="96" r="5"/><circle cx="210" cy="96" r="5"/>
+      <circle cx="370" cy="96" r="5"/><circle cx="430" cy="96" r="5"/>
+      <circle cx="590" cy="96" r="5"/><circle cx="640" cy="96" r="5"/>
+    </g>
+    <text class="lm-rev d2" x="150" y="118" text-anchor="middle" font-size="8" fill="#4a6b3a">反射：直接出动作</text>
+    <!-- think 节点 1 -->
+    <circle class="lm-rev d3" cx="285" cy="96" r="11" fill="#d6d9f0" stroke="#3949ab" stroke-width="1.8"/>
+    <text class="lm-rev d3" x="285" y="100" text-anchor="middle" font-size="11">🧠</text>
+    <text class="lm-rev d3" x="285" y="66" text-anchor="middle" font-size="8" fill="#28306e">岔路 / 新目标</text>
+    <text class="lm-rev d3" x="285" y="132" text-anchor="middle" font-size="7.5" fill="#3949ab">&lt;|thought|&gt; 想一下</text>
+    <!-- think 节点 2 -->
+    <circle class="lm-rev d4" cx="510" cy="96" r="11" fill="#d6d9f0" stroke="#3949ab" stroke-width="1.8"/>
+    <text class="lm-rev d4" x="510" y="100" text-anchor="middle" font-size="11">🧠</text>
+    <text class="lm-rev d4" x="510" y="66" text-anchor="middle" font-size="8" fill="#28306e">环境突变</text>
+    <text class="lm-rev d4" x="510" y="132" text-anchor="middle" font-size="7.5" fill="#3949ab">旧计划失效 → 重想</text>
+
+    <text class="lm-rev d5" x="360" y="174" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#28306e">走熟路不琢磨每一步，只在岔路口停下来想 · 卡 100 步没想则强制思考自救</text>
+  </svg>
+</figure>
+
+
+<!-- §05 -->
+<h2><span class="num">§ 05</span>训练：2424 小时人类录像，纯模仿三阶段</h2>
+
+<p>和你 Mario RL 最大的分野——<strong>完全没有强化学习、没有 reward</strong>，就是<a href="../concepts/imitation-learning.html">行为克隆</a>（看人怎么玩，学着复现）：</p>
+
+<table class="spec">
+  <tr><th>阶段</th><th>数据</th><th>学什么</th></tr>
+  <tr><td>预训练</td><td>1731h 原始录像</td><td>行为克隆，学基本操作"肌肉记忆"</td></tr>
+  <tr><td>指令跟随</td><td>200h（自动打标）</td><td>把操作绑到自然语言指令上</td></tr>
+  <tr><td>推理</td><td>15h（人工标内心独白）</td><td>学长程自主决策（hybrid thinking）</td></tr>
+</table>
+
+<p>第二阶段省人工的巧办法：先训一个小 <strong>Qwen2-VL-2B 分类器</strong>（165h 人工标的 38 类活动）去给海量录像<strong>自动打活动标签</strong>，再用 <strong>GPT-4.1</strong> 在转折点生成多样的自然语言指令。这样 200h 指令数据不用全靠人标。</p>
+
+<h3>跟 RL 的路线对照</h3>
+<table class="spec">
+  <tr><th>维度</th><th>Mario RL（你在玩的）</th><th>Lumine</th></tr>
+  <tr><td>学法</td><td>强化学习：试错 + reward</td><td>纯模仿：抄人类录像，无 reward</td></tr>
+  <tr><td>大脑</td><td>小 CNN 策略网络</td><td>7B VLM（语言+视觉先验）</td></tr>
+  <tr><td>动作</td><td>离散按键，网络直接输出</td><td>当文本 token 生成，可 chunking</td></tr>
+  <tr><td>推理</td><td>不"想"，纯反射</td><td>关键点才"想"（hybrid thinking）</td></tr>
+</table>
+<p>一句话：<strong>RL 是"从零试错练手感"，Lumine 是"站在 VLM 先验上抄人类作业 + 该想才想"</strong>。开放世界 reward 太稀疏，纯 RL 几乎练不出 5 小时主线，所以走模仿。</p>
+
+
+<!-- §06 -->
+<h2><span class="num">§ 06</span>真·实时：25.3× 延迟优化</h2>
+
+<p>要 200ms 出一帧的 6 个动作块，工程上压榨到极致：<strong>流式输出</strong>（每个分号块一好就执行，把 200ms 死线松成每块 33ms）+ <strong>投机解码</strong>（利用固定分隔符免草稿模型）+ <strong>KV-cache 复用</strong>（<a href="../concepts/kv-cache.html">StreamingLLM</a> + attention sink）+ <a href="../concepts/quantization.html"><strong>W8A8 量化</strong></a>（SmoothQuant，权重激活都 INT8）+ 4 卡张量并行 + CUDA graph 融合。合起来 <strong>25.3× 延迟降低</strong>：不带推理时一帧 ~114ms，稳稳塞进 200ms 窗口。</p>
+
+<div class="note">
+  <span class="l">放进 wiki 这条线</span>
+  <p>Lumine 把几块拧在一起：<a href="../concepts/qwen3-vl.html">VLM</a>（Qwen2-VL 当大脑）+ <a href="../concepts/action-chunking.html">action chunking</a>（看慢动快）+ <a href="../concepts/imitation-learning.html">模仿学习</a>（替代 RL）+ <a href="../concepts/memory-stream.html">context 当记忆</a>（同 <a href="memgpt.html">MemGPT</a> 思路）+ <a href="../concepts/quantization.html">W8A8 量化</a>/<a href="../concepts/kv-cache.html">KV-cache</a> 做实时。一句话：<strong>把游戏操作翻译成"语言"，让一个 VLM 看图说"话"（话=键鼠），抄人类录像学会，该想才想。</strong>跟纯 RL 的 Mario 是两条路。</p>
+</div>
+
+
+<!-- glossary -->
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">动作即文本</span> · 不加专门动作头，键鼠操作编码成 token 串（鼠标位移 <code>[-1000,1000]</code> + 分号隔开的 33ms 按键片），VLM 用自回归"预测下一 token"产出。复用语言/视觉先验，免从零训控制网络。</li>
+    <li id="g-02"><span class="term"><a href="../concepts/action-chunking.html">Action Chunking</a></span> · 一次推理预测未来多步动作（Lumine: 6 块 × 33ms）。用 5Hz 的慢感知喂出 30Hz 的快控制；也让动作更连贯、少抖。机器人 VLA（ACT/RT 系）通用招。</li>
+    <li id="g-03"><span class="term">Hybrid Thinking · 该想才想</span> · 每步决定"直接出动作"还是先生成 <code>&lt;|thought|&gt;</code> 推理。只在关键转折点想（省算力），卡 100 步没想则强制思考自救。</li>
+    <li id="g-04"><span class="term"><a href="../concepts/imitation-learning.html">纯模仿学习 · 三阶段</a></span> · 2424h 人类原神录像：预训练 1731h 行为克隆 → 指令跟随 200h（小分类器+GPT-4.1 自动打标）→ 推理 15h（人工标内心独白）。<strong>零 RL</strong>。</li>
+    <li id="g-05"><span class="term"><a href="../concepts/quantization.html">25.3× 延迟优化</a></span> · 流式输出 + 投机解码 + <a href="../concepts/kv-cache.html">KV-cache 复用(StreamingLLM)</a> + W8A8 量化(SmoothQuant) + 4 卡张量并行 + CUDA graph。无推理一帧 ~114ms。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>SOURCE · arXiv 2511.08892 · Lumine: An Open Recipe for Building Generalist Agents in 3D Open Worlds (Tan et al. · 2025)</span>
+  <span>INGESTED · 2026-06-16</span>
+</div>
+
+</div>
+<script>
+{
+  const figs = ['fig-act','fig-chunk','fig-think'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.15 });
+    obs.observe(el);
+  });
+}
+</script>
+</body>
+</html>
