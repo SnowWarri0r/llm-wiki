@@ -59,8 +59,8 @@ update ∝  teacher_score(x)  −  fake_score(x)
   <text class="reveal d4" x="540" y="214" text-anchor="middle" font-size="10" font-weight="700" fill="#0f4a45">老师分布 p</text>
   <g class="reveal d5" fill="#f2dcc2" stroke="#bf5a1e"><ellipse cx="210" cy="210" rx="56" ry="34" opacity="0.7"/></g>
   <text class="reveal d5" x="210" y="214" text-anchor="middle" font-size="10" font-weight="700" fill="#8a3f12">学生分布 q</text>
-  <line class="reveal d6" x1="270" y1="206" x2="464" y2="206" stroke="#bf5a1e" stroke-width="2.6" marker-end="url(#dmd-o)"/>
-  <text class="reveal d6" x="368" y="198" text-anchor="middle" font-size="9" font-weight="700" fill="#bf5a1e">teacher_score(吸向 p) − fake_score(斥离 q)</text>
+  <text class="reveal d6" x="368" y="184" text-anchor="middle" font-size="9" font-weight="700" fill="#bf5a1e">teacher_score(吸向 p) − fake_score(斥离 q)</text>
+  <line class="reveal d6" x1="272" y1="210" x2="462" y2="210" stroke="#bf5a1e" stroke-width="2.6" marker-end="url(#dmd-o)"/>
   <text class="reveal d6" x="368" y="240" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="11" font-weight="700" fill="#3a3128">吸向老师、斥离自己 → q 追上 p（眼熟吗？=Drifting）</text>
 </svg>
 </figure>

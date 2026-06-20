@@ -737,3 +737,12 @@ skill 更新:
 - dmd-distillation: NFE=跑几次网络; DMD=不抄轨迹只让出图分布匹配, update∝teacher_score(吸真)−fake_score(斥自己)=Drifting同构; NFE对比+分布匹配图; 接 ode-sde/drifting/diffusion-opd/closed-form-kl
 - progressive-resolution-training: 256P→512P→2K 先小图便宜学构图再升大图抠细节; 阶梯图; 接 qwen-image-2六段/mrt 512→1024
 - 回链: qwen-image-2 g-04/g-05/g-06 + mrt g-05 链到三新页; index 生成模型基础段加三条
+
+## [2026-06-15] add | qwen3-vl-report bespoke 精装页 + fix dmd 文案重合
+- 用户要 Qwen-VL; arxiv HTML/ar5iv 转换失败, 直接读原始 PDF(pypdf 抽全文 42 页, 4.2MB)一手核实
+- 注意 slug 冲突: concept 已占 qwen3-vl, paper 用 qwen3-vl-report; 文件 docs/papers/qwen3-vl-report.html
+- qwen3-vl-report bespoke(umber #6b4a2e, 第13色): VLM三件套(SigLIP-2 ViT + MLP merger 2×2压 + Qwen3 LLM); 三升级 Interleaved-MRoPE(t/h/w交错铺频谱均衡)/DeepStack(3层ViT经各自merger残差注入LLM前3层)/文字时间戳<3.0s>代T-RoPE; 预训练四阶段S0只训merger→S1/2/3全参 8K→32K→256K + 后训练长CoT SFT→强师蒸馏→RL; OCR32语种/2D3D grounding/GUI agent/256K→1M; 3图
+- DeepStack ↔ ideogram-4"取13中间层" 同思想(多层特征>最后一层)
+- 与现有 qwen3-vl concept(当文本编码器)互补互链
+- fix: dmd-distillation 图 teacher_score−fake_score 文案压在橙箭头上, 文案上移到184/箭头下移到210
+- 回链: index 接 mrt 后; modality-projector 等已有链接覆盖
