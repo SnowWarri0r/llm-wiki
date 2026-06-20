@@ -50,6 +50,7 @@ BN → ReLU → conv → BN → ReLU → conv → (+ x)
 - LayerNorm 在 feature 维度归一化，跟序列长度无关，更适合
 
 ## 链接
+- [[normalization]] · 归一化家族对照(BN/LN/GN/RMSNorm 只差对哪根轴)+真数字例子
 - [[resnet]] · BN 的早期高光场景
 - [[layernorm]] · Transformer 用的替代品
 - [[residual-connection]] · BN 跟残差是组合拳

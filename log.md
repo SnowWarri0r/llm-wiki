@@ -761,3 +761,10 @@ skill 更新:
 - 查 Wan2.1 论文 arxiv 2503.20314 核实
 - video-vae: VAE视频版 vs 图像版(kl-vae); 三件事=3D卷积时间也压((1+T)×H×W→[1+T/4,H/8,W/8]×16,空间64×+时间4×)/因果只看过去帧(1+T关键帧→T=0退化成图,图视频通吃)/特征缓存+RMSNorm→无限长1080P; 图像VAE vs 视频VAE 对照图
 - 回链: mrt 两处 WAN-2.1-VAE 链接从 kl-vae 改指 video-vae; kl-vae 加 video-vae 链接; index 接 KL-VAE 后
+
+## [2026-06-15] add | normalization 家族页（用户问 layernorm/groupnorm，嫌抽象→给真数字）
+- 已有 layernorm/batchnorm/qk-rmsnorm 分页; 缺统一家族页(对哪根轴) → 建 normalization
+- 核心: 都是拉回μ0σ1+γβ, 区别只在对哪组数求统计; 成绩表类比(BN按列/LN按行/GN分组)
+- 真数字例子: 2样本×4通道矩阵[1,2,3,4]/[10,20,30,40] 算三遍 — LN按行(两行都→[-1.34,-.45,.45,1.34],抹scale)/BN按列(每列[-1,1],要全batch)/GN行内分2组([-1,1,-1,1]); 三面板高亮图(行/列/块)
+- RMSNorm + 为啥 video-vae 换掉 GroupNorm(因果/流式)
+- 回链: layernorm/batchnorm/video-vae 加 normalization 链接; index 接 LayerNorm 后

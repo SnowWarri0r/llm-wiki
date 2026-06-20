@@ -118,6 +118,7 @@
 - [Relative Position Encoding](wiki/concepts/relative-position-encoding.md) — 为什么"差几个位置"比"在第几个位置"好
 - [Transformer Architecture](wiki/concepts/transformer-architecture.md) — Encoder + Decoder 堆叠
 - [LayerNorm](wiki/concepts/layernorm.md) — 每个 token 内部归一化，序列模型比 BN 更顺手
+- [归一化家族 Normalization](wiki/concepts/normalization.md) — BN/LN/GN/RMSNorm 只差"对哪根轴求μ/σ"; 同一个2×4矩阵算三遍(按行LN/按列BN/分块GN)真数字例子 + 立方体图
 - [Residual + LayerNorm](wiki/concepts/residual-layernorm.md) — 现代 Transformer block 的稳定训练骨架
 
 ### CNN 基础
