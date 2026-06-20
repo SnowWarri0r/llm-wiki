@@ -790,3 +790,5 @@ skill 更新:
 ## [2026-06-18] query | covariance-gaussian + entropy-kl + gradient-backprop (数学地基 round 2)
 
 ## [2026-06-18] query | tokenization + sampling-decoding (LLM 输入输出两端)
+
+## [2026-06-18] query | norm-regularization + bayes-probability (数学地基收尾)

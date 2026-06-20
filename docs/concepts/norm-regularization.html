@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>范数 / 正则化 · 衡量&quot;权重多大&quot;并罚它别太大 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · norm-regularization</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>范数 / 正则化 · 衡量&quot;权重多大&quot;并罚它别太大</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p><strong>范数</strong>把一个向量"整体多大"压成一个数:<strong>L2</strong> = 欧氏长度 <code>√Σxᵢ²</code>(直线距离)、<strong>L1</strong> = 绝对值和 <code>Σ|xᵢ|</code>(街区距离)。<strong>正则化</strong> = 在 loss 里加一项权重的范数当"罚款",逼权重别长太大 → 防过拟合;<strong>L2(weight decay)</strong> 让权重均匀缩小,<strong>L1</strong> 逼出稀疏(很多权重正好 = 0)。</p>
+<h2>直觉 · 范数 = 一个向量整体多大</h2>
+<p>向量有好几个分量,"它整体多大"得用一个数概括,这就是范数:</p>
+<ul>
+<li><strong>L2 范数</strong> <code>‖x‖₂ = √(x₁²+x₂²+…)</code>:勾股定理那种<strong>直线距离</strong>(从原点到这个点)。最常用,平滑可导。</li>
+<li><strong>L1 范数</strong> <code>‖x‖₁ = |x₁|+|x₂|+…</code>:<strong>街区/曼哈顿距离</strong>(只能横平竖直走的总路程)。</li>
+</ul>
+<p><strong>为什么要"正则"权重</strong>:权重太大 → 模型能把训练数据<strong>死记硬背</strong>(连噪声都拟合)→ 过拟合,新数据上崩。办法:在 loss 后面加一项 <code>λ·‖w‖</code>,训练时<strong>既要降原 loss、又要保持权重小</strong>,<code>λ</code> 调罚得多狠。</p>
+<ul>
+<li><strong>L2 正则 / weight decay</strong>:加 <code>½λ‖w‖₂²</code>。它的梯度是 <code>λw</code> → 每步更新里多一个"把 w 往 0 拉一点"的力,等价于<strong>每步把权重乘一个略小于 1 的数</strong>(所以叫"权重衰减")。效果:权重<strong>整体均匀变小</strong>,但很少正好为 0。</li>
+<li><strong>L1 正则</strong>:加 <code>λ‖w‖₁</code>。它会逼出<strong>稀疏</strong>——很多权重被直接压成 <strong>0</strong>(相当于自动做特征选择)。</li>
+</ul>
+<h2>为什么 L1 稀疏、L2 不</h2>
+<figure style="margin:26px 0; padding:22px; background:#eef1f5; border:1px solid #aab4c4; border-radius:4px;">
+<svg viewBox="0 0 720 230" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:JetBrains Mono,monospace;">
+  <!-- Panel A: L2 圆 -->
+  <text class="reveal d1" x="180" y="32" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#3949ab">L2 · 圆(没有角)</text>
+  <line class="reveal d1" x1="80" y1="130" x2="280" y2="130" stroke="#bbb" stroke-width="1"/>
+  <line class="reveal d1" x1="180" y1="60" x2="180" y2="200" stroke="#bbb" stroke-width="1"/>
+  <circle class="draw d2" cx="180" cy="130" r="52" fill="none" stroke="#3949ab" stroke-width="2" pathLength="1000"/>
+  <!-- loss 等高线椭圆从右上压来，切在斜方向 -->
+  <ellipse class="reveal d3" cx="248" cy="70" rx="60" ry="38" fill="none" stroke="#9b2c2c" stroke-width="1.4" stroke-dasharray="4 3" transform="rotate(35 248 70)"/>
+  <circle class="reveal d3" cx="215" cy="96" r="5" fill="#9b2c2c"/>
+  <text class="reveal d3" x="180" y="218" text-anchor="middle" font-size="9.5" fill="#7a6f5d">最优落在斜方向 → 两权重都非零(只变小)</text>
+
+  <!-- Panel B: L1 菱形 -->
+  <text class="reveal d4" x="540" y="32" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#1f4d3a">L1 · 菱形(角在轴上)</text>
+  <line class="reveal d4" x1="440" y1="130" x2="640" y2="130" stroke="#bbb" stroke-width="1"/>
+  <line class="reveal d4" x1="540" y1="60" x2="540" y2="200" stroke="#bbb" stroke-width="1"/>
+  <polygon class="draw d4" points="540,78 592,130 540,182 488,130" fill="none" stroke="#1f4d3a" stroke-width="2" pathLength="1000"/>
+  <ellipse class="reveal d5" cx="600" cy="78" rx="60" ry="38" fill="none" stroke="#9b2c2c" stroke-width="1.4" stroke-dasharray="4 3" transform="rotate(35 600 78)"/>
+  <circle class="reveal d5" cx="540" cy="78" r="5" fill="#9b2c2c"/>
+  <text class="reveal d5" x="540" y="64" text-anchor="middle" font-size="9" fill="#9b2c2c">切在顶角(x=0)</text>
+  <text class="reveal d5" x="540" y="218" text-anchor="middle" font-size="9.5" fill="#7a6f5d">角在坐标轴上 → 最优爱落在角 → 某权重=0(稀疏)</text>
+</svg>
+</figure>
+
+<p>正则相当于"把解约束在一个球里"(范数 ≤ 某值)。<strong>L2 的球是圆</strong>——光滑、没有偏好的方向,最优解一般落在某个斜方向,两个权重都非零、只是被压小。<strong>L1 的球是菱形</strong>——<strong>尖角正好戳在坐标轴上</strong>,loss 等高线压过来时<strong>特别容易切在角上</strong>,而角意味着某个坐标 = 0。维度越多,角越多越尖,稀疏越明显。</p>
+<h2>数字例子 · 手算</h2>
+<p>权重 <code>w = [3, 4]</code>:</p>
+<pre><code>L2 范数 ‖w‖₂ = √(3² + 4²) = √25 = 5      （勾股，直线距离）
+L1 范数 ‖w‖₁ = |3| + |4| = 7              （街区距离）
+</code></pre>
+<p><strong>L2 正则怎么缩权重</strong>(weight decay 的来历):</p>
+<pre><code>正则项 R = ½·λ·‖w‖₂²，它对 w 的梯度 = λ·w
+一步更新: w ← w − lr·(原梯度 + λw)
+        = w·(1 − lr·λ) − lr·原梯度
+          └ 每步先把 w 乘 (1−lr·λ) 即略小于 1 → 持续往 0 收 ┘
+</code></pre>
+<p>比如 <code>lr=0.1, λ=0.1</code> → 每步权重先 ×0.99,再走原梯度。这就是优化器里 <code>weight_decay</code> 参数干的事。</p>
+<h2>落点</h2>
+<ul>
+<li><strong>weight_decay</strong>:几乎所有训练默认开 L2 正则(AdamW 把它做对了)。</li>
+<li><strong>梯度裁剪</strong>:按梯度的 <strong>L2 范数</strong>裁(<code>‖grad‖ &gt; 阈值就缩回去</code>),治 <a href="../concepts/gradient-backprop.html">gradient-backprop</a> 的梯度爆炸。</li>
+<li><strong>RMSNorm</strong>:除以特征的均方根 ≈ 除以 <code>L2/√n</code>,见 <a href="../concepts/normalization.html">normalization</a>。</li>
+<li><strong>L1 稀疏</strong>:Lasso 回归、模型剪枝、压缩里逼零。</li>
+</ul>
+<h2>代码出处 / 来源</h2>
+<ul>
+<li>标准内容:Lp 范数、L1/L2 正则(Ridge/Lasso)、weight decay</li>
+<li>落点:<code>torch.optim.AdamW(weight_decay=...)</code>、<code>clip_grad_norm_</code></li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/gradient-backprop.html">gradient-backprop</a> · 正则给梯度多加一项;梯度裁剪按 L2 范数</li>
+<li><a href="../concepts/normalization.html">normalization</a> · RMSNorm 除以 L2/√n;归一化跟范数同源</li>
+<li><a href="../concepts/matrix-rank.html">matrix-rank</a> · 低秩是另一种"约束复杂度";正则约束的是权重大小</li>
+<li><a href="../concepts/cross-entropy.html">cross-entropy</a> · 总 loss = 交叉熵 + λ·正则项</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../concepts/gradient-backprop.html"><span class="cat">concept</span>梯度 / 反向传播 · 往哪调参数能让 loss 变小</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/norm-regularization.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

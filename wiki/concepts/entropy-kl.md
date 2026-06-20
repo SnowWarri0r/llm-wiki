@@ -62,3 +62,4 @@ KL(P‖Q) = 0.5·log₂(0.5/0.9) + 0.5·log₂(0.5/0.1)
 - [[softmax]] · 算这些概率分布的常用出口
 - [[rl-for-llm-people]] · KL 散度当训练橡皮筋
 - [[markov-chain]] · 熵 / KL 也用来量分布随时间的变化
+- [[bayes-probability]] · 熵/KL 量的就是先验→后验那些分布差多少
