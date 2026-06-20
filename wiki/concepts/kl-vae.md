@@ -120,3 +120,4 @@ updated: 2026-06-15
 - [[flow-matching]] · 速度场学的是 latent 空间里噪声→干净的路径
 - [[patch-embedding]] · DiT 把 latent 再切 patch 喂进 transformer
 - [[ideogram-4]] · 单流 DiT 在 KL-VAE 的 latent 上做生成
+- [[video-vae]] · 视频版：多压一根时间轴 + 因果（Wan-VAE）
