@@ -205,3 +205,5 @@ logits  = h · W_outᵀ       # 一次算完 → [50257] 个分数，每个 toke
 - [[training-vs-inference]] · 训练时这条链是并行一次算完，推理时一个一个挤
 - [[gpt-2]] · weight tying（输入嵌入 = 输出头）出处
 - [[causal-language-model]] · 训练时怎么让模型只看左边来学这条链
+- [[tokenization]] · ① 入口:文本先切成 token 才进模型
+- [[sampling-decoding]] · ⑦ 出口:从 logits 分布里挑下一个 token
