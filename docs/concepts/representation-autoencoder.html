@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Representation Autoencoder · RAE · 拿&quot;看懂图的编码器&quot;当扩散 latent · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · representation-autoencoder</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Representation Autoencoder · RAE · 拿&quot;看懂图的编码器&quot;当扩散 latent</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>不再为扩散单训一个 <a href="../concepts/kl-vae.html">kl-vae</a> 压缩器,而是<strong>拿一个冻结的预训练表征编码器(SigLIP-2 / DINOv2)当 encoder、只训一个轻量 decoder 还原像素</strong>;扩散直接在这个<strong>高维语义 latent</strong> 里跑。比 VAE 收敛快、抗过拟合、越 scale 越赢。</p>
+<h2>直觉 · 压缩坐标 vs 概念坐标</h2>
+<p>主流 latent 扩散先训个 VAE 把图压成低维 latent(常 &lt;100 维)。但 VAE 是<strong>为"忠实还原"训的</strong>——latent 轴<strong>没语义</strong>(纯压缩编码),压缩还丢细节。扩散在这种"压缩坐标系"里学得慢、还易过拟合。</p>
+<p>RAE 的观察:<strong>已经有一堆"看懂图"的模型</strong>(<a href="../papers/dino.html">dino</a>v2、SigLIP,自监督/对比学出来的强表征)。直接拿它们的输出空间当 latent——</p>
+<ul>
+<li>编码器<strong>冻结不训</strong>(它已经把图组织成了语义结构);</li>
+<li><strong>只训一个轻量解码器</strong>把语义 embedding 还原成像素(L1 + LPIPS + Gram + 对抗损失)。</li>
+</ul>
+<p>类比:VAE = 自己存一个 <strong>zip 压缩包</strong>(紧凑但坐标没意义、有损);RAE = 直接在一个<strong>"已经理解图像"的概念坐标系</strong>里作画——"附近 = 语义相似",扩散学起来顺,解码器只管把概念渲染回像素。</p>
+<h2>怎么做的</h2>
+<pre><code>图 ──[冻结 SigLIP-2/DINOv2]──&gt; 高维语义 latent (256 token × 1152 维)
+                                      │  扩散(DiT + flow matching)在这里跑
+                                      ▼
+                              [只训这个轻量解码器] ──&gt; 像素
+</code></pre>
+<p>对照 VAE:VAE 的 encoder+decoder 都要训、latent 低维无语义;RAE 的 encoder 白嫖现成表征、只训 decoder、latent 高维有语义。</p>
+<h2>为什么更好(rae-dit 实测)</h2>
+<ul>
+<li><strong>收敛快</strong>:比 FLUX 的 VAE 基线 GenEval 快 <strong>4.0×</strong>、DPG 快 4.6×。</li>
+<li><strong>抗过拟合</strong>:VAE 微调 <strong>64 epoch 后崩</strong>(loss 塌向 0),RAE <strong>稳到 256 epoch</strong> 还在涨——高维+语义结构是<strong>隐式正则</strong>。</li>
+<li><strong>越大越赢</strong>:0.5B→9.8B 全程 RAE&gt;VAE,差距随规模变大。</li>
+</ul>
+<h2>一个必须的代价:维度相关噪声调度</h2>
+<p>语义 latent 维度 <code>m=N×d</code> 远大于 VAE。高维里加同样噪声相对腐蚀更小,所以<strong>时间步要按 <code>α=√(m/n)</code> 往"更多噪声"挪</strong>,补回信噪比。去掉它性能腰斩(GenEval 49.6→23.6)。这是 RAE 唯一不能省的技术;反倒是宽 diffusion head、噪声增强解码这些小模型补丁,放大后都没必要。</p>
+<h2>代码出处 / 来源</h2>
+<ul>
+<li><a href="../papers/rae-dit.html">rae-dit</a> · Scaling T2I Diffusion Transformers with Representation Autoencoders(arXiv 2601.16208)</li>
+<li>编码器:SigLIP-2 So400M / DINOv2 / WebSSL</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/rae-dit.html">rae-dit</a> · 这页的来源论文(把 RAE scale 到大规模 T2I)</li>
+<li><a href="../concepts/kl-vae.html">kl-vae</a> · 被替掉的低维压缩 latent</li>
+<li><a href="../papers/dino.html">dino</a> · DINOv2 这类自监督表征编码器(RAE 的 encoder 之一)</li>
+<li><a href="../papers/pid-pixel-diffusion.html">pid-pixel-diffusion</a> · 对照:PiD 换解码端、RAE 换编码端,都挑战"VAE 是不是最佳地基"</li>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · 在语义 latent 上跑的仍是 DiT</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · 训练目标</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/rae-dit.html"><span class="cat">paper</span>RAE-DiT · 拿&quot;看懂图的编码器&quot;当扩散的 latent</a></li><li><a href="../concepts/kl-vae.html"><span class="cat">concept</span>KL-VAE · 把图压进 latent 的那层地基</a></li><li><a href="../concepts/pixel-diffusion-decoder.html"><span class="cat">concept</span>像素扩散解码器 · 把 latent→像素的解码改成条件扩散</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/representation-autoencoder.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

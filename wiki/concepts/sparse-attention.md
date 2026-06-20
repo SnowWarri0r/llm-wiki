@@ -51,4 +51,5 @@ GPT-3 当年用 sparse 的工程动机被 FlashAttention 部分消解了 —— 
 ## 链接
 - [[gpt-3]] · 用 alternating dense/sparse
 - [[self-attention]] · 标准版的复杂度问题
+- [[flash-attention]] · 对照:它精确不跳对、只优化 IO;sparse 是近似改算法
 - [[transformer-architecture]] · 框架

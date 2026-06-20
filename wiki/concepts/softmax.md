@@ -50,4 +50,5 @@ T=2:   等于把 z 减半 [1,0.5,0] 再 softmax → [0.51, 0.31, 0.19]  更平
 - [[dot-product]] · softmax 的输入 logits 常来自点积
 - [[cross-entropy]] · softmax 的天生搭档损失,梯度 = p − onehot
 - [[qk-rmsnorm]] · 都为"别让 softmax 太尖/炸"服务
+- [[flash-attention]] · 在线 softmax 用的就是这页"减最大值"那套,改成 running
 - [[gspo]] · RL 里序列概率也走 softmax/对数概率
