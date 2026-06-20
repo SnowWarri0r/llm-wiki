@@ -244,6 +244,8 @@
 - [协方差 / 多元高斯](wiki/concepts/covariance-gaussian.md) — 协方差矩阵=数据散成的椭圆; 它的特征向量=椭圆轴=PCA主成分(又是同一条轴); 手算"点躺一条线→协方差秩1"; N(μ,Σ)
 - [熵 / KL 散度](wiki/concepts/entropy-kl.md) — 熵=平均多不确定(−Σplogp); KL=用错分布Q描述P多花的惊讶=交叉熵−熵, ≥0且不对称; 手算公平/偏硬币
 - [梯度 / 反向传播](wiki/concepts/gradient-backprop.md) — 梯度=往哪调参数loss变多少(指上坡最陡)→沿负梯度下山; backprop=链式法则从loss往回一层层算+复用; 手算一步SGD; 连乘→消失/爆炸
+- [范数 / 正则化](wiki/concepts/norm-regularization.md) — L2=直线长度/L1=街区距离; 正则=罚权重别太大防过拟合; L2(weight decay)均匀缩小/L1逼稀疏(角在轴上); 手算‖[3,4]‖
+- [条件概率 / 贝叶斯](wiki/concepts/bayes-probability.md) — 链式法则P(x1)P(x2|x1)…=LM逐token; 贝叶斯翻转条件用观测更新信念; 手算医学检验"阳性≠有病"(1%患病率+99%准→真患50%)
 - [LoRA](wiki/concepts/lora.md) — 冻底模只训低秩小增量 ΔW=BA; 几十MB加个技能、可插拔; PEFT, 文生图社区标配
 - [AI 服务器内存层级](wiki/concepts/ai-memory-hierarchy.md) — HBM/LPDDR5X-SOCAMM/DDR5/CXL/光互连 的"快但小↔慢但大"阶梯; "NVIDIA 砍内存"砍的是哪层 + 为何走向池化光互连
 - [量化 · WxAy](wiki/concepts/quantization.md) — 少比特存数字; W8A8(权重激活都INT8)让矩阵乘跑INT8提速; 激活离群值靠 SmoothQuant 搬给权重
