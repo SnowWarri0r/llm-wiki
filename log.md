@@ -780,3 +780,5 @@ skill 更新:
 ## [2026-06-17] ingest | pid-pixel-diffusion + pixel-diffusion-decoder (arXiv 2605.23902, nv-tlabs/PiD)
 
 ## [2026-06-17] ingest | flux-1 + guidance-distillation (Black Forest Labs FLUX.1)
+
+## [2026-06-17] query | gaussian-splatting + lora + matrix-rank (Qwen-Image-Edit Gaussian-Splash LoRA)
