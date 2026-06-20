@@ -1,7 +1,7 @@
 ---
 name: diffusion-transformer
 type: concept
-sources: [ideogram-4, qwen-image-2, mrt, stable-diffusion-3-5]
+sources: [ideogram-4, qwen-image-2, mrt, stable-diffusion-3-5, flux-1]
 updated: 2026-06-15
 ---
 
@@ -21,7 +21,7 @@ updated: 2026-06-15
 - **双流 / MMDiT**（SD3、FLUX）：文本和图像各有**一套独立的投影**（Q/K/V、MLP），只在 attention 那一步让两边互相看。两条流并行。
 - **单流**（Ideogram 4、Z-Image、Hunyuan 3）：文本和图像 token **共享同一套投影**，每层就是一条 self-attention 序列。结构更简、参数更省。
 
-Ideogram 4 选单流：34 层，文本图像 token 一条序列，靠 3D Multimodal RoPE 把两者放进同一个位置系。
+Ideogram 4 选单流：34 层，文本图像 token 一条序列，靠 3D Multimodal RoPE 把两者放进同一个位置系。**FLUX 则两个都用、分前后**：前段双流 MMDiT 块对齐模态、后段切单流共享权重收尾（见 [[flux-1]]）——先用贵的对齐、再用省的干完。
 
 ## 怎么做的
 ```
@@ -36,6 +36,7 @@ for block in layers:                       # 34 层
 ## 链接
 - [[mmdit]] · 双流多模态 DiT(文字图像同序列、各自权重)，本页"双流"那支的专页
 - [[stable-diffusion-3-5]] · MMDiT 的招牌落地
+- [[flux-1]] · 先双流后单流的混合 DiT
 - [[ideogram-4]] · 9.3B 单流 DiT
 - [[flow-matching]] · DiT 的训练目标（预测速度场）
 - [[transformer-architecture]] · DiT 的骨架就是它

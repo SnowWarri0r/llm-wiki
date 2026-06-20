@@ -41,6 +41,7 @@
 - [资金面 · 量能与共识](wiki/papers/capital-flow.md) — 交易/盘口经验派: 量能(量价关系) + 共识(游资分歧转一致/筹码集中/抱团); 经验派语言, 易事后解释
 - [爱在冰川 · 低吸待涨的道法术](wiki/papers/aizai-bingchuan.md) — 交易/短线经验派: 道(低吸待涨极简循环)→法(横盘龙头低吸/大智大勇/潜伏)→术(揉搓线/做小T); 从公开复盘合集提炼, 非荐股
 - [Stable Diffusion 3.5 · 整流流 + MMDiT](wiki/papers/stable-diffusion-3-5.md) — 开源文生图(基于SD3论文): 把"文字当调料"换成"文字图像坐同一张桌子"(MMDiT双权重单序列) + 整流流直线少步采样 + 三文本编码器(CLIP-L/G+T5-XXL) + QK-Norm稳训; Large 8B/Medium 2.5B(MMDiT-X消费级能跑)
+- [FLUX.1 · 先双流后单流 + 两道蒸馏](wiki/papers/flux-1.md) — SD原作者新公司(Black Forest Labs)的12B整流流T2I: 混合架构(前段双流MMDiT对齐+后段单流共享省) + 引导蒸馏(CFG两遍压一遍)做dev + 步数蒸馏4步做schnell(两道正交); pro/dev/schnell三档
 - [Ideogram 4.0 · 9.3B 单流 DiT](wiki/papers/ideogram-4.md) — 文生图开源权重: 单流 DiT + Qwen3-VL 文本编码器 + 结构化 JSON caption(bbox/调色板); 9.3B 文本渲染碾压 80B
 - [MiniMind-O · 0.1B 端到端 Omni](wiki/papers/minimind-o.md) — 从0实现的听看说 Omni: Thinker–Talker 双路径 + MTP 出8层 Mimi codes + 冻结编码器/projector; fish-speech 的麻雀版
 - [ELT · Elastic Looped Transformers](wiki/papers/elt.md) — looped transformer 进视觉生成: N层block循环L圈(深度共享权重) + 一族深度弹性推理 + ILSD; 同算力 4× 参数缩减
@@ -167,6 +168,7 @@
 - [Diffusion Transformer](wiki/concepts/diffusion-transformer.md) — 去噪网络从 U-Net 换成 Transformer；单流 vs 双流 MMDiT
 - [MMDiT](wiki/concepts/mmdit.md) — 双流多模态扩散 Transformer: 文字图像同序列共享注意力、各用各的权重; SD3/FLUX/Qwen-Image 主干
 - [像素扩散解码器](wiki/concepts/pixel-diffusion-decoder.md) — 把 latent→像素的确定性 VAE 解码器换成条件扩散; "复印机→插画师", 边解码边补细节+超分; latent 与全像素扩散两路线的缝合
+- [引导蒸馏](wiki/concepts/guidance-distillation.md) — 把 CFG 的每步两遍前向蒸成一遍(引导强度当输入); FLUX dev 这么训; 与步数蒸馏正交
 - [Classifier-Free Guidance](wiki/concepts/classifier-free-guidance.md) — 条件/无条件两支放大差值逼模型听话；Ideogram 的非对称变体
 - [结构化 Caption 条件](wiki/concepts/structured-caption-conditioning.md) — 不喂一句话喂 JSON，把位置/颜色/文字显式做进训练
 - [KL-VAE](wiki/concepts/kl-vae.md) — 把图压成 latent 的地基；扩散在压缩空间画画省 48 倍计算

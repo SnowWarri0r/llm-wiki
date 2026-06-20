@@ -49,7 +49,7 @@
 <li><strong>双流 / MMDiT</strong>（SD3、FLUX）：文本和图像各有<strong>一套独立的投影</strong>（Q/K/V、MLP），只在 attention 那一步让两边互相看。两条流并行。</li>
 <li><strong>单流</strong>（Ideogram 4、Z-Image、Hunyuan 3）：文本和图像 token <strong>共享同一套投影</strong>，每层就是一条 self-attention 序列。结构更简、参数更省。</li>
 </ul>
-<p>Ideogram 4 选单流：34 层，文本图像 token 一条序列，靠 3D Multimodal RoPE 把两者放进同一个位置系。</p>
+<p>Ideogram 4 选单流：34 层，文本图像 token 一条序列，靠 3D Multimodal RoPE 把两者放进同一个位置系。<strong>FLUX 则两个都用、分前后</strong>：前段双流 MMDiT 块对齐模态、后段切单流共享权重收尾（见 <a href="../papers/flux-1.html">flux-1</a>）——先用贵的对齐、再用省的干完。</p>
 <h2>怎么做的</h2>
 <pre><code># 一个 DiT block (单流, Ideogram 4 风格)
 x = [text_tokens; image_latent_tokens]   # 拼成一条序列
@@ -62,6 +62,7 @@ for block in layers:                       # 34 层
 <ul>
 <li><a href="../concepts/mmdit.html">mmdit</a> · 双流多模态 DiT(文字图像同序列、各自权重)，本页"双流"那支的专页</li>
 <li><a href="../papers/stable-diffusion-3-5.html">stable-diffusion-3-5</a> · MMDiT 的招牌落地</li>
+<li><a href="../papers/flux-1.html">flux-1</a> · 先双流后单流的混合 DiT</li>
 <li><a href="../papers/ideogram-4.html">ideogram-4</a> · 9.3B 单流 DiT</li>
 <li><a href="../concepts/flow-matching.html">flow-matching</a> · DiT 的训练目标（预测速度场）</li>
 <li><a href="../concepts/transformer-architecture.html">transformer-architecture</a> · DiT 的骨架就是它</li>
