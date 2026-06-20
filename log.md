@@ -786,3 +786,5 @@ skill 更新:
 ## [2026-06-18] query | svd + dot-product + softmax (数学地基补强)
 
 ## [2026-06-18] query | eigenvector + svd 重写(首尾串讲, 含特征方程手算)
+
+## [2026-06-18] query | covariance-gaussian + entropy-kl + gradient-backprop (数学地基 round 2)

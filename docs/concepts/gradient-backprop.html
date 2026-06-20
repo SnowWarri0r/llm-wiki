@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>梯度 / 反向传播 · 往哪调参数能让 loss 变小 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · gradient-backprop</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>梯度 / 反向传播 · 往哪调参数能让 loss 变小</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p><strong>梯度</strong> = 每个参数"动一点点,loss 变多少"拼成的向量,指向<strong>上坡最陡</strong>的方向;训练就沿<strong>负梯度</strong>下坡(<code>参数 ← 参数 − lr·梯度</code>)。<strong>反向传播</strong> = 用链式法则从 loss 往回<strong>一层层</strong>把每个参数的梯度算出来,复用中间结果不重算。</p>
+<h2>直觉 · 蒙眼下山</h2>
+<p>训练 = 在一个"参数 → loss"的山谷里找最低点。你蒙着眼,只能感觉<strong>脚下哪个方向最陡</strong>,然后往下坡迈一小步,反复。</p>
+<ul>
+<li><strong>导数</strong>(1 个参数):loss 对这个参数的斜率——它变大一点,loss 涨还是跌、涨跌多快。</li>
+<li><strong>梯度</strong>(一堆参数):每个参数各自的斜率(偏导)拼成的向量。它指向<strong>让 loss 涨最快</strong>的方向 → 取<strong>反方向</strong>就是降最快。</li>
+<li><strong>学习率 lr</strong>:步子多大。太大跨过谷底来回震荡,太小挪半天。</li>
+</ul>
+<pre><code>参数_new = 参数_old − lr · 梯度        # 沿负梯度走一小步
+</code></pre>
+<figure style="margin:26px 0; padding:22px; background:#eef1f5; border:1px solid #aab4c4; border-radius:4px;">
+<svg viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:JetBrains Mono,monospace;">
+  <defs><marker id="gb-h" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#9b2c2c"/></marker></defs>
+  <!-- loss 碗 -->
+  <path class="draw d1" d="M70,40 C 250,40 250,180 360,180 C 470,180 470,40 650,40" fill="none" stroke="#3a3128" stroke-width="2" pathLength="1000"/>
+  <text class="reveal d1" x="360" y="200" text-anchor="middle" font-size="9" fill="#7a6f5d">参数 w →</text>
+  <text class="reveal d1" x="48" y="100" text-anchor="middle" font-size="9" fill="#7a6f5d" transform="rotate(-90 48 100)">loss</text>
+  <!-- 当前点 + 负梯度步 -->
+  <circle class="reveal d2" cx="160" cy="92" r="6" fill="#9b2c2c"/>
+  <text class="reveal d2" x="160" y="80" text-anchor="middle" font-size="8" fill="#9b2c2c">现在 w</text>
+  <line class="reveal d3" x1="172" y1="100" x2="250" y2="140" stroke="#9b2c2c" stroke-width="2" marker-end="url(#gb-h)"/>
+  <text class="reveal d3" x="250" y="120" text-anchor="middle" font-size="8" fill="#9b2c2c">−lr·梯度 → 下坡一步</text>
+  <circle class="reveal d4" cx="360" cy="180" r="6" fill="#1f4d3a"/>
+  <text class="reveal d4" x="360" y="168" text-anchor="middle" font-size="8" fill="#1f4d3a">谷底 (loss 最小)</text>
+  <text class="reveal d5" x="360" y="28" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="11.5" font-weight="700" fill="#3a3128">梯度指上坡最陡 → 取负方向迈一小步 → 反复滚到谷底</text>
+</svg>
+</figure>
+
+<h2>反向传播 · 链式法则从后往前</h2>
+<p>网络是<strong>函数套函数</strong>:<code>loss = L( f( g( h(x) ) ) )</code>。要 loss 对最里层参数的梯度,靠<strong>链式法则</strong>把一串局部导数乘起来:</p>
+<pre><code>dL/d(里层) = dL/df · df/dg · dg/dh · dh/d(里层)
+</code></pre>
+<p><strong>关键省法</strong>:从 <strong>loss 那头往回算</strong>(back-prop),每一层把"上游传来的梯度"乘上"本层的局部导数",再传给更里一层。这样每个中间结果<strong>只算一次、被复用</strong>——不然每个参数都从头乘一遍会爆炸。前向算一遍存下中间值,反向再扫一遍收梯度。</p>
+<h2>数字例子 · 手算一步</h2>
+<p>一个最小网络:<code>L = (w·x − y)²</code>,给定 <code>x=2, y=5</code>,当前 <code>w=3</code>,学习率 <code>lr=0.1</code>。</p>
+<p><strong>前向</strong>(算 loss,顺手存中间值):</p>
+<pre><code>a = w·x = 3·2 = 6
+err = a − y = 6 − 5 = 1
+L = err² = 1
+</code></pre>
+<p><strong>反向</strong>(链式法则,从 L 往回到 w):</p>
+<pre><code>dL/d(err) = 2·err = 2·1 = 2          # L=err² 的导数
+d(err)/da = 1                         # err=a−y
+da/dw     = x = 2                     # a=w·x
+dL/dw = 2 · 1 · 2 = 4                 # 三段乘起来
+</code></pre>
+<p><strong>走一步</strong>:</p>
+<pre><code>w ← w − lr·(dL/dw) = 3 − 0.1·4 = 2.6
+</code></pre>
+<p><strong>验证变好了</strong>:新 <code>a=2.6·2=5.2</code>,<code>err=0.2</code>,<code>L=0.04</code> —— 从 1 掉到 0.04,loss 真降了。这一步就是 SGD 的全部:前向出 loss、反向出梯度、沿负梯度挪一点。</p>
+<h2>为什么深网络要小心梯度</h2>
+<p>链式法则是<strong>一长串相乘</strong>:每段都 &lt;1 → 乘到底<strong>消失</strong>(学不动);每段都 &gt;1 → <strong>爆炸</strong>(炸飞)。所以才有:</p>
+<ul>
+<li><strong><a href="../concepts/residual-connection.html">residual-connection</a> / <a href="../papers/lstm.html">lstm</a></strong>:加法路径 ≈ 每步乘 1,给梯度修条高速路。</li>
+<li><strong><a href="../concepts/qk-rmsnorm.html">qk-rmsnorm</a> / <a href="../concepts/layernorm.html">layernorm</a></strong>:把数值摁在稳定区间,别让某段导数过大过小。</li>
+<li><strong>梯度裁剪 / 好的初始化</strong>:同样为治这串连乘。</li>
+</ul>
+<h2>代码出处 / 来源</h2>
+<ul>
+<li>标准内容:梯度下降、反向传播(Rumelhart et al. 1986)、链式法则</li>
+<li>现代:autograd(PyTorch/JAX 自动建反向图),你不用手推,但要懂它在干嘛</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/cross-entropy.html">cross-entropy</a> · 最常被求梯度的那个 loss(梯度 = p − onehot)</li>
+<li><a href="../concepts/residual-connection.html">residual-connection</a> · 加法路径给梯度修高速路,治消失</li>
+<li><a href="../papers/lstm.html">lstm</a> · cell state 的加法更新同理,梯度不消失</li>
+<li><a href="../concepts/softmax.html">softmax</a> · softmax+交叉熵的梯度特别干净</li>
+<li><a href="../concepts/matrix-rank.html">matrix-rank</a> · 反向传播本质是一连串矩阵乘(每层局部导数)</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../concepts/residual-connection.html"><span class="cat">concept</span>Residual Connection · 残差连接 / Skip Connection</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/gradient-backprop.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
