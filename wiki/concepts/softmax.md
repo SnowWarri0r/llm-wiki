@@ -46,6 +46,7 @@ T=2:   等于把 z 减半 [1,0.5,0] 再 softmax → [0.51, 0.31, 0.19]  更平
 
 ## 链接
 - [[self-attention]] · 注意力权重 = softmax(点积分数)
+- [[sampling-decoding]] · softmax 出分布后,怎么从里面挑 token(温度/top-k/top-p)
 - [[dot-product]] · softmax 的输入 logits 常来自点积
 - [[cross-entropy]] · softmax 的天生搭档损失,梯度 = p − onehot
 - [[qk-rmsnorm]] · 都为"别让 softmax 太尖/炸"服务

@@ -116,7 +116,9 @@
 - [Cross-Attention](wiki/concepts/cross-attention.md) — decoder 用自己的 Q 去查 encoder 的 K/V
 - [Positional Encoding](wiki/concepts/positional-encoding.md) — 给无顺序的 attention 加位置
 - [Rotary Position Embedding](wiki/concepts/rotary-position-embedding.md) — 旋转 Q/K 让点积天然含相对位置，现代 LLM 事实标准
+- [Tokenization / BPE](wiki/concepts/tokenization.md) — 文本切成子词token(BPE从字符起反复合并最高频相邻对); 高频成块/低频拆开/永不OOV; 手算hug合并; 解释"数不清strawberry几个r"
 - [一次前向 · token→下一个token](wiki/concepts/next-token-forward-pass.md) — QKV→注意力softmax→末位向量撞词表→输出softmax→挑token；拆清两个 softmax
+- [采样 / 解码策略](wiki/concepts/sampling-decoding.md) — 从softmax分布里挑token: greedy/按概率采样+温度/top-k(留前k)/top-p(留累计到p动态个数)/beam; 接softmax; 手算各策略保留谁
 - [Cross-Entropy 交叉熵](wiki/concepts/cross-entropy.md) — −log(你押对的概率)；one-hot时是"别答错"，软标签时整条分布去贴；最小化它=最小化KL
 - [EMA 指数滑动平均](wiki/concepts/ema.md) — 一行 `新=m·旧+(1−m)·新值`；磨平抖动追"更稳的自己"；DINO/BatchNorm/Adam 全在用
 - [Relative Position Encoding](wiki/concepts/relative-position-encoding.md) — 为什么"差几个位置"比"在第几个位置"好
