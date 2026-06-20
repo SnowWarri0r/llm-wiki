@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>点积与投影 · dot product · 衡量&quot;方向多一致 + 多长&quot; · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · dot-product</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>点积与投影 · dot product · 衡量&quot;方向多一致 + 多长&quot;</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>两个向量点积 <code>a·b = Σ aᵢbᵢ = |a||b|cosθ</code>——<strong>对应分量乘起来加总</strong>,几何上等于"方向多一致(cosθ)× 各自多长"。它是相似度、注意力分数、检索打分、整个矩阵乘法的最小积木。</p>
+<h2>直觉 · 一个数说清"像不像 + 多强"</h2>
+<p>点积把两个向量压成<strong>一个数</strong>,这个数同时编码了两件事:</p>
+<ul>
+<li><strong>方向一致吗</strong>:<code>cosθ</code>——同向为正、垂直为 0、反向为负。</li>
+<li><strong>各自多大</strong>:<code>|a|·|b|</code>——向量越长,点积越大。</li>
+</ul>
+<p>所以点积大 = "方向一致<strong>且</strong>都不小"。如果只想要"方向像不像"、不管长短,就除掉长度 → <strong>余弦相似度</strong> <code>cosθ = a·b / (|a||b|)</code>。</p>
+<p>落点几乎无处不在:</p>
+<ul>
+<li><strong><a href="../concepts/self-attention.html">self-attention</a> 分数</strong>:<code>Q·Kᵀ</code> 就是"当前 token 的问"和"每个位置的答"做点积,点积大 = 越该关注。</li>
+<li><strong><a href="../concepts/retrieval-scoring.html">retrieval-scoring</a> / <a href="../concepts/contrastive-learning.html">contrastive-learning</a></strong>:query 向量和候选向量点积当相关性分。</li>
+<li><strong><a href="../concepts/dual-tower-architecture.html">dual-tower-architecture</a></strong>:两塔末端就是一个点积。</li>
+</ul>
+<h2>投影 · a 在 b 上的影子</h2>
+<p>点积还直接给出<strong>投影</strong>:<code>a</code> 在单位方向 <code>b̂</code> 上的<strong>影子长度</strong> = <code>a · b̂</code>。</p>
+<pre><code>b̂ = b/|b|                       # 单位方向
+proj_b(a) = (a · b̂) · b̂          # a 投到 b 方向上的分量（向量）
+影子长度  =  a · b̂  =  |a|cosθ
+</code></pre>
+<p>直觉:拿手电筒沿 <code>b</code> 方向垂直照 <code>a</code>,墙上影子的长度就是 <code>a·b̂</code>。注意力、PCA 主轴投影、把一个向量"分解到某个方向有多少"全是这个动作。</p>
+<h2>怎么做的 · 一个数字例子</h2>
+<pre><code>a = [3, 4]          |a| = 5
+b = [4, 0]          |b| = 4
+a·b = 3×4 + 4×0 = 12
+cosθ = 12 / (5×4) = 0.6   →  θ ≈ 53°
+a 在 b(x轴)上的影子 = a·b̂ = 12/4 = 3   （正好是 a 的 x 分量）
+</code></pre>
+<p>矩阵乘法 <code>C = AB</code> 的每个元素 <code>Cᵢⱼ</code>,就是 <strong>A 的第 i 行和 B 的第 j 列做一次点积</strong>——所以"矩阵乘 = 一大批点积",<a href="../concepts/matrix-rank.html">matrix-rank</a> / GPU 的 GEMM 都建在它上。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/self-attention.html">self-attention</a> · Q·Kᵀ 注意力分数就是点积</li>
+<li><a href="../concepts/retrieval-scoring.html">retrieval-scoring</a> · 相关性打分的核心运算</li>
+<li><a href="../concepts/contrastive-learning.html">contrastive-learning</a> · 正/负样本相似度 = 点积/余弦</li>
+<li><a href="../concepts/dual-tower-architecture.html">dual-tower-architecture</a> · 两塔末端的点积</li>
+<li><a href="../concepts/matrix-rank.html">matrix-rank</a> · 矩阵乘 = 一批点积;秩讲的是这批结果的独立性</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../concepts/retrieval-scoring.html"><span class="cat">concept</span>Retrieval Scoring · 记忆检索排序</a></li><li><a href="../concepts/self-attention.html"><span class="cat">concept</span>Self-Attention · 自注意力</a></li><li><a href="../concepts/softmax.html"><span class="cat">concept</span>Softmax · 一组实数压成概率分布 · 温度调软硬</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/dot-product.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

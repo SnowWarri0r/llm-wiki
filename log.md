@@ -782,3 +782,5 @@ skill 更新:
 ## [2026-06-17] ingest | flux-1 + guidance-distillation (Black Forest Labs FLUX.1)
 
 ## [2026-06-17] query | gaussian-splatting + lora + matrix-rank (Qwen-Image-Edit Gaussian-Splash LoRA)
+
+## [2026-06-18] query | svd + dot-product + softmax (数学地基补强)

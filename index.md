@@ -235,6 +235,9 @@
 
 ### 共享基础设施
 - [矩阵的秩 · rank](wiki/concepts/matrix-rank.md) — 一个变换"真正有几个独立旋钮"; 低秩=冗余可压(拆成两个瘦矩阵); LoRA/SVD/PCA/注意力瓶颈背后同一件事
+- [SVD · 奇异值分解](wiki/concepts/svd.md) — 任何矩阵=转·各轴拉伸·再转(UΣVᵀ); 奇异值σ排序=各方向强度; 截断前r个=最佳低秩近似(Eckart-Young); PCA/压缩/LoRA 根
+- [点积与投影](wiki/concepts/dot-product.md) — a·b=Σaᵢbᵢ=|a||b|cosθ, 衡量"方向多一致+多长"; 注意力分数/检索打分/矩阵乘的最小积木; 投影=影子长度
+- [Softmax · 温度](wiki/concepts/softmax.md) — 一组实数压成和为1的概率(exp再归一); 可导的软argmax; 温度T调软硬(小→尖锐接近argmax/大→平); 注意力权重和采样都用
 - [LoRA](wiki/concepts/lora.md) — 冻底模只训低秩小增量 ΔW=BA; 几十MB加个技能、可插拔; PEFT, 文生图社区标配
 - [AI 服务器内存层级](wiki/concepts/ai-memory-hierarchy.md) — HBM/LPDDR5X-SOCAMM/DDR5/CXL/光互连 的"快但小↔慢但大"阶梯; "NVIDIA 砍内存"砍的是哪层 + 为何走向池化光互连
 - [量化 · WxAy](wiki/concepts/quantization.md) — 少比特存数字; W8A8(权重激活都INT8)让矩阵乘跑INT8提速; 激活离群值靠 SmoothQuant 搬给权重
