@@ -140,3 +140,4 @@ TML 也提到 RL 训练 → bitwise determinism 是为它服务的。[[bitwise-d
 - [[fish-speech-s2-pro]] · 这里 RL 对齐
 - [[bitwise-determinism]] · RL 训练稳定性前提
 - [[dual-ar]] · GRPO 在 Dual-AR 之上做 post-training
+- [[gspo]] · 后继：把 token 级重要性比率提到序列级，更稳（Qwen3 用）

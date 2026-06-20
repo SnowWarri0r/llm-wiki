@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Qwen3-ASR · 给 LLM 接个耳朵</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --teal: #1a6a64; --teal-soft: #cce5e1;
+  --steel: #3d5a6c; --steel-soft: #cfdde3;
+  --accent: var(--steel); --accent-soft: var(--steel-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(40px, 6.4vw, 72px); line-height: 0.97; letter-spacing: -0.03em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 36px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
+p { margin: 12px 0; } strong { font-weight: 700; }
+ul { margin: 12px 0; padding-left: 24px; } li { margin: 6px 0; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.86em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--steel-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--steel); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--steel); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+table.spec { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+table.spec td, table.spec th { border-bottom: 1px dashed var(--rule); padding: 7px 10px; text-align: left; }
+table.spec th { color: var(--accent); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+table.spec td:first-child { color: var(--muted); }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--steel-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--steel-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* qa-specific */
+.qa-svg { width: 100%; height: auto; display: block; }
+.qa-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .qa-rev { opacity: 1; }
+figure.play .qa-rev.d1 { transition-delay: 0.15s; }
+figure.play .qa-rev.d2 { transition-delay: 0.45s; }
+figure.play .qa-rev.d3 { transition-delay: 0.75s; }
+figure.play .qa-rev.d4 { transition-delay: 1.05s; }
+figure.play .qa-rev.d5 { transition-delay: 1.35s; }
+figure.play .qa-rev.d6 { transition-delay: 1.65s; }
+.qa-svg .draw { stroke-dasharray: 1000; stroke-dashoffset: 1000; transition: stroke-dashoffset 1.5s ease; }
+figure.play .qa-svg .draw { stroke-dashoffset: 0; }
+figure.play .qa-svg .draw.d2 { transition-delay: 0.40s; }
+figure.play .qa-svg .draw.d3 { transition-delay: 0.70s; }
+@media (prefers-reduced-motion: reduce) { .qa-rev { opacity: 1; transition: none; } .qa-svg .draw { stroke-dashoffset: 0; transition: none; } }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · qwen3-asr</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · 语音识别 · Qwen3-ASR · 2026</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · ASR · LLM 接耳朵</div>
+  <h1 class="title">Qwen3-ASR ·<br /><span class="em">不从头训 ASR，给 LLM 接个耳朵。</span></h1>
+  <div class="byline">Qwen Team, Alibaba · Qwen3-ASR Technical Report · arXiv 2601.21337 · 2026</div>
+  <p class="dek">Whisper 从零训一个 encoder-decoder，语言能力也得硬学。Qwen3-ASR 换个想法：语言别重学了——拿预训练的 Qwen3 LLM 当解码器，前面接一个音频编码器（耳朵）+ projector（翻译插头），让音频"说成 LLM 听得懂的输入"。就是 minimind-o 那套 modality-projector，专做语音、规模拉满。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>Qwen3-ASR 把 ASR 拆成 <strong>音频 → AuT 编码器<a class="jr" href="#g-01">1</a> → projector<a class="jr" href="#g-02">2</a> → Qwen3 LLM → 文字</strong>——和 <a href="../concepts/modality-projector.html">modality-projector</a> 模式（minimind-o）同骨架，只是<strong>解码器换成现成的语言大模型</strong>，post-train 自 Qwen3-Omni。<strong>AuT</strong> 对 128 维 Fbank 做 <strong>8× 下采样 → 12.5Hz token 率<a class="jr" href="#g-03">3</a></strong>，并用<strong>动态注意力窗口 1s~8s<a class="jr" href="#g-04">4</a></strong>——同一个模型既能 1 秒短块<strong>流式</strong>、又能 8 秒长上下文<strong>离线高精度</strong>。训练四段：AuT 预训练（~4000 万小时伪标注）→ Omni 预训练 → ASR SFT（学 I/O 格式 + <strong>context biasing</strong><a class="jr" href="#g-05">5</a>）→ <strong>RL 用 <a href="../concepts/gspo.html">GSPO</a></strong> 磨鲁棒。亮点：prompt 塞<strong>热词定制转写</strong>（因为解码器就是会读 prompt 的 LLM）、<strong>52 种语言/方言</strong>、带 BGM 的<strong>整首歌</strong>、<strong>填槽式 NAR 时间戳</strong><a class="jr" href="#g-06">6</a>。LibriSpeech WER 1.63/3.38；带口音英语 16.07 完胜 Whisper-large-v3 的 21.30；0.6B TTFT 92ms。</p>
+</div>
+
+
+<!-- §01 -->
+<h2><span class="num">§ 01</span>思路：别重学语言，给 LLM 接耳朵</h2>
+
+<p><a href="whisper.html">Whisper</a> 是<strong>从零训</strong>一个 encoder-decoder：听音频、写文字，连"语言长什么样"都得从弱监督数据里硬学。Qwen3-ASR 的想法：<strong>语言这件事，世界上最强的一批模型（LLM）早就学透了——别重学，直接拿来当解码器。</strong></p>
+
+<p>所以它在一个预训练 <strong>Qwen3 LLM</strong> 前面接两块：一个<strong>音频编码器（耳朵）</strong>把声音变成 token，一个 <strong>projector（翻译插头）</strong>把音频 token 翻译进 LLM 的输入空间。LLM 本身就是写转写的那支笔，还自带强语言先验。整套是从 <strong>Qwen3-Omni</strong>（已经多模态）post-train 来的。</p>
+
+<div class="note">
+  <span class="l">一句话对照</span>
+  <p>Whisper = 从头培养一个"既会听又会写"的译员；Qwen3-ASR = <strong>雇一个文笔已经很好的写手（LLM），只教它读懂一种新输入格式（音频 token）</strong>——语言那半边几乎不用重学。这也是它能 <strong>prompt 里塞热词</strong>的根：解码器就是个会读指令的 LLM。</p>
+</div>
+
+
+<!-- §02 -->
+<h2><span class="num">§ 02</span>三段流水线 = modality-projector 模式</h2>
+
+<p>整条链就三块，正是你在 <a href="minimind-o.html">minimind-o</a> 见过的 <a href="../concepts/modality-projector.html">模态编码器 → projector → LLM</a>：</p>
+
+<figure id="fig-pipe" class="fig-pipe">
+  <figcaption>
+    <span>Fig 01 · 耳朵 → 插头 → 写手</span>
+    <span class="fnum">音频 · AuT · projector · Qwen3 LLM · 文字</span>
+  </figcaption>
+  <svg class="qa-svg" viewBox="0 0 720 210" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="qa1-h" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#3d5a6c"/></marker></defs>
+    <g class="qa-rev d1" text-anchor="middle" font-family="JetBrains Mono,monospace">
+      <rect x="20" y="78" width="96" height="52" rx="4" fill="#faf4e1" stroke="#7a6f5d"/><text x="68" y="100" font-size="10" fill="#3a3128">音频波形</text><text x="68" y="116" font-size="7.5" fill="#7a6f5d">Fbank 128 维</text>
+    </g>
+    <line class="qa-rev d2" x1="116" y1="104" x2="156" y2="104" stroke="#3d5a6c" stroke-width="1.6" marker-end="url(#qa1-h)"/>
+    <g class="qa-rev d2" text-anchor="middle" font-family="JetBrains Mono,monospace">
+      <rect x="158" y="72" width="120" height="64" rx="4" fill="#cfdde3" stroke="#3d5a6c" stroke-width="1.6"/><text x="218" y="96" font-size="11" font-weight="700" fill="#26414f">AuT 编码器</text><text x="218" y="112" font-size="8" fill="#3a3128">耳朵 · 300M</text><text x="218" y="125" font-size="7.5" fill="#7a6f5d">音频→token</text>
+    </g>
+    <line class="qa-rev d3" x1="278" y1="104" x2="318" y2="104" stroke="#3d5a6c" stroke-width="1.6" marker-end="url(#qa1-h)"/>
+    <g class="qa-rev d3" text-anchor="middle" font-family="JetBrains Mono,monospace">
+      <rect x="320" y="78" width="104" height="52" rx="4" fill="#f0e0a8" stroke="#b8841c"/><text x="372" y="100" font-size="10" font-weight="700" fill="#7a5310">projector</text><text x="372" y="116" font-size="7.5" fill="#7a6f5d">翻译插头→LLM空间</text>
+    </g>
+    <line class="qa-rev d4" x1="424" y1="104" x2="464" y2="104" stroke="#3d5a6c" stroke-width="1.6" marker-end="url(#qa1-h)"/>
+    <g class="qa-rev d4" text-anchor="middle" font-family="JetBrains Mono,monospace">
+      <rect x="466" y="72" width="128" height="64" rx="4" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.6"/><text x="530" y="96" font-size="11" font-weight="700" fill="#3a5a2a">Qwen3 LLM</text><text x="530" y="112" font-size="8" fill="#3a3128">写手 · 预训练</text><text x="530" y="125" font-size="7.5" fill="#7a6f5d">自回归写转写</text>
+    </g>
+    <line class="qa-rev d5" x1="594" y1="104" x2="634" y2="104" stroke="#3d5a6c" stroke-width="1.6" marker-end="url(#qa1-h)"/>
+    <g class="qa-rev d5" text-anchor="middle" font-family="JetBrains Mono,monospace">
+      <rect x="636" y="82" width="68" height="44" rx="4" fill="#f7f1de" stroke="#3d5a6c" stroke-width="1.6"/><text x="670" y="108" font-size="10" font-weight="700" fill="#26414f">文字</text>
+    </g>
+    <text class="qa-rev d6" x="360" y="170" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#3d5a6c">只有"耳朵+插头"是新训的；"写手"是现成的语言大模型（对比 Whisper 整条从头训）</text>
+  </svg>
+</figure>
+
+<p><strong>Qwen3-ASR-1.7B</strong> = Qwen3-1.7B LLM + 300M 的 AuT（hidden 1024）；还有个 <strong>0.6B</strong> 小号（Qwen3-0.6B + 180M AuT）。</p>
+
+
+<!-- §03 -->
+<h2><span class="num">§ 03</span>AuT 编码器：压成 12.5Hz + 动态窗口</h2>
+
+<p>这只"耳朵"有两手关键设计。</p>
+
+<h3>① 8× 下采样 → 12.5Hz token 率</h3>
+<p>输入是 128 维 <a href="../concepts/log-mel-spectrogram.html">Fbank</a>（log-mel 频谱的近亲，每秒上百帧）。AuT 把它<strong>8 倍下采样，压成每秒 12.5 个音频 token</strong>。为什么压：LLM 不需要每 10ms 的细节，它要的是接近"音节/词"粒度的块——<strong>少 token = 又快又省、还更好喂进 LLM</strong>。</p>
+
+<figure id="fig-aut" class="fig-aut">
+  <figcaption>
+    <span>Fig 02 · 下采样 + 动态注意力窗口</span>
+    <span class="fnum">百帧/秒 → 12.5 token/秒 · 1s 流式 / 8s 离线</span>
+  </figcaption>
+  <svg class="qa-svg" viewBox="0 0 720 270" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="qa2-h" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#3d5a6c"/></marker></defs>
+    <!-- 下采样 -->
+    <text class="qa-rev d1" x="60" y="40" font-family="JetBrains Mono,monospace" font-size="10" font-weight="700" fill="#26414f">① 8× 下采样</text>
+    <g class="qa-rev d1" fill="#9fb3c8">
+      <rect x="60" y="54" width="6" height="26"/><rect x="70" y="54" width="6" height="26"/><rect x="80" y="54" width="6" height="26"/><rect x="90" y="54" width="6" height="26"/><rect x="100" y="54" width="6" height="26"/><rect x="110" y="54" width="6" height="26"/><rect x="120" y="54" width="6" height="26"/><rect x="130" y="54" width="6" height="26"/><rect x="140" y="54" width="6" height="26"/><rect x="150" y="54" width="6" height="26"/><rect x="160" y="54" width="6" height="26"/><rect x="170" y="54" width="6" height="26"/><rect x="180" y="54" width="6" height="26"/><rect x="190" y="54" width="6" height="26"/><rect x="200" y="54" width="6" height="26"/><rect x="210" y="54" width="6" height="26"/>
+    </g>
+    <text class="qa-rev d1" x="135" y="98" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#7a6f5d">Fbank ~每秒上百帧（密）</text>
+    <line class="qa-rev d2" x1="230" y1="67" x2="290" y2="67" stroke="#3d5a6c" stroke-width="1.6" marker-end="url(#qa2-h)"/>
+    <text class="qa-rev d2" x="260" y="60" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" font-weight="700" fill="#3d5a6c">÷8</text>
+    <g class="qa-rev d2" fill="#3d5a6c">
+      <rect x="300" y="54" width="12" height="26"/><rect x="330" y="54" width="12" height="26"/><rect x="360" y="54" width="12" height="26"/>
+    </g>
+    <text class="qa-rev d2" x="345" y="98" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8.5" fill="#26414f">12.5 token/秒（疏，接近音节粒度）</text>
+    <!-- 分隔 -->
+    <line x1="40" y1="120" x2="680" y2="120" class="qa-rev d3" stroke="#bfb398" stroke-width="1" stroke-dasharray="4 4"/>
+    <!-- 动态窗口 -->
+    <text class="qa-rev d3" x="60" y="146" font-family="JetBrains Mono,monospace" font-size="10" font-weight="700" fill="#26414f">② 动态注意力窗口 1s~8s（同一个编码器）</text>
+    <!-- 流式 -->
+    <g class="qa-rev d4">
+      <rect x="60" y="166" width="60" height="30" rx="3" fill="#cfdde3" stroke="#3d5a6c"/>
+      <text x="90" y="185" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="#26414f">1s 窗</text>
+      <text x="200" y="180" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#3a3128">短块 → 低延迟 → 流式</text>
+      <text x="200" y="194" font-family="JetBrains Mono,monospace" font-size="8" fill="#7a6f5d">边说边出，TTFT 低</text>
+    </g>
+    <!-- 离线 -->
+    <g class="qa-rev d5">
+      <rect x="60" y="208" width="200" height="30" rx="3" fill="#cfdde3" stroke="#3d5a6c"/>
+      <text x="160" y="227" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" font-weight="700" fill="#26414f">8s 长窗</text>
+      <text x="300" y="222" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#3a3128">长上下文 → 离线高精度</text>
+      <text x="300" y="236" font-family="JetBrains Mono,monospace" font-size="8" fill="#7a6f5d">整段一起看，准</text>
+    </g>
+    <text class="qa-rev d6" x="540" y="200" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#3d5a6c">一个模型两种模式，<tspan x="540" dy="16">不用训两套</tspan></text>
+  </svg>
+</figure>
+
+
+<!-- §04 -->
+<h2><span class="num">§ 04</span>训练四段</h2>
+
+<table class="spec">
+  <tr><th>阶段</th><th>干啥</th><th>数据</th></tr>
+  <tr><td>① AuT 预训练</td><td>学通用音频表示（可变窗口下）</td><td>~4000 万小时伪标注（中英为主）</td></tr>
+  <tr><td>② Omni 预训练</td><td>底座 = Qwen3-Omni（多模态理解打底）</td><td>3T token 音/视/文</td></tr>
+  <tr><td>③ ASR SFT</td><td>风格迁移到 ASR-only I/O 格式 + 学 context biasing</td><td>较小的多语数据</td></tr>
+  <tr><td>④ RL（<a href="../concepts/gspo.html">GSPO</a>）</td><td>磨噪声鲁棒 + 转写稳定</td><td>~5 万条（35% 中英 / 35% 多语 / 30% 功能）</td></tr>
+</table>
+
+<p>第④段的 <a href="../concepts/gspo.html">GSPO</a> 是 <a href="../concepts/grpo.html">GRPO</a> 的近亲——把重要性比率从 token 级提到<strong>序列级</strong>，低方差更稳（见 <a href="../concepts/gspo.html">GSPO 概念页</a>）。</p>
+
+
+<!-- §05 -->
+<h2><span class="num">§ 05</span>亮点 · context biasing + 时间戳 + 结果</h2>
+
+<p>最有意思的卖点：<strong>因为解码器是个会读 prompt 的 LLM，你能把热词/背景知识塞进 system prompt，定制转写。</strong>专有名词、人名、行话——Whisper 这种从头训的 enc-dec 很难做到。</p>
+
+<figure id="fig-bias" class="fig-bias">
+  <figcaption>
+    <span>Fig 03 · context biasing：prompt 塞热词</span>
+    <span class="fnum">同一段音频 · 给不给热词 · 转写不同</span>
+  </figcaption>
+  <svg class="qa-svg" viewBox="0 0 720 230" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="qa3-h" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#3d5a6c"/></marker></defs>
+    <!-- 无热词 -->
+    <g class="qa-rev d1" font-family="JetBrains Mono,monospace">
+      <rect x="40" y="40" width="150" height="40" rx="4" fill="#faf4e1" stroke="#7a6f5d"/><text x="115" y="58" text-anchor="middle" font-size="9" fill="#3a3128">无 system prompt</text><text x="115" y="72" text-anchor="middle" font-size="7.5" fill="#7a6f5d">裸转写</text>
+    </g>
+    <line class="qa-rev d2" x1="190" y1="60" x2="300" y2="60" stroke="#3d5a6c" stroke-width="1.4" marker-end="url(#qa3-h)"/>
+    <g class="qa-rev d2" font-family="JetBrains Mono,monospace">
+      <rect x="302" y="40" width="220" height="40" rx="4" fill="#efd6c8" stroke="#9b2c2c"/><text x="412" y="58" text-anchor="middle" font-size="9.5" fill="#7a2020">"阿斯匹林、RTX 五零九零"</text><text x="412" y="72" text-anchor="middle" font-size="7.5" fill="#9b2c2c">同音字 / 数字错</text>
+    </g>
+    <!-- 有热词 -->
+    <g class="qa-rev d3" font-family="JetBrains Mono,monospace">
+      <rect x="40" y="130" width="150" height="56" rx="4" fill="#cfdde3" stroke="#3d5a6c" stroke-width="1.5"/><text x="115" y="150" text-anchor="middle" font-size="9" font-weight="700" fill="#26414f">system prompt 热词</text><text x="115" y="166" text-anchor="middle" font-size="8" fill="#3a3128">["阿司匹林",</text><text x="115" y="178" text-anchor="middle" font-size="8" fill="#3a3128">"RTX 5090"]</text>
+    </g>
+    <line class="qa-rev d4" x1="190" y1="158" x2="300" y2="158" stroke="#3d5a6c" stroke-width="1.4" marker-end="url(#qa3-h)"/>
+    <g class="qa-rev d4" font-family="JetBrains Mono,monospace">
+      <rect x="302" y="138" width="220" height="40" rx="4" fill="#d8e6ce" stroke="#4a6b3a"/><text x="412" y="156" text-anchor="middle" font-size="9.5" fill="#3a5a2a">"阿司匹林、RTX 5090"</text><text x="412" y="170" text-anchor="middle" font-size="7.5" fill="#4a6b3a">✓ 命中专有名词</text>
+    </g>
+    <text class="qa-rev d5" x="600" y="120" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">同一段音频</text>
+    <text class="qa-rev d6" x="360" y="214" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#3d5a6c">解码器是 LLM → 读 prompt 里的热词 → 定制转写（Whisper 难做）</text>
+  </svg>
+</figure>
+
+<p>其它亮点：<strong>52 种语言/方言</strong>（30 语言 + 22 中文方言）含内建语种识别；对<strong>带 BGM 的整首歌</strong>鲁棒、能转歌词；<strong>时间戳</strong>由 <strong>Qwen3-ForcedAligner</strong> 给——把强制对齐改成"<strong>填槽</strong>"，用 <code>[time]</code> 特殊 token，<strong>非自回归</strong>一次性预测所有时间戳（RTF≈0.001，极快）。</p>
+
+<table class="spec">
+  <tr><th>基准</th><th>Qwen3-ASR-1.7B</th><th>对照</th></tr>
+  <tr><td>LibriSpeech clean / other</td><td>1.63 / 3.38 WER</td><td>—</td></tr>
+  <tr><td>带口音英语</td><td><strong>16.07</strong> WER</td><td>Whisper-large-v3 21.30</td></tr>
+  <tr><td>AISHELL-2（中文）</td><td>2.71 CER</td><td>—</td></tr>
+  <tr><td>速度（0.6B）</td><td>TTFT 92ms · 2000s 音频/秒</td><td>128 并发</td></tr>
+</table>
+
+<div class="note">
+  <span class="l">放进 wiki 这条线</span>
+  <p>Qwen3-ASR 把你学的几块拼起来：<a href="../concepts/modality-projector.html">modality-projector</a>（同骨架，minimind-o）+ <a href="whisper.html">Whisper</a>（对照：从头 enc-dec vs LLM 接耳朵）+ <a href="../concepts/log-mel-spectrogram.html">Fbank/log-mel</a>（输入）+ <a href="../concepts/gspo.html">GSPO</a>/<a href="../concepts/grpo.html">GRPO</a>（RL 阶段）。一句话：<strong>语言交给预训练 LLM，只新训"耳朵+插头"；解码器是 LLM 这一点，顺手解锁了 prompt 热词定制。</strong></p>
+</div>
+
+
+<!-- glossary -->
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">AuT 编码器</span> · 那只"耳朵"，AED（attention encoder-decoder）式的独立预训练音频模块。1.7B 版 300M / hidden 1024；把声音变成音频 token 喂给 LLM。</li>
+    <li id="g-02"><span class="term">projector</span> · "翻译插头"，把音频 token 映射进 LLM 的输入嵌入空间。就是 <a href="../concepts/modality-projector.html">modality-projector</a> 那块（minimind-o 同款）。</li>
+    <li id="g-03"><span class="term">8× 下采样 → 12.5Hz</span> · 把 128 维 Fbank 的每秒上百帧压成每秒 12.5 个 token。LLM 不要每 10ms 细节，要接近音节粒度的块 → 少 token、又快又好喂。</li>
+    <li id="g-04"><span class="term">动态注意力窗口 1s~8s</span> · 同一个编码器，注意力窗口可在 1 秒（短块 → 流式低延迟）和 8 秒（长上下文 → 离线高精度）之间切。一个模型两种模式。</li>
+    <li id="g-05"><span class="term">context biasing</span> · 把热词/背景知识塞进 system prompt 定制转写。只因解码器是会读 prompt 的 LLM 才做得到；Whisper 那种从头 enc-dec 难。</li>
+    <li id="g-06"><span class="term">Qwen3-ForcedAligner · 填槽 NAR 时间戳</span> · 把强制对齐重构成"槽位填充"，用 <code>[time]</code> token，非自回归一次性预测全部时间戳。RTF≈0.001，比 WhisperX/NFA 累计偏移降 67~77%。</li>
+    <li id="g-07"><span class="term">GSPO（RL 阶段）</span> · <a href="../concepts/grpo.html">GRPO</a> 的近亲：重要性比率从 token 级提到<a href="../concepts/gspo.html">序列级</a>，低方差更稳。Qwen3-ASR 第④段训练用它磨鲁棒。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>SOURCE · arXiv 2601.21337 · Qwen3-ASR Technical Report (Qwen Team, Alibaba · 2026)</span>
+  <span>INGESTED · 2026-06-14</span>
+</div>
+
+</div>
+<script>
+{
+  const figs = ['fig-pipe','fig-aut','fig-bias'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.15 });
+    obs.observe(el);
+  });
+}
+</script>
+</body>
+</html>
