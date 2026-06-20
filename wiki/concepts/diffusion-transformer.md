@@ -1,8 +1,8 @@
 ---
 name: diffusion-transformer
 type: concept
-sources: [ideogram-4]
-updated: 2026-06-04
+sources: [ideogram-4, qwen-image-2]
+updated: 2026-06-15
 ---
 
 # Diffusion Transformer · DiT
