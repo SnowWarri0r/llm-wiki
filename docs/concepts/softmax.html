@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Softmax · 一组实数压成概率分布 · 温度调软硬 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · softmax</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Softmax · 一组实数压成概率分布 · 温度调软硬</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把一组实数(logits)变成<strong>和为 1 的概率</strong>:每个先取 <code>exp</code> 再除以总和。指数让"大的更大",但小的也留一点(不像 argmax 一刀切)。<strong>温度 T</strong> 是软硬旋钮:T 小→尖锐(接近 argmax)、T 大→平(接近均匀)。</p>
+<h2>直觉 · 可导的"软 argmax"</h2>
+<p>模型最后常要从一堆分数里"选"一个——直接 argmax 取最大?<strong>不可导</strong>(挪一点分数,选择要么不变要么突跳),没法反向传播训练。softmax 是 argmax 的<strong>可导软化版</strong>:</p>
+<pre><code>pᵢ = exp(zᵢ) / Σⱼ exp(zⱼ)
+</code></pre>
+<ul>
+<li><strong>exp</strong>:把分数指数放大,大的拉得更开 → 倾向于"最大那个占大头"。</li>
+<li><strong>除以总和</strong>:归一化成概率(都正、加起来 1)。</li>
+</ul>
+<p>为什么用 <code>exp</code> 而不是直接归一化?因为指数能<strong>拉开差距 + 永远为正</strong>,且配 <a href="../concepts/cross-entropy.html">cross-entropy</a> 损失时梯度特别干净(<code>p − onehot</code>)。</p>
+<h2>温度 T · 尖锐 ↔ 平滑的旋钮</h2>
+<p>把 logits 先除以温度 <code>T</code> 再 softmax:<code>pᵢ = softmax(zᵢ / T)</code>。</p>
+<ul>
+<li><strong>T → 小(&lt;1)</strong>:差距被放大 → 分布<strong>尖锐</strong>,几乎把全部概率给最大那个(接近 argmax、更确定、更死板)。</li>
+<li><strong>T → 大(&gt;1)</strong>:差距被压平 → 分布<strong>平滑</strong>,各选项概率拉近(更随机、更有创造性/多样)。</li>
+<li><strong>T = 1</strong>:原样。</li>
+</ul>
+<p>这就是 LLM 采样里的 "temperature":调高更天马行空、调低更稳重保守。</p>
+<h2>怎么做的 · 数字例子</h2>
+<p>logits <code>z = [2, 1, 0]</code>:</p>
+<pre><code>T=1:   exp=[7.39, 2.72, 1.00]  /10.11 → [0.73, 0.27, 0.10]  (差不多七成给最大)
+                                          ↑实际 [0.665, 0.245, 0.090]
+T=0.5: 等于把 z 翻倍 [4,2,0] 再 softmax → [0.84, 0.11, 0.02]  更尖
+T=2:   等于把 z 减半 [1,0.5,0] 再 softmax → [0.51, 0.31, 0.19]  更平
+</code></pre>
+<p>(还有个工程细节:实现时先减去最大值 <code>exp(zᵢ − max z)</code> 防 <code>exp</code> 溢出,结果不变。)</p>
+<h2>落点</h2>
+<ul>
+<li><strong><a href="../concepts/self-attention.html">self-attention</a></strong>:<code>softmax(Q·Kᵀ/√d)</code> 把注意力分数变成"分配给每个位置的权重",和为 1。那个 <code>√d</code> 就是防分数过大、softmax 太尖(同 <a href="../concepts/qk-rmsnorm.html">qk-rmsnorm</a> 一类稳定动机)。</li>
+<li><strong>分类输出 / <a href="../concepts/cross-entropy.html">cross-entropy</a></strong>:最后一层 logits 过 softmax 得类别概率。</li>
+<li><strong>采样</strong>:温度 + top-k/top-p 控制生成的随机性。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/self-attention.html">self-attention</a> · 注意力权重 = softmax(点积分数)</li>
+<li><a href="../concepts/dot-product.html">dot-product</a> · softmax 的输入 logits 常来自点积</li>
+<li><a href="../concepts/cross-entropy.html">cross-entropy</a> · softmax 的天生搭档损失,梯度 = p − onehot</li>
+<li><a href="../concepts/qk-rmsnorm.html">qk-rmsnorm</a> · 都为"别让 softmax 太尖/炸"服务</li>
+<li><a href="../concepts/gspo.html">gspo</a> · RL 里序列概率也走 softmax/对数概率</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../concepts/cross-entropy.html"><span class="cat">concept</span>Cross-Entropy · 交叉熵 · −log(你押对的概率)</a></li><li><a href="../concepts/self-attention.html"><span class="cat">concept</span>Self-Attention · 自注意力</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/softmax.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

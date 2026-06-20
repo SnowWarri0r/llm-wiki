@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>SVD · 奇异值分解 · 任何矩阵 = 转一下·各轴拉伸·再转一下 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · svd</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>SVD · 奇异值分解 · 任何矩阵 = 转一下·各轴拉伸·再转一下</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>任何矩阵都能拆成 <strong><code>W = U Σ Vᵀ</code></strong>:先换个角度看(<code>Vᵀ</code> 旋转)、沿各主轴<strong>各自拉伸</strong>(<code>Σ</code>,对角线上是奇异值 σ)、再换个角度摆好(<code>U</code> 旋转)。<strong>σ 排序后就是各方向的"强度";留前 r 个 = 最佳低秩近似</strong>——这是 <a href="../concepts/matrix-rank.html">matrix-rank</a> / 压缩 / PCA 背后的同一台机器。</p>
+<h2>直觉 · 把一个变换拆成"旋转-拉伸-旋转"</h2>
+<p>一个线性变换 <code>y = W x</code> 看着复杂,SVD 说它本质上只是三步:</p>
+<pre><code>x ──Vᵀ──&gt; 换一组正交坐标轴看 ──Σ──&gt; 沿每根新轴各自缩放 ──U──&gt; 再旋到输出坐标
+</code></pre>
+<ul>
+<li><code>V</code>、<code>U</code>:两组<strong>正交方向</strong>(纯旋转/反射,不改长度)。</li>
+<li><code>Σ</code>:对角矩阵,对角线 <code>σ₁ ≥ σ₂ ≥ … ≥ 0</code> 是<strong>奇异值</strong>——第 i 根主轴被拉伸多少倍。</li>
+</ul>
+<p>关键直觉:<strong>σ 大的那根方向,是这个变换"使劲"的方向;σ 小的几乎被压扁、可以忽略</strong>。所以一堆奇异值从大到小排开,就是"这个矩阵的信息都集中在哪几个方向"的体检表。</p>
+<h2>怎么做的 · 截断 = 最佳低秩近似</h2>
+<p>把矩阵写成 <strong>r 个"秩 1 块"按强度相加</strong>:</p>
+<pre><code>W = σ₁ u₁v₁ᵀ + σ₂ u₂v₂ᵀ + … + σ_n u_nv_nᵀ      （σ 从大到小）
+</code></pre>
+<p>只<strong>留前 k 个、丢掉长尾</strong>(σ 小的),得到的 <code>W_k</code> 就是 W 的<strong>最佳秩 k 近似</strong>(Eckart–Young 定理:在所有秩 k 矩阵里,它跟 W 的误差最小)。这正是:</p>
+<ul>
+<li><strong><a href="../concepts/matrix-rank.html">matrix-rank</a> 低秩</strong>:秩 = 非零 σ 的个数;低秩 = 长尾 σ 都是 0 或近 0。</li>
+<li><strong>压缩 / 降维</strong>:图像、embedding 只留前几个 σ,省存储、去噪声(长尾常是噪声)。</li>
+<li><strong>PCA</strong>:对（中心化）数据矩阵做 SVD,前几个主轴就是主成分。</li>
+<li><strong><a href="../concepts/lora.html">lora</a></strong>:微调增量近似低秩,所以拿秩 r 的 <code>B·A</code> 就能逼近。</li>
+</ul>
+<p>一个直觉数字:一张图的像素矩阵做 SVD,常常<strong>前 5%~10% 的 σ 就还原出肉眼几乎一样的图</strong>——剩下 90% 的奇异值贡献的都是细枝末节。</p>
+<h2>跟特征分解的区别(顺带)</h2>
+<p>特征分解 <code>W = QΛQ⁻¹</code> 只对<strong>方阵</strong>、且需要可对角化;SVD <strong>任何形状矩阵都行</strong>(d×k 也可),而且 U、V 一定正交、σ 一定非负实数——更稳、更通用。对称正定矩阵时两者重合。</p>
+<h2>代码出处 / 来源</h2>
+<ul>
+<li>线性代数标准结论:SVD + Eckart–Young 最优低秩近似</li>
+<li>落点:PCA、图像压缩、<a href="../concepts/lora.html">lora</a>、推荐系统矩阵分解</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/matrix-rank.html">matrix-rank</a> · 秩 = 非零奇异值个数;低秩近似就是截断 SVD</li>
+<li><a href="../concepts/lora.html">lora</a> · 低秩增量背后的"为什么能拆成两个小矩阵"</li>
+<li><a href="../concepts/kl-vae.html">kl-vae</a> · 降维/压缩到 latent 的同源思想</li>
+<li><a href="../concepts/pooling.html">pooling</a> · 另一种"压掉次要信息"的手段对照</li>
+<li><a href="../concepts/contrastive-learning.html">contrastive-learning</a> · 学出来的 embedding 常用 PCA/SVD 看结构</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../concepts/matrix-rank.html"><span class="cat">concept</span>矩阵的秩 · rank · 一个变换&quot;真正有几个独立旋钮&quot;</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/svd.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

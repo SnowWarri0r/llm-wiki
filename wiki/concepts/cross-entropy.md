@@ -76,6 +76,7 @@ updated: 2026-06-12
 - 几乎所有分类、LLM 预训练（[[next-token-forward-pass]] 的输出 softmax）都用它
 
 ## 链接
+- [[softmax]] · 交叉熵的天生搭档；logits→概率后才算交叉熵，梯度 = p−onehot
 - [[next-token-forward-pass]] · LLM 预训练损失 = 对真实下一个 token 的交叉熵
 - [[dino]] · student 软分布 vs teacher 软分布的交叉熵
 - [[grpo]] · 在交叉熵基础上加 reward 加权 + KL 约束
