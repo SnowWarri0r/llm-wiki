@@ -295,7 +295,7 @@ figure.play .qa-svg .draw.d3 { transition-delay: 0.70s; }
     <li id="g-03"><span class="term">8× 下采样 → 12.5Hz</span> · 把 128 维 Fbank 的每秒上百帧压成每秒 12.5 个 token。LLM 不要每 10ms 细节，要接近音节粒度的块 → 少 token、又快又好喂。</li>
     <li id="g-04"><span class="term">动态注意力窗口 1s~8s</span> · 同一个编码器，注意力窗口可在 1 秒（短块 → 流式低延迟）和 8 秒（长上下文 → 离线高精度）之间切。一个模型两种模式。</li>
     <li id="g-05"><span class="term">context biasing</span> · 把热词/背景知识塞进 system prompt 定制转写。只因解码器是会读 prompt 的 LLM 才做得到；Whisper 那种从头 enc-dec 难。</li>
-    <li id="g-06"><span class="term">Qwen3-ForcedAligner · 填槽 NAR 时间戳</span> · 把强制对齐重构成"槽位填充"，用 <code>[time]</code> token，非自回归一次性预测全部时间戳。RTF≈0.001，比 WhisperX/NFA 累计偏移降 67~77%。</li>
+    <li id="g-06"><span class="term"><a href="../concepts/forced-alignment.html">Qwen3-ForcedAligner · 填槽 NAR 时间戳</a></span> · <a href="../concepts/forced-alignment.html">强制对齐</a>=文字已知、只求每字时间（卡拉OK逐字对时间）。把它重构成"槽位填充"，每字插 <code>[time]</code> token，非自回归一次性并行预测全部时间戳 → 不累积误差。RTF≈0.001，比 WhisperX/NFA 累计偏移降 67~77%。</li>
     <li id="g-07"><span class="term">GSPO（RL 阶段）</span> · <a href="../concepts/grpo.html">GRPO</a> 的近亲：重要性比率从 token 级提到<a href="../concepts/gspo.html">序列级</a>，低方差更稳。Qwen3-ASR 第④段训练用它磨鲁棒。</li>
   </ol>
 </div>
