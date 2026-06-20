@@ -53,4 +53,5 @@ CREATE TABLE memory_stream (
 - [[agent-reflection]] · 定期把碎片记忆总结成高层认知
 - [[react-loop]] · 多轮 Observation 的来源
 - [[deep-research]] · 多轮调研攒下的观察存进流里
+- [[lumine]] · 游戏 agent 也用 context 当记忆(滑窗 20 帧)
 - [[generative-agents]] · 论文

@@ -50,3 +50,4 @@ ReAct 是**边走边想**，灵活但**容易绕远、没全局观**——可能
 - [[memory-stream]] · 多轮 Observation 攒下来怎么存
 - [[memgpt]] · LLM 自己 function call 调度记忆，ReAct 的"动手"升级版
 - [[agent-reflection]] · 跑久了把碎片 Observation 提炼成高层认知
+- [[action-chunking]] · 对照:ReAct 想一步动一步，chunking 想一次动多步

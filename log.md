@@ -774,3 +774,5 @@ skill 更新:
 ## [2026-06-16] ingest | ai-memory-hierarchy (PhotonCap SOCAMM selloff)
 
 ## [2026-06-16] ingest | stable-diffusion-3-5 + mmdit (SD3 arXiv 2403.03206)
+
+## [2026-06-16] ingest | lumine + action-chunking + imitation-learning + quantization (arXiv 2511.08892)
