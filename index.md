@@ -43,6 +43,7 @@
 - [ELT · Elastic Looped Transformers](wiki/papers/elt.md) — looped transformer 进视觉生成: N层block循环L圈(深度共享权重) + 一族深度弹性推理 + ILSD; 同算力 4× 参数缩减
 - [HiDream-O1-Image · 像素级统一 Transformer](wiki/papers/hidream-o1.md) — 文生图反向操作: 无VAE像素空间扩散 + 文本编码器收进主干(Qwen3-VL) + 混合注意力 + O1推理agent先想后画; 8B 超更大模型
 - [Qwen-Image-2.0 · 生成与编辑统一](wiki/papers/qwen-image-2.md) — 20B MMDiT: 生成vs编辑=条件里塞不塞原图latent(Concat), 同backbone, 没点名天然照抄; frozen Qwen3-VL条件编码器 + VAE升16×(f16c64) + MSRoPE + DMD蒸馏4-NFE; 中文文字渲染 + 1K token直出信息图; LMArena中文#1
+- [MRT · Masked Region Transformer](wiki/papers/mrt.md) — 分层图像生成编辑(CVPR2026,Canva): 产出可编辑RGBA图层而非拍平图; masking哪些图层干净/噪声=切文生层/拆图成层/层改层三任务(Qwen-Image-2.0"条件→目标"的分层升级); anonymous region transformer + overflow画布留溢出 + DMD蒸馏50→8步; 比Qwen-Image-Layered快10~100×
 - [DINO · 自监督 ViT](wiki/papers/dino.md) — 无标签自蒸馏: student 对齐 EMA teacher + multi-crop 局部猜全局 + centering/sharpening 防坍缩; 涌现物体注意力, DINO loss 的来历
 - [LPIPS · 深层特征当感知度量](wiki/papers/lpips.md) — 像素L2跟人眼差很远: 过预训练网络比深层特征 + 人类2AFC校准权重; 感知相似是深度表征的涌现属性, 既度量又当损失
 

@@ -723,3 +723,10 @@ skill 更新:
 - qwen-image-2 bespoke(grape #6a3a8e, 第11色): 生成+编辑统一成"条件→目标"; 编辑=条件拼原图VAE latent Concat(ℰ_x,h_y)进同一MMDiT, 没点名天然照抄; frozen Qwen3-VL条件编码器 + MMDiT(QK-Norm/纯乘性调制/SwiGLU/MSRoPE) + VAE f16c64(16×,1.0是8×) + 六段训练+Data Flywheel + DMD蒸馏40步→4-NFE; LMArena ELO1168中文#1; 3图(统一/架构流/编辑一致性)
 - 接线: diffusion-transformer(MMDiT)/qwen3-vl(条件编码器)/kl-vae(latent)/mrope(MSRoPE)/qk-rmsnorm + flow-matching(DMD)/drifting-models/diffusion-opd(少步化线)
 - 回链: diffusion-transformer/qwen3-vl/kl-vae 加 qwen-image-2 source; index 接 hidream-o1 后
+
+## [2026-06-15] add | mrt bespoke 精装页（用户给 mrt-cvpr.github.io）
+- ar5iv 全文 + 项目页核实 arxiv 2605.27235 (Canva, CVPR2026)
+- mrt bespoke(cobalt #2f6db0, 第12色): 分层图像生成编辑; 核心=selective token masking 哪些图层干净(给定)/噪声(生成)=切3任务(text/image/layers→layers); anonymous region transformer(WAN-VAE region token+full attention,匿名靠位置内容推角色可重摆); overflow画布留溢出; DMD蒸馏50→8步108.5×; 建在Qwen-Image 20B全参微调; 3图(分层vs拍平/masking网格/overflow)
+- 关键: 是 qwen-image-2 "条件→目标、编辑塞原图" 推广成 "任意子集图层当干净条件"
+- 接线: qwen-image-2(同底座+思路升级+同DMD)/diffusion-transformer/kl-vae/closed-form-kl(DMD KL)/drifting-models/diffusion-opd
+- 回链: kl-vae/diffusion-transformer/closed-form-kl 加 mrt source; qwen-image-2 加 mrt 交叉链接; index 接 qwen-image-2 后

@@ -1,7 +1,7 @@
 ---
 name: kl-vae
 type: concept
-sources: [ideogram-4, qwen-image-2]
+sources: [ideogram-4, qwen-image-2, mrt]
 updated: 2026-06-15
 ---
 
