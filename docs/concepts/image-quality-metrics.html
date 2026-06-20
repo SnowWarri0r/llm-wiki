@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>图像质量指标 · PSNR / SSIM · 重建得像不像 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · image-quality-metrics</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>图像质量指标 · PSNR / SSIM · 重建得像不像</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>两把尺子量"重建图 vs 原图"差多少：PSNR 死磕逐像素误差（取对数变 dB，越高越好），SSIM 看局部亮度/对比度/结构（0~1，越接近 1 越像）。</p>
+<h2>直觉 · 给 VAE 的"还原度"打分</h2>
+<p>最常见用途：<a href="../concepts/kl-vae.html">kl-vae</a> 把图<strong>编码成 latent 再解码回来</strong>，丢了多少？PSNR/SSIM 高 = "压了再解几乎不丢"，latent 是忠实压缩。</p>
+<ul>
+<li><strong>PSNR（峰值信噪比）</strong>：先算原图和重建图的<strong>逐像素平方差均值（MSE）</strong>，再取对数变分贝。误差越小 → dB 越高。30+ 不错、40+ 很好。</li>
+<li><strong>软肋</strong>：死磕单像素。图整体平移一两像素、人眼看一模一样，PSNR 却暴跌——跟人感知不一致。这正是 <a href="../papers/lpips.html">lpips</a> / <a href="../concepts/perceptual-loss.html">perceptual-loss</a> 存在的理由。</li>
+<li><strong>SSIM（结构相似性）</strong>：不死磕单像素，在一小块窗口里比<strong>亮度 + 对比度 + 结构（纹理图案）</strong>。0~1，1=完全一样。</li>
+<li>跟 <a href="../papers/lpips.html">lpips</a> 同一个动机（像素差 ≠ 人眼觉得像），但 SSIM 是<strong>手写公式</strong>（便宜），LPIPS 是<strong>学出来的深度特征距离</strong>。</li>
+</ul>
+<figure style="margin:26px 0; padding:22px; background:#eef2f7; border:1px solid #9fb3c8; border-radius:4px;">
+<svg viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:JetBrains Mono,monospace;">
+  <!-- PSNR 标尺 -->
+  <text class="reveal d1" x="60" y="56" font-size="11" font-weight="700" fill="#1f3a5f">PSNR（dB，越高越好）</text>
+  <rect class="reveal d1" x="80" y="66" width="187" height="18" fill="#efd6c8"/>
+  <rect class="reveal d1" x="267" y="66" width="224" height="18" fill="#f0e0a8"/>
+  <rect class="reveal d1" x="491" y="66" width="149" height="18" fill="#d8e6ce"/>
+  <g class="reveal d1" font-size="8" fill="#7a6f5d" text-anchor="middle">
+    <text x="173" y="98">差 &lt;30</text><text x="379" y="98">不错 30–40</text><text x="565" y="98">很好 40+</text>
+    <text x="80" y="62">20</text><text x="267" y="62">30</text><text x="491" y="62">40</text><text x="640" y="62">45</text>
+  </g>
+  <g class="draw d2"><line x1="381" y1="60" x2="381" y2="90" pathLength="1000" stroke="#9b2c2c" stroke-width="2.4"/></g>
+  <text class="reveal d3" x="381" y="112" text-anchor="middle" font-size="9.5" font-weight="700" fill="#9b2c2c">VAE = 33.42</text>
+  <!-- SSIM 标尺 -->
+  <text class="reveal d3" x="60" y="146" font-size="11" font-weight="700" fill="#1a6a64">SSIM（0–1，越接近 1 越像）</text>
+  <rect class="reveal d3" x="80" y="156" width="560" height="18" fill="#cce5e1"/>
+  <g class="reveal d3" font-size="8" fill="#7a6f5d" text-anchor="middle"><text x="80" y="152">0</text><text x="360" y="152">0.5</text><text x="640" y="152">1.0</text></g>
+  <g class="draw d3"><line x1="597" y1="150" x2="597" y2="180" pathLength="1000" stroke="#9b2c2c" stroke-width="2.4"/></g>
+  <text class="reveal d4" x="597" y="200" text-anchor="middle" font-size="9.5" font-weight="700" fill="#9b2c2c">VAE = 0.9225</text>
+  <text class="reveal d4" x="300" y="200" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="11" font-weight="700" fill="#3a3128">PSNR 死磕像素(平移即崩) · SSIM 看结构(更贴人眼)</text>
+</svg>
+</figure>
+
+<h2>怎么做的</h2>
+<pre><code>MSE   = mean( (原图 − 重建)² )            # 逐像素平方差均值
+PSNR  = 10 · log10( MAX² / MSE )          # MAX=像素最大值(255 或 1.0)，单位 dB
+SSIM  = 在滑窗里综合 [亮度l · 对比度c · 结构s]，对全图取平均  # ∈ [0,1]
+</code></pre>
+<p>报告时常 PSNR + SSIM 一起给：前者管"整体像素准不准"，后者管"结构/纹理像不像"，互补。</p>
+<h2>代码出处</h2>
+<ul>
+<li><code>torchmetrics.PeakSignalNoiseRatio</code> / <code>StructuralSimilarityIndexMeasure</code>；或 <code>skimage.metrics.peak_signal_noise_ratio</code> / <code>structural_similarity</code></li>
+<li><a href="../papers/qwen-image-2.html">qwen-image-2</a> 报 VAE f16c64 的 PSNR 33.42 / SSIM 0.9225</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/kl-vae.html">kl-vae</a> · 主要拿它给 VAE 重建打分</li>
+<li><a href="../papers/lpips.html">lpips</a> · 学出来的感知距离；补 PSNR/SSIM 不贴人眼的短板</li>
+<li><a href="../concepts/perceptual-loss.html">perceptual-loss</a> · 同动机：像素差 ≠ 感知</li>
+<li><a href="../papers/qwen-image-2.html">qwen-image-2</a> · 用到这俩数</li>
+</ul>
+</article>
+
+
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/image-quality-metrics.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
