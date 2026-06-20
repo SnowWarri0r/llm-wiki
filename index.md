@@ -200,6 +200,7 @@
 ### 视觉
 - [Patch Embedding](wiki/concepts/patch-embedding.md) — 图切成 16×16 块, 每块拉平投影成 token, ViT 唯一的工程创新
 - [Inductive Bias](wiki/concepts/inductive-bias.md) — 模型架构里的"祖传家产", 数据少时是宝大数据时是包袱
+- [3D Gaussian Splatting](wiki/concepts/gaussian-splatting.md) — 场景=几百万个高斯椭球, splat投影+α混合实时渲染+任意新视角; vs NeRF快且可编辑; "高斯泼溅"LoRA是2D扩散借名模仿非真3D
 
 ### 多模态
 - [Contrastive Learning](wiki/concepts/contrastive-learning.md) — 拉近正样本 + 推开负样本, in-batch negatives 白送 N²-N 个负例
@@ -233,6 +234,8 @@
 - [Imitation Learning](wiki/concepts/imitation-learning.md) — 行为克隆抄专家演示, 不试错不要 reward; 对照 RL; 软肋是误差累积(distribution shift)
 
 ### 共享基础设施
+- [矩阵的秩 · rank](wiki/concepts/matrix-rank.md) — 一个变换"真正有几个独立旋钮"; 低秩=冗余可压(拆成两个瘦矩阵); LoRA/SVD/PCA/注意力瓶颈背后同一件事
+- [LoRA](wiki/concepts/lora.md) — 冻底模只训低秩小增量 ΔW=BA; 几十MB加个技能、可插拔; PEFT, 文生图社区标配
 - [AI 服务器内存层级](wiki/concepts/ai-memory-hierarchy.md) — HBM/LPDDR5X-SOCAMM/DDR5/CXL/光互连 的"快但小↔慢但大"阶梯; "NVIDIA 砍内存"砍的是哪层 + 为何走向池化光互连
 - [量化 · WxAy](wiki/concepts/quantization.md) — 少比特存数字; W8A8(权重激活都INT8)让矩阵乘跑INT8提速; 激活离群值靠 SmoothQuant 搬给权重
 - [KV Cache](wiki/concepts/kv-cache.md) — 流式推理的内存账本

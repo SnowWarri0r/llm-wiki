@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>LoRA · 低秩适配 · 不动底模，只训一个小增量 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · lora</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>LoRA · 低秩适配 · 不动底模，只训一个小增量</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>微调时<strong>冻结底模权重不动</strong>,只在旁边训一个<strong>低秩的小增量矩阵</strong> <code>ΔW = B·A</code>(秩 r 很小);推理时用 <code>W + BA</code>。几十 MB 就给大模型加一个专门技能,可插拔、一个底模能挂很多个。</p>
+<h2>直觉 · 别重训整本书，夹张便利贴</h2>
+<p>全参数微调一个大模型:要更新<strong>所有</strong>权重,显存吃不消、每个任务存一整份几个 GB 的权重,贵。</p>
+<p>LoRA(Hu et al. 2021)的观察:<strong>微调带来的权重改变量 <code>ΔW</code> 其实是低秩的</strong>(<a href="../concepts/matrix-rank.html">matrix-rank</a>:改动只活在少数几个独立方向上)——可以用两个<strong>瘦长的小矩阵相乘</strong>近似出来。于是:</p>
+<ul>
+<li>底模权重 <code>W</code> <strong>冻结不动</strong>;</li>
+<li>旁边学一个 <code>ΔW = B·A</code>,其中 <code>A</code> 是 <code>r×k</code>、<code>B</code> 是 <code>d×r</code>,<strong>秩 <code>r</code> 很小</strong>(常 8/16/32);</li>
+<li>前向变成 <code>y = Wx + B(Ax)</code>,只训 <code>A</code>、<code>B</code>。</li>
+</ul>
+<p>类比:不重印整本教科书,只在页边<strong>夹一叠便利贴</strong>写批注。底书不变,便利贴几十 KB,想换主题换一叠便利贴就行。</p>
+<h2>怎么做的 · 低秩 = 省在哪</h2>
+<pre><code>原始:   y = W x                 # W 是 d×k，冻结
+LoRA:   y = W x + B (A x)        # A:r×k  B:d×r   只训 A,B（秩 r 小）
+        ΔW = B·A                 # 用时可合并进 W，零额外推理开销
+</code></pre>
+<p>举个数:<code>W</code> 是 4096×4096 ≈ <strong>1678 万</strong>参数。取 <code>r=16</code>,则 <code>A</code>+<code>B</code> 只有 <code>4096×16×2</code> ≈ <strong>13 万</strong>参数 —— <strong>省约 128×</strong>。所以一个 LoRA 常只有几十 MB,而底模是几个 GB。</p>
+<p>好处:</p>
+<ul>
+<li><strong>省显存/省存储</strong>:只训&amp;存那点小矩阵。</li>
+<li><strong>可插拔</strong>:一个底模挂多个 LoRA(画风A/画风B/某技能),按需加载、甚至加权混合。</li>
+<li><strong>不伤底模</strong>:底模权重没动,卸掉 LoRA 就回到原样。</li>
+</ul>
+<h2>跟全量微调的关系</h2>
+<p>LoRA 属于 <strong>PEFT(参数高效微调)</strong>家族,是 <a href="../concepts/pretrain-finetune-paradigm.html">pretrain-finetune-paradigm</a> 里"finetune"那步的省钱版:不动预训练底座,只学一个小适配器。文生图圈尤其常见——SD/<a href="../papers/flux-1.html">flux-1</a>/<a href="../papers/qwen-image-2.html">qwen-image-2</a> 上一堆社区 LoRA(画风、人物、某种特效)。</p>
+<h2>代码出处 / 来源</h2>
+<ul>
+<li>LoRA:Hu et al. 2021《LoRA: Low-Rank Adaptation of Large Language Models》</li>
+<li>生态:diffusers / PEFT;ModelScope、Civitai 上海量文生图 LoRA</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/matrix-rank.html">matrix-rank</a> · "low-rank" 的秩到底在模型里起什么作用</li>
+<li><a href="../concepts/pretrain-finetune-paradigm.html">pretrain-finetune-paradigm</a> · LoRA 是 finetune 那步的参数高效版</li>
+<li><a href="../concepts/gaussian-splatting.html">gaussian-splatting</a> · 那个"高斯泼溅"就是挂在 <a href="../papers/qwen-image-2.html">qwen-image-2</a> 上的一个 LoRA</li>
+<li><a href="../papers/qwen-image-2.html">qwen-image-2</a> · <a href="../papers/flux-1.html">flux-1</a> · 文生图底模,社区常挂 LoRA 加技能</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../concepts/gaussian-splatting.html"><span class="cat">concept</span>3D Gaussian Splatting · 3DGS · 用一堆高斯椭球表示场景</a></li><li><a href="../concepts/matrix-rank.html"><span class="cat">concept</span>矩阵的秩 · rank · 一个变换&quot;真正有几个独立旋钮&quot;</a></li><li><a href="../concepts/pretrain-finetune-paradigm.html"><span class="cat">concept</span>Pretrain-Finetune Paradigm · 先预训练再微调</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/lora.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
