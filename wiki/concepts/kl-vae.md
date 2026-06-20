@@ -1,8 +1,8 @@
 ---
 name: kl-vae
 type: concept
-sources: [ideogram-4, qwen-image-2, mrt, stable-diffusion-3-5]
-updated: 2026-06-16
+sources: [ideogram-4, qwen-image-2, mrt, stable-diffusion-3-5, pid-pixel-diffusion]
+updated: 2026-06-17
 ---
 
 # KL-VAE · 把图压进 latent 的那层地基
@@ -122,3 +122,4 @@ updated: 2026-06-16
 - [[ideogram-4]] · 单流 DiT 在 KL-VAE 的 latent 上做生成
 - [[video-vae]] · 视频版：多压一根时间轴 + 因果（Wan-VAE）
 - [[stable-diffusion-3-5]] · 在 16 通道 VAE latent 上跑 MMDiT 扩散
+- [[pixel-diffusion-decoder]] · 把这个确定性解码器换成条件像素扩散([[pid-pixel-diffusion]])

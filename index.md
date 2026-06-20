@@ -46,6 +46,7 @@
 - [ELT · Elastic Looped Transformers](wiki/papers/elt.md) — looped transformer 进视觉生成: N层block循环L圈(深度共享权重) + 一族深度弹性推理 + ILSD; 同算力 4× 参数缩减
 - [HiDream-O1-Image · 像素级统一 Transformer](wiki/papers/hidream-o1.md) — 文生图反向操作: 无VAE像素空间扩散 + 文本编码器收进主干(Qwen3-VL) + 混合注意力 + O1推理agent先想后画; 8B 超更大模型
 - [Qwen-Image-2.0 · 生成与编辑统一](wiki/papers/qwen-image-2.md) — 20B MMDiT: 生成vs编辑=条件里塞不塞原图latent(Concat), 同backbone, 没点名天然照抄; frozen Qwen3-VL条件编码器 + VAE升16×(f16c64) + MSRoPE + DMD蒸馏4-NFE; 中文文字渲染 + 1K token直出信息图; LMArena中文#1
+- [PiD · 像素扩散解码器](wiki/papers/pid-pixel-diffusion.md) — NVIDIA 把 latent→像素的确定性 VAE 解码器换成条件像素扩散: 解码从"忠实还原"升级成"生成式补细节+顺手超分4×/8×"; sigma-aware adapter 吃半成品 latent 让 latent 扩散早停 + DMD2 蒸 4 步 + 通吃 VAE/语义 latent; 512²→2048² 1秒内
 - [MRT · Masked Region Transformer](wiki/papers/mrt.md) — 分层图像生成编辑(CVPR2026,Canva): 产出可编辑RGBA图层而非拍平图; masking哪些图层干净/噪声=切文生层/拆图成层/层改层三任务(Qwen-Image-2.0"条件→目标"的分层升级); anonymous region transformer + overflow画布留溢出 + DMD蒸馏50→8步; 比Qwen-Image-Layered快10~100×
 - [Qwen3-VL · 视觉语言模型怎么看图](wiki/papers/qwen3-vl-report.md) — VLM三件套(SigLIP-2 ViT眼睛+MLP merger插头+Qwen3 LLM大脑); 图按原生分辨率变长token; 三升级 Interleaved-MRoPE(频谱均衡长视频)/DeepStack(3层ViT注入前3层LLM)/文字时间戳; 四阶段预训练到256K+thinking; OCR32语种/2D3D grounding/GUI agent
 - [DINO · 自监督 ViT](wiki/papers/dino.md) — 无标签自蒸馏: student 对齐 EMA teacher + multi-crop 局部猜全局 + centering/sharpening 防坍缩; 涌现物体注意力, DINO loss 的来历
@@ -165,6 +166,7 @@
 - [闭式 KL](wiki/concepts/closed-form-kl.md) — 公式直算 vs 撒豆子估；同协方差高斯 KL 塌成均值差²(MSE)
 - [Diffusion Transformer](wiki/concepts/diffusion-transformer.md) — 去噪网络从 U-Net 换成 Transformer；单流 vs 双流 MMDiT
 - [MMDiT](wiki/concepts/mmdit.md) — 双流多模态扩散 Transformer: 文字图像同序列共享注意力、各用各的权重; SD3/FLUX/Qwen-Image 主干
+- [像素扩散解码器](wiki/concepts/pixel-diffusion-decoder.md) — 把 latent→像素的确定性 VAE 解码器换成条件扩散; "复印机→插画师", 边解码边补细节+超分; latent 与全像素扩散两路线的缝合
 - [Classifier-Free Guidance](wiki/concepts/classifier-free-guidance.md) — 条件/无条件两支放大差值逼模型听话；Ideogram 的非对称变体
 - [结构化 Caption 条件](wiki/concepts/structured-caption-conditioning.md) — 不喂一句话喂 JSON，把位置/颜色/文字显式做进训练
 - [KL-VAE](wiki/concepts/kl-vae.md) — 把图压成 latent 的地基；扩散在压缩空间画画省 48 倍计算
