@@ -1,7 +1,7 @@
 ---
 name: flow-matching
 type: concept
-sources: [interaction-models-tml, ideogram-4]
+sources: [interaction-models-tml, ideogram-4, stable-diffusion-3-5]
 updated: 2026-06-04
 ---
 
@@ -49,3 +49,4 @@ updated: 2026-06-04
 - [[rvq-codec]] · 离散对照
 - [[audio-tokenization-rvq-vs-flow]] · 横向对比
 - [[early-fusion]] · flow head 接在主 transformer 后
+- [[stable-diffusion-3-5]] · 整流流(直线少步)就是 flow-matching 在文生图的落地

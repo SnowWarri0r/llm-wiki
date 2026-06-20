@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>MMDiT · 多模态扩散 Transformer · 文字图像坐同一张桌子 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · mmdit</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>MMDiT · 多模态扩散 Transformer · 文字图像坐同一张桌子</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>文字 token 和图像 token <strong>拼成同一条序列、过同一个自注意力</strong>实现双向对齐——但<strong>每种模态各用各的一套权重(QKV 投影 + MLP)</strong>。是 SD3/FLUX 那代文生图的主干，长 prompt 服从和文字排版大涨的根。</p>
+<h2>直觉 · 调料 vs 同桌</h2>
+<p>老文生图(SD1.5/SDXL，U-Net + <strong>cross-attention</strong>)里<strong>图像是主角</strong>：一条图像特征序列从头走到尾，文字编码后<strong>从旁边</strong>通过 cross-attention "喷"进每层。文字像炒菜时<strong>从锅边淋进去的调料</strong>——能影响味道，但它自己不在锅里翻炒，跟图像不平等。后果是长 prompt 顾此失彼、英文单词拼写缺胳膊少腿。</p>
+<p><strong>MMDiT(SD3，Esser et al. 2024)</strong> 把这关系改成<strong>平起平坐</strong>：把图像 token 和文字 token <strong>拼成一条序列</strong>，一起过<strong>同一个 self-attention</strong>，让两边<strong>双向</strong>互相看、互相改。</p>
+<p>为什么不直接共享一套权重就完了？因为<strong>图像和文字的统计规律本就不同</strong>(一个是连续的视觉 patch，一个是离散的语言 token)。MMDiT 的折中是:<strong>注意力里合流(共享对齐)，但 QKV 投影和 MLP 按模态分两套(各自的"母语")</strong>。像两个说不同语言的人<strong>坐到同一张桌子</strong>——各自带自己的笔记本(独立权重)，但能直接对视交流(共享注意力)。</p>
+<h2>怎么做的 · 双套权重，一次 attention</h2>
+<pre><code># 一个 MMDiT block（双流）
+# 输入两路 token：文字 h_text、图像 h_img
+q_t,k_t,v_t = W_text_qkv( AdaLN_t(t) · h_text )   # 文字用自己的投影权重
+q_i,k_i,v_i = W_img_qkv ( AdaLN_i(t) · h_img  )   # 图像用自己的投影权重
+
+# 拼起来做一次联合注意力（这一步两模态合流、双向看）
+Q=[q_t;q_i]  K=[k_t;k_i]  V=[v_t;v_i]
+attn = softmax(QKNorm(Q)·QKNorm(K)ᵀ/√d) · V       # QK-Norm 防 logit 爆炸
+
+h_text += W_text_o(attn_text);  h_text += MLP_text(h_text)   # 各自的 MLP
+h_img  += W_img_o (attn_img );  h_img  += MLP_img (h_img )
+# 时间步 t 通过 AdaLN 调制每个 block 的残差路径
+</code></pre>
+<p>要点:<strong>两路 token 各走各的投影/MLP(两套权重)，只在算 attention 时拼成一条共享序列</strong>。这就是"双流"。</p>
+<h2>单流 vs 双流(关键分歧)</h2>
+<ul>
+<li><strong>双流 / MMDiT</strong>(SD3、FLUX):文字图像各一套投影，只在 attention 合流。表达强、参数多。</li>
+<li><strong>单流</strong>(<a href="../papers/ideogram-4.html">ideogram-4</a>、Z-Image):文字图像<strong>共享同一套投影</strong>，每层就一条 self-attention 序列。更简、更省参数。</li>
+</ul>
+<p>SD3.5 还把 MMDiT 块里的单注意力换成<strong>双注意力层</strong>(Medium 版叫 <strong>MMDiT-X</strong>:前 13 层额外加自注意力)，进一步改多分辨率一致性。</p>
+<h2>代码出处 / 来源</h2>
+<ul>
+<li>SD3 arXiv 2403.03206《Scaling Rectified Flow Transformers》—— MMDiT 提出处</li>
+<li><a href="../papers/stable-diffusion-3-5.html">stable-diffusion-3-5</a> · 开源权重实现；<a href="../papers/qwen-image-2.html">qwen-image-2</a> · 把 MMDiT 推广到生成+编辑统一</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · MMDiT 是 DiT 的双流多模态形态(父概念)</li>
+<li><a href="../papers/stable-diffusion-3-5.html">stable-diffusion-3-5</a> · MMDiT 的招牌落地</li>
+<li><a href="../papers/qwen-image-2.html">qwen-image-2</a> · 同吃 MMDiT，做条件→目标统一生成编辑</li>
+<li><a href="../papers/mrt.html">mrt</a> · 把"任意子集图层当条件"推广，仍是 MMDiT 一族</li>
+<li><a href="../concepts/qk-rmsnorm.html">qk-rmsnorm</a> · 联合注意力里防 logit 爆炸的 QK-Norm</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · MMDiT 的训练目标(预测速度场)</li>
+<li><a href="../concepts/mrope.html">mrope</a> · 给拼起来的文字图像 token 算跨模态联合位置</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/stable-diffusion-3-5.html"><span class="cat">paper</span>Stable Diffusion 3.5 · 整流流 + MMDiT 文生图</a></li><li><a href="../concepts/diffusion-transformer.html"><span class="cat">concept</span>Diffusion Transformer · DiT</a></li><li><a href="../concepts/qk-rmsnorm.html"><span class="cat">concept</span>QK-Norm · 给 Q/K 做归一化稳住训练</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/mmdit.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
