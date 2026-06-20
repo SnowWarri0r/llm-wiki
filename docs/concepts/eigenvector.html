@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>特征向量 / 特征值 · 被矩阵作用后&quot;只缩放、不转向&quot;的方向 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · eigenvector</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>特征向量 / 特征值 · 被矩阵作用后&quot;只缩放、不转向&quot;的方向</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>矩阵 <code>W</code> 作用在向量上一般又转又拉;但有几个<strong>特殊方向</strong>,<code>W</code> 作用后<strong>方向纹丝不动、只被拉长或缩短</strong>——这些方向叫<strong>特征向量</strong>,拉伸倍数叫<strong>特征值 λ</strong>(<code>Wv = λv</code>)。它们是这个矩阵"最自然的骨架轴",<a href="../concepts/svd.html">svd</a>、PCA、稳定性分析全建在它上。</p>
+<h2>直觉 · 大多数方向会转，少数不转</h2>
+<p>把矩阵当一个<strong>变换</strong>:<code>y = W x</code> 把向量 <code>x</code> 搬到新位置 <code>y</code>。随手挑个向量喂进去,它通常<strong>既被转了向、又被改了长</strong>。</p>
+<p>但总有那么几个<strong>特殊方向</strong>:喂进去,出来还<strong>指着原来那条线</strong>(方向没变),只是变长或变短了。</p>
+<pre><code>Wv = λv      # 出来 = 原方向 × 一个数 λ
+</code></pre>
+<ul>
+<li><code>v</code>:特征向量(那条不转向的方向;它的长度无所谓,关键是"哪条线")。</li>
+<li><code>λ</code>:特征值(沿这条线被拉伸几倍。λ&gt;1 拉长、0&lt;λ&lt;1 缩短、λ&lt;0 反向、λ=0 压成 0)。</li>
+</ul>
+<p>类比:一张橡皮膜被你按某种方式拉扯,膜上大多数小箭头会被又转又抻;但<strong>沿某两个特殊方向画的箭头,只会原地变长变短、不会歪</strong>——那两个方向就是这次拉扯的特征向量。</p>
+<figure style="margin:26px 0; padding:22px; background:#eef1f5; border:1px solid #aab4c4; border-radius:4px;">
+<svg viewBox="0 0 720 230" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:JetBrains Mono,monospace;">
+  <defs>
+    <marker id="ev-i" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#7a6f5d"/></marker>
+    <marker id="ev-o" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#9b2c2c"/></marker>
+    <marker id="ev-e" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#1f4d3a"/></marker>
+  </defs>
+  <!-- 普通方向：被转向 -->
+  <text class="reveal d1" x="180" y="30" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#9b2c2c">普通方向 · 被转向</text>
+  <line class="reveal d1" x1="120" y1="170" x2="120" y2="100" stroke="#7a6f5d" stroke-width="2" marker-end="url(#ev-i)"/>
+  <text class="reveal d1" x="120" y="186" text-anchor="middle" font-size="8" fill="#7a6f5d">喂进去 x</text>
+  <line class="draw d2" x1="120" y1="170" x2="200" y2="118" stroke="#9b2c2c" stroke-width="2" marker-end="url(#ev-o)" pathLength="1000"/>
+  <text class="reveal d2" x="240" y="120" text-anchor="middle" font-size="8" fill="#9b2c2c">出来 Wx：歪了</text>
+  <!-- 特征方向：不转只缩 -->
+  <text class="reveal d3" x="540" y="30" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#1f4d3a">特征方向 · 只变长</text>
+  <line class="reveal d3" x1="460" y1="180" x2="520" y2="120" stroke="#7a6f5d" stroke-width="2" marker-end="url(#ev-i)"/>
+  <text class="reveal d3" x="448" y="150" text-anchor="middle" font-size="8" fill="#7a6f5d">v</text>
+  <line class="draw d4" x1="460" y1="180" x2="580" y2="60" stroke="#1f4d3a" stroke-width="2" marker-end="url(#ev-e)" pathLength="1000"/>
+  <text class="reveal d4" x="618" y="78" text-anchor="middle" font-size="8" fill="#1f4d3a">Wv = λv</text>
+  <text class="reveal d4" x="600" y="120" text-anchor="middle" font-size="8" fill="#1f4d3a">同一条线、只拉长 λ 倍</text>
+  <line class="reveal d4" x1="455" y1="185" x2="600" y2="40" stroke="#1f4d3a" stroke-width="0.6" stroke-dasharray="3 3"/>
+  <text class="reveal d5" x="360" y="214" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="11.5" font-weight="700" fill="#3a3128">特征向量 = 被 W 作用后唯一不转向的那条线，λ = 沿它拉几倍</text>
+</svg>
+</figure>
+
+<h2>怎么找出来 · 手算一个 2×2(全程)</h2>
+<p>目标:找满足 <code>Wv = λv</code> 的 <code>λ</code> 和 <code>v</code>。拿这个矩阵:</p>
+<pre><code>W = [2 1]
+    [1 2]
+</code></pre>
+<p><strong>第 1 步:挪到一边。</strong> <code>Wv = λv</code> → <code>Wv − λv = 0</code> → <code>(W − λI)v = 0</code>(<code>I</code> 是单位矩阵,凑出同形状好相减):</p>
+<pre><code>(W − λI) = [2−λ   1 ]
+           [ 1   2−λ]
+</code></pre>
+<p><strong>第 2 步:要有"非零的 v"解,这个矩阵必须是"压扁的"(行列式=0)。</strong> 否则 <code>(W−λI)v=0</code> 只有 <code>v=0</code> 的废解。所以列<strong>特征方程</strong> <code>det(W − λI) = 0</code>:</p>
+<pre><code>det = (2−λ)(2−λ) − 1·1 = (2−λ)² − 1 = 0
+→ (2−λ)² = 1  →  2−λ = ±1  →  λ = 1 或 λ = 3
+</code></pre>
+<p>两个特征值出来了:<strong>λ = 3 和 λ = 1</strong>。(行列式=0 的直觉:<code>det</code> 衡量这个变换把面积放大几倍;=0 表示它把整个平面压扁到一条线上,才会有"被压没"的非零方向——那方向就是特征向量。)</p>
+<p><strong>第 3 步:把每个 λ 代回去,解出对应的 v。</strong></p>
+<pre><code>λ=3:  (W−3I)v = [−1  1][v₁]=0  → −v₁+v₂=0 → v₁=v₂  → v=[1, 1]（任意倍数都行）
+                [ 1 −1][v₂]
+λ=1:  (W−1I)v = [ 1  1][v₁]=0  →  v₁+v₂=0 → v₁=−v₂ → v=[1,−1]
+                [ 1  1][v₂]
+</code></pre>
+<p><strong>第 4 步:验证(代回原式 <code>Wv=λv</code>)。</strong></p>
+<pre><code>W·[1, 1]ᵀ = [2+1, 1+2] = [3, 3] = 3×[1,1]   ✓ λ=3
+W·[1,−1]ᵀ = [2−1, 1−2] = [1,−1] = 1×[1,−1]  ✓ λ=1
+</code></pre>
+<p>搞定:这矩阵的特征向量是斜 45° 的 <code>[1,1]</code>(拉 3 倍)和 <code>[1,−1]</code>(拉 1 倍)。</p>
+<h2>特征分解 · 沿特征方向看，W 就是"各自缩放"</h2>
+<p>把特征向量当新坐标轴(拼成矩阵 <code>Q</code>),特征值摆成对角(<code>Λ</code>),那么:</p>
+<pre><code>W = Q Λ Q⁻¹
+读法（从右往左）：Q⁻¹ 把向量换到&quot;特征方向坐标&quot; → Λ 沿每根特征轴各乘 λ → Q 换回原坐标
+</code></pre>
+<p>意义:<strong>在特征方向这套坐标里,一个复杂矩阵就退化成"每根轴各自乘个数"</strong>——最简单的形态。反复作用 <code>Wⁿ = QΛⁿQ⁻¹</code>,<code>λ</code> 最大的那根方向会越滚越主导(幂迭代、PageRank、系统稳定性都靠这条)。</p>
+<h2>它的局限 → 为什么还需要 SVD</h2>
+<p>特征分解很美,但挑食:</p>
+<ul>
+<li><strong>只对方阵</strong>(d×d),长方形矩阵没有特征向量。</li>
+<li>特征向量 <code>Q</code> <strong>不一定正交</strong>(不一定互相垂直),<code>λ</code> 可能是负数甚至复数。</li>
+</ul>
+<p><a href="../concepts/svd.html">svd</a> 是它对<strong>任意矩阵</strong>的推广:不直接看 <code>W</code> 的特征向量,而是看 <code>WᵀW</code> 的(它必对称、必半正定),得到的方向一定正交、奇异值 σ 一定非负。对称矩阵时两者重合(σ = |λ|)。</p>
+<h2>代码出处 / 来源</h2>
+<ul>
+<li>线性代数标准内容:特征值/特征向量、特征方程 det(W−λI)=0、特征分解</li>
+<li>落点:<a href="../concepts/svd.html">svd</a>、PCA、幂迭代/PageRank、ODE 稳定性</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/svd.html">svd</a> · 把特征分解推广到任意矩阵(看 WᵀW 的特征向量)</li>
+<li><a href="../concepts/matrix-rank.html">matrix-rank</a> · 非零特征值/奇异值的个数 = 秩</li>
+<li><a href="../concepts/dot-product.html">dot-product</a> · "正交"= 点积为 0;特征向量是否正交是关键区别</li>
+<li><a href="../concepts/markov-chain.html">markov-chain</a> · 转移矩阵的最大特征向量 = 稳态分布</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../concepts/matrix-rank.html"><span class="cat">concept</span>矩阵的秩 · rank · 一个变换&quot;真正有几个独立旋钮&quot;</a></li><li><a href="../concepts/svd.html"><span class="cat">concept</span>SVD · 奇异值分解 · 任何矩阵 = 转一下·各轴拉伸·再转一下</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/eigenvector.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
