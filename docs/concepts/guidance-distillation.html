@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>引导蒸馏 · guidance distillation · 把 CFG 的两遍前向压成一遍 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · guidance-distillation</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>引导蒸馏 · guidance distillation · 把 CFG 的两遍前向压成一遍</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把 <a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a>(CFG)那个"每步算两遍再外推"的过程<strong>蒸进模型</strong>:让模型把<strong>引导强度当输入</strong>,<strong>一遍前向</strong>就直接吐出"已经引导好"的结果 → 省掉每步那一半算力,质量不掉。</p>
+<h2>直觉 · 别每步都算两遍</h2>
+<p><a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a> 提质量靠"两遍":一遍带 prompt 出 <code>v_cond</code>、一遍空 prompt 出 <code>v_uncond</code>,再按引导强度 <code>w</code> 外推 <code>v = v_uncond + w·(v_cond − v_uncond)</code>。问题:<strong>每一步采样都要前向两次</strong> → 推理算力直接 2×。</p>
+<p>引导蒸馏的想法:<strong>这个外推结果是确定的,能不能让模型直接学会输出它?</strong> 训练时:</p>
+<ul>
+<li><strong>老师</strong>:跑完整 CFG(两遍 + 外推),在各种 <code>w</code> 下生成"标准答案"。</li>
+<li><strong>学生</strong>:输入里<strong>多塞一个引导强度 <code>w</code></strong>,被训成<strong>一遍前向</strong>就复现老师那个带 CFG 的结果。</li>
+</ul>
+<p>蒸完之后,学生模型把 <code>w</code> 当普通条件吃进去,一次前向出图——<strong>两遍变一遍</strong>。<a href="../papers/flux-1.html">flux-1</a> 的 dev 版就是这么训的(老师是闭源的 pro)。</p>
+<p>类比:CFG 像每道菜都"做一份正常的、做一份不放料的,再按比例兑";引导蒸馏是<strong>直接训一个厨师,你告诉他要多大味儿(w),他一锅就给你那个味儿</strong>,不用做两份再兑。</p>
+<h2>注意:跟"步数蒸馏"是两回事(正交)</h2>
+<ul>
+<li><strong>引导蒸馏</strong>:省的是<strong>每一步的 2× 前向</strong>(两遍→一遍)。步数不变。</li>
+<li><strong>步数蒸馏</strong>(<a href="../concepts/dmd-distillation.html">dmd-distillation</a> 那类):省的是<strong>采样步数</strong>(几十步→4 步)。每步几遍不管。</li>
+<li>两者<strong>正交</strong>,可叠加:<a href="../papers/flux-1.html">flux-1</a> 的 schnell = dev(引导蒸馏)再 + 步数蒸馏。</li>
+</ul>
+<p>dev 里那个 <code>guidance</code> 参数是<strong>喂进模型的输入</strong>,跟标准 CFG 的外推系数 <code>w</code> 不是一回事(虽然都叫引导强度)。</p>
+<h2>怎么做的</h2>
+<pre><code># 老师：完整 CFG（两遍）
+v* = uncond + w·(cond − uncond)
+# 学生：把 w 当输入，一遍前向逼近 v*
+minimize  ‖ model(z_t, t, prompt, w) − v* ‖
+# 推理时：一次前向，无需再跑无条件支
+</code></pre>
+<h2>代码出处 / 来源</h2>
+<ul>
+<li><a href="../papers/flux-1.html">flux-1</a> · FLUX.1-dev 用引导蒸馏(老师=pro),一遍前向出 CFG 质量</li>
+<li>思想源:CFG distillation(Meng et al. 2023,把 CFG 蒸进单模型)</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a> · 被蒸的那个"两遍外推"</li>
+<li><a href="../papers/flux-1.html">flux-1</a> · dev 的训练方式</li>
+<li><a href="../concepts/dmd-distillation.html">dmd-distillation</a> · 正交的另一种蒸馏(省步数)</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · 引导作用在速度场上</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/flux-1.html"><span class="cat">paper</span>FLUX.1 · 先双流后单流 + 两道蒸馏</a></li><li><a href="../concepts/classifier-free-guidance.html"><span class="cat">concept</span>Classifier-Free Guidance · CFG</a></li><li><a href="../concepts/dmd-distillation.html"><span class="cat">concept</span>DMD 蒸馏 · NFE · 把 40 步压成 4 步</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/guidance-distillation.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

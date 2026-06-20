@@ -1,8 +1,8 @@
 ---
 name: mmdit
 type: concept
-sources: [stable-diffusion-3-5, qwen-image-2, mrt]
-updated: 2026-06-16
+sources: [stable-diffusion-3-5, qwen-image-2, mrt, flux-1]
+updated: 2026-06-17
 ---
 
 # MMDiT · 多模态扩散 Transformer · 文字图像坐同一张桌子
@@ -50,6 +50,7 @@ SD3.5 还把 MMDiT 块里的单注意力换成**双注意力层**(Medium 版叫 
 ## 链接
 - [[diffusion-transformer]] · MMDiT 是 DiT 的双流多模态形态(父概念)
 - [[stable-diffusion-3-5]] · MMDiT 的招牌落地
+- [[flux-1]] · 只在前段用双流 MMDiT，后段切单流（混合）
 - [[qwen-image-2]] · 同吃 MMDiT，做条件→目标统一生成编辑
 - [[mrt]] · 把"任意子集图层当条件"推广，仍是 MMDiT 一族
 - [[qk-rmsnorm]] · 联合注意力里防 logit 爆炸的 QK-Norm
