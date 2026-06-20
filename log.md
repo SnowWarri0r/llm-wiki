@@ -756,3 +756,8 @@ skill 更新:
 - 用户问 qwen3-vl-report "T-RoPE 长视频 id 又大又稀/密集采fps" 背景
 - mrope 加节: RoPE→M-RoPE→T-RoPE(t绑绝对时间)两毛病(id大+稀; 要密集采各种fps训)→Qwen3-VL 文字时间戳<3.0s>把时间从位置挪到内容; T-RoPE稀疏大id vs 文字时间戳小密id 对照图
 - 回链: qwen3-vl-report §02③ 链到 mrope; mrope sources 加 qwen3-vl-report/qwen-image-2
+
+## [2026-06-15] add | video-vae 概念页（用户问 WAN-2.1-VAE 怎么做）
+- 查 Wan2.1 论文 arxiv 2503.20314 核实
+- video-vae: VAE视频版 vs 图像版(kl-vae); 三件事=3D卷积时间也压((1+T)×H×W→[1+T/4,H/8,W/8]×16,空间64×+时间4×)/因果只看过去帧(1+T关键帧→T=0退化成图,图视频通吃)/特征缓存+RMSNorm→无限长1080P; 图像VAE vs 视频VAE 对照图
+- 回链: mrt 两处 WAN-2.1-VAE 链接从 kl-vae 改指 video-vae; kl-vae 加 video-vae 链接; index 接 KL-VAE 后
