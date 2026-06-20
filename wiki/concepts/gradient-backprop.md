@@ -30,7 +30,8 @@ updated: 2026-06-18
   <text class="reveal d1" x="46" y="120" text-anchor="middle" font-size="10" fill="#7a6f5d" transform="rotate(-90 46 120)">loss</text>
   <!-- 当前点：贝塞尔 t≈0.4 处 (218,93)，真落在曲线上 -->
   <circle class="reveal d2" cx="218" cy="93" r="6" fill="#9b2c2c"/>
-  <text class="reveal d2" x="196" y="80" text-anchor="middle" font-size="11" fill="#9b2c2c">现在 w</text>
+  <rect class="reveal d2" x="244" y="58" width="56" height="17" rx="2" fill="#eef1f5"/>
+  <text class="reveal d2" x="272" y="71" text-anchor="middle" font-size="11" fill="#9b2c2c">现在 w</text>
   <!-- 负梯度步：到 t≈0.6 处 (262,131)，沿坡往下 -->
   <line class="reveal d3" x1="224" y1="98" x2="259" y2="129" stroke="#9b2c2c" stroke-width="2.2" marker-end="url(#gb-h)"/>
   <text class="reveal d3" x="356" y="108" text-anchor="middle" font-size="11" fill="#9b2c2c">−lr·梯度 → 沿坡下一步</text>
