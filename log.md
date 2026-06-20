@@ -717,3 +717,9 @@ skill 更新:
 - Qwen3-ForcedAligner-0.6B: 每字插 [time] token 填槽 + 非自回归一次并行预测全部时间戳→断开误差累积; RTF≈0.001, 比WhisperX/NFA累计偏移降67~77%
 - AR级联漂移 vs NAR一次填槽对照图; 接 qwen3-asr/multi-token-prediction(同"串行→并行"思路)/next-token-forward-pass
 - 回链: qwen3-asr g-06 链到本页; 注意 render 不支持 [[a|b]] 别名(已避开)
+
+## [2026-06-15] add | qwen-image-2 bespoke 精装页（用户要 Qwen Image Edit 最新论文）
+- arxiv 2605.10730 全文 HTML/PDF 拉不到(404/超限), 走 ar5iv 全文镜像 + abstract + GitHub 拼齐, 机制已确证
+- qwen-image-2 bespoke(grape #6a3a8e, 第11色): 生成+编辑统一成"条件→目标"; 编辑=条件拼原图VAE latent Concat(ℰ_x,h_y)进同一MMDiT, 没点名天然照抄; frozen Qwen3-VL条件编码器 + MMDiT(QK-Norm/纯乘性调制/SwiGLU/MSRoPE) + VAE f16c64(16×,1.0是8×) + 六段训练+Data Flywheel + DMD蒸馏40步→4-NFE; LMArena ELO1168中文#1; 3图(统一/架构流/编辑一致性)
+- 接线: diffusion-transformer(MMDiT)/qwen3-vl(条件编码器)/kl-vae(latent)/mrope(MSRoPE)/qk-rmsnorm + flow-matching(DMD)/drifting-models/diffusion-opd(少步化线)
+- 回链: diffusion-transformer/qwen3-vl/kl-vae 加 qwen-image-2 source; index 接 hidream-o1 后
