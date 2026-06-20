@@ -105,3 +105,4 @@ archive_messages(message_ids=[m1, m2, m3])
 - [[memory-stream]] · Generative Agents 的对应记忆机制
 - [[retrieval-scoring]] · 都用到的检索基础
 - [[in-context-learning]] · function calling 的基础能力
+- [[deep-research]] · 几十轮搜读塞不下 context 时的调度场景
