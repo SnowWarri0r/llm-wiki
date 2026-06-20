@@ -9,6 +9,7 @@
 - [FFT · 快速傅里叶变换](wiki/papers/fft.md) — 信号处理/算法基础: 傅里叶=棱镜拆频率, FFT 用偶奇折半+单位根对称(蝴蝶)把 N² 砍成 N·logN; 接卷积定理 + 音频频谱(STFT)
 - [CNN · 卷积神经网络](wiki/papers/cnn.md) — 视觉骨架基础: 小核滑遍全图+权重共享, 把局部性/平移不变焊进结构; 卷积滑窗动画 + LeNet→ResNet→ViT 谱系
 - [Deep Residual Learning · ResNet](wiki/papers/resnet.md) — 残差连接的起源，把"网络越深越好"做成现实，也给两年后的 Transformer 留好 sublayer 模板
+- [LSTM · 长短期记忆](wiki/papers/lstm.md) — Transformer 前的序列霸主: cell state 记忆传送带(加法更新)+三个门(遗忘/输入/输出)治住RNN梯度消失; 加法梯度高速路=ResNet残差同构; 被Attention取代
 - [Attention Is All You Need](wiki/papers/attention-is-all-you-need.md) — Transformer 始祖，整个 LLM 时代的奠基
 - [BERT](wiki/papers/bert.md) — 只要 Transformer encoder，用 MLM 学双向上下文，立住 pretrain → finetune 范式
 - [GPT-1](wiki/papers/gpt-1.md) — 只要 Transformer decoder，causal LM 预训练，用输入格式编码任务结构
