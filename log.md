@@ -751,3 +751,8 @@ skill 更新:
 - lstm bespoke(pine #2f6e4a, 第14色): RNN梯度消失→cell state记忆传送带(加法更新C_t=f·C_{t-1}+i·g)+三门(遗忘f/输入i·g/输出o); 加法梯度高速路=ResNet残差x+F(x)同构(时间方向vs深度方向); GRU简化; seq2seq+最早attention→被Transformer取代; 3图(cell单元/三阀门擦写读/梯度高速路); Hochreiter&Schmidhuber 1997 pre-cutoff凭知识写
 - 接线: resnet(加法高速路同构)/attention-is-all-you-need(取代它); index 接 attention 前
 - fix(mrt): Fig01 分层图标签贴右边缘被上层错位盖住→挪到各层露出的左下角(画布/背景/前景logo/前景文字)
+
+## [2026-06-15] add | mrope 页加 T-RoPE→文字时间戳 一节（用户问背景）
+- 用户问 qwen3-vl-report "T-RoPE 长视频 id 又大又稀/密集采fps" 背景
+- mrope 加节: RoPE→M-RoPE→T-RoPE(t绑绝对时间)两毛病(id大+稀; 要密集采各种fps训)→Qwen3-VL 文字时间戳<3.0s>把时间从位置挪到内容; T-RoPE稀疏大id vs 文字时间戳小密id 对照图
+- 回链: qwen3-vl-report §02③ 链到 mrope; mrope sources 加 qwen3-vl-report/qwen-image-2
