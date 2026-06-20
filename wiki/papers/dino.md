@@ -28,6 +28,7 @@ year: 2021
 - [[self-attention]] · 涌现的物体注意力来自它
 - [[patch-embedding]] · ViT 的输入
 - [[elt]] · ILSD 也是自蒸馏（student 对齐更强的自己）
+- [[rae-dit]] · DINOv2 当扩散的语义 latent 编码器（RAE）
 
 ## 我的批注 / 疑问
 - "自蒸馏"在我学的东西里出现了两次：DINO（对齐 EMA teacher）+ ELT 的 ILSD（中途退对齐满配）。共同骨架=让网络追一个更稳/更强版本的自己。
