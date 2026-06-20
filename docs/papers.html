@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>个人 wiki · 精读页 · Deep Dives</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+<style>
+
+.search { margin: 28px 0 8px; }
+.search input { width: 100%; box-sizing: border-box; font-family: 'JetBrains Mono', monospace; font-size: 15px; padding: 14px 16px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper-card); color: var(--ink); }
+.search input:focus { outline: none; border-color: var(--brick); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.chip { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1px; padding: 5px 13px; border: 1px solid var(--rule); border-radius: 20px; background: transparent; color: var(--ink-2); cursor: pointer; transition: all 0.15s; }
+.chip:hover { border-color: var(--brick); }
+.chip.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.chip .c { opacity: 0.55; font-size: 10px; }
+.pill.dom { font-weight: 700; border-color: var(--ink-2); }
+.nores { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--muted); padding: 36px 0; text-align: center; }
+.entries { margin-top: 18px; }
+
+</style>
+</head>
+<body>
+<div class="page">
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">精读页 · Deep Dives · 48 条目</span>
+</div>
+
+<section class="hero">
+  <div class="issue"><a href="index.html" style="color:var(--brick);text-decoration:none;">← index</a> · 按时间倒序</div>
+  <h1 class="title">精读页 · Deep Dives</h1>
+  <p class="dek">共 48 条，最新在上。</p>
+</section>
+
+<div class="search">
+  <input id="q" type="search" placeholder="搜索 标题 / 概念 / 术语…" autocomplete="off" spellcheck="false" />
+  <div class="chips"><button class="chip active" data-dom="">全部 <span class="c">48</span></button><button class="chip" data-dom="ML">ML <span class="c">39</span></button><button class="chip" data-dom="系统">系统 <span class="c">1</span></button><button class="chip" data-dom="金融">金融 <span class="c">7</span></button><button class="chip" data-dom="史">史 <span class="c">1</span></button></div>
+</div>
+<div id="nores" class="nores" hidden>没有匹配的条目 — 换个词试试</div>
+<div class="entries">
+<div class="entry paper" data-domains="ML" data-s="rae-dit · 拿&quot;看懂图的编码器&quot;当扩散的 latent 把扩散的 latent 从 [[kl-vae]] 低维压缩 latent 换成**冻结表征编码器(siglip-2/dinov2)的高维语义 latent**([[representation-autoencoder]]),只训轻量解码器;扩散([[diffusion-transformer]] + [[flow-matching]])在语义空间里跑。比 vae 收敛快 4×、抗过拟合(vae 64 epoch 崩 / rae 稳到 256)、越 scale 越赢。 rae-dit paper ml § 01痛点：vae 的 latent 是&quot;压缩坐标&quot;，没语义 § 02rae：冻结语义编码器 + 只训解码器 § 03唯一不能省的：维度相关噪声调度 § 04越 scale 越简单 + 抗过拟合 引用 / 术语表 representation autoencoder · rae 只训解码器 维度相关噪声调度 scale 后配方简化 rae &gt; vae 的实证">
+  <h3><a href="papers/rae-dit.html">RAE-DiT · 拿&quot;看懂图的编码器&quot;当扩散的 latent</a></h3>
+  <p class="hook">把扩散的 latent 从 [[kl-vae]] 低维压缩 latent 换成**冻结表征编码器(SigLIP-2/DINOv2)的高维语义 latent**([[representation-autoencoder]]),只训轻量解码器;扩散([[diffusion-transformer]] + [[flow-matching]])在语义空间里跑。比 VAE 收敛快 4×、抗过拟合(VAE 64 epoch 崩 / RAE 稳到 256)、越 scale 越赢。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-18</span><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="flux.1 · 先双流后单流 + 两道蒸馏 black forest labs(原 stable diffusion / latent diffusion 核心作者)的 12b 整流流 transformer。架构招牌:**先双流 [[mmdit]] 后单流的混合**;再叠两道正交蒸馏——[[guidance-distillation]](把 cfg 两遍前向压成一遍)做 dev、[[dmd-distillation]] 步数蒸馏到 4 步做 schnell。 flux-1 paper ml § 01来头：sd 原作者的下一代 § 02招一：先双流对齐，再单流干完 § 03招二：引导蒸馏 —— cfg 两遍压成一遍 § 04两道蒸馏叠出三档 引用 / 术语表 跟 sd3.5 摆一起看 先双流后单流 · 混合架构 引导蒸馏 · guidance distillation 步数蒸馏 · schnell pro / dev / schnell 三档">
+  <h3><a href="papers/flux-1.html">FLUX.1 · 先双流后单流 + 两道蒸馏</a></h3>
+  <p class="hook">Black Forest Labs(原 Stable Diffusion / Latent Diffusion 核心作者)的 12B 整流流 Transformer。架构招牌:**先双流 [[mmdit]] 后单流的混合**;再叠两道正交蒸馏——[[guidance-distillation]](把 CFG 两遍前向压成一遍)做 dev、[[dmd-distillation]] 步数蒸馏到 4 步做 schnell。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-17</span><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="pid · 把 vae 解码器换成会扩散的解码器 pid(pixel diffusion)把 latent 扩散最后那个确定性 [[kl-vae]] 解码器,换成一个**以 latent 为条件、直接在高清像素上去噪的扩散模型**([[pixel-diffusion-decoder]])——解码从&quot;忠实还原&quot;升级成&quot;生成式补细节 + 顺手超分(4×/8×)&quot;。nvidia 多伦多 ai lab,arxiv 2605.23902。 pid-pixel-diffusion paper ml § 01痛点：vae 解码器只会还原，不会补 § 02巧处：吃半成品 latent，让 latent 扩散早停 § 03即插即用 + 实测 引用 / 术语表 解码 = 条件生成 sigma-aware adapter 即插即用 · 通吃 latent dmd2 · 4 步 实测">
+  <h3><a href="papers/pid-pixel-diffusion.html">PiD · 把 VAE 解码器换成会扩散的解码器</a></h3>
+  <p class="hook">PiD(Pixel Diffusion)把 latent 扩散最后那个确定性 [[kl-vae]] 解码器,换成一个**以 latent 为条件、直接在高清像素上去噪的扩散模型**([[pixel-diffusion-decoder]])——解码从&quot;忠实还原&quot;升级成&quot;生成式补细节 + 顺手超分(4×/8×)&quot;。NVIDIA 多伦多 AI Lab,arXiv 2605.23902。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-17</span><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="lumine · 从像素直接玩 3d 开放世界的通用 agent 一个 vlm(qwen2-vl-7b)当大脑,直接吃游戏画面像素、吐键盘鼠标操作,端到端打通《原神》5 小时蒙德主线,零样本迁移《鸣潮》《崩铁》。三招:动作即文本 token、看一眼预测多步([[action-chunking]])、该想才想(hybrid thinking)。**纯模仿人类录像,零 rl**。 lumine paper ml § 01痛点：开放世界，纯 rl 练不动 § 02第一招：动作就是&quot;文本&quot;，没有动作头 § 03第二招：看慢动快 · action chunking § 04第三招：该想才想 · hybrid thinking § 05训练：2424 小时人类录像，纯模仿三阶段 § 06真·实时：25.3× 延迟优化 引用 / 术语表 跟 rl 的路线对照 动作即文本 action chunking hybrid thinking · 该想才想 纯模仿学习 · 三阶段 25.3× 延迟优化">
+  <h3><a href="papers/lumine.html">Lumine · 从像素直接玩 3D 开放世界的通用 agent</a></h3>
+  <p class="hook">一个 VLM(Qwen2-VL-7B)当大脑,直接吃游戏画面像素、吐键盘鼠标操作,端到端打通《原神》5 小时蒙德主线,零样本迁移《鸣潮》《崩铁》。三招:动作即文本 token、看一眼预测多步([[action-chunking]])、该想才想(hybrid thinking)。**纯模仿人类录像,零 RL**。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-16</span><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="stable diffusion 3.5 · 整流流 + mmdit 文生图 sd3 那套架构(arxiv 2403.03206《scaling rectified flow transformers》)的产品化开源版:整流流少步采样 + [[mmdit]](文字图像同序列、双权重) + 三文本编码器(clip-l/clip-g/t5-xxl) + qk-norm 稳训,在 16 通道 vae latent 空间画。large 8b / medium 2.5b 开源权重(2024-10)。 stable-diffusion-3-5 paper ml § 01痛点：文字只是&quot;塞进来的调料&quot; § 02不走加噪去噪：整流流的&quot;直线少步&quot; § 03主干 mmdit：同一张桌子，各带各的笔记本 § 04三个文本编码器 + qk-norm 稳训 § 05sd3.5 家族 引用 / 术语表 整流流 · rectified flow mmdit · 多模态扩散 transformer 三文本编码器 qk-norm sd3.5 家族 / mmdit-x">
+  <h3><a href="papers/stable-diffusion-3-5.html">Stable Diffusion 3.5 · 整流流 + MMDiT 文生图</a></h3>
+  <p class="hook">SD3 那套架构(arXiv 2403.03206《Scaling Rectified Flow Transformers》)的产品化开源版:整流流少步采样 + [[mmdit]](文字图像同序列、双权重) + 三文本编码器(CLIP-L/CLIP-G/T5-XXL) + QK-Norm 稳训,在 16 通道 VAE latent 空间画。Large 8B / Medium 2.5B 开源权重(2024-10)。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-16</span><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="lstm · 长短期记忆 给 rnn 加一条单独的&quot;记忆传送带&quot;(cell state)，更新主要靠加法、信息能原样带很远；再配三个门(遗忘/输入/输出)决定擦掉什么、写入什么、读出什么。治住 rnn 的梯度消失，是 transformer 之前的序列霸主。 lstm paper ml § 01痛点：rnn 记不住远处 § 02核心：一条记忆传送带 + 三个阀门 § 03三个阀门：擦一点、写一点、读一点 § 04为什么梯度不消失：加法高速路 § 05余波：gru · 被 transformer 取代 引用 / 术语表 梯度消失/爆炸 cell state · 记忆传送带 遗忘门 f 输入门 i + 候选 g 输出门 o 加法梯度高速路 gru / seq2seq / 被取代">
+  <h3><a href="papers/lstm.html">LSTM · 长短期记忆</a></h3>
+  <p class="hook">给 RNN 加一条单独的&quot;记忆传送带&quot;(cell state)，更新主要靠加法、信息能原样带很远；再配三个门(遗忘/输入/输出)决定擦掉什么、写入什么、读出什么。治住 RNN 的梯度消失，是 Transformer 之前的序列霸主。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-15</span><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="mrt · masked region transformer · 分层图像生成与编辑 不产出拍平的图，而是一摞可编辑的 rgba 图层（画布+背景+k 前景）；同一个 20b 模型靠&quot;哪些图层是干净给定、哪些是噪声待生成&quot;这一个 masking 开关，切出文生层 / 拆图成层 / 层改层三任务。建在 qwen-image 上，cvpr 2026。 mrt paper ml § 01痛点：拍平的图改不动 § 02核心：masking 哪些干净/哪些噪声 = 切任务 § 03anonymous region transformer § 04overflow 画布：别在边界把图层切了 § 05蒸馏 · 结果 · 放进 wiki 引用 / 术语表 rgba 图层 选择性 token masking anonymous region transformer overflow 画布层 dmd 蒸馏 · 8 步 三任务">
+  <h3><a href="papers/mrt.html">MRT · Masked Region Transformer · 分层图像生成与编辑</a></h3>
+  <p class="hook">不产出拍平的图，而是一摞可编辑的 RGBA 图层（画布+背景+K 前景）；同一个 20B 模型靠&quot;哪些图层是干净给定、哪些是噪声待生成&quot;这一个 masking 开关，切出文生层 / 拆图成层 / 层改层三任务。建在 Qwen-Image 上，CVPR 2026。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-15</span><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="qwen-image-2.0 · 生成与编辑统一成一个模式 把文生图和编辑统一进一个&quot;条件→目标&quot;模式：生成时条件只有文字，编辑时把原图 vae latent 和文字嵌入拼接 `concat(ℰ_x, h_y)` 喂同一个 mmdit，没点名的区域天然照抄。20b mmdit，主打中文文字渲染 + 1k token 长指令直出文字密集版面。 qwen-image-2 paper ml § 01痛点：生成和编辑本是两套 § 02统一：条件→目标，编辑就是多塞张原图 § 03架构：qwen3-vl 读懂指令 · vae 压原图 · mmdit 联合 § 04编辑为什么&quot;只改点名处&quot; § 05训练六段 · 蒸馏 · 招牌能力 引用 / 术语表 concat(ℰ_x, h_y) · 条件-目标拼接 天然一致性 frozen qwen3-vl 条件编码器 vae f16c64 六段训练 + data flywheel dmd 蒸馏 · 4-nfe mmdit / msrope">
+  <h3><a href="papers/qwen-image-2.html">Qwen-Image-2.0 · 生成与编辑统一成一个模式</a></h3>
+  <p class="hook">把文生图和编辑统一进一个&quot;条件→目标&quot;模式：生成时条件只有文字，编辑时把原图 VAE latent 和文字嵌入拼接 `Concat(ℰ_x, h_y)` 喂同一个 MMDiT，没点名的区域天然照抄。20B MMDiT，主打中文文字渲染 + 1K token 长指令直出文字密集版面。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-15</span><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="qwen3-vl · 视觉语言模型怎么看图 一个 vlm = 眼睛(siglip-2 vit) + 翻译插头(mlp merger) + 大脑(qwen3 llm)：图按原生分辨率变成变长 token、和文字 token 进同一条序列。qwen3-vl 三处升级（interleaved-mrope / deepstack / 文字时间戳）把长视频、细粒度感知、视频定位顶上去。 qwen3-vl-report paper ml § 01vlm 三件套：眼睛 → 插头 → 大脑 § 02三处升级(vs qwen2.5-vl) § 03训练：四阶段预训练 + 三步后训练 § 04能力 · 放进 wiki 引用 / 术语表 ① interleaved-mrope · 把频谱铺均匀 ② deepstack · 不只取最后一层 vit ③ 文字时间戳 · 视频帧前缀 &lt;3.0 seconds&gt; 三件套 + mlp merger 动态分辨率 → 变长 token interleaved-mrope deepstack 文字时间戳 四阶段预训练 + thinking">
+  <h3><a href="papers/qwen3-vl-report.html">Qwen3-VL · 视觉语言模型怎么看图</a></h3>
+  <p class="hook">一个 VLM = 眼睛(SigLIP-2 ViT) + 翻译插头(MLP merger) + 大脑(Qwen3 LLM)：图按原生分辨率变成变长 token、和文字 token 进同一条序列。Qwen3-VL 三处升级（Interleaved-MRoPE / DeepStack / 文字时间戳）把长视频、细粒度感知、视频定位顶上去。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-15</span><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="qwen3-asr · 给 llm 接个耳朵 不从头训 asr：拿预训练 qwen3 llm 当解码器，前面接一个音频编码器（aut，耳朵）+ projector（翻译插头），让音频&quot;说成 llm 听得懂的输入&quot;。就是 modality-projector 模式，专做语音、规模拉满，post-train 自 qwen3-omni。 qwen3-asr paper ml § 01思路：别重学语言，给 llm 接耳朵 § 02三段流水线 = modality-projector 模式 § 03aut 编码器：压成 12.5hz + 动态窗口 § 04训练四段 § 05亮点 · context biasing + 时间戳 + 结果 引用 / 术语表 ① 8× 下采样 → 12.5hz token 率 aut 编码器 projector 8× 下采样 → 12.5hz 动态注意力窗口 1s~8s context biasing qwen3-forcedaligner · 填槽 nar 时间戳 gspo（rl 阶段）">
+  <h3><a href="papers/qwen3-asr.html">Qwen3-ASR · 给 LLM 接个耳朵</a></h3>
+  <p class="hook">不从头训 ASR：拿预训练 Qwen3 LLM 当解码器，前面接一个音频编码器（AuT，耳朵）+ projector（翻译插头），让音频&quot;说成 LLM 听得懂的输入&quot;。就是 modality-projector 模式，专做语音、规模拉满，post-train 自 Qwen3-Omni。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-14</span><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="diffusionopd · 扩散的 on-policy 蒸馏 给扩散做多奖励对齐时，多奖励一起 rl 会打架、级联训会遗忘。diffusionopd 先各训单任务专家老师，再沿学生自己 rollout 的轨迹把老师蒸进一个学生；扩散去噪是高斯马尔可夫链，每步 kl 有闭式解、塌成均值的 mse。 diffusion-opd paper ml § 01痛点：多奖励对齐扩散，怎么搞都别扭 § 02on-policy distillation：在学生自己走到的状态上学老师 § 03两阶段：先各请专家，再蒸进一个学生 § 04数学甜头：扩散去噪的 kl 塌成 mse § 05效果 · 放进 wiki 引用 / 术语表 on-policy distillation（opd） 两阶段解耦 高斯马尔可夫链 闭式 kl cross-task interference / 遗忘 结果">
+  <h3><a href="papers/diffusion-opd.html">DiffusionOPD · 扩散的 On-Policy 蒸馏</a></h3>
+  <p class="hook">给扩散做多奖励对齐时，多奖励一起 RL 会打架、级联训会遗忘。DiffusionOPD 先各训单任务专家老师，再沿学生自己 rollout 的轨迹把老师蒸进一个学生；扩散去噪是高斯马尔可夫链，每步 KL 有闭式解、塌成均值的 MSE。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-12</span><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="generative modeling via drifting · 训练时漂移、一步生成 扩散把&quot;噪声→数据&quot;的迭代放在推理时（多步慢）；drifting 用&quot;吸引真数据+排斥自己&quot;的漂移场，把迭代搬到训练时，推理只剩一步。imagenet 256 一步 fid 1.54。 drifting-models paper ml § 01痛点：迭代卡在推理时 § 02漂移场：吸引真数据 + 排斥自己 § 03反对称 → 平衡：q=p 时场归零 § 04训练即演化：不动点 + stopgrad § 05它像谁 · 结果 引用 / 术语表 漂移场 v_{p,q} 反对称 → 平衡 stopgrad 不动点 核漂移场 vs gan 1-nfe / 训练时演化">
+  <h3><a href="papers/drifting-models.html">Generative Modeling via Drifting · 训练时漂移、一步生成</a></h3>
+  <p class="hook">扩散把&quot;噪声→数据&quot;的迭代放在推理时（多步慢）；Drifting 用&quot;吸引真数据+排斥自己&quot;的漂移场，把迭代搬到训练时，推理只剩一步。ImageNet 256 一步 FID 1.54。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-12</span><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="fft · 快速傅里叶变换 傅里叶变换把一段信号拆成各频率的强度（像棱镜拆光）；fft 用&quot;偶/奇折半 + 单位根对称&quot;的分治，把朴素的 n² 砍成 n·log n，让音频频谱、卷积加速、mp3/jpeg/mri 全都跑得动。 fft paper ml § 01傅里叶变换在算什么：棱镜拆光 § 02它怎么&quot;测&quot;一个频率：转圈圈 § 03为什么慢，又怎么变快：n² → n·log n § 04蝴蝶与 twiddle：一次乘喂两个输出 § 05拿 x=[1,2,3,4] 真算一遍 § 06搞 ml 为什么该懂：卷积定理 + 频谱 引用 / 术语表 三个实现细节 · 拿 n=8 砸实 step 1 · 按偶/奇拆成两半 step 2 · 各做一个 2 点 dft（最简单的蝴蝶，twiddle=w⁰=1，纯加减） step 3 · 拼起来（外层蝴蝶，奇路乘 twiddle） 对答案 · 朴素 n² 直接硬算 dft · 离散傅里叶变换 单位根 / 复指数 twiddle factor · 旋转因子 分治 · n·log n 蝴蝶 · butterfly 卷积定理 bit-reversal · 位反转重排 stft · 短时傅里叶变换">
+  <h3><a href="papers/fft.html">FFT · 快速傅里叶变换</a></h3>
+  <p class="hook">傅里叶变换把一段信号拆成各频率的强度（像棱镜拆光）；FFT 用&quot;偶/奇折半 + 单位根对称&quot;的分治，把朴素的 N² 砍成 N·log N，让音频频谱、卷积加速、MP3/JPEG/MRI 全都跑得动。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-12</span><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="ode vs sde · 确定性流与随机流（底层 + 数值例子） ode 是&quot;风场里放颗弹珠顺箭头滑，确定地走出一条路&quot;；sde 是&quot;同一个风场但每步随机踹一脚，走出一团落点&quot;。两者由&quot;概率流 ode = 扩散 sde 的同分布替身&quot;连起来——flow-matching 站 ode 这头，diffusion 站 sde 那头。 ode-sde paper ml § 01ode · 跟着风场走的确定轨迹 § 02sde · ode 再加每步随机踹一脚 § 03桥 · 同一团云的两种看法 § 04怎么数值解 · 用真数字砸实 § 05一句话收口 引用 / 术语表 ① ode → euler：每步 x += f(x)·dt ② sde → euler–maruyama：x += f·dt + √dt·g·z ode · 常微分方程 sde · 随机微分方程 drift / diffusion / dw 概率流 ode（桥） score 函数 euler / euler–maruyama √dt 缩放 ddim">
+  <h3><a href="papers/ode-sde.html">ODE vs SDE · 确定性流与随机流（底层 + 数值例子）</a></h3>
+  <p class="hook">ODE 是&quot;风场里放颗弹珠顺箭头滑，确定地走出一条路&quot;；SDE 是&quot;同一个风场但每步随机踹一脚，走出一团落点&quot;。两者由&quot;概率流 ODE = 扩散 SDE 的同分布替身&quot;连起来——flow-matching 站 ODE 这头，diffusion 站 SDE 那头。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-12</span><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="adam · 自适应矩估计优化器 给梯度记两个 ema——一阶动量 m（记方向、抹抖）+ 二阶 v（梯度平方的 ema，记大小），更新量 = lr·m̂/(√v̂+ε)，每个参数都拿到自己的自适应步长。动量 + rmsprop 合体，几乎不用调参，transformer/llm 默认优化器。 adam paper ml § 01sgd 为什么抖 / 慢 § 02动量 · 一阶 ema 记方向 § 03rmsprop · 二阶 ema 调步长 § 04adam = 两者合 + bias correction 引用 / 术语表 一阶动量 m 二阶矩 v 自适应学习率 bias correction · 偏差修正 adamw sgd / 动量 / rmsprop">
+  <h3><a href="papers/adam.html">Adam · 自适应矩估计优化器</a></h3>
+  <p class="hook">给梯度记两个 EMA——一阶动量 m（记方向、抹抖）+ 二阶 v（梯度平方的 EMA，记大小），更新量 = lr·m̂/(√v̂+ε)，每个参数都拿到自己的自适应步长。动量 + RMSprop 合体，几乎不用调参，Transformer/LLM 默认优化器。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-11</span><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="dino · 自监督 vit · 自蒸馏无标签 不用任何标签，让一个 student vit 去对齐一个 teacher vit 的输出，而 teacher 是 student 自己的滑动平均——自己教自己。训出来的特征强在语义/结构，注意力无监督就落在物体上。 dino paper ml § 01自监督 · 没标签怎么学 § 02师生自蒸馏 · 老师是学生的影子 § 03multi-crop · 局部也要猜出全局 § 04防坍缩 · centering 和 sharpening 两个力 § 05涌现 · 没人教却长出语义 引用 / 术语表 自监督 · self-supervised ema teacher · 动量老师 multi-crop · 多裁剪 centering / sharpening 涌现属性 · emerging properties dinov2">
+  <h3><a href="papers/dino.html">DINO · 自监督 ViT · 自蒸馏无标签</a></h3>
+  <p class="hook">不用任何标签，让一个 student ViT 去对齐一个 teacher ViT 的输出，而 teacher 是 student 自己的滑动平均——自己教自己。训出来的特征强在语义/结构，注意力无监督就落在物体上。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-10</span><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="elt · elastic looped transformers for visual generation 把 looped transformer 带进视觉生成：不堆很多不同层，而是把一个 n 层 block 循环套 l 圈（有效深度 n×l、参数只看 n），一次训练出一族深度，推理时按算力挑 l —— 同等算力下 4× 参数缩减。 elt paper ml § 01循环 · n 层 block 套 l 圈 § 02elastic · 一次训练，一族深度 § 03ilsd · 怎么让每一档都好用 § 04结果 · 4× 参数缩减 · 谱系 引用 / 术语表 looped transformer n×l · 有效深度 权重共享 · weight sharing elastic / any-time 推理 ilsd · intra-loop self distillation matryoshka · 套娃 dit · diffusion transformer maskgit / magvit · 掩码生成 fid / fvd">
+  <h3><a href="papers/elt.html">ELT · Elastic Looped Transformers for Visual Generation</a></h3>
+  <p class="hook">把 looped transformer 带进视觉生成：不堆很多不同层，而是把一个 N 层 block 循环套 L 圈（有效深度 N×L、参数只看 N），一次训练出一族深度，推理时按算力挑 L —— 同等算力下 4× 参数缩减。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-10</span><a class="pill" href="https://arxiv.org/pdf/2604.09168" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="hidream-o1-image · pixel-level unified transformer 一个原生统一的图像生成基座：把原始像素、文本、任务条件全塞进一个 transformer 的同一条 token 序列——**没有 vae、没有独立文本编码器**，画之前还用一个推理 agent 先&quot;想&quot;一遍版面。8b 打平/超更大模型。 hidream-o1 paper ml § 01一张图看懂 · 一个 transformer 吃下全部 § 02no vae · 直接在像素上扩散 § 03unified transformer · 混合注意力 § 04o1 · 画之前先&quot;想&quot;一遍 § 05训练 · 结果 · 对照 ideogram 引用 / 术语表 uit · pixel-level unified transformer 无 vae · 像素空间扩散 混合注意力 · hybrid attention reasoning-driven prompt agent flow matching + perceptual qwen3-vl backbone rlhf · grpo geneval / cvtg-2k / gedit">
+  <h3><a href="papers/hidream-o1.html">HiDream-O1-Image · Pixel-level Unified Transformer</a></h3>
+  <p class="hook">一个原生统一的图像生成基座：把原始像素、文本、任务条件全塞进一个 transformer 的同一条 token 序列——**没有 VAE、没有独立文本编码器**，画之前还用一个推理 agent 先&quot;想&quot;一遍版面。8B 打平/超更大模型。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-10</span><a class="pill" href="https://github.com/HiDream-ai/HiDream-O1-Image" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="lpips · 深层特征当感知度量 逐像素比图（l2/psnr）跟人眼差得离谱。lpips 把两图过一个预训练网络、比深层特征的距离——再用人类判断校准的权重加权。深度特征作为&quot;像不像&quot;的尺子好得不讲道理。 lpips paper ml § 01像素 l2 是个烂尺子 § 02怎么算 · 深层特征 + 学出的权重 § 03权重哪来 · 人类 2afc 校准 § 04&quot;不讲道理的好&quot; · 当度量也当损失 引用 / 术语表 lpips 学出的线性权重 bapps 数据集 2afc · 二选一强制选择 unreasonable effectiveness">
+  <h3><a href="papers/lpips.html">LPIPS · 深层特征当感知度量</a></h3>
+  <p class="hook">逐像素比图（L2/PSNR）跟人眼差得离谱。LPIPS 把两图过一个预训练网络、比深层特征的距离——再用人类判断校准的权重加权。深度特征作为&quot;像不像&quot;的尺子好得不讲道理。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-10</span><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="cnn · 卷积神经网络 用一个小核滑遍整张图、一路共用同一套权重，把&quot;局部性 + 平移不变&quot;两条视觉先验焊进网络结构 —— 参数比全连接少几个数量级，且天生认得出挪了位置的目标。 cnn paper ml § 01卷积 · 核滑过每个位置 § 02为什么不直接全连接 · 局部 + 共享 § 03多核 → 层级特征 § 04pooling + 感受野 · 看得越来越宽 § 05谱系 · lenet → resnet → 被 vit 填平 引用 / 术语表 卷积 · convolution 核 · kernel / filter stride / padding feature map 权重共享 · weight sharing 平移不变 · translation invariance 池化 · pooling 感受野 · receptive field 归纳偏置 · inductive bias vit · 护城河被填平">
+  <h3><a href="papers/cnn.html">CNN · 卷积神经网络</a></h3>
+  <p class="hook">用一个小核滑遍整张图、一路共用同一套权重，把&quot;局部性 + 平移不变&quot;两条视觉先验焊进网络结构 —— 参数比全连接少几个数量级，且天生认得出挪了位置的目标。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-09</span><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="minimind-o · 0.1b 端到端 omni 从 0 实现的 ~0.1b 端到端 omni 模型：单一权重同时听文/音/图、说出流式语音。当前公开最小的完整 omni 之一，代码/权重/数据/技术报告全开源，单卡 3090 约 2 小时跑通 mini 全链路。 minimind-o paper ml § 01一张图看懂 · 听看说一条链 § 02thinker–talker · 想的说的分两路 § 03多模态进来 · 冻结编码器 + projector § 04talker · mtp 一次出 8 层 mimi codes § 05训练 · 按数据流逐步接入 § 06结果 · 小而完整 · 端到端 vs 级联 引用 / 术语表 omni 模型 thinker–talker bridge 中间层 mimi codec rvq · 残差向量量化 mtp · multi-token prediction modality projector sensevoice / siglip2 in-context voice cloning cam++ speaker embedding vad · barge-in 端到端 vs 级联">
+  <h3><a href="papers/minimind-o.html">MiniMind-O · 0.1B 端到端 Omni</a></h3>
+  <p class="hook">从 0 实现的 ~0.1B 端到端 Omni 模型：单一权重同时听文/音/图、说出流式语音。当前公开最小的完整 Omni 之一，代码/权重/数据/技术报告全开源，单卡 3090 约 2 小时跑通 mini 全链路。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-08</span><a class="pill" href="https://arxiv.org/abs/2605.03937" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="金融" data-s="爱在冰川 · 低吸待涨的&quot;道法术&quot; 爱在冰川是个 a 股短线（打板/低吸）作者，把自己的体系按**道（模式/心法）→ 法（战法）→ 术（具体技术）**三层组织。核心模式是**低吸待涨**：前一晚复盘找待涨逻辑，开盘买、等逻辑发酵，发酵就次日获利了结，失败就次日割 —— &quot;开盘买、开盘卖、复利循环&quot;，极简到能稳定执行。 aizai-bingchuan paper 金融 § 01道法术 · 体系的三层 § 02道 · 低吸待涨, 极简循环 § 03低吸到底是什么 § 04法 · 两个核心战法 § 05术 · 具体技术 § 06择时 · 情绪周期 + 复盘功课 § 07怎么看待它 · 经验派, 散户难复制 引用 / 术语表 道 / 法 / 术 低吸待涨 低吸 承接盘 / 水下承接 反包 追高 打板比追高安全 横盘龙头股低吸 大智大勇战法 潜伏 揉搓线 / 顺势做小t（术） 情绪周期 · 涨停板复盘">
+  <h3><a href="papers/aizai-bingchuan.html">爱在冰川 · 低吸待涨的&quot;道法术&quot;</a></h3>
+  <p class="hook">爱在冰川是个 A 股短线（打板/低吸）作者，把自己的体系按**道（模式/心法）→ 法（战法）→ 术（具体技术）**三层组织。核心模式是**低吸待涨**：前一晚复盘找待涨逻辑，开盘买、等逻辑发酵，发酵就次日获利了结，失败就次日割 —— &quot;开盘买、开盘卖、复利循环&quot;，极简到能稳定执行。</p>
+  <div class="pills"><span class="pill dom dom-金融">金融</span><span class="pill">paper</span><span class="pill">ingested 2026-06-04</span><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="金融" data-s="资金面 · 量能与共识 价是结果，量和资金行为是过程。资金面分两件一体两面的事：**量能**（成交量是行情的燃料，量价配合还是背离）和**共识**（资金对方向认不认同，游资讲的&quot;分歧转一致&quot;、筹码集中、抱团）。量能管&quot;燃料够不够&quot;，共识管&quot;方向齐不齐&quot;。 capital-flow paper 金融 § 01为什么看资金, 不只看价 § 02量能 · 成交量是燃料 § 03量价配合 vs 背离 § 04共识 · 分歧与一致 § 05筹码集中 · 抱团 § 06量能 × 共识 · 拼成读盘坐标 § 07怎么看待它 · 经验派的局限 引用 / 术语表 资金面 量能 · 成交量 量价关系 量在价先 放量 / 缩量 量价背离 资金共识 分歧转一致 龙头股 · 龙头战法 筹码集中度 抱团 经验派局限 · 过拟合">
+  <h3><a href="papers/capital-flow.html">资金面 · 量能与共识</a></h3>
+  <p class="hook">价是结果，量和资金行为是过程。资金面分两件一体两面的事：**量能**（成交量是行情的燃料，量价配合还是背离）和**共识**（资金对方向认不认同，游资讲的&quot;分歧转一致&quot;、筹码集中、抱团）。量能管&quot;燃料够不够&quot;，共识管&quot;方向齐不齐&quot;。</p>
+  <div class="pills"><span class="pill dom dom-金融">金融</span><span class="pill">paper</span><span class="pill">ingested 2026-06-04</span><a class="pill" href="https://zhuanlan.zhihu.com/p/37669953" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="金融" data-s="缠论 · 动力学篇 · 背驰与区间套 形态学（分型→笔→线段→中枢）只告诉你走势&quot;长什么样&quot;，动力学回答&quot;还有没有劲、什么时候转&quot;。核心是**背驰**（后一段力度比前一段弱 = 趋势要尽），力度用 **macd 面积**量；再用**区间套**（大级别背驰里套小级别背驰）把买卖点精确到一个点。一条定理把两者钉死：**任何背驰必制造某级别买卖点，任何买卖点必源自某级别背驰**。 chan-theory-dynamics paper 金融 § 01背驰 · 力度的比较 § 02用 macd 量&quot;力度&quot; § 03趋势背驰 vs 盘整背驰 § 04区间套 · 精确到一个点 § 05定理 · 背驰 ↔ 买卖点 引用 / 术语表 背驰 标准结构 a+a+b+b+c 趋势背驰 盘整背驰 macd 面积 / 黄白线 力度 区间套 背驰-买卖点定理 第一类买点 第二类买点 第三类买点 级别嵌套转化">
+  <h3><a href="papers/chan-theory-dynamics.html">缠论 · 动力学篇 · 背驰与区间套</a></h3>
+  <p class="hook">形态学（分型→笔→线段→中枢）只告诉你走势&quot;长什么样&quot;，动力学回答&quot;还有没有劲、什么时候转&quot;。核心是**背驰**（后一段力度比前一段弱 = 趋势要尽），力度用 **MACD 面积**量；再用**区间套**（大级别背驰里套小级别背驰）把买卖点精确到一个点。一条定理把两者钉死：**任何背驰必制造某级别买卖点，任何买卖点必源自某级别背驰**。</p>
+  <div class="pills"><span class="pill dom dom-金融">金融</span><span class="pill">paper</span><span class="pill">ingested 2026-06-04</span><a class="pill" href="https://www.chanluns.com/chzhshch/" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="金融" data-s="缠论 · 操作篇 · 走势分解与同级别分解 缠论操作的地基是一条极简定理：**任何级别的走势，要么是趋势，要么是盘整**（走势类型定理）。把走势在**同一个级别**上拆成&quot;盘整 + 趋势&quot;的接龙（同级别分解），一个走势类型走完就是一个操作点。难点是**走势的多义性**（同一张图能有多种合法分解），缠论用&quot;走势终完美 + 只做当下&quot;来化解。 chan-theory-operation paper 金融 § 01走势类型定理 · 只有两种走势 § 02同级别分解 · 切成能操作的段 § 03中枢震荡 · 盘整里怎么做 § 04走势的多义性 · 缠论最难的活点 § 05闭环 · 只做当下 引用 / 术语表 走势类型定理 趋势 盘整 走势终完美 同级别分解 同级别分解操作法 中枢震荡操作 中枢延伸 / 扩展 / 新生 走势的多义性 只做当下 级别选择">
+  <h3><a href="papers/chan-theory-operation.html">缠论 · 操作篇 · 走势分解与同级别分解</a></h3>
+  <p class="hook">缠论操作的地基是一条极简定理：**任何级别的走势，要么是趋势，要么是盘整**（走势类型定理）。把走势在**同一个级别**上拆成&quot;盘整 + 趋势&quot;的接龙（同级别分解），一个走势类型走完就是一个操作点。难点是**走势的多义性**（同一张图能有多种合法分解），缠论用&quot;走势终完美 + 只做当下&quot;来化解。</p>
+  <div class="pills"><span class="pill dom dom-金融">金融</span><span class="pill">paper</span><span class="pill">ingested 2026-06-04</span><a class="pill" href="https://www.chanluns.com/chzhshch/" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="ideogram 4.0 · 9.3b 单流 dit, 把排版做进权重 ideogram 第一个开源权重模型（2026-06-03）：9.3b 的**单流 diffusion transformer**，用 **qwen3-vl（vlm）当文本编码器**、**只用结构化 json caption 训练**（显式给调色板/bounding box/文字），9.3b 的体量把文本渲染和版面控制做到开源第一、逼近闭源 gpt image 2。 ideogram-4 paper ml § 01一张图看懂 pipeline § 02单流 dit · 文本图像一条序列 § 03用 vlm 当文本编码器 § 04训练目标 · flow matching + 非对称 cfg § 05训练 / 推理 · 为什么不是自回归 § 06杀手锏 · 结构化 json caption § 07结果 · 9.3b 打赢一堆大模型 引用 / 术语表 diffusion transformer · dit 单流 · single-stream 双流 · mmdit qwen3-vl 文本编码器 13 层 hidden state 拼接 flow matching 非对称 cfg 结构化 json caption bounding-box 布局控制 调色板条件 kl vae latent · 8× 压缩 mrope · qk-rmsnorm">
+  <h3><a href="papers/ideogram-4.html">Ideogram 4.0 · 9.3B 单流 DiT, 把排版做进权重</a></h3>
+  <p class="hook">Ideogram 第一个开源权重模型（2026-06-03）：9.3B 的**单流 Diffusion Transformer**，用 **Qwen3-VL（VLM）当文本编码器**、**只用结构化 JSON caption 训练**（显式给调色板/bounding box/文字），9.3B 的体量把文本渲染和版面控制做到开源第一、逼近闭源 GPT Image 2。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-04</span><a class="pill" href="https://github.com/ideogram-oss/ideogram4" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="金融" data-s="缠论 · 把走势拆成可数的结构 缠论（缠中说禅，李彪 2006–2008《教你炒股票 108 课》）把 k 线走势自下而上拆成一套**可数的结构**：分型 → 笔 → 线段 → 中枢，再用背驰和级别判断买卖点。核心哲学是「走势终完美」—— 任何走势最终都会走完，分析的是当下而非预测。 chan-theory paper 金融 § 01它想干什么 · 走势终完美 § 02地基 · 包含处理与分型 § 03笔与线段 · 往上搭一层 § 04中枢 · 缠论的心脏 § 05级别 · 自相似的俄罗斯套娃 § 06动力学 · 背驰与三类买卖点 § 07怎么看待它 · 自洽不等于有效 引用 / 术语表 缠论 · 缠中说禅 走势终完美 k 线包含处理 分型 · 顶 / 底 笔 线段 中枢 走势类型 · 趋势 / 盘整 级别 · 自相似嵌套 背驰 三类买卖点 主观性争议 · 自洽≠有效">
+  <h3><a href="papers/chan-theory.html">缠论 · 把走势拆成可数的结构</a></h3>
+  <p class="hook">缠论（缠中说禅，李彪 2006–2008《教你炒股票 108 课》）把 K 线走势自下而上拆成一套**可数的结构**：分型 → 笔 → 线段 → 中枢，再用背驰和级别判断买卖点。核心哲学是「走势终完美」—— 任何走势最终都会走完，分析的是当下而非预测。</p>
+  <div class="pills"><span class="pill dom dom-金融">金融</span><span class="pill">paper</span><span class="pill">ingested 2026-06-03</span><a class="pill" href="https://bigquant.com/wiki/doc/cOsACEKd1x" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="史" data-s="盐铁论 · 两千年前的国营 vs 民营 公元前 81 年（汉昭帝始元六年）的&quot;盐铁会议&quot;，是中国历史上第一场被完整记录的**国家统制经济 vs 民间自由经济**大辩论：桑弘羊（法家、官营垄断）对阵贤良文学 60 余人（儒家、藏富于民）。桓宽把记录整理成《盐铁论》。两千年后，这场辩论的题目几乎一字未改。 discourses-salt-iron paper 史 § 01那场会议 · 公元前 81 年 § 02桑弘羊的财政机器 § 03核心分歧 · 钱该在谁手里 § 04均输平准 · 国家当总批发商 § 05两千年回声 · 同一道题 引用 / 术语表 盐铁会议 桑弘羊 贤良文学 桓宽 盐铁专卖 均输 平准 酒榷（榷酤） 与民争利 富国强兵 vs 藏富于民 本末之争 · 重农抑末 法家 vs 儒家 · 统制 vs 市场">
+  <h3><a href="papers/discourses-salt-iron.html">盐铁论 · 两千年前的国营 vs 民营</a></h3>
+  <p class="hook">公元前 81 年（汉昭帝始元六年）的&quot;盐铁会议&quot;，是中国历史上第一场被完整记录的**国家统制经济 vs 民间自由经济**大辩论：桑弘羊（法家、官营垄断）对阵贤良文学 60 余人（儒家、藏富于民）。桓宽把记录整理成《盐铁论》。两千年后，这场辩论的题目几乎一字未改。</p>
+  <div class="pills"><span class="pill dom dom-史">史</span><span class="pill">paper</span><span class="pill">ingested 2026-06-03</span><a class="pill" href="https://zh.wikipedia.org/wiki/盐铁论" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="金融" data-s="康波周期 · 50–60 年的经济四季 康德拉季耶夫 1920 年代发现资本主义经济有 ~50–60 年的长波，schumpeter 把成因归到**成簇出现的技术革命**；一个周期分繁荣/衰退/萧条/回升四季，每季约 10–15 年。周金涛把它本土化成「人生发财靠康波」。**但主流经济学多不认它，定年和成因都无共识，不能拿来精确择时。** kondratiev-wave paper 金融 § 01长波 · 经济的四季 § 02引擎 · 技术革命成簇出现 § 03四季 · 大类资产各有各的天 § 04嵌套 · 你看到的经济是四条周期的合力 § 05本土化 · 人生发财靠康波 § 06怎么看待它 · 罗盘, 不是钟表 引用 / 术语表 康波 · 康德拉季耶夫长波 a 相 / b 相 schumpeter · 技术革命归因 创造性破坏 · 创新成簇 五次浪潮 四季 · 繁荣/衰退/萧条/回升 基钦周期 朱格拉周期 库兹涅茨周期 周金涛 人生发财靠康波 主流质疑">
+  <h3><a href="papers/kondratiev-wave.html">康波周期 · 50–60 年的经济四季</a></h3>
+  <p class="hook">康德拉季耶夫 1920 年代发现资本主义经济有 ~50–60 年的长波，Schumpeter 把成因归到**成簇出现的技术革命**；一个周期分繁荣/衰退/萧条/回升四季，每季约 10–15 年。周金涛把它本土化成「人生发财靠康波」。**但主流经济学多不认它，定年和成因都无共识，不能拿来精确择时。**</p>
+  <div class="pills"><span class="pill dom dom-金融">金融</span><span class="pill">paper</span><span class="pill">ingested 2026-06-03</span><a class="pill" href="https://zh.wikipedia.org/wiki/康德拉季耶夫长波" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="金融" data-s="净利润断层 · 业绩惊喜 + 跳空缺口 净利润断层 = **净利润惊喜（业绩超预期）** + **断层（盈余公告次日股价向上跳空缺口）** 两个条件同时成立才买。它本质是 a 股版的 **pead（盈余公告后漂移）**：好消息公布后股价不会一步到位，而是朝超预期方向慢慢漂，断层就是漂移启动的信号。 net-profit-gap paper 金融 § 01什么是&quot;断层&quot; § 02两个要素 · 缺一不可 § 03它抓的是 pead · 一个老异象 § 04缺口回补 · 证伪信号 § 05为什么有效 · 又为什么衰减 引用 / 术语表 净利润断层 净利润惊喜 · 业绩超预期 断层 · 跳空缺口 pead · 盈余公告后漂移 ball &amp; brown 1968 sue · 标准化预期外盈余 缺口回补 业绩预告抢跑 信息缓慢扩散 · 反应不足 因子拥挤 · 衰减 有效市场假说违背 基本面 + 技术面结合">
+  <h3><a href="papers/net-profit-gap.html">净利润断层 · 业绩惊喜 + 跳空缺口</a></h3>
+  <p class="hook">净利润断层 = **净利润惊喜（业绩超预期）** + **断层（盈余公告次日股价向上跳空缺口）** 两个条件同时成立才买。它本质是 A 股版的 **PEAD（盈余公告后漂移）**：好消息公布后股价不会一步到位，而是朝超预期方向慢慢漂，断层就是漂移启动的信号。</p>
+  <div class="pills"><span class="pill dom dom-金融">金融</span><span class="pill">paper</span><span class="pill">ingested 2026-06-03</span><a class="pill" href="https://en.wikipedia.org/wiki/Post–earnings-announcement_drift" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="系统" data-s="go gc · 从三色 mark-sweep 到 green tea go 的 gc 是**三色并发 mark-sweep + write barrier**，靠 gogc/gomemlimit 控触发节奏；go 1.26 默认开的 **green tea** 把 mark 的工作单元从&quot;对象&quot;换成&quot;8 kib page&quot;，把指针追逐的随机访存改成按页顺序扫，gc-heavy 程序 gc overhead 降 10–40%。 go-gc paper 系统 § 01底座 · 三色并发 mark-sweep § 02并发的代价 · write barrier § 03什么时候触发 · gogc 与 gomemlimit § 04痛点 · graph flood 在内存里乱跳 § 05green tea · 把工作单元从对象换成页 § 06实战 · 升 go 1.26 意味着什么 引用 / 术语表 三色标记 · tri-color marking mark-sweep · stw write barrier · 写屏障 mutator gc roots · 根集合 gogc gomemlimit gc pacing · 配速 size class · span page · 8 kib graph flood · 图洪泛 green tea gc">
+  <h3><a href="papers/go-gc.html">Go GC · 从三色 mark-sweep 到 Green Tea</a></h3>
+  <p class="hook">Go 的 GC 是**三色并发 mark-sweep + write barrier**，靠 GOGC/GOMEMLIMIT 控触发节奏；Go 1.26 默认开的 **Green Tea** 把 mark 的工作单元从&quot;对象&quot;换成&quot;8 KiB page&quot;，把指针追逐的随机访存改成按页顺序扫，GC-heavy 程序 GC overhead 降 10–40%。</p>
+  <div class="pills"><span class="pill dom dom-系统">系统</span><span class="pill">paper</span><span class="pill">ingested 2026-06-01</span><a class="pill" href="https://go.dev/doc/go1.26" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="clip · learning transferable visual models from natural language supervision 不用人工打标签, 直接从互联网爬 4 亿张&quot;图 + caption&quot;对子, 让图像和文本在同一个向量空间里对齐 —— **图片识别从&quot;判断这是什么类别&quot;变成&quot;哪句话最配这张图&quot;**, 顺手解锁 zero-shot 分类和所有现代多模态。 clip paper ml § 01痛点 · 一张图一个 label 太浪费 § 02架构 · 双塔 + 末端对齐 § 03对比学习 · 把整个 batch 当训练单元 § 04数据 · 4 亿对子的力量 § 05zero-shot · 分类变成&quot;哪句话最配&quot; § 06下游 · 谁在用 clip § 07历史定位 · 视觉的 gpt-3 时刻 引用 / 术语表 ① 生成模型的 conditioning ② llm 的视觉前端 ③ 大数据集的过滤器 ④ open-vocabulary 检测 / 分割 imagenet 范式 wit · webimagetext 400m 对比学习 · contrastive learning dual-tower architecture · 双塔 zero-shot classification clip joint embedding space gpt-3 弱监督路线 in-batch negatives · 批内负样本 temperature parameter · 温度参数 prompt engineering · 提示词工程 open vocabulary siglip · sigmoid-loss clip">
+  <h3><a href="papers/clip.html">CLIP · Learning Transferable Visual Models from Natural Language Supervision</a></h3>
+  <p class="hook">不用人工打标签, 直接从互联网爬 4 亿张&quot;图 + caption&quot;对子, 让图像和文本在同一个向量空间里对齐 —— **图片识别从&quot;判断这是什么类别&quot;变成&quot;哪句话最配这张图&quot;**, 顺手解锁 zero-shot 分类和所有现代多模态。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-28</span><a class="pill" href="https://arxiv.org/abs/2103.00020" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="memgpt · towards llms as operating systems 把 llm 的 context window 当成 ram，外部存储当硬盘 —— 让 llm **通过 function call 自己管自己的记忆**：哪些塞进 context、哪些挪到外部、什么时候要回看老对话。**操作系统级别的记忆管理思路套在 agent 身上**。 memgpt paper ml § 01痛点 · context 装不下，谁来管？ § 02核心隐喻 · os 的虚拟内存 § 03三层记忆 · 像 cpu 寄存器 / ram / 硬盘 § 04核心循环 · context 满了怎么办 § 05vs generative agents · 一对孪生兄弟 § 06实际场景 · 长对话不丢人设 § 07历史定位 · 后来变成了 letta 引用 / 术语表 外部编排 llm 自己当 os function calling 调度记忆 三层记忆 · core / recall / archival function calling · 函数调用 操作系统虚拟内存 context 90% 阈值 外部编排 vs llm 自治 超长对话一致性 letta · 论文的产品化">
+  <h3><a href="papers/memgpt.html">MemGPT · Towards LLMs as Operating Systems</a></h3>
+  <p class="hook">把 LLM 的 context window 当成 RAM，外部存储当硬盘 —— 让 LLM **通过 function call 自己管自己的记忆**：哪些塞进 context、哪些挪到外部、什么时候要回看老对话。**操作系统级别的记忆管理思路套在 agent 身上**。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-28</span><a class="pill" href="https://arxiv.org/abs/2310.08560" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="ppo · proximal policy optimization 强化学习里**最关键也最容易翻车**的一件事是更新步子的大小 —— ppo 用一行 `clip` 把&quot;别走太远&quot;这个约束硬塞进 loss 里, **简单到能在 200 行代码内复现, 又稳到撑起了 chatgpt 的对齐**。 ppo paper ml § 01rl 基本设定 · agent ↔ env 一来一回 § 02痛点 · 步子大就崩 § 03核心 · 一行 clip 干掉所有麻烦 § 04顺手白送 · 数据重用 k 个 epoch § 05另一半 · clip 只是 actor 那一半 § 06gae · 把&quot;超出预期&quot;算得又稳又准 § 07完整的 loss · 三项, 不是一项 § 08训练时盯什么 · 论文不写, 一跑就懂 § 09杀手级应用 · rlhf 训出 chatgpt § 10遗产 · grpo · dpo · 跟它们的关系 § 11它真正改变的是什么 引用 / 术语表 grpo (deepseek 2024) dpo (2023) 当前生态 policy gradient · 策略梯度 trpo · trust region policy optimization clipped surrogate objective k-epoch data reuse rlhf · reinforcement learning from human feedback rl 训练信号迟来 步子大就崩 advantage function · 优势函数 kl penalty · 防 reward hacking grpo · group relative policy optimization gae · generalized advantage estimation dpo · direct preference optimization actor-critic · 演员-评论家结构 critic · 价值估计器 v(s) explained_variance · critic 成绩单 entropy bonus · 熵项 / ent_coef reward normalization · 奖励归一化 deterministic vs stochastic 评估">
+  <h3><a href="papers/ppo.html">PPO · Proximal Policy Optimization</a></h3>
+  <p class="hook">强化学习里**最关键也最容易翻车**的一件事是更新步子的大小 —— PPO 用一行 `clip` 把&quot;别走太远&quot;这个约束硬塞进 loss 里, **简单到能在 200 行代码内复现, 又稳到撑起了 ChatGPT 的对齐**。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-28</span><a class="pill" href="https://arxiv.org/abs/1707.06347" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="vit · an image is worth 16×16 words 把图片切成 16×16 的小块，每块当一个&quot;词&quot;，剩下的事全交给 transformer —— **cnn 不是必需品，transformer 也能干视觉**，前提是数据够多。 vit paper ml § 01痛点 · 像素当 token 算不动 § 02核心思路 · 把图切成 token § 03patch embedding · 切完拉平投影 § 04归纳偏置 · cnn 的祖传家产被扔了 § 05scaling · 数据量决定胜负 § 06注意力学到了什么 · 自己长出 cnn § 07遗产 · 它真正改变的是什么 引用 / 术语表 ① 跨模态架构统一 ② cnn 时代结束 ③ 视觉吃 scaling law transformer 推平 nlp 16×16 patch 标准 transformer encoder 归纳偏置 · inductive bias jft-300m 视觉的 scaling law vit 的完整 pipeline conv2d 实现 patch embedding 跨模态架构统一 交叉点曲线 注意力的自然层次">
+  <h3><a href="papers/vit.html">ViT · An Image is Worth 16×16 Words</a></h3>
+  <p class="hook">把图片切成 16×16 的小块，每块当一个&quot;词&quot;，剩下的事全交给 Transformer —— **CNN 不是必需品，Transformer 也能干视觉**，前提是数据够多。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-28</span><a class="pill" href="https://arxiv.org/abs/2010.11929" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="generative agents · interactive simulacra of human behavior 给 llm 加上**记忆流 + 反思 + 规划**三件套，让 25 个 ai agent 在一个虚拟小镇里自主生活 —— 会交朋友、传八卦、组织派对、甚至谈恋爱。这套架构是现在几乎所有&quot;有记忆的 ai agent&quot;的祖宗。 generative-agents paper ml § 01痛点 · llm 没有记忆 § 02agent 架构 · 感知 → 检索 → 反思 → 规划 → 行动 § 03记忆流 · 所有经历存成一条时间线 § 04检索 · 时近度 × 重要性 × 相关性 § 05反思 · 碎片变认知 § 06smallville · 涌现出来的社会行为 § 07工程视角 · 这套东西怎么落地 引用 / 术语表 llm 没有记忆 memory stream · 记忆流 reflection · 反思 planning · 规划 smallville · 虚拟小镇 每步都调 llm 只追加的表 检索排序 rag · retrieval-augmented generation 反思触发阈值 涌现行为 token 成本">
+  <h3><a href="papers/generative-agents.html">Generative Agents · Interactive Simulacra of Human Behavior</a></h3>
+  <p class="hook">给 LLM 加上**记忆流 + 反思 + 规划**三件套，让 25 个 AI agent 在一个虚拟小镇里自主生活 —— 会交朋友、传八卦、组织派对、甚至谈恋爱。这套架构是现在几乎所有&quot;有记忆的 AI agent&quot;的祖宗。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-27</span><a class="pill" href="https://arxiv.org/abs/2304.03442" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="roformer · rotary position embedding (rope) 把位置信息编码成 q/k 向量的**旋转角度**，让 attention 的点积天然就能感知相对位置 —— 不用额外参数，不用改架构，现在几乎所有主流 llm 都用这个。 rope paper ml § 01为什么需要新的 pe § 02核心直觉 · 时钟指针 § 03怎么做 · 多频率旋转 § 04为什么管用 § 05历史定位 · 静悄悄改变了整个行业 引用 / 术语表 点积天然含相对位置 远距离自动衰减 attention 对顺序无感 sinusoidal pe · 原版位置编码 旋转 q/k 相对位置 vs 绝对位置 kv cache 2d 子空间分解 多频率 = 多尺度位置指纹 元素级实现 正交变换 · 保角性 远距离自动衰减 苏剑林 · jianlin su 上下文扩展 · ntk-aware / yarn">
+  <h3><a href="papers/rope.html">RoFormer · Rotary Position Embedding (RoPE)</a></h3>
+  <p class="hook">把位置信息编码成 Q/K 向量的**旋转角度**，让 attention 的点积天然就能感知相对位置 —— 不用额外参数，不用改架构，现在几乎所有主流 LLM 都用这个。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-25</span><a class="pill" href="https://arxiv.org/abs/2104.09864" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="whisper · robust speech recognition via large-scale weak supervision 用 68 万小时互联网音频 + 带噪字幕做弱监督训练，训出来的 asr 比用几千小时精标数据的模型鲁棒性强一个数量级 —— 跟 gpt-3 同一套&quot;量大力飞&quot;哲学。 whisper paper ml § 01痛点 · 精标数据的天花板 § 02数据策略 · 量大力飞 § 03架构 · 极度保守 § 04多任务 · 一个模型干所有事 § 05规模 · 从 tiny 到 large § 06鲁棒性 · 最反直觉的结果 § 07历史定位 · 语音领域的 gpt 时刻 § 08训练 vs 推理 · 跟原版 transformer 一样 引用 / 术语表 精标数据 + 自监督预训练 68 万小时互联网音频 弱监督 · weak supervision 标准 encoder-decoder transformer 多任务统一格式 wer · word error rate wav2vec 2.0 ctc · connectionist temporal classification conformer log-mel spectrogram · 输入格式 bpe · byte pair encoding 模型尺寸 · tiny → large">
+  <h3><a href="papers/whisper.html">Whisper · Robust Speech Recognition via Large-Scale Weak Supervision</a></h3>
+  <p class="hook">用 68 万小时互联网音频 + 带噪字幕做弱监督训练，训出来的 ASR 比用几千小时精标数据的模型鲁棒性强一个数量级 —— 跟 GPT-3 同一套&quot;量大力飞&quot;哲学。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-25</span><a class="pill" href="https://arxiv.org/abs/2212.04356" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="bert · bidirectional encoder representations from transformers **把 transformer 的 encoder stack 单独拿出来，用 masked language model 让它一次性看到双向上下文做预训练**——理解类任务从此进入&quot;先 pretrain 一个，到处 finetune&quot;时代。 bert paper ml § 012018 的分叉路口 § 02mlm · 训练双向的诡计 § 03nsp · 给段间关系一个 pretrain 信号 § 04只要 encoder · 架构对比 § 05pretrain → finetune · 范式革命 § 06当时炸场，今天的遗产 § 07训练 vs 推理 · bert 不&quot;写&quot; 引用 / 术语表 bidirectional context train-inference 分布漂移 roberta · a robustly optimized bert pretraining approach rag 嵌入模型为何还在用 bert 系 &quot;先 pretrain 一个大模型再到处用&quot;成了行业默认 mlm · masked language model nsp · next sentence prediction [cls] / [sep] / segment embedding wordpiece tokenizer bert-base vs bert-large glue benchmark elmo · 2018 前的&quot;双向&quot;半成品">
+  <h3><a href="papers/bert.html">BERT · Bidirectional Encoder Representations from Transformers</a></h3>
+  <p class="hook">**把 Transformer 的 encoder stack 单独拿出来，用 masked language model 让它一次性看到双向上下文做预训练**——理解类任务从此进入&quot;先 pretrain 一个，到处 finetune&quot;时代。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://arxiv.org/abs/1810.04805" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="dmel · speech tokenization made simple **别训 codec 了，直接把 log-mel 按预设 bin 量化成 token** —— 对 speech-llm 训练来说，简单的 bin quantization 跟复杂的 neural rvq codec 效果相当。 dmel paper ml § 01音频 → token · 主流做法的痛点 § 02从波形到 log-mel · 输入是什么 § 03bin quantization · 简单到 20 行代码 § 04dmel vs rvq · 复杂度差一个量级 § 05这是个反复出现的范式 § 06tml 怎么把 dmel 接进 micro-turn § 07历史定位与影响 引用 / 术语表 log-mel spectrogram · 对数 mel 频谱图 rvq codec · residual vector quantization &quot;性能相当&quot;的实证 &quot;主模型变强 · 预处理塌缩&quot; 范式 &quot;端到端&quot;的工程含义 2024-12 tml vocabulary 大小取舍 vmin / vmax 是数据集统计值 vocoder · 把 mel 转回波形 pipeline 简化的工程价值 fish-speech 路线 vs dmel 路线 &quot;先做扎实简单方案&quot;的工程哲学">
+  <h3><a href="papers/dmel.html">dMel · Speech Tokenization Made Simple</a></h3>
+  <p class="hook">**别训 codec 了，直接把 log-mel 按预设 bin 量化成 token** —— 对 speech-LLM 训练来说，简单的 bin quantization 跟复杂的 neural RVQ codec 效果相当。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://arxiv.org/abs/2407.15835" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="flow matching for generative modeling **把噪声→数据的生成问题转成一个&quot;学速度场&quot;的回归问题**。给定起点（噪声）和终点（数据），定义一条路径，让模型学每一时刻应该往哪个方向走。 flow-matching paper ml § 01为什么 diffusion 不够好用 § 02速度场 · flow vs diffusion 的核心差异 § 03velocity field · 具体长什么样 § 04ot 直线 · 为什么 flow matching 推理这么快 § 05training · 跟 diffusion 比有多简单 § 06为什么 tml 选 flow matching 做音频 § 07历史定位与后续 引用 / 术语表 &quot;直接说&quot; vs &quot;绕一圈说&quot; velocity field ↔ probability path 1:1 对应 conditional vs marginal flow matching loss 概率路径自由 tml 选 flow matching 而不是 diffusion 的工程原因 score function · ∇log p(x) 连续性方程 · continuity equation tweedie&#x27;s formula rectified flow · liu et al. 2022 stable diffusion 3 · flux &quot;训练目标 = 想要的东西&quot; 是反复出现的范式 rvq 路线 vs flow matching 路线 · 两种音频生成哲学">
+  <h3><a href="papers/flow-matching.html">Flow Matching for Generative Modeling</a></h3>
+  <p class="hook">**把噪声→数据的生成问题转成一个&quot;学速度场&quot;的回归问题**。给定起点（噪声）和终点（数据），定义一条路径，让模型学每一时刻应该往哪个方向走。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://arxiv.org/abs/2210.02747" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="gpt-1 · improving language understanding by generative pre-training **用 transformer decoder 在 bookcorpus 上预训练&quot;预测下一个词&quot;，再 finetune 到各种下游任务** —— 用输入文本格式编码任务结构，避免给每个任务设计新架构。 gpt-1 paper ml § 012018 上半年的赌局 § 02预训练 · causal language model § 03架构 · causal mask 是怎么回事 § 04怎么用 · input transformations § 05跟 bert 的对照 § 06真正的遗产 § 07训练 vs 推理 · causal mask 的双重作用 引用 / 术语表 训练信号密度 bookcorpus auxiliary lm loss &quot;tl;dr:&quot; prompt causal mask autoregressive generation · 自回归生成 12 项 benchmark bookcorpus + lm = 117m 训练几天能搞定 decoder-only 的最终胜出 为什么 gpt-1 不能 zero-shot prompting · 提示工程 generative vs discriminative pre-training">
+  <h3><a href="papers/gpt-1.html">GPT-1 · Improving Language Understanding by Generative Pre-Training</a></h3>
+  <p class="hook">**用 Transformer decoder 在 BookCorpus 上预训练&quot;预测下一个词&quot;，再 finetune 到各种下游任务** —— 用输入文本格式编码任务结构，避免给每个任务设计新架构。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://openai.com/research/language-unsupervised" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="gpt-2 · language models are unsupervised multitask learners **同一个 transformer decoder 架构放大到 1.5b + 用 webtext 训，发现 zero-shot 可以触发摘要 / 翻译 / 阅读理解 —— 不用 finetune 也能跨任务工作**。 gpt-2 paper ml § 01gpt-1 之后的下一步 § 024 个 size · 把 scaling 摆出来 § 03zero-shot · prompt 就能触发任务 § 04webtext · 把人类注意力当数据 filter § 05gpt-1 → gpt-2 · 什么变了 / 什么没变 § 06&quot;too dangerous to release&quot; · staged release 的开端 § 07真正的遗产 引用 / 术语表 zero-shot transfer · 零样本迁移 &quot;language models are unsupervised multitask learners&quot; perplexity · 困惑度 scaling laws · kaplan et al. 2020 &quot;tl;dr:&quot; trick 隐式任务示例 reddit karma ≥ 3 启发式 staged release · 分阶段释放 为什么 thesis 钉死重要 prompt engineering gpt-3 在哪赢 webtext 没开源">
+  <h3><a href="papers/gpt-2.html">GPT-2 · Language Models are Unsupervised Multitask Learners</a></h3>
+  <p class="hook">**同一个 Transformer decoder 架构放大到 1.5B + 用 WebText 训，发现 zero-shot 可以触发摘要 / 翻译 / 阅读理解 —— 不用 finetune 也能跨任务工作**。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://openai.com/research/better-language-models" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="gpt-3 · language models are few-shot learners **模型 scale 到 175b 后，prompt 里塞几个例子就能让模型现学任务 —— in-context learning 是 emergent ability**。gpt 系列从 &quot;pretrain + finetune&quot; 演化到 &quot;pretrain + prompt&quot;，finetune 阶段在前沿模型上从此退场。 gpt-3 paper ml § 01把同架构再放 100 倍 · 175b 是怎么来的 § 02in-context learning · 论文真正的 surprise § 03emergence · 小模型 ≈ 0 大模型突然能 § 04scaling laws · 算出来的 175b § 05真正的遗产 引用 / 术语表 in-context learning · icl · 上下文内学习 emergent abilities · 涌现能力 scaling laws · 标度律 sparse attention · 稀疏注意力 implicit gradient descent $4.6m 训练成本 8 size 系列 &quot;够好 + 极快&quot;赢&quot;最好 + 极慢&quot; chinchilla 修正 · hoffmann et al. 2022 rlhf 引爆链 · 2022 instructgpt → chatgpt trajectory 视角 vs snapshot 视角 icl 的扩展 · cot / 工具 / 长上下文 / reasoning">
+  <h3><a href="papers/gpt-3.html">GPT-3 · Language Models are Few-Shot Learners</a></h3>
+  <p class="hook">**模型 scale 到 175B 后，prompt 里塞几个例子就能让模型现学任务 —— in-context learning 是 emergent ability**。GPT 系列从 &quot;pretrain + finetune&quot; 演化到 &quot;pretrain + prompt&quot;，finetune 阶段在前沿模型上从此退场。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://arxiv.org/abs/2005.14165" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="deep residual learning · 残差连接的起源 **别让网络从零学一个映射，让它学跟&quot;输入直接复制过去&quot;的差距**——加一条 `+ x` 的&quot;快车道&quot;，让深层网络的梯度有路可走、参数有路可不学。 resnet paper ml § 01故事背景 § 02degradation problem6 · 反直觉的崩塌 § 03残差 · f 学的是什么 § 04+ x 为什么管用 · 两个独立的好处 § 05怎么把它做得能用 § 06它真正改变的是什么 引用 / 术语表 角度 1 · 梯度高速路（已在 fig 02 演示） 角度 2 · identity 是免费起点（看 fig 03） 5.1 resnet 系列 · 把深度从瓶颈变成廉价资源 5.2 bottleneck7 · 为什么 1×1 → 3×3 → 1×1 能省算力 plain cnn batch normalization identity mapping · 恒等映射 sgd 的&quot;白送好起点&quot; sublayer · transformer 子层 degradation problem bottleneck block highway network projection shortcut pre-activation resnet skip connection + x 是免费的（计算意义上）">
+  <h3><a href="papers/resnet.html">Deep Residual Learning · 残差连接的起源</a></h3>
+  <p class="hook">**别让网络从零学一个映射，让它学跟&quot;输入直接复制过去&quot;的差距**——加一条 `+ x` 的&quot;快车道&quot;，让深层网络的梯度有路可走、参数有路可不学。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-21</span><a class="pill" href="https://arxiv.org/abs/1512.03385" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="attention is all you need · transformer 始祖 **砍掉 rnn 的&quot;必须按时间步串行处理&quot;枷锁**，用 self-attention 让序列里每个位置一次性看到所有其他位置，整个模型可并行训练，长程依赖也变成 o(1) 跳。 attention-is-all-you-need paper ml § 01 · the bottleneckrnn 的天花板 § 02 · figure one并行 vs 串行 § 03 · the trickself-attention 机制 § 04 · the expansionmulti-head § 05 · the hackpositional encoding § 06 · the architecture完整架构 § 07 · the legacy改变了什么 § 08 · what to keep个人解读 § 06训练 vs 推理 · 同一个架构两种跑法 § ▼ · vocabulary术语词典 06.1每个子层里发生什么 06.2ffn 是什么">
+  <h3><a href="papers/attention-is-all-you-need.html">Attention Is All You Need · Transformer 始祖</a></h3>
+  <p class="hook">**砍掉 RNN 的&quot;必须按时间步串行处理&quot;枷锁**，用 self-attention 让序列里每个位置一次性看到所有其他位置，整个模型可并行训练，长程依赖也变成 O(1) 跳。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-20</span><a class="pill" href="https://arxiv.org/abs/1706.03762" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="fish audio s2 pro 用 **dual-ar**（慢 ar 4b + 快 ar 400m）+ **rvq codec**（10 codebook ~21hz）+ **grpo** 对齐做出来的开源 tts，质量超过 seed-tts / minimax speech-02 / qwen3-tts。 fish-speech-s2-pro paper ml § 01 · the bottleneck不可能三角 § 02 · the core trickdual-ar · 慢 + 快 § 03 · the codecneural codec · 编 / 量 / 解 § 04 · the alignmentgrpo · 组相对 rl § 05 · the plumbing推理工程 § 06 · the controls控制与多语言 § 07 · the numbersbenchmark § 08 · what to keep个人解读 § ▼ · vocabulary术语词典 03.1neural codec 全貌 03.2rvq · 把 codebook 摞 10 层 04.1四维 reward 信号 06.115000+ 自由文本 tag 06.280+ 语言不靠 phonemizer 07.5更多基准（一张表）">
+  <h3><a href="papers/fish-speech-s2-pro.html">Fish Audio S2 Pro</a></h3>
+  <p class="hook">用 **Dual-AR**（慢 AR 4B + 快 AR 400M）+ **RVQ codec**（10 codebook ~21Hz）+ **GRPO** 对齐做出来的开源 TTS，质量超过 Seed-TTS / MiniMax Speech-02 / Qwen3-TTS。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-20</span><a class="pill" href="https://arxiv.org/abs/2603.08823" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+<div class="entry paper" data-domains="ML" data-s="interaction models · thinking machines lab 当前 chat 模型是&quot;轮次制&quot;（你说一段我说一段）；tml 主张把交互能力做进模型本体，做成 **200ms 微回合 + 时间对齐**的并发流。 interaction-models-tml paper ml § 01 · the bottleneck协作瓶颈 § 02 · figure one轮次制 vs 时间对齐 § 03 · what unlocks六种原生能力 § 04 · system shape双模型架构 § 05 · the core trick200ms 微回合 § 06 · the plumbing技术细节 § 07 · the numbersbenchmark 对比 § 08 · what to keep个人解读 § ▼ · vocabulary术语词典 06.1encoder-free early fusion · 无独立编码器的早融合 06.1·flow matching · 音频输出怎么从噪声里&quot;流&quot;出来 06.2streaming sessions · 流式会话 06.3trainer-sampler 一致性 06.4安全 07.5常规基准（不是 tml 自造的）">
+  <h3><a href="papers/interaction-models-tml.html">Interaction Models · Thinking Machines Lab</a></h3>
+  <p class="hook">当前 chat 模型是&quot;轮次制&quot;（你说一段我说一段）；TML 主张把交互能力做进模型本体，做成 **200ms 微回合 + 时间对齐**的并发流。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-05-20</span><a class="pill" href="https://thinkingmachines.ai/blog/interaction-models/" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
+</div>
+<div class="colophon">
+  Renderer / <code>render.py</code> · Pattern / <a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f" target="_blank">Karpathy LLM Wiki</a> · Source / <a href="https://github.com/SnowWarri0r/llm-wiki" target="_blank">github.com/SnowWarri0r/llm-wiki</a>
+</div>
+
+</div>
+<script>
+
+(function(){
+  var q = document.getElementById('q');
+  var chips = [].slice.call(document.querySelectorAll('.chip'));
+  var entries = [].slice.call(document.querySelectorAll('.entry'));
+  var nores = document.getElementById('nores');
+  var dom = '';
+  function apply(){
+    var term = q.value.trim().toLowerCase();
+    var shown = 0;
+    entries.forEach(function(el){
+      var okT = !term || (el.getAttribute('data-s') || '').indexOf(term) !== -1;
+      var okD = !dom || (el.getAttribute('data-domains') || '').split(' ').indexOf(dom) !== -1;
+      var vis = okT && okD;
+      el.style.display = vis ? '' : 'none';
+      if (vis) shown++;
+    });
+    nores.hidden = shown !== 0;
+  }
+  q.addEventListener('input', apply);
+  chips.forEach(function(c){
+    c.addEventListener('click', function(){
+      chips.forEach(function(x){ x.classList.remove('active'); });
+      c.classList.add('active');
+      dom = c.getAttribute('data-dom') || '';
+      apply();
+    });
+  });
+})();
+
+</script>
+</body>
+</html>
