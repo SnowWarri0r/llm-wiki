@@ -711,3 +711,9 @@ skill 更新:
 ## [2026-06-14] add | gspo 数字例子 + log-mel/Fbank 五步流水线
 - gspo: 用户嫌 r_seq 公式抽象, 加4token演算(π_old/π_new→r_t 1.2/0.5/1.17/1.1, 序列连乘0.06→0.0462, r_seq=0.77^.25≈0.94=几何平均); 柱状图(0.5探出clip带 vs r_seq稳线); 释 1/|y| 防连乘指数爆塌
 - log-mel-spectrogram: 用户问 Fbank 怎么做没补; 正名(Fbank=本页/MFCC=Fbank+DCT) + 从波形到Fbank五步(分帧/加窗防泄漏/每帧FFT=STFT/Mel三角滤波器组=Fbank名字由来/log) + 六格流水线图; 接 fft 页
+
+## [2026-06-14] add | forced-alignment 概念页（用户问 Qwen3-ForcedAligner）
+- 强制对齐=文字已知只求每字时间(卡拉OK逐字对时间); 经典做法帧级DP/AR会累积漂移
+- Qwen3-ForcedAligner-0.6B: 每字插 [time] token 填槽 + 非自回归一次并行预测全部时间戳→断开误差累积; RTF≈0.001, 比WhisperX/NFA累计偏移降67~77%
+- AR级联漂移 vs NAR一次填槽对照图; 接 qwen3-asr/multi-token-prediction(同"串行→并行"思路)/next-token-forward-pass
+- 回链: qwen3-asr g-06 链到本页; 注意 render 不支持 [[a|b]] 别名(已避开)
