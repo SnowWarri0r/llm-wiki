@@ -291,8 +291,8 @@ for 每个任务 m:
   <ol>
     <li id="g-01"><span class="term">On-Policy Distillation（OPD）</span> · 学生自己 rollout 生成轨迹，在<strong>学生实际走到的状态</strong>上匹配老师的下一步。每步稠密监督；对比 off-policy（照抄老师固定数据，学生偏了不会救）和 RL（稀疏终局奖励）。</li>
     <li id="g-02"><span class="term">两阶段解耦</span> · Stage 1 各任务用 RL 训专家老师（探索解耦）；Stage 2 沿学生轨迹把老师们蒸进一个学生（整合不打架、不遗忘）。</li>
-    <li id="g-03"><span class="term">扩散 = 高斯马尔可夫链</span> · 去噪过程来自<a href="ode-sde.html">反向 SDE</a>，每步是一个高斯转移，协方差只由 noise schedule 定、与策略无关 → 才能有闭式 KL。</li>
-    <li id="g-04"><span class="term">同协方差 KL = MSE</span> · <code>KL(N(μ_s,σ²I)‖N(μ_t,σ²I)) = ‖μ_s−μ_t‖²/(2σ²)</code>。每步 on-policy KL 蒸馏塌成学生 vs 老师去噪均值的 MSE，无 RL 方差。</li>
+    <li id="g-03"><span class="term"><a href="../concepts/markov-chain.html">高斯马尔可夫链</a></span> · <strong>只看当下、每步钟形雾</strong>的状态链。去噪过程来自<a href="ode-sde.html">反向 SDE</a> 离散化，每步是一个高斯转移；雾胖瘦（协方差）只由 noise schedule 定、与策略无关。（不懂先点进去）</li>
+    <li id="g-04"><span class="term"><a href="../concepts/closed-form-kl.html">闭式 KL</a></span> · "闭式"=公式直接算、不用撒点估。同协方差高斯：<code>KL(N(μ_s,σ²I)‖N(μ_t,σ²I)) = ‖μ_s−μ_t‖²/(2σ²)</code>，每步 on-policy KL 蒸馏塌成学生 vs 老师去噪均值的 MSE，无 RL 方差。</li>
     <li id="g-05"><span class="term">cross-task interference / 遗忘</span> · 多奖励联合 RL 的两大病：任务优化方向矛盾、简单任务抢戏；级联 RL 则灾难性遗忘。OPD 用解耦+蒸馏避开。</li>
     <li id="g-06"><span class="term">结果</span> · 平均归一化 0.929 vs 级联 0.851 / 多任务 RL 0.763；美学/OCR/GenEval 全 SOTA，训练更快更省。</li>
   </ol>
