@@ -153,6 +153,8 @@
 - [Optimal Transport](wiki/concepts/optimal-transport.md) — 让噪声到数据尽量走直路的路径选择
 - [Continuity Equation](wiki/concepts/continuity-equation.md) — 粒子守恒：密度变化 = 净流入
 - [ODE vs SDE](wiki/concepts/ode-vs-sde.md) — flow（确定性）vs diffusion（随机性）
+- [Markov Chain](wiki/concepts/markov-chain.md) — 只看现在、不看历史；高斯版=每步一团钟形雾，扩散去噪就是它
+- [闭式 KL](wiki/concepts/closed-form-kl.md) — 公式直算 vs 撒豆子估；同协方差高斯 KL 塌成均值差²(MSE)
 - [Diffusion Transformer](wiki/concepts/diffusion-transformer.md) — 去噪网络从 U-Net 换成 Transformer；单流 vs 双流 MMDiT
 - [Classifier-Free Guidance](wiki/concepts/classifier-free-guidance.md) — 条件/无条件两支放大差值逼模型听话；Ideogram 的非对称变体
 - [结构化 Caption 条件](wiki/concepts/structured-caption-conditioning.md) — 不喂一句话喂 JSON，把位置/颜色/文字显式做进训练
