@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Stable Diffusion 3.5 · 整流流 + MMDiT 文生图</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --lagoon: #0e7490; --lagoon-soft: #cfe6ea;
+  --accent: var(--lagoon); --accent-soft: var(--lagoon-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(38px, 6vw, 70px); line-height: 0.98; letter-spacing: -0.03em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 36px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
+p { margin: 12px 0; } strong { font-weight: 700; }
+ul { margin: 12px 0; padding-left: 24px; } li { margin: 6px 0; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.86em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--accent-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--accent); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--accent); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+table.spec { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+table.spec td, table.spec th { border-bottom: 1px dashed var(--rule); padding: 7px 10px; text-align: left; }
+table.spec th { color: var(--accent); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+table.spec td:first-child { color: var(--muted); }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--accent-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--accent-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* sd-specific */
+.sd-svg { width: 100%; height: auto; display: block; font-family: 'JetBrains Mono', monospace; }
+.sd-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .sd-rev { opacity: 1; }
+figure.play .sd-rev.d1 { transition-delay: 0.15s; }
+figure.play .sd-rev.d2 { transition-delay: 0.45s; }
+figure.play .sd-rev.d3 { transition-delay: 0.75s; }
+figure.play .sd-rev.d4 { transition-delay: 1.05s; }
+figure.play .sd-rev.d5 { transition-delay: 1.35s; }
+figure.play .sd-rev.d6 { transition-delay: 1.65s; }
+.sd-svg .draw { stroke-dasharray: 1000; stroke-dashoffset: 1000; transition: stroke-dashoffset 1.5s ease; }
+figure.play .sd-svg .draw { stroke-dashoffset: 0; }
+@media (prefers-reduced-motion: reduce) { .sd-rev { opacity: 1; transition: none; } .sd-svg .draw { stroke-dashoffset: 0; transition: none; } }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">papers · stable-diffusion-3-5</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · 文生图 · Stable Diffusion 3.5 · 2024</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 整流流 · MMDiT · 开源权重</div>
+  <h1 class="title">Stable Diffusion 3.5 ·<br /><span class="em">文字和图像，坐到同一张桌子。</span></h1>
+  <div class="byline">Stability AI · 基于 SD3《Scaling Rectified Flow Transformers》· arXiv 2403.03206 · 模型 2024-10 开源</div>
+  <p class="dek">老文生图把文字当"调料"从旁边塞进图像主序列。SD3/3.5 把文字 token 和图像 token 拼成一条序列、过同一个注意力——但两种模态各用各的权重(MMDiT)。再换掉加噪去噪那套、改用近乎直线的整流流少步采样，加 QK 归一化稳住大规模训练。开源 Large 8B / Medium 2.5B。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>SD3.5（开源权重，2024-10）是 SD3 那套架构的产品化版：<strong>整流流</strong><a class="jr" href="#g-01">1</a>（不走 DDPM 加噪去噪，学一条噪声↔图的近乎<strong>直线</strong>路径 → 少步出图）+ <a href="../concepts/mmdit.html"><strong>MMDiT</strong></a><a class="jr" href="#g-02">2</a>（文字 + 图像 token 拼成一条序列共享注意力，但<strong>两种模态各用各的一套权重</strong>，双向对齐 → 长 prompt / 排版大涨）。条件靠<strong>三个文本编码器</strong> <a href="clip.html">CLIP-L + CLIP-G</a> + <strong>T5-XXL</strong><a class="jr" href="#g-03">3</a>（T5 可丢省显存）。3.5 相比 3 的关键补丁：<a href="../concepts/qk-rmsnorm.html"><strong>QK-Norm</strong></a><a class="jr" href="#g-04">4</a> 稳训 + MMDiT 块里<strong>双注意力层</strong>。还在 <a href="../concepts/kl-vae.html">16 通道 VAE latent</a> 空间画。家族：<strong>Large 8B</strong> / <strong>Large Turbo</strong>（<a href="../concepts/dmd-distillation.html">蒸馏 ~4 步</a>）/ <strong>Medium 2.5B（MMDiT-X，消费级能跑）</strong><a class="jr" href="#g-05">5</a>。</p>
+</div>
+
+
+<!-- §01 -->
+<h2><span class="num">§ 01</span>痛点：文字只是"塞进来的调料"</h2>
+
+<p>老的文生图（SD1.5 / SDXL 那代）主干是 <strong>U-Net + cross-attention</strong>：<strong>图像是主角</strong>，一条图像特征序列从头走到尾；文字编码后<strong>从旁边</strong>通过 cross-attention "喷"进每一层。文字像炒菜时<strong>从锅边淋进去的调料</strong>——能影响味道，但它自己不在锅里翻炒，跟图像不是平等的两方。</p>
+
+<p>后果很实在：<strong>长 prompt 顾此失彼</strong>（"红帽子的猫站在写着 OPEN 的牌子旁"——颜色、主体、文字招牌容易串）、<strong>拼写/排版差</strong>（生成的英文单词缺胳膊少腿）。根子在文字和图像的<strong>信息流不对等</strong>。SD3 的主张：<strong>让两种模态平起平坐。</strong></p>
+
+
+<!-- §02 -->
+<h2><span class="num">§ 02</span>不走加噪去噪：整流流的"直线少步"</h2>
+
+<p>先换掉生成的底层范式。传统扩散（DDPM）是"图 → 一点点加噪 → 纯噪声"，生成时反着<strong>一步步去噪</strong>，路径弯弯绕绕、要几十步。<strong>整流流（Rectified Flow）</strong>直接学一条<strong>噪声 ↔ 图之间近乎直线</strong>的路径（就是你已学的 <a href="flow-matching.html">flow-matching</a> 那套）——路径越直，采样需要的步数越少。</p>
+
+<figure id="fig-flow">
+  <figcaption><span>FIG 01 · 弯路 vs 直线</span><span class="fnum">RECTIFIED FLOW</span></figcaption>
+  <svg class="sd-svg" viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="sf-h" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#9b2c2c"/></marker>
+      <marker id="sf-g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#0e7490"/></marker>
+    </defs>
+    <!-- 端点 -->
+    <text class="sd-rev d1" x="60" y="34" text-anchor="middle" font-size="10" fill="#3a3128">噪声</text>
+    <text class="sd-rev d1" x="660" y="34" text-anchor="middle" font-size="10" fill="#3a3128">图</text>
+    <circle class="sd-rev d1" cx="60" cy="60" r="9" fill="#7a6f5d"/>
+    <circle class="sd-rev d1" cx="660" cy="60" r="9" fill="#2f6e4a"/>
+    <circle class="sd-rev d1" cx="60" cy="170" r="9" fill="#7a6f5d"/>
+    <circle class="sd-rev d1" cx="660" cy="170" r="9" fill="#2f6e4a"/>
+
+    <!-- 老扩散：弯路多步 -->
+    <text class="sd-rev d1" x="80" y="92" text-anchor="start" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#9b2c2c">老扩散（DDPM）：弯弯绕绕，几十步</text>
+    <path class="draw d2" d="M69,60 C 140,10 200,120 270,70 C 340,20 400,120 470,72 C 540,30 600,100 651,62" fill="none" stroke="#9b2c2c" stroke-width="2.2" marker-end="url(#sf-h)" pathLength="1000"/>
+    <g class="sd-rev d3" fill="#9b2c2c"><circle cx="170" cy="52" r="3"/><circle cx="270" cy="70" r="3"/><circle cx="370" cy="58" r="3"/><circle cx="470" cy="72" r="3"/><circle cx="560" cy="58" r="3"/></g>
+    <text class="sd-rev d3" x="360" y="118" text-anchor="middle" font-size="8.5" fill="#7a6f5d">每一步只敢挪一点点，步数多才稳</text>
+
+    <!-- 整流流：直线少步 -->
+    <text class="sd-rev d3" x="80" y="150" text-anchor="start" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#0e7490">整流流（Rectified Flow）：近乎直线，几步到</text>
+    <line class="draw d4" x1="69" y1="170" x2="651" y2="170" stroke="#0e7490" stroke-width="2.6" marker-end="url(#sf-g)" pathLength="1000"/>
+    <g class="sd-rev d5" fill="#0e7490"><circle cx="215" cy="170" r="3.5"/><circle cx="360" cy="170" r="3.5"/><circle cx="505" cy="170" r="3.5"/></g>
+    <text class="sd-rev d5" x="360" y="194" text-anchor="middle" font-size="8.5" fill="#7a6f5d">路径直 → 大步走也不偏 → 步数少（Turbo 蒸到 ~4 步）</text>
+
+    <!-- logit-normal -->
+    <text class="sd-rev d5" x="360" y="226" text-anchor="middle" font-size="9" fill="#3a3128">训练技巧：<tspan font-weight="700" fill="#0e7490">logit-normal 时间步采样</tspan> —— 多练"轨迹中段"那块最难学的，算力花刀刃上</text>
+  </svg>
+</figure>
+
+<p>SD3 还在训练时用 <strong>logit-normal 时间步采样</strong>：不平均地采整条轨迹，而是<strong>偏向中段</strong>（噪声和信号势均力敌、最难学的那段），论文说这是"把噪声采样偏向<strong>感知上重要的尺度</strong>"。Turbo 版进一步用蒸馏把步数压到 <strong>~4 步</strong>（同 <a href="../concepts/dmd-distillation.html">DMD</a> 那条少步化线）。</p>
+
+
+<!-- §03 -->
+<h2><span class="num">§ 03</span>主干 MMDiT：同一张桌子，各带各的笔记本</h2>
+
+<p>这是 SD3/3.5 最值钱的创新。把"图像主角 + 文字调料"的不对等关系，换成<strong>两种模态平起平坐</strong>：图像 token 和文字 token <strong>拼成同一条序列</strong>，一起过<strong>同一个自注意力</strong>——但每种模态<strong>各用各的一套权重</strong>（各自的 QKV 投影、各自的 MLP）。</p>
+
+<figure id="fig-mmdit">
+  <figcaption><span>FIG 02 · cross-attention vs MMDiT</span><span class="fnum">SEPARATE WEIGHTS, SHARED ATTENTION</span></figcaption>
+  <svg class="sd-svg" viewBox="0 0 720 320" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="sm-h" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#7a6f5d"/></marker>
+      <marker id="sm-b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#0e7490"/></marker>
+    </defs>
+
+    <!-- 左：cross-attention -->
+    <text class="sd-rev d1" x="180" y="32" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#9b2c2c">老 SD · cross-attention</text>
+    <text class="sd-rev d1" x="180" y="48" text-anchor="middle" font-size="8.5" fill="#7a6f5d">图像是主角，文字从旁边喷进来</text>
+    <!-- 图像主序列 -->
+    <g class="sd-rev d1">
+      <rect x="60" y="70" width="36" height="30" rx="3" fill="#d8e6ce" stroke="#4a6b3a"/>
+      <rect x="100" y="70" width="36" height="30" rx="3" fill="#d8e6ce" stroke="#4a6b3a"/>
+      <rect x="140" y="70" width="36" height="30" rx="3" fill="#d8e6ce" stroke="#4a6b3a"/>
+      <rect x="180" y="70" width="36" height="30" rx="3" fill="#d8e6ce" stroke="#4a6b3a"/>
+      <rect x="220" y="70" width="36" height="30" rx="3" fill="#d8e6ce" stroke="#4a6b3a"/>
+    </g>
+    <text class="sd-rev d1" x="158" y="116" text-anchor="middle" font-size="8.5" fill="#2f6e4a">图像 token 序列（主干）</text>
+    <!-- 文字旁挂 -->
+    <rect class="sd-rev d2" x="120" y="178" width="76" height="30" rx="3" fill="#efd6c8" stroke="#9b2c2c"/>
+    <text class="sd-rev d2" x="158" y="197" text-anchor="middle" font-size="8.5" fill="#7a2020">文字（旁路）</text>
+    <line class="sd-rev d2" x1="158" y1="176" x2="158" y2="104" stroke="#9b2c2c" stroke-width="1.4" marker-end="url(#sm-h)" stroke-dasharray="4 3"/>
+    <text class="sd-rev d2" x="240" y="150" text-anchor="middle" font-size="8" fill="#9b2c2c">单向喷入</text>
+    <text class="sd-rev d2" x="158" y="232" text-anchor="middle" font-size="8.5" fill="#7a6f5d">文字影响图，图不回头改文字</text>
+
+    <!-- 分隔竖线 -->
+    <line x1="360" y1="60" x2="360" y2="280" class="sd-rev d2" stroke="#bfb398" stroke-width="1" stroke-dasharray="5 4"/>
+
+    <!-- 右：MMDiT -->
+    <text class="sd-rev d3" x="540" y="32" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#0e7490">MMDiT · 同一条序列</text>
+    <text class="sd-rev d3" x="540" y="48" text-anchor="middle" font-size="8.5" fill="#7a6f5d">文字 + 图像拼一起，平起平坐</text>
+    <!-- 拼接序列：文字token(青) + 图像token(绿) -->
+    <g class="sd-rev d3">
+      <rect x="404" y="70" width="34" height="30" rx="3" fill="#cfe6ea" stroke="#0e7490"/>
+      <rect x="440" y="70" width="34" height="30" rx="3" fill="#cfe6ea" stroke="#0e7490"/>
+      <rect x="476" y="70" width="34" height="30" rx="3" fill="#d8e6ce" stroke="#4a6b3a"/>
+      <rect x="512" y="70" width="34" height="30" rx="3" fill="#d8e6ce" stroke="#4a6b3a"/>
+      <rect x="548" y="70" width="34" height="30" rx="3" fill="#d8e6ce" stroke="#4a6b3a"/>
+      <rect x="584" y="70" width="34" height="30" rx="3" fill="#d8e6ce" stroke="#4a6b3a"/>
+    </g>
+    <text class="sd-rev d3" x="457" y="116" text-anchor="middle" font-size="8" fill="#0e7490">文字 token</text>
+    <text class="sd-rev d3" x="547" y="116" text-anchor="middle" font-size="8" fill="#2f6e4a">图像 token</text>
+    <!-- 各自权重标 -->
+    <text class="sd-rev d4" x="457" y="60" text-anchor="middle" font-size="7.5" fill="#0e7490">权重 W_text</text>
+    <text class="sd-rev d4" x="547" y="60" text-anchor="middle" font-size="7.5" fill="#2f6e4a">权重 W_img</text>
+    <!-- 联合 attention 框 -->
+    <rect class="draw d4" x="404" y="150" width="214" height="40" rx="6" fill="none" stroke="#0e7490" stroke-width="1.8" pathLength="1000"/>
+    <text class="sd-rev d5" x="511" y="175" text-anchor="middle" font-size="10" font-weight="700" fill="#0e7490">联合 Self-Attention</text>
+    <!-- 双向箭头 token <-> attention -->
+    <g class="sd-rev d5" stroke="#0e7490" stroke-width="1.3">
+      <line x1="457" y1="104" x2="457" y2="146" marker-end="url(#sm-b)"/>
+      <line x1="547" y1="104" x2="547" y2="146" marker-end="url(#sm-b)"/>
+      <line x1="490" y1="192" x2="490" y2="220" marker-end="url(#sm-b)"/>
+    </g>
+    <text class="sd-rev d5" x="511" y="236" text-anchor="middle" font-size="8.5" fill="#0e7490">双向：文字↔图像互相看、互相改</text>
+    <text class="sd-rev d5" x="511" y="258" text-anchor="middle" font-size="8" fill="#7a6f5d">同一注意力里合流，但 QKV/MLP 权重按模态分两套</text>
+
+    <text class="sd-rev d6" x="360" y="300" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#3a3128">平起平坐 + 双向对齐 → 长 prompt 服从、排版/拼写大涨</text>
+  </svg>
+</figure>
+
+<p>类比：cross-attention 像<strong>说两种语言的人靠传话筒隔房间递纸条</strong>；MMDiT 像<strong>让他们坐到同一张桌子上</strong>——各自带自己的笔记本（独立权重，因为图像和文字的统计规律本就不同），但能<strong>直接对视、双向交流</strong>（共享同一个自注意力）。文字和图像的对齐因此强得多，这正是 SD3/3.5 在<strong>长指令理解和文字渲染</strong>上明显变好的根。</p>
+
+<p>SD3.5 在此之上还把 MMDiT 块里的<strong>单注意力换成双注意力层</strong>（Medium 版叫 <strong>MMDiT-X</strong>：在前 13 层额外加自注意力），进一步改善多分辨率一致性和整体连贯。</p>
+
+
+<!-- §04 -->
+<h2><span class="num">§ 04</span>三个文本编码器 + QK-Norm 稳训</h2>
+
+<p><strong>三编码器并联喂条件</strong>：<a href="clip.html">CLIP-L + CLIP-G</a> 给"图文对齐过的语义"，<strong>T5-XXL</strong> 给"长句、细节、拼写"的纯语言理解。T5 很吃显存，推理时<strong>可以临时丢掉只用两个 CLIP</strong> 省内存（掉一点细节服从）。</p>
+
+<p>3.5 相比 3 的关键稳定性补丁是 <a href="../concepts/qk-rmsnorm.html"><strong>QK 归一化</strong></a>。大模型训练时，注意力的 <code>Q·K</code> 点积容易随规模<strong>数值爆炸</strong>：logit 飙到很大 → softmax 饱和成 one-hot → 梯度消失、训练崩。在算 attention 前先把 <strong>Q、K 各自归一化</strong>，把这个隐患摁住。</p>
+
+<figure id="fig-qk">
+  <figcaption><span>FIG 03 · QK-Norm 摁住爆炸</span><span class="fnum">TRAINING STABILITY</span></figcaption>
+  <svg class="sd-svg" viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg">
+    <!-- 无 QK-norm -->
+    <text class="sd-rev d1" x="180" y="30" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#9b2c2c">没有 QK-Norm</text>
+    <line class="sd-rev d1" x1="60" y1="170" x2="300" y2="170" stroke="#7a6f5d" stroke-width="1"/>
+    <line class="sd-rev d1" x1="60" y1="170" x2="60" y2="50" stroke="#7a6f5d" stroke-width="1"/>
+    <path class="draw d2" d="M70,168 C 150,165 200,150 230,90 C 245,60 250,52 256,48" fill="none" stroke="#9b2c2c" stroke-width="2.4" pathLength="1000"/>
+    <text class="sd-rev d3" x="250" y="42" text-anchor="middle" font-size="8.5" fill="#9b2c2c">logit 飙飞</text>
+    <text class="sd-rev d3" x="180" y="190" text-anchor="middle" font-size="8.5" fill="#7a6f5d">softmax 饱和 → 梯度没了 → 训练崩</text>
+
+    <!-- 分隔 -->
+    <line x1="360" y1="40" x2="360" y2="180" class="sd-rev d2" stroke="#bfb398" stroke-width="1" stroke-dasharray="5 4"/>
+
+    <!-- 有 QK-norm -->
+    <text class="sd-rev d3" x="540" y="30" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#0e7490">有 QK-Norm</text>
+    <line class="sd-rev d3" x1="420" y1="170" x2="660" y2="170" stroke="#7a6f5d" stroke-width="1"/>
+    <line class="sd-rev d3" x1="420" y1="170" x2="420" y2="50" stroke="#7a6f5d" stroke-width="1"/>
+    <path class="draw d4" d="M430,150 C 500,120 560,118 620,120" fill="none" stroke="#0e7490" stroke-width="2.4" pathLength="1000"/>
+    <line class="sd-rev d5" x1="420" y1="110" x2="660" y2="110" stroke="#0e7490" stroke-width="0.8" stroke-dasharray="3 3"/>
+    <text class="sd-rev d5" x="600" y="104" text-anchor="middle" font-size="8" fill="#0e7490">上限被摁住</text>
+    <text class="sd-rev d5" x="540" y="190" text-anchor="middle" font-size="8.5" fill="#7a6f5d">先归一化 Q、K → logit 有界 → 稳</text>
+  </svg>
+</figure>
+
+<p>QK-Norm 现在是大 Transformer 的标配（你已学的 <a href="../concepts/qk-rmsnorm.html">qk-rmsnorm</a> 是同一招，<a href="qwen-image-2.html">Qwen-Image-2.0</a> 也用）。再加上还在 <a href="../concepts/kl-vae.html">16 通道 VAE</a> 压缩空间里做扩散（不在像素上直接画，省算力），整套就齐了。</p>
+
+
+<!-- §05 -->
+<h2><span class="num">§ 05</span>SD3.5 家族</h2>
+
+<table class="spec">
+  <tr><th>版本</th><th>参数</th><th>特点</th></tr>
+  <tr><td>Large</td><td>8B</td><td>旗舰画质；QK-Norm + 双注意力 MMDiT</td></tr>
+  <tr><td>Large Turbo</td><td>8B 蒸馏</td><td>~4 步出图（少步化，见 <a href="../concepts/dmd-distillation.html">DMD</a>）</td></tr>
+  <tr><td>Medium</td><td>2.5B</td><td>MMDiT-X（前 13 层加自注意力）；消费级显卡能跑</td></tr>
+</table>
+
+<p>3.5 对 3 的主要进步：<strong>QK-Norm 内置稳训、MMDiT 双注意力、排版 / prompt 服从 / 输出多样性更好</strong>，并主打<strong>消费级跑得动的尺寸</strong>。文本编码器、VAE、噪声调度器和 SD3 Medium 一致。</p>
+
+
+<div class="note">
+  <span class="l">放进 wiki 这条线</span>
+  <p>SD3.5 把你学的几块拧在一起：<a href="flow-matching.html">flow-matching/整流流</a>（少步采样）+ <a href="../concepts/mmdit.html">MMDiT</a>（文字图像同序列、双权重）+ <a href="clip.html">CLIP</a>/T5 文本编码 + <a href="../concepts/qk-rmsnorm.html">QK-Norm</a>（稳训）+ <a href="../concepts/kl-vae.html">VAE latent</a> + <a href="../concepts/dmd-distillation.html">DMD 蒸馏</a>（Turbo）。一句话：<strong>把"文字当调料"换成"文字和图像坐同一张桌子"，再用直线少步的整流流跑完。</strong>同样吃 MMDiT 的还有 <a href="qwen-image-2.html">Qwen-Image-2.0</a> / <a href="mrt.html">MRT</a>。</p>
+</div>
+
+
+<!-- glossary -->
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">整流流 · Rectified Flow</span> · 不走 DDPM 加噪去噪，而是学一条噪声↔数据之间近乎<strong>直线</strong>的速度场（<a href="flow-matching.html">flow-matching</a> 家族）。路径越直，采样步数越少。SD3 还用 logit-normal 时间步采样把训练算力偏向轨迹中段。</li>
+    <li id="g-02"><span class="term"><a href="../concepts/mmdit.html">MMDiT · 多模态扩散 Transformer</a></span> · 文字 + 图像 token 拼成一条序列、共享同一个自注意力实现双向对齐，但<strong>每种模态各用各的一套 QKV/MLP 权重</strong>。SD3 的招牌创新，长 prompt 服从与排版大涨的根。</li>
+    <li id="g-03"><span class="term">三文本编码器</span> · <a href="clip.html">CLIP-L + CLIP-G</a>（图文对齐语义）+ T5-XXL（长句/细节/拼写的纯语言理解）。三者输出拼起来当条件；T5 吃显存，可丢掉省内存。</li>
+    <li id="g-04"><span class="term"><a href="../concepts/qk-rmsnorm.html">QK-Norm</a></span> · 算 attention 前对 Q、K 各自归一化，防止 logit 随规模数值爆炸 → softmax 饱和 → 训练崩。SD3.5 相比 SD3 的关键稳定性补丁，现已是大 Transformer 标配。</li>
+    <li id="g-05"><span class="term">SD3.5 家族 / MMDiT-X</span> · Large 8B、Large Turbo（蒸馏 ~4 步）、Medium 2.5B。Medium 用 MMDiT-X：在 MMDiT 前 13 层额外加自注意力，改善多分辨率一致性，目标消费级硬件可跑。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>SOURCE · SD3 arXiv 2403.03206《Scaling Rectified Flow Transformers》(Esser et al. 2024) · SD3.5 模型卡 (Stability AI · 2024-10)</span>
+  <span>INGESTED · 2026-06-16</span>
+</div>
+
+</div>
+<script>
+{
+  const figs = ['fig-flow','fig-mmdit','fig-qk'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.15 });
+    obs.observe(el);
+  });
+}
+</script>
+</body>
+</html>
