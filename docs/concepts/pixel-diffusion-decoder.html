@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>像素扩散解码器 · 把 latent→像素的解码改成条件扩散 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r">concepts · pixel-diffusion-decoder</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>像素扩散解码器 · 把 latent→像素的解码改成条件扩散</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>扩散在 latent 里画完后，用来把 latent 摊回像素的那个<strong>确定性 VAE 解码器</strong>，换成一个<strong>以 latent 为条件、直接在高清像素上去噪的扩散模型</strong>——解码从"忠实还原"升级成"生成式补细节 + 顺手超分"。</p>
+<h2>直觉 · 复印机 vs 插画师</h2>
+<p>主流 <a href="../concepts/kl-vae.html">kl-vae</a> latent 扩散的最后一步:VAE 解码器把小 latent 展开成像素。但这个解码器是<strong>为"还原"训练的</strong>(目标是逆回编码器),<strong>只摊开、不创造</strong>。到 2K/4K 它又贵又糊——高频纹理它本就没学过怎么造。</p>
+<ul>
+<li><strong>VAE 解码器 = 复印机</strong>:把压缩文件忠实摊开,放大就糊,不添新东西。</li>
+<li><strong>像素扩散解码器 = 插画师</strong>:瞟一眼缩略图(latent),直接在高清像素上<strong>画</strong>出来,该有的纹理<strong>合理脑补</strong>,还能顺手放大 4×/8×。</li>
+</ul>
+<p>为什么"解码"值得用扩散?因为解码到高分辨率本质上是个<strong>欠定问题</strong>(一个小 latent 对应无数张合理高清图),确定性解码器只能给一个糊平均;扩散是生成模型,天生会<strong>采样出有细节的那一张</strong>。</p>
+<h2>怎么做的 · sigma-aware adapter + 早停</h2>
+<p><a href="../papers/pid-pixel-diffusion.html">pid-pixel-diffusion</a>(PiD)的实现:</p>
+<pre><code>latent 扩散（噪声→干净）── 中途早停 ──&gt; 半成品(带噪) latent
+                                          │  sigma-aware adapter
+                                          ▼  （按噪声水平 sigma 注入）
+                              像素扩散主干（DMD2 蒸到 4 步）
+                                          ▼
+                                    高清像素（+ 4×/8× 超分）
+</code></pre>
+<ul>
+<li><strong>sigma-aware adapter</strong>:轻量适配器,知道 latent 还带多少噪(sigma),于是能吃<strong>半成品 latent</strong> → latent 扩散<strong>不必跑到全干净就早停</strong>,剩下交给像素扩散收尾,省算力。</li>
+<li><strong>即插即用</strong>:VAE latent 和语义 latent(<a href="../papers/dino.html">dino</a>v2/SigLIP 这类 RAE 路线)都吃,换骨干(SD3/Flux/Qwen-Image)不用重训。</li>
+</ul>
+<h2>跟相邻概念的关系</h2>
+<ul>
+<li>它是 <a href="../concepts/kl-vae.html">kl-vae</a> <strong>解码端</strong>的替换(编码端、latent 生成都不动)。</li>
+<li>跟 <a href="../concepts/pixel-space-diffusion.html">pixel-space-diffusion</a> 的区别:那是<strong>全程</strong>在像素上扩散(无 VAE,如 HiDream);这里是<strong>只把解码这一段</strong>改像素扩散,主体生成照样吃 latent 的便宜 → 两条路线的缝合。</li>
+</ul>
+<h2>代码出处 / 来源</h2>
+<ul>
+<li><a href="../papers/pid-pixel-diffusion.html">pid-pixel-diffusion</a> · PiD,arXiv 2605.23902(NVIDIA Toronto AI Lab)</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/kl-vae.html">kl-vae</a> · 被替掉的那个确定性解码器</li>
+<li><a href="../concepts/pixel-space-diffusion.html">pixel-space-diffusion</a> · 对照:全程无 VAE 的像素扩散</li>
+<li><a href="../papers/pid-pixel-diffusion.html">pid-pixel-diffusion</a> · 这页的来源论文</li>
+<li><a href="../concepts/dmd-distillation.html">dmd-distillation</a> · 把解码扩散蒸到 4 步(DMD2)</li>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · 主体 latent 生成仍是它</li>
+<li><a href="../concepts/image-quality-metrics.html">image-quality-metrics</a> · 解码质量怎么量(重建 vs 生成)</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/pid-pixel-diffusion.html"><span class="cat">paper</span>PiD · 把 VAE 解码器换成会扩散的解码器</a></li><li><a href="../concepts/kl-vae.html"><span class="cat">concept</span>KL-VAE · 把图压进 latent 的那层地基</a></li><li><a href="../concepts/pixel-space-diffusion.html"><span class="cat">concept</span>Pixel-Space Diffusion · 直接在原始像素上扩散</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/pixel-diffusion-decoder.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

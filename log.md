@@ -776,3 +776,5 @@ skill 更新:
 ## [2026-06-16] ingest | stable-diffusion-3-5 + mmdit (SD3 arXiv 2403.03206)
 
 ## [2026-06-16] ingest | lumine + action-chunking + imitation-learning + quantization (arXiv 2511.08892)
+
+## [2026-06-17] ingest | pid-pixel-diffusion + pixel-diffusion-decoder (arXiv 2605.23902, nv-tlabs/PiD)
