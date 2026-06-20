@@ -239,6 +239,9 @@
 - [SVD · 奇异值分解](wiki/concepts/svd.md) — 接特征向量: 看 WᵀW 特征向量推广到任意矩阵; W=UΣVᵀ 入方向/拉伸/出方向(U≠V); σ=√特征值; 截断前r个=最佳低秩近似; PCA/压缩/LoRA 根
 - [点积与投影](wiki/concepts/dot-product.md) — a·b=Σaᵢbᵢ=|a||b|cosθ, 衡量"方向多一致+多长"; 注意力分数/检索打分/矩阵乘的最小积木; 投影=影子长度
 - [Softmax · 温度](wiki/concepts/softmax.md) — 一组实数压成和为1的概率(exp再归一); 可导的软argmax; 温度T调软硬(小→尖锐接近argmax/大→平); 注意力权重和采样都用
+- [协方差 / 多元高斯](wiki/concepts/covariance-gaussian.md) — 协方差矩阵=数据散成的椭圆; 它的特征向量=椭圆轴=PCA主成分(又是同一条轴); 手算"点躺一条线→协方差秩1"; N(μ,Σ)
+- [熵 / KL 散度](wiki/concepts/entropy-kl.md) — 熵=平均多不确定(−Σplogp); KL=用错分布Q描述P多花的惊讶=交叉熵−熵, ≥0且不对称; 手算公平/偏硬币
+- [梯度 / 反向传播](wiki/concepts/gradient-backprop.md) — 梯度=往哪调参数loss变多少(指上坡最陡)→沿负梯度下山; backprop=链式法则从loss往回一层层算+复用; 手算一步SGD; 连乘→消失/爆炸
 - [LoRA](wiki/concepts/lora.md) — 冻底模只训低秩小增量 ΔW=BA; 几十MB加个技能、可插拔; PEFT, 文生图社区标配
 - [AI 服务器内存层级](wiki/concepts/ai-memory-hierarchy.md) — HBM/LPDDR5X-SOCAMM/DDR5/CXL/光互连 的"快但小↔慢但大"阶梯; "NVIDIA 砍内存"砍的是哪层 + 为何走向池化光互连
 - [量化 · WxAy](wiki/concepts/quantization.md) — 少比特存数字; W8A8(权重激活都INT8)让矩阵乘跑INT8提速; 激活离群值靠 SmoothQuant 搬给权重
