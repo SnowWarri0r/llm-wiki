@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>R-SWA · Reference Sliding Window Attention · 参考滑窗注意力 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · reference-sliding-window-attention</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>R-SWA · Reference Sliding Window Attention · 参考滑窗注意力</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>每个生成 token 只看两段：全部"参考"（视觉+prompt，全局可见）+ 最近 n 个输出 token（滑窗），于是 KV cache 恒定不增。</p>
+<h2>直觉</h2>
+<p>灵感是<strong>人抄书</strong>。抄一整本时，注意力其实只落在三处：手边的<strong>源书</strong>（一直摊开）、<strong>刚写下的几个字</strong>（确认抄到哪了）、<strong>下一个要写的字</strong>。已经抄完的几十页？不会每写一个字就回头通读一遍——它们<strong>软遗忘</strong>了。正是这种"不全记"让人能低负荷地连续抄几百页不变慢。</p>
+<p>把这套搬进注意力：</p>
+<ul>
+<li><strong>源书 = 参考 token</strong>（视觉 token + prompt）→ 永远全局可见，不淘汰。</li>
+<li><strong>刚写的几个字 = 输出滑窗</strong>（最近 n 个，n 默认 128）→ 因果滑动。</li>
+<li><strong>已抄完的早期输出</strong> → 滑出窗口就从 KV cache 淘汰（软遗忘）。</li>
+</ul>
+<p>它替代的是 <a href="../concepts/kv-cache.html">kv-cache</a> 随输出长度线性膨胀的标准全注意力。也不同于 linear attention——linear attention 会让参考 token 反复做状态更新，把图像特征越揉越糊；R-SWA <strong>把视觉 token 排除在状态转移之外</strong>，所以图永远清晰、认字不掉点。这是它跟普通 sliding window attention（<a href="../concepts/sparse-attention.html">sparse-attention</a> 家族）最关键的区别。</p>
+<h2>怎么做的</h2>
+<pre><code>生成第 t 个 token 时,它能看见的集合 N(t) =
+   P              ← 前缀 prefix: 全部视觉 token + prompt, 长度 L_m, 全局可见
+ ∪ D_n(t)         ← 输出滑窗: 最近 n 个已生成 token (因果)
+
+KV cache 当成一个容量 L_m + n 的队列:
+   每生成一个新 token → 淘汰队列里第 (L_m+1) 个(最老的那个输出 token)
+   → 前缀那段 L_m 永远留着,输出那段恒为 n
+</code></pre>
+<p>所以 KV cache 大小 = <code>L_m + min(n, T)</code> ≤ <code>L_m + n</code>，<strong>不随生成长度 T 增长</strong>。标准 MHA 则是 <code>L_m + T</code>，线性涨到爆。</p>
+<h2>数字例子</h2>
+<p>设前缀 <code>L_m = 300</code>（视觉 token + prompt），滑窗 <code>n = 128</code>。解码一本几十页的书，输出 <code>T = 10000</code> 个 token：</p>
+<pre><code>标准 MHA  cache = L_m + T   = 300 + 10000 = 10300
+R-SWA     cache = L_m + n   = 300 + 128   = 428
+─────────────────────────────────────────────────
+比值 ρ = 428 / 10300 ≈ 0.0415  →  只用 4%,省了 96%
+</code></pre>
+<p>而且 T 越大省得越狠：T=100000 时 MHA 要 100300，R-SWA 还是 <strong>428</strong>（ρ→0）。✓ 自检：把 T 一直加大，MHA 那条线性涨，R-SWA 这条压平在 428 不动——这就是"unlimited"的底气。显存和每步算力都恒定，所以几十页一次前向跑下来速度不掉。</p>
+<h2>跟标准注意力 / 普通 SWA 的对比</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>标准全注意力 (MHA)</th>
+<th>普通 SWA</th>
+<th>R-SWA</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>KV cache</td>
+<td>L_m + T（线性涨）</td>
+<td>常数</td>
+<td>常数 L_m+n</td>
+</tr>
+<tr>
+<td>看得到全部参考(图)?</td>
+<td>能</td>
+<td>滑出去就看不到</td>
+<td><strong>永远能</strong>（前缀全局）</td>
+</tr>
+<tr>
+<td>视觉 token 会被"揉糊"吗</td>
+<td>不会</td>
+<td>会（随滑窗状态转移）</td>
+<td><strong>不会</strong>（排除在状态转移外）</td>
+</tr>
+</tbody>
+</table>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/unlimited-ocr.html">unlimited-ocr</a> · 提出 R-SWA 的 paper</li>
+<li><a href="../concepts/kv-cache.html">kv-cache</a> · R-SWA 要兜住的对象：从线性压成常数</li>
+<li><a href="../concepts/sparse-attention.html">sparse-attention</a> · R-SWA 是稀疏注意力的"前缀全局 + 输出滑窗"两段式特例</li>
+<li><a href="../concepts/optical-context-compression.html">optical-context-compression</a> · 配套的输入侧省法（前缀 L_m 本身已经被压小）</li>
+<li><a href="../concepts/flash-attention.html">flash-attention</a> · kernel 落地用 FA v3，R-SWA 下 per-call 时延恒定</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/unlimited-ocr.html"><span class="cat">paper</span>Unlimited OCR · 像人抄书一样，一口气解析几十页</a></li><li><a href="../concepts/optical-context-compression.html"><span class="cat">concept</span>Optical Context Compression · 光学上下文压缩</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/reference-sliding-window-attention.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
