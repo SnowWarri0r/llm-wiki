@@ -31,6 +31,7 @@ year: 2018
 - [[statistics-pooling]] · 变长→定长的核心机制（mean+std over time）
 - [[time-delay-neural-network]] · 帧级主干，膨胀上下文，conv1d-with-dilation 的前身
 - [[pooling]] · statistics pooling 是 pooling 家族里"沿时间轴聚合"的一种
+- [[mfcc]] · 喂给 TDNN 的 24 维输入特征（log-mel + DCT）
 
 ## 我的批注
 - 最值得记的一句：**训练目标和使用方式不是一回事**。训练时让网络做分类（认出这段是 N 个人里的哪个），训完把 softmax 分类头扔掉，从倒数第二段（segment6）抠出来的向量当通用声纹用。分类只是个"逼网络学会区分人"的代理任务。
