@@ -25,6 +25,7 @@
 - [RoPE · Rotary Position Embedding](wiki/papers/rope.md) — 不加位置向量，旋转 Q/K 让点积天然含相对位置；LLaMA / Mistral / Qwen 全在用
 - [Whisper](wiki/papers/whisper.md) — 68 万小时弱监督训 ASR，zero-shot 碾压精标模型；语音领域的 GPT 时刻
 - [Qwen3-ASR · 给 LLM 接个耳朵](wiki/papers/qwen3-asr.md) — 不从头训ASR: 预训练Qwen3当解码器+AuT音频编码器(8×下采样12.5Hz+动态窗口流式/离线)+projector; modality-projector生产级; prompt塞热词定制转写; RL用GSPO; 带口音英语完胜Whisper
+- [X-Vectors · 声纹身份证](wiki/papers/x-vector.md) — Kaldi 看家声纹模型(ECAPA祖宗): 训网络认人,训完扔分类头,中间512维向量就是声纹; statistics pooling(沿时间μ+σ)把变长语音塌成定长; TDNN膨胀上下文; 数据增强吃大数据,SRE16 EER 8.35%→4.89%完胜i-vector; 抽"谁"不抽"什么",跟ASR正交
 - [Generative Agents · Smallville](wiki/papers/generative-agents.md) — 给 LLM 加记忆流 + 反思 + 规划，25 个 agent 在虚拟小镇里自主生活
 - [MemGPT · LLMs as Operating Systems](wiki/papers/memgpt.md) — context 当 RAM、外部存储当硬盘，LLM 自己 function call 调度记忆
 - [Lumine · 从像素玩 3D 开放世界](wiki/papers/lumine.md) — VLM(Qwen2-VL)直接吃画面像素吐键鼠, 端到端打通原神5h主线零样本迁移; 动作即文本token + action chunking(5Hz看30Hz动) + hybrid thinking(该想才想); 2424h人类录像纯模仿零RL + W8A8实时
@@ -201,6 +202,9 @@
 ### 语音 / ASR
 - [Weak Supervision at Scale](wiki/concepts/weak-supervision-at-scale.md) — 弱标注 + 量大力飞，Whisper 核心策略
 - [Multitask Speech](wiki/concepts/multitask-speech.md) — 一个模型多任务，靠特殊 token 切换
+- [Speaker Embedding · 声纹嵌入](wiki/concepts/speaker-embedding.md) — 语音→定长"身份向量",抽"谁说的"; i-vector→x-vector→ECAPA代际; 余弦/PLDA打分判同异
+- [Statistics Pooling · 统计池化](wiki/concepts/statistics-pooling.md) — 沿时间求μ+σ把变长帧序列塌成定长向量; "变长→定长"核心一步,跟帧数无关
+- [TDNN · 时延网络](wiki/concepts/time-delay-neural-network.md) — 逐帧+膨胀上下文,本质dilated conv1d; 三层把感受野铺到15帧; x-vector帧级主干
 
 ### 视觉
 - [Patch Embedding](wiki/concepts/patch-embedding.md) — 图切成 16×16 块, 每块拉平投影成 token, ViT 唯一的工程创新

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Statistics Pooling · 统计池化 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · statistics-pooling</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Statistics Pooling · 统计池化</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>沿时间轴把不定长的逐帧序列，用均值+标准差汇成一个固定长度的向量。</p>
+<h2>直觉</h2>
+<p>这是 <a href="../papers/x-vector.html">x-vector</a> 里"变长语音→定长嵌入"的那一步魔法。</p>
+<p>痛点：网络前半段（<a href="../concepts/time-delay-neural-network.html">time-delay-neural-network</a>）逐帧处理，输入 100 帧出 100 帧、输入 500 帧出 500 帧——还是不定长。但最后要的是一个<strong>定长</strong>向量去算距离。怎么把"长度不定的一摞帧"塌成"一个固定大小的东西"？</p>
+<p>答案朴素得意外：<strong>对整段求统计量</strong>。100 帧也好 500 帧也好，求个均值就只剩一个数（每维一个）。均值天然不在乎你有多少帧——这就是"变长→定长"。</p>
+<p>为什么不只取均值、还要标准差？均值只说"这段语音平均长什么样"，标准差还带了"这段里嗓音波动有多大"——快慢、高低起伏的幅度，对区分人很有用。所以 x-vector 把<strong>均值和标准差拼起来</strong>，维度翻倍。</p>
+<p>类比：一个班 30 个学生（不定长，换班可能 40 个）的成绩，你没法直接拿"30 个分数"和别的班"40 个分数"比。但你可以算这个班的<strong>平均分 + 标准差</strong>两个数——不管多少人都是两个数，拿去和别的班比就对齐了。statistics pooling 就是干这个，只不过对的是 1500 维的逐帧向量。</p>
+<h2>怎么做的</h2>
+<pre><code>输入: 帧级序列 h[1..T]，每帧是 D 维向量（x-vector 里 D=1500）
+      T 是帧数，不固定
+
+mean = (1/T) Σ_t h[t]          # D 维
+std  = sqrt( (1/T) Σ_t h[t]² − mean² )   # D 维，逐维标准差
+
+输出 = concat(mean, std)       # 2D 维，固定！（x-vector: 1500+1500=3000）
+</code></pre>
+<p>不管 T 是多少，输出永远 2D 维。后面接全连接 → 512 维 = x-vector。</p>
+<h2>数字例子</h2>
+<p>3 帧，每帧 2 维（真实是 T 帧 × 1500 维，这里缩小手算）：</p>
+<pre><code>h1 = [2, 0]
+h2 = [4, 0]
+h3 = [6, 0]
+</code></pre>
+<p><strong>均值</strong>（逐维求平均）：</p>
+<ul>
+<li>维度 1: (2+4+6)/3 = 12/3 = <strong>4</strong></li>
+<li>维度 2: (0+0+0)/3 = <strong>0</strong></li>
+<li>mean = [4, 0]</li>
+</ul>
+<p><strong>标准差</strong>（逐维）：维度 1 的偏差是 2−4=−2, 4−4=0, 6−4=+2</p>
+<ul>
+<li>方差 = (4+0+4)/3 = 8/3 ≈ 2.67 → std ≈ <strong>1.63</strong></li>
+<li>维度 2 全是 0 → std = 0</li>
+<li>std = [1.63, 0]</li>
+</ul>
+<p><strong>拼接输出</strong> = [4, 0, 1.63, 0] → <strong>4 维定长</strong>。</p>
+<p>现在换一段 5 帧的语音进来，无论那 5 帧是多少，pooling 出来<strong>还是 4 维</strong>（mean 2 维 + std 2 维）✓。长度被这一步彻底"吃掉"了。维度 2 全程是 0（这一维没信息），均值和标准差都是 0——也如实反映出来了。</p>
+<h2>跟普通 pooling 的对比</h2>
+<ul>
+<li>普通 <a href="../concepts/pooling.html">pooling</a>（CNN 里的 max/avg pool）沿<strong>空间</strong>降采样，还是保留一个缩小的网格。</li>
+<li>statistics pooling 沿<strong>时间</strong>直接塌成一个向量，把整段压成定长——目的是"消灭长度维度"，不是降采样。</li>
+<li>进阶版 attentive statistics pooling（ECAPA）：求加权均值/标准差，让网络自己学"哪些帧更重要"，而不是每帧等权。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/x-vector.html">x-vector</a> · 用它做变长→定长那一步</li>
+<li><a href="../concepts/speaker-embedding.html">speaker-embedding</a> · 这一步的产物就是声纹嵌入</li>
+<li><a href="../concepts/pooling.html">pooling</a> · pooling 家族；这是沿时间轴的统计版</li>
+<li><a href="../concepts/time-delay-neural-network.html">time-delay-neural-network</a> · 它的上游（喂逐帧序列进来）</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/x-vector.html"><span class="cat">paper</span>X-Vectors · 给一段语音拍张&quot;声纹身份证&quot;</a></li><li><a href="../concepts/speaker-embedding.html"><span class="cat">concept</span>Speaker Embedding · 声纹嵌入</a></li><li><a href="../concepts/time-delay-neural-network.html"><span class="cat">concept</span>Time-Delay Neural Network · TDNN · 时延网络</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/statistics-pooling.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

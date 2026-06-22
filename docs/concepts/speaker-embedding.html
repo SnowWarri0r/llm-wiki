@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Speaker Embedding · 声纹嵌入 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · speaker-embedding</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Speaker Embedding · 声纹嵌入</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把一段任意长的语音压成一个固定长度向量，代表"是谁在说"，不管说了什么。</p>
+<h2>直觉</h2>
+<p>类比：给每个人的<strong>嗓音拍一张身份证照片</strong>。照片尺寸固定（比如 512 维），不管你录 3 秒还是 30 秒。判断两段录音是不是同一个人，就是量两张照片的距离——近就是同一人，远就是不同人。</p>
+<p>它替代的是"逐帧比对"这种行不通的做法：两段语音帧数不一样、内容也不一样，没法直接对齐着比。嵌入这一步先把"内容、长度、信道"这些噪声都甩掉，只留"谁"，再比就干净了。</p>
+<p>关键分工：<a href="../papers/x-vector.html">x-vector</a> 这类模型抽的是<strong>身份</strong>；ASR（<a href="../papers/whisper.html">whisper</a> / <a href="../papers/qwen3-asr.html">qwen3-asr</a>）抽的是<strong>内容</strong>。同样喂音频，目标正交。</p>
+<h2>怎么做的</h2>
+<p>三代演进，骨架越来越像"神经网络嵌入 + 后端打分"：</p>
+<pre><code>i-vector (2011)：GMM-UBM 统计 + 因子分析 → 低维向量。纯统计，不学。
+x-vector (2018)：TDNN 逐帧 → statistics pooling 沿时间汇成定长 → 段级全连接 → 512 维嵌入。
+                 训练当分类任务（认 N 个说话人），用时扔掉分类头取中间层。
+ECAPA-TDNN (2020)：x-vector + SE 注意力 + 多尺度聚合 + attentive pooling。
+</code></pre>
+<p>拿到两个嵌入怎么判同不同人（后端打分）：</p>
+<ul>
+<li><strong>余弦相似度</strong>：最简单，量两个向量夹角。</li>
+<li><strong>PLDA</strong>：再训一个概率模型，把"说话人间差异"和"同一人内部波动（不同录音/信道）"分开建模，打一个对数似然比分。比裸余弦更鲁棒，是 x-vector 时代标配后端。</li>
+</ul>
+<h2>数字例子</h2>
+<p>两段录音各自得到 2 维嵌入（真实是 512 维，这里缩小手算）：</p>
+<pre><code>录音 A（张三，安静）: a = [0.8, 0.6]
+录音 B（张三，带噪声）: b = [0.6, 0.8]
+录音 C（李四）:         c = [-0.7, 0.7]
+</code></pre>
+<p>余弦相似度 = 点积 /（各自模长），这里三个向量模长都≈1（0.8²+0.6²=1），省去分母：</p>
+<ul>
+<li>A·B = 0.8×0.6 + 0.6×0.8 = 0.48 + 0.48 = <strong>0.96</strong> → 很近 → 判同一人 ✓</li>
+<li>A·C = 0.8×(−0.7) + 0.6×0.7 = −0.56 + 0.42 = <strong>−0.14</strong> → 接近 0（夹角约 98°）→ 判不同人 ✓</li>
+</ul>
+<p>✓ 同一个人即使一段带噪，嵌入还是靠在一起（0.96）；换个人立刻拉开（−0.14）。这就是"好嵌入"的标准：类内紧、类间散。数据增强（往 A 里掺噪声造出 B 一起训）就是逼网络学会"带噪也认得出是张三"。</p>
+<h2>跟 ASR 嵌入的对比</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>声纹嵌入</th>
+<th>ASR 表示</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>抽什么</td>
+<td>谁说的（身份）</td>
+<td>说了什么（内容）</td>
+</tr>
+<tr>
+<td>输出</td>
+<td>一整段一个定长向量</td>
+<td>逐帧/逐 token 序列</td>
+</tr>
+<tr>
+<td>怎么用</td>
+<td>算两向量距离判同异</td>
+<td>解码成文字</td>
+</tr>
+</tbody>
+</table>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/x-vector.html">x-vector</a> · 提出 x-vector 这个嵌入的 paper</li>
+<li><a href="../concepts/statistics-pooling.html">statistics-pooling</a> · 变长→定长嵌入的核心一步</li>
+<li><a href="../concepts/time-delay-neural-network.html">time-delay-neural-network</a> · x-vector 的帧级主干</li>
+<li><a href="../papers/whisper.html">whisper</a> · 对照：抽内容而非身份</li>
+<li><a href="../concepts/dot-product.html">dot-product</a> · 余弦相似度的核心运算</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/x-vector.html"><span class="cat">paper</span>X-Vectors · 给一段语音拍张&quot;声纹身份证&quot;</a></li><li><a href="../concepts/statistics-pooling.html"><span class="cat">concept</span>Statistics Pooling · 统计池化</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/speaker-embedding.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
