@@ -73,7 +73,7 @@
 </tr>
 </tbody>
 </table>
-<p>你问的"怎么通过 softmax 得到概率分布"——是<strong>右边那个</strong>。"怎么跟 token 匹配上"——是它前面一步（LM head）。下面端到端走一遍，标清每一步。</p>
+<p>"怎么通过 softmax 得到概率分布"——是<strong>右边那个</strong>。"怎么跟 token 匹配上"——是它前面一步（LM head）。下面端到端走一遍，标清每一步。</p>
 <h2>全流程一张图</h2>
 <figure style="margin:26px 0; padding:22px; background:#eef2f7; border:1px solid #9fb3c8; border-radius:4px;">
 <svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:JetBrains Mono,monospace;">
@@ -161,7 +161,7 @@ out     = weights · V         # 按权重把各 token 的 V 加权抄过来
 <p>"堆 N 层"（深度，竖着叠）和 ③ 里的"多头"（一层内横着拆 h 个头）是<strong>两个垂直的轴</strong>，最容易混——区别和配图见 <a href="../concepts/transformer-architecture.html">transformer-architecture</a> 的"深度 vs 多头"一节。</p>
 </blockquote>
 <p>预测下一个词时，我们只关心<strong>最后一个位置</strong>的那个 [768] 向量——它是模型对"接下来该是什么"的全部浓缩判断。</p>
-<h2>⑤ LM head · 末位向量怎么"撞"上 token（你问的匹配在这）</h2>
+<h2>⑤ LM head · 末位向量怎么"撞"上 token（token 匹配在这）</h2>
 <p>这一步回答"怎么跟 token 匹配上"。有一个<strong>输出矩阵 W_out</strong>，形状 <code>[词表大小 × 768]</code>——<strong>每一行是一个 token 的"代表向量"</strong>（"子"有一行，"垫"有一行，5 万个 token 5 万行）。</p>
 <p>把末位向量 h 跟<strong>每一行</strong>做点积：</p>
 <pre><code>logit_i = h · W_out[i]     # h 跟第 i 个 token 的代表向量有多像
