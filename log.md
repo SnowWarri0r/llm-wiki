@@ -812,3 +812,5 @@ skill 更新:
 ## [2026-06-23] update | optical-context-compression 补"SAM/CLIP 各发挥什么"(窗口看清+全局理解+顺序逻辑); 修 unlimited-ocr 误指 vit 的链接
 
 ## [2026-06-23] ingest | sam (Segment Anything) + promptable-segmentation + sam-data-engine (闭合 optical-context-compression → SAM 回链)
+
+## [2026-06-23] update | optical-context-compression 补"16× 怎么做"(两次stride-2卷积,边长64→32→16); 修 sam FIG01 两箭头方向
