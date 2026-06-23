@@ -10,7 +10,7 @@ year: 2023
 
 # Segment Anything · 给"分割"造一个可提示的基础模型
 
-Meta AI 2023 的里程碑。它把 NLP 那套"基础模型 + 提示（prompt）+ 零样本迁移"搬到图像分割：训一个**可提示**的分割模型，给它一个点/框/文字，就能把对应的东西抠出来，还能零样本迁移到没见过的图和任务。它的图像编码器（SAM-ViT）后来被 DeepSeek-OCR 的 DeepEncoder 借去当前半段，所以从 [[unlimited-ocr]] / [[optical-context-compression]] 一路点回来，就到这。
+Meta AI 2023 的里程碑。它把 NLP 那套"基础模型 + 提示（prompt）+ 零样本迁移"搬到图像分割：训一个**可提示**的分割模型，给它一个点/框/文字，就能把对应的东西抠出来，还能零样本迁移到没见过的图和任务。它的图像编码器（SAM-ViT）后来被 DeepSeek-OCR 的 DeepEncoder 借去当前半段，是 [[unlimited-ocr]] / [[optical-context-compression]] 那条 OCR 压缩线的上游。
 
 ## 一句话
 **把分割重新定义成"给任意提示返回一个合理掩码"的可提示任务，配一个能自我滚雪球的数据引擎造出 11 亿掩码，于是一个模型零样本分割万物。**
