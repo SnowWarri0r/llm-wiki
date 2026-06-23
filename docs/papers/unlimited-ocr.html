@@ -321,7 +321,7 @@ figure.play .uo-svg .draw { stroke-dashoffset: 0; }
 
 <div class="note">
   <span class="l">放进 wiki 这条线</span>
-  <p>Unlimited OCR 接的是 <a href="../concepts/optical-context-compression.html">光学上下文压缩</a>（DeepEncoder = <a href="vit.html">SAM/CLIP-ViT</a>）那条线，但只动解码器：把全注意力换成 <a href="../concepts/reference-sliding-window-attention.html">R-SWA</a>，把 <a href="../concepts/kv-cache.html">KV cache</a> 从线性压成常数——它是 <a href="../concepts/sparse-attention.html">稀疏注意力</a> 的"前缀全局 + 输出滑窗"两段式特例，跟 <a href="flash-attention.html">FlashAttention</a> 一样在攻注意力的显存/IO 成本，只是一个改可见范围、一个改 IO 调度。一句话：<strong>照着人抄书的工作记忆，让每个字只盯「原图 + 最近 128 字」——KV cache 一恒定,几十页就能一口气抄完,而且这刀对 dense OCR 还是免费午餐。R-SWA 不止 OCR,ASR / 翻译这类"盯固定参考、长程输出"的任务都能套。</strong></p>
+  <p>Unlimited OCR 接的是 <a href="../concepts/optical-context-compression.html">光学上下文压缩</a>（DeepEncoder = SAM-ViT 窗口注意力"看清每个字" + <a href="clip.html">CLIP-ViT</a> 全局注意力"理解整页"，细节见概念页）那条线，但只动解码器：把全注意力换成 <a href="../concepts/reference-sliding-window-attention.html">R-SWA</a>，把 <a href="../concepts/kv-cache.html">KV cache</a> 从线性压成常数——它是 <a href="../concepts/sparse-attention.html">稀疏注意力</a> 的"前缀全局 + 输出滑窗"两段式特例，跟 <a href="flash-attention.html">FlashAttention</a> 一样在攻注意力的显存/IO 成本，只是一个改可见范围、一个改 IO 调度。一句话：<strong>照着人抄书的工作记忆，让每个字只盯「原图 + 最近 128 字」——KV cache 一恒定,几十页就能一口气抄完,而且这刀对 dense OCR 还是免费午餐。R-SWA 不止 OCR,ASR / 翻译这类"盯固定参考、长程输出"的任务都能套。</strong></p>
 </div>
 
 <div class="gloss">
