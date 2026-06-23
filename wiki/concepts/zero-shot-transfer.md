@@ -1,8 +1,8 @@
 ---
 name: zero-shot-transfer
 type: concept
-sources: [gpt-2, gpt-3]
-updated: 2026-05-21
+sources: [gpt-2, gpt-3, sam]
+updated: 2026-06-23
 ---
 
 # Zero-Shot Transfer · 不 finetune 直接用 prompt 触发任务
