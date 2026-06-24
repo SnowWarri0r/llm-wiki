@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>SwiGLU · 带门的 FFN · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · swiglu</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>SwiGLU · 带门的 FFN</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把 transformer 的 FFN 改成"一条算内容、一条当门，两条逐元素相乘"——让网络自己决定哪些特征放过去。</p>
+<h2>直觉</h2>
+<p>普通 FFN：<code>x → 升维(d→4d) → 激活(GELU) → 降维(4d→d)</code>，一条路、一个激活函数。</p>
+<p>SwiGLU 加了个<strong>门</strong>：开两条并行投影，一条当"内容"，另一条过一个平滑激活(Swish)当"开关"，两条<strong>逐元素相乘</strong>——门接近 0 的位置内容被掐掉，门大的地方放过。直觉上比"算一遍激活一遍"多了一层<strong>自己给自己开关</strong>的能力，实测同算力下更强，所以 LLaMA、PaLM、现代 <a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> 家族(SD3/FLUX)都用它。</p>
+<p>注意：<strong>原版 <a href="../papers/dit.html">dit</a>(2022) 用的是 GELU，不是 SwiGLU</strong>——SwiGLU 是后来给 DiT 家族的现代化升级，别记串了。</p>
+<h2>怎么做的</h2>
+<pre><code>FFN_SwiGLU(x) = ( Swish(x·W_gate)  ⊙  x·W_up ) · W_down
+
+Swish(z) = z · sigmoid(z)   (也叫 SiLU，一条平滑、负区不全为 0 的曲线)
+⊙ = 逐元素相乘
+</code></pre>
+<p>三个矩阵(W_gate / W_up / W_down)而非两个，为保持参数量，中间维度从 4d 缩到约 2.67d(×2/3)。</p>
+<h2>数字例子</h2>
+<p>设某 token 算出两条投影：门 <code>g = x·W_gate = [2, -1]</code>，内容 <code>u = x·W_up = [3, 4]</code>。</p>
+<p><strong>第一步 · 门过 Swish</strong>(Swish(z)=z·σ(z))：</p>
+<pre><code>σ(2) ≈ 0.88 → Swish(2)  = 2·0.88  =  1.76
+σ(-1)≈ 0.27 → Swish(-1) = -1·0.27 = -0.27
+</code></pre>
+<p><strong>第二步 · 门 ⊙ 内容</strong>：</p>
+<pre><code>gated = [1.76, -0.27] ⊙ [3, 4] = [1.76·3, -0.27·4] = [5.28, -1.08]
+</code></pre>
+<p>再过 <code>W_down</code> 降维。✓ 自检：第二维门的输入是 −1(负)→ Swish 压到 −0.27(接近 0)→ 把内容 4 几乎掐灭(−1.08)；第一维门输入 2(正)→ 放大内容到 5.28。<strong>门在挑哪些内容通过</strong>，这是普通 GELU FFN(单路、无门)给不了的。</p>
+<h2>跟普通 FFN 的对比</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>普通 FFN</th>
+<th>SwiGLU</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>投影矩阵</td>
+<td>2 个</td>
+<td>3 个(gate/up/down)</td>
+</tr>
+<tr>
+<td>激活</td>
+<td>GELU 单路</td>
+<td>Swish 当门 ⊙ 内容</td>
+</tr>
+<tr>
+<td>中间维度</td>
+<td>4d</td>
+<td>≈2.67d(补回参数量)</td>
+</tr>
+<tr>
+<td>谁用</td>
+<td>原版 DiT、早期 Transformer</td>
+<td>LLaMA / PaLM / SD3 / FLUX</td>
+</tr>
+</tbody>
+</table>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/dit.html">dit</a> · DiT 家族的 FFN；原版用 GELU，现代换 SwiGLU</li>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · 现代 DiT 主干的 FFN 就是它</li>
+<li><a href="../concepts/normalization.html">normalization</a> · 同属"transformer 块内部零件"</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/dit.html"><span class="cat">paper</span>DiT · 把扩散模型的 U-Net 换成 Transformer</a></li><li><a href="../concepts/diffusion-transformer.html"><span class="cat">concept</span>Diffusion Transformer · DiT</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/swiglu.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

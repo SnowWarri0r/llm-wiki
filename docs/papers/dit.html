@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>DiT · 把扩散的 U-Net 换成 Transformer · 个人 wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --accent: var(--brick); --accent-soft: var(--brick-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply; opacity: 0.5;
+}
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; }
+.masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(52px, 9vw, 96px); line-height: 0.92; letter-spacing: -0.035em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 38px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; letter-spacing: -0.01em; }
+p { margin: 12px 0; }
+strong { font-weight: 700; color: var(--ink); }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--ochre-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--ochre); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--ochre); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+table.spec { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 13px; margin: 24px 0; }
+table.spec th, table.spec td { border: 1px solid var(--rule); padding: 7px 10px; text-align: left; }
+table.spec th { background: var(--accent-soft); color: var(--ink); font-weight: 700; }
+table.spec td.hl { background: var(--ochre-soft); font-weight: 700; }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--accent-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--accent-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* dt-specific */
+.dt-svg { width: 100%; height: auto; display: block; font-family: 'JetBrains Mono', monospace; }
+.dt-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .dt-rev { opacity: 1; }
+figure.play .dt-rev.d1 { transition-delay: 0.15s; }
+figure.play .dt-rev.d2 { transition-delay: 0.40s; }
+figure.play .dt-rev.d3 { transition-delay: 0.65s; }
+figure.play .dt-rev.d4 { transition-delay: 0.90s; }
+figure.play .dt-rev.d5 { transition-delay: 1.15s; }
+figure.play .dt-rev.d6 { transition-delay: 1.40s; }
+.dt-svg .draw { stroke-dasharray: 1000; stroke-dashoffset: 1000; transition: stroke-dashoffset 1.5s ease; }
+figure.play .dt-svg .draw { stroke-dashoffset: 0; }
+.dt-svg .grow { transform: scaleX(0); transform-origin: left center; transition: transform 1.1s ease; }
+figure.play .dt-svg .grow { transform: scaleX(1); }
+@media (prefers-reduced-motion: reduce) { .dt-rev { opacity: 1; transition: none; } .dt-svg .draw { stroke-dashoffset: 0; transition: none; } .dt-svg .grow { transform: scaleX(1); transition: none; } }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · dit</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · ICCV · 2023</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 扩散生成主干</div>
+  <h1 class="title">U-Net<br /><span class="em">退役.</span></h1>
+  <div class="byline">William Peebles (UC Berkeley) · Saining Xie (NYU) · ICCV 2023 · arXiv 2212.09748</div>
+  <p class="dek">扩散去噪一直用 U-Net。DiT 证明纯 Transformer 在 latent patch 上去噪不但能用，还更会 scale——SD3 / FLUX / 视频生成全是它的后代。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>把扩散模型的去噪 U-Net 整个换成 <strong>Transformer</strong>：在 VAE latent（256×256 图 → 32×32×4）上 <a class="jr" href="#g-02">patchify</a> 成 token 序列，像 ViT 一样去噪。时间步 t 和类别 c 通过 <a class="jr" href="#g-01">adaLN-Zero</a> 注入——从 (t+c) 算出每层归一化的缩放/平移，再加一个<strong>零初始化的门控</strong>让每块开训即恒等。比 cross-attention / in-context 都好(<a class="jr" href="#g-03">FID 19.47 vs 26.14</a>)还更省。关键认知：<strong>DiT 是架构，<a class="jr" href="#g-04">flow matching / diffusion 是训练目标，两者正交</a></strong>——原版 DiT 预测噪声 ε(DDPM)，SD3/FLUX 把同一个 DiT 拿去预测速度就是 flow matching，架构一个字不改。<a class="jr" href="#g-05">算力越多 FID 越低</a>，DiT-XL/2 在 ImageNet 256 拿下 FID 2.27。</p>
+</div>
+
+<h2><span class="num">§ 01</span>把 U-Net 换成 Transformer</h2>
+<p>早期扩散（DDPM、Stable Diffusion）的去噪网络都是卷积 U-Net——带一堆局部性、多尺度的归纳偏置。但 Transformer 在别的领域早证明了"大数据 + 可 scale"更香。DiT 来验证：去噪能不能也换成纯 Transformer？做法跟 <a href="vit.html">ViT</a> 一个味道——把 <a class="jr" href="#g-06">VAE latent</a> 切成 <a class="jr" href="#g-02">patch</a> token，喂进标准 Transformer，让 self-attention 在 token 间传信息。patch 越小，token 越多、算力越大、FID 越低。块里的 FFN 原版用 GELU、现代 DiT 家族换成 <a class="jr" href="#g-09">SwiGLU</a>。</p>
+
+<figure id="fig-backbone">
+  <figcaption><span>Fig 01 · 去噪骨架:U-Net → Transformer(latent patch)</span><span class="fnum">BACKBONE SWAP</span></figcaption>
+  <svg class="dt-svg" viewBox="0 0 720 290" role="img" aria-label="U-Net 去噪 vs DiT 在 latent patch 上去噪">
+    <!-- left: U-Net -->
+    <text class="dt-rev d1" x="150" y="36" text-anchor="middle" font-size="13" font-weight="700" fill="#7a6f5d">以前 · U-Net 去噪</text>
+    <g class="dt-rev d1" fill="#e8e0c8" stroke="#bfb398">
+      <rect x="70" y="60" width="40" height="40" rx="3"/><rect x="116" y="78" width="34" height="34" rx="3"/><rect x="156" y="94" width="28" height="28" rx="3"/>
+      <rect x="190" y="94" width="28" height="28" rx="3"/><rect x="224" y="78" width="34" height="34" rx="3"/><rect x="264" y="60" width="40" height="40" rx="3"/>
+    </g>
+    <path class="dt-rev d1" d="M150 130 Q 187 160 224 130" fill="none" stroke="#bfb398" stroke-width="1" stroke-dasharray="3 2"/>
+    <text class="dt-rev d1" x="187" y="150" text-anchor="middle" font-size="9" fill="#7a6f5d">卷积下采样→上采样 + skip</text>
+    <text class="dt-rev d1" x="187" y="176" text-anchor="middle" font-size="9.5" fill="#7a6f5d">一堆卷积归纳偏置</text>
+
+    <line class="dt-rev d2" x1="360" y1="44" x2="360" y2="250" stroke="#bfb398" stroke-width="1" stroke-dasharray="4 4"/>
+
+    <!-- right: DiT -->
+    <text class="dt-rev d2" x="540" y="36" text-anchor="middle" font-size="13" font-weight="700" fill="#9b2c2c">DiT · Transformer 去噪</text>
+    <rect class="dt-rev d2" x="392" y="60" width="56" height="56" rx="3" fill="#c8d4e2" stroke="#1f3a5f"/>
+    <text class="dt-rev d2" x="420" y="128" text-anchor="middle" font-size="8.5" fill="#7a6f5d">VAE latent</text>
+    <text class="dt-rev d2" x="420" y="140" text-anchor="middle" font-size="8.5" fill="#7a6f5d">32×32×4</text>
+    <line class="dt-rev d3" x1="450" y1="88" x2="478" y2="88" stroke="#3a3128" stroke-width="1.3"/><polygon class="dt-rev d3" points="478,88 470,84 470,92" fill="#3a3128"/>
+    <!-- patchify grid -->
+    <g class="dt-rev d3">
+      <rect x="482" y="64" width="48" height="48" fill="none" stroke="#9b2c2c"/>
+      <line x1="498" y1="64" x2="498" y2="112" stroke="#9b2c2c" stroke-width="0.6"/><line x1="514" y1="64" x2="514" y2="112" stroke="#9b2c2c" stroke-width="0.6"/>
+      <line x1="482" y1="80" x2="530" y2="80" stroke="#9b2c2c" stroke-width="0.6"/><line x1="482" y1="96" x2="530" y2="96" stroke="#9b2c2c" stroke-width="0.6"/>
+    </g>
+    <text class="dt-rev d3" x="506" y="128" text-anchor="middle" font-size="8.5" fill="#7a6f5d">patchify p×p</text>
+    <line class="dt-rev d4" x1="532" y1="88" x2="560" y2="88" stroke="#3a3128" stroke-width="1.3"/><polygon class="dt-rev d4" points="560,88 552,84 552,92" fill="#3a3128"/>
+    <!-- token seq -->
+    <g class="dt-rev d4" fill="#efd6c8" stroke="#9b2c2c"><rect x="564" y="76" width="14" height="24" rx="2"/><rect x="580" y="76" width="14" height="24" rx="2"/><rect x="596" y="76" width="14" height="24" rx="2"/><rect x="612" y="76" width="14" height="24" rx="2"/></g>
+    <text class="dt-rev d4" x="612" y="128" text-anchor="middle" font-size="8.5" fill="#7a6f5d">token 序列</text>
+    <line class="dt-rev d5" x1="544" y1="150" x2="544" y2="166" stroke="#3a3128" stroke-width="1.3"/>
+    <rect class="dt-rev d5" x="430" y="166" width="230" height="34" rx="4" fill="#efd6c8" stroke="#9b2c2c" stroke-width="1.3"/>
+    <text class="dt-rev d5" x="545" y="188" text-anchor="middle" font-size="12" font-weight="700" fill="#9b2c2c">Transformer 块 ×N（去噪）</text>
+
+    <text class="dt-rev d6" x="540" y="232" text-anchor="middle" font-size="10" fill="#7a6f5d">patch 越小 → token 越多 → 算力越大 → FID 越低</text>
+    <text class="dt-rev d6" x="540" y="248" text-anchor="middle" font-size="9" fill="#7a6f5d">p=2→256 token · p=4→64 · p=8→16</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 02</span>adaLN-Zero：用时间和条件去拧每层旋钮</h2>
+<p>Transformer 没有 U-Net 那些现成的条件注入口，得自己设计怎么把 <strong>时间步 t + 类别 c</strong> 喂进去。DiT 的答案是 <a class="jr" href="#g-01">adaLN</a>：不用固定的 LayerNorm 缩放 γ、平移 β，而是从 (t+c) 用一个小 MLP <strong>算出</strong> γ、β 去拧每层归一化。再加一手 <strong>adaLN-Zero</strong>——为每个残差分支多算一个门控 α 并<strong>零初始化</strong>，让每块开训时是恒等函数（同 <a href="../papers/resnet.html">resnet</a> 的 identity 起点）。详见 <a href="../concepts/adaptive-layernorm.html">adaptive-layernorm</a>。</p>
+
+<figure id="fig-adaln">
+  <figcaption><span>Fig 02 · DiT 块内部:(t+c) 拧 γ/β,零门控 α 起步即恒等</span><span class="fnum">ADALN-ZERO</span></figcaption>
+  <svg class="dt-svg" viewBox="0 0 720 430" role="img" aria-label="adaLN-Zero DiT 块结构">
+    <!-- condition MLP (left) -->
+    <rect class="dt-rev d1" x="40" y="168" width="180" height="74" rx="5" fill="#f0e0a8" stroke="#b8841c" stroke-width="1.4"/>
+    <text class="dt-rev d1" x="130" y="194" text-anchor="middle" font-size="12" font-weight="700" fill="#181410">(t + c) → MLP</text>
+    <text class="dt-rev d1" x="130" y="213" text-anchor="middle" font-size="9.5" fill="#3a3128">算出 6 个向量</text>
+    <text class="dt-rev d1" x="130" y="228" text-anchor="middle" font-size="9" fill="#7a6f5d">γ1,β1,α1 / γ2,β2,α2</text>
+
+    <!-- block column (center) x 360..540 -->
+    <rect class="dt-rev d2" x="356" y="54" width="188" height="20" rx="3" fill="#faf4e1" stroke="#bfb398"/><text class="dt-rev d2" x="450" y="68" text-anchor="middle" font-size="10" fill="#181410">输入 x（patch tokens）</text>
+    <line class="dt-rev d2" x1="450" y1="74" x2="450" y2="90" stroke="#3a3128" stroke-width="1.2"/><polygon class="dt-rev d2" points="450,90 446,82 454,82" fill="#3a3128"/>
+
+    <rect class="dt-rev d3" x="356" y="90" width="188" height="24" rx="3" fill="#c8d4e2" stroke="#1f3a5f"/><text class="dt-rev d3" x="450" y="106" text-anchor="middle" font-size="10" fill="#181410">adaLN ① · γ1·LN(x)+β1</text>
+    <line class="dt-rev d3" x1="450" y1="114" x2="450" y2="128" stroke="#3a3128" stroke-width="1.2"/><polygon class="dt-rev d3" points="450,128 446,120 454,120" fill="#3a3128"/>
+    <rect class="dt-rev d3" x="356" y="128" width="188" height="24" rx="3" fill="#efd6c8" stroke="#9b2c2c"/><text class="dt-rev d3" x="450" y="144" text-anchor="middle" font-size="10" fill="#181410">Multi-Head Attention</text>
+    <line class="dt-rev d3" x1="450" y1="152" x2="450" y2="164" stroke="#3a3128" stroke-width="1.2"/><polygon class="dt-rev d3" points="450,164 446,156 454,156" fill="#3a3128"/>
+    <rect class="dt-rev d3" x="386" y="164" width="128" height="22" rx="3" fill="#f0e0a8" stroke="#b8841c"/><text class="dt-rev d3" x="450" y="179" text-anchor="middle" font-size="10" fill="#181410">⊗ 门控 α1</text>
+    <circle class="dt-rev d3" cx="450" cy="202" r="9" fill="#faf4e1" stroke="#3a3128"/><text class="dt-rev d3" x="450" y="206" text-anchor="middle" font-size="11" fill="#3a3128">+</text>
+    <line class="dt-rev d3" x1="450" y1="186" x2="450" y2="193" stroke="#3a3128" stroke-width="1.2"/>
+
+    <line class="dt-rev d4" x1="450" y1="211" x2="450" y2="224" stroke="#3a3128" stroke-width="1.2"/><polygon class="dt-rev d4" points="450,224 446,216 454,216" fill="#3a3128"/>
+    <rect class="dt-rev d4" x="356" y="224" width="188" height="24" rx="3" fill="#c8d4e2" stroke="#1f3a5f"/><text class="dt-rev d4" x="450" y="240" text-anchor="middle" font-size="10" fill="#181410">adaLN ② · γ2·LN(x)+β2</text>
+    <line class="dt-rev d4" x1="450" y1="248" x2="450" y2="262" stroke="#3a3128" stroke-width="1.2"/><polygon class="dt-rev d4" points="450,262 446,254 454,254" fill="#3a3128"/>
+    <rect class="dt-rev d4" x="356" y="262" width="188" height="24" rx="3" fill="#efd6c8" stroke="#9b2c2c"/><text class="dt-rev d4" x="450" y="278" text-anchor="middle" font-size="10" fill="#181410">FFN（GELU / SwiGLU）</text>
+    <line class="dt-rev d4" x1="450" y1="286" x2="450" y2="298" stroke="#3a3128" stroke-width="1.2"/><polygon class="dt-rev d4" points="450,298 446,290 454,290" fill="#3a3128"/>
+    <rect class="dt-rev d4" x="386" y="298" width="128" height="22" rx="3" fill="#f0e0a8" stroke="#b8841c"/><text class="dt-rev d4" x="450" y="313" text-anchor="middle" font-size="10" fill="#181410">⊗ 门控 α2</text>
+    <circle class="dt-rev d4" cx="450" cy="336" r="9" fill="#faf4e1" stroke="#3a3128"/><text class="dt-rev d4" x="450" y="340" text-anchor="middle" font-size="11" fill="#3a3128">+</text>
+    <line class="dt-rev d4" x1="450" y1="320" x2="450" y2="327" stroke="#3a3128" stroke-width="1.2"/>
+    <line class="dt-rev d4" x1="450" y1="345" x2="450" y2="358" stroke="#3a3128" stroke-width="1.2"/><polygon class="dt-rev d4" points="450,358 446,350 454,350" fill="#3a3128"/>
+    <rect class="dt-rev d4" x="356" y="358" width="188" height="20" rx="3" fill="#faf4e1" stroke="#bfb398"/><text class="dt-rev d4" x="450" y="372" text-anchor="middle" font-size="10" fill="#181410">输出</text>
+
+    <!-- residual skip lines (far right, clear) -->
+    <path class="dt-rev d3" d="M544 64 H 580 V 202 H 461" fill="none" stroke="#7a6f5d" stroke-width="1" stroke-dasharray="3 2"/>
+    <path class="dt-rev d4" d="M544 214 H 596 V 336 H 461" fill="none" stroke="#7a6f5d" stroke-width="1" stroke-dasharray="3 2"/>
+    <text class="dt-rev d4" x="600" y="270" text-anchor="start" font-size="9" fill="#7a6f5d">残差</text>
+
+    <!-- condition arrows (dashed ochre) from MLP to modulate/gate points -->
+    <g class="dt-rev d5" stroke="#b8841c" stroke-width="1.1" stroke-dasharray="3 2" fill="none">
+      <path d="M220 188 C 300 188, 320 102, 354 102"/>
+      <path d="M220 200 C 300 200, 330 175, 384 175"/>
+      <path d="M220 218 C 300 218, 320 236, 354 236"/>
+      <path d="M220 230 C 300 230, 330 309, 384 309"/>
+    </g>
+    <g class="dt-rev d5" fill="#b8841c"><polygon points="354,102 346,98 346,106"/><polygon points="384,175 376,171 376,179"/><polygon points="354,236 346,232 346,240"/><polygon points="384,309 376,305 376,313"/></g>
+
+    <text class="dt-rev d6" x="130" y="300" text-anchor="middle" font-size="10.5" font-weight="700" fill="#9b2c2c">α 零初始化</text>
+    <text class="dt-rev d6" x="130" y="318" text-anchor="middle" font-size="9.5" fill="#7a6f5d">开训 α=0 → 两个 ⊗ 都归零</text>
+    <text class="dt-rev d6" x="130" y="332" text-anchor="middle" font-size="9.5" fill="#7a6f5d">→ 整块 = 恒等(x 原样穿过)</text>
+    <text class="dt-rev d6" x="130" y="346" text-anchor="middle" font-size="9.5" fill="#7a6f5d">→ 深网络梯度好走</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 03</span>为什么是 adaLN-Zero：四种条件注入实测</h2>
+<p>DiT 把四种把条件喂进 Transformer 的办法摆一起比（DiT-XL/2 @400K 步，FID 越低越好）：把条件当额外 token 拼进序列（in-context）、加一层交叉注意力（cross-attention）、用条件算 γ/β（adaLN）、再加零门控（adaLN-Zero）。结论干脆——<strong>adaLN-Zero 最低，还最省算力</strong>。</p>
+
+<figure id="fig-cond">
+  <figcaption><span>Fig 03 · 条件注入四选一(FID 越低越好)</span><span class="fnum">CONDITIONING · FID@400K</span></figcaption>
+  <svg class="dt-svg" viewBox="0 0 720 300" role="img" aria-label="四种条件注入的 FID 对比">
+    <line class="dt-rev d1" x1="150" y1="40" x2="150" y2="250" stroke="#bfb398" stroke-width="1"/>
+    <line class="dt-rev d1" x1="150" y1="250" x2="660" y2="250" stroke="#bfb398" stroke-width="1"/>
+    <text class="dt-rev d1" x="142" y="254" text-anchor="end" font-size="10" fill="#7a6f5d">0</text>
+    <line class="dt-rev d1" x1="146" y1="150" x2="150" y2="150" stroke="#bfb398"/><text class="dt-rev d1" x="142" y="154" text-anchor="end" font-size="10" fill="#7a6f5d">20</text>
+    <line class="dt-rev d1" x1="146" y1="50" x2="150" y2="50" stroke="#bfb398"/><text class="dt-rev d1" x="142" y="54" text-anchor="end" font-size="10" fill="#7a6f5d">40</text>
+    <!-- bars: 5px per FID unit, baseline 250 -->
+    <rect class="dt-rev d2" x="180" y="74" width="90" height="176" fill="#9b2c2c" opacity="0.85"/><text class="dt-rev d2" x="225" y="66" text-anchor="middle" font-size="13" font-weight="700" fill="#9b2c2c">35.24</text><text class="dt-rev d2" x="225" y="268" text-anchor="middle" font-size="10" fill="#3a3128">in-context</text>
+    <rect class="dt-rev d3" x="300" y="119" width="90" height="131" fill="#b8841c" opacity="0.8"/><text class="dt-rev d3" x="345" y="111" text-anchor="middle" font-size="13" font-weight="700" fill="#b8841c">26.14</text><text class="dt-rev d3" x="345" y="268" text-anchor="middle" font-size="10" fill="#3a3128">cross-attn</text>
+    <rect class="dt-rev d4" x="420" y="124" width="90" height="126" fill="#b8841c" opacity="0.8"/><text class="dt-rev d4" x="465" y="116" text-anchor="middle" font-size="13" font-weight="700" fill="#b8841c">25.21</text><text class="dt-rev d4" x="465" y="268" text-anchor="middle" font-size="10" fill="#3a3128">adaLN</text>
+    <rect class="dt-rev d5" x="540" y="153" width="90" height="97" fill="#4a6b3a"/><text class="dt-rev d5" x="585" y="145" text-anchor="middle" font-size="13" font-weight="700" fill="#4a6b3a">19.47</text><text class="dt-rev d5" x="585" y="268" text-anchor="middle" font-size="10" font-weight="700" fill="#4a6b3a">adaLN-Zero</text>
+    <text class="dt-rev d6" x="585" y="286" text-anchor="middle" font-size="9" fill="#7a6f5d">最低 + 最省算力 ✓</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 04</span>关键：DiT 是架构，flow matching 是目标（正交）</h2>
+<p>这是最容易卡住的点：<strong>你在 DiT 结构里看不到 flow matching，因为它根本不在架构里。</strong> DiT 只是个条件函数——吃进 (带噪 latent xt, 时间 t, 条件 c)，吐出同形状的一个张量。这个张量<strong>该是什么</strong>、以及<strong>怎么用它采样</strong>，才是 diffusion / flow matching 的事。原版 DiT 训它预测<strong>噪声 ε</strong>(DDPM)；SD3/FLUX 把<strong>同一个 DiT</strong> 训成预测<strong>速度 v</strong>，就是 <a href="../concepts/flow-matching.html">flow-matching</a>——架构一个字不改。adaLN 的时间条件，就是把网络和"轨迹走到哪了"接起来的桥。</p>
+
+<figure id="fig-objective">
+  <figcaption><span>Fig 04 · 同一个 DiT,换训练目标 = diffusion 或 flow matching</span><span class="fnum">ARCH ⊥ OBJECTIVE</span></figcaption>
+  <svg class="dt-svg" viewBox="0 0 720 320" role="img" aria-label="DiT 架构与训练目标正交">
+    <!-- the one DiT -->
+    <rect class="dt-rev d1" x="270" y="40" width="180" height="50" rx="6" fill="#efd6c8" stroke="#9b2c2c" stroke-width="1.6"/>
+    <text class="dt-rev d1" x="360" y="60" text-anchor="middle" font-size="13" font-weight="700" fill="#9b2c2c">同一个 DiT</text>
+    <text class="dt-rev d1" x="360" y="78" text-anchor="middle" font-size="9" fill="#7a6f5d">(xt, t, c) → 同形状输出</text>
+    <!-- two target branches -->
+    <line class="dt-rev d2" x1="320" y1="90" x2="220" y2="118" stroke="#3a3128" stroke-width="1.2"/><polygon class="dt-rev d2" points="220,118 228,114 226,122" fill="#3a3128"/>
+    <line class="dt-rev d2" x1="400" y1="90" x2="500" y2="118" stroke="#3a3128" stroke-width="1.2"/><polygon class="dt-rev d2" points="500,118 492,114 494,122" fill="#3a3128"/>
+    <rect class="dt-rev d2" x="60" y="120" width="280" height="50" rx="5" fill="#c8d4e2" stroke="#1f3a5f"/>
+    <text class="dt-rev d2" x="200" y="140" text-anchor="middle" font-size="11" font-weight="700" fill="#181410">目标 A · 预测噪声 ε（DDPM）</text>
+    <text class="dt-rev d2" x="200" y="158" text-anchor="middle" font-size="9" fill="#7a6f5d">原版 DiT(2022)</text>
+    <rect class="dt-rev d3" x="380" y="120" width="280" height="50" rx="5" fill="#d8e6ce" stroke="#4a6b3a"/>
+    <text class="dt-rev d3" x="520" y="140" text-anchor="middle" font-size="11" font-weight="700" fill="#181410">目标 B · 预测速度 v（flow matching）</text>
+    <text class="dt-rev d3" x="520" y="158" text-anchor="middle" font-size="9" fill="#7a6f5d">SD3 / FLUX · 架构不变</text>
+
+    <!-- 1D numeric for flow matching -->
+    <rect class="dt-rev d4" x="60" y="196" width="600" height="98" rx="5" fill="#faf4e1" stroke="#bfb398"/>
+    <text class="dt-rev d4" x="76" y="216" text-anchor="start" font-size="10.5" font-weight="700" fill="#4a6b3a">1 维数字例子(把整张图缩成一个数)：噪声 x₀=0，数据 x₁=4，直线 xt=4t，速度 v=x₁−x₀=4</text>
+    <!-- number line -->
+    <line class="dt-rev d5" x1="120" y1="258" x2="600" y2="258" stroke="#7a6f5d" stroke-width="1"/>
+    <g class="dt-rev d5" font-size="10" fill="#3a3128" text-anchor="middle">
+      <circle cx="120" cy="258" r="5" fill="#1f3a5f"/><text x="120" y="278">x=0 (t=0)</text>
+      <circle cx="360" cy="258" r="5" fill="#b8841c"/><text x="360" y="278">x=2 (t=0.5)</text>
+      <circle cx="600" cy="258" r="5" fill="#4a6b3a"/><text x="600" y="278">x=4 (t=1, 数据)</text>
+    </g>
+    <path class="dt-rev d6" d="M126 250 C 200 234, 280 234, 354 250" fill="none" stroke="#9b2c2c" stroke-width="1.3"/><polygon class="dt-rev d6" points="354,250 346,245 347,253" fill="#9b2c2c"/>
+    <path class="dt-rev d6" d="M366 250 C 440 234, 520 234, 594 250" fill="none" stroke="#9b2c2c" stroke-width="1.3"/><polygon class="dt-rev d6" points="594,250 586,245 587,253" fill="#9b2c2c"/>
+    <text class="dt-rev d6" x="240" y="232" text-anchor="middle" font-size="9" fill="#9b2c2c">走 v·0.5=2</text>
+    <text class="dt-rev d6" x="480" y="232" text-anchor="middle" font-size="9" fill="#9b2c2c">再走 v·0.5=2</text>
+  </svg>
+</figure>
+<div class="note">
+  <span class="l">一句话拆穿"模拟"</span>
+  <p>网络从头到尾只干一件事：<strong>给定你现在在哪(xt)、现在几点(t)，说一个方向</strong>。flow matching 规定"方向的目标 = x₁−x₀"且"用欧拉法把方向积分出来"；diffusion 规定"预测噪声 ε 再按公式反推"。<strong>同一个 DiT，换目标即换范式</strong>，这就是为什么结构图里看不到它。</p>
+</div>
+
+<h2><span class="num">§ 05</span>Scaling：算力越多，FID 越低</h2>
+<p>DiT 用 <a class="jr" href="#g-05">Gflops</a> 当横轴画 scaling：把模型加深加宽、或把 patch 调小（token 变多），算力越大，FID 单调往下，干净且可预测（四档 <a class="jr" href="#g-07">DiT-S/B/L/XL</a>）。最大的 DiT-XL/2 在 class-conditional ImageNet 256×256 拿下 <strong><a class="jr" href="#g-08">FID 2.27</a></strong>（<a class="jr" href="#g-10">cfg=1.5</a>；不加 guidance 是 9.62），当时 SOTA。</p>
+
+<figure id="fig-scaling">
+  <figcaption><span>Fig 05 · Gflops ↑ → FID ↓(单调)</span><span class="fnum">SCALING LAW</span></figcaption>
+  <svg class="dt-svg" viewBox="0 0 720 300" role="img" aria-label="DiT 算力越大 FID 越低">
+    <line class="dt-rev d1" x1="90" y1="40" x2="90" y2="248" stroke="#bfb398" stroke-width="1"/>
+    <line class="dt-rev d1" x1="90" y1="248" x2="660" y2="248" stroke="#bfb398" stroke-width="1"/>
+    <text class="dt-rev d1" x="78" y="60" text-anchor="end" font-size="10" fill="#7a6f5d">FID</text>
+    <text class="dt-rev d1" x="78" y="244" text-anchor="end" font-size="10" fill="#7a6f5d">低</text>
+    <text class="dt-rev d1" x="375" y="278" text-anchor="middle" font-size="10" fill="#7a6f5d">Gflops（更深/更宽/更小 patch）→</text>
+    <!-- descending curve -->
+    <polyline class="draw d2" points="140,70 280,120 430,168 600,210" fill="none" stroke="#9b2c2c" stroke-width="2.6" pathLength="1000"/>
+    <g font-size="9.5" fill="#3a3128" text-anchor="middle">
+      <circle class="dt-rev d3" cx="140" cy="70" r="4" fill="#9b2c2c"/><text class="dt-rev d3" x="140" y="60">DiT-S</text><text class="dt-rev d3" x="140" y="264" fill="#7a6f5d">1.4G</text>
+      <circle class="dt-rev d4" cx="280" cy="120" r="4" fill="#9b2c2c"/><text class="dt-rev d4" x="280" y="110">DiT-B</text><text class="dt-rev d4" x="280" y="264" fill="#7a6f5d">5.6G</text>
+      <circle class="dt-rev d5" cx="430" cy="168" r="4" fill="#9b2c2c"/><text class="dt-rev d5" x="430" y="158">DiT-L</text><text class="dt-rev d5" x="430" y="264" fill="#7a6f5d">19.7G</text>
+      <circle class="dt-rev d6" cx="600" cy="210" r="5" fill="#4a6b3a"/><text class="dt-rev d6" x="600" y="200" font-weight="700" fill="#4a6b3a">DiT-XL</text><text class="dt-rev d6" x="600" y="264" fill="#7a6f5d">29G(/4)</text>
+    </g>
+    <rect class="dt-rev d6" x="470" y="64" width="186" height="50" rx="4" fill="#faf4e1" stroke="#bfb398"/>
+    <text class="dt-rev d6" x="563" y="86" text-anchor="middle" font-size="14" font-weight="700" fill="#4a6b3a">DiT-XL/2 → FID 2.27</text>
+    <text class="dt-rev d6" x="563" y="104" text-anchor="middle" font-size="9" fill="#7a6f5d">cfg=1.5 · ImageNet 256 · SOTA</text>
+  </svg>
+</figure>
+
+<div class="note">
+  <span class="l">放进 wiki 这条线</span>
+  <p>DiT 是 <a href="../concepts/diffusion-transformer.html">扩散用 Transformer</a> 的源头：把去噪 U-Net 换成在 <a href="../concepts/patch-embedding.html">latent patch</a> 上跑的 <a href="vit.html">ViT</a>，用 <a href="../concepts/adaptive-layernorm.html">adaLN-Zero</a> 注 t/c。它的两个后话——<a href="../concepts/swiglu.html">SwiGLU</a> 换掉 GELU、<a href="flow-matching.html">flow matching</a> 换掉 DDPM——都是后来 <a href="stable-diffusion-3-5.html">SD3</a> / <a href="flux-1.html">FLUX</a> 给 DiT 家族做的现代化，把它升级成 <a href="../concepts/mmdit.html">MMDiT</a> 双流；<a href="cosmos-3.html">Cosmos 3</a> 的 generator 塔本质也是个 DiT。一句话：<strong>DiT 给扩散生成立了个"纯 Transformer、可 scale"的干净主干;而它能跑 diffusion 还是 flow matching,不在架构里,在你训它预测 ε 还是速度。</strong></p>
+</div>
+
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term"><a href="../concepts/adaptive-layernorm.html">adaLN-Zero</a></span> · 从 (t+c) 用 MLP 算每层归一化的缩放 γ/平移 β，再加零初始化门控 α 让每块开训即恒等。比 cross-attn/in-context 都好且省。</li>
+    <li id="g-02"><span class="term">patchify</span> · 把 VAE latent（32×32×4）切成 p×p 的 patch，拉平投影成 token 序列喂 Transformer。p 越小 token 越多、算力越大、FID 越低（p=2→256 token）。</li>
+    <li id="g-03"><span class="term">条件注入四法</span> · in-context(35.24) / cross-attention(26.14) / adaLN(25.21) / adaLN-Zero(19.47)，FID@400K，越低越好，adaLN-Zero 胜。</li>
+    <li id="g-04"><span class="term">架构 ⊥ 目标</span> · DiT 是架构(条件函数 (xt,t,c)→输出)，diffusion(预测 ε)/flow matching(预测速度 v) 是训练目标 + 采样法。同一个 DiT 换目标即换范式。</li>
+    <li id="g-05"><span class="term">Gflops scaling</span> · 算力(更深/更宽/更小 patch)↑ → FID↓，单调可预测。DiT-XL/2 = 118.64 Gflops。</li>
+    <li id="g-06"><span class="term">VAE latent</span> · 用 Stable Diffusion 的 VAE 把 256×256×3 图压成 32×32×4 latent，DiT 在 latent 上去噪而非像素。</li>
+    <li id="g-07"><span class="term">DiT-S/B/L/XL</span> · 四档：S(12 层,384)/B(12,768)/L(24,1024)/XL(28,1152)。XL/2 最大。</li>
+    <li id="g-08"><span class="term">FID 2.27</span> · DiT-XL/2 在 class-conditional ImageNet 256×256 的成绩(cfg=1.5)，当时 SOTA；不加 guidance 9.62。</li>
+    <li id="g-09"><span class="term"><a href="../concepts/swiglu.html">SwiGLU</a></span> · 带门的 FFN(现代 DiT 家族用)。注意：原版 DiT 用的是 GELU，SwiGLU 是 SD3 之后的升级。</li>
+    <li id="g-10"><span class="term">classifier-free guidance</span> · 采样时用条件/无条件两支外推，拉高与 prompt 的契合；DiT 靠它把 FID 从 9.62 提到 2.27。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>SOURCE · Peebles & Xie · Scalable Diffusion Models with Transformers · ICCV 2023 · arXiv 2212.09748</span>
+  <span>INGESTED · 2026-06-24</span>
+</div>
+
+</div>
+<script>
+{
+  const figs = ['fig-backbone','fig-adaln','fig-cond','fig-objective','fig-scaling'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.12 });
+    obs.observe(el);
+  });
+}
+</script>
+</body>
+</html>

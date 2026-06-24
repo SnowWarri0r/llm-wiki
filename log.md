@@ -819,3 +819,5 @@ skill 更新:
 ## [2026-06-24] ingest | cosmos-3 + mixture-of-transformers + world-foundation-model + physical-ai (NVIDIA omnimodal world model, MoT 双塔)
 
 ## [2026-06-24] topic | joint-attention-lineage (cross-attn→MMDiT/Unified/MoT 2×2 网格: 权重×注意力两旋钮)
+
+## [2026-06-24] ingest | dit (bespoke, Peebles&Xie) + adaptive-layernorm + swiglu (DiT 升格论文页, 讲透 adaLN-Zero/架构⊥目标/scaling)

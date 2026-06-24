@@ -1,11 +1,13 @@
 ---
 name: diffusion-transformer
 type: concept
-sources: [ideogram-4, qwen-image-2, mrt, stable-diffusion-3-5, flux-1, cosmos-3]
-updated: 2026-06-15
+sources: [ideogram-4, qwen-image-2, mrt, stable-diffusion-3-5, flux-1, cosmos-3, dit]
+updated: 2026-06-24
 ---
 
 # Diffusion Transformer · DiT
+
+> 这页是跨 paper 的概念速览；DiT 原始论文(Peebles & Xie)的精装详解(adaLN-Zero 内部、架构 vs 训练目标、scaling)见 [[dit]]。
 
 ## 一句话
 把扩散模型里那个老 U-Net 换成 Transformer —— 图像切成 latent token，像处理一串 token 一样去噪。
@@ -34,6 +36,9 @@ for block in layers:                       # 34 层
 ```
 
 ## 链接
+- [[dit]] · 原始论文精装页：adaLN-Zero、架构 vs 目标、scaling law
+- [[adaptive-layernorm]] · 时间步 t 怎么注进每层(adaLN-Zero)
+- [[swiglu]] · 现代 DiT 家族的 FFN(原版 DiT 用 GELU)
 - [[mmdit]] · 双流多模态 DiT(文字图像同序列、各自权重)，本页"双流"那支的专页
 - [[stable-diffusion-3-5]] · MMDiT 的招牌落地
 - [[flux-1]] · 先双流后单流的混合 DiT
