@@ -825,3 +825,5 @@ skill 更新:
 ## [2026-06-24] update | adaptive-layernorm 重写 怎么做的+数字例子(先讲LN三步, 一条 x=[1,5] 端到端: LN→γ/β调制(两个t对比)→α门控)
 
 ## [2026-06-24] update | swiglu 加 Swish/sigmoid 函数图(按方程算点: S曲线+负区小坑+ReLU虚线对照)
+
+## [2026-06-24] feature | render.py inject_glossary_popover: 点 .jr 右侧浮卡(不跳页), 自动注入所有有 glossary 的 bespoke 页; 底部 ol 保留兜底
