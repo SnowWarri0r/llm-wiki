@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>World Foundation Model · WFM · 世界基础模型 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · world-foundation-model</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>World Foundation Model · WFM · 世界基础模型</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>一个学会"世界接下来会怎么变"的大模型——给它当前画面和一个动作，它能模拟/预测未来的画面，当 Physical AI 的训练场和推演器。</p>
+<h2>直觉</h2>
+<p><a href="../concepts/physical-ai.html">physical-ai</a> 的智能体（机器人、自动驾驶）要在真实世界里学，可真实世界又慢又贵又危险——撞一次车、摔一次机械臂都是代价。所以需要一个<strong>能模拟世界的模型</strong>当训练场：智能体在里面"想象"地试，安全又能无限快进。</p>
+<p>世界基础模型就是干这个的：它内化了世界的动态规律（物体怎么掉、人怎么走、车怎么开），所以能<strong>预测/生成可信的未来</strong>。给定"现在 + 一个动作"，它续出"接下来会发生什么"。这跟视频生成模型像，但目标不同——视频模型要<strong>好看</strong>，世界模型要<strong>符合物理、可被动作控制、能推演后果</strong>。</p>
+<p>它替代的是"只能在真实世界里采数据"和"手写仿真器"。手写仿真器（如游戏引擎）画面假、覆盖窄；世界模型从海量真实视频里学，画面真、泛化广，还能批量造合成训练数据（synthetic data generation）。</p>
+<h2>怎么做的</h2>
+<pre><code>输入: 当前观察(图/视频) + 文字指令 + (可选)动作
+  ↓ 世界模型(通常是视频扩散 / 自回归 backbone)
+输出: 未来的视频帧(+音频/+下一步动作)
+</code></pre>
+<p>用法三件套：</p>
+<ul>
+<li><strong>模拟器</strong>：给动作 → 生成未来，让智能体在"梦里"试错（forward dynamics）。</li>
+<li><strong>合成数据工厂</strong>：批量生成带标注的场景视频，喂给下游感知/策略模型，省真实采集。</li>
+<li><strong>策略评估</strong>：拿世界模型推演一个动作序列的后果，挑最好的。</li>
+</ul>
+<p><a href="../papers/cosmos-3.html">cosmos-3</a> 把这套和"理解（VLM）+ 动作（策略）"用 <a href="../concepts/mixture-of-transformers.html">mixture-of-transformers</a> 缝进一个模型，所以它既是世界模型，也是 VLM，也是策略模型。</p>
+<h2>跟视频生成模型的对比</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>普通视频生成</th>
+<th>世界基础模型</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>目标</td>
+<td>画面好看、符合 prompt</td>
+<td>符合物理、可被动作控制、能推演后果</td>
+</tr>
+<tr>
+<td>控制</td>
+<td>文字/图</td>
+<td>文字/图 + <strong>动作</strong>，可逐步交互</td>
+</tr>
+<tr>
+<td>用途</td>
+<td>内容创作</td>
+<td>Physical AI 训练场 / 合成数据 / 策略评估</td>
+</tr>
+</tbody>
+</table>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/cosmos-3.html">cosmos-3</a> · NVIDIA 的世界基础模型，omnimodal 把它和理解+动作统一</li>
+<li><a href="../concepts/physical-ai.html">physical-ai</a> · 它服务的对象：具身智能体</li>
+<li><a href="../papers/lumine.html">lumine</a> · 对照：直接学"看画面→出动作"的策略，不显式建世界模型</li>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · 世界模型常用的生成主干</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/cosmos-3.html"><span class="cat">paper</span>Cosmos 3 · 一个模型同时理解世界、生成世界、在世界里动手</a></li><li><a href="../concepts/physical-ai.html"><span class="cat">concept</span>Physical AI · 物理 AI / 具身智能</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/world-foundation-model.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

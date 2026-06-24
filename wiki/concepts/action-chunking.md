@@ -1,7 +1,7 @@
 ---
 name: action-chunking
 type: concept
-sources: [lumine]
+sources: [lumine, cosmos-3]
 updated: 2026-06-16
 ---
 
