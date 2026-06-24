@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Joint-Attention 谱系 · 从 cross-attention 到 MMDiT / Unified / MoT · Topic</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../topics.html" style="color:#b8841c;">topics</a> · joint-attention-lineage</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="topics">
+
+<header class="concept-header">
+  <span class="concept-badge cat-topic">Topic</span>
+  <h1>Joint-Attention 谱系 · 从 cross-attention 到 MMDiT / Unified / MoT</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>多模态模型都从"独立文本编码器 + cross-attention"搬到了"一条序列 + 联合自注意力"；剩下的分歧只有两点——<strong>权重分不分流、要不要因果</strong>。</p>
+<h2>共同的大招：concat + 联合自注意力</h2>
+<p>早期文生图（早期 SD、DALL·E）是这样：文本走一个<strong>独立编码器</strong>，再用 <a href="../concepts/cross-attention.html">cross-attention</a> 把文本"注入"图像去噪。文本和图像始终是两套东西，隔着一道 cross-attention 说话。</p>
+<p><a href="../concepts/mmdit.html">mmdit</a>、<a href="../concepts/unified-transformer.html">unified-transformer</a>、Cosmos 3 的 <a href="../concepts/mixture-of-transformers.html">mixture-of-transformers</a>——<strong>全都把不同模态的 token concat 进同一条序列，做一次联合自注意力</strong>，让文本和图像在同一张注意力表里直接互看，不再隔 cross-attention。这是它们共同的"异曲"。</p>
+<p>但"concat + 联合注意力"内部，还有两个<strong>正交</strong>的选择，决定了它们的"不同工"。</p>
+<h2>两个旋钮</h2>
+<p><strong>旋钮 A · 每个模态/流的权重，共享还是分流？</strong></p>
+<ul>
+<li>共享一套 → Unified Transformer</li>
+<li>每流一套（双流 / 双塔）→ MMDiT、MoT</li>
+<li>为什么分流：文本和图像统计差异大，各给一套权重免得抢参数打架；代价是参数≈翻倍。</li>
+</ul>
+<p><strong>旋钮 B · 注意力是全双向，还是混合（因果 + 双向）？</strong></p>
+<ul>
+<li>全双向 → MMDiT</li>
+<li>混合（文本/AR 走因果、生成走双向）→ Unified Transformer、MoT</li>
+<li>为什么要混合：只有让文本 token 走<strong>因果</strong>，模型才能像 LLM 那样<strong>自回归吐文本</strong>（理解/推理）。纯生成模型不需要因果。</li>
+</ul>
+<p>把这两个旋钮当坐标轴，四种架构正好落在 2×2 网格的四个角：</p>
+<figure>
+<svg viewBox="0 0 660 470" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:'JetBrains Mono',monospace;">
+  <!-- column headers (权重) -->
+  <text class="reveal d1" x="250" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#1f3a5f">权重共享（一套）</text>
+  <text class="reveal d1" x="520" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#1f3a5f">权重分流（双流/双塔）</text>
+  <text class="reveal d1" x="385" y="22" text-anchor="middle" font-size="10" fill="#7a6f5d">旋钮 A · 权重 →</text>
+  <!-- row labels (注意力) in left gutter -->
+  <text class="reveal d2" x="60" y="146" text-anchor="middle" font-size="12" font-weight="700" fill="#4a6b3a">混合</text>
+  <text class="reveal d2" x="60" y="162" text-anchor="middle" font-size="9" fill="#7a6f5d">理解+生成</text>
+  <text class="reveal d2" x="60" y="320" text-anchor="middle" font-size="12" font-weight="700" fill="#b8841c">全双向</text>
+  <text class="reveal d2" x="60" y="336" text-anchor="middle" font-size="9" fill="#7a6f5d">纯生成</text>
+  <text class="reveal d2" x="22" y="240" text-anchor="middle" font-size="10" fill="#7a6f5d" transform="rotate(-90 22 240)">旋钮 B · 注意力 ↑</text>
+
+  <!-- TL: 共享 + 混合 = Unified Transformer -->
+  <rect class="reveal d3" x="120" y="70" width="252" height="150" rx="6" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.4"/>
+  <text class="reveal d3" x="246" y="116" text-anchor="middle" font-size="15" font-weight="700" fill="#181410">Unified Transformer</text>
+  <text class="reveal d3" x="246" y="142" text-anchor="middle" font-size="10" fill="#3a3128">一套权重 · 混合注意力</text>
+  <text class="reveal d3" x="246" y="162" text-anchor="middle" font-size="10" fill="#3a3128">文本因果 + 生成双向</text>
+  <text class="reveal d3" x="246" y="190" text-anchor="middle" font-size="9.5" fill="#4a6b3a">理解 + 生成 · 一套权重最省</text>
+
+  <!-- TR: 分流 + 混合 = MoT -->
+  <rect class="reveal d4" x="388" y="70" width="252" height="150" rx="6" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="1.6"/>
+  <text class="reveal d4" x="514" y="110" text-anchor="middle" font-size="15" font-weight="700" fill="#181410">MoT</text>
+  <text class="reveal d4" x="514" y="128" text-anchor="middle" font-size="10" fill="#7a6f5d">Cosmos 3</text>
+  <text class="reveal d4" x="514" y="150" text-anchor="middle" font-size="10" fill="#3a3128">双塔分权重 · 混合注意力</text>
+  <text class="reveal d4" x="514" y="170" text-anchor="middle" font-size="10" fill="#3a3128">AR 因果 + 扩散双向</text>
+  <text class="reveal d4" x="514" y="196" text-anchor="middle" font-size="9.5" fill="#1f3a5f">理解 + 生成 + 动作</text>
+
+  <!-- BL: 共享 + 全双向 = 单流 DiT -->
+  <rect class="reveal d5" x="120" y="245" width="252" height="150" rx="6" fill="#f0e0a8" stroke="#b8841c" stroke-width="1.4"/>
+  <text class="reveal d5" x="246" y="291" text-anchor="middle" font-size="15" font-weight="700" fill="#181410">单流 DiT</text>
+  <text class="reveal d5" x="246" y="317" text-anchor="middle" font-size="10" fill="#3a3128">一套权重 · 全双向</text>
+  <text class="reveal d5" x="246" y="337" text-anchor="middle" font-size="10" fill="#3a3128">文图共享、都双向去噪</text>
+  <text class="reveal d5" x="246" y="365" text-anchor="middle" font-size="9.5" fill="#b8841c">纯生成（如 FLUX 后段单流块）</text>
+
+  <!-- BR: 分流 + 全双向 = MMDiT -->
+  <rect class="reveal d6" x="388" y="245" width="252" height="150" rx="6" fill="#f0e0a8" stroke="#b8841c" stroke-width="1.6"/>
+  <text class="reveal d6" x="514" y="291" text-anchor="middle" font-size="15" font-weight="700" fill="#181410">MMDiT</text>
+  <text class="reveal d6" x="514" y="309" text-anchor="middle" font-size="10" fill="#7a6f5d">SD3.5 / FLUX 前段</text>
+  <text class="reveal d6" x="514" y="331" text-anchor="middle" font-size="10" fill="#3a3128">双流分权重 · 全双向</text>
+  <text class="reveal d6" x="514" y="351" text-anchor="middle" font-size="10" fill="#3a3128">文本仅当条件</text>
+  <text class="reveal d6" x="514" y="378" text-anchor="middle" font-size="9.5" fill="#b8841c">纯生成 · 不会生成文本</text>
+
+  <!-- bottom note -->
+  <text class="reveal d6" x="380" y="430" text-anchor="middle" font-size="10" fill="#7a6f5d">整张网格都活在"concat + 联合自注意力"里 · 它替代的是网格外的老办法：独立文本编码器 + cross-attention</text>
+</svg>
+</figure>
+
+<h2>对照表</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>concat 一条序列</th>
+<th>每模态权重</th>
+<th>注意力</th>
+<th>能干啥</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>老式（cross-attn）</td>
+<td>否（文本单独编码器）</td>
+<td>—</td>
+<td>—</td>
+<td>只生成（文本仅当条件）</td>
+</tr>
+<tr>
+<td><strong>MMDiT</strong></td>
+<td>是</td>
+<td>分流（双流）</td>
+<td>全双向</td>
+<td>只生成（<strong>不能生成文本</strong>）</td>
+</tr>
+<tr>
+<td><strong>单流 DiT</strong></td>
+<td>是</td>
+<td>共享</td>
+<td>全双向</td>
+<td>只生成</td>
+</tr>
+<tr>
+<td><strong>Unified Transformer</strong></td>
+<td>是</td>
+<td>共享</td>
+<td>混合</td>
+<td>理解 + 生成</td>
+</tr>
+<tr>
+<td><strong>MoT（Cosmos 3）</strong></td>
+<td>是</td>
+<td>分流（双塔）</td>
+<td>混合</td>
+<td>理解 + 生成 + 动作</td>
+</tr>
+</tbody>
+</table>
+<h2>关键的"不同工"</h2>
+<p>MMDiT 和 Unified Transformer 最实质的区别，是那个<strong>混合注意力</strong>带来的能力差：</p>
+<ul>
+<li><strong>MMDiT 全双向 = 本质还是个纯生成（扩散）模型</strong>。文本 token 虽然进了同一条序列、也参与联合注意力，但它<strong>只是条件</strong>——MMDiT <strong>不会自回归生成文本</strong>，你没法让它说话/推理。文本流有自己的权重，只是为了被图像 token 更好地读取。</li>
+<li><strong>Unified Transformer 的混合注意力</strong>（文本因果 + 生成双向）才让一个模型<strong>既能像 LLM 因果吐文本（理解），又能像 DiT 双向去噪（生成）</strong>。这是 MMDiT 给不了的。</li>
+<li><strong>MoT</strong> = MMDiT 的"双流分权重" + Unified 的"混合注意力" 合一，再加动作模态。</li>
+</ul>
+<h2>一句话带走</h2>
+<p><strong>大家都从"独立编码器 + cross-attention"搬到了"一条序列 + 联合自注意力"；剩下的分歧就两点——权重分不分流、要不要因果（= 要不要顺带会生成文本）。</strong> MMDiT 选"分流 + 全双向"，强在画图但不会说话；Unified / MoT 选"混合注意力"，所以理解生成一把抓。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/mmdit.html">mmdit</a> · 分流 + 全双向：SD3.5 / FLUX 的文图双流联合注意力</li>
+<li><a href="../concepts/unified-transformer.html">unified-transformer</a> · 共享 + 混合：一个 transformer 同时理解+生成</li>
+<li><a href="../concepts/mixture-of-transformers.html">mixture-of-transformers</a> · 分流 + 混合：Cosmos 3 的双塔</li>
+<li><a href="../concepts/cross-attention.html">cross-attention</a> · 网格外的老办法，被联合自注意力取代</li>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · 生成那一侧的共同底座（DiT）</li>
+<li><a href="../papers/stable-diffusion-3-5.html">stable-diffusion-3-5</a> / <a href="../papers/flux-1.html">flux-1</a> / <a href="../papers/cosmos-3.html">cosmos-3</a> · 各自的落地 paper</li>
+</ul>
+</article>
+
+
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/topics/joint-attention-lineage.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
