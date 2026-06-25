@@ -44,6 +44,7 @@
 - [净利润断层 · 业绩惊喜 + 跳空缺口](wiki/papers/net-profit-gap.md) — 交易/事件驱动: 净利润惊喜 + 断层缺口, 本质捕捉 PEAD(Ball&Brown 1968); 有学术底子但会衰减
 - [资金面 · 量能与共识](wiki/papers/capital-flow.md) — 交易/盘口经验派: 量能(量价关系) + 共识(游资分歧转一致/筹码集中/抱团); 经验派语言, 易事后解释
 - [爱在冰川 · 低吸待涨的道法术](wiki/papers/aizai-bingchuan.md) — 交易/短线经验派: 道(低吸待涨极简循环)→法(横盘龙头低吸/大智大勇/潜伏)→术(揉搓线/做小T); 从公开复盘合集提炼, 非荐股
+- [Qwen-Image-Bench · 评测从生成到创造](wiki/papers/qwen-image-bench.md) — Qwen文生图评测基准: 老基准查语义对齐已饱和→加两根新支柱(真实世界保真+创意生成); 5支柱→23子能力→56条可判定细则(每条0/1/2/N-A); Q-Judger判官(Qwen3.6-27B,80美院标注员+13万人标训, 跟人类专家ρ=0.92); 自家基准榜首是GPT Image 2(64.69)自家模型中游=可信
 - [DiT · 把扩散的 U-Net 换成 Transformer](wiki/papers/dit.md) — 扩散去噪骨架换成ViT(VAE latent切patch成token); adaLN-Zero注入t/c(从条件算γ/β拧归一化+零初始化门控让块起步即恒等,FID 19.47胜cross-attn/in-context); 关键:架构⊥目标(同一DiT预测ε=DDPM/预测速度=flow matching,架构不改); Gflops↑→FID↓, XL/2 FID 2.27; SD3/FLUX/视频生成的祖宗
 - [Stable Diffusion 3.5 · 整流流 + MMDiT](wiki/papers/stable-diffusion-3-5.md) — 开源文生图(基于SD3论文): 把"文字当调料"换成"文字图像坐同一张桌子"(MMDiT双权重单序列) + 整流流直线少步采样 + 三文本编码器(CLIP-L/G+T5-XXL) + QK-Norm稳训; Large 8B/Medium 2.5B(MMDiT-X消费级能跑)
 - [FLUX.1 · 先双流后单流 + 两道蒸馏](wiki/papers/flux-1.md) — SD原作者新公司(Black Forest Labs)的12B整流流T2I: 混合架构(前段双流MMDiT对齐+后段单流共享省) + 引导蒸馏(CFG两遍压一遍)做dev + 步数蒸馏4步做schnell(两道正交); pro/dev/schnell三档
@@ -189,6 +190,8 @@
 - [Video VAE · Wan-VAE](wiki/concepts/video-vae.md) — VAE视频版: 3D因果卷积空间+时间一起压((1+T)→1+T/4)、只看过去帧、特征缓存做无限长1080P; MRT 用它编 region latent
 - [Pixel-Space Diffusion](wiki/concepts/pixel-space-diffusion.md) — 不要 VAE，直接在原始像素上扩散；patch embedding 替掉 VAE 压缩、去掉 latent 瓶颈
 - [图像质量指标 PSNR/SSIM](wiki/concepts/image-quality-metrics.md) — 重建像不像两把尺子: PSNR逐像素误差(dB)/SSIM局部结构(0-1); PSNR平移即崩→故有LPIPS
+- [拆细则打分 · Rubric-Based Eval](wiki/concepts/rubric-based-evaluation.md) — 别给"好不好"打一个总分,拆成一堆可逐项判定的小问题各打0/1/2再聚合; 可复现+能定位差在哪条; Qwen-Image-Bench拆到56条
+- [LLM-as-Judge · 拿模型当判官](wiki/concepts/llm-as-judge.md) — 用模型自动给输出打分替人评,前提是用人标把判官校准到人类口味(看Spearman ρ); 跟RLHF的reward model同母题
 - [DMD 蒸馏 / NFE](wiki/concepts/dmd-distillation.md) — 把40步老师蒸成4步学生: 不抄轨迹只让出图分布匹配(teacher_score−fake_score=吸老师斥自己=Drifting同构); NFE=跑几次网络
 - [渐进式分辨率训练](wiki/concepts/progressive-resolution-training.md) — 256P→512P→2K: 先小图便宜学构图再升大图抠细节; 类比缩略图→放大
 - [Unified Transformer](wiki/concepts/unified-transformer.md) — 像素+文本+条件一条流 + 混合注意力(文本causal/生成full)；LLM 和 DiT 缝成一个

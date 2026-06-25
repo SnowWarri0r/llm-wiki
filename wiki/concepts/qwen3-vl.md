@@ -1,7 +1,7 @@
 ---
 name: qwen3-vl
 type: concept
-sources: [ideogram-4, qwen-image-2, cosmos-3]
+sources: [ideogram-4, qwen-image-2, cosmos-3, qwen-image-bench]
 updated: 2026-06-15
 ---
 
