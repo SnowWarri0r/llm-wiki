@@ -43,7 +43,7 @@
 <h2>直觉</h2>
 <p>评 1000 张图、几十个模型,全靠人打分又贵又慢又难复现。自然想法:<strong>让一个模型当裁判</strong>(judge),自动打分。</p>
 <p>但有个坑:随便抓个通用多模态大模型(MLLM)当裁判,它的口味跟人类专家<strong>对不齐</strong>——它可能偏爱艳丽配色、看不出专业创作者在乎的细节。所以关键不在"用不用模型当判官",而在<strong>把判官校准到人类偏好</strong>:拿大量人类标注训这个判官,直到它的排名跟人类专家高度一致,才敢放它自动评。</p>
-<p><a href="../papers/qwen-image-bench.html">qwen-image-bench</a> 的 Q-Judger 就是这么炼的:基于 Qwen3.6-27B,用 80 位美院标注员盲标、13 万+人标对训练,最后跟人类专家排名 <strong>Spearman ρ=0.92</strong>(几乎一致),才拿它去自动评 56 条细则。这跟 <a href="../concepts/rlhf.html">rlhf</a> 训 reward model 是同一个母题——<strong>想规模化判断,先用人把判官喂准</strong>。</p>
+<p><a href="../papers/qwen-image-bench.html">qwen-image-bench</a> 的 Q-Judger 就是这么炼的:从 Qwen3.6-27B <strong>SFT</strong> 出来:用 80 位美院标注员盲标的 13 万+条 pointwise 标注(每条细则 0/1/2/N-A)训练,最后跟人类专家排名 <strong>Spearman ρ=0.92</strong>(几乎一致),才拿它去自动评 56 条细则。这跟 <a href="../concepts/rlhf.html">rlhf</a> 训 reward model 是同一个母题——<strong>想规模化判断,先用人把判官喂准</strong>。</p>
 <p>判官值不值得信,就看它的排名跟人类排名有多吻合,常用 <strong>Spearman 等级相关 ρ</strong>:ρ=1 完全一致、0 没关系、−1 完全相反。</p>
 <h2>怎么做的</h2>
 <pre><code>
@@ -52,6 +52,14 @@
 3. 验证: 在留出集上算判官排名 vs 人类排名的 Spearman ρ, 够高才敢用
 4. 部署: 判官自动给海量输出打分, 人只抽查
 </code></pre>
+<h2>是 SFT,不是 RL（常混的点）</h2>
+<p>判官本身是<strong>监督微调(SFT)</strong>出来的——拿"输入 → 人给的分"当训练对，让模型去<strong>拟合人类标签</strong>(回归/分类),没有 RL。Qwen-Image-Bench 的 Q-Judger 就是从 Qwen3.6-27B SFT 在 13 万+ pointwise 标注(每条细则 0/1/2/N-A)上,全程没有 reward model / PPO / GRPO;那个 ρ=0.92 是<strong>事后</strong>验相关性用的,不参与训练。</p>
+<p>别把角色搞反:</p>
+<ul>
+<li><strong>判官 = reward / 裁判这一侧 → 监督训</strong>(拟合人类偏好/标签)。<a href="../concepts/rlhf.html">rlhf</a> 里的 reward model 同理,也是监督训。</li>
+<li><strong>RL 是下游</strong>:拿训好的判官<strong>当奖励</strong>去调教一个<strong>生成模型</strong>——那一步才是 RL。</li>
+</ul>
+<p>一句话:<strong>判官是"裁判",不是"被 RL 调教的选手";它是 RL 里会被拿来当 reward 的那个东西。</strong></p>
 <h2>数字例子</h2>
 <p>判官信不信得过,核心看它给模型排的名次跟人类排的有多像。Spearman ρ 就量这个:</p>
 <pre><code>ρ = 1 − 6·Σd² / (n·(n²−1))     d = 同一个模型在两套排名里的名次差, n = 模型数
