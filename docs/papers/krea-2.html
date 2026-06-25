@@ -187,12 +187,14 @@ figure.play .kr-svg .grow { transform: scaleX(1); }
     <text class="kr-rev d5" x="609" y="112" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1f3a5f">VAE 解码 → 图</text>
     <text class="kr-rev d6" x="609" y="128" text-anchor="middle" font-size="8" fill="#3a3128">Qwen-Image VAE</text>
     <text class="kr-rev d6" x="609" y="142" text-anchor="middle" font-size="8" fill="#3a3128">+ FLUX 2 VAE</text>
-    <text class="kr-rev d6" x="403" y="214" text-anchor="middle" font-size="9.5" fill="#7a6f5d">骨架是标准现代配置 —— 差异化在 §03 数据 + §04 后训练</text>
+    <text class="kr-rev d6" x="403" y="214" text-anchor="middle" font-size="9.5" fill="#7a6f5d">骨架是标准现代配置 —— 差异化在数据 + 后训练</text>
   </svg>
 </figure>
+<p>真正费功夫的是把这套标准配置训稳、训快。几个不显眼但实用的选择：256px 的第一个 epoch 上 <strong>iREPA</strong> 加速收敛，之后撤掉让模型长自己的表征；低/中分辨率用 <strong>8-bit 训练</strong>（256px tensorwise、512px rowwise，1024px 起回 bf16），换来 15–20% 提速且几乎不掉点；每个分辨率单独扫一个<strong>时间步偏移</strong>（shifted logit-normal）的最优值，但推理偏移保持不变；学习率走 warmup-stable-decay，权重平均用 <strong>PMA</strong>（参数合并近似）替 <a href="../concepts/ema.html">EMA</a>——效果相当但省下一大笔显存。</p>
 
 <h2><span class="num">§ 03</span>数据哲学：别在源头把多样性筛没了</h2>
-<p>这是全篇的灵魂。业界常拿<strong>美学打分器</strong>（aesthetic score）和画质评估（IQA）去筛数据、删低分图。Krea 反对<a class="jr" href="#g-03">3</a>：这些打分器自带口味，拿它当门卫等于把它的偏见焊进数据分布——"不讨喜但真实"的图被成批删掉，模型从没见过、以后也画不出来，审美就这么收敛了。Krea 把关口从"好不好看"换成"<strong>caption 准不准</strong>"：只要配文准确描述了图，哪怕图本身不讨喜也留着。再加一条硬规则——<strong>预训练里一张 AI 合成图都不掺</strong><a class="jr" href="#g-04">4</a>。详见 <a href="../concepts/generative-data-curation.html">generative-data-curation</a>。</p>
+<p>这是全篇的灵魂。业界常拿<strong>美学打分器</strong>（aesthetic score）和画质评估（IQA）去筛数据、按分数挑"更美的"。Krea 反对<a class="jr" href="#g-03">3</a>：这些打分器自带口味，拿它塑造数据分布等于把它的偏见焊进去——"不讨喜但真实"的图被系统性压低，模型从没见过、以后也画不出来，审美就这么收敛了。Krea 把关口从"好不好看"换成"<strong>caption 准不准</strong>"：只要配文准确描述了图，哪怕图本身不讨喜也留着。</p>
+<p>注意这里有个分寸——Krea <strong>不是完全不过滤</strong>：低分辨率阶段用便宜的 CPU 过滤（拉普拉斯、熵之类）剔废图，高分辨率阶段也会用画质/美学过滤，但<strong>只用来删掉"极差"的，绝不用来 oversample"更美"的</strong>。差别在意图：删极差 vs 挑更美。再加一条硬规则——<strong>预训练里一张 AI 合成图都不掺</strong><a class="jr" href="#g-04">4</a>。详见 <a href="../concepts/generative-data-curation.html">generative-data-curation</a>。</p>
 
 <figure id="fig-data">
   <figcaption><span>Fig 03 · 美学过滤剪掉分布尾巴 vs Krea 按 caption 留全</span><span class="fnum">FILTER = BIAS</span></figcaption>
@@ -217,7 +219,7 @@ figure.play .kr-svg .grow { transform: scaleX(1); }
     <path class="kr-rev d6" d="M408,160 C468,160 488,70 543,70 C598,70 618,160 678,160" fill="none" stroke="#a82d5c" stroke-width="1.8"/>
     <rect class="kr-rev d6" x="408" y="70" width="270" height="90" fill="#a82d5c" opacity="0.10"/>
     <text class="kr-rev d6" x="543" y="120" text-anchor="middle" font-size="9" fill="#a82d5c">尾巴也留（只要配文准）</text>
-    <text class="kr-rev d7" x="543" y="210" text-anchor="middle" font-size="9.5" fill="#a82d5c">分布留全 → 审美空间撑开</text>
+    <text class="kr-rev d7" x="543" y="210" text-anchor="middle" font-size="9.5" fill="#a82d5c">只删极差·不挑更美 → 审美空间撑开</text>
     <!-- no AI banner -->
     <rect class="kr-rev d7" x="408" y="226" width="270" height="26" rx="4" fill="#181410"/>
     <text class="kr-rev d7" x="543" y="243" text-anchor="middle" font-size="10" font-weight="700" fill="#f0e9d6">＋ 预训练 0 张 AI 合成图</text>
@@ -226,11 +228,45 @@ figure.play .kr-svg .grow { transform: scaleX(1); }
 
 <p>为什么 0 AI 数据这么硬：合成图<strong>更好学</strong>（本就来自更简单的分布），模型会优先把 loss 降在这些"软柿子"上、慢慢往合成分布塌，相当于给质量<strong>封了个顶</strong>。用模型的输出喂模型，是给后代近亲繁殖——每代更"好学"、更窄。</p>
 
-<h2><span class="num">§ 04</span>六段训练流水线</h2>
+<h2><span class="num">§ 04</span>配文与覆盖：喂进去的不是图，是图文对</h2>
+<p>留下哪些图只是一半，另一半是<strong>怎么描述它</strong>——训练信号是图文对，配文不准等于信号脏。Krea 的配文是条流水线：先 <strong>OCR</strong> 抽出图里的可见文字，再让一个 captioner 结合 OCR 结果 + 元数据（相机参数、已知实体）写出<strong>信息密集</strong>的长描述，最后用一个便宜 LLM 把它改写成<strong>不同长度/格式</strong>。训练以长 caption 为主（密集监督 → 收敛更快、loss 更低），但也喂短/中 prompt，让模型推理时短句也能用。</p>
+<p>预训练是"自下而上"广撒网；之后的<strong>中训</strong>反过来"自上而下"补覆盖：用 FAISS 做<strong>层级 k-means 聚类</strong>、让 VLM 审查每个簇心附近的图，用 <strong>SigLIP 相似度</strong>做语义去重，再用维基百科 <strong>PageRank</strong> 排序（取 top 90%、对照 Wikidata）保证约 <strong>500 万个概念</strong>都被覆盖到——常识实体别有盲区。SFT 阶段则是<strong>小而精的人工集</strong>：量到一定程度后，质量远比规模重要。</p>
+
+<figure id="fig-caption">
+  <figcaption><span>Fig 04 · 配文流水线 + 中训自上而下补覆盖</span><span class="fnum">CAPTION &amp; COVERAGE</span></figcaption>
+  <svg class="kr-svg" viewBox="0 0 720 240" role="img" aria-label="配文流水线与中训覆盖策展">
+    <!-- caption pipeline -->
+    <text class="kr-rev d1" x="60" y="30" font-size="11" font-weight="700" fill="#a82d5c">配文流水线：图 → 准确且多长度的图文对</text>
+    <g font-size="9" text-anchor="middle">
+      <rect class="kr-rev d1" x="36" y="46" width="84" height="40" rx="4" fill="#faf4e1" stroke="#bfb398"/><text x="78" y="63" fill="#181410" font-weight="700">OCR</text><text x="78" y="77" font-size="7.5" fill="#7a6f5d">抽可见文字</text>
+      <rect class="kr-rev d2" x="166" y="46" width="104" height="40" rx="4" fill="#d8e6ce" stroke="#4a6b3a"/><text x="218" y="63" fill="#181410" font-weight="700">captioner</text><text x="218" y="77" font-size="7.5" fill="#3a3128">+元数据→长描述</text>
+      <rect class="kr-rev d3" x="316" y="46" width="104" height="40" rx="4" fill="#faf4e1" stroke="#bfb398"/><text x="368" y="63" fill="#181410" font-weight="700">便宜 LLM</text><text x="368" y="77" font-size="7.5" fill="#7a6f5d">改写多长度</text>
+      <rect class="kr-rev d4" x="466" y="46" width="118" height="40" rx="4" fill="#f1d3df" stroke="#a82d5c" stroke-width="1.4"/><text x="525" y="63" fill="#a82d5c" font-weight="700">图文对</text><text x="525" y="77" font-size="7.5" fill="#7a6f5d">长为主·短中也喂</text>
+    </g>
+    <g stroke="#7a6f5d" stroke-width="1.2">
+      <line class="kr-rev d2" x1="120" y1="66" x2="162" y2="66"/><polygon class="kr-rev d2" points="162,66 154,62 154,70" fill="#7a6f5d"/>
+      <line class="kr-rev d3" x1="270" y1="66" x2="312" y2="66"/><polygon class="kr-rev d3" points="312,66 304,62 304,70" fill="#7a6f5d"/>
+      <line class="kr-rev d4" x1="420" y1="66" x2="462" y2="66"/><polygon class="kr-rev d4" points="462,66 454,62 454,70" fill="#7a6f5d"/>
+    </g>
+    <text class="kr-rev d4" x="525" y="102" text-anchor="middle" font-size="8" fill="#7a6f5d">长 caption = 密集监督 → 收敛更快</text>
+    <line class="kr-rev d5" x1="40" y1="120" x2="680" y2="120" stroke="#bfb398" stroke-width="1" stroke-dasharray="4 4"/>
+    <!-- coverage -->
+    <text class="kr-rev d5" x="60" y="146" font-size="11" font-weight="700" fill="#7a6f5d">中训：自上而下补覆盖（别留常识盲区）</text>
+    <g font-size="8.5" text-anchor="middle" fill="#3a3128">
+      <rect class="kr-rev d5" x="40" y="158" width="150" height="44" rx="4" fill="#faf4e1" stroke="#bfb398"/><text x="115" y="176" font-weight="700">层级 k-means(FAISS)</text><text x="115" y="192" font-size="7.5" fill="#7a6f5d">VLM 审簇心附近图</text>
+      <rect class="kr-rev d6" x="206" y="158" width="150" height="44" rx="4" fill="#faf4e1" stroke="#bfb398"/><text x="281" y="176" font-weight="700">SigLIP 语义去重</text><text x="281" y="192" font-size="7.5" fill="#7a6f5d">删近重复</text>
+      <rect class="kr-rev d7" x="372" y="158" width="170" height="44" rx="4" fill="#f1d3df" stroke="#a82d5c" stroke-width="1.4"/><text x="457" y="176" font-weight="700" fill="#a82d5c">PageRank 维基覆盖</text><text x="457" y="192" font-size="7.5" fill="#7a6f5d">top 90% → ~500 万概念</text>
+    </g>
+    <text class="kr-rev d7" x="620" y="174" text-anchor="middle" font-size="8" fill="#7a6f5d">SFT 阶段</text>
+    <text class="kr-rev d7" x="620" y="188" text-anchor="middle" font-size="8" fill="#7a6f5d">质量&gt;规模</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 05</span>六段训练流水线</h2>
 <p>差异化的另一半在后训练。从随机权重到能少步出图，Krea 2 走六段，每段各司其职：先把广度铺开（预训），再补域覆盖（中训），然后用小而精的人工集定调（SFT），接着两道对齐（偏好优化 PO → 多奖励 RL），最后压步数（蒸馏）<a class="jr" href="#g-05">5</a>。</p>
 
 <figure id="fig-ladder">
-  <figcaption><span>Fig 04 · 预训→中训→SFT→PO→RL→蒸馏</span><span class="fnum">SIX STAGES</span></figcaption>
+  <figcaption><span>Fig 05 · 预训→中训→SFT→PO→RL→蒸馏</span><span class="fnum">SIX STAGES</span></figcaption>
   <svg class="kr-svg" viewBox="0 0 720 250" role="img" aria-label="六段训练流水线">
     <g font-size="10" text-anchor="middle">
       <rect class="kr-rev d1" x="24" y="60" width="104" height="64" rx="5" fill="#faf4e1" stroke="#bfb398"/>
@@ -276,7 +312,7 @@ figure.play .kr-svg .grow { transform: scaleX(1); }
   </svg>
 </figure>
 
-<h2><span class="num">§ 05</span>STPO：堵住 DPO 的偷懒解法</h2>
+<h2><span class="num">§ 06</span>STPO：堵住 DPO 的偷懒解法</h2>
 <p>偏好优化用 <a href="../concepts/direct-preference-optimization.html">DPO</a><a class="jr" href="#g-07">7</a>：拿"赢/输"成对样本，直接让模型更偏向赢家。但 DPO 只盯"赢减输"的<strong>差</strong>——模型能学会一个偷懒解法：<strong>把赢家、输家概率一起往下压，只要把输家压得更狠</strong>，差距照样拉大、loss 照样降。结果赢家概率也掉了，"为了拉开差距把好的也练差了"，这叫<a class="jr" href="#g-08">策略发散</a>。Krea 的 STPO（报告没给全称）加一个辅助损失 + 改 DPO 公式，<strong>盯住赢家的绝对概率别掉</strong>，把这条偷懒路堵死。</p>
 
 <div class="kr-calc">取 β=1，参考模型对赢/输初始都给 logπ_ref = −2.0，隐式奖励 r = logπθ − logπ_ref
@@ -290,7 +326,7 @@ figure.play .kr-svg .grow { transform: scaleX(1); }
 <p>✓ 自检：偷懒步的 loss（0.127）比好步（0.201）还低，可它把好图的概率练低了——这正是只看相对差的盲区。STPO 给赢家绝对概率上了把锁。详见 <a href="../concepts/direct-preference-optimization.html">direct-preference-optimization</a>。</p>
 
 <figure id="fig-stpo">
-  <figcaption><span>Fig 05 · DPO 偷懒：赢输一起掉只要差变大 · STPO 顶住赢家</span><span class="fnum">STPO</span></figcaption>
+  <figcaption><span>Fig 06 · DPO 偷懒：赢输一起掉只要差变大 · STPO 顶住赢家</span><span class="fnum">STPO</span></figcaption>
   <svg class="kr-svg" viewBox="0 0 720 250" role="img" aria-label="DPO 策略发散与 STPO 修正">
     <!-- baseline line -->
     <text class="kr-rev d1" x="60" y="30" font-size="11" font-weight="700" fill="#7a6f5d">DPO 偷懒步：赢家也被压低</text>
@@ -317,11 +353,11 @@ figure.play .kr-svg .grow { transform: scaleX(1); }
   </svg>
 </figure>
 
-<h2><span class="num">§ 06</span>多奖励 RL：四个裁判 + 把 prompt 拆成可验证项</h2>
+<h2><span class="num">§ 07</span>多奖励 RL：四个裁判 + 把 prompt 拆成可验证项</h2>
 <p>RL 阶段用<strong>多奖励 GRPO 式</strong>方法<a class="jr" href="#g-09">9</a>（<a href="../concepts/grpo.html">GRPO</a>：同 prompt 一组采样比相对好坏当 advantage，省掉 value 网络）。四个奖励模型一起推：<strong>通用美学 / 提示遵循 / 文字渲染 / 瑕疵与结构</strong>。其中提示遵循用 <strong>prompt 级 rubric 奖励</strong><a class="jr" href="#g-10">10</a>——借鉴 <a href="../concepts/rubric-based-evaluation.html">rubric-based evaluation</a>，不让判官给一个笼统总分，而是把每个 prompt <strong>拆成可验证的要求逐条判</strong>。整个 RL <strong>不开 CFG</strong><a class="jr" href="#g-11">11</a>：让采样（rollout）和训练分布对齐、不额外开销，推理时再开。</p>
 
 <figure id="fig-rl">
-  <figcaption><span>Fig 06 · 一张图 → 四奖励 + rubric 逐条判 → 组内相对当 advantage</span><span class="fnum">MULTI-REWARD GRPO</span></figcaption>
+  <figcaption><span>Fig 07 · 一张图 → 四奖励 + rubric 逐条判 → 组内相对当 advantage</span><span class="fnum">MULTI-REWARD GRPO</span></figcaption>
   <svg class="kr-svg" viewBox="0 0 720 270" role="img" aria-label="多奖励 GRPO 与 rubric 奖励">
     <!-- generated image -->
     <rect class="kr-rev d1" x="30" y="108" width="92" height="50" rx="5" fill="#f1d3df" stroke="#a82d5c" stroke-width="1.4"/>
@@ -357,11 +393,64 @@ figure.play .kr-svg .grow { transform: scaleX(1); }
   </svg>
 </figure>
 
-<h2><span class="num">§ 07</span>蒸馏与发布：TDM 压步数，出 K2 Turbo</h2>
+<h2><span class="num">§ 08</span>Prompt Expansion：把短输入扩成富 caption，还得防塌成一种风格</h2>
+<p>模型训在<strong>信息密集的长 caption</strong> 上，可用户输入往往短、模糊、各人习惯还不一样。所以前面挂一个 <strong>prompt expander</strong><a class="jr" href="#g-14">14</a> 把短输入扩写成模型爱吃的富 caption。它也分两段训：</p>
+<p><strong>SFT</strong>：用另一个 LLM 从长 caption <em>反向</em>造"用户 caption"（短、口语、半指令、故意省细节）配成训练对；还合成<strong>思考轨迹</strong>（中间一步"重建意图"能提升下游表现）。再做分布塑形——oversample 艺术性图扩大创意覆盖、给该写实的 prompt 加轻量"摄影介质"偏置；目标<strong>不是强加 house style</strong>，而是让扩写分布同时覆盖"艺术导演范"和"直白写实"两端。</p>
+<p><strong>RL</strong>：目标从"模仿目标 caption"转成"<strong>扩写要提升出图质量、同时保住用户意图</strong>"。用 <strong>GDPO</strong>（Generative DPO，<a href="../concepts/direct-preference-optimization.html">DPO</a> 的生成式变体）配多奖励：图级（出图质量/偏好）+ prompt 级可验证奖励（扩写忠不忠于原请求）+ <strong>安全闸</strong>（稀疏约束，别引入没请求的/不可接受内容）。</p>
+<p>这里有个必须正面对抗的失败模式——<strong>多样性塌缩</strong>：expander 会偷偷学会一种"安全、高奖励的 house style"（尤其当图级奖励占主导）。对策是加一个 <strong>DINOv3 嵌入多样性分</strong>，对同一组 prompt 的<strong>组内视觉多样性</strong>给奖励。报告说一旦这个权重调小，模型很快塌向单调；<strong>整个训练全程都得让多样性奖励保活</strong>才压得住。RL 的 prompt 还混了硬例（内部踩、bug 报告、手改 prompt，按失败类分桶），挑"难但不绝望"的——综合分中等、有真实方差，GDPO 才拿得到有效偏好信号。</p>
+
+<figure id="fig-prompt">
+  <figcaption><span>Fig 08 · 图级奖励独大→塌成一种风格 · DINOv3 多样性分拉回</span><span class="fnum">DIVERSITY COLLAPSE</span></figcaption>
+  <svg class="kr-svg" viewBox="0 0 720 220" role="img" aria-label="prompt expander 多样性塌缩与 DINOv3 修正">
+    <text class="kr-rev d1" x="180" y="28" text-anchor="middle" font-size="11" font-weight="700" fill="#7a6f5d">只追图级奖励：塌成一种 house style</text>
+    <text class="kr-rev d1" x="42" y="92" font-size="9" fill="#7a6f5d" text-anchor="start">同一句短 prompt</text>
+    <rect class="kr-rev d1" x="40" y="100" width="56" height="24" rx="3" fill="#f1d3df" stroke="#a82d5c"/><text class="kr-rev d1" x="68" y="116" text-anchor="middle" font-size="9" fill="#a82d5c">扩写</text>
+    <g class="kr-rev d2" stroke="#bfb398" stroke-width="1"><line x1="96" y1="112" x2="150" y2="78"/><line x1="96" y1="112" x2="150" y2="112"/><line x1="96" y1="112" x2="150" y2="146"/></g>
+    <g class="kr-rev d3" fill="#9b2c2c"><circle cx="170" cy="78" r="9"/><circle cx="170" cy="112" r="9"/><circle cx="170" cy="146" r="9"/></g>
+    <text class="kr-rev d3" x="214" y="116" text-anchor="start" font-size="9" fill="#9b2c2c">三张几乎一个样</text>
+    <text class="kr-rev d4" x="180" y="186" text-anchor="middle" font-size="9" fill="#9b2c2c">高奖励但单调 → 多样性塌缩</text>
+    <line class="kr-rev d4" x1="368" y1="18" x2="368" y2="196" stroke="#bfb398" stroke-width="1" stroke-dasharray="4 4"/>
+    <text class="kr-rev d5" x="540" y="28" text-anchor="middle" font-size="11" font-weight="700" fill="#a82d5c">＋ DINOv3 组内多样性奖励</text>
+    <rect class="kr-rev d5" x="404" y="100" width="56" height="24" rx="3" fill="#f1d3df" stroke="#a82d5c"/><text class="kr-rev d5" x="432" y="116" text-anchor="middle" font-size="9" fill="#a82d5c">扩写</text>
+    <g class="kr-rev d6" stroke="#bfb398" stroke-width="1"><line x1="460" y1="112" x2="516" y2="78"/><line x1="460" y1="112" x2="516" y2="112"/><line x1="460" y1="112" x2="516" y2="146"/></g>
+    <g class="kr-rev d6"><circle cx="536" cy="78" r="9" fill="#a82d5c"/><circle cx="536" cy="112" r="9" fill="#4a6b3a"/><circle cx="536" cy="146" r="9" fill="#1f3a5f"/></g>
+    <text class="kr-rev d7" x="580" y="116" text-anchor="start" font-size="9" fill="#a82d5c">三张各不相同</text>
+    <text class="kr-rev d7" x="540" y="186" text-anchor="middle" font-size="9" fill="#a82d5c">质量不掉 + 多样保住（权重得全程保活）</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 09</span>Style Reference：只借风格，别把人家的内容也搬来</h2>
+<p>风格参考让用户<strong>用文字生成、再拿一张或多张参考图导风格</strong>。Krea 想做到三点：多个风格<strong>平滑语义混合</strong>、每个参考<strong>强度连续可调</strong>、复杂风格的<strong>贴合度 SOTA</strong>。难就难在——"风格"和"内容"本来就没有清晰边界，最常见的翻车是<strong>内容泄漏</strong><a class="jr" href="#g-15">15</a>：参考图里的主体/物件直接钻进了结果图。数据还稀缺：风格迁移数据不像编辑数据那样能从视频里大量挖。Krea 的做法是<strong>一套新的自监督训练</strong>专训风格参考模块、再接一道<strong>偏好优化</strong>对齐，专门把内容泄漏压下去。</p>
+
+<figure id="fig-style">
+  <figcaption><span>Fig 09 · 参考图只该贡献"风格",不该把"内容"也搬来</span><span class="fnum">CONTENT LEAKAGE</span></figcaption>
+  <svg class="kr-svg" viewBox="0 0 720 210" role="img" aria-label="风格参考的内容泄漏问题与修正">
+    <rect class="kr-rev d1" x="32" y="66" width="96" height="70" rx="5" fill="#f1d3df" stroke="#a82d5c" stroke-width="1.4"/>
+    <text class="kr-rev d1" x="80" y="90" text-anchor="middle" font-size="9.5" font-weight="700" fill="#a82d5c">参考图</text>
+    <text class="kr-rev d1" x="80" y="106" text-anchor="middle" font-size="8" fill="#7a6f5d">想借：笔触/色调</text>
+    <text class="kr-rev d1" x="80" y="120" text-anchor="middle" font-size="8" fill="#9b2c2c">别借：里面的主体</text>
+    <text class="kr-rev d2" x="80" y="156" text-anchor="middle" font-size="8.5" fill="#7a6f5d">+ prompt："一只猫"</text>
+    <line class="kr-rev d3" x1="128" y1="86" x2="246" y2="58" stroke="#9b2c2c" stroke-width="1.3"/><polygon class="kr-rev d3" points="246,58 237,57 241,65" fill="#9b2c2c"/>
+    <rect class="kr-rev d3" x="250" y="32" width="184" height="52" rx="5" fill="#faf4e1" stroke="#9b2c2c"/>
+    <text class="kr-rev d3" x="342" y="52" text-anchor="middle" font-size="9.5" font-weight="700" fill="#9b2c2c">泄漏（常见翻车）</text>
+    <text class="kr-rev d3" x="342" y="68" text-anchor="middle" font-size="8" fill="#3a3128">猫 + 参考图的主体也冒出来</text>
+    <line class="kr-rev d5" x1="128" y1="116" x2="246" y2="146" stroke="#a82d5c" stroke-width="1.6"/><polygon class="kr-rev d5" points="246,146 237,139 237,147" fill="#a82d5c"/>
+    <rect class="kr-rev d5" x="250" y="120" width="184" height="52" rx="5" fill="#f1d3df" stroke="#a82d5c" stroke-width="1.5"/>
+    <text class="kr-rev d5" x="342" y="140" text-anchor="middle" font-size="9.5" font-weight="700" fill="#a82d5c">只迁风格（目标）</text>
+    <text class="kr-rev d5" x="342" y="156" text-anchor="middle" font-size="8" fill="#3a3128">你的猫 + 参考图的笔触/色调</text>
+    <rect class="kr-rev d6" x="468" y="62" width="220" height="80" rx="6" fill="#faf4e1" stroke="#bfb398"/>
+    <text class="kr-rev d6" x="578" y="84" text-anchor="middle" font-size="9.5" font-weight="700" fill="#181410">怎么压泄漏</text>
+    <text class="kr-rev d7" x="578" y="104" text-anchor="middle" font-size="8.5" fill="#3a3128">① 新自监督训练 style 模块</text>
+    <text class="kr-rev d7" x="578" y="120" text-anchor="middle" font-size="8.5" fill="#3a3128">② 偏好优化再对齐</text>
+    <text class="kr-rev d7" x="578" y="136" text-anchor="middle" font-size="8" fill="#7a6f5d">+ 多风格混合 · 强度连续可调</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 10</span>蒸馏与发布：TDM 压步数，出 K2 Turbo</h2>
 <p>最后压步数。Krea 比过 DMD / DMD2 / Decoupled DMD / piFlow / APT，选了 <a href="../concepts/trajectory-distribution-matching.html">TDM</a>（轨迹分布匹配）<a class="jr" href="#g-12">12</a>，理由是好调、超参少。和只匹配终点分布的 <a href="../concepts/dmd-distillation.html">DMD</a> 不同，TDM 沿去噪轨迹的<strong>多个点都匹配分布</strong>，所以少步更稳、步数能灵活选。发布两套权重：<strong>K2 Raw</strong>（未蒸馏基座，给做微调/后训练的）和 <strong>K2 Turbo</strong>（<a href="../concepts/guidance-distillation.html">引导蒸馏</a> + 时间步蒸馏双管，少步快出图）。</p>
 
 <figure id="fig-distill">
-  <figcaption><span>Fig 07 · 老师多小步 → 学生几大跳（沿途路标都对分布）</span><span class="fnum">TDM · K2 TURBO</span></figcaption>
+  <figcaption><span>Fig 10 · 老师多小步 → 学生几大跳（沿途路标都对分布）</span><span class="fnum">TDM · K2 TURBO</span></figcaption>
   <svg class="kr-svg" viewBox="0 0 720 240" role="img" aria-label="TDM 轨迹分布匹配蒸馏">
     <text class="kr-rev d1" x="60" y="34" font-size="11" font-weight="700" fill="#7a6f5d">老师：很多小步（慢、稳）</text>
     <rect class="kr-rev d1" x="40" y="50" width="54" height="26" rx="3" fill="#faf4e1" stroke="#7a6f5d"/><text class="kr-rev d1" x="67" y="67" text-anchor="middle" font-size="9" fill="#3a3128">噪声</text>
@@ -387,7 +476,69 @@ figure.play .kr-svg .grow { transform: scaleX(1); }
   </svg>
 </figure>
 
-<h2><span class="num">§ 08</span>定位：饱和之后比的是"多样"</h2>
+<h2><span class="num">§ 11</span>系统：在这种规模下，训练是怎么崩的</h2>
+<p>报告罕见地把<strong>基础设施</strong>摊开讲，而且很坦诚。调度用 Kubernetes 上的 Kueue（gang-scheduling 协调多机 + 借/借出/回收配额）；研究把 GPU 占满时，推理靠 <strong>Virtual Kubelet</strong> 自动外溢到集群外的别家算力；启动流水线自动避开坏节点，还有个叫 <strong>Packerman</strong> 的 operator 把 dev 这类非关键负载<strong>塞到坏节点上</strong>、给训练保住好节点。</p>
+<p>最有料的是 observability 的几条反直觉结论<a class="jr" href="#g-16">16</a>（全靠 DCGM 指标攒出来的）：GPU 温度过 75–78°C 就开始 throttle 拖累稳定；<strong>GPU 利用率会骗人</strong>——崩掉的卡反而显示 0%，所以他们改看<strong>张量核利用率</strong>当训练是否正常的首选信号；PCIe replay 突增常常是崩溃的前兆；而<strong>头号崩溃原因是 InfiniBand fabric 不稳</strong>（链路抖动、丢包、拥塞）。更现实的教训：很多崩溃是<strong>瞬态</strong>的——同样代码同样数据，两小时内反复崩，啥都不改重启就能稳跑 16 小时；<strong>128 卡以下很稳</strong>，可 GPU 一翻倍不稳定性涨得远超预期；<strong>在很大规模上，没有一次 run 跑过 24 小时不崩</strong>，而且常常无声无息（NCCL 超时，指标却全绿）。文件系统从 Ceph 换到 <strong>Weka</strong> 后故障骤降、性能同步提升，checkpoint 约 30 秒搞定。</p>
+<p>数据仓他们自己写了个叫 <strong>krablet</strong> 的系统：PostgreSQL 分片 + "漏斗"服务异步批量化写入降锁争用，撑到 <strong>208 TB 元数据</strong>、每秒数万次竞争 UPSERT。最妙的是不上 Kafka/Ray/Spark，而是<strong>把 DAG 工作流当成数据库队列</strong>跑（靠 <code>FOR UPDATE SKIP LOCKED</code>）：失败的行自动排到队尾重试、worker 随时崩都不丢进度、动态加 worker 不用 reshard——用一句 SQL 换掉一整套流处理框架。</p>
+
+<figure id="fig-infra">
+  <figcaption><span>Fig 11 · 大规模训练真正崩在哪 + 一个反直觉的健康信号</span><span class="fnum">WHAT BREAKS RUNS</span></figcaption>
+  <svg class="kr-svg" viewBox="0 0 720 250" role="img" aria-label="训练崩溃来源与张量核信号">
+    <text class="kr-rev d1" x="40" y="30" font-size="11" font-weight="700" fill="#7a6f5d" text-anchor="start">崩溃来源（越长越主要）</text>
+    <g font-size="9" fill="#3a3128">
+      <text class="kr-rev d2" x="40" y="62" text-anchor="start">InfiniBand fabric 不稳</text>
+      <rect class="kr-rev d2 grow" x="220" y="50" width="320" height="18" rx="2" fill="#9b2c2c"/><text class="kr-rev d2" x="548" y="64" font-size="8" fill="#9b2c2c">头号</text>
+      <text class="kr-rev d3" x="40" y="92" text-anchor="start">PCIe replay 突增</text>
+      <rect class="kr-rev d3 grow" x="220" y="80" width="150" height="18" rx="2" fill="#b8841c"/><text class="kr-rev d3" x="378" y="94" font-size="8" fill="#7a6f5d">崩前预兆</text>
+      <text class="kr-rev d4" x="40" y="122" text-anchor="start">过热 throttle (&gt;78°C)</text>
+      <rect class="kr-rev d4 grow" x="220" y="110" width="110" height="18" rx="2" fill="#bfb398"/>
+      <text class="kr-rev d4" x="40" y="152" text-anchor="start">瞬态/无名 (NCCL 超时)</text>
+      <rect class="kr-rev d4 grow" x="220" y="140" width="130" height="18" rx="2" fill="#bfb398"/><text class="kr-rev d4" x="358" y="154" font-size="8" fill="#7a6f5d">重启即好</text>
+    </g>
+    <line class="kr-rev d5" x1="40" y1="172" x2="680" y2="172" stroke="#bfb398" stroke-width="1" stroke-dasharray="4 4"/>
+    <text class="kr-rev d5" x="40" y="194" font-size="10" font-weight="700" fill="#a82d5c" text-anchor="start">反直觉：别信 GPU 利用率</text>
+    <rect class="kr-rev d6" x="40" y="204" width="200" height="30" rx="4" fill="#faf4e1" stroke="#9b2c2c"/><text class="kr-rev d6" x="140" y="223" text-anchor="middle" font-size="9" fill="#9b2c2c">崩掉的卡显示 0% 利用率</text>
+    <text class="kr-rev d6" x="252" y="223" font-size="11" fill="#7a6f5d">→</text>
+    <rect class="kr-rev d7" x="270" y="204" width="220" height="30" rx="4" fill="#f1d3df" stroke="#a82d5c" stroke-width="1.4"/><text class="kr-rev d7" x="380" y="223" text-anchor="middle" font-size="9" fill="#a82d5c">改看张量核利用率当健康信号</text>
+    <text class="kr-rev d7" x="510" y="223" text-anchor="start" font-size="8.5" fill="#7a6f5d">·&lt;128 卡稳 / 翻倍更崩</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 12</span>未来：把一堆碎片合成一个</h2>
+<p>报告结尾把路线图也写了。<strong>Scaling</strong>：上 MoE、用稀疏注意力做 native 2K–4K、用 NVFP4 预训练、换 Muon 优化器——并自认现在的模型<strong>训得还不够</strong>（undertrained）。两个更结构性的方向<a class="jr" href="#g-17">17</a>：</p>
+<p><strong>MOPD（多教师 on-policy 蒸馏）</strong>：先训各领域的专家，再把它们的能力通过<strong>密集监督</strong>蒸进一个学生。好处是避免"调好这域、搞坏那域"的跨域能力打架，还能让不同 RL 团队各管一域、互不 regress——本质是把模型训练<strong>组织层面并行化</strong>。<strong>架构简化</strong>：现在要一串相互依赖的模型（VAE + DiT + 文本编码器 + prompt expander）才能跑，目标是把它们<strong>合成一个统一模型</strong>，让研究像 LLM 那样能拆开并行推进。再加新能力：稳健编辑、图像参考、native 2K/4K——因为用户早就在用自然语言/标签/JSON/bbox/指令/Markdown 各种花样下 prompt，模型得原生看懂。</p>
+
+<figure id="fig-future">
+  <figcaption><span>Fig 12 · MOPD：多专家蒸成一个 · 架构：多模型合成一个</span><span class="fnum">FUTURE WORK</span></figcaption>
+  <svg class="kr-svg" viewBox="0 0 720 220" role="img" aria-label="MOPD 与架构统一">
+    <text class="kr-rev d1" x="180" y="30" text-anchor="middle" font-size="11" font-weight="700" fill="#a82d5c">MOPD：各域专家 → 蒸进一个学生</text>
+    <g class="kr-rev d2" font-size="8.5" text-anchor="middle" fill="#3a3128">
+      <rect x="40" y="50" width="90" height="22" rx="3" fill="#faf4e1" stroke="#bfb398"/><text x="85" y="65">专家·人像</text>
+      <rect x="40" y="80" width="90" height="22" rx="3" fill="#faf4e1" stroke="#bfb398"/><text x="85" y="95">专家·文字</text>
+      <rect x="40" y="110" width="90" height="22" rx="3" fill="#faf4e1" stroke="#bfb398"/><text x="85" y="125">专家·写实</text>
+    </g>
+    <g class="kr-rev d3" stroke="#a82d5c" stroke-width="1.2"><line x1="130" y1="61" x2="226" y2="88"/><line x1="130" y1="91" x2="226" y2="91"/><line x1="130" y1="121" x2="226" y2="94"/></g>
+    <polygon class="kr-rev d3" points="226,91 217,87 217,95" fill="#a82d5c"/>
+    <rect class="kr-rev d4" x="230" y="74" width="96" height="36" rx="5" fill="#f1d3df" stroke="#a82d5c" stroke-width="1.5"/>
+    <text class="kr-rev d4" x="278" y="90" text-anchor="middle" font-size="9" font-weight="700" fill="#a82d5c">一个学生</text>
+    <text class="kr-rev d4" x="278" y="103" text-anchor="middle" font-size="7.5" fill="#7a6f5d">密集监督蒸馏</text>
+    <text class="kr-rev d4" x="180" y="150" text-anchor="middle" font-size="8.5" fill="#7a6f5d">各域不打架 · RL 团队可并行</text>
+    <line class="kr-rev d5" x1="368" y1="20" x2="368" y2="172" stroke="#bfb398" stroke-width="1" stroke-dasharray="4 4"/>
+    <text class="kr-rev d5" x="540" y="30" text-anchor="middle" font-size="11" font-weight="700" fill="#a82d5c">架构：一串模型 → 一个统一模型</text>
+    <g class="kr-rev d6" font-size="7.5" text-anchor="middle" fill="#3a3128">
+      <rect x="400" y="56" width="60" height="20" rx="3" fill="#faf4e1" stroke="#bfb398"/><text x="430" y="70">VAE</text>
+      <rect x="400" y="82" width="60" height="20" rx="3" fill="#faf4e1" stroke="#bfb398"/><text x="430" y="96">DiT</text>
+      <rect x="400" y="108" width="60" height="20" rx="3" fill="#faf4e1" stroke="#bfb398"/><text x="430" y="122">文本编码</text>
+      <rect x="400" y="134" width="60" height="20" rx="3" fill="#faf4e1" stroke="#bfb398"/><text x="430" y="148">expander</text>
+    </g>
+    <text class="kr-rev d7" x="500" y="108" text-anchor="middle" font-size="12" fill="#7a6f5d">→</text>
+    <rect class="kr-rev d7" x="528" y="80" width="120" height="52" rx="6" fill="#f1d3df" stroke="#a82d5c" stroke-width="1.6"/>
+    <text class="kr-rev d7" x="588" y="103" text-anchor="middle" font-size="10" font-weight="700" fill="#a82d5c">统一模型</text>
+    <text class="kr-rev d7" x="588" y="118" text-anchor="middle" font-size="7.5" fill="#7a6f5d">研究像 LLM 那样并行</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 13</span>定位：饱和之后比的是"多样"</h2>
 <p>Krea 2 在 Artificial Analysis 文生图榜<strong>前十</strong>、<strong>独立实验室里第二</strong><a class="jr" href="#g-13">13</a>。但这报告真正的赌注不在某个榜的名次，而在一套逆向品味：当画质和对齐都卷到天花板，差异就只剩"<strong>真实感</strong>"和"<strong>创意/多样</strong>"——而这两样必须在<strong>数据端</strong>就保住（别筛掉尾巴、别掺合成图），再靠后训练（STPO + 多奖励 rubric + 防风格塌缩的多样性奖励）轻轻拨向人类口味，而不是把它优化成一种讨喜默认。</p>
 
 <div class="note">
@@ -411,6 +562,10 @@ figure.play .kr-svg .grow { transform: scaleX(1); }
     <li id="g-11"><span class="term">RL 不开 CFG</span> · 让采样(rollout)与训练分布对齐、省开销；classifier-free guidance 留到推理时再开。</li>
     <li id="g-12"><span class="term"><a href="../concepts/trajectory-distribution-matching.html">TDM · 轨迹分布匹配</a></span> · 沿去噪轨迹多个点都匹配分布（不只终点）→ 少步稳、步数灵活；从 DMD/DMD2/piFlow/APT 里选出，好调超参少。</li>
     <li id="g-13"><span class="term">Artificial Analysis 定位</span> · 文生图榜前十、独立实验室中第二。报告原话的对外可观察定位。</li>
+    <li id="g-14"><span class="term">Prompt Expansion + 多样性塌缩</span> · 把短用户输入扩成富 caption 的前置模型；SFT+RL(GDPO 多奖励) 训。坑：会塌成一种高奖励 house style，靠 DINOv3 组内多样性奖励(全程保活)压住。</li>
+    <li id="g-15"><span class="term">内容泄漏 · Style Reference</span> · 风格参考的核心难题：参考图的主体/内容钻进结果图。Krea 用新自监督训练 + 偏好优化压低泄漏，支持多风格混合 + 强度连续可调。</li>
+    <li id="g-16"><span class="term">训练崩溃真相</span> · 头号原因是 InfiniBand fabric 不稳；GPU 利用率会骗人(崩卡显 0%)→改看张量核利用率；&lt;128 卡稳、翻倍更崩、大规模无 run 跑过 24h 不崩(常无声 NCCL 超时)。</li>
+    <li id="g-17"><span class="term">MOPD + 架构统一（未来）</span> · 多教师 on-policy 蒸馏：各域专家 → 密集监督蒸进一个学生(各域不打架+团队可并行)；并把 VAE/DiT/文本编码/expander 合成一个统一模型，让研究像 LLM 那样并行。</li>
   </ol>
 </div>
 
@@ -422,7 +577,7 @@ figure.play .kr-svg .grow { transform: scaleX(1); }
 </div>
 <script>
 {
-  const figs = ['fig-thesis','fig-arch','fig-data','fig-ladder','fig-stpo','fig-rl','fig-distill'];
+  const figs = ['fig-thesis','fig-arch','fig-data','fig-caption','fig-ladder','fig-stpo','fig-rl','fig-prompt','fig-style','fig-distill','fig-infra','fig-future'];
   figs.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
