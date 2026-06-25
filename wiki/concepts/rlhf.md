@@ -1,7 +1,7 @@
 ---
 name: rlhf
 type: concept
-sources: [ppo, qwen-image-bench]
+sources: [ppo, qwen-image-bench, krea-2]
 updated: 2026-05-28
 ---
 

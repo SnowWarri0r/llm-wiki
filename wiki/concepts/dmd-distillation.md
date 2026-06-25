@@ -1,7 +1,7 @@
 ---
 name: dmd-distillation
 type: concept
-sources: [qwen-image-2, mrt, pid-pixel-diffusion, flux-1]
+sources: [qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2]
 updated: 2026-06-17
 ---
 

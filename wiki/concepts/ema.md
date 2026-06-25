@@ -1,7 +1,7 @@
 ---
 name: ema
 type: concept
-sources: [dino]
+sources: [dino, krea-2]
 updated: 2026-06-11
 ---
 

@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>DPO · 直接偏好优化（跳过奖励模型对齐人类口味） · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · direct-preference-optimization</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>DPO · 直接偏好优化（跳过奖励模型对齐人类口味）</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>不训奖励模型、不跑 PPO，直接拿"赢/输"成对数据当分类题优化模型：把赢的样本概率顶上去、输的压下去，一步到位对齐人类偏好。</p>
+<h2>直觉 · 它把 RLHF 的两步压成一步</h2>
+<p><a href="../concepts/rlhf.html">rlhf</a> 的老套路是两步：先用人类偏好训一个<strong>奖励模型</strong>（打分器），再用 <a href="../papers/ppo.html">ppo</a> 拿这个奖励去调模型。两步、要额外一个网络、还容易训崩。</p>
+<p>DPO 的洞见：<strong>偏好这件事，不必先变成一个分数再去优化</strong>。给一对样本（同一个 prompt 下，人选出来的赢家 <code>y_w</code> 和输家 <code>y_l</code>），直接让模型"更想生成赢家、更不想生成输家"就行——写成一道<strong>二分类</strong>题：模型给赢家的相对概率应该高于输家。</p>
+<p>关键巧思是"相对谁"：相对一个<strong>冻结的参考模型</strong> <code>π_ref</code>（通常就是没对齐前的自己）。DPO 不看绝对概率，看<strong>你比参考模型多偏向某个样本多少</strong>，这个量就是它的<strong>隐式奖励</strong>：</p>
+<pre><code>隐式奖励  r(y) = β · log[ πθ(y) / π_ref(y) ]
+                  = β · ( logπθ(y) − logπ_ref(y) )
+</code></pre>
+<p><code>β</code> 是温度（管偏离参考的力度）。直觉：<code>r(y)</code> 大 = "我比原来的自己更爱生成 y"。</p>
+<h2>怎么做的 · 一道 sigmoid 二分类</h2>
+<p>DPO 的损失就是"赢家隐式奖励要高过输家"的逻辑回归：</p>
+<pre><code>loss = − log σ( r(y_w) − r(y_l) )
+     = − log σ( β·[(logπθ(y_w) − logπ_ref(y_w)) − (logπθ(y_l) − logπ_ref(y_l))] )
+</code></pre>
+<p><code>σ</code> 是 sigmoid。赢输的奖励差越大 → <code>σ</code> 越接近 1 → loss 越小。梯度会<strong>抬高赢家的对数概率、压低输家的</strong>。</p>
+<h2>数字例子 · 算给你看，顺带看出它的坑</h2>
+<p>取 <code>β=1</code>，参考模型对赢家、输家初始都给 <code>logπ_ref = −2.0</code>（即一开始一样喜欢）。</p>
+<p><strong>第 0 步（还没动）</strong>：模型 = 参考，<code>r(y_w)=0</code>、<code>r(y_l)=0</code>，差 = 0。</p>
+<pre><code>σ(0) = 0.5      loss = −ln(0.5) = 0.693
+</code></pre>
+<p><strong>一步"好"的更新</strong>——赢家概率抬上去、输家压下去：</p>
+<pre><code>logπθ(y_w) = −1.5   → r(y_w) = −1.5 −(−2.0) = +0.5   （比参考更爱赢家 ✓）
+logπθ(y_l) = −3.0   → r(y_l) = −3.0 −(−2.0) = −1.0   （比参考更厌输家 ✓）
+差 = 0.5 −(−1.0) = 1.5
+σ(1.5) = 0.818      loss = −ln(0.818) = 0.201   ↓ 变小，对
+</code></pre>
+<p><strong>一步"偷懒"的更新</strong>——这就是坑：赢家也被压低了，但只要差距更大，loss 照样降：</p>
+<pre><code>logπθ(y_w) = −2.5   → r(y_w) = −2.5 −(−2.0) = −0.5  （比参考更【不】爱赢家 ✗！）
+logπθ(y_l) = −4.5   → r(y_l) = −4.5 −(−2.0) = −2.5
+差 = −0.5 −(−2.5) = 2.0
+σ(2.0) = 0.881      loss = −ln(0.881) = 0.127   ↓ 反而更小！
+</code></pre>
+<p>✓ 自检：第二步的 loss（0.127）比第一步（0.201）还低，DPO "更满意"——可赢家的对数概率从 −2.0 掉到了 −2.5，<strong>模型其实更不会生成那张好图了</strong>。DPO 只盯"赢减输"的差，没人管赢家的<strong>绝对</strong>概率，于是模型学会一个偷懒解法：<strong>把两个都往下压、只要把输家压得更狠</strong>，差距就拉大、loss 就降。结果"为了拉开差距，把好的也练差了"。这就是<strong>策略发散</strong>。</p>
+<h2>STPO · Krea 2 怎么堵这个坑</h2>
+<p><a href="../papers/krea-2.html">krea-2</a> 在偏好优化阶段自创了一个 DPO 变体，叫 <strong>STPO</strong>（报告没给全称）：<strong>加一个辅助损失 + 改 DPO 公式</strong>，专门盯住"赢家的绝对概率别往下掉"——不许靠单方面压低赢家来制造差距，逼模型真的把赢家顶上去。落到上面的例子，就是给"赢家 <code>r(y_w)</code> 掉到负数"这种情况额外加一笔惩罚，把第二步那种偷懒解法堵死。</p>
+<blockquote>
+<p>类比：评委不能靠"把两个选手都压分、只要把差选手压更低"来拉开名次；STPO 等于规定"好选手的绝对分不许掉"。</p>
+</blockquote>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/rlhf.html">rlhf</a> · DPO 要替代的两步老路（奖励模型 + PPO）</li>
+<li><a href="../papers/ppo.html">ppo</a> / <a href="../concepts/grpo.html">grpo</a> · 还要奖励/采样的 RL 路线；DPO 是免奖励模型的捷径</li>
+<li><a href="../papers/krea-2.html">krea-2</a> · STPO = 稳住的 DPO，治策略发散</li>
+<li><a href="../concepts/closed-form-kl.html">closed-form-kl</a> · DPO 的推导背后是带 KL 约束的偏好最优解</li>
+<li><a href="../concepts/softmax.html">softmax</a> · sigmoid 是二分类版的 softmax，DPO 损失的核</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/krea-2.html"><span class="cat">paper</span>Krea 2 · 不追一种&quot;标准好看&quot;,撑开整个审美空间</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/direct-preference-optimization.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
