@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>层级 k-means 策展 · 把&quot;逐张审查&quot;压成&quot;逐簇审查&quot; · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · hierarchical-kmeans-curation</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>层级 k-means 策展 · 把&quot;逐张审查&quot;压成&quot;逐簇审查&quot;</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>十亿张图没法一张张看；先用 k-means 把它们按视觉语义聚成簇、再递归切子簇，每个簇心附近挑几张代表图让 VLM 审一眼，按簇整批保留/丢弃/补采。</p>
+<h2>直觉 · 为什么要聚类</h2>
+<p><a href="../papers/krea-2.html">krea-2</a> 的中训要"自上而下"地保证质量和覆盖，可数据是十亿级——人或 VLM 不可能逐张看。聚类的作用是<strong>抽样的杠杆</strong>：把相似的图归到一起，那么"看一个簇的几张代表图"就约等于"了解这一整类几百万张图"。审查从"逐张"降到"逐簇"，工作量小几个数量级。</p>
+<h2>怎么做的 · k-means + 递归</h2>
+<p><strong>k-means</strong> 一句话：给定 K，把点分成 K 簇，让每个点离它所属簇的中心（centroid）最近，反复"分配→重算中心"直到不动。</p>
+<p><strong>层级</strong>＝递归：</p>
+<pre><code>
+1. 全库图过 SigLIP/DINO → 向量
+2. 一层 k-means 切成 K 个大簇（如 1000 个：风景/人像/图表/截图…）
+3. 每个大簇内部再 k-means 切子簇（如各 100 个）→ 形成一棵聚类树
+4. 每个簇心附近挑几张代表图 → VLM 看：这簇是啥？要不要？有没有有害内容？
+5. 按簇整批操作：丢掉低质域、给稀缺域补采、给过量域降采
+</code></pre>
+<p>FAISS（向量检索库）提供能在十亿向量上跑的 k-means 和最近邻，所以这套在超大库上才跑得动。</p>
+<h2>数字例子 · 一轮 k-means 长什么样</h2>
+<p>把图向量简化成 1 维。6 个点 <code>1,2,3,10,11,12</code>，K=2，故意给个<strong>坏初始</strong>中心 <code>c0=1, c1=2</code> 看它怎么自己走对：</p>
+<pre><code>初始: c0=1.0  c1=2.0
+iter1 分配（各点归到更近的中心）:
+   1→c0   2,3,10,11,12→c1
+   重算: c0=mean(1)=1.0   c1=mean(2,3,10,11,12)=7.6
+iter2 分配:
+   1,2,3→c0(1.0)   10,11,12→c1(7.6)
+   重算: c0=mean(1,2,3)=2.0   c1=mean(10,11,12)=11.0
+iter3 分配: 不变 → 收敛
+最终: c0=2（小数簇）  c1=11（大数簇）
+</code></pre>
+<p>✓ 自检：起点很烂（c0、c1 挤在 1、2），但两轮就自动把"小数堆"和"大数堆"分开了。换成图就是"把风景和图表分到两簇"。<strong>层级</strong>＝对 <code>{1,2,3}</code> 这簇再切一次（比如分出 <code>{1}</code> 和 <code>{2,3}</code>），逐层细化到能审查的粒度。</p>
+<h2>跟去重的分工</h2>
+<p><a href="../concepts/siglip-semantic-dedup.html">siglip-semantic-dedup</a> 用同一批向量，但目的不同：去重是<strong>删近邻</strong>（cos 太高的并掉）；这里是<strong>分簇审查</strong>（按语义大类整批决定取舍）。一个管"别重复"，一个管"覆盖与质量"。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/generative-data-curation.html">generative-data-curation</a> · 中训"自上而下"策展用它做主力</li>
+<li><a href="../concepts/siglip-semantic-dedup.html">siglip-semantic-dedup</a> · 同源向量，分工不同（删重复 vs 分簇审查）</li>
+<li><a href="../concepts/pagerank-entity-coverage.html">pagerank-entity-coverage</a> · 覆盖的另一把尺子：按实体重要性补齐</li>
+<li><a href="../papers/krea-2.html">krea-2</a> · 中训阶段用 FAISS 层级 k-means + VLM 审簇</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/krea-2.html"><span class="cat">paper</span>Krea 2 · 不追一种&quot;标准好看&quot;,撑开整个审美空间</a></li><li><a href="../concepts/pagerank-entity-coverage.html"><span class="cat">concept</span>PageRank 实体覆盖 · 用链接结构挑出&quot;必须见过的概念&quot;</a></li><li><a href="../concepts/siglip-semantic-dedup.html"><span class="cat">concept</span>SigLIP 语义去重 · 删的是&quot;长得像&quot;，不是&quot;字节一样&quot;</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/hierarchical-kmeans-curation.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

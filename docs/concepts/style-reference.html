@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Style Reference · 只借参考图的&quot;风格&quot;，别把它的&quot;内容&quot;也搬来 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · style-reference</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Style Reference · 只借参考图的&quot;风格&quot;，别把它的&quot;内容&quot;也搬来</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>用文字生成、再拿一/多张参考图导风格；核心难题是别让参考图的主体/物件钻进结果（内容泄漏），靠自监督训练 + 偏好优化把"风格"和"内容"两条通道拆开。</p>
+<h2>直觉 · "风格"和"内容"没有清晰边界</h2>
+<p>用户想要"我的猫，画成梵高那种笔触"。参考图（梵高的画）该贡献的是<strong>笔触、色调、肌理</strong>（风格），不该贡献的是<strong>漩涡、村庄、星星</strong>（内容）。可一张图里风格和内容是缠在一起的，模型很容易<strong>连内容一起抄过来</strong>——这就是 <a href="../papers/krea-2.html">krea-2</a> 说的最常见翻车：<strong>内容泄漏</strong>（content leakage），结果图里冒出参考图的主体。</p>
+<p>更麻烦的是<strong>数据稀缺</strong>：图像编辑能从视频里挖"同一物体不同状态"的配对，但"同一内容套不同风格"的高保真配对<strong>没法大量现成获取</strong>。</p>
+<h2>怎么做的 · 自监督造对 + 偏好优化收尾</h2>
+<p>没有现成配对，就<strong>自己造</strong>（自监督）。<a href="../papers/krea-2.html">krea-2</a> 说用了"a novel self-supervised technique"，但<strong>没公开具体构造</strong>。这类问题的通用思路是制造 <code>(内容, 风格参考, 目标)</code> 三元组而不依赖人工配对，常见两种：</p>
+<pre><code>思路A 同图增广：把一张图做成&quot;风格参考&quot;(只留色调/笔触统计、打乱或抹掉内容)，
+       要求模型在【另一个内容】上重建出这种风格 → 逼风格通道只学风格
+思路B 自己当目标+风格源：同一张图既当目标又当风格来源，但把内容信息遮住，
+       逼模型只能从&quot;风格通道&quot;取信息、从&quot;内容通道(文字)&quot;取主体
+</code></pre>
+<p>两者都在结构上<strong>强制风格和内容走不同通道</strong>，让模型学会"风格可借、内容归文字"。</p>
+<p><strong>再接偏好优化</strong>（见 <a href="../concepts/direct-preference-optimization.html">direct-preference-optimization</a> 思路）：生成一批结果，偏好"风格像、且内容没泄漏"的样本，往那个方向调——把"少泄漏"这个难量化目标，变成"两个里选泄漏更少的那个"的偏好信号。再加上<strong>多风格平滑混合</strong>、每个参考<strong>强度连续可调</strong>。</p>
+<h2>一个具体场景走一遍</h2>
+<pre><code>参考图 = 梵高《星空》     用户 prompt = &quot;一只猫&quot;
+想借: 漩涡状厚涂笔触、蓝黄对比色调
+别借: 星空、漩涡云、村庄(这些是参考图的【内容】)
+
+泄漏(坏): 出图里猫 + 莫名其妙的漩涡云/村庄 → 内容串味
+目标(好): 你的猫，披着梵高式厚涂笔触和蓝黄调 → 内容是你的，风格是它的
+强度旋钮: 0.3=淡淡梵高味；0.9=浓重梵高味
+</code></pre>
+<p>✓ 自检：判断成败就一条——<strong>结果的"是什么"(内容)该由文字定，"长什么质感"(风格)才由参考图定</strong>。泄漏 = 参考图擅自决定了"是什么"。</p>
+<blockquote>
+<p>报告披露程度：Krea 只给了"自监督 + 偏好优化两段 + 压内容泄漏 + 多风格混合 + 强度可调"的<strong>框架</strong>；自监督怎么造对、PO 用什么奖励<strong>都没细说</strong>。上面思路 A/B 是这类任务的通用解法，不是 Krea 逐字实现。</p>
+</blockquote>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/direct-preference-optimization.html">direct-preference-optimization</a> · 第二段"偏好优化"对齐少泄漏的输出</li>
+<li><a href="../concepts/cross-attention.html">cross-attention</a> · 风格/内容条件常通过注意力注入，是"分通道"的一种载体</li>
+<li><a href="../concepts/lora.html">lora</a> · 业界另一类风格注入（轻量适配器）；与本文的"训练专用风格模块"对照</li>
+<li><a href="../papers/krea-2.html">krea-2</a> · style-reference 系统的出处</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/krea-2.html"><span class="cat">paper</span>Krea 2 · 不追一种&quot;标准好看&quot;,撑开整个审美空间</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/style-reference.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

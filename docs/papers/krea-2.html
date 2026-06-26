@@ -259,7 +259,7 @@ figure.play .kr-svg .grow { transform: scaleX(1); }
 
 <h2><span class="num">§ 04</span>配文与覆盖：喂进去的不是图，是图文对</h2>
 <p>留下哪些图只是一半，另一半是<strong>怎么描述它</strong>——训练信号是图文对，配文不准等于信号脏。Krea 的配文是条流水线：先 <strong>OCR</strong> 抽出图里的可见文字，再让一个 captioner 结合 OCR 结果 + 元数据（相机参数、已知实体）写出<strong>信息密集</strong>的长描述，最后用一个便宜 LLM 把它改写成<strong>不同长度/格式</strong>。训练以长 caption 为主（密集监督 → 收敛更快、loss 更低），但也喂短/中 prompt，让模型推理时短句也能用。</p>
-<p>预训练是"自下而上"广撒网；之后的<strong>中训</strong>反过来"自上而下"补覆盖：用 FAISS 做<strong>层级 k-means 聚类</strong>、让 VLM 审查每个簇心附近的图，用 <strong>SigLIP 相似度</strong>做语义去重，再用维基百科 <strong>PageRank</strong> 排序（取 top 90%、对照 Wikidata）保证约 <strong>500 万个概念</strong>都被覆盖到——常识实体别有盲区。SFT 阶段则是<strong>小而精的人工集</strong>：量到一定程度后，质量远比规模重要。</p>
+<p>预训练是"自下而上"广撒网；之后的<strong>中训</strong>反过来"自上而下"补覆盖：用 FAISS 做<strong>层级 k-means 聚类</strong>、让 VLM 审查每个簇心附近的图，用 <strong>SigLIP 相似度</strong>做语义去重，再用维基百科 <strong>PageRank</strong> 排序（取 top 90%、对照 Wikidata）保证约 <strong>500 万个概念</strong>都被覆盖到——常识实体别有盲区。SFT 阶段则是<strong>小而精的人工集</strong>：量到一定程度后，质量远比规模重要。机制详见 <a href="../concepts/siglip-semantic-dedup.html">SigLIP 语义去重</a> · <a href="../concepts/hierarchical-kmeans-curation.html">层级 k-means 策展</a> · <a href="../concepts/pagerank-entity-coverage.html">PageRank 实体覆盖</a>。</p>
 
 <figure id="fig-caption">
   <figcaption><span>Fig 04 · 配文流水线 + 中训自上而下补覆盖</span><span class="fnum">CAPTION &amp; COVERAGE</span></figcaption>
@@ -442,7 +442,7 @@ figure.play .kr-svg .grow { transform: scaleX(1); }
 <p>模型训在<strong>信息密集的长 caption</strong> 上，可用户输入往往短、模糊、各人习惯还不一样。所以前面挂一个 <strong>prompt expander</strong><a class="jr" href="#g-14">14</a> 把短输入扩写成模型爱吃的富 caption。它也分两段训：</p>
 <p><strong>SFT</strong>：用另一个 LLM 从长 caption <em>反向</em>造"用户 caption"（短、口语、半指令、故意省细节）配成训练对；还合成<strong>思考轨迹</strong>（中间一步"重建意图"能提升下游表现）。再做分布塑形——oversample 艺术性图扩大创意覆盖、给该写实的 prompt 加轻量"摄影介质"偏置；目标<strong>不是强加 house style</strong>，而是让扩写分布同时覆盖"艺术导演范"和"直白写实"两端。</p>
 <p><strong>RL</strong>：目标从"模仿目标 caption"转成"<strong>扩写要提升出图质量、同时保住用户意图</strong>"。用 <strong>GDPO</strong>（Generative DPO，<a href="../concepts/direct-preference-optimization.html">DPO</a> 的生成式变体）配多奖励：图级（出图质量/偏好）+ prompt 级可验证奖励（扩写忠不忠于原请求）+ <strong>安全闸</strong>（稀疏约束，别引入没请求的/不可接受内容）。</p>
-<p>这里有个必须正面对抗的失败模式——<strong>多样性塌缩</strong>：expander 会偷偷学会一种"安全、高奖励的 house style"（尤其当图级奖励占主导）。对策是加一个 <strong>DINOv3 嵌入多样性分</strong>，对同一组 prompt 的<strong>组内视觉多样性</strong>给奖励。报告说一旦这个权重调小，模型很快塌向单调；<strong>整个训练全程都得让多样性奖励保活</strong>才压得住。RL 的 prompt 还混了硬例（内部踩、bug 报告、手改 prompt，按失败类分桶），挑"难但不绝望"的——综合分中等、有真实方差，GDPO 才拿得到有效偏好信号。</p>
+<p>这里有个必须正面对抗的失败模式——<strong>多样性塌缩</strong>：expander 会偷偷学会一种"安全、高奖励的 house style"（尤其当图级奖励占主导）。对策是加一个 <strong>DINOv3 嵌入多样性分</strong>，对同一组 prompt 的<strong>组内视觉多样性</strong>给奖励。报告说一旦这个权重调小，模型很快塌向单调；<strong>整个训练全程都得让多样性奖励保活</strong>才压得住。RL 的 prompt 还混了硬例（内部踩、bug 报告、手改 prompt，按失败类分桶），挑"难但不绝望"的——综合分中等、有真实方差，GDPO 才拿得到有效偏好信号。机制详见 <a href="../concepts/prompt-expansion.html">prompt-expansion</a>（含 GDPO 凑对流程）与 <a href="../concepts/dinov3-diversity-reward.html">DINOv3 多样性奖励</a>。</p>
 
 <figure id="fig-prompt">
   <figcaption><span>Fig 08 · 图级奖励独大→塌成一种风格 · DINOv3 多样性分拉回</span><span class="fnum">DIVERSITY COLLAPSE</span></figcaption>
@@ -465,7 +465,7 @@ figure.play .kr-svg .grow { transform: scaleX(1); }
 </figure>
 
 <h2><span class="num">§ 09</span>Style Reference：只借风格，别把人家的内容也搬来</h2>
-<p>风格参考让用户<strong>用文字生成、再拿一张或多张参考图导风格</strong>。Krea 想做到三点：多个风格<strong>平滑语义混合</strong>、每个参考<strong>强度连续可调</strong>、复杂风格的<strong>贴合度 SOTA</strong>。难就难在——"风格"和"内容"本来就没有清晰边界，最常见的翻车是<strong>内容泄漏</strong><a class="jr" href="#g-15">15</a>：参考图里的主体/物件直接钻进了结果图。数据还稀缺：风格迁移数据不像编辑数据那样能从视频里大量挖。Krea 的做法是<strong>一套新的自监督训练</strong>专训风格参考模块、再接一道<strong>偏好优化</strong>对齐，专门把内容泄漏压下去。</p>
+<p>风格参考让用户<strong>用文字生成、再拿一张或多张参考图导风格</strong>。Krea 想做到三点：多个风格<strong>平滑语义混合</strong>、每个参考<strong>强度连续可调</strong>、复杂风格的<strong>贴合度 SOTA</strong>。难就难在——"风格"和"内容"本来就没有清晰边界，最常见的翻车是<strong>内容泄漏</strong><a class="jr" href="#g-15">15</a>：参考图里的主体/物件直接钻进了结果图。数据还稀缺：风格迁移数据不像编辑数据那样能从视频里大量挖。Krea 的做法是<strong>一套新的自监督训练</strong>专训风格参考模块、再接一道<strong>偏好优化</strong>对齐，专门把内容泄漏压下去。机制详见 <a href="../concepts/style-reference.html">style-reference</a>。</p>
 
 <figure id="fig-style">
   <figcaption><span>Fig 09 · 参考图只该贡献"风格",不该把"内容"也搬来</span><span class="fnum">CONTENT LEAKAGE</span></figcaption>

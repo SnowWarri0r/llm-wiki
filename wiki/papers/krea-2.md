@@ -43,7 +43,13 @@ Krea 2 是 Krea AI 2026-06-23 放出的文生图模型技术报告(K2 Raw + K2 T
 
 ## 关键概念
 - [[generative-data-curation]] · 反美学分过滤 + 0 AI 数据:数据哲学是这报告的灵魂
-- [[direct-preference-optimization]] · DPO 与 Krea 的 STPO 变体(治"win/lose 一起掉")
+- [[siglip-semantic-dedup]] · 数据去重:删"语义重复"而非字节相同
+- [[hierarchical-kmeans-curation]] · 中训自上而下:FAISS 层级 k-means + VLM 逐簇审查
+- [[pagerank-entity-coverage]] · 维基 PageRank 取 top 90% ≈500 万实体校验覆盖
+- [[direct-preference-optimization]] · DPO 与 Krea 的 STPO 变体(治"win/lose 一起掉",含 DPOP 式修法)
+- [[prompt-expansion]] · 短输入扩富 caption;GDPO 多奖励 + 防多样性塌缩
+- [[dinov3-diversity-reward]] · 组内多样性奖励:防 prompt expander 塌成一种 house style
+- [[style-reference]] · 只迁风格不泄漏内容:自监督 + 偏好优化
 - [[trajectory-distribution-matching]] · TDM 少步蒸馏(K2 Turbo 的来源)
 - [[grpo]] · 多奖励 GRPO 式 RL 的底座(四个奖励 + rubric)
 - [[rubric-based-evaluation]] · prompt 级 rubric 奖励:把 prompt 拆成可验证项逐条判

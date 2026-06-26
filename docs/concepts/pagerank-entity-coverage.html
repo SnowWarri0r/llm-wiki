@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>PageRank 实体覆盖 · 用链接结构挑出&quot;必须见过的概念&quot; · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · pagerank-entity-coverage</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>PageRank 实体覆盖 · 用链接结构挑出&quot;必须见过的概念&quot;</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>拿维基百科的链接图跑 PageRank，给每个条目算个"重要度"，取排名前 90% 当"必须覆盖的概念"（约 500 万个），再回头查训练集有没有图文对覆盖到它们。</p>
+<h2>直觉 · 覆盖全不全，谁说了算</h2>
+<p><a href="../papers/krea-2.html">krea-2</a> 中训要保证模型"常识实体没盲区"——可"重要实体"有几百万个，怎么定哪些必须覆盖？人工列不现实。维基百科的<strong>链接结构</strong>天然是个投票系统：一个条目被越多、越重要的条目链接，它就越"中心"。PageRank 就是把这个"被谁链接、链接者本身有多重要"递归地量出来。</p>
+<h2>怎么做的 · 随机冲浪者的平稳分布</h2>
+<p>PageRank 把网页图看成一个<strong>随机冲浪者</strong>：站在某页，以概率 d（阻尼，常取 0.85）随机点一条出链跳走，以概率 1−d 随机瞬移到任意页。冲浪足够久后，<strong>停在每页的概率</strong>就是它的 PageRank。这正是一个 <a href="../concepts/markov-chain.html">markov-chain</a> 的<strong>平稳分布</strong>。</p>
+<p>平衡式（每页的分 = floor + 指向它的页分给它的份额）：</p>
+<pre><code>PR(p) = (1−d)/N  +  d · Σ_{q→p}  PR(q) / 出链数(q)
+        └ floor ┘     └ 上游按出链数均分它的分给下游 ┘
+</code></pre>
+<p>反复代入直到不变（幂迭代），就得到稳态。</p>
+<h2>数字例子 · 4 个页面</h2>
+<p>A→B→C→A 构成一个环，D→A（D 谁都没指向它）。<code>d=0.85, N=4</code>，floor=(1−0.85)/4=<strong>0.0375</strong>。</p>
+<pre><code>平衡式（代入链接关系）：
+  PR(D) = 0.0375                     （没人指向 D → 只有 floor）
+  PR(A) = 0.0375 + 0.85·(PR(C)+PR(D))   （C、D 都指向 A）
+  PR(B) = 0.0375 + 0.85· PR(A)
+  PR(C) = 0.0375 + 0.85· PR(B)
+解出（反复迭代收敛）：
+  PR(A)≈0.33   PR(B)≈0.32   PR(C)≈0.31   PR(D)=0.0375
+</code></pre>
+<p>✓ 自检：D 没有任何入链，永远卡在 floor <code>0.0375</code>——<strong>孤儿页拿不到任何"链接传来的分"</strong>。环里的 A/B/C 互相喂分，都涨到 ~0.32。把页面换成维基条目就是：被很多重要条目链接的"中心概念"分高，没人提的冷门词分低。取<strong>排名前 90%</strong> 当"必须覆盖"，约 <strong>500 万</strong>个实体，再去训练集里用全文检索查每个有没有被图文对覆盖到，没覆盖的就补采。</p>
+<blockquote>
+<p>类比：朋友圈里"谁重要"不看自封，看<strong>被多少重要的人提起</strong>——PageRank 把这条递归算到底。</p>
+</blockquote>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/markov-chain.html">markov-chain</a> · PageRank = 随机冲浪 Markov 链的平稳分布</li>
+<li><a href="../concepts/generative-data-curation.html">generative-data-curation</a> · 覆盖维度的策展：别留常识盲区</li>
+<li><a href="../concepts/hierarchical-kmeans-curation.html">hierarchical-kmeans-curation</a> · 互补的另一把尺子（按视觉簇审查 vs 按实体重要性补齐）</li>
+<li><a href="../papers/krea-2.html">krea-2</a> · 中训用维基 PageRank 取 top 90% ≈500 万概念校验覆盖</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/krea-2.html"><span class="cat">paper</span>Krea 2 · 不追一种&quot;标准好看&quot;,撑开整个审美空间</a></li><li><a href="../concepts/hierarchical-kmeans-curation.html"><span class="cat">concept</span>层级 k-means 策展 · 把&quot;逐张审查&quot;压成&quot;逐簇审查&quot;</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/pagerank-entity-coverage.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

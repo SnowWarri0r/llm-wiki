@@ -77,6 +77,18 @@ logπθ(y_l) = −4.5   → r(y_l) = −4.5 −(−2.0) = −2.5
 <blockquote>
 <p>类比：评委不能靠"把两个选手都压分、只要把差选手压更低"来拉开名次；STPO 等于规定"好选手的绝对分不许掉"。</p>
 </blockquote>
+<h3>怎么加这一笔（DPOP 式辅助损失）</h3>
+<p>学界对"DPO 会把赢家也压低"这个老毛病有个标准修法，叫 <strong>DPOP（DPO-Positive）</strong>：在原 DPO 损失上加一项，<strong>专门惩罚赢家的对数概率掉到参考以下</strong>：</p>
+<pre><code>总损失 = DPO损失  +  λ · max(0,  logπ_ref(y_w) − logπθ(y_w) )
+                          ↑ 赢家比训练前还低时这项&gt;0，被罚；没掉就是 0
+</code></pre>
+<p>把它套到上面那两步（取 λ=2）：</p>
+<pre><code>好的一步:  logπθ(赢)=−1.5 &gt; 参考−2.0 → 辅助=2·max(0,−2.0−(−1.5))=2·0=0
+           总损失 = 0.201 + 0 = 0.201
+偷懒一步:  logπθ(赢)=−2.5 &lt; 参考−2.0 → 辅助=2·max(0,−2.0−(−2.5))=2·0.5=1.0
+           总损失 = 0.127 + 1.0 = 1.127  ← 反而最贵！
+</code></pre>
+<p>✓ 自检：加辅助前，偷懒步 loss(0.127) 比好步(0.201) 还低，优化器会选偷懒；加辅助后，偷懒步总损失飙到 <strong>1.127</strong>，远贵于好步的 0.201——这条偷懒路被堵死，模型只能真把赢家顶上去。<strong>STPO 是这一类修法</strong>（同样治"赢家被压低"的发散），但 <a href="../papers/krea-2.html">krea-2</a> <strong>没公开 STPO 的全称和确切公式</strong>，上式是标准 DPOP 形式，用来说明机制，不是 Krea 的逐字实现。</p>
 <p><a href="../papers/krea-2.html">krea-2</a> 里其实有两个 DPO 衍生：<strong>STPO</strong> 用在主模型的偏好优化阶段（上面这套）；<strong>GDPO</strong>（Generative DPO）用在 prompt expander 的 RL 阶段，配多奖励（图级 + prompt 级可验证 + 安全闸）。两者同源——都是把"成对偏好直接当目标"的思路按各自场景改造。</p>
 <h2>链接</h2>
 <ul>
@@ -89,8 +101,8 @@ logπθ(y_l) = −4.5   → r(y_l) = −4.5 −(−2.0) = −2.5
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 1 处</span>
-  <ul><li><a href="../papers/krea-2.html"><span class="cat">paper</span>Krea 2 · 不追一种&quot;标准好看&quot;,撑开整个审美空间</a></li></ul>
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/krea-2.html"><span class="cat">paper</span>Krea 2 · 不追一种&quot;标准好看&quot;,撑开整个审美空间</a></li><li><a href="../concepts/prompt-expansion.html"><span class="cat">concept</span>Prompt Expansion · 把短输入扩成富 caption（还得防塌成一种风格）</a></li><li><a href="../concepts/style-reference.html"><span class="cat">concept</span>Style Reference · 只借参考图的&quot;风格&quot;，别把它的&quot;内容&quot;也搬来</a></li></ul>
 </div>
 
 <div class="colophon">
