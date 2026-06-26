@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>FAISS / 近似最近邻 · 用一点精度换十亿级的速度 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · faiss-ann-search</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>FAISS / 近似最近邻 · 用一点精度换十亿级的速度</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>精确最近邻要拿查询跟全部向量逐个比，十亿级太慢；FAISS 用"先分桶只翻几桶"(IVF)+"把向量压成几字节"(PQ)两招，换来毫秒级近似检索。</p>
+<h2>直觉 · 为什么不能精确比</h2>
+<p><a href="../concepts/siglip-semantic-dedup.html">siglip-semantic-dedup</a> 去重、<a href="../concepts/hierarchical-kmeans-curation.html">hierarchical-kmeans-curation</a> 聚类，都要在十亿张图的向量里反复找"最近的邻居"。精确最近邻 = 查询向量跟<strong>每一个</strong>库向量算距离，取最小 → 十亿次距离、每次几百维乘加，慢到没法用。FAISS 的整个设计就是<strong>用一点点精度（近似 ANN）换巨大的速度</strong>，靠两个能叠用的招。</p>
+<h2>招 1 · IVF 倒排：别全找，先分桶</h2>
+<pre><code>建索引: 先用 k-means 把全库聚成 ~√N 个&quot;格子&quot;(Voronoi cell)，各有一个中心
+查询:   1) 查询先跟这 √N 个中心比，挑最近的 nprobe 个格子
+        2) 只在这几个格子里的向量中找最近邻，其余格子整批跳过
+</code></pre>
+<p>像进图书馆找书：不挨本翻，先走到对的<strong>书架</strong>(格子)，只翻那几架。</p>
+<h2>招 2 · PQ 乘积量化：别存全量，压成几字节</h2>
+<pre><code>把一个向量切成 m 段(子向量); 每段单独用 k-means 训一本 256 个中心的&quot;码本&quot;
+每段 → 替换成&quot;最近中心的编号&quot;(0~255 = 1 字节)
+于是整条向量 = m 个字节; 距离用预存的&quot;段-距离查表&quot;求和近似算
+</code></pre>
+<p>像把一长串颜色用"色卡编号"记：不存 RGB，存色卡上第几号，又小又能比。</p>
+<p>两招叠起来（<strong>IVF+PQ</strong>）：先分桶跳掉绝大多数候选，再在要翻的桶里用压缩码算近似距离 → 十亿向量塞进几 GB、查询毫秒级。FAISS 还有 GPU kernel，再快 5~10×。</p>
+<h2>数字例子 · 跳过比 + 压缩比都算给你看</h2>
+<p><strong>IVF 省了多少次比较</strong>（取 N=100 万）：</p>
+<pre><code>格子数 = √N = 1000，每格 ~1000 个向量
+精确:  100 万次距离
+IVF:   1000(先比中心) + nprobe×1000  ; nprobe=10 → 1000 + 10000 = 1.1 万次
+       → 约 90× 更少（只翻 10/1000 = 1% 的库）
+</code></pre>
+<p><strong>PQ 压了多少</strong>（768 维 float32）：</p>
+<pre><code>原始:  768 × 4 字节 = 3072 字节/向量
+PQ:    切 8 段 → 每段 1 字节(256 码本) = 8 字节/向量
+       → 3072 / 8 = 384× 压缩
+十亿向量:  3.07 TB  →  8 GB   （从&quot;放不进内存&quot;变成&quot;GPU 都装得下&quot;）
+</code></pre>
+<p>✓ 自检：IVF 把"翻全库"变成"翻 1% 的库"(90× 提速)，PQ 把"3TB 存不下"变成"8GB 装得下"(384× 瘦身)——两件事正交，所以能乘起来用。代价是<strong>近似</strong>：可能漏掉极少数真正最近的邻居。旋钮就是 <strong>nprobe</strong>(翻几个桶)和 <strong>PQ 段数/位数</strong>：调大→更准但更慢/更占内存，调小→更快但召回降。本质是<strong>召回率 ↔ 速度/内存</strong>的权衡。</p>
+<h2>跟 k-means 的关系</h2>
+<p>注意 k-means 在这里出现了<strong>两次</strong>、用途不同：IVF 用它把全库分成检索格子；PQ 用它在每个子段空间里训码本。<a href="../concepts/hierarchical-kmeans-curation.html">hierarchical-kmeans-curation</a> 里的 k-means 则是第三种用途（按语义分簇审查）——同一个算法，三处不同目的。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/siglip-semantic-dedup.html">siglip-semantic-dedup</a> · 去重要找近邻，靠 ANN 索引把 O(N²) 压到近线性</li>
+<li><a href="../concepts/hierarchical-kmeans-curation.html">hierarchical-kmeans-curation</a> · 在十亿向量上做 k-means 也靠 FAISS</li>
+<li><a href="../concepts/quantization.html">quantization</a> · PQ 是向量量化的一种；同样是"用低精度换体积/速度"</li>
+<li><a href="../concepts/dot-product.html">dot-product</a> · 向量距离/相似度的底层运算</li>
+<li><a href="../papers/krea-2.html">krea-2</a> · 数据策展在十亿级图向量上用 FAISS</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../concepts/hierarchical-kmeans-curation.html"><span class="cat">concept</span>层级 k-means 策展 · 把&quot;逐张审查&quot;压成&quot;逐簇审查&quot;</a></li><li><a href="../concepts/siglip-semantic-dedup.html"><span class="cat">concept</span>SigLIP 语义去重 · 删的是&quot;长得像&quot;，不是&quot;字节一样&quot;</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/faiss-ann-search.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
