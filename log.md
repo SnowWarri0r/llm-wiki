@@ -814,3 +814,4 @@ skill 更新:
 ## [2026-06-23] ingest | sam (Segment Anything) + promptable-segmentation + sam-data-engine (闭合 optical-context-compression → SAM 回链)
 
 ## [2026-06-23] update | optical-context-compression 补"16× 怎么做"(两次stride-2卷积,边长64→32→16); 修 sam FIG01 两箭头方向
+## [2026-06-23] fix | sam FIG03 文字溢出框/FIG04 400×被柱遮挡/去掉"你从OCR点回来"导航预设; skill grep 加导航预设
