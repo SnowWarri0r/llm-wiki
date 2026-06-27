@@ -89,6 +89,7 @@
 
 - [训练 vs 推理 · 同一个模型的两种跑法](wiki/topics/training-vs-inference.md) — 三种架构训练/推理对比（teacher forcing / causal mask / KV cache / MLM 放在一起看）
 - [音频 token 化：RVQ vs Flow](wiki/topics/audio-tokenization-rvq-vs-flow.md) — 两种主流路线的工程对照
+- [Joint-Attention 谱系：cross-attn → MMDiT / Unified / MoT](wiki/topics/joint-attention-lineage.md) — 多模态都从"独立编码器+cross-attention"搬到"一条序列+联合自注意力"; 剩下两个旋钮(权重共享/分流 × 注意力全双向/混合)摆成2×2: MMDiT(分流+全双向,只画图)/Unified(共享+混合)/MoT(分流+混合); 混合注意力=能不能顺带生成文本
 - [把外挂规则吃进权重](wiki/topics/replace-heuristics-with-weights.md) — 反复出现的范式：VAD、phonemizer、Whisper encoder 都在被收
 
 ## Concepts · 概念
