@@ -835,3 +835,5 @@ skill 更新:
 ## [2026-06-25] update | qwen-image-bench 补全评测标准: 5 支柱→23 子能力整表 + 打分聚合 (0/1/2/N-A 归一化 0/60/100, N-A 剔除, 三级无权重平均, 每 prompt 激活 3-5 支柱) + 端到端手算总分例子
 
 ## [2026-06-25] ingest | krea-2 (Krea 2 技术报告: 反美学分过滤+0 AI数据的数据哲学 / 六段流水线 / STPO治DPO策略发散 / 多奖励GRPO+rubric / TDM蒸馏K2 Turbo) + 3 concept (direct-preference-optimization, generative-data-curation, trajectory-distribution-matching)
+
+## [2026-06-26] query→concepts | krea-2 机制深挖: 新增 6 concept (siglip-semantic-dedup, hierarchical-kmeans-curation, pagerank-entity-coverage, dinov3-diversity-reward, prompt-expansion, style-reference) + DPO 页补 DPOP 式 STPO 修法(数字例); GDPO/自监督风格按报告披露程度标注"框架已知/细节未公开"
