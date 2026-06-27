@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>TDM · 轨迹分布匹配（沿整条去噪路都对分布，少步还稳） · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · trajectory-distribution-matching</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>TDM · 轨迹分布匹配（沿整条去噪路都对分布，少步还稳）</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把 <a href="../concepts/dmd-distillation.html">dmd-distillation</a>（DMD）的"只匹配终点出图分布"推广到"沿去噪轨迹的多个点都匹配分布"，于是少步生成更稳、步数能灵活选、超参还少。</p>
+<h2>直觉 · 从"只看终点"到"看整条路"</h2>
+<p><a href="../concepts/dmd-distillation.html">dmd-distillation</a>（DMD）蒸馏的目标是：学生（少步）画出来的<strong>最终分布</strong>跟老师（多步）的一样。这对<strong>一步/极少步</strong>很好用，但只盯终点，中间怎么走没人管——想做"灵活多步"（有时 2 步、有时 8 步）时不好控。</p>
+<p><strong>TDM（Trajectory Distribution Matching，轨迹分布匹配）</strong>的改法：不只在终点对分布，而是在<strong>去噪轨迹上的好几个时间点</strong>都要求"学生此刻的分布 ≈ 老师此刻的分布"。把约束从一个点摊到整条路上，少步生成的每一跳都被钉在老师的轨迹分布上 → 更稳、可以灵活选步数。<a href="../papers/krea-2.html">krea-2</a> 比过 DMD / DMD2 / Decoupled DMD / piFlow / APT，最后选 TDM，理由就是<strong>好调、超参少</strong>。</p>
+<h2>怎么做的 · 轨迹是什么、匹配什么</h2>
+<p><a href="../concepts/flow-matching.html">flow-matching</a> 把生成看成从纯噪声沿一条路积分到数据。老师用很多小步（小心地走），学生想用几大步跳完：</p>
+<pre><code>时间 t:   1.0(纯噪声) ──────────────────────────► 0(图)
+老师:     · · · · · · · · · · · · · · · ·   ~28 小步，每步挪一点
+学生:     ●─────────●─────────●─────────●     4 大步，每步一大跳
+            t=1.0    t=0.7    t=0.4    t=0.1   ← 在这些&quot;路标&quot;上对分布
+</code></pre>
+<ul>
+<li><strong>DMD</strong>：只要求最右边那个 ●（终点）的分布对上老师。</li>
+<li><strong>TDM</strong>：要求每个 ● 这一刻，学生群体的分布都 ≈ 老师走到同一 t 时的分布。</li>
+</ul>
+<h2>数字例子 · 一条 1D 玩具轨迹</h2>
+<p>把一张图简化成 1D 的一个值，从噪声 <code>x=1.0</code> 走到数据 <code>x=0</code>。老师走 4 小步、学生想 2 大步跳完，路标设在 <code>t=0.5</code>（中点）和 <code>t=0</code>（终点）。</p>
+<p>老师（每步 ×0.6，模拟"小心地走"）：</p>
+<pre><code>1.00 → 0.60 → 0.36 → 0.22 → 0.13   （4 步，最后落在 ~0.13 附近）
+            ↑ t=0.5 这一刻老师在 0.36 附近
+</code></pre>
+<p>学生只两跳，TDM 要求它在两个路标都对上老师那一刻的分布：</p>
+<pre><code>路标 t=0.5： 学生第一跳要落在【0.36 附近的分布】← 跟老师中途对齐
+路标 t=0  ： 学生第二跳要落在【0.13 附近的分布】← 跟老师终点对齐
+</code></pre>
+<p>对比只用 DMD：只约束终点 0.13，中间跳到哪没人管——学生可能第一跳直接冲过头（比如跳到 0.05），再硬拐回来，少步时容易抖。TDM 在 0.36 这个<strong>中途路标</strong>也钉住，等于给少步路径加了"中途检查站"。</p>
+<pre><code>✓ 自检：约束点数 1(DMD) → 多个(TDM)。多一个中途路标，学生的少步轨迹
+  就少一分乱窜的自由 → 2/4/8 步都能稳出，且不用为每个步数重调超参。
+</code></pre>
+<blockquote>
+<p>类比：DMD 只考"终点站到没到对的地方"；TDM 沿途还设了几个打卡点，每个都要对——少走几站也不会跑偏。</p>
+</blockquote>
+<h2>K2 Raw vs K2 Turbo</h2>
+<p><a href="../papers/krea-2.html">krea-2</a> 用 TDM 做时间步蒸馏，发两套权重：</p>
+<ul>
+<li><strong>K2 Raw</strong>：未蒸馏的基座，留给做微调 / 后训练研究的人。</li>
+<li><strong>K2 Turbo</strong>：<strong>引导蒸馏 + 时间步蒸馏</strong>双管齐下（<a href="../concepts/guidance-distillation.html">guidance-distillation</a> 去掉 CFG 的双次前向、TDM 把步数压到几步），少步快出图。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/dmd-distillation.html">dmd-distillation</a> · 直接前身：只匹配终点分布；TDM 推广到整条轨迹</li>
+<li><a href="../concepts/guidance-distillation.html">guidance-distillation</a> · 正交的另一种蒸馏；K2 Turbo 两个一起做</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · "轨迹"就是它定义的噪声→数据那条积分路</li>
+<li><a href="../papers/ode-sde.html">ode-sde</a> · 采样步数 = NFE，少步快采的根</li>
+<li><a href="../papers/krea-2.html">krea-2</a> · 选 TDM（好调、超参少），产出 K2 Turbo</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/krea-2.html"><span class="cat">paper</span>Krea 2 · 不追一种&quot;标准好看&quot;,撑开整个审美空间</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/trajectory-distribution-matching.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

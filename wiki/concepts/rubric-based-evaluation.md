@@ -1,7 +1,7 @@
 ---
 name: rubric-based-evaluation
 type: concept
-sources: [qwen-image-bench]
+sources: [qwen-image-bench, krea-2]
 updated: 2026-06-25
 ---
 

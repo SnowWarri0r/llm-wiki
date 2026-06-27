@@ -1,7 +1,7 @@
 ---
 name: progressive-resolution-training
 type: concept
-sources: [qwen-image-2, mrt]
+sources: [qwen-image-2, mrt, krea-2]
 updated: 2026-06-15
 ---
 

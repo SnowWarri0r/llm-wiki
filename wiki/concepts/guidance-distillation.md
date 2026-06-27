@@ -1,7 +1,7 @@
 ---
 name: guidance-distillation
 type: concept
-sources: [flux-1]
+sources: [flux-1, krea-2]
 updated: 2026-06-17
 ---
 
