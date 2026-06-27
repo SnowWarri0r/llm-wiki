@@ -817,3 +817,5 @@ skill 更新:
 ## [2026-06-23] fix | sam FIG03 文字溢出框/FIG04 400×被柱遮挡/去掉"你从OCR点回来"导航预设; skill grep 加导航预设
 
 ## [2026-06-24] ingest | cosmos-3 + mixture-of-transformers + world-foundation-model + physical-ai (NVIDIA omnimodal world model, MoT 双塔)
+
+## [2026-06-24] topic | joint-attention-lineage (cross-attn→MMDiT/Unified/MoT 2×2 网格: 权重×注意力两旋钮)
