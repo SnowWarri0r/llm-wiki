@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Mixture-of-Transformers · MoT · 混合 transformer（双塔） · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · mixture-of-transformers</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Mixture-of-Transformers · MoT · 混合 transformer（双塔）</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>每个 transformer 层养两套完整权重（"塔"），不同模态/任务的 token 走不同塔，但所有 token 共用一次注意力对齐。</p>
+<h2>直觉</h2>
+<p>痛点：让一个 transformer 同时干"理解"（语言/推理，要<strong>因果</strong>注意力、像 LLM）和"生成"（高保真图像视频，要<strong>双向</strong>注意力、像扩散）——这两种工作模式对权重的要求很不一样，硬塞进同一套权重会互相打架、谁都学不好。</p>
+<p>MoT 的解法干脆：<strong>给每种工作模式配一套自己的完整 transformer 权重</strong>（注意力投影、FFN、norm 全独立），叫一个"塔"。理解的 token 走 reasoner 塔，生成的 token 走 generator 塔。但关键是——它们<strong>在同一次注意力里相遇</strong>（联合注意力），所以生成塔能看到理解塔算出的文字 prompt、保持对齐。分权重避免打架，共注意力保证统一。</p>
+<p>跟两个容易混的东西划清界限：</p>
+<ul>
+<li><strong>vs <a href="../concepts/moe.html">moe</a></strong>：MoE 是在 FFN 那层养很多"专家"，每个 token 按内容路由到少数几个专家，<strong>注意力是共享的</strong>，目的是<strong>省算力</strong>（总参大、激活小）。MoT 是养<strong>整条 transformer 通路</strong>（连注意力投影都独立），按<strong>模态/任务</strong>路由，目的是<strong>消解多模态冲突</strong>。一个为效率，一个为统一。</li>
+<li><strong>vs <a href="../concepts/unified-transformer.html">unified-transformer</a></strong>：unified-transformer 也用"文本走因果 + 生成走双向"的混合注意力，但<strong>只有一套权重</strong>。MoT 在它之上把权重<strong>拆成两塔</strong>——这是 MoT 的新增点。</li>
+</ul>
+<h2>怎么做的</h2>
+<pre><code>一条 token 序列 = [ AR 子序列(语言+理解) | 扩散子序列(要生成的图/视频/动作) ]
+
+每个 decoder 层:
+  AR token      → reasoner 塔(独立权重)  · 因果自注意力(只看前面的 AR)
+  扩散 token    → generator 塔(独立权重) · 双向注意力(看 [AR; 扩散] 全部)
+  ↑ 两塔权重不同, 但在同一次 attention 里 AR 当 key/value 喂给扩散 token
+AR 永不被扩散 token 更新(保住因果, 文本生成能力不坏)
+</code></pre>
+<p>两塔都从一个预训练 VLM（Cosmos 3 用 <a href="../concepts/qwen3-vl.html">qwen3-vl</a>）初始化，所以一上来就有语言+视觉底子，再学生成。</p>
+<h2>数字例子</h2>
+<p>Cosmos 3 的 Nano 档：稠密底座是 8B（一个完整 VLM 的参数量）。MoT 给 reasoner 和 generator <strong>各</strong>一套 ≈8B 的权重：</p>
+<pre><code>reasoner 塔  ≈ 8B   (理解/AR)
+generator 塔 ≈ 8B   (生成/扩散)
+─────────────────────────────
+总参         ≈ 16B   = 2 × 稠密底座
+</code></pre>
+<p>✓ 自检：Super 档底座 32B → 总参 64B，正好也是 ×2，对得上"每层两套权重"。但<strong>激活量≈单塔</strong>——因为一个 token 只过它该走的那一塔（AR token 只过 reasoner，扩散 token 只过 generator），不是两塔都过。所以总参翻倍、单 token 计算量没翻倍。对比 MoE：MoE 是 100B 总参可能只激活 5B（省算力）；MoT 是 16B 总参激活≈8B（不为省算力，为分工）。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/cosmos-3.html">cosmos-3</a> · 用 MoT 把理解+生成+动作统一的 paper</li>
+<li><a href="../concepts/moe.html">moe</a> · 对照：FFN 专家、按 token 路由、共享注意力、为省算力</li>
+<li><a href="../concepts/unified-transformer.html">unified-transformer</a> · 最近亲：混合注意力但单套权重；MoT 拆成双塔</li>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · generator 塔干的活</li>
+<li><a href="../concepts/qwen3-vl.html">qwen3-vl</a> · 两塔的初始化来源</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/cosmos-3.html"><span class="cat">paper</span>Cosmos 3 · 一个模型同时理解世界、生成世界、在世界里动手</a></li><li><a href="../concepts/physical-ai.html"><span class="cat">concept</span>Physical AI · 物理 AI / 具身智能</a></li><li><a href="../concepts/world-foundation-model.html"><span class="cat">concept</span>World Foundation Model · WFM · 世界基础模型</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/mixture-of-transformers.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

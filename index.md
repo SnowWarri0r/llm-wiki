@@ -29,6 +29,7 @@
 - [Unlimited OCR · 一口气抄完整本书](wiki/papers/unlimited-ocr.md) — 百度端到端OCR(接DeepSeek-OCR线): 解码器全换R-SWA(每token只看全图+最近128字)让KV cache恒定不增→几十页一次前向解析完(别人一页一页for-loop); DeepEncoder光学压缩1024²→256视觉token; 3B-A0.5B MoE; OmniDocBench 87→93.23 SOTA且长程不崩; R-SWA也能用于ASR/翻译
 - [Generative Agents · Smallville](wiki/papers/generative-agents.md) — 给 LLM 加记忆流 + 反思 + 规划，25 个 agent 在虚拟小镇里自主生活
 - [MemGPT · LLMs as Operating Systems](wiki/papers/memgpt.md) — context 当 RAM、外部存储当硬盘，LLM 自己 function call 调度记忆
+- [Cosmos 3 · 理解、生成、行动一个模型](wiki/papers/cosmos-3.md) — NVIDIA Physical AI 旗舰: MoT 双塔(reasoner塔跑AR理解/因果 + generator塔跑扩散生成/双向,每层两套权重,都从Qwen3-VL初始化)+dual-stream联合注意力把理解+生成统一; 五模态(语言/图/视频/音频/动作)重排token切任务,subsume VLM+视频生成+世界模型+VLA; Edge4B/Nano16B/Super64B(=2×底座); 最强开源T2I/I2V+最强策略(RoboArena)
 - [Lumine · 从像素玩 3D 开放世界](wiki/papers/lumine.md) — VLM(Qwen2-VL)直接吃画面像素吐键鼠, 端到端打通原神5h主线零样本迁移; 动作即文本token + action chunking(5Hz看30Hz动) + hybrid thinking(该想才想); 2424h人类录像纯模仿零RL + W8A8实时
 - [ViT · An Image is Worth 16×16 Words](wiki/papers/vit.md) — 把图切成 16×16 patch 当 token，纯 Transformer 干视觉；CNN 在视觉的护城河被填平
 - [CLIP · Learning Transferable Visual Models](wiki/papers/clip.md) — 4 亿图文对对比学习, 图像和文本对齐到同一向量空间; DALL-E / SD / LLaVA 都靠它
@@ -222,6 +223,11 @@
 - [Contrastive Learning](wiki/concepts/contrastive-learning.md) — 拉近正样本 + 推开负样本, in-batch negatives 白送 N²-N 个负例
 - [Zero-Shot Image Classification](wiki/concepts/zero-shot-image-classification.md) — 分类变成"哪句话最配这张图", 类别由文本定义
 - [Dual-Tower Architecture](wiki/concepts/dual-tower-architecture.md) — 两个独立 encoder + 末端点积; 推理可缓存, 适合检索
+
+### 世界模型 / 具身 Physical AI
+- [Mixture-of-Transformers · MoT](wiki/concepts/mixture-of-transformers.md) — 每层两套权重(塔): AR token走reasoner塔(理解/因果)、扩散token走generator塔(生成/双向),按模态/任务路由+联合注意力对齐; vs MoE(FFN专家为省算力)/unified-transformer(单套权重); Cosmos 3 发动机
+- [World Foundation Model · WFM](wiki/concepts/world-foundation-model.md) — 学"世界接下来怎么变"的大模型,给当前+动作能模拟未来; 当Physical AI训练场/合成数据工厂/策略评估; vs视频生成(要符合物理+可动作控制)
+- [Physical AI · 具身智能](wiki/concepts/physical-ai.md) — 在真实世界感知-推理-行动的AI(机器人/自驾),动作后果不可逆+理解与生成耦合,主要靠仿真/合成数据训(sim2real)
 
 ### Omni / 语音交互
 - [Thinker–Talker](wiki/concepts/thinker-talker.md) — 想的(语义文本)和说的(渲染音频codes)分两路解耦; Talker 吃 Thinker 中间层条件

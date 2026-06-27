@@ -1,7 +1,7 @@
 ---
 name: unified-transformer
 type: concept
-sources: [hidream-o1]
+sources: [hidream-o1, cosmos-3]
 updated: 2026-06-10
 ---
 
