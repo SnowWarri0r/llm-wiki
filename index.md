@@ -196,6 +196,12 @@
 - [DMD 蒸馏 / NFE](wiki/concepts/dmd-distillation.md) — 把40步老师蒸成4步学生: 不抄轨迹只让出图分布匹配(teacher_score−fake_score=吸老师斥自己=Drifting同构); NFE=跑几次网络
 - [TDM · 轨迹分布匹配](wiki/concepts/trajectory-distribution-matching.md) — DMD只匹配终点分布→TDM沿去噪轨迹多个路标都匹配; 少步更稳/步数灵活/超参少; Krea 2从DMD/DMD2/piFlow/APT里选它蒸出K2 Turbo
 - [生成模型数据策展](wiki/concepts/generative-data-curation.md) — 别按美学分过滤(等于把打分器偏见焊死+剪掉分布尾巴→审美收敛), 关口换成"caption准不准"; 预训练0张AI合成图(合成图"更好学"会把模型往简单分布拽给质量封顶); Krea 2灵魂
+- [SigLIP 语义去重](wiki/concepts/siglip-semantic-dedup.md) — 图压成向量, 余弦相似度>阈值算近重复每簇留一张; 删的是"语义重复"(裁剪/压缩/改水印的同一张)而非字节相同, 哈希抓不到
+- [层级 k-means 策展](wiki/concepts/hierarchical-kmeans-curation.md) — 十亿图没法逐张看: FAISS递归k-means聚成簇树, 簇心代表图给VLM审一眼按簇整批取舍; 把"逐张审查"压成"逐簇审查"
+- [PageRank 实体覆盖](wiki/concepts/pagerank-entity-coverage.md) — 维基链接图跑PageRank给条目算重要度(=随机冲浪Markov链平稳分布), 取top90%≈500万概念校验训练集覆盖; 孤儿页卡在floor(1-d)/N
+- [DINOv3 多样性奖励](wiki/concepts/dinov3-diversity-reward.md) — 一组图DINOv3向量两两距离均值当多样性分加进奖励, 防RL只追质量塌成一种house style; λ调小立刻塌要全程保活
+- [Prompt Expansion](wiki/concepts/prompt-expansion.md) — 短输入扩成富caption: SFT反造用户caption学扩写, RL用GDPO(偏好对模型自己生成+多奖励自动判)调"提质不跑题"; 忠实奖励一票否决跑题扩写
+- [Style Reference](wiki/concepts/style-reference.md) — 只借参考图风格别搬内容(content leakage是核心翻车); 自监督造对强制风格/内容分通道+偏好优化压泄漏; "是什么"归文字"什么质感"归参考图
 - [渐进式分辨率训练](wiki/concepts/progressive-resolution-training.md) — 256P→512P→2K: 先小图便宜学构图再升大图抠细节; 类比缩略图→放大
 - [Unified Transformer](wiki/concepts/unified-transformer.md) — 像素+文本+条件一条流 + 混合注意力(文本causal/生成full)；LLM 和 DiT 缝成一个
 - [Perceptual Loss](wiki/concepts/perceptual-loss.md) — 不逐像素比图，在预训练网络特征空间里比；LPIPS(VGG·纹理) + DINO(自监督ViT·语义)

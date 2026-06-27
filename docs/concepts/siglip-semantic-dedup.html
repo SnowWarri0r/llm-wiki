@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>SigLIP 语义去重 · 删的是&quot;长得像&quot;，不是&quot;字节一样&quot; · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · siglip-semantic-dedup</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>SigLIP 语义去重 · 删的是&quot;长得像&quot;，不是&quot;字节一样&quot;</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把每张图用 SigLIP 压成一个向量，向量方向接近（余弦相似度高过阈值）就当近重复，每簇只留一张。</p>
+<h2>直觉 · 为什么不用哈希</h2>
+<p>按文件哈希去重只能抓<strong>逐字节相同</strong>的图。但训练集里真正的冗余是<strong>语义重复</strong>：同一张图被裁过、压过、改过水印、调过色——字节全不同，可它们对模型是同一个样本，留着只会让这个概念<strong>过度重复</strong>、淹没长尾（正是 <a href="../concepts/generative-data-curation.html">generative-data-curation</a> 要避免的）。</p>
+<p><a href="../papers/krea-2.html">krea-2</a> 用 <strong>SigLIP</strong>（CLIP 的变体，把对比损失换成 sigmoid，见 <a href="../concepts/contrastive-learning.html">contrastive-learning</a> / <a href="../papers/clip.html">clip</a>）把图压成向量：语义相近的图，向量方向也相近。于是"长得像"变成了"向量夹角小"，可量、可批量删。</p>
+<h2>怎么做的</h2>
+<pre><code>
+1. 全库每张图过 SigLIP → 一个向量（如 768 维），方向编码&quot;这图讲什么&quot;
+2. 算两张图向量的余弦相似度 cos（1=方向完全一致 / 0=无关）
+3. 设阈值，如 cos &gt; 0.95 算近重复
+4. 近重复的成簇，每簇只留一张（通常留分辨率/质量最好的）
+</code></pre>
+<p>全库两两比太慢，实际用<strong>近似最近邻索引</strong>（如 FAISS）只查每张图的少数近邻，把 O(N²) 压到近线性。</p>
+<h2>数字例子 · 余弦怎么判重</h2>
+<p>把图向量简化成 3 维。余弦 = 点积 ÷ 两者长度（见 <a href="../concepts/dot-product.html">dot-product</a>）：</p>
+<pre><code>a = [0.90, 0.40, 0.10]   （原图）
+b = [0.88, 0.45, 0.08]   （同图改了水印/压缩过）
+c = [0.10, 0.25, 0.96]   （另一张完全不同的图）
+
+cos(a,b) = (0.90·0.88 + 0.40·0.45 + 0.10·0.08) / (|a|·|b|)
+         = 0.9944 / (0.997·0.997) ≈ 0.998   &gt; 0.95 → 判近重复，删一张
+cos(a,c) = 0.29                              &lt; 0.95 → 不同，两张都留
+</code></pre>
+<p>✓ 自检：a 和 b 字节完全不同（水印都改了），哈希去重抓不到；但语义上是同一张，余弦 0.998 一抓一个准。c 虽然第三维也有值，但整体方向差很远，余弦只有 0.29，不会被误删。<strong>阈值就是"多像才算重复"的旋钮</strong>：调高（如 0.98）只删几乎一模一样的，调低（如 0.9）连"很像"的也并掉。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/generative-data-curation.html">generative-data-curation</a> · 去重是其中一条：别让常见概念淹没长尾</li>
+<li><a href="../concepts/hierarchical-kmeans-curation.html">hierarchical-kmeans-curation</a> · 同样用 SigLIP 向量，但用来分簇审查而非删重复</li>
+<li><a href="../concepts/contrastive-learning.html">contrastive-learning</a> · SigLIP 的训练范式（sigmoid 版对比学习）</li>
+<li><a href="../papers/clip.html">clip</a> · SigLIP 的前身；图文对齐嵌入的来源</li>
+<li><a href="../concepts/dot-product.html">dot-product</a> · 余弦相似度 = 归一化后的点积</li>
+<li><a href="../papers/krea-2.html">krea-2</a> · 数据策展里用它做语义去重</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/krea-2.html"><span class="cat">paper</span>Krea 2 · 不追一种&quot;标准好看&quot;,撑开整个审美空间</a></li><li><a href="../concepts/hierarchical-kmeans-curation.html"><span class="cat">concept</span>层级 k-means 策展 · 把&quot;逐张审查&quot;压成&quot;逐簇审查&quot;</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/siglip-semantic-dedup.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

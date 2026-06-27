@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Prompt Expansion · 把短输入扩成富 caption（还得防塌成一种风格） · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · prompt-expansion</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Prompt Expansion · 把短输入扩成富 caption（还得防塌成一种风格）</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>模型训在信息密集的长 caption 上，用户却爱打短句；前面挂一个会写字的 LLM 把短输入扩成富 caption，用 SFT 学会扩写、再用 GDPO + 多奖励把扩写调到"提质又不跑题、还别塌成一种风格"。</p>
+<h2>直觉 · 训练分布和用户分布对不上</h2>
+<p>文生图模型见过的是"光影、材质、构图都写满"的长描述，可用户输入往往短、模糊、各人习惯不同（"画只猫" vs 一长串 JSON）。这中间的落差就由 <a href="../papers/krea-2.html">krea-2</a> 的 <strong>prompt expander</strong> 补：它是个 LLM，把用户的短 prompt <strong>改写成模型爱吃的富 caption</strong>，再喂给生成模型。</p>
+<h2>怎么做的 · 两段训练</h2>
+<p><strong>① SFT（学会扩写）</strong>：用另一个 LLM 从长 caption <strong>反向</strong>造"用户 caption"（短、口语、半指令、故意省细节），配成 <code>(短输入 → 富 caption)</code> 的训练对让 expander 模仿；还合成<strong>思考轨迹</strong>（中间一步"先重建用户意图"，能提升下游）。再做<strong>分布塑形</strong>——oversample 艺术性图扩大创意覆盖、给该写实的 prompt 加轻量"摄影介质"偏置；目标不是强加 house style，而是让扩写分布同时覆盖"艺术导演范"和"直白写实"。</p>
+<p><strong>② RL（GDPO + 多奖励）</strong>：目标从"模仿目标 caption"转成"<strong>扩写要让出图更好、同时保住用户意图</strong>"。难点是没法便宜地让人对"哪个扩写更好"做海量配对标注，所以用 <strong>GDPO</strong>（Generative DPO，<a href="../concepts/direct-preference-optimization.html">direct-preference-optimization</a> 的生成式变体）：偏好对不是人标的，而是<strong>模型自己生成候选、用奖励自动判</strong>出来的。</p>
+<h2>GDPO 配多奖励 · 偏好对怎么自动来</h2>
+<pre><code>对一条用户 prompt：
+
+1. expander 生成多个候选扩写
+2. 每个扩写出图，再打多奖励：
+     图级奖励      = 出图质量/偏好
+     prompt 级可验证 = 扩写有没有忠于原请求（程序可查）
+     安全闸        = 别引入没请求的/不可接受内容（稀疏约束）
+     多样性        = DINOv3 组内多样性分（见 &lt;a href=&quot;../concepts/dinov3-diversity-reward.html&quot;&gt;dinov3-diversity-reward&lt;/a&gt;）
+
+3. 合成总分 → 分高的当&quot;赢&quot;、分低的当&quot;输&quot; → 自动凑成偏好对
+4. 拿这些自动偏好对跑 DPO
+</code></pre>
+<h2>数字例子 · 一条 prompt 凑出偏好对</h2>
+<p>三个候选扩写，各项打分（图级 0–1、忠实 0/1、安全 ok=不扣）：</p>
+<pre><code>候选   图级   忠于原意   安全    总分(简单相加, 忠实/安全当门)
+ E1    0.8      1         ok     0.8
+ E2    0.5      1         ok     0.5
+ E3    0.9      0(跑题)   ok     —   （忠实=0 直接出局：再好看也不能改用户意图）
+→ 赢家 = E1(0.8)   输家 = E2(0.5)   组成偏好对喂 DPO
+</code></pre>
+<p>✓ 自检：E3 出图最好看（0.9）但<strong>改了用户意图</strong>（忠实=0），被可验证奖励一票否决——这正是"提质但不能跑题"的约束。剩下 E1&gt;E2 形成偏好对，无需任何人工标注。<strong>多样性分</strong>则跨这一组算（见 <a href="../concepts/dinov3-diversity-reward.html">dinov3-diversity-reward</a>），防止 expander 把每条 prompt 都扩成同一种风格。RL 的 prompt 还混了硬例（内部踩、bug 报告、手改 prompt，按失败类分桶），挑"难但不绝望"的——综合分中等、有真实方差，DPO 才拿得到有效信号。</p>
+<blockquote>
+<p>报告披露程度：GDPO + 这套多奖励的<strong>构成</strong>点明了；奖励的具体加权、DPO 变体的公式<strong>没公开</strong>。上面的凑对流程是按"生成式偏好优化"的通用做法讲的。</p>
+</blockquote>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/direct-preference-optimization.html">direct-preference-optimization</a> · GDPO 是它的生成式变体（偏好对自动生成+打分）</li>
+<li><a href="../concepts/dinov3-diversity-reward.html">dinov3-diversity-reward</a> · 多奖励里防 house-style 塌缩的那一项</li>
+<li><a href="../concepts/rubric-based-evaluation.html">rubric-based-evaluation</a> · "prompt 级可验证奖励"的思路：拆成可判定项</li>
+<li><a href="../concepts/grpo.html">grpo</a> · 多奖励 RL 的近亲方法</li>
+<li><a href="../concepts/structured-caption-conditioning.html">structured-caption-conditioning</a> · 富 caption / 结构化条件是扩写的目标形态</li>
+<li><a href="../papers/krea-2.html">krea-2</a> · prompt expander 的 SFT+RL 两段训练出处</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/krea-2.html"><span class="cat">paper</span>Krea 2 · 不追一种&quot;标准好看&quot;,撑开整个审美空间</a></li><li><a href="../concepts/dinov3-diversity-reward.html"><span class="cat">concept</span>DINOv3 多样性奖励 · 给&quot;组内整齐划一&quot;扣钱，防风格塌缩</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/prompt-expansion.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

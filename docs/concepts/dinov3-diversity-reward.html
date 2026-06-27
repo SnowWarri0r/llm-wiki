@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>DINOv3 多样性奖励 · 给&quot;组内整齐划一&quot;扣钱，防风格塌缩 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · dinov3-diversity-reward</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>DINOv3 多样性奖励 · 给&quot;组内整齐划一&quot;扣钱，防风格塌缩</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>一条 prompt 生成一组图，用 DINOv3 把每张压成向量，算组内两两的平均距离当"多样性分"，加进奖励——逼模型每次给的几张互不雷同。</p>
+<h2>直觉 · 质量奖励单独跑会塌</h2>
+<p>RL 阶段如果只用"质量/偏好"奖励，模型会发现一个偷懒解：<strong>每次都输出那一种最讨喜、最稳拿高分的风格</strong>。结果分很高，但所有图都一个样——<a href="../papers/krea-2.html">krea-2</a> 把这叫<strong>多样性塌缩</strong>（house-style collapse），恰恰违背它"撑开审美空间"的初衷（见 <a href="../concepts/generative-data-curation.html">generative-data-curation</a>）。</p>
+<p>对策：再加一个<strong>多样性奖励</strong>，专门给"这一组图太像"扣分。<strong>DINOv3</strong> 是自监督 ViT（<a href="../papers/dino.html">dino</a> 家族），把图压成对<strong>风格/结构</strong>敏感的向量；同一 prompt 那组图的向量越分散，多样性分越高。</p>
+<h2>怎么做的</h2>
+<pre><code>
+1. 一条 prompt 生成一组图（如 4 张），每张过 DINOv3 → 一个向量
+2. 算组内两两的&quot;距离&quot;（如 1 − 余弦相似度），取平均 = 这组的多样性分
+3. 把多样性分加进总奖励：总 = 质量 + 对齐 + λ·多样性
+4. RL（GRPO/GDPO）照常优化总奖励
+</code></pre>
+<p>关键经验（报告原话意思）：<strong>这个 λ 一调小，模型很快又塌回单调</strong>——所以整个训练全程都得让多样性奖励<strong>保活</strong>，不能训到后期撤掉。</p>
+<h2>数字例子 · 塌缩组 vs 多样组</h2>
+<p>图向量简化成 3 维，多样性分 = 组内两两 <code>1−cos</code> 的平均（越大越多样）：</p>
+<pre><code>塌缩组（三张几乎一样）:
+  [0.90,0.40,0.10]  [0.89,0.42,0.12]  [0.91,0.39,0.08]
+  两两 cos 都 ≈0.999 → 1−cos ≈0.001
+  多样性分 ≈ 0.001   → 几乎拿不到多样性奖励
+
+多样组（三张各走一个方向）:
+  [0.90,0.40,0.10]  [0.20,0.95,0.10]  [0.10,0.30,0.95]
+  两两 cos 低 → 1−cos 大
+  多样性分 ≈ 0.564  → 多样性奖励高
+</code></pre>
+<p>✓ 自检：塌缩组质量分可能很高，但多样性分只有 0.001，总奖励被这一项压下来；多样组多样性 0.564 把总奖励顶上去。于是优化器<strong>只有同时保住质量和多样性才划算</strong>，"全输出同一种"这条偷懒路被堵死。λ 就是"多看重多样"的旋钮——它太小，惩罚不痛，模型照塌不误。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/prompt-expansion.html">prompt-expansion</a> · 这奖励主要用在 prompt expander 的 RL 里防塌缩</li>
+<li><a href="../concepts/generative-data-curation.html">generative-data-curation</a> · 同一目标的两端：数据端别筛掉多样、训练端别奖励塌缩</li>
+<li><a href="../papers/dino.html">dino</a> · DINOv3 的自监督 ViT 谱系（对风格/结构敏感的嵌入）</li>
+<li><a href="../concepts/grpo.html">grpo</a> · 多样性分作为多奖励之一，并入 GRPO/GDPO 的总奖励</li>
+<li><a href="../papers/krea-2.html">krea-2</a> · prompt expander 防 house-style collapse 的具体做法</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/krea-2.html"><span class="cat">paper</span>Krea 2 · 不追一种&quot;标准好看&quot;,撑开整个审美空间</a></li><li><a href="../concepts/prompt-expansion.html"><span class="cat">concept</span>Prompt Expansion · 把短输入扩成富 caption（还得防塌成一种风格）</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/dinov3-diversity-reward.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
