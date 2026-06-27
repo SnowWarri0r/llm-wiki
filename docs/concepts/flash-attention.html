@@ -42,7 +42,7 @@
 <p>标准注意力把 N×N 的大分数矩阵吐进慢显存(HBM)再读回来,<strong>卡在内存搬运上</strong>。FlashAttention 把 Q/K/V <strong>切成小块、只在快内存(SRAM)里一块块算</strong>,靠<strong>在线 softmax</strong> 拼出和一次算全<strong>一模一样</strong>的结果——大矩阵从不落地。结果:2~4× 快、显存从 O(N²) 降到 O(N),且<strong>输出逐位相同</strong>。</p>
 <h2>直觉 · 瓶颈不是算力，是来回搬大矩阵</h2>
 <p>注意力 <code>softmax(Q·Kᵀ)·V</code>,中间 <code>Q·Kᵀ</code> 是 <strong>N×N</strong>(N=序列长)。N=8000 就是 <strong>6400 万个数</strong>。算它不慢——慢在<strong>把这么大一个矩阵写进 HBM、再读回来做 softmax、再读回来乘 V</strong>。</p>
-<p>接你学的 <a href="../concepts/ai-memory-hierarchy.html">ai-memory-hierarchy</a>:GPU 有<strong>小而极快的 SRAM</strong> 和 <strong>大而慢的 HBM</strong>。标准注意力让 N×N 矩阵在 HBM 里<strong>来回搬三趟</strong>,带宽全耗在这——这叫 <strong>memory-bound</strong>(算力大半在干等)。</p>
+<p>GPU 的内存层级（见 <a href="../concepts/ai-memory-hierarchy.html">ai-memory-hierarchy</a>）:<strong>小而极快的 SRAM</strong> 和 <strong>大而慢的 HBM</strong>。标准注意力让 N×N 矩阵在 HBM 里<strong>来回搬三趟</strong>,带宽全耗在这——这叫 <strong>memory-bound</strong>(算力大半在干等)。</p>
 <figure style="margin:26px 0; padding:22px; background:#f1eee8; border:1px solid #c7bca8; border-radius:4px;">
 <svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:JetBrains Mono,monospace;">
   <defs>
