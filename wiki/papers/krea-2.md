@@ -27,6 +27,10 @@ Krea 2 是 Krea AI 2026-06-23 放出的文生图模型技术报告(K2 Raw + K2 T
 3. **STPO —— 稳住的偏好优化**:[[direct-preference-optimization]] —— 报告自创的 DPO 变体(报告未给全称),加一个辅助损失 + 改 DPO 公式,专治"win/lose 概率一起掉"的策略发散。PO 分两步:先大规模合成偏好对(类 delta learning,保证多数对里至少有一个 on-policy 样本)初调,再用**纯人工标注**(自家熟悉模型脾性的人)校准。
 4. **多奖励 GRPO 式 RL + prompt 级 rubric 奖励**:[[grpo]] —— 四个奖励模型(通用美学 / 提示遵循 / 文字渲染 / 瑕疵与结构)一起推;rubric 奖励借鉴 [[rubric-based-evaluation]],把每个 prompt **拆成可验证的要求逐条判**,而不是让判官给一个笼统总分。整个 RL 阶段**不用 CFG**(保持 rollout 与训练分布一致,推理时再开)。
 5. **TDM 时间步蒸馏 + 双发布**:[[trajectory-distribution-matching]] —— 对比了 DMD/DMD2/Decoupled DMD/piFlow/APT,最后选 TDM(好调、超参少)。发布 **K2 Raw**(未蒸馏基座,给做微调/后训练研究的)和 **K2 Turbo**(引导+时间步双蒸馏,少步快出图)。
+6. **Prompt Expansion(防多样性塌缩)**:短用户输入扩成富 caption 的前置模型。SFT(从长 caption 反造用户 caption + 合成 thinking trace) + RL(GDPO 多奖励:图级 + prompt 级可验证 + 安全闸)。关键:expander 会塌成一种高奖励 house style,靠 **DINOv3 组内多样性奖励**(全程保活)压住;RL prompt 混硬例,挑"难但不绝望"的。
+7. **Style Reference(压内容泄漏)**:文字 + 一/多张参考图导风格,要多风格平滑混合 + 强度连续可调。难题是 style/content 边界模糊导致**内容泄漏**(参考图主体钻进结果)。做法:**新自监督训练** style 模块 + 偏好优化对齐。
+8. **罕见地摊开系统工程**:Kueue 调度 + Virtual Kubelet 外溢推理 + Packerman 把 dev 塞坏节点;observability 反直觉结论(InfiniBand fabric 是头号崩溃源 / GPU 利用率会骗人改看张量核 / <128 卡稳翻倍更崩 / 大规模无 run 跑过 24h);Weka 换 Ceph;krablet(PG 分片,208TB 元数据,FOR UPDATE SKIP LOCKED 把 DAG 当 DB 队列)。
+9. **未来路线**:MoE / native 2K-4K(稀疏注意力) / NVFP4 预训 / Muon;**MOPD**(多教师 on-policy 蒸馏:各域专家→密集监督蒸进一个学生,各域不打架 + 团队可并行);架构统一(VAE+DiT+文本编码+expander 合一,让研究像 LLM 那样并行)。
 
 ## 架构速览
 - **主干**:多模态扩散 Transformer [[mmdit]] / [[diffusion-transformer]],用 [[flow-matching]] 训。
