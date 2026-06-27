@@ -837,3 +837,5 @@ skill 更新:
 ## [2026-06-25] ingest | krea-2 (Krea 2 技术报告: 反美学分过滤+0 AI数据的数据哲学 / 六段流水线 / STPO治DPO策略发散 / 多奖励GRPO+rubric / TDM蒸馏K2 Turbo) + 3 concept (direct-preference-optimization, generative-data-curation, trajectory-distribution-matching)
 
 ## [2026-06-26] query→concepts | krea-2 机制深挖: 新增 6 concept (siglip-semantic-dedup, hierarchical-kmeans-curation, pagerank-entity-coverage, dinov3-diversity-reward, prompt-expansion, style-reference) + DPO 页补 DPOP 式 STPO 修法(数字例); GDPO/自监督风格按报告披露程度标注"框架已知/细节未公开"
+
+## [2026-06-26] concept | faiss-ann-search (IVF倒排分桶+PQ乘积量化, 近似最近邻怎么在十亿向量上做到毫秒级); 从 siglip-dedup/hierarchical-kmeans 链入

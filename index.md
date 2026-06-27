@@ -198,6 +198,7 @@
 - [生成模型数据策展](wiki/concepts/generative-data-curation.md) — 别按美学分过滤(等于把打分器偏见焊死+剪掉分布尾巴→审美收敛), 关口换成"caption准不准"; 预训练0张AI合成图(合成图"更好学"会把模型往简单分布拽给质量封顶); Krea 2灵魂
 - [SigLIP 语义去重](wiki/concepts/siglip-semantic-dedup.md) — 图压成向量, 余弦相似度>阈值算近重复每簇留一张; 删的是"语义重复"(裁剪/压缩/改水印的同一张)而非字节相同, 哈希抓不到
 - [层级 k-means 策展](wiki/concepts/hierarchical-kmeans-curation.md) — 十亿图没法逐张看: FAISS递归k-means聚成簇树, 簇心代表图给VLM审一眼按簇整批取舍; 把"逐张审查"压成"逐簇审查"
+- [FAISS · 近似最近邻](wiki/concepts/faiss-ann-search.md) — 十亿向量精确比太慢: IVF倒排(先分√N个桶只翻几桶,跳过99%)+PQ乘积量化(向量切段各压成1字节,768维float→8字节384×); 召回↔速度/内存权衡
 - [PageRank 实体覆盖](wiki/concepts/pagerank-entity-coverage.md) — 维基链接图跑PageRank给条目算重要度(=随机冲浪Markov链平稳分布), 取top90%≈500万概念校验训练集覆盖; 孤儿页卡在floor(1-d)/N
 - [DINOv3 多样性奖励](wiki/concepts/dinov3-diversity-reward.md) — 一组图DINOv3向量两两距离均值当多样性分加进奖励, 防RL只追质量塌成一种house style; λ调小立刻塌要全程保活
 - [Prompt Expansion](wiki/concepts/prompt-expansion.md) — 短输入扩成富caption: SFT反造用户caption学扩写, RL用GDPO(偏好对模型自己生成+多奖励自动判)调"提质不跑题"; 忠实奖励一票否决跑题扩写
