@@ -808,3 +808,5 @@ skill 更新:
 ## [2026-06-22] update | mfcc 数字例子补"代 n 造波→跟 x 点积"两步桥接, 挂 dot-product
 
 ## [2026-06-22] ingest | unlimited-ocr + reference-sliding-window-attention + optical-context-compression (Baidu, R-SWA 恒定 KV cache)
+
+## [2026-06-23] update | optical-context-compression 补"SAM/CLIP 各发挥什么"(窗口看清+全局理解+顺序逻辑); 修 unlimited-ocr 误指 vit 的链接
