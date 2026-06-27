@@ -802,3 +802,5 @@ skill 更新:
 ## [2026-06-22] query | TDNN 补"跳着取为何不丢帧"(底层密集+窗口重叠铺满, gridding 坑)
 
 ## [2026-06-22] ingest | mfcc (梅尔频率倒谱系数, log-mel+DCT; 串起 fft/log-mel/x-vector)
+
+## [2026-06-22] lint | 清"假设读者已学过其它页"口头禅(你学的/你已经懂/放进你学的), 12 页; skill 3.7 grep 扩充

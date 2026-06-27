@@ -14,7 +14,7 @@ updated: 2026-06-18
 
 注意力 `softmax(Q·Kᵀ)·V`,中间 `Q·Kᵀ` 是 **N×N**(N=序列长)。N=8000 就是 **6400 万个数**。算它不慢——慢在**把这么大一个矩阵写进 HBM、再读回来做 softmax、再读回来乘 V**。
 
-接你学的 [[ai-memory-hierarchy]]:GPU 有**小而极快的 SRAM** 和 **大而慢的 HBM**。标准注意力让 N×N 矩阵在 HBM 里**来回搬三趟**,带宽全耗在这——这叫 **memory-bound**(算力大半在干等)。
+GPU 的内存层级（见 [[ai-memory-hierarchy]]）:**小而极快的 SRAM** 和 **大而慢的 HBM**。标准注意力让 N×N 矩阵在 HBM 里**来回搬三趟**,带宽全耗在这——这叫 **memory-bound**(算力大半在干等)。
 
 <figure style="margin:26px 0; padding:22px; background:#f1eee8; border:1px solid #c7bca8; border-radius:4px;">
 <svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:JetBrains Mono,monospace;">
