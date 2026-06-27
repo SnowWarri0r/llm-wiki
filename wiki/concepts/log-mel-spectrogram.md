@@ -26,7 +26,7 @@ Mel spectrogram 做<strong>降维 + 人耳化</strong>：
 
 ## Fbank / MFCC · 正名
 - **Fbank**（filter bank energies）= **就是本页这张 log-mel 图**。名字来自下面第 ④ 步那"一排三角滤波器"（filter bank）。Qwen3-ASR 用的是 128 维 Fbank。
-- **MFCC** = Fbank 之上再做一步 **DCT**（离散余弦变换，去相关）。老式 ASR（GMM-HMM）需要 DCT 把特征解耦；神经网络不怕特征相关，所以现代 ASR（[[whisper]] / [[qwen3-asr]]）直接吃裸 **Fbank**，不做 DCT。
+- **MFCC** = Fbank 之上再做一步 **DCT**（离散余弦变换，去相关）。老式 ASR（GMM-HMM）需要 DCT 把特征解耦；神经网络不怕特征相关，所以现代 ASR（[[whisper]] / [[qwen3-asr]]）直接吃裸 **Fbank**，不做 DCT。展开看 [[mfcc]]（含 DCT 拆"形状基"的手算例子）。
 
 ## 从波形到 Fbank · 五步
 从一段 16kHz 波形到 Fbank，五步走（前三步合起来就是 [[fft]] 页的 **STFT**）：
@@ -128,3 +128,4 @@ log-mel 仍是连续值（浮点）。dMel 把每个 cell 按 16 bin 量化 → 
 - [[rvq-codec]] · 对照的另一种"音频 → token"路线
 - [[interaction-models-tml]] · 应用
 - [[fft]] · 频谱怎么算出来的：把信号切窗、每段做一次 FFT（STFT）
+- [[mfcc]] · 本页之上再加一步 DCT；老式 ASR / x-vector 的输入
