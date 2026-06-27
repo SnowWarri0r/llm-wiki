@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Promptable Segmentation · 可提示分割 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · promptable-segmentation</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Promptable Segmentation · 可提示分割</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把分割重新定义成"给任意提示（点/框/掩码/文字）返回一个合理掩码"，哪怕提示有歧义也得给出至少一个说得通的答案。</p>
+<h2>直觉</h2>
+<p>类比 LLM 的"下一个 token 预测"——那个任务本身平平无奇，但它通用到能撑起所有下游任务。SAM 想给分割找同一个"通用预训练任务"，答案就是<strong>可提示分割</strong>：不绑定"分割人/车/猫"这种固定类别，而是"你给个提示，我返回对应的掩码"。</p>
+<p>它替代的是"一个数据集训一个专用分割模型"。一旦任务是"提示→掩码"，模型就能像 LLM 被 prompt 一样，被<strong>组合</strong>进各种下游任务（<a href="../concepts/zero-shot-transfer.html">zero-shot-transfer</a>）：想做物体检测？把检测框当 prompt。想做实例分割？让检测器吐框、SAM 抠掩码。</p>
+<p>关键的拧巴点是<strong>歧义</strong>：你点在一个人的衬衫上，到底要衬衫、这个人、还是这群人？以前的模型被逼着猜一个。SAM 的任务定义网开一面——"返回<strong>至少一个</strong>合理掩码就算对"，并且让模型<strong>一次吐 3 个</strong>（整体/部分/子部分），再用 IoU 分数挑。把歧义当 feature，不当 bug。</p>
+<h2>怎么做的</h2>
+<pre><code>输入: 图像 embedding(编码器跑一次) + 一个 prompt(点/框/掩码/文字)
+   ↓ 轻量掩码解码器(2 层 transformer, 双向注意力)
+输出: 3 个候选掩码  +  每个掩码的 IoU 预测分
+   ↓
+取 IoU 分最高的那个(或按下游需要全要)
+</code></pre>
+<p>训练时：对同一个 prompt，3 个预测里<strong>只对 IoU 最高的那个算 loss</strong>（反向传播只走最好的那条），这样 3 个 head 自然分化成"整体/部分/子部分"三种粒度，而不是互相打架。</p>
+<h2>数字例子</h2>
+<p>一个点落在「穿格子衬衫的人」的衬衫上。模型输出 3 个候选掩码 + 自评 IoU：</p>
+<pre><code>掩码 A = 整件衬衫        IoU 预测 0.92
+掩码 B = 整个人          IoU 预测 0.64
+掩码 C = 衬衫上一个口袋  IoU 预测 0.41
+</code></pre>
+<ul>
+<li>默认取 IoU 最高的 <strong>A（衬衫）</strong> 交付 ✓</li>
+<li>但三个都留着——下游要"人"就用 B，要"口袋"就用 C，<strong>一个点同时覆盖了三种合理解读</strong>。</li>
+<li>训练时若这次的标注真值是"整个人"，就只对 <strong>B</strong> 算 loss、把 B 往真值推，A/C 不动。久了 3 个 head 就稳定分工到三种粒度。✓ 自检：如果只输出 1 个掩码，遇到这种点必然有 2/3 概率"猜错粒度"；输出 3 个把"猜"变成"覆盖"。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/sam.html">sam</a> · 提出这个任务的 paper</li>
+<li><a href="../concepts/zero-shot-transfer.html">zero-shot-transfer</a> · 可提示 = 能被 prompt 组合进下游任务，零样本迁移的前提</li>
+<li><a href="../concepts/sam-data-engine.html">sam-data-engine</a> · 正因为解码轻、可交互，标注飞轮才转得起来</li>
+<li><a href="../papers/clip.html">clip</a> · 同样用"通用预训练任务 + prompt"做基础模型的姊妹思路</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/sam.html"><span class="cat">paper</span>Segment Anything · 给&quot;分割&quot;造一个可提示的基础模型</a></li><li><a href="../concepts/sam-data-engine.html"><span class="cat">concept</span>SAM Data Engine · 数据引擎（模型在环的标注飞轮）</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/promptable-segmentation.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
