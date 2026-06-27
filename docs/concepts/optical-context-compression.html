@@ -55,7 +55,7 @@
 <p>模式：Base（1024×1024 → 256 token，多页用）、Gundam（动态分辨率，单页用）。其它压缩档：Tiny 64 / Small 100 / Large 400 token。</p>
 <h2>SAM 和 CLIP 各发挥什么</h2>
 <p>不是随便挑两个 ViT 拼一起——这俩的预训练和注意力类型，正好卡在"前半省、后半准"的两个位置上。</p>
-<p><strong>SAM-ViT（前半，~80M，窗口注意力）</strong>：来自 Segment Anything，预训练目标是"把图里每个东西精确切出来"，所以它<strong>擅长密集、局部、精确定位的视觉细节</strong>——刚好是认字需要的（每个字的形状、位置）。它用<strong>窗口注意力</strong>（只看局部邻域，不做全局），代价低，所以能在<strong>海量高分辨率 token</strong>（4096 个）上跑而不爆显存。它负责"看清"。</p>
+<p><strong>SAM-ViT（前半，~80M，窗口注意力）</strong>：来自 <a href="../papers/sam.html">sam</a>（Segment Anything），预训练目标是"把图里每个东西精确切出来"，所以它<strong>擅长密集、局部、精确定位的视觉细节</strong>——刚好是认字需要的（每个字的形状、位置）。它用<strong>窗口注意力</strong>（只看局部邻域，不做全局），代价低，所以能在<strong>海量高分辨率 token</strong>（4096 个）上跑而不爆显存。它负责"看清"。</p>
 <p><strong>CLIP-ViT（后半，~300M，全局注意力）</strong>：来自图文对比学习（见 <a href="../papers/clip.html">clip</a>），预训练让它<strong>擅长全局、语义层面的理解</strong>。它用<strong>全局注意力</strong>——每个 token 看所有 token，表达力强但 O(token²) 很贵。</p>
 <p><strong>为什么是这个顺序</strong>：全局注意力在 4096 个 token 上是 4096² ≈ 1700 万对，跑不起；但在压缩后的 256 个 token 上只有 256² ≈ 6.5 万对，便宜得多。所以——<strong>先用便宜的窗口注意力 + SAM 在高分辨率上抽细节 → 16× 压到 256 → 再用贵的全局注意力 + CLIP 抽语义</strong>。把最贵的那步（全局注意力）挪到 token 数最少的地方，这是整套设计省显存的真正关键。一句话：<strong>SAM 负责"看清每个字"（高分辨率、局部、便宜），CLIP 负责"理解整页"（语义、全局、压缩后才跑）。</strong></p>
 <h2>数字例子</h2>
@@ -76,8 +76,8 @@
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 2 处</span>
-  <ul><li><a href="../papers/unlimited-ocr.html"><span class="cat">paper</span>Unlimited OCR · 像人抄书一样，一口气解析几十页</a></li><li><a href="../concepts/reference-sliding-window-attention.html"><span class="cat">concept</span>R-SWA · Reference Sliding Window Attention · 参考滑窗注意力</a></li></ul>
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/sam.html"><span class="cat">paper</span>Segment Anything · 给&quot;分割&quot;造一个可提示的基础模型</a></li><li><a href="../papers/unlimited-ocr.html"><span class="cat">paper</span>Unlimited OCR · 像人抄书一样，一口气解析几十页</a></li><li><a href="../concepts/reference-sliding-window-attention.html"><span class="cat">concept</span>R-SWA · Reference Sliding Window Attention · 参考滑窗注意力</a></li></ul>
 </div>
 
 <div class="colophon">

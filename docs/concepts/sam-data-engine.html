@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>SAM Data Engine · 数据引擎（模型在环的标注飞轮） · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · sam-data-engine</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>SAM Data Engine · 数据引擎（模型在环的标注飞轮）</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>模型帮人标注、标注再训模型、模型越强标得越多——三阶段滚雪球，从零滚出 11 亿掩码。</p>
+<h2>直觉</h2>
+<p>先有鸡还是先有蛋：要训分割基础模型得有海量掩码，可像素级标注贵得离谱，没数据就训不出好模型、没好模型标注又快不起来。</p>
+<p>SAM 的破法是<strong>飞轮</strong>：让当前模型先去标，人只补它标不好的；补出来的新数据又拿去把模型训得更强；模型更强 → 标得更准更快 → 人补得更少……越转越快，最后人几乎可以撒手，模型全自动标完剩下的。这跟 <a href="../papers/whisper.html">whisper</a> 的弱监督、<a href="../papers/unlimited-ocr.html">unlimited-ocr</a> 用 PaddleOCR 自动标注是同一个母题：<strong>大规模数据靠模型自己造</strong>，人只在早期推飞轮。</p>
+<p>它能转起来的前提是 <a href="../concepts/promptable-segmentation.html">promptable-segmentation</a> 的<strong>轻量解码器</strong>——换 prompt 只要 ~50ms，标注员才能实时点几下就出掩码，交互成本低到飞轮转得动。架构和数据互为因果。</p>
+<h2>怎么做的</h2>
+<pre><code>阶段1 · 辅助手动:  人用 SAM 交互工具标, SAM 给初始掩码人来修
+阶段2 · 半自动:    SAM 自动标出它有把握的, 人只补漏掉的(逼数据更多样)
+阶段3 · 全自动:    32×32 网格点当 prompt 喂给 SAM, NMS 去重 → 全自动产掩码
+</code></pre>
+<p>每过一阶段，模型被新数据喂得更强，下一阶段人就更省力。</p>
+<h2>数字例子</h2>
+<p>三阶段的产出和"人退场"的过程，数字很能说明问题：</p>
+<pre><code>阶段1 辅助手动:  4.3M 掩码 / 120k 图
+                单掩码标注时间 34s → 14s(模型变强,人修得快)
+                每图掩码数    20 → 44
+阶段2 半自动:    +5.9M 掩码 / 180k 图
+                每图掩码数    44 → 72(自动补上不显眼的)
+阶段3 全自动:    32×32 网格点扫全部 11M 图 → 1.1B 掩码
+─────────────────────────────────────────────
+SA-1B 总计: 11M 图 / 1.1B 掩码, 其中 99.1% 全自动生成
+            比已有任何分割数据集多 400×; 94% 掩码与专业修正 IoU&gt;90%
+</code></pre>
+<p>✓ 自检：人手标的只有阶段1+2 的约 10M 掩码（不到 1%），剩下 99% 是模型自动产的——但没有前两阶段把模型喂到够强，阶段3 的全自动根本标不准。<strong>飞轮头几圈靠人推，后面才自转</strong>。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/sam.html">sam</a> · 用这套引擎造出 SA-1B</li>
+<li><a href="../concepts/promptable-segmentation.html">promptable-segmentation</a> · 轻量可交互是飞轮能转的前提</li>
+<li><a href="../papers/whisper.html">whisper</a> · 同母题：弱监督/自动标注换大规模数据</li>
+<li><a href="../papers/unlimited-ocr.html">unlimited-ocr</a> · 同母题：用现成 OCR 自动标注造训练数据</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/sam.html"><span class="cat">paper</span>Segment Anything · 给&quot;分割&quot;造一个可提示的基础模型</a></li><li><a href="../concepts/promptable-segmentation.html"><span class="cat">concept</span>Promptable Segmentation · 可提示分割</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/sam-data-engine.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

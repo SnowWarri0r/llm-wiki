@@ -32,6 +32,7 @@
 - [Lumine · 从像素玩 3D 开放世界](wiki/papers/lumine.md) — VLM(Qwen2-VL)直接吃画面像素吐键鼠, 端到端打通原神5h主线零样本迁移; 动作即文本token + action chunking(5Hz看30Hz动) + hybrid thinking(该想才想); 2424h人类录像纯模仿零RL + W8A8实时
 - [ViT · An Image is Worth 16×16 Words](wiki/papers/vit.md) — 把图切成 16×16 patch 当 token，纯 Transformer 干视觉；CNN 在视觉的护城河被填平
 - [CLIP · Learning Transferable Visual Models](wiki/papers/clip.md) — 4 亿图文对对比学习, 图像和文本对齐到同一向量空间; DALL-E / SD / LLaVA 都靠它
+- [SAM · Segment Anything](wiki/papers/sam.md) — 分割界的基础模型(Meta): 可提示分割(给点/框/字返回掩码,歧义就吐3个+IoU挑)+重编码器跑一次轻解码器~50ms可交互+数据引擎飞轮造出SA-1B(11M图/1.1B掩码,99.1%全自动,400×); 零样本迁移多任务; 图像编码器被DeepSeek-OCR借去当DeepEncoder前半
 - [PPO · Proximal Policy Optimization](wiki/papers/ppo.md) — 一行 clip 干掉 TRPO 的复杂; RLHF 的训练发动机, 撑起 ChatGPT 的对齐
 - [Go GC · 从 mark-sweep 到 Green Tea](wiki/papers/go-gc.md) — 系统/runtime 深度页: 三色并发 mark-sweep + write barrier + GOGC/GOMEMLIMIT, 到 Go 1.26 默认的 Green Tea 按页扫优化
 - [康波周期 · 经济的四季](wiki/papers/kondratiev-wave.md) — 宏观/有争议框架: 50–60 年长波 + 五次技术浪潮 + 四季资产轮动 + 多周期嵌套 + 周金涛本土化; 当罗盘不当钟表
@@ -212,6 +213,8 @@
 ### 视觉
 - [Patch Embedding](wiki/concepts/patch-embedding.md) — 图切成 16×16 块, 每块拉平投影成 token, ViT 唯一的工程创新
 - [光学上下文压缩 · Optical Context Compression](wiki/concepts/optical-context-compression.md) — 整页文字拍成图再压成几百视觉token比逐字编码省; DeepEncoder=SAM(窗口)串CLIP(全局)+16×压, 1024²→256 token约1:10; DeepSeek-OCR/Unlimited-OCR输入侧省法
+- [可提示分割 · Promptable Segmentation](wiki/concepts/promptable-segmentation.md) — SAM核心任务:给任意prompt(点/框/掩码/字)返回合理掩码,歧义就输出3个(整体/部分/子部分)+IoU排序; 让分割能像LLM被prompt组合进下游
+- [SAM 数据引擎 · Data Engine](wiki/concepts/sam-data-engine.md) — 模型帮标→数据训模型→模型更强的飞轮,三阶段(辅助手动→半自动→全自动)从零滚出11亿掩码; 前两阶段人推后面自转
 - [Inductive Bias](wiki/concepts/inductive-bias.md) — 模型架构里的"祖传家产", 数据少时是宝大数据时是包袱
 - [3D Gaussian Splatting](wiki/concepts/gaussian-splatting.md) — 场景=几百万个高斯椭球, splat投影+α混合实时渲染+任意新视角; vs NeRF快且可编辑; "高斯泼溅"LoRA是2D扩散借名模仿非真3D
 
