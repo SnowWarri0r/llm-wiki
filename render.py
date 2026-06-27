@@ -919,6 +919,87 @@ def inject_nav_strip(path: Path, category: str, slug: str) -> bool:
 
 
 # ============================================================
+# Glossary popover (点术语 → 右侧浮卡，不跳页)
+# ============================================================
+
+GLOSS_POP_START = "<!-- gloss-popover:start -->"
+GLOSS_POP_END = "<!-- gloss-popover:end -->"
+
+GLOSS_POP_BLOCK = GLOSS_POP_START + """
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6);}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  var items={};
+  document.querySelectorAll('.gloss ol li[id^="g-"]').forEach(function(li){items[li.id]=li.innerHTML;});
+  if(!Object.keys(items).length)return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!items[id])return;
+      e.preventDefault();
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+items[id];
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+""" + GLOSS_POP_END + "\n"
+
+
+def inject_glossary_popover(path: Path) -> bool:
+    """Inject (or refresh) the click-to-float glossary popover before </body>.
+
+    Idempotent (marker-bounded). Progressive enhancement: the bottom <ol>
+    glossary + #g-NN anchors stay as a no-JS / print fallback. Returns True
+    if the file changed."""
+    text = path.read_text()
+    original = text
+    # strip any existing block first (idempotent)
+    if GLOSS_POP_START in text:
+        text = re.sub(
+            re.escape(GLOSS_POP_START) + r".*?" + re.escape(GLOSS_POP_END) + r"\n*",
+            "",
+            text,
+            flags=re.DOTALL,
+        )
+    # only pages with an actual bottom glossary need the popover
+    if 'class="gloss"' not in text:
+        if text != original:           # we stripped a now-stale block (page lost its glossary)
+            path.write_text(text)
+            return True
+        return False
+    block = GLOSS_POP_BLOCK.rstrip("\n") + "\n"
+    new_text, n = re.subn(r"</body>", lambda m: block + m.group(0), text, count=1)
+    if n == 0 or new_text == original:
+        return False
+    path.write_text(new_text)
+    return True
+
+
+# ============================================================
 # Slug index + wikilink resolution
 # ============================================================
 
@@ -1188,12 +1269,15 @@ def main():
     # 2. Inject nav strip + resolve [[wikilinks]] in bespoke HTML
     injected = 0
     linked = 0
+    popped = 0
     for e in entries:
         if e.bespoke_path and e.bespoke_path.exists():
             if inject_nav_strip(e.bespoke_path, e.category, e.slug):
                 injected += 1
             if inject_wikilinks(e.bespoke_path, e.category):
                 linked += 1
+            if inject_glossary_popover(e.bespoke_path):
+                popped += 1
 
     # 3. Render landing index + per-category sub-pages（按时间倒序）
     (HTML_OUT / "index.html").write_text(render_index(entries))
@@ -1210,6 +1294,7 @@ def main():
     print(f"  HTML pages ready: {ready}")
     print(f"  待做: {len(entries) - ready}")
     print(f"  nav strip refreshed in {injected} bespoke pages")
+    print(f"  glossary popover injected in {popped} bespoke pages")
     print(f"  wikilinks resolved in {linked} bespoke pages")
     print(f"  auto-rendered concept/topic/thread pages: {auto_rendered}")
 
