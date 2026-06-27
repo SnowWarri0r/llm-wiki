@@ -831,3 +831,5 @@ skill 更新:
 ## [2026-06-25] ingest | qwen-image-bench + rubric-based-evaluation + llm-as-judge (Qwen 文生图评测, 5→23→56 细则 + Q-Judger ρ=0.92)
 
 ## [2026-06-25] update | llm-as-judge 补"判官是SFT不是RL"(reward侧监督训, RL在下游用判官当奖励调生成模型); 修 pointwise 措辞
+
+## [2026-06-25] update | qwen-image-bench 补全评测标准: 5 支柱→23 子能力整表 + 打分聚合 (0/1/2/N-A 归一化 0/60/100, N-A 剔除, 三级无权重平均, 每 prompt 激活 3-5 支柱) + 端到端手算总分例子

@@ -75,6 +75,15 @@ figure.play .qb-rev.d6 { transition-delay: 1.40s; }
 .qb-svg .grow { transform: scaleX(0); transform-origin: left center; transition: transform 1.1s ease; }
 figure.play .qb-svg .grow { transform: scaleX(1); }
 @media (prefers-reduced-motion: reduce) { .qb-rev { opacity: 1; transition: none; } .qb-svg .grow { transform: scaleX(1); transition: none; } }
+.qb-tax { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 15px; }
+.qb-tax th, .qb-tax td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.qb-tax thead th { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); border-bottom: 2px solid var(--rule); }
+.qb-tax .p { font-weight: 700; white-space: nowrap; }
+.qb-tax tr.new td { background: var(--paper-3); }
+.qb-tax tr.new .p { color: var(--accent); }
+.qb-tax .cnt { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.qb-tax .tag { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--accent); border: 1px solid var(--accent); border-radius: 2px; padding: 0 4px; margin-left: 6px; vertical-align: middle; }
+.qb-calc { background: var(--paper-3); border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: 0 4px 4px 0; padding: 16px 20px; margin: 22px 0; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.75; overflow-x: auto; white-space: pre; color: var(--ink-2); }
 </style>
 </head>
 <body>
@@ -207,6 +216,57 @@ figure.play .qb-svg .grow { transform: scaleX(1); }
     <text class="qb-rev d6" x="360" y="262" text-anchor="middle" font-size="10" fill="#b8841c">→ 可复现 + 能定位模型差在哪条</text>
   </svg>
 </figure>
+
+<h3>全部 5 支柱 → 23 子能力（一张表看全）</h3>
+<p>56 条三级细则论文没逐条全列（只给了部分名字：光影物理、材质质感、噪点、边缘清晰度……），但二级的 <strong>23 个子能力是完整公开的</strong>，挂在 5 根支柱下面如下。带 <span style="color:var(--accent);font-weight:700;">NEW</span> 的两根（真实世界保真 / 创意生成）是创作者驱动的新维度，也是这篇基准的灵魂；其余三根是老基准就有、如今已饱和的部分。</p>
+
+<table class="qb-tax">
+  <thead><tr><th>支柱（L1）</th><th>数</th><th>子能力（L2，共 23 个）</th></tr></thead>
+  <tbody>
+    <tr><td class="p">质量<br><span style="font-weight:400;color:var(--muted);font-size:13px;">Quality</span></td><td class="cnt">3</td><td>真实感 Realism · 细节 Detail · 清晰度 Resolution</td></tr>
+    <tr><td class="p">美学<br><span style="font-weight:400;color:var(--muted);font-size:13px;">Aesthetics</span></td><td class="cnt">6</td><td>构图 Composition · 色彩和谐 Color Harmony · 光影 Lighting · 人体/人像 Anatomical Portraiture · 情绪表达 Emotional Expression · 风格控制 Style Control</td></tr>
+    <tr><td class="p">图文对齐<br><span style="font-weight:400;color:var(--muted);font-size:13px;">Alignment</span></td><td class="cnt">5</td><td>属性 Attributes · 动作 Actions · 布局 Layout · 关系 Relations · 场景 Scene</td></tr>
+    <tr class="new"><td class="p">真实世界保真<span class="tag">new</span><br><span style="font-weight:400;color:var(--muted);font-size:13px;">Real-world Fidelity</span></td><td class="cnt">3</td><td>公平性 Fairness · 安全合规 Safety &amp; Compliance · 世界知识 World Knowledge</td></tr>
+    <tr class="new"><td class="p">创意生成<span class="tag">new</span><br><span style="font-weight:400;color:var(--muted);font-size:13px;">Creative Generation</span></td><td class="cnt">6</td><td>想象力 Imagination · 特征匹配 Feature Matching · 逻辑自洽 Logical Resolution · 文字渲染 Text Rendering · 设计应用 Design Applications · 视觉叙事 Visual Storytelling</td></tr>
+  </tbody>
+</table>
+<p class="note" style="margin-top:8px;"><span class="l">数一下</span>3 + 6 + 5 + 3 + 6 = <strong>23</strong>。每个子能力下面再挂若干条三级细则（每条一个能逐项判定的小问句），全部加起来 <strong>56 条</strong>。</p>
+
+<h3>每条怎么打分、怎么往上滚成总分</h3>
+<p>每条细则判 <code>0/1/2/N-A</code>，但聚合前先做一次<strong>非线性归一化</strong>（论文 Eq.7），再三级求平均：</p>
+<div class="qb-calc">分数映射（关键：不是线性 0/50/100）
+  0  不满足  →   0
+  1  及格    →  60      ← 故意把"及格"放在 60% 这个常识线
+  2  优秀    → 100
+  N-A 不适用 →  剔除     ← 不算分母,既不拉低也不抬高
+
+往上滚（全程无权重平均,且只算"这条 prompt 实际激活的"子项）
+  56 条细则  →(同一子能力内求平均)→  23 子能力分
+  23 子能力  →(同一支柱内求平均)→    5 支柱分
+   5 支柱    →(激活的那几根求平均)→   总分
+
+注:每条 prompt 只激活其中 3-5 根支柱(画风景不考"人体",
+    抽象画不考"世界知识"),没激活的支柱不进总分。</div>
+<p>把"及格 = 60"而不是 50，是为了对齐"60 分及格"的直觉——一张"没毛病但也不出彩"的图，落在 60 才符合人对"刚及格"的感觉。</p>
+
+<p>拿一张图走一遍（prompt 激活了 3 根支柱），先把每条细则的 0/1/2 换成 0/60/100，N-A 直接剔除：</p>
+<div class="qb-calc">【真实世界保真】
+  子能力·物理合理:  光影方向 2→100   反光高光 1→60        → (100+60)/2 = 80
+  子能力·材质:      纹理真实 2→100   防伪水印 N-A(剔除)    → 100/1     = 100
+  支柱分 = (80 + 100) / 2 = 90
+
+【质量】
+  子能力·真实感 1→60      子能力·细节 2→100              → 各 1 条
+  支柱分 = (60 + 100) / 2 = 80
+
+【创意生成】
+  子能力·想象力:   [2,1]→[100,60]   → (100+60)/2 = 80
+  子能力·文字渲染: 0→0              → 0
+  支柱分 = (80 + 0) / 2 = 40
+
+总分 = 激活的 3 根支柱无权重平均
+     = (90 + 80 + 40) / 3 = 70.0</div>
+<p>✓ 自检：N-A 那条（防伪水印）不进分母，所以"材质"是 100 不是 50——<strong>不适用不等于扣分</strong>。"文字渲染"挂了个 0，直接把创意这根支柱从 80 拖到 40，再压低总分——这正是拆细则的价值：总分 70 能一路回溯到"这模型栽在文字渲染上"，而不是只甩一个笼统的 70。</p>
 
 <h2><span class="num">§ 04</span>Q-Judger：把判官训到跟人类对齐</h2>
 <p>56 条细则要逐张图判，靠人评 <a class="jr" href="#g-10">1000 条 prompt</a>×几十个模型太贵太慢。自然想到<a class="jr" href="#g-06">让模型当判官</a>。但随便抓个通用 MLLM 当裁判，口味跟人类专家对不齐。关键是<strong>校准</strong>：用 <strong>80 位美院标注员</strong>盲标（每样本≥3 次独立评审）、<strong>13 万+人标对</strong>训练，把判官（基于 Qwen3.6-27B）调到跟人类专家排名 <strong>Spearman <a class="jr" href="#g-07">ρ=0.92</a></strong>，才敢放它自动评。详见 <a href="../concepts/llm-as-judge.html">llm-as-judge</a>。</p>
