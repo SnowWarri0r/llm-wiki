@@ -827,3 +827,5 @@ skill 更新:
 ## [2026-06-24] update | swiglu 加 Swish/sigmoid 函数图(按方程算点: S曲线+负区小坑+ReLU虚线对照)
 
 ## [2026-06-24] feature | render.py inject_glossary_popover: 点 .jr 右侧浮卡(不跳页), 自动注入所有有 glossary 的 bespoke 页; 底部 ol 保留兜底
+
+## [2026-06-25] ingest | qwen-image-bench + rubric-based-evaluation + llm-as-judge (Qwen 文生图评测, 5→23→56 细则 + Q-Judger ρ=0.92)

@@ -1,7 +1,7 @@
 ---
 name: image-quality-metrics
 type: concept
-sources: [qwen-image-2]
+sources: [qwen-image-2, qwen-image-bench]
 updated: 2026-06-15
 ---
 
