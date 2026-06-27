@@ -26,6 +26,7 @@
 - [Whisper](wiki/papers/whisper.md) — 68 万小时弱监督训 ASR，zero-shot 碾压精标模型；语音领域的 GPT 时刻
 - [Qwen3-ASR · 给 LLM 接个耳朵](wiki/papers/qwen3-asr.md) — 不从头训ASR: 预训练Qwen3当解码器+AuT音频编码器(8×下采样12.5Hz+动态窗口流式/离线)+projector; modality-projector生产级; prompt塞热词定制转写; RL用GSPO; 带口音英语完胜Whisper
 - [X-Vectors · 声纹身份证](wiki/papers/x-vector.md) — Kaldi 看家声纹模型(ECAPA祖宗): 训网络认人,训完扔分类头,中间512维向量就是声纹; statistics pooling(沿时间μ+σ)把变长语音塌成定长; TDNN膨胀上下文; 数据增强吃大数据,SRE16 EER 8.35%→4.89%完胜i-vector; 抽"谁"不抽"什么",跟ASR正交
+- [Unlimited OCR · 一口气抄完整本书](wiki/papers/unlimited-ocr.md) — 百度端到端OCR(接DeepSeek-OCR线): 解码器全换R-SWA(每token只看全图+最近128字)让KV cache恒定不增→几十页一次前向解析完(别人一页一页for-loop); DeepEncoder光学压缩1024²→256视觉token; 3B-A0.5B MoE; OmniDocBench 87→93.23 SOTA且长程不崩; R-SWA也能用于ASR/翻译
 - [Generative Agents · Smallville](wiki/papers/generative-agents.md) — 给 LLM 加记忆流 + 反思 + 规划，25 个 agent 在虚拟小镇里自主生活
 - [MemGPT · LLMs as Operating Systems](wiki/papers/memgpt.md) — context 当 RAM、外部存储当硬盘，LLM 自己 function call 调度记忆
 - [Lumine · 从像素玩 3D 开放世界](wiki/papers/lumine.md) — VLM(Qwen2-VL)直接吃画面像素吐键鼠, 端到端打通原神5h主线零样本迁移; 动作即文本token + action chunking(5Hz看30Hz动) + hybrid thinking(该想才想); 2424h人类录像纯模仿零RL + W8A8实时
@@ -116,6 +117,7 @@
 - [Self-Attention](wiki/concepts/self-attention.md) — Q·Kᵀ/√dₖ 然后 softmax 加权 V
 - [Multi-Head Attention](wiki/concepts/multi-head-attention.md) — 多个 head 学不同关系模式
 - [FlashAttention](wiki/concepts/flash-attention.md) — 注意力慢在搬N×N大矩阵进HBM(memory-bound); 切块进SRAM+在线softmax拼出一样结果, 大矩阵不落地; 2-4×快/显存O(N); 精确非近似(vs sparse)
+- [R-SWA · 参考滑窗注意力](wiki/concepts/reference-sliding-window-attention.md) — 每token只看「全部前缀(视觉+prompt,全局)+最近n个输出(滑窗)」, KV cache恒定L_m+n不随T涨; 视觉token不参与状态转移所以图不糊; Unlimited-OCR用它一口气抄几十页
 - [Cross-Attention](wiki/concepts/cross-attention.md) — decoder 用自己的 Q 去查 encoder 的 K/V
 - [Positional Encoding](wiki/concepts/positional-encoding.md) — 给无顺序的 attention 加位置
 - [Rotary Position Embedding](wiki/concepts/rotary-position-embedding.md) — 旋转 Q/K 让点积天然含相对位置，现代 LLM 事实标准
@@ -209,6 +211,7 @@
 
 ### 视觉
 - [Patch Embedding](wiki/concepts/patch-embedding.md) — 图切成 16×16 块, 每块拉平投影成 token, ViT 唯一的工程创新
+- [光学上下文压缩 · Optical Context Compression](wiki/concepts/optical-context-compression.md) — 整页文字拍成图再压成几百视觉token比逐字编码省; DeepEncoder=SAM(窗口)串CLIP(全局)+16×压, 1024²→256 token约1:10; DeepSeek-OCR/Unlimited-OCR输入侧省法
 - [Inductive Bias](wiki/concepts/inductive-bias.md) — 模型架构里的"祖传家产", 数据少时是宝大数据时是包袱
 - [3D Gaussian Splatting](wiki/concepts/gaussian-splatting.md) — 场景=几百万个高斯椭球, splat投影+α混合实时渲染+任意新视角; vs NeRF快且可编辑; "高斯泼溅"LoRA是2D扩散借名模仿非真3D
 

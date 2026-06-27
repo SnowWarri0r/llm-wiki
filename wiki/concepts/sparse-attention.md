@@ -1,7 +1,7 @@
 ---
 name: sparse-attention
 type: concept
-sources: [gpt-3]
+sources: [gpt-3, unlimited-ocr]
 updated: 2026-05-21
 ---
 

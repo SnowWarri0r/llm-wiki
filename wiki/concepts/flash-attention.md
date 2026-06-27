@@ -1,8 +1,8 @@
 ---
 name: flash-attention
 type: concept
-sources: []
-updated: 2026-06-18
+sources: [unlimited-ocr]
+updated: 2026-06-22
 ---
 
 # FlashAttention · 注意力的"省搬运"算法（精确，非近似）

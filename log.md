@@ -806,3 +806,5 @@ skill 更新:
 ## [2026-06-22] lint | 清"假设读者已学过其它页"口头禅(你学的/你已经懂/放进你学的), 12 页; skill 3.7 grep 扩充
 
 ## [2026-06-22] update | mfcc 数字例子补"代 n 造波→跟 x 点积"两步桥接, 挂 dot-product
+
+## [2026-06-22] ingest | unlimited-ocr + reference-sliding-window-attention + optical-context-compression (Baidu, R-SWA 恒定 KV cache)

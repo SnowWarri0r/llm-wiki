@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Unlimited OCR · 像人抄书一样一口气解析几十页 · 个人 wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --accent: var(--deep); --accent-soft: var(--deep-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply; opacity: 0.5;
+}
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; }
+.masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(50px, 8vw, 88px); line-height: 0.94; letter-spacing: -0.035em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 38px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; letter-spacing: -0.01em; }
+p { margin: 12px 0; }
+strong { font-weight: 700; color: var(--ink); }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--ochre-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--ochre); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--ochre); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+table.spec { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 13px; margin: 24px 0; }
+table.spec th, table.spec td { border: 1px solid var(--rule); padding: 7px 10px; text-align: left; }
+table.spec th { background: var(--accent-soft); color: var(--ink); font-weight: 700; }
+table.spec td.hl { background: var(--ochre-soft); font-weight: 700; }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--accent-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--accent-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* uo-specific */
+.uo-svg { width: 100%; height: auto; display: block; font-family: 'JetBrains Mono', monospace; }
+.uo-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .uo-rev { opacity: 1; }
+figure.play .uo-rev.d1 { transition-delay: 0.15s; }
+figure.play .uo-rev.d2 { transition-delay: 0.40s; }
+figure.play .uo-rev.d3 { transition-delay: 0.65s; }
+figure.play .uo-rev.d4 { transition-delay: 0.90s; }
+figure.play .uo-rev.d5 { transition-delay: 1.15s; }
+figure.play .uo-rev.d6 { transition-delay: 1.40s; }
+.uo-svg .draw { stroke-dasharray: 1000; stroke-dashoffset: 1000; transition: stroke-dashoffset 1.5s ease; }
+figure.play .uo-svg .draw { stroke-dashoffset: 0; }
+@media (prefers-reduced-motion: reduce) { .uo-rev { opacity: 1; transition: none; } .uo-svg .draw { stroke-dashoffset: 0; transition: none; } }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · unlimited-ocr</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · Baidu · 2026</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 文档解析 / 长程 OCR</div>
+  <h1 class="title">一口气<br /><span class="em">抄完整本书</span></h1>
+  <div class="byline">Baidu Inc. · Unlimited OCR Technical Report · 2026-06-22</div>
+  <p class="dek">别的 OCR 一页一页 for-loop 跑、每页重置记忆。Unlimited OCR 把解码器注意力全换成 R-SWA，KV cache 恒定不增——几十页一次前向读到底。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>拿 LLM 当 OCR 解码器有个硬伤：输出越长，<a class="jr" href="#g-04">KV cache</a> 越堆越大、生成越来越慢，所以现有模型只能一页一图 for-loop 跑。Unlimited OCR 以 <a class="jr" href="#g-09">DeepSeek-OCR</a> 为底，只改一件事——把解码器里<strong>所有</strong>注意力层换成 <a class="jr" href="#g-01">R-SWA（Reference Sliding Window Attention）</a>：每个生成 token 只看「<strong>全部原图（视觉 token，全局可见）</strong> + <strong>刚写的最近 128 个字（滑窗）</strong>」，早期输出滑出窗口就淘汰。于是 KV cache 恒定为 <code>L_m + n</code>，不随输出长度涨。配上 <a class="jr" href="#g-03">DeepEncoder</a> 把一页压成 256 个视觉 token，两头一夹——几十页文档一次前向解析完，还顺手把 OmniDocBench 从 87 涨到 <strong>93.23</strong>。</p>
+</div>
+
+<h2><span class="num">§ 01</span>LLM 当解码器的甜头与代价</h2>
+<p>DeepSeek-OCR 让 OCR 又翻红了：拿 LLM 当解码器，借语言先验，认字更准。但代价同样明显——输出序列越长，累积的 <a class="jr" href="#g-04">KV cache</a> 越吃显存、生成越来越慢。人抄一整本书不会越抄越慢，模型却会。</p>
+<p>于是现有模型没一个能在<strong>单次前向</strong>里解析十几页，全靠"一页一图、每页把记忆清零"的 for-loop 硬拼。这把一个本该连贯的长程任务，碎成一堆由外部调度器管的孤立短任务——能用，但是工程绕路，不是真的"长程能力"。Unlimited OCR 想把这件事做成模型自己的能力。</p>
+
+<h2><span class="num">§ 02</span>输入侧：一页文字压成 256 个 token</h2>
+<p>先看输入。反直觉但很硬的事实：<strong>一页密密麻麻的文字，当成图编码，比当成文本编码更省 token</strong><a class="jr" href="#g-03">3</a>。DeepEncoder 把 1024×1024 的 PDF 图压到 <strong>256 个视觉 token</strong>，约 1:10——一个视觉 token 顶约 10 个文本 token。诀窍是<strong>窗口注意力扛海量原图 token、全局注意力只留给压缩后的少量 token</strong>，这样编码高分辨率图也不爆显存。</p>
+
+<figure id="fig-encoder">
+  <figcaption><span>Fig 01 · 整页文字 → 256 个视觉 token</span><span class="fnum">DEEPENCODER · 16×</span></figcaption>
+  <svg class="uo-svg" viewBox="0 0 720 270" role="img" aria-label="DeepEncoder 把高分辨率图压成少量视觉 token">
+    <!-- image -->
+    <rect class="uo-rev d1" x="28" y="74" width="84" height="84" rx="3" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="1.4"/>
+    <g class="uo-rev d1" stroke="#1f3a5f" stroke-width="0.6" opacity="0.5">
+      <line x1="42" y1="86" x2="98" y2="86"/><line x1="42" y1="98" x2="98" y2="98"/><line x1="42" y1="110" x2="98" y2="110"/><line x1="42" y1="122" x2="98" y2="122"/><line x1="42" y1="134" x2="92" y2="134"/><line x1="42" y1="146" x2="88" y2="146"/>
+    </g>
+    <text class="uo-rev d1" x="70" y="176" text-anchor="middle" font-size="11" font-weight="700" fill="#3a3128">1024×1024</text>
+    <text class="uo-rev d1" x="70" y="190" text-anchor="middle" font-size="9.5" fill="#7a6f5d">一页文档</text>
+    <line class="uo-rev d2" x1="116" y1="116" x2="150" y2="116" stroke="#3a3128" stroke-width="1.4"/><polygon class="uo-rev d2" points="150,116 142,112 142,120" fill="#3a3128"/>
+
+    <!-- SAM window-attn over many tokens -->
+    <rect class="uo-rev d2" x="156" y="92" width="118" height="48" rx="4" fill="#faf4e1" stroke="#bfb398"/>
+    <text class="uo-rev d2" x="215" y="112" text-anchor="middle" font-size="11" font-weight="700" fill="#181410">SAM-ViT</text>
+    <text class="uo-rev d2" x="215" y="128" text-anchor="middle" font-size="9" fill="#7a6f5d">窗口注意力·扛海量 token</text>
+    <text class="uo-rev d2" x="215" y="160" text-anchor="middle" font-size="10" fill="#3a3128">4096 token</text>
+    <g class="uo-rev d2" fill="#7a6f5d"><rect x="170" y="166" width="3" height="8"/><rect x="176" y="166" width="3" height="8"/><rect x="182" y="166" width="3" height="8"/><rect x="188" y="166" width="3" height="8"/><rect x="194" y="166" width="3" height="8"/><rect x="200" y="166" width="3" height="8"/><rect x="206" y="166" width="3" height="8"/><rect x="212" y="166" width="3" height="8"/><rect x="218" y="166" width="3" height="8"/><rect x="224" y="166" width="3" height="8"/><rect x="230" y="166" width="3" height="8"/><rect x="236" y="166" width="3" height="8"/><rect x="242" y="166" width="3" height="8"/><rect x="248" y="166" width="3" height="8"/><rect x="254" y="166" width="3" height="8"/></g>
+
+    <!-- 16x funnel -->
+    <polygon class="uo-rev d3" points="290,98 350,114 350,118 290,134" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="1.2"/>
+    <text class="uo-rev d3" x="320" y="86" text-anchor="middle" font-size="11" font-weight="700" fill="#1f3a5f">16× 压缩</text>
+
+    <!-- CLIP global-attn over few tokens -->
+    <rect class="uo-rev d4" x="366" y="92" width="118" height="48" rx="4" fill="#faf4e1" stroke="#bfb398"/>
+    <text class="uo-rev d4" x="425" y="112" text-anchor="middle" font-size="11" font-weight="700" fill="#181410">CLIP-ViT</text>
+    <text class="uo-rev d4" x="425" y="128" text-anchor="middle" font-size="9" fill="#7a6f5d">全局注意力·只在少量 token</text>
+    <line class="uo-rev d4" x1="486" y1="116" x2="520" y2="116" stroke="#3a3128" stroke-width="1.4"/><polygon class="uo-rev d4" points="520,116 512,112 512,120" fill="#3a3128"/>
+
+    <!-- output 256 -->
+    <rect class="uo-rev d5" x="526" y="96" width="92" height="40" rx="4" fill="#1f3a5f"/>
+    <text class="uo-rev d5" x="572" y="113" text-anchor="middle" font-size="13" font-weight="700" fill="#f7f1de">256 token</text>
+    <text class="uo-rev d5" x="572" y="128" text-anchor="middle" font-size="8.5" fill="#c8d4e2">视觉 token</text>
+
+    <!-- right legend: the point -->
+    <rect class="uo-rev d6" x="632" y="92" width="74" height="86" rx="4" fill="#faf4e1" stroke="#bfb398"/>
+    <text class="uo-rev d6" x="669" y="112" text-anchor="middle" font-size="11" font-weight="700" fill="#1f3a5f">≈ 1:10</text>
+    <text class="uo-rev d6" x="669" y="132" text-anchor="middle" font-size="8.5" fill="#7a6f5d">1 视觉 token</text>
+    <text class="uo-rev d6" x="669" y="145" text-anchor="middle" font-size="8.5" fill="#7a6f5d">顶 ~10 文本</text>
+    <text class="uo-rev d6" x="669" y="165" text-anchor="middle" font-size="8.5" fill="#7a6f5d">token</text>
+
+    <text class="uo-rev d6" x="360" y="238" text-anchor="middle" font-size="11" fill="#7a6f5d">输入侧已经压得很好——可真正的瓶颈,在解码侧（往下看）</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 03</span>真正的瓶颈在解码 · 人抄书的工作记忆</h2>
+<p>问题来了：1:10 意味着 10K 视觉 token（约 20–30 页）要解码出 <strong>10 万+</strong> 个文本 token。标准注意力扛不住这么长——KV cache 线性爆炸。怎么办？作者从<strong>人抄书</strong>里偷招：抄一整本时，注意力只落在三处——一直摊开的<strong>源书</strong>、<strong>刚写下的几个字</strong>（确认抄到哪）、<strong>下一个要写的字</strong>。已经抄完的几十页？<strong>软遗忘</strong><a class="jr" href="#g-08">8</a>，不会每写一字就回头通读。正是"不全记"让人能低负荷连续抄几百页。</p>
+
+<figure id="fig-memory">
+  <figcaption><span>Fig 02 · 抄书的人只盯三处,其余软遗忘</span><span class="fnum">WORKING MEMORY → R-SWA</span></figcaption>
+  <svg class="uo-svg" viewBox="0 0 720 280" role="img" aria-label="人抄书的注意力:源书+刚写的几个字+下一个字">
+    <!-- source book (reference) -->
+    <rect class="uo-rev d1" x="40" y="40" width="150" height="58" rx="4" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="1.4"/>
+    <text class="uo-rev d1" x="115" y="64" text-anchor="middle" font-size="13" font-weight="700" fill="#1f3a5f">源书</text>
+    <text class="uo-rev d1" x="115" y="82" text-anchor="middle" font-size="9.5" fill="#3a3128">视觉 token · 全局可见,不淘汰</text>
+
+    <!-- output tape -->
+    <text class="uo-rev d2" x="60" y="150" text-anchor="start" font-size="10" fill="#7a6f5d">已写下的输出 →</text>
+    <!-- forgotten (greyed) cells -->
+    <g class="uo-rev d2">
+      <rect x="60" y="160" width="22" height="26" rx="2" fill="#e8e0c8" stroke="#bfb398" opacity="0.55"/>
+      <rect x="84" y="160" width="22" height="26" rx="2" fill="#e8e0c8" stroke="#bfb398" opacity="0.55"/>
+      <rect x="108" y="160" width="22" height="26" rx="2" fill="#e8e0c8" stroke="#bfb398" opacity="0.55"/>
+      <rect x="132" y="160" width="22" height="26" rx="2" fill="#e8e0c8" stroke="#bfb398" opacity="0.55"/>
+      <rect x="156" y="160" width="22" height="26" rx="2" fill="#e8e0c8" stroke="#bfb398" opacity="0.55"/>
+      <rect x="180" y="160" width="22" height="26" rx="2" fill="#e8e0c8" stroke="#bfb398" opacity="0.55"/>
+    </g>
+    <text class="uo-rev d2" x="131" y="208" text-anchor="middle" font-size="10" fill="#9b2c2c">已抄完 → 淘汰（软遗忘）</text>
+    <!-- sliding window (recent n) cells -->
+    <g class="uo-rev d3">
+      <rect x="206" y="160" width="22" height="26" rx="2" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="1.3"/>
+      <rect x="230" y="160" width="22" height="26" rx="2" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="1.3"/>
+      <rect x="254" y="160" width="22" height="26" rx="2" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="1.3"/>
+      <rect x="278" y="160" width="22" height="26" rx="2" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="1.3"/>
+    </g>
+    <text class="uo-rev d3" x="253" y="208" text-anchor="middle" font-size="10" font-weight="700" fill="#1f3a5f">最近 n 个 → 滑窗 (n=128)</text>
+    <!-- next token -->
+    <rect class="uo-rev d4" x="318" y="160" width="30" height="26" rx="2" fill="#f0e0a8" stroke="#b8841c" stroke-width="1.5"/>
+    <text class="uo-rev d4" x="333" y="178" text-anchor="middle" font-size="13" font-weight="700" fill="#b8841c">?</text>
+    <text class="uo-rev d4" x="333" y="208" text-anchor="middle" font-size="10" fill="#b8841c">下一个字</text>
+
+    <!-- arrows converging on next token -->
+    <path class="uo-rev d5" d="M190 70 C 300 70, 360 110, 340 156" fill="none" stroke="#1f3a5f" stroke-width="1.4" stroke-dasharray="4 3"/><polygon class="uo-rev d5" points="340,156 335,148 343,147" fill="#1f3a5f"/>
+    <line class="uo-rev d5" x1="300" y1="173" x2="316" y2="173" stroke="#1f3a5f" stroke-width="1.4"/><polygon class="uo-rev d5" points="316,173 308,169 308,177" fill="#1f3a5f"/>
+    <text class="uo-rev d5" x="270" y="92" text-anchor="middle" font-size="9.5" fill="#1f3a5f">源书永远看得到</text>
+
+    <!-- mapping legend -->
+    <rect class="uo-rev d6" x="430" y="44" width="276" height="150" rx="4" fill="#faf4e1" stroke="#bfb398"/>
+    <text class="uo-rev d6" x="446" y="66" text-anchor="start" font-size="11" font-weight="700" fill="#1f3a5f">映射到 R-SWA</text>
+    <text class="uo-rev d6" x="446" y="92" text-anchor="start" font-size="10.5" fill="#3a3128">源书 = 前缀 prefix（视觉+prompt）</text>
+    <text class="uo-rev d6" x="446" y="110" text-anchor="start" font-size="10.5" fill="#3a3128">　→ 全局可见,长度 L_m 固定</text>
+    <text class="uo-rev d6" x="446" y="134" text-anchor="start" font-size="10.5" fill="#3a3128">刚写的 n 字 = 输出滑窗</text>
+    <text class="uo-rev d6" x="446" y="152" text-anchor="start" font-size="10.5" fill="#3a3128">　→ 因果,宽度 n 固定</text>
+    <text class="uo-rev d6" x="446" y="176" text-anchor="start" font-size="10.5" fill="#9b2c2c">已抄完 = 滑出窗口就淘汰</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 04</span>R-SWA：每个字只看「全图 + 最近 128 字」</h2>
+<p>把这套搬进注意力，就是 <strong>R-SWA</strong><a class="jr" href="#g-01">1</a>。生成第 t 个 token 时，它能看见的集合 = <strong>全部前缀 P</strong><a class="jr" href="#g-02">2</a>（视觉 token + prompt，永远全局可见）∪ <strong>最近 n 个输出 token</strong><a class="jr" href="#g-06">6</a>（因果滑窗）。跟标准全注意力比，区别就是右下那张可见性图——全注意力是整个下三角全填，R-SWA 只填"前缀那几列 + 一条宽 n 的对角带"。</p>
+
+<figure id="fig-mask">
+  <figcaption><span>Fig 03 · 谁能看见谁:全注意力 vs R-SWA</span><span class="fnum">ATTENTION MASK</span></figcaption>
+  <svg class="uo-svg" viewBox="0 0 720 340" role="img" aria-label="全注意力与 R-SWA 的可见性矩阵对比">
+    <!-- left: full attention -->
+    <text class="uo-rev d1" x="175" y="36" text-anchor="middle" font-size="13" font-weight="700" fill="#9b2c2c">全注意力 (MHA)</text>
+    <text class="uo-rev d1" x="175" y="54" text-anchor="middle" font-size="9.5" fill="#7a6f5d">下三角全填 → KV cache 随 T 线性涨</text>
+    <!-- right: R-SWA -->
+    <text class="uo-rev d1" x="535" y="36" text-anchor="middle" font-size="13" font-weight="700" fill="#1f3a5f">R-SWA</text>
+    <text class="uo-rev d1" x="535" y="54" text-anchor="middle" font-size="9.5" fill="#7a6f5d">前缀列 + 宽 n 对角带 → KV cache 恒定</text>
+    <!-- grids: 10x10, cell 24, origin left gx=70 gy=70; right gx=430 -->
+    <!-- JS fills cells; here static via script-less: draw prefix split line at col 3 -->
+    <g id="uo-maskcells"></g>
+    <!-- axis labels -->
+    <text class="uo-rev d2" x="40" y="190" text-anchor="middle" font-size="9.5" fill="#7a6f5d" transform="rotate(-90 40 190)">query t →</text>
+    <text class="uo-rev d2" x="175" y="330" text-anchor="middle" font-size="9.5" fill="#7a6f5d">key j →（前 3 列 = 前缀/原图）</text>
+    <text class="uo-rev d2" x="535" y="330" text-anchor="middle" font-size="9.5" fill="#7a6f5d">前缀列永远填 · 输出只留最近一条带</text>
+    <!-- legend swatches (right, clear space) -->
+    <rect class="uo-rev d6" x="660" y="80" width="13" height="13" fill="#1f3a5f"/><text class="uo-rev d6" x="678" y="91" font-size="9" fill="#3a3128" text-anchor="start">前缀</text>
+    <rect class="uo-rev d6" x="660" y="100" width="13" height="13" fill="#b8841c"/><text class="uo-rev d6" x="678" y="111" font-size="9" fill="#3a3128" text-anchor="start">滑窗</text>
+    <rect class="uo-rev d6" x="660" y="120" width="13" height="13" fill="#e8e0c8" stroke="#bfb398"/><text class="uo-rev d6" x="678" y="131" font-size="9" fill="#9b2c2c" text-anchor="start">淘汰</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 05</span>恒定 KV cache：unlimited 的底气</h2>
+<p>这一步是全部收益的来源。标准 MHA 的 KV cache = <code>L_m + T</code>，随生成长度 T 线性涨；R-SWA 永远只留"前缀 L_m + 最近 n"，即 <code>L_m + n</code>，<strong>封顶不动</strong><a class="jr" href="#g-05">5</a>。算个账：前缀 L_m=300、n=128，解码一本书 T=10000——MHA 要 10300，R-SWA 只要 428，<strong>省 96%</strong>。T 拉到十万，MHA 跟着涨，R-SWA 还是 428。显存和每步算力都恒定，所以几十页一次过、速度不掉。</p>
+
+<figure id="fig-kv">
+  <figcaption><span>Fig 04 · KV cache:线性爆炸 vs 封顶不动</span><span class="fnum">L_m=300 · n=128</span></figcaption>
+  <svg class="uo-svg" viewBox="0 0 720 320" role="img" aria-label="KV cache 大小随解码长度的增长对比">
+    <!-- axes -->
+    <line class="uo-rev d1" x1="90" y1="40" x2="90" y2="262" stroke="#bfb398" stroke-width="1"/>
+    <line class="uo-rev d1" x1="90" y1="262" x2="640" y2="262" stroke="#bfb398" stroke-width="1"/>
+    <text class="uo-rev d1" x="80" y="266" text-anchor="end" font-size="10" fill="#7a6f5d">0</text>
+    <text class="uo-rev d1" x="80" y="62" text-anchor="end" font-size="10" fill="#7a6f5d">10.3K</text>
+    <text class="uo-rev d1" x="54" y="160" text-anchor="middle" font-size="9.5" fill="#7a6f5d" transform="rotate(-90 54 160)">KV cache 大小</text>
+    <text class="uo-rev d1" x="365" y="292" text-anchor="middle" font-size="9.5" fill="#7a6f5d">解码长度 T →</text>
+    <text class="uo-rev d1" x="630" y="278" text-anchor="end" font-size="10" fill="#7a6f5d">10K</text>
+    <!-- MHA line: from (90,256) at T=0 cache~300 to (630,60) at T=10000 cache 10300 -->
+    <polyline class="draw d2" points="90,256 630,60" fill="none" stroke="#9b2c2c" stroke-width="2.6" pathLength="1000"/>
+    <!-- R-SWA line: rises to L_m+n=428 (~y 247) then flat -->
+    <polyline class="draw d3" points="90,256 120,247 630,247" fill="none" stroke="#1f3a5f" stroke-width="2.6" pathLength="1000"/>
+    <!-- end markers + labels in clear space -->
+    <circle class="uo-rev d4" cx="630" cy="60" r="3.5" fill="#9b2c2c"/>
+    <text class="uo-rev d4" x="500" y="58" text-anchor="end" font-size="11" font-weight="700" fill="#9b2c2c">MHA = L_m + T</text>
+    <text class="uo-rev d4" x="500" y="74" text-anchor="end" font-size="10" fill="#7a6f5d">T=10K → 10300,线性爆炸</text>
+    <circle class="uo-rev d5" cx="630" cy="247" r="3.5" fill="#1f3a5f"/>
+    <text class="uo-rev d5" x="360" y="232" text-anchor="start" font-size="11" font-weight="700" fill="#1f3a5f">R-SWA = L_m + n = 428,封顶不动</text>
+    <!-- saving callout -->
+    <rect class="uo-rev d6" x="470" y="150" width="150" height="56" rx="4" fill="#faf4e1" stroke="#bfb398"/>
+    <text class="uo-rev d6" x="545" y="176" text-anchor="middle" font-size="18" font-weight="700" fill="#1f3a5f">−96%</text>
+    <text class="uo-rev d6" x="545" y="195" text-anchor="middle" font-size="9.5" fill="#7a6f5d">428 / 10300 ≈ 0.04</text>
+  </svg>
+</figure>
+
+<div class="note">
+  <span class="l">为什么不掉点,还涨点</span>
+  <p>R-SWA vs 普通滑窗注意力的命门：<strong>视觉 token 被排除在状态转移之外</strong>——它们编码一次后全局静态，不会像普通滑窗那样被反复"揉糊"，所以认字精度保得住。作者还推测：全注意力在输出变长时容易发散，R-SWA 把注意力夹在"原图 + 最近 128 字"里，反而逼模型更专注 dense OCR、靠滑窗里的最近输出定位"我抄到哪了"。所以替换是个<strong>免费午餐</strong>——省了还涨。</p>
+</div>
+
+<h2><span class="num">§ 06</span>结果：SOTA + 长程不崩</h2>
+<p>从 DeepSeek-OCR checkpoint 续训 4000 步、冻结 DeepEncoder 只训 LLM（解码器是 3B-A0.5B 的 MoE<a class="jr" href="#g-07">7</a>）、2M 文档数据——改动极小却拿了端到端 SOTA。OmniDocBench v1.5 拿 <strong>93.23</strong><a class="jr" href="#g-10">10</a>，比 DeepSeek-OCR baseline 高 6.22、比更强的 DeepSeek-OCR 2 还高 4；v1.6 拿 93.92。更关键的是长程：40+ 页一次性解析，编辑距离仍 < 0.11、Distinct-35 达 97%（没有"复读机"塌缩<a class="jr" href="#g-11">11</a>）。</p>
+
+<figure id="fig-results">
+  <figcaption><span>Fig 05 · OmniDocBench v1.5 总分 + 长程</span><span class="fnum">越高越好 · y 轴从 80 起</span></figcaption>
+  <svg class="uo-svg" viewBox="0 0 720 320" role="img" aria-label="OmniDocBench 总分对比与长程解析结果">
+    <!-- y axis (80..95 zoomed) -->
+    <line class="uo-rev d1" x1="86" y1="40" x2="86" y2="258" stroke="#bfb398" stroke-width="1"/>
+    <line class="uo-rev d1" x1="86" y1="258" x2="430" y2="258" stroke="#bfb398" stroke-width="1"/>
+    <text class="uo-rev d1" x="78" y="262" text-anchor="end" font-size="10" fill="#7a6f5d">80</text>
+    <line class="uo-rev d1" x1="82" y1="118" x2="86" y2="118" stroke="#bfb398"/><text class="uo-rev d1" x="78" y="122" text-anchor="end" font-size="10" fill="#7a6f5d">90</text>
+    <!-- bars: (score-80)*14 px, baseline y=258 -->
+    <rect class="uo-rev d2" x="118" y="160" width="74" height="98" fill="#9b2c2c" opacity="0.85"/>
+    <text class="uo-rev d2" x="155" y="151" text-anchor="middle" font-size="14" font-weight="700" fill="#9b2c2c">87.01</text>
+    <text class="uo-rev d2" x="155" y="278" text-anchor="middle" font-size="10.5" font-weight="700" fill="#3a3128">DeepSeek-OCR</text>
+    <rect class="uo-rev d3" x="222" y="130" width="74" height="128" fill="#7a6f5d"/>
+    <text class="uo-rev d3" x="259" y="121" text-anchor="middle" font-size="14" font-weight="700" fill="#4a6b3a">89.17</text>
+    <text class="uo-rev d3" x="259" y="278" text-anchor="middle" font-size="10.5" font-weight="700" fill="#3a3128">DeepSeek-OCR 2</text>
+    <rect class="uo-rev d4" x="326" y="73" width="74" height="185" fill="#1f3a5f"/>
+    <text class="uo-rev d4" x="363" y="64" text-anchor="middle" font-size="14" font-weight="700" fill="#1f3a5f">93.23</text>
+    <text class="uo-rev d4" x="363" y="278" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1f3a5f">Unlimited-OCR</text>
+
+    <!-- long-horizon callout (right, clear space) -->
+    <rect class="uo-rev d5" x="470" y="70" width="222" height="160" rx="4" fill="#faf4e1" stroke="#bfb398"/>
+    <text class="uo-rev d5" x="481" y="94" text-anchor="start" font-size="12" font-weight="700" fill="#1f3a5f">长程一次过 (in-house)</text>
+    <text class="uo-rev d6" x="481" y="122" text-anchor="start" font-size="11" fill="#3a3128">2–40+ 页单次前向解析</text>
+    <text class="uo-rev d6" x="481" y="148" text-anchor="start" font-size="11" fill="#3a3128">40+ 页:编辑距离 &lt; 0.11</text>
+    <text class="uo-rev d6" x="481" y="174" text-anchor="start" font-size="11" fill="#3a3128">Distinct-35 = 97%</text>
+    <text class="uo-rev d6" x="481" y="206" text-anchor="start" font-size="10" fill="#7a6f5d">+12.7% TPS（5580 vs 4951）</text>
+  </svg>
+</figure>
+
+<div class="note">
+  <span class="l">放进 wiki 这条线</span>
+  <p>Unlimited OCR 接的是 <a href="../concepts/optical-context-compression.html">光学上下文压缩</a>（DeepEncoder = <a href="vit.html">SAM/CLIP-ViT</a>）那条线，但只动解码器：把全注意力换成 <a href="../concepts/reference-sliding-window-attention.html">R-SWA</a>，把 <a href="../concepts/kv-cache.html">KV cache</a> 从线性压成常数——它是 <a href="../concepts/sparse-attention.html">稀疏注意力</a> 的"前缀全局 + 输出滑窗"两段式特例，跟 <a href="flash-attention.html">FlashAttention</a> 一样在攻注意力的显存/IO 成本，只是一个改可见范围、一个改 IO 调度。一句话：<strong>照着人抄书的工作记忆，让每个字只盯「原图 + 最近 128 字」——KV cache 一恒定,几十页就能一口气抄完,而且这刀对 dense OCR 还是免费午餐。R-SWA 不止 OCR,ASR / 翻译这类"盯固定参考、长程输出"的任务都能套。</strong></p>
+</div>
+
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term"><a href="../concepts/reference-sliding-window-attention.html">R-SWA · 参考滑窗注意力</a></span> · 每个生成 token 看「全部前缀（视觉+prompt，全局）+ 最近 n 个输出（滑窗，n=128）」，早期输出滑出就淘汰。KV cache 恒定。</li>
+    <li id="g-02"><span class="term">前缀 / 参考 token（P, L_m）</span> · 视觉 token + prompt，长度 L_m。对所有后续 token 全局可见、整个解码过程不变，不参与状态转移所以图不糊。</li>
+    <li id="g-03"><span class="term"><a href="../concepts/optical-context-compression.html">光学上下文压缩 · DeepEncoder</a></span> · SAM-ViT（窗口注意力）串 CLIP-ViT（全局注意力）+ 桥接 16× 压缩，1024×1024 图 → 256 视觉 token，约 1:10 顶文本 token。</li>
+    <li id="g-04"><span class="term"><a href="../concepts/kv-cache.html">KV cache</a></span> · 解码时缓存的历史 K/V。标准注意力随输出长度线性涨（越跑越慢、越吃显存），是长程 OCR 的瓶颈。</li>
+    <li id="g-05"><span class="term">恒定 KV cache</span> · R-SWA 下 cache = L_m + min(n,T) ≤ L_m + n，封顶不随 T 涨。L_m=300/n=128/T=10000 时 428 vs MHA 10300，省 96%。</li>
+    <li id="g-06"><span class="term">滑窗宽度 n</span> · 输出区因果窗口大小，默认 128（多页推理用 1024）。单页 OCR 全用 n=128 替换全注意力，无损还涨点。</li>
+    <li id="g-07"><span class="term">MoE 3B-A0.5B</span> · 继承 DeepSeek-OCR 的 <a href="../concepts/moe.html">混合专家</a>解码器，3B 总参、推理只激活 0.5B，效率高。</li>
+    <li id="g-08"><span class="term">软遗忘 / 工作记忆</span> · 人抄书只盯源书+刚写的几个字+下一个字，已抄完的不通读。R-SWA 把它落成"前缀全局 + 输出滑窗 + 淘汰旧输出"。</li>
+    <li id="g-09"><span class="term">DeepSeek-OCR</span> · 本文的 baseline（2025）：DeepEncoder 光学压缩 + 3B-MoE 解码器，让端到端 OCR 翻红；但 KV cache 随输出线性涨。</li>
+    <li id="g-10"><span class="term">OmniDocBench</span> · 文档解析基准，多维（文本编辑距离、公式 CDM、表格 TEDS、阅读顺序）。Unlimited v1.5 拿 93.23、v1.6 拿 93.92 端到端 SOTA。</li>
+    <li id="g-11"><span class="term">Distinct-n</span> · 生成文本里不重复 n-gram 的占比，衡量长程解析有没有"复读机"塌缩。40+ 页时 Distinct-35 仍 97%。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>SOURCE · Baidu Inc. · Unlimited OCR Technical Report · 2026-06-22 · github.com/baidu/Unlimited-OCR</span>
+  <span>INGESTED · 2026-06-22</span>
+</div>
+
+</div>
+<script>
+{
+  // Fig 03 · build the two attention-mask grids
+  const ns = "http://www.w3.org/2000/svg";
+  const g = document.getElementById('uo-maskcells');
+  if (g) {
+    const N = 10, P = 3, band = 2, cell = 22;
+    const grids = [{ox:70, mode:'full'}, {ox:430, mode:'rswa'}];
+    const gy = 70;
+    grids.forEach(gr => {
+      for (let r = 0; r < N; r++) {       // query row t = r
+        for (let c = 0; c < N; c++) {     // key col j = c
+          if (c > r) continue;            // causal: can't see future
+          let fill = null;
+          if (gr.mode === 'full') {
+            fill = '#1f3a5f';             // full lower-triangle
+          } else {
+            if (c < P) fill = '#1f3a5f';                 // prefix cols always
+            else if (c > r - 1 - band) fill = '#b8841c'; // recent n output band
+            // else: evicted -> leave faint
+          }
+          const x = gr.ox + c * cell, y = gy + r * cell;
+          const rect = document.createElementNS(ns, 'rect');
+          rect.setAttribute('x', x); rect.setAttribute('y', y);
+          rect.setAttribute('width', cell - 2); rect.setAttribute('height', cell - 2);
+          rect.setAttribute('rx', 2);
+          if (fill) { rect.setAttribute('fill', fill); }
+          else { rect.setAttribute('fill', '#e8e0c8'); rect.setAttribute('stroke', '#cdbf9e'); rect.setAttribute('stroke-width', '0.5'); rect.setAttribute('opacity','0.5'); }
+          rect.setAttribute('class', 'uo-rev d3');
+          g.appendChild(rect);
+        }
+      }
+      // prefix divider line after col P
+      const dx = gr.ox + P * cell - 1;
+      const ln = document.createElementNS(ns, 'line');
+      ln.setAttribute('x1', dx); ln.setAttribute('y1', gy); ln.setAttribute('x2', dx); ln.setAttribute('y2', gy + N*cell);
+      ln.setAttribute('stroke', '#3a3128'); ln.setAttribute('stroke-width', '1'); ln.setAttribute('stroke-dasharray','3 2');
+      ln.setAttribute('class', 'uo-rev d4');
+      g.appendChild(ln);
+    });
+  }
+
+  const figs = ['fig-encoder','fig-memory','fig-mask','fig-kv','fig-results'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.12 });
+    obs.observe(el);
+  });
+}
+</script>
+</body>
+</html>
