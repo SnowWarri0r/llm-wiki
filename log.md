@@ -829,3 +829,5 @@ skill 更新:
 ## [2026-06-24] feature | render.py inject_glossary_popover: 点 .jr 右侧浮卡(不跳页), 自动注入所有有 glossary 的 bespoke 页; 底部 ol 保留兜底
 
 ## [2026-06-25] ingest | qwen-image-bench + rubric-based-evaluation + llm-as-judge (Qwen 文生图评测, 5→23→56 细则 + Q-Judger ρ=0.92)
+
+## [2026-06-25] update | llm-as-judge 补"判官是SFT不是RL"(reward侧监督训, RL在下游用判官当奖励调生成模型); 修 pointwise 措辞
