@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Qwen-Image-Bench · 评测从生成升到创造 · 个人 wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --accent: var(--ochre); --accent-soft: var(--ochre-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply; opacity: 0.5;
+}
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; }
+.masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(50px, 8.5vw, 90px); line-height: 0.94; letter-spacing: -0.035em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 38px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; letter-spacing: -0.01em; }
+p { margin: 12px 0; }
+strong { font-weight: 700; color: var(--ink); }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--ochre-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--ochre); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--ochre); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--accent-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--brick-soft); } 100% { background: var(--accent-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* qb-specific */
+.qb-svg { width: 100%; height: auto; display: block; font-family: 'JetBrains Mono', monospace; }
+.qb-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .qb-rev { opacity: 1; }
+figure.play .qb-rev.d1 { transition-delay: 0.15s; }
+figure.play .qb-rev.d2 { transition-delay: 0.40s; }
+figure.play .qb-rev.d3 { transition-delay: 0.65s; }
+figure.play .qb-rev.d4 { transition-delay: 0.90s; }
+figure.play .qb-rev.d5 { transition-delay: 1.15s; }
+figure.play .qb-rev.d6 { transition-delay: 1.40s; }
+.qb-svg .grow { transform: scaleX(0); transform-origin: left center; transition: transform 1.1s ease; }
+figure.play .qb-svg .grow { transform: scaleX(1); }
+@media (prefers-reduced-motion: reduce) { .qb-rev { opacity: 1; transition: none; } .qb-svg .grow { transform: scaleX(1); transition: none; } }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · qwen-image-bench</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · Alibaba Qwen · 2026</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 文生图评测</div>
+  <h1 class="title">从生成<br /><span class="em">到创造</span></h1>
+  <div class="byline">Qwen Team, Alibaba · 2026 · arXiv 2605.28091</div>
+  <p class="dek">老基准只查"图对不对得上 prompt"，这题早满分了。Qwen-Image-Bench 加两根新支柱——真实世界保真 + 创意——把模糊的"好不好"拆成 56 条可判定细则。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>文生图模型进步飞快，<strong>评测却拖了后腿</strong>。老基准（GenEval / DPG-Bench）只查<a class="jr" href="#g-09">语义对齐</a>——"有没有两只猫、红色在不在左边"，顶尖模型都顶到天花板、分不出高下。专业创作者真正在乎的两件事没人系统地量：<strong>像不像真实世界、有没有真创意</strong>。Qwen-Image-Bench 用创作者视角补上：<a class="jr" href="#g-01">五大支柱</a>（质量/美学/图文对齐 + <strong>真实世界保真 + 创意生成</strong>），按 <a class="jr" href="#g-04">5→23→56</a> 拆成 56 条<a class="jr" href="#g-05">可逐项判定的细则</a>，再训一个跟人类专家 <a class="jr" href="#g-07">ρ=0.92</a> 对齐的判官 <a class="jr" href="#g-06">Q-Judger</a> 自动打分。结果很坦诚——<strong>自家基准里榜首是 GPT Image 2（<a class="jr" href="#g-08">64.69</a>），Qwen 自己的模型只排中游</strong>。</p>
+</div>
+
+<h2><span class="num">§ 01</span>评测要从"生成"升到"创造"</h2>
+<p>这几年文生图模型一代比一代强，可衡量它们的尺子还停在老地方。老基准查的是<strong>语义对齐</strong><a class="jr" href="#g-09">9</a>——画面里该有的东西有没有、位置颜色对不对。这题顶尖模型早就做到接近满分，<strong>饱和了，分不出高下</strong>。但专业创作者真正挑剔的两件事，老基准压根没量：这张图<strong>像不像能用的真实产品图</strong>（真实保真），以及<strong>有没有审美和巧思</strong>（创意）。Qwen-Image-Bench 的主张就是把评测从 generation（画得对）推到 creation（画得有想法）。</p>
+
+<figure id="fig-ladder">
+  <figcaption><span>Fig 01 · 对齐饱和了,差异在真实感和创意</span><span class="fnum">GENERATION → CREATION</span></figcaption>
+  <svg class="qb-svg" viewBox="0 0 720 280" role="img" aria-label="老基准查对齐已饱和,新基准升到真实保真和创意">
+    <!-- left: old, saturated -->
+    <text class="qb-rev d1" x="170" y="36" text-anchor="middle" font-size="13" font-weight="700" fill="#7a6f5d">老基准 · 查语义对齐</text>
+    <line class="qb-rev d1" x1="60" y1="70" x2="280" y2="70" stroke="#9b2c2c" stroke-width="1.4" stroke-dasharray="5 4"/>
+    <text class="qb-rev d1" x="170" y="62" text-anchor="middle" font-size="9" fill="#9b2c2c">天花板</text>
+    <rect class="qb-rev d2 grow" x="60" y="78" width="220" height="34" rx="3" fill="#bfb398"/>
+    <text class="qb-rev d2" x="170" y="100" text-anchor="middle" font-size="11" font-weight="700" fill="#3a3128">对齐分 ≈ 顶到天花板</text>
+    <text class="qb-rev d2" x="170" y="138" text-anchor="middle" font-size="10" fill="#7a6f5d">顶尖模型都满分 → 分不出高下</text>
+
+    <line class="qb-rev d3" x1="360" y1="44" x2="360" y2="256" stroke="#bfb398" stroke-width="1" stroke-dasharray="4 4"/>
+
+    <!-- right: new, stacked higher -->
+    <text class="qb-rev d3" x="540" y="36" text-anchor="middle" font-size="13" font-weight="700" fill="#b8841c">Qwen-Image-Bench · 升维</text>
+    <rect class="qb-rev d4" x="430" y="180" width="220" height="34" rx="3" fill="#e8e0c8" stroke="#bfb398"/>
+    <text class="qb-rev d4" x="540" y="202" text-anchor="middle" font-size="10.5" fill="#3a3128">基础 · 质量/美学/对齐</text>
+    <rect class="qb-rev d5" x="430" y="140" width="220" height="34" rx="3" fill="#f0e0a8" stroke="#b8841c" stroke-width="1.4"/>
+    <text class="qb-rev d5" x="540" y="162" text-anchor="middle" font-size="10.5" font-weight="700" fill="#181410">＋ 真实世界保真（新）</text>
+    <rect class="qb-rev d6" x="430" y="100" width="220" height="34" rx="3" fill="#f0e0a8" stroke="#b8841c" stroke-width="1.4"/>
+    <text class="qb-rev d6" x="540" y="122" text-anchor="middle" font-size="10.5" font-weight="700" fill="#181410">＋ 创意生成（新）</text>
+    <text class="qb-rev d6" x="540" y="240" text-anchor="middle" font-size="10" fill="#7a6f5d">差异全在上面两层 · 这才是创作者要的</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 02</span>五大支柱：三根老的，两根新的</h2>
+<p>Qwen-Image-Bench 把"图好不好"分成<a class="jr" href="#g-01">五根支柱</a>。三根是老熟人——质量、美学、图文对齐；两根是创作者驱动的新维度——<strong>真实世界保真</strong><a class="jr" href="#g-02">2</a>（能不能当真实产品图用）和<strong>创意生成</strong><a class="jr" href="#g-03">3</a>（有没有审美巧思）。后两根才是本文的灵魂，也是老基准的空白。</p>
+
+<figure id="fig-pillars">
+  <figcaption><span>Fig 02 · 5 支柱:3 根老的(饱和) + 2 根新的(创作者驱动)</span><span class="fnum">FIVE PILLARS</span></figcaption>
+  <svg class="qb-svg" viewBox="0 0 720 230" role="img" aria-label="五大支柱:三根传统加两根新的">
+    <text class="qb-rev d1" x="195" y="40" text-anchor="middle" font-size="11" font-weight="700" fill="#7a6f5d">传统 3 根（已饱和）</text>
+    <g class="qb-rev d2">
+      <rect x="40" y="56" width="100" height="120" rx="4" fill="#e8e0c8" stroke="#bfb398"/><text x="90" y="120" text-anchor="middle" font-size="12" font-weight="700" fill="#3a3128">质量</text>
+      <rect x="150" y="56" width="100" height="120" rx="4" fill="#e8e0c8" stroke="#bfb398"/><text x="200" y="120" text-anchor="middle" font-size="12" font-weight="700" fill="#3a3128">美学</text>
+      <rect x="260" y="56" width="100" height="120" rx="4" fill="#e8e0c8" stroke="#bfb398"/><text x="310" y="113" text-anchor="middle" font-size="12" font-weight="700" fill="#3a3128">图文对齐</text><text x="310" y="131" text-anchor="middle" font-size="8.5" fill="#9b2c2c">≈ 满分</text>
+    </g>
+    <text class="qb-rev d3" x="540" y="40" text-anchor="middle" font-size="11" font-weight="700" fill="#b8841c">新 2 根（创作者驱动 · 本文灵魂）</text>
+    <g class="qb-rev d4">
+      <rect x="400" y="56" width="140" height="120" rx="4" fill="#f0e0a8" stroke="#b8841c" stroke-width="1.6"/><text x="470" y="108" text-anchor="middle" font-size="13" font-weight="700" fill="#181410">真实世界</text><text x="470" y="128" text-anchor="middle" font-size="13" font-weight="700" fill="#181410">保真</text>
+      <rect x="552" y="56" width="140" height="120" rx="4" fill="#f0e0a8" stroke="#b8841c" stroke-width="1.6"/><text x="622" y="118" text-anchor="middle" font-size="13" font-weight="700" fill="#181410">创意生成</text>
+    </g>
+    <text class="qb-rev d5" x="195" y="200" text-anchor="middle" font-size="9.5" fill="#7a6f5d">能不能画对</text>
+    <text class="qb-rev d6" x="546" y="200" text-anchor="middle" font-size="9.5" fill="#b8841c">能不能当真实产品图用 · 有没有审美巧思</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 03</span>把"好不好"拆成 56 条可判定细则</h2>
+<p>"这图好不好"直接打 1-10 分，主观、难复现。Qwen-Image-Bench 用 <a class="jr" href="#g-05">rubric（细则）</a>把它<strong>拆成一棵树</strong>：5 根支柱 → <strong>23 个二级子能力</strong> → <strong>56 条三级细则</strong><a class="jr" href="#g-04">4</a>，每条只判 <code>0/1/2/N-A</code>（不满足/部分/满足/不适用）。逐条打分再聚合——既可复现，又能告诉你模型具体差在哪条。详见 <a href="../concepts/rubric-based-evaluation.html">rubric-based-evaluation</a>。</p>
+
+<figure id="fig-tree">
+  <figcaption><span>Fig 03 · 5 支柱 → 23 子能力 → 56 可判定细则</span><span class="fnum">5 → 23 → 56</span></figcaption>
+  <svg class="qb-svg" viewBox="0 0 720 300" role="img" aria-label="层级:5支柱到23子能力到56细则">
+    <!-- three columns funnel -->
+    <text class="qb-rev d1" x="110" y="40" text-anchor="middle" font-size="12" font-weight="700" fill="#b8841c">5 支柱</text>
+    <text class="qb-rev d2" x="360" y="40" text-anchor="middle" font-size="12" font-weight="700" fill="#b8841c">23 子能力</text>
+    <text class="qb-rev d3" x="610" y="40" text-anchor="middle" font-size="12" font-weight="700" fill="#b8841c">56 细则</text>
+    <!-- L1 -->
+    <g class="qb-rev d1" font-size="9.5" fill="#3a3128" text-anchor="middle">
+      <rect x="60" y="54" width="100" height="20" rx="3" fill="#e8e0c8" stroke="#bfb398"/><text x="110" y="68">质量</text>
+      <rect x="60" y="80" width="100" height="20" rx="3" fill="#e8e0c8" stroke="#bfb398"/><text x="110" y="94">美学</text>
+      <rect x="60" y="106" width="100" height="20" rx="3" fill="#e8e0c8" stroke="#bfb398"/><text x="110" y="120">图文对齐</text>
+      <rect x="60" y="132" width="100" height="20" rx="3" fill="#f0e0a8" stroke="#b8841c"/><text x="110" y="146">真实保真</text>
+      <rect x="60" y="158" width="100" height="20" rx="3" fill="#f0e0a8" stroke="#b8841c"/><text x="110" y="172">创意生成</text>
+    </g>
+    <!-- expand "真实保真" branch as example -->
+    <line class="qb-rev d2" x1="160" y1="142" x2="248" y2="120" stroke="#b8841c" stroke-width="1"/>
+    <line class="qb-rev d2" x1="160" y1="142" x2="248" y2="160" stroke="#b8841c" stroke-width="1"/>
+    <g class="qb-rev d2" font-size="9" fill="#3a3128" text-anchor="middle">
+      <rect x="250" y="108" width="120" height="20" rx="3" fill="#f7f1de" stroke="#bfb398"/><text x="310" y="122">光影物理</text>
+      <rect x="250" y="134" width="120" height="20" rx="3" fill="#f7f1de" stroke="#bfb398"/><text x="310" y="148">材质质感</text>
+      <rect x="250" y="160" width="120" height="20" rx="3" fill="#f7f1de" stroke="#bfb398"/><text x="310" y="174">常识穿帮</text>
+    </g>
+    <text class="qb-rev d2" x="310" y="196" text-anchor="middle" font-size="8" fill="#7a6f5d">(其余 4 支柱同理展开,共 23)</text>
+    <!-- L3 rubrics -->
+    <line class="qb-rev d3" x1="370" y1="118" x2="468" y2="96" stroke="#b8841c" stroke-width="1"/>
+    <line class="qb-rev d3" x1="370" y1="118" x2="468" y2="144" stroke="#b8841c" stroke-width="1"/>
+    <g class="qb-rev d3" font-size="8.5" fill="#3a3128" text-anchor="start">
+      <rect x="470" y="86" width="180" height="18" rx="2" fill="#faf4e1" stroke="#bfb398"/><text x="478" y="99">阴影方向跟光源一致? 0/1/2</text>
+      <rect x="470" y="110" width="180" height="18" rx="2" fill="#faf4e1" stroke="#bfb398"/><text x="478" y="123">反光高光合理? 0/1/2</text>
+      <rect x="470" y="134" width="180" height="18" rx="2" fill="#faf4e1" stroke="#bfb398"/><text x="478" y="147">材质纹理真实? 0/1/2</text>
+    </g>
+    <text class="qb-rev d4" x="560" y="174" text-anchor="middle" font-size="8" fill="#7a6f5d">(共 56 条,每条 0/1/2/N-A)</text>
+    <text class="qb-rev d5" x="360" y="240" text-anchor="middle" font-size="11" fill="#7a6f5d">把"真不真实"拆到"阴影方向对不对"这种能逐条判定的小问题</text>
+    <text class="qb-rev d6" x="360" y="262" text-anchor="middle" font-size="10" fill="#b8841c">→ 可复现 + 能定位模型差在哪条</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 04</span>Q-Judger：把判官训到跟人类对齐</h2>
+<p>56 条细则要逐张图判，靠人评 <a class="jr" href="#g-10">1000 条 prompt</a>×几十个模型太贵太慢。自然想到<a class="jr" href="#g-06">让模型当判官</a>。但随便抓个通用 MLLM 当裁判，口味跟人类专家对不齐。关键是<strong>校准</strong>：用 <strong>80 位美院标注员</strong>盲标（每样本≥3 次独立评审）、<strong>13 万+人标对</strong>训练，把判官（基于 Qwen3.6-27B）调到跟人类专家排名 <strong>Spearman <a class="jr" href="#g-07">ρ=0.92</a></strong>，才敢放它自动评。详见 <a href="../concepts/llm-as-judge.html">llm-as-judge</a>。</p>
+
+<figure id="fig-judge">
+  <figcaption><span>Fig 04 · 用人标把判官喂准,再放它自动评</span><span class="fnum">Q-JUDGER</span></figcaption>
+  <svg class="qb-svg" viewBox="0 0 720 250" role="img" aria-label="Q-Judger 训练与校准流程">
+    <rect class="qb-rev d1" x="30" y="90" width="130" height="64" rx="5" fill="#faf4e1" stroke="#bfb398"/>
+    <text class="qb-rev d1" x="95" y="114" text-anchor="middle" font-size="11" font-weight="700" fill="#181410">80 位美院</text>
+    <text class="qb-rev d1" x="95" y="130" text-anchor="middle" font-size="11" font-weight="700" fill="#181410">标注员</text>
+    <text class="qb-rev d1" x="95" y="146" text-anchor="middle" font-size="8.5" fill="#7a6f5d">盲标 · 每样本≥3 评审</text>
+    <line class="qb-rev d2" x1="160" y1="122" x2="196" y2="122" stroke="#3a3128" stroke-width="1.4"/><polygon class="qb-rev d2" points="196,122 188,118 188,126" fill="#3a3128"/>
+    <rect class="qb-rev d2" x="200" y="96" width="120" height="52" rx="5" fill="#f0e0a8" stroke="#b8841c"/>
+    <text class="qb-rev d2" x="260" y="118" text-anchor="middle" font-size="11" font-weight="700" fill="#181410">13 万+ 人标对</text>
+    <text class="qb-rev d2" x="260" y="134" text-anchor="middle" font-size="8.5" fill="#7a6f5d">56 细则 0/1/2/N-A</text>
+    <line class="qb-rev d3" x1="320" y1="122" x2="356" y2="122" stroke="#3a3128" stroke-width="1.4"/><polygon class="qb-rev d3" points="356,122 348,118 348,126" fill="#3a3128"/>
+    <rect class="qb-rev d3" x="360" y="92" width="140" height="60" rx="5" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.4"/>
+    <text class="qb-rev d3" x="430" y="114" text-anchor="middle" font-size="12" font-weight="700" fill="#181410">训判官</text>
+    <text class="qb-rev d3" x="430" y="132" text-anchor="middle" font-size="9" fill="#3a3128">底座 Qwen3.6-27B</text>
+    <text class="qb-rev d3" x="430" y="146" text-anchor="middle" font-size="9" fill="#3a3128">→ Q-Judger</text>
+    <line class="qb-rev d4" x1="500" y1="122" x2="536" y2="122" stroke="#3a3128" stroke-width="1.4"/><polygon class="qb-rev d4" points="536,122 528,118 528,126" fill="#3a3128"/>
+    <rect class="qb-rev d4" x="540" y="96" width="150" height="52" rx="5" fill="#f0e0a8" stroke="#b8841c"/>
+    <text class="qb-rev d4" x="615" y="118" text-anchor="middle" font-size="10.5" font-weight="700" fill="#181410">自动评 56 细则</text>
+    <text class="qb-rev d4" x="615" y="134" text-anchor="middle" font-size="8.5" fill="#7a6f5d">1000 prompt × 几十模型</text>
+    <!-- validation -->
+    <rect class="qb-rev d5" x="360" y="180" width="330" height="40" rx="5" fill="#faf4e1" stroke="#b8841c"/>
+    <text class="qb-rev d5" x="525" y="198" text-anchor="middle" font-size="12" font-weight="700" fill="#b8841c">跟人类专家排名 Spearman ρ = 0.92</text>
+    <text class="qb-rev d5" x="525" y="213" text-anchor="middle" font-size="9" fill="#7a6f5d">几乎一致 → 判官可信,才敢自动评</text>
+    <line class="qb-rev d5" x1="430" y1="152" x2="430" y2="180" stroke="#7a6f5d" stroke-width="1" stroke-dasharray="3 2"/>
+    <text class="qb-rev d6" x="95" y="200" text-anchor="middle" font-size="9.5" fill="#7a6f5d">想规模化判断,</text>
+    <text class="qb-rev d6" x="95" y="214" text-anchor="middle" font-size="9.5" fill="#7a6f5d">先用人把判官喂准</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 05</span>结果：自家基准，自家模型不夺冠</h2>
+<p>最能说明这基准没护短的一点：<strong>榜首是 GPT Image 2（64.69），在五根支柱上全部第一</strong>（真实保真 57.38、创意 75.23 一骑绝尘）；Qwen 自己的 Qwen Image 2.0 Pro 只排中游（57.84）。自家出的考卷自家学生不拿第一，反而让这份评测<strong>更可信</strong>。</p>
+
+<figure id="fig-board">
+  <figcaption><span>Fig 05 · 总分榜(x 轴从 55 起) · 判官 ρ=0.92</span><span class="fnum">LEADERBOARD</span></figcaption>
+  <svg class="qb-svg" viewBox="0 0 720 320" role="img" aria-label="Qwen-Image-Bench 总分排行榜">
+    <line class="qb-rev d1" x1="205" y1="48" x2="205" y2="288" stroke="#bfb398" stroke-width="1"/>
+    <text class="qb-rev d1" x="205" y="304" text-anchor="middle" font-size="9" fill="#7a6f5d">55</text>
+    <text class="qb-rev d1" x="620" y="304" text-anchor="middle" font-size="9" fill="#7a6f5d">总分 →（x 轴从 55 起）</text>
+    <!-- rows: bar length = (score-55)*41 from x=205 -->
+    <g font-size="10.5" fill="#3a3128" text-anchor="end" font-weight="700">
+      <text class="qb-rev d2" x="198" y="76">GPT Image 2</text>
+      <text class="qb-rev d3" x="198" y="114">Nano Banana 2.0</text>
+      <text class="qb-rev d3" x="198" y="152">GPT Image 1.5</text>
+      <text class="qb-rev d4" x="198" y="190">Nano Banana Pro</text>
+      <text class="qb-rev d5" x="198" y="228">Qwen Image 2.0 Pro</text>
+      <text class="qb-rev d6" x="198" y="266">Seedream 5.0</text>
+    </g>
+    <rect class="qb-rev d2 grow" x="205" y="62" width="397" height="24" rx="2" fill="#1f3a5f"/><text class="qb-rev d2" x="610" y="79" text-anchor="start" font-size="12" font-weight="700" fill="#1f3a5f">64.69</text>
+    <rect class="qb-rev d3 grow" x="205" y="100" width="198" height="24" rx="2" fill="#bfb398"/><text class="qb-rev d3" x="411" y="117" text-anchor="start" font-size="11" fill="#3a3128">59.82</text>
+    <rect class="qb-rev d3 grow" x="205" y="138" width="191" height="24" rx="2" fill="#bfb398"/><text class="qb-rev d3" x="404" y="155" text-anchor="start" font-size="11" fill="#3a3128">59.65</text>
+    <rect class="qb-rev d4 grow" x="205" y="176" width="182" height="24" rx="2" fill="#bfb398"/><text class="qb-rev d4" x="395" y="193" text-anchor="start" font-size="11" fill="#3a3128">59.45</text>
+    <rect class="qb-rev d5 grow" x="205" y="214" width="116" height="24" rx="2" fill="#b8841c"/><text class="qb-rev d5" x="329" y="231" text-anchor="start" font-size="11" font-weight="700" fill="#b8841c">57.84 ← 自家,中游</text>
+    <rect class="qb-rev d6 grow" x="205" y="252" width="91" height="24" rx="2" fill="#bfb398"/><text class="qb-rev d6" x="304" y="269" text-anchor="start" font-size="11" fill="#3a3128">57.22</text>
+  </svg>
+</figure>
+
+<div class="note">
+  <span class="l">放进 wiki 这条线</span>
+  <p>Qwen-Image-Bench 是给文生图模型出的"考卷"——<a href="qwen-image-2.html">Qwen-Image-2.0</a> / <a href="stable-diffusion-3-5.html">SD3.5</a> / <a href="flux-1.html">FLUX</a>（主干都是 <a href="dit.html">DiT</a>）是被考的"考生"。它的两个方法骨架都可复用:<a href="../concepts/rubric-based-evaluation.html">拆细则打分</a>(把模糊的好不好拆成可验证小问题)、<a href="../concepts/llm-as-judge.html">训校准的判官</a>(跟 <a href="../concepts/rlhf.html">RLHF</a> 的 reward model 同母题)。它要超越的是 <a href="../concepts/image-quality-metrics.html">FID/CLIPScore/GenEval</a> 那套已饱和的老指标。一句话:<strong>对齐做满之后,模型的差距全在"真实感"和"创意"上;把这两维拆成 56 条能逐项判定的细则、再训个跟人类 ρ=0.92 的判官自动打,评测才追得上模型——而自家基准让对手夺冠,正是它可信的证据。</strong></p>
+</div>
+
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">五大支柱</span> · 质量 / 美学 / 图文对齐（传统 3 根，已饱和）+ 真实世界保真 / 创意生成（创作者驱动的 2 根新维度，本文灵魂）。</li>
+    <li id="g-02"><span class="term">真实世界保真</span> · 能不能当真实产品图用：光影物理、材质质感、有无常识穿帮。老基准的空白之一。</li>
+    <li id="g-03"><span class="term">创意生成</span> · 有没有审美和巧思（不只是"画对了"）。GPT Image 2 在这维 75.23 一骑绝尘。</li>
+    <li id="g-04"><span class="term">5 → 23 → 56 层级</span> · 5 支柱拆成 23 个二级子能力、再拆成 56 条三级细则。把模糊判断拆成可验证的树。</li>
+    <li id="g-05"><span class="term"><a href="../concepts/rubric-based-evaluation.html">可判定细则 · rubric</a></span> · 每条细则只判 0/1/2/N-A（不满足/部分/满足/不适用），逐条打分再聚合 → 可复现、能定位短板。</li>
+    <li id="g-06"><span class="term"><a href="../concepts/llm-as-judge.html">Q-Judger</a></span> · 基于 Qwen3.6-27B 的判官模型，自动给 56 细则打分。靠大量人标校准到人类口味才可信。</li>
+    <li id="g-07"><span class="term">Spearman ρ=0.92</span> · 判官排名跟人类专家排名的等级相关（1=完全一致）。0.92 = 几乎一样 → 判官可信。</li>
+    <li id="g-08"><span class="term">GPT Image 2 = 64.69</span> · 榜首，五支柱全部第一。Qwen 自家 Qwen Image 2.0 Pro 仅 57.84（中游）。</li>
+    <li id="g-09"><span class="term">语义对齐饱和</span> · GenEval/DPG-Bench 查"画面元素对不对"，顶尖模型都接近满分、分不出高下，逼出"升维到创造"的需求。</li>
+    <li id="g-10"><span class="term">1000 双语 prompt</span> · facet 定向采样（每条≥3 能力点）+ LLM 起草 + 美院艺术家改写 + 长短分半（500 短 500 长）。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>SOURCE · Qwen Team, Alibaba · Qwen-Image-Bench: From Generation to Creation in Text-to-Image Evaluation · arXiv 2605.28091 · 2026</span>
+  <span>INGESTED · 2026-06-25</span>
+</div>
+
+</div>
+<script>
+{
+  const figs = ['fig-ladder','fig-pillars','fig-tree','fig-judge','fig-board'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.12 });
+    obs.observe(el);
+  });
+}
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6);}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  var items={};
+  document.querySelectorAll('.gloss ol li[id^="g-"]').forEach(function(li){items[li.id]=li.innerHTML;});
+  if(!Object.keys(items).length)return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!items[id])return;
+      e.preventDefault();
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+items[id];
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+</body>
+</html>
