@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>X-Vectors · 给语音拍张声纹身份证 · 个人 wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --accent: var(--moss); --accent-soft: var(--moss-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply; opacity: 0.5;
+}
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; }
+.masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(52px, 8.5vw, 92px); line-height: 0.94; letter-spacing: -0.035em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 38px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; letter-spacing: -0.01em; }
+p { margin: 12px 0; }
+strong { font-weight: 700; color: var(--ink); }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--ochre-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--ochre); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--ochre); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+table.spec { width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 13px; margin: 24px 0; }
+table.spec th, table.spec td { border: 1px solid var(--rule); padding: 7px 10px; text-align: left; }
+table.spec th { background: var(--accent-soft); color: var(--ink); font-weight: 700; }
+table.spec td.hl { background: var(--ochre-soft); font-weight: 700; }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--accent-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--accent-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* xv-specific */
+.xv-svg { width: 100%; height: auto; display: block; font-family: 'JetBrains Mono', monospace; }
+.xv-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .xv-rev { opacity: 1; }
+figure.play .xv-rev.d1 { transition-delay: 0.15s; }
+figure.play .xv-rev.d2 { transition-delay: 0.40s; }
+figure.play .xv-rev.d3 { transition-delay: 0.65s; }
+figure.play .xv-rev.d4 { transition-delay: 0.90s; }
+figure.play .xv-rev.d5 { transition-delay: 1.15s; }
+figure.play .xv-rev.d6 { transition-delay: 1.40s; }
+.xv-svg .draw { stroke-dasharray: 1000; stroke-dashoffset: 1000; transition: stroke-dashoffset 1.4s ease; }
+figure.play .xv-svg .draw { stroke-dashoffset: 0; }
+.xv-svg .grow { transform: scaleX(0); transform-origin: left center; transition: transform 1.1s ease; }
+figure.play .xv-svg .grow { transform: scaleX(1); }
+@media (prefers-reduced-motion: reduce) { .xv-rev { opacity: 1; transition: none; } .xv-svg .draw { stroke-dashoffset: 0; transition: none; } .xv-svg .grow { transform: scaleX(1); transition: none; } }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · x-vector</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · ICASSP · 2018</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 声纹 / 说话人识别</div>
+  <h1 class="title">声纹<br /><span class="em">身份证</span></h1>
+  <div class="byline">Snyder · Garcia-Romero · Sell · Povey · Khudanpur (JHU) · ICASSP 2018</div>
+  <p class="dek">训一个网络去"认人"，训完把分类头扔掉，中间那层固定长度的向量就是声纹。Kaldi 里的看家模型，ECAPA-TDNN 的祖宗。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>语音可以是 3 秒也可以是 30 秒，逐帧特征是不定长序列；可要判断"两段是不是同一个人"，得拿两个<strong>等长</strong>向量算距离。x-vector 的解法分三步：① 用 <a class="jr" href="#g-03">TDNN</a> 逐帧抽特征，② 用 <a class="jr" href="#g-02">statistics pooling</a> 沿时间求均值+标准差，把不定长序列<strong>塌成定长向量</strong>，③ 接全连接出 512 维嵌入。训练时让网络做"认出是 N 个人里的哪个"的分类任务，<strong>用的时候把分类头扔掉</strong>，从中间层抠出来的向量就是通用 <a class="jr" href="#g-01">声纹嵌入</a>。靠数据增强吃下大数据，在 SRE16 上把错误率从 i-vector 的 8.35% 砍到 4.89%。</p>
+</div>
+
+<h2><span class="num">§ 01</span>从 i-vector 说起</h2>
+<p>声纹这件事，在 x-vector 之前是 <strong>i-vector</strong><a class="jr" href="#g-08">8</a>（2011）的天下——一套纯统计的方法：先训一个"全世界人嗓音平均长什么样"的高斯混合模型（GMM-UBM），你这段录音偏离这个平均值的方向和程度，用因子分析压成一个低维向量，就是 i-vector。十年主力，但有个天花板：<strong>它吃不动大数据</strong>。统计模型给到一定量就饱和，再多录音也不涨了。</p>
+<p>神经网络反过来——<strong>数据越多越强</strong>。这就是 x-vector 的全部筹码：把那套统计流程换成一个端到端学的网络，让它在海量数据上学"怎么把一段语音变成代表身份的向量"。"x" 没什么深意，就是接着 i-vector（i→x）起的名。用户问的"Kaldi 的 lvector"，指的就是它。</p>
+<div class="note">
+  <span class="l">一句话抓住它</span>
+  <p>x-vector 抽的是<strong>"谁说的"（身份）</strong>，跟 <a href="whisper.html">Whisper</a> / <a href="qwen3-asr.html">Qwen3-ASR</a> 抽<strong>"说了什么"（内容）</strong>是正交的两件事。同样喂音频，目标完全不同。</p>
+</div>
+
+<h2><span class="num">§ 02</span>变长 → 定长：池化那一步魔法</h2>
+<p>核心难题先摆明白：网络前半段逐帧处理，输入 3 帧出 3 帧、输入 7 帧出 7 帧——<strong>还是不定长</strong>。可最后要的是一个定长向量去算距离。怎么把"长度不定的一摞帧"塌成"一个固定大小的东西"？</p>
+<p>答案朴素得意外：<strong>对整段求统计量</strong><a class="jr" href="#g-02">2</a>。3 帧也好 7 帧也好，求个均值就只剩每维一个数——均值天生不在乎你有多少帧。这就是"变长→定长"。x-vector 还额外取了<strong>标准差</strong>：均值说"这段平均长什么样"，标准差带了"这段里嗓音波动有多大"，对区分人也有用。所以它把均值和标准差拼起来，维度翻倍。</p>
+
+<figure id="fig-pool">
+  <figcaption><span>Fig 01 · 进去长度不一,出来都是定长</span><span class="fnum">STATS POOLING</span></figcaption>
+  <svg class="xv-svg" viewBox="0 0 760 300" role="img" aria-label="不同长度语音经统计池化后输出相同长度向量">
+    <!-- lane A: short utterance -->
+    <text class="xv-rev d1" x="92" y="36" text-anchor="middle" font-size="12" font-weight="700" fill="#4a6b3a">短语音 · 3 帧</text>
+    <rect class="xv-rev d1" x="62" y="58" width="12" height="36" fill="#4a6b3a" opacity="0.85"/>
+    <rect class="xv-rev d1" x="80" y="46" width="12" height="48" fill="#4a6b3a" opacity="0.85"/>
+    <rect class="xv-rev d1" x="98" y="66" width="12" height="28" fill="#4a6b3a" opacity="0.85"/>
+    <line class="xv-rev d2" x1="120" y1="76" x2="186" y2="76" stroke="#3a3128" stroke-width="1.5"/>
+    <polygon class="xv-rev d2" points="186,76 178,72 178,80" fill="#3a3128"/>
+    <rect class="xv-rev d2" x="192" y="52" width="120" height="48" rx="4" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.5"/>
+    <text class="xv-rev d2" x="252" y="73" text-anchor="middle" font-size="11" font-weight="700" fill="#181410">μ + σ 池化</text>
+    <text class="xv-rev d2" x="252" y="88" text-anchor="middle" font-size="9" fill="#7a6f5d">沿时间求统计</text>
+    <line class="xv-rev d3" x1="312" y1="76" x2="378" y2="76" stroke="#3a3128" stroke-width="1.5"/>
+    <polygon class="xv-rev d3" points="378,76 370,72 370,80" fill="#3a3128"/>
+    <rect class="xv-rev d3" x="384" y="58" width="104" height="36" rx="4" fill="#4a6b3a"/>
+    <text class="xv-rev d3" x="436" y="80" text-anchor="middle" font-size="13" font-weight="700" fill="#f7f1de">3000 维</text>
+
+    <!-- lane B: long utterance -->
+    <text class="xv-rev d1" x="92" y="186" text-anchor="middle" font-size="12" font-weight="700" fill="#4a6b3a">长语音 · 7 帧</text>
+    <rect class="xv-rev d1" x="44" y="210" width="9" height="40" fill="#4a6b3a" opacity="0.85"/>
+    <rect class="xv-rev d1" x="56" y="220" width="9" height="30" fill="#4a6b3a" opacity="0.85"/>
+    <rect class="xv-rev d1" x="68" y="206" width="9" height="44" fill="#4a6b3a" opacity="0.85"/>
+    <rect class="xv-rev d1" x="80" y="224" width="9" height="26" fill="#4a6b3a" opacity="0.85"/>
+    <rect class="xv-rev d1" x="92" y="214" width="9" height="36" fill="#4a6b3a" opacity="0.85"/>
+    <rect class="xv-rev d1" x="104" y="228" width="9" height="22" fill="#4a6b3a" opacity="0.85"/>
+    <rect class="xv-rev d1" x="116" y="218" width="9" height="32" fill="#4a6b3a" opacity="0.85"/>
+    <line class="xv-rev d2" x1="132" y1="230" x2="186" y2="230" stroke="#3a3128" stroke-width="1.5"/>
+    <polygon class="xv-rev d2" points="186,230 178,226 178,234" fill="#3a3128"/>
+    <rect class="xv-rev d2" x="192" y="206" width="120" height="48" rx="4" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.5"/>
+    <text class="xv-rev d2" x="252" y="227" text-anchor="middle" font-size="11" font-weight="700" fill="#181410">μ + σ 池化</text>
+    <text class="xv-rev d2" x="252" y="242" text-anchor="middle" font-size="9" fill="#7a6f5d">沿时间求统计</text>
+    <line class="xv-rev d3" x1="312" y1="230" x2="378" y2="230" stroke="#3a3128" stroke-width="1.5"/>
+    <polygon class="xv-rev d3" points="378,230 370,226 370,234" fill="#3a3128"/>
+    <rect class="xv-rev d3" x="384" y="212" width="104" height="36" rx="4" fill="#4a6b3a"/>
+    <text class="xv-rev d3" x="436" y="234" text-anchor="middle" font-size="13" font-weight="700" fill="#f7f1de">3000 维</text>
+
+    <!-- right legend: the point -->
+    <rect class="xv-rev d4" x="540" y="96" width="196" height="108" rx="4" fill="#faf4e1" stroke="#bfb398" stroke-width="1"/>
+    <text class="xv-rev d4" x="638" y="124" text-anchor="middle" font-size="13" font-weight="700" fill="#4a6b3a">长度被吃掉了</text>
+    <text class="xv-rev d5" x="556" y="150" text-anchor="start" font-size="11" fill="#3a3128">3 帧 → 3000 维</text>
+    <text class="xv-rev d5" x="556" y="170" text-anchor="start" font-size="11" fill="#3a3128">7 帧 → 3000 维</text>
+    <text class="xv-rev d6" x="556" y="190" text-anchor="start" font-size="10.5" fill="#7a6f5d">求 μ+σ 跟帧数无关</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 03</span>TDNN：每层多看一点，三层看到 15 帧</h2>
+<p>池化之前，逐帧特征谁来抽？答案是 <strong>TDNN（时延网络）</strong><a class="jr" href="#g-03">3</a>。一帧语音只有 10 毫秒，单看一帧什么都听不出来，得看一小段上下文。但又不想像 RNN 那样一帧一帧串着算（慢、难并行）。TDNN 的办法：<strong>每层只看局部几帧，但一层叠一层，越上层一个输出帧间接看到的原始帧越多</strong>——就是卷在时间轴上的感受野<a class="jr" href="#g-04">4</a>。</p>
+<p>而且它<strong>跳着看</strong>（膨胀）：x-vector 第 3 层看的是 <code>{t−3, t, t+3}</code>，隔 3 帧取一个。这样少算很多帧，却能把感受野撑得很大——只用 3 层就把上下文铺到 15 帧（约 150 毫秒），足够刻画音素级声学。等价于现在说的 dilated conv1d。</p>
+
+<figure id="fig-tdnn">
+  <figcaption><span>Fig 02 · 感受野逐层张开 5 → 9 → 15</span><span class="fnum">TDNN 膨胀上下文</span></figcaption>
+  <svg class="xv-svg" viewBox="0 0 720 290" role="img" aria-label="TDNN 感受野随层数增长">
+    <!-- layer labels left -->
+    <text class="xv-rev d1" x="60" y="74" text-anchor="middle" font-size="12" font-weight="700" fill="#3a3128">frame1</text>
+    <text class="xv-rev d2" x="60" y="124" text-anchor="middle" font-size="12" font-weight="700" fill="#3a3128">frame2</text>
+    <text class="xv-rev d3" x="60" y="174" text-anchor="middle" font-size="12" font-weight="700" fill="#3a3128">frame3</text>
+    <!-- centered receptive-field bars, midpoint x=400, 1 frame = 24px -->
+    <rect class="xv-rev d1 grow" x="340" y="58" width="120" height="24" rx="3" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.4"/>
+    <text class="xv-rev d1" x="476" y="74" text-anchor="start" font-size="11" fill="#3a3128">看 5 帧 · <tspan font-family="'JetBrains Mono'" fill="#7a6f5d">[t−2,t+2]</tspan></text>
+    <rect class="xv-rev d2 grow" x="292" y="108" width="216" height="24" rx="3" fill="#c3ddb0" stroke="#4a6b3a" stroke-width="1.4"/>
+    <text class="xv-rev d2" x="524" y="124" text-anchor="start" font-size="11" fill="#3a3128">看 9 帧</text>
+    <rect class="xv-rev d3 grow" x="220" y="158" width="360" height="24" rx="3" fill="#4a6b3a"/>
+    <text class="xv-rev d3" x="596" y="174" text-anchor="start" font-size="11" font-weight="700" fill="#4a6b3a">看 15 帧</text>
+    <!-- raw-frame ruler -->
+    <line class="xv-rev d4" x1="220" y1="158" x2="220" y2="226" stroke="#b8841c" stroke-width="0.8" stroke-dasharray="3 3"/>
+    <line class="xv-rev d4" x1="580" y1="158" x2="580" y2="226" stroke="#b8841c" stroke-width="0.8" stroke-dasharray="3 3"/>
+    <g class="xv-rev d4">
+      <rect x="222" y="228" width="20" height="16" rx="2" fill="#e8e0c8" stroke="#bfb398"/>
+      <rect x="246" y="228" width="20" height="16" rx="2" fill="#e8e0c8" stroke="#bfb398"/>
+      <rect x="270" y="228" width="20" height="16" rx="2" fill="#e8e0c8" stroke="#bfb398"/>
+      <rect x="294" y="228" width="20" height="16" rx="2" fill="#e8e0c8" stroke="#bfb398"/>
+      <rect x="318" y="228" width="20" height="16" rx="2" fill="#e8e0c8" stroke="#bfb398"/>
+      <rect x="342" y="228" width="20" height="16" rx="2" fill="#e8e0c8" stroke="#bfb398"/>
+      <rect x="366" y="228" width="20" height="16" rx="2" fill="#e8e0c8" stroke="#bfb398"/>
+      <rect x="390" y="228" width="20" height="16" rx="2" fill="#e8e0c8" stroke="#bfb398"/>
+      <rect x="414" y="228" width="20" height="16" rx="2" fill="#e8e0c8" stroke="#bfb398"/>
+      <rect x="438" y="228" width="20" height="16" rx="2" fill="#e8e0c8" stroke="#bfb398"/>
+      <rect x="462" y="228" width="20" height="16" rx="2" fill="#e8e0c8" stroke="#bfb398"/>
+      <rect x="486" y="228" width="20" height="16" rx="2" fill="#e8e0c8" stroke="#bfb398"/>
+      <rect x="510" y="228" width="20" height="16" rx="2" fill="#e8e0c8" stroke="#bfb398"/>
+      <rect x="534" y="228" width="20" height="16" rx="2" fill="#e8e0c8" stroke="#bfb398"/>
+      <rect x="558" y="228" width="20" height="16" rx="2" fill="#e8e0c8" stroke="#bfb398"/>
+    </g>
+    <text class="xv-rev d4" x="400" y="270" text-anchor="middle" font-size="11" fill="#7a6f5d">15 帧原始上下文 ≈ 150 毫秒</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 04</span>整条流水线：x-vector 从哪抠出来</h2>
+<p>把整张网络摊开看（论文 Table 1）。一条竖线从底下的 MFCC 帧一路到顶上的 softmax，<strong>statistics pooling 是中间那道分水岭</strong>：上面是"逐帧 · 长度不定"的世界，下面是"整段 · 定长"的世界。</p>
+<table class="spec">
+  <tr><th>层</th><th>看的上下文</th><th>维度 (输入→输出)</th></tr>
+  <tr><td>frame1–5</td><td>逐帧 / 膨胀</td><td>24 → … → 1500（每帧）</td></tr>
+  <tr><td class="hl">stats pooling</td><td>整段 T 帧</td><td class="hl">1500·T → 3000（μ+σ）</td></tr>
+  <tr><td class="hl">segment6 ★</td><td>整段</td><td class="hl">3000 → 512　← x-vector</td></tr>
+  <tr><td>segment7</td><td>整段</td><td>512 → 512</td></tr>
+  <tr><td>softmax</td><td>整段</td><td>512 → N 说话人</td></tr>
+</table>
+<p>x-vector 就是从 <strong>segment6 的仿射输出（过激活之前）</strong>抠出来的那个 512 维向量<a class="jr" href="#g-05">5</a>。注意它<strong>不是最后一层</strong>——最后的 softmax 只在训练时用来做分类，推理时整个扔掉。</p>
+
+<figure id="fig-arch">
+  <figcaption><span>Fig 03 · 池化是"不定长 / 定长"的分水岭</span><span class="fnum">全架构数据流</span></figcaption>
+  <svg class="xv-svg" viewBox="0 0 600 540" role="img" aria-label="x-vector 完整网络结构与池化边界">
+    <!-- zone labels -->
+    <text class="xv-rev d1" x="34" y="105" text-anchor="middle" font-size="10.5" font-weight="700" fill="#7a6f5d" transform="rotate(-90 34 105)">逐帧 · 长度 T 不定</text>
+    <text class="xv-rev d4" x="34" y="400" text-anchor="middle" font-size="10.5" font-weight="700" fill="#4a6b3a" transform="rotate(-90 34 400)">整段 · 定长</text>
+
+    <rect class="xv-rev d1" x="170" y="28" width="260" height="46" rx="4" fill="#faf4e1" stroke="#bfb398"/>
+    <text class="xv-rev d1" x="300" y="46" text-anchor="middle" font-size="12" font-weight="700" fill="#181410">MFCC 逐帧特征</text>
+    <text class="xv-rev d1" x="300" y="63" text-anchor="middle" font-size="10" fill="#7a6f5d">T 帧 × 24 维</text>
+    <line class="xv-rev d1" x1="300" y1="74" x2="300" y2="92" stroke="#3a3128" stroke-width="1.5"/><polygon class="xv-rev d1" points="300,92 296,84 304,84" fill="#3a3128"/>
+
+    <rect class="xv-rev d2" x="170" y="94" width="260" height="56" rx="4" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.4"/>
+    <text class="xv-rev d2" x="300" y="116" text-anchor="middle" font-size="12" font-weight="700" fill="#181410">TDNN frame1–5</text>
+    <text class="xv-rev d2" x="300" y="134" text-anchor="middle" font-size="10" fill="#3a3128">逐帧处理 → 1500 维/帧</text>
+    <line class="xv-rev d2" x1="300" y1="150" x2="300" y2="168" stroke="#3a3128" stroke-width="1.5"/><polygon class="xv-rev d2" points="300,168 296,160 304,160" fill="#3a3128"/>
+
+    <!-- boundary band -->
+    <rect class="xv-rev d3" x="120" y="172" width="360" height="56" rx="4" fill="#4a6b3a"/>
+    <text class="xv-rev d3" x="300" y="194" text-anchor="middle" font-size="13" font-weight="700" fill="#f7f1de">═ STATS POOLING ═</text>
+    <text class="xv-rev d3" x="300" y="213" text-anchor="middle" font-size="10.5" fill="#d8e6ce">μ+σ · T 帧 → 3000 维（定长）</text>
+    <line class="xv-rev d4" x1="300" y1="228" x2="300" y2="246" stroke="#3a3128" stroke-width="1.5"/><polygon class="xv-rev d4" points="300,246 296,238 304,238" fill="#3a3128"/>
+
+    <rect class="xv-rev d4" x="170" y="248" width="260" height="50" rx="4" fill="#f0e0a8" stroke="#b8841c" stroke-width="1.6"/>
+    <text class="xv-rev d4" x="300" y="270" text-anchor="middle" font-size="12" font-weight="700" fill="#181410">segment6 · 3000 → 512</text>
+    <text class="xv-rev d4" x="300" y="287" text-anchor="middle" font-size="10" fill="#7a6f5d">仿射输出（激活前）</text>
+    <!-- x-vector callout right -->
+    <line class="xv-rev d4" x1="430" y1="273" x2="470" y2="273" stroke="#b8841c" stroke-width="1.4"/>
+    <text class="xv-rev d4" x="476" y="269" text-anchor="start" font-size="12" font-weight="700" fill="#b8841c">★ x-vector</text>
+    <text class="xv-rev d4" x="476" y="285" text-anchor="start" font-size="10" fill="#7a6f5d">512 维,从这抠</text>
+    <line class="xv-rev d5" x1="300" y1="298" x2="300" y2="316" stroke="#3a3128" stroke-width="1.5"/><polygon class="xv-rev d5" points="300,316 296,308 304,308" fill="#3a3128"/>
+
+    <rect class="xv-rev d5" x="170" y="318" width="260" height="44" rx="4" fill="#faf4e1" stroke="#bfb398"/>
+    <text class="xv-rev d5" x="300" y="345" text-anchor="middle" font-size="12" font-weight="700" fill="#181410">segment7 · 512 → 512</text>
+    <line class="xv-rev d5" x1="300" y1="362" x2="300" y2="380" stroke="#3a3128" stroke-width="1.5"/><polygon class="xv-rev d5" points="300,380 296,372 304,372" fill="#3a3128"/>
+
+    <rect class="xv-rev d6" x="170" y="382" width="260" height="46" rx="4" fill="#faf4e1" stroke="#9b2c2c" stroke-width="1.4" stroke-dasharray="5 4"/>
+    <text class="xv-rev d6" x="300" y="400" text-anchor="middle" font-size="12" font-weight="700" fill="#9b2c2c">softmax · 512 → N 说话人</text>
+    <text class="xv-rev d6" x="300" y="417" text-anchor="middle" font-size="10" fill="#7a6f5d">训练时分类用</text>
+    <!-- discard callout -->
+    <line class="xv-rev d6" x1="430" y1="405" x2="470" y2="405" stroke="#9b2c2c" stroke-width="1.4"/>
+    <text class="xv-rev d6" x="476" y="401" text-anchor="start" font-size="11" font-weight="700" fill="#9b2c2c">推理时</text>
+    <text class="xv-rev d6" x="476" y="417" text-anchor="start" font-size="11" font-weight="700" fill="#9b2c2c">整个扔掉</text>
+
+    <text class="xv-rev d6" x="300" y="470" text-anchor="middle" font-size="11" fill="#7a6f5d">分类只是逼网络学会"区分人"的代理任务</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 05</span>数据增强当免费午餐 · 结果</h2>
+<p>i-vector 学不动"这是说话人差异，还是换了麦克风/有噪声"。x-vector 因为是监督训练，可以靠<strong>数据增强</strong>硬学出鲁棒性：往干净语音里掺 MUSAN（babble 人声、音乐、噪声）+ 模拟混响<a class="jr" href="#g-06">6</a>，把训练数据翻好几倍。同一段话"干净版"和"带噪版"都标成同一个人，网络被逼着学"带噪也认得出是他"。监督训练能充分吃下这些增强数据，这是 i-vector 那套统计模型做不到的。</p>
+<p>效果直接：在 NIST SRE16 的 Cantonese 集上，<strong>EER<a class="jr" href="#g-09">9</a> 从 i-vector 的 8.35% 砍到 4.89%</strong>——错误率近乎砍半。</p>
+
+<figure id="fig-eer">
+  <figcaption><span>Fig 04 · SRE16 Cantonese · EER 越低越好</span><span class="fnum">i-vector vs x-vector</span></figcaption>
+  <svg class="xv-svg" viewBox="0 0 600 320" role="img" aria-label="i-vector 与 x-vector 错误率对比">
+    <!-- y axis -->
+    <line class="xv-rev d1" x1="90" y1="40" x2="90" y2="262" stroke="#bfb398" stroke-width="1"/>
+    <line class="xv-rev d1" x1="90" y1="262" x2="520" y2="262" stroke="#bfb398" stroke-width="1"/>
+    <text class="xv-rev d1" x="80" y="266" text-anchor="end" font-size="10" fill="#7a6f5d">0</text>
+    <line class="xv-rev d1" x1="86" y1="162" x2="90" y2="162" stroke="#bfb398"/>
+    <text class="xv-rev d1" x="80" y="166" text-anchor="end" font-size="10" fill="#7a6f5d">5%</text>
+    <line class="xv-rev d1" x1="86" y1="62" x2="90" y2="62" stroke="#bfb398"/>
+    <text class="xv-rev d1" x="80" y="66" text-anchor="end" font-size="10" fill="#7a6f5d">10%</text>
+    <!-- bars: 20px per 1%, baseline y=262 -->
+    <rect class="xv-rev d2" x="160" y="95" width="100" height="167" fill="#9b2c2c" opacity="0.88"/>
+    <text class="xv-rev d2" x="210" y="86" text-anchor="middle" font-size="16" font-weight="700" fill="#9b2c2c">8.35%</text>
+    <text class="xv-rev d2" x="210" y="282" text-anchor="middle" font-size="12" font-weight="700" fill="#3a3128">i-vector</text>
+    <text class="xv-rev d2" x="210" y="298" text-anchor="middle" font-size="10" fill="#7a6f5d">2011 · 统计</text>
+
+    <rect class="xv-rev d3" x="350" y="164" width="100" height="98" fill="#4a6b3a"/>
+    <text class="xv-rev d3" x="400" y="155" text-anchor="middle" font-size="16" font-weight="700" fill="#4a6b3a">4.89%</text>
+    <text class="xv-rev d3" x="400" y="282" text-anchor="middle" font-size="12" font-weight="700" fill="#3a3128">x-vector</text>
+    <text class="xv-rev d3" x="400" y="298" text-anchor="middle" font-size="10" fill="#7a6f5d">2018 · 神经网络</text>
+
+    <!-- delta annotation in clear space top-right -->
+    <rect class="xv-rev d4" x="478" y="96" width="104" height="62" rx="4" fill="#faf4e1" stroke="#bfb398"/>
+    <text class="xv-rev d4" x="530" y="122" text-anchor="middle" font-size="18" font-weight="700" fill="#4a6b3a">−41%</text>
+    <text class="xv-rev d4" x="530" y="142" text-anchor="middle" font-size="10" fill="#7a6f5d">错误率近乎砍半</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 06</span>训练当分类、用时当嵌入</h2>
+<p>最值得记的一点：<strong>训练目标和使用方式不是一回事</strong>。训练时让网络做分类——认出这段是 N 个人里的哪个；分类只是个"逼网络学会区分人"的代理任务。训完，<strong>把 softmax 分类头扔掉</strong>，从 segment6 抠出来的向量当通用声纹用。哪怕测试时遇到训练里从没见过的人，这个向量照样能区分。</p>
+<p>怎么拿两个向量判同异？后端打分<a class="jr" href="#g-07">7</a>：最简单是<strong>余弦相似度</strong>（量夹角）；x-vector 时代标配是 <strong>PLDA</strong>——再训个概率模型，把"说话人之间的差异"和"同一人不同录音的内部波动"分开建模，打个对数似然比分，比裸余弦更鲁棒。</p>
+
+<figure id="fig-twouse">
+  <figcaption><span>Fig 05 · 同一个网络,两种用法</span><span class="fnum">训练 vs 推理</span></figcaption>
+  <svg class="xv-svg" viewBox="0 0 720 340" role="img" aria-label="训练时做分类,推理时取嵌入比距离">
+    <line x1="360" y1="30" x2="360" y2="320" stroke="#bfb398" stroke-width="1" stroke-dasharray="4 4"/>
+    <!-- left: training -->
+    <text class="xv-rev d1" x="180" y="48" text-anchor="middle" font-size="13" font-weight="700" fill="#4a6b3a">训练时 · 当分类任务</text>
+    <rect class="xv-rev d1" x="120" y="66" width="120" height="34" rx="4" fill="#faf4e1" stroke="#bfb398"/>
+    <text class="xv-rev d1" x="180" y="88" text-anchor="middle" font-size="11" fill="#181410">一段语音</text>
+    <line class="xv-rev d1" x1="180" y1="100" x2="180" y2="116" stroke="#3a3128" stroke-width="1.4"/><polygon class="xv-rev d1" points="180,116 176,108 184,108" fill="#3a3128"/>
+    <rect class="xv-rev d2" x="120" y="118" width="120" height="34" rx="4" fill="#d8e6ce" stroke="#4a6b3a"/>
+    <text class="xv-rev d2" x="180" y="140" text-anchor="middle" font-size="11" fill="#181410">网络 → segment6</text>
+    <line class="xv-rev d2" x1="180" y1="152" x2="180" y2="168" stroke="#3a3128" stroke-width="1.4"/><polygon class="xv-rev d2" points="180,168 176,160 184,160" fill="#3a3128"/>
+    <rect class="xv-rev d2" x="120" y="170" width="120" height="34" rx="4" fill="#faf4e1" stroke="#9b2c2c" stroke-dasharray="5 4"/>
+    <text class="xv-rev d2" x="180" y="192" text-anchor="middle" font-size="11" font-weight="700" fill="#9b2c2c">softmax · N 人</text>
+    <line class="xv-rev d2" x1="180" y1="204" x2="180" y2="220" stroke="#3a3128" stroke-width="1.4"/><polygon class="xv-rev d2" points="180,220 176,212 184,212" fill="#3a3128"/>
+    <text class="xv-rev d2" x="180" y="240" text-anchor="middle" font-size="12" font-weight="700" fill="#4a6b3a">认出是第几个人 ✓</text>
+
+    <!-- right: inference -->
+    <text class="xv-rev d3" x="540" y="48" text-anchor="middle" font-size="13" font-weight="700" fill="#4a6b3a">推理时 · 当声纹嵌入</text>
+    <rect class="xv-rev d3" x="404" y="70" width="96" height="30" rx="4" fill="#faf4e1" stroke="#bfb398"/>
+    <text class="xv-rev d3" x="452" y="90" text-anchor="middle" font-size="11" fill="#181410">语音 A</text>
+    <rect class="xv-rev d3" x="404" y="110" width="96" height="30" rx="4" fill="#faf4e1" stroke="#bfb398"/>
+    <text class="xv-rev d3" x="452" y="130" text-anchor="middle" font-size="11" fill="#181410">语音 B</text>
+    <line class="xv-rev d3" x1="500" y1="85" x2="540" y2="100" stroke="#3a3128" stroke-width="1.4"/>
+    <line class="xv-rev d3" x1="500" y1="125" x2="540" y2="110" stroke="#3a3128" stroke-width="1.4"/>
+    <rect class="xv-rev d4" x="540" y="86" width="118" height="38" rx="4" fill="#d8e6ce" stroke="#4a6b3a"/>
+    <text class="xv-rev d4" x="599" y="103" text-anchor="middle" font-size="10.5" fill="#181410">网络（segment6）</text>
+    <text class="xv-rev d4" x="599" y="118" text-anchor="middle" font-size="9.5" fill="#9b2c2c">softmax 已扔</text>
+    <line class="xv-rev d4" x1="599" y1="124" x2="599" y2="140" stroke="#3a3128" stroke-width="1.4"/><polygon class="xv-rev d4" points="599,140 595,132 603,132" fill="#3a3128"/>
+    <rect class="xv-rev d5" x="512" y="142" width="80" height="28" rx="4" fill="#f0e0a8" stroke="#b8841c"/>
+    <text class="xv-rev d5" x="552" y="161" text-anchor="middle" font-size="11" font-weight="700" fill="#181410">向量 a</text>
+    <rect class="xv-rev d5" x="606" y="142" width="80" height="28" rx="4" fill="#f0e0a8" stroke="#b8841c"/>
+    <text class="xv-rev d5" x="646" y="161" text-anchor="middle" font-size="11" font-weight="700" fill="#181410">向量 b</text>
+    <line class="xv-rev d5" x1="552" y1="170" x2="588" y2="196" stroke="#3a3128" stroke-width="1.4"/>
+    <line class="xv-rev d5" x1="646" y1="170" x2="610" y2="196" stroke="#3a3128" stroke-width="1.4"/>
+    <rect class="xv-rev d6" x="529" y="198" width="140" height="34" rx="4" fill="#4a6b3a"/>
+    <text class="xv-rev d6" x="599" y="220" text-anchor="middle" font-size="11" font-weight="700" fill="#f7f1de">PLDA / 余弦打分</text>
+    <line class="xv-rev d6" x1="599" y1="232" x2="599" y2="248" stroke="#3a3128" stroke-width="1.4"/><polygon class="xv-rev d6" points="599,248 595,240 603,240" fill="#3a3128"/>
+    <text class="xv-rev d6" x="599" y="268" text-anchor="middle" font-size="12" font-weight="700" fill="#4a6b3a">同一个人? ✓ / ✗</text>
+  </svg>
+</figure>
+
+<div class="note">
+  <span class="l">放进 wiki 这条线</span>
+  <p>x-vector 跟 <a href="bert.html">BERT</a> 是同一个套路的两个领域版本：<strong>训一个代理任务（分类 / MLM）→ 拿中间表示当通用嵌入</strong>。它的核心机制 <a href="../concepts/statistics-pooling.html">statistics pooling</a> 是"变长→定长"最朴素的解，<a href="../concepts/time-delay-neural-network.html">TDNN</a> 则是 dilated conv1d 的前身。现代接班人 ECAPA-TDNN<a class="jr" href="#g-10">10</a> 往里加了残差（<a href="resnet.html">ResNet</a> 那套）+ 注意力，但骨架还是"帧级 TDNN → 沿时间 pool → 段级嵌入"这三段。一句话：<strong>认人不靠对齐内容,靠把整段语音压成一个甩掉了长度和内容、只剩"谁"的定长向量。</strong></p>
+</div>
+
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term"><a href="../concepts/speaker-embedding.html">Speaker Embedding · 声纹嵌入</a></span> · 把一段任意长语音压成定长向量，代表"是谁在说"。同一人不同录音向量靠得近，不同人离得远。判同异 = 量两向量距离。</li>
+    <li id="g-02"><span class="term"><a href="../concepts/statistics-pooling.html">Statistics Pooling · 统计池化</a></span> · 沿时间轴对逐帧序列求均值 μ + 标准差 σ，拼成定长向量（x-vector: 1500·T → 3000）。"变长→定长"的核心一步，跟帧数无关。</li>
+    <li id="g-03"><span class="term"><a href="../concepts/time-delay-neural-network.html">TDNN · 时延网络</a></span> · 逐帧处理、每层膨胀（跳着取上下文）的网络，本质是 dilated conv1d。x-vector 用 5 个帧级层。</li>
+    <li id="g-04"><span class="term"><a href="../concepts/receptive-field.html">感受野 · Receptive Field</a></span> · 一个输出帧间接"看到"的原始帧数。x-vector 到 frame3 已聚合 15 帧（≈150ms）。</li>
+    <li id="g-05"><span class="term">segment6</span> · 池化后的第一段全连接层，3000→512。x-vector 就是它的仿射输出（激活前），不是最后一层。</li>
+    <li id="g-06"><span class="term">数据增强</span> · 往干净语音掺 MUSAN（babble/音乐/噪声）+ 模拟混响，把训练数据翻倍，逼网络学跨信道鲁棒性。监督训练才吃得下，i-vector 学不动。</li>
+    <li id="g-07"><span class="term">PLDA 后端</span> · 拿到两个嵌入后判同异的概率模型，把"说话人间差异"和"同一人内部波动"分开建模，打对数似然比分。比裸余弦更鲁棒。</li>
+    <li id="g-08"><span class="term">i-vector</span> · 上一代（2011）纯统计声纹：GMM-UBM + 因子分析。十年主力，但吃不动大数据，x-vector 的对照基线。</li>
+    <li id="g-09"><span class="term">EER · 等错误率</span> · 说话人验证常用指标，误拒率 = 误纳率 时的取值，越低越好。SRE16 Cantonese: 8.35% → 4.89%。</li>
+    <li id="g-10"><span class="term">ECAPA-TDNN</span> · 2020 接班人：x-vector + SE 注意力 + 多尺度聚合 + attentive stats pooling，至今强 baseline。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>SOURCE · ICASSP 2018 · X-Vectors: Robust DNN Embeddings for Speaker Recognition (Snyder et al., JHU)</span>
+  <span>INGESTED · 2026-06-22</span>
+</div>
+
+</div>
+<script>
+{
+  const figs = ['fig-pool','fig-tdnn','fig-arch','fig-eer','fig-twouse'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.15 });
+    obs.observe(el);
+  });
+}
+</script>
+</body>
+</html>

@@ -796,3 +796,5 @@ skill 更新:
 ## [2026-06-18] query | flash-attention (IO-aware 精确注意力)
 
 ## [2026-06-18] ingest | rae-dit + representation-autoencoder (arXiv 2601.16208)
+
+## [2026-06-22] ingest | x-vector + speaker-embedding + statistics-pooling + time-delay-neural-network (Kaldi 声纹, Snyder ICASSP 2018)
