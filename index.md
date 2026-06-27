@@ -44,6 +44,7 @@
 - [净利润断层 · 业绩惊喜 + 跳空缺口](wiki/papers/net-profit-gap.md) — 交易/事件驱动: 净利润惊喜 + 断层缺口, 本质捕捉 PEAD(Ball&Brown 1968); 有学术底子但会衰减
 - [资金面 · 量能与共识](wiki/papers/capital-flow.md) — 交易/盘口经验派: 量能(量价关系) + 共识(游资分歧转一致/筹码集中/抱团); 经验派语言, 易事后解释
 - [爱在冰川 · 低吸待涨的道法术](wiki/papers/aizai-bingchuan.md) — 交易/短线经验派: 道(低吸待涨极简循环)→法(横盘龙头低吸/大智大勇/潜伏)→术(揉搓线/做小T); 从公开复盘合集提炼, 非荐股
+- [DiT · 把扩散的 U-Net 换成 Transformer](wiki/papers/dit.md) — 扩散去噪骨架换成ViT(VAE latent切patch成token); adaLN-Zero注入t/c(从条件算γ/β拧归一化+零初始化门控让块起步即恒等,FID 19.47胜cross-attn/in-context); 关键:架构⊥目标(同一DiT预测ε=DDPM/预测速度=flow matching,架构不改); Gflops↑→FID↓, XL/2 FID 2.27; SD3/FLUX/视频生成的祖宗
 - [Stable Diffusion 3.5 · 整流流 + MMDiT](wiki/papers/stable-diffusion-3-5.md) — 开源文生图(基于SD3论文): 把"文字当调料"换成"文字图像坐同一张桌子"(MMDiT双权重单序列) + 整流流直线少步采样 + 三文本编码器(CLIP-L/G+T5-XXL) + QK-Norm稳训; Large 8B/Medium 2.5B(MMDiT-X消费级能跑)
 - [FLUX.1 · 先双流后单流 + 两道蒸馏](wiki/papers/flux-1.md) — SD原作者新公司(Black Forest Labs)的12B整流流T2I: 混合架构(前段双流MMDiT对齐+后段单流共享省) + 引导蒸馏(CFG两遍压一遍)做dev + 步数蒸馏4步做schnell(两道正交); pro/dev/schnell三档
 - [Ideogram 4.0 · 9.3B 单流 DiT](wiki/papers/ideogram-4.md) — 文生图开源权重: 单流 DiT + Qwen3-VL 文本编码器 + 结构化 JSON caption(bbox/调色板); 9.3B 文本渲染碾压 80B
@@ -175,7 +176,9 @@
 - [ODE vs SDE](wiki/concepts/ode-vs-sde.md) — flow（确定性）vs diffusion（随机性）
 - [Markov Chain](wiki/concepts/markov-chain.md) — 只看现在、不看历史；高斯版=每步一团钟形雾，扩散去噪就是它
 - [闭式 KL](wiki/concepts/closed-form-kl.md) — 公式直算 vs 撒豆子估；同协方差高斯 KL 塌成均值差²(MSE)
-- [Diffusion Transformer](wiki/concepts/diffusion-transformer.md) — 去噪网络从 U-Net 换成 Transformer；单流 vs 双流 MMDiT
+- [Diffusion Transformer](wiki/concepts/diffusion-transformer.md) — 去噪网络从 U-Net 换成 Transformer；单流 vs 双流 MMDiT（原始论文精装见 papers/dit）
+- [Adaptive LayerNorm · adaLN-Zero](wiki/concepts/adaptive-layernorm.md) — 不用固定γ/β,从(时间步t+条件c)算出来拧每层归一化; 零初始化门控α让块起步即恒等; DiT注入t/c的标准做法,比cross-attn/in-context好且省
+- [SwiGLU](wiki/concepts/swiglu.md) — 带门的FFN: 一条算内容、一条过Swish当门,逐元素相乘,网络自己挑哪些特征通过; LLaMA/SD3/FLUX都用; 注意原版DiT用GELU不是它
 - [MMDiT](wiki/concepts/mmdit.md) — 双流多模态扩散 Transformer: 文字图像同序列共享注意力、各用各的权重; SD3/FLUX/Qwen-Image 主干
 - [像素扩散解码器](wiki/concepts/pixel-diffusion-decoder.md) — 把 latent→像素的确定性 VAE 解码器换成条件扩散; "复印机→插画师", 边解码边补细节+超分; latent 与全像素扩散两路线的缝合
 - [表征自编码器 RAE](wiki/concepts/representation-autoencoder.md) — 冻结SigLIP-2/DINOv2当编码器(高维语义latent)+只训解码器; 扩散在"看懂图"的概念坐标里跑, 比VAE快/抗过拟合; PiD换解码端、RAE换编码端

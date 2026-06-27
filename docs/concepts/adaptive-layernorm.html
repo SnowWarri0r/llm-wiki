@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Adaptive LayerNorm · AdaLN / AdaLN-Zero · 自适应层归一化 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · adaptive-layernorm</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Adaptive LayerNorm · AdaLN / AdaLN-Zero · 自适应层归一化</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>不用固定的归一化缩放/平移，而是用"条件"(时间步 t + 类别/文字 c)临时算出来——让条件去实时拧每一层的旋钮。</p>
+<h2>直觉</h2>
+<p>普通 <a href="../concepts/layernorm.html">layernorm</a>：归一化之后乘一个学出来的缩放 γ、加一个平移 β，但 <strong>γ、β 训练完就固定</strong>，每次前向都一样。</p>
+<p>可 <a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> 这类网络有个特殊需求：它必须知道<strong>现在去噪到第几步(t)、要生成什么(c)</strong>。同一个网络在 t=0.1(刚从噪声起步)和 t=0.9(快成清晰图)该干的事完全不同。怎么把 t、c 喂进去？</p>
+<p><strong>AdaLN 的答案：让 γ、β 不再固定，而是用 (t+c) 现算。</strong> 一个小 MLP 吃进条件，吐出这一层该用的 γ、β。于是"当前时间和条件"实时拧每层归一化的增益和偏置——网络因此知道自己在轨迹哪、要画啥。比 <a href="../concepts/cross-attention.html">cross-attention</a> 注入便宜(只动归一化的几个参数)，<a href="../papers/dit.html">dit</a> 实测效果还最好。</p>
+<p><strong>AdaLN-Zero(DiT 实际用的)再加一手</strong>：MLP 除了 γ、β，还为每个残差分支多算一个<strong>门控 α</strong>(<code>x = x + α·子层(...)</code>)，并把 <strong>α 初始化成 0</strong>。于是开训时 α=0 → 残差分支不起作用 → 整个网络是<strong>恒等函数</strong>。这跟 <a href="../papers/resnet.html">resnet</a> "白送 identity 起点"同一招，让深网络训得稳。</p>
+<h2>怎么做的</h2>
+<pre><code>条件 = embed(t) + embed(c)
+  ↓ 小 MLP
+每个 DiT 块拿到 6 个向量: (γ1,β1,α1) 给注意力子层, (γ2,β2,α2) 给 FFN 子层
+
+注意力子层:  h = LayerNorm(x);  h = γ1 ⊙ h + β1;  x = x + α1 ⊙ Attn(h)
+FFN 子层:    h = LayerNorm(x);  h = γ2 ⊙ h + β2;  x = x + α2 ⊙ FFN(h)
+</code></pre>
+<p>α 零初始化 → 开训 x=x；训练中 α 慢慢长大，块才开始"出力"。</p>
+<h2>数字例子</h2>
+<p>某一层归一化后得到 <code>x̂ = [1, -1]</code>(均值 0、标准差 1)。</p>
+<p><strong>缩放/平移</strong>：固定 LN 用 γ=1, β=0 → 输出还是 <code>[1, -1]</code>。AdaLN 在某个 (t,c) 下 MLP 算出 γ=2, β=0.5：</p>
+<pre><code>out = γ ⊙ x̂ + β = 2·[1,-1] + 0.5 = [2.5, -1.5]
+</code></pre>
+<p>换一个时间步 t'，MLP 可能算出 γ=0.5, β=0 → <code>[0.5, -0.5]</code>。✓ 同一个 x̂，<strong>不同 t 给出不同调制</strong>——这就是"条件拧旋钮"。</p>
+<p><strong>零门控的恒等起点</strong>：设注意力子层算出 <code>Attn(h) = [3, 3]</code>。</p>
+<pre><code>开训 α1=0:   x = x + 0·[3,3] = x        ← 块=恒等,信号原样穿过 ✓
+训练后 α1=0.2: x = x + 0.2·[3,3] = x+[0.6,0.6]  ← 块开始出力
+</code></pre>
+<p>✓ 自检：α=0 时整块对输入零改动，28 层 DiT 叠起来开训即恒等，梯度好走；这就是 AdaLN-<strong>Zero</strong> 比 vanilla AdaLN(19.47 vs 25.21 FID)强的原因。</p>
+<h2>跟其它条件注入的对比</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>怎么注入条件</th>
+<th>代价</th>
+<th>DiT 里 FID(@400K)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>in-context</td>
+<td>条件当额外 token 拼进序列</td>
+<td>序列变长</td>
+<td>35.24</td>
+</tr>
+<tr>
+<td>cross-attention</td>
+<td>加一层交叉注意力查条件</td>
+<td>多一层注意力</td>
+<td>26.14</td>
+</tr>
+<tr>
+<td>adaLN</td>
+<td>条件算 γ/β 拧归一化</td>
+<td>只动 norm 参数</td>
+<td>25.21</td>
+</tr>
+<tr>
+<td><strong>adaLN-Zero</strong></td>
+<td>adaLN + 零初始化门控 α</td>
+<td>同上</td>
+<td><strong>19.47</strong> ✓</td>
+</tr>
+</tbody>
+</table>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/dit.html">dit</a> · 提出 adaLN-Zero 的 paper</li>
+<li><a href="../concepts/layernorm.html">layernorm</a> · 普通版：γ/β 固定</li>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · adaLN 是它注入 t/c 的标准做法</li>
+<li><a href="../papers/resnet.html">resnet</a> · "零初始化 → 恒等起点"同一个母题</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/dit.html"><span class="cat">paper</span>DiT · 把扩散模型的 U-Net 换成 Transformer</a></li><li><a href="../concepts/diffusion-transformer.html"><span class="cat">concept</span>Diffusion Transformer · DiT</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/adaptive-layernorm.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
