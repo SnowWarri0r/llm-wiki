@@ -45,6 +45,7 @@
 - [资金面 · 量能与共识](wiki/papers/capital-flow.md) — 交易/盘口经验派: 量能(量价关系) + 共识(游资分歧转一致/筹码集中/抱团); 经验派语言, 易事后解释
 - [爱在冰川 · 低吸待涨的道法术](wiki/papers/aizai-bingchuan.md) — 交易/短线经验派: 道(低吸待涨极简循环)→法(横盘龙头低吸/大智大勇/潜伏)→术(揉搓线/做小T); 从公开复盘合集提炼, 非荐股
 - [Qwen-Image-Bench · 评测从生成到创造](wiki/papers/qwen-image-bench.md) — Qwen文生图评测基准: 老基准查语义对齐已饱和→加两根新支柱(真实世界保真+创意生成); 5支柱→23子能力→56条可判定细则(每条0/1/2/N-A); Q-Judger判官(Qwen3.6-27B,80美院标注员+13万人标训, 跟人类专家ρ=0.92); 自家基准榜首是GPT Image 2(64.69)自家模型中游=可信
+- [Krea 2 · 不追一种"标准好看",撑开审美空间](wiki/papers/krea-2.md) — 文生图/后训练逆向品味: 反对按美学分过滤数据(等于把打分器偏见焊死/剪掉分布尾巴)+预训练0张AI合成图(合成图"更好学"给质量封顶); 六段流水线(预训256→512→1024→中训~500万维基概念→SFT→偏好优化→多奖励RL→TDM蒸馏); 自创STPO治DPO策略发散(赢输概率一起压低凑差距→辅助损失顶住赢家); 多奖励GRPO(美学/提示遵循/文字/瑕疵)+prompt级rubric奖励+RL不开CFG; 发K2 Raw(基座)/K2 Turbo(蒸馏); AA榜前十独立实验室第二
 - [DiT · 把扩散的 U-Net 换成 Transformer](wiki/papers/dit.md) — 扩散去噪骨架换成ViT(VAE latent切patch成token); adaLN-Zero注入t/c(从条件算γ/β拧归一化+零初始化门控让块起步即恒等,FID 19.47胜cross-attn/in-context); 关键:架构⊥目标(同一DiT预测ε=DDPM/预测速度=flow matching,架构不改); Gflops↑→FID↓, XL/2 FID 2.27; SD3/FLUX/视频生成的祖宗
 - [Stable Diffusion 3.5 · 整流流 + MMDiT](wiki/papers/stable-diffusion-3-5.md) — 开源文生图(基于SD3论文): 把"文字当调料"换成"文字图像坐同一张桌子"(MMDiT双权重单序列) + 整流流直线少步采样 + 三文本编码器(CLIP-L/G+T5-XXL) + QK-Norm稳训; Large 8B/Medium 2.5B(MMDiT-X消费级能跑)
 - [FLUX.1 · 先双流后单流 + 两道蒸馏](wiki/papers/flux-1.md) — SD原作者新公司(Black Forest Labs)的12B整流流T2I: 混合架构(前段双流MMDiT对齐+后段单流共享省) + 引导蒸馏(CFG两遍压一遍)做dev + 步数蒸馏4步做schnell(两道正交); pro/dev/schnell三档
@@ -193,6 +194,8 @@
 - [拆细则打分 · Rubric-Based Eval](wiki/concepts/rubric-based-evaluation.md) — 别给"好不好"打一个总分,拆成一堆可逐项判定的小问题各打0/1/2再聚合; 可复现+能定位差在哪条; Qwen-Image-Bench拆到56条
 - [LLM-as-Judge · 拿模型当判官](wiki/concepts/llm-as-judge.md) — 用模型自动给输出打分替人评,前提是用人标把判官校准到人类口味(看Spearman ρ); 跟RLHF的reward model同母题
 - [DMD 蒸馏 / NFE](wiki/concepts/dmd-distillation.md) — 把40步老师蒸成4步学生: 不抄轨迹只让出图分布匹配(teacher_score−fake_score=吸老师斥自己=Drifting同构); NFE=跑几次网络
+- [TDM · 轨迹分布匹配](wiki/concepts/trajectory-distribution-matching.md) — DMD只匹配终点分布→TDM沿去噪轨迹多个路标都匹配; 少步更稳/步数灵活/超参少; Krea 2从DMD/DMD2/piFlow/APT里选它蒸出K2 Turbo
+- [生成模型数据策展](wiki/concepts/generative-data-curation.md) — 别按美学分过滤(等于把打分器偏见焊死+剪掉分布尾巴→审美收敛), 关口换成"caption准不准"; 预训练0张AI合成图(合成图"更好学"会把模型往简单分布拽给质量封顶); Krea 2灵魂
 - [渐进式分辨率训练](wiki/concepts/progressive-resolution-training.md) — 256P→512P→2K: 先小图便宜学构图再升大图抠细节; 类比缩略图→放大
 - [Unified Transformer](wiki/concepts/unified-transformer.md) — 像素+文本+条件一条流 + 混合注意力(文本causal/生成full)；LLM 和 DiT 缝成一个
 - [Perceptual Loss](wiki/concepts/perceptual-loss.md) — 不逐像素比图，在预训练网络特征空间里比；LPIPS(VGG·纹理) + DINO(自监督ViT·语义)
@@ -251,6 +254,7 @@
 - [Entropy Regularization](wiki/concepts/entropy-regularization.md) — 完整 loss 第三项, 花钱买探索防过早笃定撞死
 - [RLHF](wiki/concepts/rlhf.md) — SFT → reward model → PPO 三步, 把人类排序偏好变成 LLM 训练信号
 - [GSPO](wiki/concepts/gspo.md) — GRPO 后继: 重要性比率从 token 级提到序列级(每 token 只采一次→token 级是高方差噪声易崩), 稳住 MoE RL; Qwen3 用
+- [DPO · 直接偏好优化](wiki/concepts/direct-preference-optimization.md) — 跳过奖励模型+PPO, 拿赢/输成对样本当sigmoid二分类直接对齐(隐式奖励=β·log(πθ/π_ref)); 坑: 只看"赢减输"差→模型会把赢输一起压低凑差距(策略发散); Krea STPO加辅助损失顶住赢家
 
 ### Agent 记忆
 - [Deep Research](wiki/concepts/deep-research.md) — 派会上网的研究员: 拆问题→规划→多轮搜读→核对→带引用报告; 4 根轴(脑子/工具/规划/可信)拆任何深度研究系统

@@ -1,7 +1,7 @@
 ---
 name: swiglu
 type: concept
-sources: [dit]
+sources: [dit, krea-2]
 updated: 2026-06-24
 ---
 

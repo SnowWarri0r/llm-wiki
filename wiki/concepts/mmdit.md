@@ -1,7 +1,7 @@
 ---
 name: mmdit
 type: concept
-sources: [stable-diffusion-3-5, qwen-image-2, mrt, flux-1]
+sources: [stable-diffusion-3-5, qwen-image-2, mrt, flux-1, krea-2]
 updated: 2026-06-17
 ---
 

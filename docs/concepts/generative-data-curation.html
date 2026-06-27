@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>生成模型的数据策展 · 别在数据端先把多样性筛没了 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · generative-data-curation</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>生成模型的数据策展 · 别在数据端先把多样性筛没了</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>训文生图模型时，用"美学打分器"过滤数据会把模型口味偷偷锁死；与其追"每张都漂亮"，不如守住"caption 准确"，并且<strong>一张 AI 合成图都不掺</strong>。</p>
+<h2>直觉 · 过滤器即偏见</h2>
+<p>直觉上，训练集越"漂亮"模型越漂亮，所以业界常拿<strong>美学打分模型</strong>（aesthetic score）和<strong>画质评估模型</strong>（IQA）去筛数据，低分的扔掉。</p>
+<p><a href="../papers/krea-2.html">krea-2</a> 的反对意见：这些打分器本身有口味。拿它当门卫，等于把它的偏见<strong>焊进</strong>你的数据分布——所有"不讨喜但真实"的图（朴素的纪实照、奇怪的构图、低饱和的旧照片）被成批删掉。模型从没见过这部分分布，<strong>以后也就永远画不出来</strong>。你以为在提质，其实在<strong>剪掉分布的尾巴</strong> → 审美收敛到打分器喜欢的那一小撮。</p>
+<p>它的替代信条很简单：<strong>"只要 caption 准确描述了这张图，哪怕图本身不讨喜，也对训练有用。"</strong> 把关口从"好不好看"换成"配文对不对"。</p>
+<h2>怎么做的 · 只删四类 + 0 合成图</h2>
+<p>Krea 的过滤<strong>不</strong>按美学分，只剔除这几类：</p>
+<pre><code>
+1. 重复 / 过度重复的概念（去重，别让常见东西淹没长尾）
+2. VLM 看不全要点的图（说明信息没法被 caption 准确捕捉）
+3. 带有害偏见和明显伪影的
+4. 视觉过于复杂、不适合低分辨率阶段建模的
+5. 【硬规则】AI 生成的图 —— 一张都不要
+</code></pre>
+<p>配文侧：OCR 抽字 + LLM 补元数据 → 生成<strong>不同长度/格式</strong>的 caption，训练时以长 caption 为主，但也喂短/中 prompt，让模型推理时短句也能用。</p>
+<h2>为什么 0 AI 数据 · 合成图会给质量"封顶"</h2>
+<p>很多管线拿模型自己生成的图回填训练集。Krea 说<strong>哪怕掺一点点都不行</strong>，逻辑是：合成图<strong>更好学</strong>（它本来就来自一个简单些的分布），模型会优先把 loss 降在这些"软柿子"上，慢慢往合成分布塌——相当于给模型质量<strong>设了个上限</strong>。</p>
+<p>一个玩具账本看"软柿子"效应。两类样本，模型在它们上的 loss：</p>
+<pre><code>            真实图(难, 信息丰富)   合成图(易, 已被某模型简化过)
+初始 loss        2.0                    1.2
+练一会儿         1.6                    0.4   ← 合成图掉得快得多
+</code></pre>
+<p>梯度下降天然偏爱"掉得快"的方向。混入合成图后，模型把劲都使在合成图上（回报立竿见影），真实图那条学得敷衍 → 输出越来越像"AI 味"的合成分布。<strong>用模型的输出喂模型，是在给后代近亲繁殖</strong>：每一代都比上一代更"好学"、更窄。所以 Krea 把合成图从预训练集里彻底清零。</p>
+<blockquote>
+<p>自检：这不是"合成图质量差"那么简单——而是"合成图太好学"，会把优化的注意力从真实分布的难样本上吸走，等于自设天花板。</p>
+</blockquote>
+<h2>跟其它策展层的关系</h2>
+<p>预训练（自下而上、广度优先）之后，Krea 还有<strong>中训</strong>做自上而下的按域策展：层级 k-means 聚类 + VLM 复核、SigLIP 语义去重、用 PageRank 按"实体覆盖"补齐约 500 万个维基概念——保证常识实体都见过。这一层管"覆盖全不全"，跟预训练那层"别筛掉尾巴"互补。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/krea-2.html">krea-2</a> · 这套数据哲学是它的灵魂</li>
+<li><a href="../papers/qwen-image-bench.html">qwen-image-bench</a> · 一体两面：它在评测端量"创造性/多样性"，本页在数据端保住多样性的来源</li>
+<li><a href="../concepts/structured-caption-conditioning.html">structured-caption-conditioning</a> · caption 准确 = 训练信号准确，配文是抓手</li>
+<li><a href="../concepts/image-quality-metrics.html">image-quality-metrics</a> · 被本页质疑的 aesthetic-score / IQA 那类打分器</li>
+<li><a href="../concepts/scaling-laws.html">scaling-laws</a> · 数据质量与多样性是 scaling 之外的另一根杠杆</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/krea-2.html"><span class="cat">paper</span>Krea 2 · 不追一种&quot;标准好看&quot;,撑开整个审美空间</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/generative-data-curation.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
