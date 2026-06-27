@@ -821,3 +821,5 @@ skill 更新:
 ## [2026-06-24] topic | joint-attention-lineage (cross-attn→MMDiT/Unified/MoT 2×2 网格: 权重×注意力两旋钮)
 
 ## [2026-06-24] ingest | dit (bespoke, Peebles&Xie) + adaptive-layernorm + swiglu (DiT 升格论文页, 讲透 adaLN-Zero/架构⊥目标/scaling)
+
+## [2026-06-24] update | adaptive-layernorm 重写 怎么做的+数字例子(先讲LN三步, 一条 x=[1,5] 端到端: LN→γ/β调制(两个t对比)→α门控)
