@@ -22,41 +22,46 @@ SwiGLU 加了个**门**：开两条并行投影，一条当"内容"，另一条�
 - **Swish** `z·σ(z)`：像**磨圆的 ReLU、负区还往下凹个小坑**。右边 z 大时 σ→1 故 ≈ z（跟 ReLU 重合）；左边 z 大负时趋 0；最低点约 z≈−1.3、值≈−0.28，再回到 0。比 ReLU 多了"平滑 + 负区留一点信息"。
 
 <figure>
-<svg viewBox="0 0 640 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:'JetBrains Mono',monospace;">
-  <!-- axes -->
-  <line class="reveal d1" x1="80" y1="40" x2="80" y2="360" stroke="#bfb398" stroke-width="1"/>
-  <line class="reveal d1" x1="80" y1="280" x2="608" y2="280" stroke="#bfb398" stroke-width="1.2"/>
-  <!-- y ticks -->
+<svg viewBox="0 0 660 350" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:'JetBrains Mono',monospace;">
+  <!-- axes cross at origin (z=0, v=0) = (330,285); x=330+60z, y=285-85v -->
+  <line class="reveal d1" x1="330" y1="148" x2="330" y2="335" stroke="#bfb398" stroke-width="1.2"/>
+  <polygon class="reveal d1" points="330,143 326,152 334,152" fill="#bfb398"/>
+  <line class="reveal d1" x1="84" y1="285" x2="612" y2="285" stroke="#bfb398" stroke-width="1.2"/>
+  <polygon class="reveal d1" points="617,285 609,281 609,289" fill="#bfb398"/>
+  <text class="reveal d1" x="622" y="289" text-anchor="start" font-size="10" fill="#7a6f5d">z</text>
+  <!-- y ticks (value axis, at z=0) -->
   <g class="reveal d1" font-size="9" fill="#7a6f5d" text-anchor="end">
-    <text x="74" y="204">1</text><text x="74" y="244">0.5</text><text x="74" y="284">0</text><text x="74" y="364">-1</text>
+    <text x="322" y="204">1</text><text x="322" y="246">0.5</text><text x="322" y="300">0</text>
   </g>
-  <line class="reveal d1" x1="76" y1="200" x2="80" y2="200" stroke="#bfb398"/><line class="reveal d1" x1="76" y1="240" x2="80" y2="240" stroke="#bfb398"/>
-  <!-- x ticks -->
+  <line class="reveal d1" x1="326" y1="200" x2="334" y2="200" stroke="#bfb398"/><line class="reveal d1" x1="326" y1="242.5" x2="334" y2="242.5" stroke="#bfb398"/>
+  <!-- x ticks (negative left, positive right) -->
   <g class="reveal d1" font-size="9" fill="#7a6f5d" text-anchor="middle">
-    <text x="80" y="375">-4</text><text x="210" y="375">-2</text><text x="340" y="375">0</text><text x="470" y="375">2</text><text x="600" y="375">4</text>
+    <text x="150" y="303">-3</text><text x="210" y="303">-2</text><text x="450" y="303">2</text><text x="570" y="303">4</text>
   </g>
-  <text class="reveal d1" x="616" y="284" text-anchor="start" font-size="10" fill="#7a6f5d">z</text>
+  <g class="reveal d1" stroke="#bfb398"><line x1="150" y1="281" x2="150" y2="289"/><line x1="210" y1="281" x2="210" y2="289"/><line x1="450" y1="281" x2="450" y2="289"/><line x1="570" y1="281" x2="570" y2="289"/></g>
 
-  <!-- ReLU (对照, dashed) -->
-  <polyline class="reveal d2" points="80,280 340,280 535,40" fill="none" stroke="#7a6f5d" stroke-width="1.4" stroke-dasharray="5 4"/>
+  <!-- ReLU (对照, dashed): 0 for z<0, =z for z>0 -->
+  <polyline class="reveal d2" points="90,285 330,285 426,149" fill="none" stroke="#7a6f5d" stroke-width="1.4" stroke-dasharray="5 4"/>
   <!-- sigmoid -->
-  <polyline class="draw d3" pathLength="1000" points="80,278.6 145,276.2 210,270.5 275,258.5 340,240 405,221.5 470,209.5 535,203.8 600,201.4" fill="none" stroke="#1f3a5f" stroke-width="2.4"/>
-  <!-- Swish -->
-  <polyline class="draw d4" pathLength="1000" points="80,285.8 145,291.4 210,299.1 256.9,302.3 275,301.5 340,280 405,221.5 470,139.1 535,51.4" fill="none" stroke="#9b2c2c" stroke-width="2.6"/>
+  <polyline class="draw d3" pathLength="1000" points="90,283.5 150,281.0 210,274.9 270,262.1 300,252.9 330,242.5 360,232.1 390,222.9 420,215.5 450,210.1 480,206.5 510,204.0 540,202.5 570,201.5" fill="none" stroke="#1f3a5f" stroke-width="2.4"/>
+  <!-- Swish: dips negative for z<0 (min -0.28 @ z=-1.28), 0 at z=0, then ≈z -->
+  <polyline class="draw d4" pathLength="1000" points="90,291.1 150,297.1 180,301.1 210,305.3 240,308.3 253.3,308.7 270,307.9 300,301.1 330,285.0 360,258.6 390,222.9 420,180.8 441,149.1" fill="none" stroke="#9b2c2c" stroke-width="2.6"/>
 
   <!-- legend (top-left empty corner) -->
   <g class="reveal d5">
-    <rect x="92" y="48" width="210" height="80" rx="4" fill="#faf4e1" stroke="#bfb398"/>
-    <line x1="104" y1="64" x2="128" y2="64" stroke="#1f3a5f" stroke-width="2.4"/><text x="134" y="68" font-size="9.5" fill="#3a3128" text-anchor="start">sigmoid · 0→1 软开关</text>
-    <line x1="104" y1="86" x2="128" y2="86" stroke="#9b2c2c" stroke-width="2.6"/><text x="134" y="90" font-size="9.5" fill="#3a3128" text-anchor="start">Swish=z·σ(z) · 平滑 ReLU+小坑</text>
-    <line x1="104" y1="108" x2="128" y2="108" stroke="#7a6f5d" stroke-width="1.4" stroke-dasharray="5 4"/><text x="134" y="112" font-size="9.5" fill="#3a3128" text-anchor="start">ReLU(对照) · 负区死平 0</text>
+    <rect x="90" y="152" width="214" height="74" rx="4" fill="#faf4e1" stroke="#bfb398"/>
+    <line x1="102" y1="170" x2="126" y2="170" stroke="#1f3a5f" stroke-width="2.4"/><text x="132" y="173.5" font-size="9.5" fill="#3a3128" text-anchor="start">sigmoid · 0→1 软开关</text>
+    <line x1="102" y1="192" x2="126" y2="192" stroke="#9b2c2c" stroke-width="2.6"/><text x="132" y="195.5" font-size="9.5" fill="#3a3128" text-anchor="start">Swish=z·σ(z) · 平滑 ReLU+小坑</text>
+    <line x1="102" y1="214" x2="126" y2="214" stroke="#7a6f5d" stroke-width="1.4" stroke-dasharray="5 4"/><text x="132" y="217.5" font-size="9.5" fill="#3a3128" text-anchor="start">ReLU(对照) · 负区死平 0</text>
   </g>
 
-  <!-- markers + labels (clear space) -->
-  <circle class="reveal d6" cx="340" cy="240" r="3.5" fill="#1f3a5f"/><text class="reveal d6" x="332" y="228" text-anchor="end" font-size="9" fill="#1f3a5f">σ(0)=0.5</text>
-  <circle class="reveal d6" cx="256.9" cy="302.3" r="3.5" fill="#9b2c2c"/><text class="reveal d6" x="250" y="330" text-anchor="middle" font-size="9" fill="#9b2c2c">Swish 最低≈−0.28 @ z≈−1.3</text>
-  <text class="reveal d6" x="600" y="150" text-anchor="end" font-size="9.5" fill="#9b2c2c">右边 Swish ≈ z（贴着 ReLU）</text>
-  <text class="reveal d6" x="600" y="196" text-anchor="end" font-size="9.5" fill="#1f3a5f">sigmoid 饱和到 1</text>
+  <!-- markers + labels (all in empty space, no line crossing) -->
+  <circle class="reveal d6" cx="330" cy="242.5" r="3.5" fill="#1f3a5f"/>
+  <line class="reveal d6" x1="290" y1="242" x2="326" y2="242.5" stroke="#1f3a5f" stroke-width="0.8"/>
+  <text class="reveal d6" x="286" y="245" text-anchor="end" font-size="9" fill="#1f3a5f">σ(0)=0.5</text>
+  <circle class="reveal d6" cx="253.3" cy="308.7" r="3.5" fill="#9b2c2c"/><text class="reveal d6" x="250" y="328" text-anchor="middle" font-size="9" fill="#9b2c2c">Swish 最低≈−0.28 @ z≈−1.3（负 z）</text>
+  <text class="reveal d6" x="468" y="268" text-anchor="middle" font-size="9.5" fill="#9b2c2c">Swish ≈ z（右边贴着 ReLU）</text>
+  <text class="reveal d6" x="548" y="232" text-anchor="middle" font-size="9.5" fill="#1f3a5f">sigmoid 饱和到 1</text>
 </svg>
 </figure>
 
