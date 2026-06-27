@@ -196,6 +196,7 @@
 
 ### 音频 tokenization
 - [Log-Mel Spectrogram](wiki/concepts/log-mel-spectrogram.md) — 音频特征基础
+- [MFCC · 梅尔频率倒谱系数](wiki/concepts/mfcc.md) — log-mel 再做一步 DCT 拆"形状基"取前~13系数=音色; 去相关+降维, GMM/i-vector/x-vector 时代标配; 现代深度模型跳过DCT直接喂log-mel
 - [Bin Quantization](wiki/concepts/bin-quantization.md) — dMel 的核心，等距分箱量化
 - [dMel](wiki/concepts/dmel.md) — log-mel 直接 bin quantize（避开 codec）
 
