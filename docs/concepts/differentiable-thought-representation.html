@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>可微思考表示 · 别硬选一个 token，取嵌入的加权混合 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · differentiable-thought-representation</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>可微思考表示 · 别硬选一个 token，取嵌入的加权混合</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>要让"选哪个 token"这一步能反传梯度，就不硬选（argmax 不可导），而是对词表 logits 做 softmax 得分布 α，用它加权各 token 的嵌入算一个<strong>期望嵌入</strong>——既留在嵌入空间里，又对下游损失可微。</p>
+<h2>直觉 · argmax 把梯度切断了</h2>
+<p>推理时"下一个 token 选谁"是个<strong>硬选择</strong>（argmax）。硬选择是<strong>台阶函数、不可导</strong>：你没法对"选了 cat 还是 dog"求梯度，于是任何想<strong>反传穿过这一步</strong>的优化（比如 <a href="../papers/relat.html">relat</a> 的重建损失要更新前面的参数）都断在这里。</p>
+<p>解法是<strong>连续松弛</strong>：与其挑一个 token，不如<strong>按概率把所有 token 的嵌入混起来</strong>。概率从 logits 经 <a href="../concepts/softmax.html">softmax</a> 来，混合是加权平均——整条路就可导了。</p>
+<h2>怎么做的</h2>
+<pre><code>某一步词表 logits  ℓ ∈ ℝ^V
+
+1. 软化成分布:  α = softmax(ℓ / τ)      τ=温度
+2. 期望嵌入:    ê = αᵀ W_emb            W_emb 是 token 嵌入表(V×d)
+ê 是&quot;各 token 嵌入按 α 加权的混合&quot;，落在嵌入空间、且对 ℓ(进而对参数)可微
+</code></pre>
+<p>τ 小 → α 接近 one-hot（接近硬选）；τ 大 → 更平滑的混合。这跟 Gumbel-Softmax 是近亲：都用 softmax 松弛把离散采样变得可微。</p>
+<h2>数字例子 · 一步算到底</h2>
+<p>词表只有 3 个词，二维嵌入：<code>cat=[1,0]  dog=[0,1]  run=[1,1]</code>。某步 logits <code>ℓ=[2,1,0]</code>，τ=1：</p>
+<pre><code>softmax: e²,e¹,e⁰ = 7.389, 2.718, 1   和=11.107
+  α = [0.665, 0.245, 0.090]            ← &quot;cat&quot; 最可能但没锁死
+期望嵌入 ê = 0.665·[1,0] + 0.245·[0,1] + 0.090·[1,1]
+           = [0.665+0.090, 0.245+0.090]
+           = [0.755, 0.335]
+</code></pre>
+<p>✓ 自检：硬选会得到 <code>cat=[1,0]</code>、而且"选 cat"这步不可导；软混合得到 <code>ê=[0.755,0.335]</code>——<strong>大部分是 cat、掺一点 dog/run</strong>，是一个连续向量。关键是 α 由 logits 平滑算来，所以 <code>ê</code> 对 logits 可导，梯度能从下游(如 <a href="../papers/relat.html">relat</a> 的重建损失)一路传回去调参。代价：<code>ê</code> 不是任何真实 token 的嵌入，而是"介于之间"的混合（推理出最终答案时仍可硬解码，只有测试时优化阶段用软的）。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/relat.html">relat</a> · 用它把潜在思考做成可微的，重建损失才能反传</li>
+<li><a href="../concepts/softmax.html">softmax</a> · 软化 logits 成分布 α 的那一步</li>
+<li><a href="../concepts/reconstruction-as-fidelity.html">reconstruction-as-fidelity</a> · 下游那个要反传回来的损失</li>
+<li><a href="../concepts/cross-entropy.html">cross-entropy</a> · 重建损失的形式</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/relat.html"><span class="cat">paper</span>ReLAT · 给潜在推理&quot;闭环&quot;：测试时用重建当保真检查</a></li><li><a href="../concepts/latent-reasoning.html"><span class="cat">concept</span>潜在推理 · 把&quot;想&quot;压进连续向量，不摊成语言</a></li><li><a href="../concepts/reconstruction-as-fidelity.html"><span class="cat">concept</span>重建即保真 · 能还原回输入，就说明中间表示没丢信息</a></li><li><a href="../concepts/test-time-training.html"><span class="cat">concept</span>测试时训练 TTT · 每道题临时调一下参数，答完即弃</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/differentiable-thought-representation.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>重建即保真 · 能还原回输入，就说明中间表示没丢信息 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · reconstruction-as-fidelity</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>重建即保真 · 能还原回输入，就说明中间表示没丢信息</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>要检查一个中间表示是否忠于输入，不必有标签——只问"能不能从它<strong>重建回原输入</strong>"：还原得回，信息就在；还原不回，关键信息已经丢了。</p>
+<h2>直觉 · 把"保真"变成"自编码"</h2>
+<p><a href="../papers/relat.html">relat</a> 面对的难题：潜在推理（<a href="../concepts/latent-reasoning.html">latent-reasoning</a>）把问题压成一串潜在向量再往下用，但<strong>没人知道这串向量是否还带着原问题的约束</strong>。要验证它"忠不忠于输入"，通常得有标准答案——可推理时没有。</p>
+<p>巧解：拿<strong>输入自己</strong>当可观测代理。如果潜在向量真的编码了问题 Q 的信息，那"<strong>从潜在向量重建出 Q</strong>"就该成功；重建不出来，说明任务相关信息在压缩中丢了。这是个纯<strong>自监督</strong>信号——不需要标签、不需要知道正确答案，只需要原问题(本来就在手上)。</p>
+<h2>必要非充分 · 它是过滤器，不是正确性证明</h2>
+<p>要点：重建成功<strong>不保证</strong>最终答案对（你可能记住了题目却推错）；但重建失败<strong>铁定</strong>意味着丢了信息。所以这是个<strong>必要条件</strong>：</p>
+<pre><code>潜在忠于输入  ⟹  Q 可重建      （逆否：Q 重建不出 ⟹ 潜在已跑偏）
+Q 可重建      ⇏  答案一定正确   （只是没丢题，不代表算对）
+</code></pre>
+<p>用法因此是<strong>过滤/拦截</strong>：在正式作答前，把那些"已经从原问题漂移掉"的潜在状态先调回来，而不是去证明答案正确。</p>
+<h2>数字例子 · 重建损失怎么当信号</h2>
+<p>重建用对<strong>原问题 token</strong> 的掩码交叉熵（<a href="../concepts/cross-entropy.html">cross-entropy</a>，只算真正的问题词，模板/padding 不算）：</p>
+<pre><code>问题 Q = &quot;甲比乙大 3 岁&quot;（关键 token: 甲, 乙, 大, 3, 岁）
+从潜在 ℰ 逐 token 预测，看模型给真值 token 的概率：
+
+潜在忠实:   P(甲)=.8 P(乙)=.7 P(大)=.9 P(3)=.85 P(岁)=.9
+  loss = -[ln.8+ln.7+ln.9+ln.85+ln.9]/5 = 0.236   ← 低 → 信息在
+潜在漂移(把&quot;3&quot;丢了):  P(3)=.05 其余不变
+  loss = -[ln.8+ln.7+ln.9+ln.05+ln.9]/5 = 0.715   ← 高 → &quot;3&quot;没编进去
+</code></pre>
+<p>✓ 自检：漂移版唯一变化是"3 岁"那个关键约束没被潜在记住，重建损失立刻从 0.236 跳到 0.715——<strong>损失高 = 潜在丢了约束</strong>。<a href="../papers/relat.html">relat</a> 就用这个损失（在测试时调一组临时 <a href="../concepts/lora.html">lora</a>）把潜在拽回忠于原题，再作答。</p>
+<h2>跟谁一脉相承</h2>
+<ul>
+<li><strong>自编码器</strong>母题：能重建 = 表示保住了信息（只是这里重建的是"输入问题"而非图像像素）。</li>
+<li><a href="../concepts/generative-data-curation.html">generative-data-curation</a> 里"只要 caption 准确就留"也是同一思路：用"配文/输入对不对得上"当保真关口。</li>
+<li><a href="../concepts/masked-language-model.html">masked-language-model</a>：遮住一部分、用其余重建——这里是用潜在当条件、重建整个输入。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/relat.html">relat</a> · 用重建损失做测试时的输入保真检查</li>
+<li><a href="../concepts/latent-reasoning.html">latent-reasoning</a> · 被检查的对象：开环的潜在状态</li>
+<li><a href="../concepts/test-time-training.html">test-time-training</a> · 拿这个损失在测试时临时调参</li>
+<li><a href="../concepts/differentiable-thought-representation.html">differentiable-thought-representation</a> · 让潜在可微，重建损失才能反传回去</li>
+<li><a href="../concepts/cross-entropy.html">cross-entropy</a> · 重建损失的形式（掩码版，只算输入 token）</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/relat.html"><span class="cat">paper</span>ReLAT · 给潜在推理&quot;闭环&quot;：测试时用重建当保真检查</a></li><li><a href="../concepts/differentiable-thought-representation.html"><span class="cat">concept</span>可微思考表示 · 别硬选一个 token，取嵌入的加权混合</a></li><li><a href="../concepts/latent-reasoning.html"><span class="cat">concept</span>潜在推理 · 把&quot;想&quot;压进连续向量，不摊成语言</a></li><li><a href="../concepts/test-time-training.html"><span class="cat">concept</span>测试时训练 TTT · 每道题临时调一下参数，答完即弃</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/reconstruction-as-fidelity.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
