@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>选择性 token masking · 用&quot;哪些给定/哪些待生成&quot;当任务开关 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · selective-token-masking</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>选择性 token masking · 用&quot;哪些给定/哪些待生成&quot;当任务开关</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>同一个扩散模型，靠"哪些 token 从干净 latent（给定、不预测）初始化、哪些从噪声（待生成）初始化"这个开关，把生成/分解/编辑统一成一个模型——换 mask = 换任务，权重不动。</p>
+<h2>直觉 · 任务的本质都是"已知一部分、求另一部分"</h2>
+<p>通常一个任务配一个模型或一个 head。但仔细看：文生图（什么都不给、全要生成）、把图拆成层（给平图、求图层）、给图层加一层（给若干层、求新层）——本质都是"<strong>已知 X、求 Y</strong>"，只是 X、Y 的划分不同。</p>
+<p><a href="../papers/mrt.html">mrt</a> 的洞见：把"已知的"那部分 token <strong>喂真 latent、不加噪、不参与预测</strong>（masked clean），把"要求的"那部分 token <strong>从噪声开始、当扩散目标</strong>（noisy）。那么"<strong>哪些是 clean</strong>"这个掩码本身就<strong>编码了任务</strong>。换一组 clean/noisy 划分 = 换一个任务，模型一个字不改。</p>
+<h2>怎么做的</h2>
+<pre><code>token 分两类:
+  masked clean  = 给定条件, 用真 latent z, 不加噪, loss 不管它
+  noisy         = 待生成目标, 用 z_t(加了噪), 是扩散要预测的
+前向: 两类 token 一起做 full attention → noisy 能&quot;看见&quot;clean(条件)
+loss: 只在 noisy token 上算
+</code></pre>
+<p>关键是 <strong>full attention 让目标 token 看得见条件 token</strong>，所以生成出来的部分跟给定的部分一致。</p>
+<h2>数字例子 · MRT 三任务，同一模型只换 mask</h2>
+<p>设计 = <code>{z合成图, z背景, z前景¹…ᴷ}</code>。哪些 clean(给定🔒)、哪些 noisy(生成⚙)：</p>
+<pre><code>任务            合成图   背景    前景层      = 哪个 mask
+text→layers     ⚙噪声   ⚙噪声   ⚙噪声       全噪声 → 从文字生成整摞
+image→layers    🔒给定   ⚙噪声   ⚙噪声       只给平图 → 拆成层(分割+补全)
+layers→layers   🔒给定   🔒给定   🔒已有/⚙新层  给若干层 → 加一层/改一层
+</code></pre>
+<p>✓ 自检：三行用的是<strong>同一个 20B 模型</strong>，差别只在"哪几格是 🔒、哪几格是 ⚙"。<code>image→layers</code> 把合成图设 clean、其余 noisy，模型就在"看着这张平图"的条件下把图层 token 去噪出来——等于学会了"看平图、拆图层"。这比"每个任务训一个网络"省得多，且三任务互相之间还能借力（<a href="../papers/mrt.html">mrt</a> 实测多任务联训几乎不掉点）。</p>
+<h2>跟别的"遮一部分"的关系</h2>
+<ul>
+<li>是 <a href="../papers/qwen-image-2.html">qwen-image-2</a>"编辑=把原图 latent 拼进条件"的<strong>推广</strong>：那里只能把"一整张原图"当条件，这里<strong>任意子集 token 都能当 clean 条件</strong>。</li>
+<li>跟 <a href="../concepts/masked-language-model.html">masked-language-model</a>（BERT 遮词预测）同一个母题——"遮住一部分、用其余预测它"，只是这里在 latent 扩散上、且 mask 的粒度是"整层"。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/mrt.html">mrt</a> · 用它把 text/image/layers→layers 三任务统一成一个模型</li>
+<li><a href="../papers/qwen-image-2.html">qwen-image-2</a> · 它的前身思路（条件里塞原图）；本概念是其推广</li>
+<li><a href="../concepts/layered-image-generation.html">layered-image-generation</a> · masking 的对象就是一摞图层 token</li>
+<li><a href="../concepts/masked-language-model.html">masked-language-model</a> · 同母题：遮一部分、用其余预测</li>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · clean/noisy token 在同一个 DiT 里 full attention</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/mrt.html"><span class="cat">paper</span>MRT · Masked Region Transformer · 分层图像生成与编辑</a></li><li><a href="../concepts/layered-image-generation.html"><span class="cat">concept</span>分层图像生成 · 产出一摞可编辑图层，不是一张拍平图</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/selective-token-masking.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
