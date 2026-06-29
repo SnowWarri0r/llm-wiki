@@ -853,3 +853,5 @@ skill 更新:
 ## [2026-06-29] expand | flux-1 精装页扩充(用户嫌太粗): 2图→4图/4词条→12词条/4节→6节; 新增 §02整体解剖(fig-anatomy: T5-XXL+CLIP双文本编码/19双流+38单流块/hidden3072·24头×128/RoPE/16通道VAE f8, +VAE压缩数字例12×) / §03补单流块attn+MLP并行 / §04引导蒸馏补CFG外推数字例([1,0]→[1,1.5]外推非插值)+guidance当embedding走AdaLN / §05招三步数蒸馏(fig-dmd: 老师50步vs学生4步,不抄轨迹只匹配出图分布); 架构数全部公开源(DeepWiki flux)确证, md待查清掉双单块数; 修 rope 误指concepts→papers
 
 ## [2026-06-29] concept | parallel-transformer-block (用户问 FLUX 单流块 attention/MLP 并行怎么做到) — 改三点: 共享一次LN/MLP读y不读注意力输出(无依赖)/两路加回同一主干; 真省在两路第一个矩阵乘输入都是y→拼成一个大GEMM(FLUX 3072→9216+12288=21504一次算,linear2 15360→3072), 比串行4个中等GEMM+2LN快~15%; 代价=MLP对同层注意力瞎但摞深不亏(GPT-J/PaLM/ViT-22B验证); 从 flux-1 §03 链入
+
+## [2026-06-29] expand | cosmos-3 细化(用户): 补硬规则缺的数字例子+变体表+动作模态; 拉技术报告(139页PDF)取实料: §02新增"两塔的账"数字例(Super每塔32B×2=64B总参,每token只过一塔激活≈单塔,对照64B dense; MoT vs MoE分法)+pre.eq/table.spec样式; §04补动作=一等模态(action token过模态encoder进统一空间,迭代去噪生成非自回归,前向/逆动力学/策略=token摆法); §05加变体表(Edge4B/底座2B 28层2048 16头8KV Qwen3-1.7B式去QKnorm ReLU²/Nano16B-8B/Super64B-32B, Nano/Super本次发Edge稍后)+g-11词条; md待解清掉动作tokenizer与激活账
