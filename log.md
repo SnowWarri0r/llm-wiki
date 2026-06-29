@@ -847,3 +847,5 @@ skill 更新:
 ## [2026-06-29] ingest | grape (The Best Instruction-Tuning Data are Those That Fit, NeurIPS25 spotlight) bespoke(clay) 3图+结果表: 合身vs最强分布/困惑度选择机制/自蒸馏塌缩; 2 concept (perplexity, distribution-aligned-sft); 核心=数据好坏相对模型说, 选目标模型困惑度最低的候选回答(只前向)超405B老师+13.8%/超3×数据/省算力; 跟ReLAT姊妹(都问目标模型自己)
 
 ## [2026-06-29] concept | on-policy-vs-off-policy (用户问) — 学自己刚做的(准但贵) vs 学别人/旧的(省但分布错位); 重要性采样π/μ纠偏数字例(裸5.5→2.8), 差远比率爆→PPO clip; 从 grape/distribution-aligned-sft 链入
+
+## [2026-06-29] ingest | omnieraser (OmniEraser: Remove Objects and Their Effects with Paired Video-Frame Data, arXiv 2501.07397, PRIS-CV) bespoke(slate) 5图: 目标=连影子一起删/视频帧白送ground-truth/数据流水线三步/双条件vs只给背景/双消融FID柱; 4 concept (object-effect-removal, video-frame-paired-supervision, object-background-guidance, background-subtraction); 核心=对象消除胜负手在数据: 视频里物体自己会走→有它的帧当输入物体离开后的帧当目标(影子在后帧真没了=免费GT)+mask故意不圈影子逼模型学因果; Video4Removal 13.4万对(MOG>0.15+MSE配帧+GroundingDINO/SAM2); object-background双条件治瞎补; FLUX.1-dev+LoRA r32, "There is nothing here"; RemovalBench FID 39.52(SOTA 55.49), 两组消融各→39.52

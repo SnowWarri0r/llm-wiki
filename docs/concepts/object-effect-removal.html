@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>对象效果消除 · 抹的不只是物体,还有它在世界上留下的痕迹 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · object-effect-removal</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>对象效果消除 · 抹的不只是物体,还有它在世界上留下的痕迹</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>真正的"删除一个物体"要连它的<strong>影子、反光、倒影</strong>一起抹掉,并把那块还原成合理的空背景;只抠掉物体本体、留下一摊孤零零的影子,看着比不删还假。</p>
+<h2>直觉 · 为什么"抠掉物体"远远不够</h2>
+<p>人眼对"物理一致性"极其敏感。一个人站在阳光下,地上有他的影子、旁边玻璃里有他的倒影。你把人 P 掉、影子和倒影还在——大脑立刻觉得"这画面有鬼":一摊没有主人的影子。所以对象消除的真实目标不是"把 mask 区域填上",而是<strong>把这个物体存在过的一切证据都清理干净</strong>。</p>
+<p>难点在于:<strong>影子/反光通常不在你框的 mask 里</strong>。用户(或自动工具)框的是物体本体,影子在物体之外、形状还不规则。模型得自己意识到"这片暗区是那个物体投的,得一起清",这不是填洞能解决的,需要它理解物体和效果之间的因果。</p>
+<p>两个常见翻车(见 <a href="../papers/omnieraser.html">omnieraser</a>):</p>
+<ul>
+<li><strong>影子赖着不走</strong>:只学会抠物体、没学会清效果(训练数据里压根没有真实光影)。</li>
+<li><strong>凭空补新物体</strong>:模型不知道这块该空,照周围猜着补出个怪东西(只给背景上下文的锅,见 <a href="../concepts/object-background-guidance.html">object-background-guidance</a>)。</li>
+</ul>
+<h2>怎么做的 · 数据教因果 + 条件给意识</h2>
+<p>对付这两个毛病,要两条腿:</p>
+<pre><code>影子清不掉  → 用带真实光影的成对数据,且 mask 故意不圈影子,
+              逼模型学到&quot;物体↔效果&quot;的关联   (&lt;a href=&quot;../concepts/video-frame-paired-supervision.html&quot;&gt;video-frame-paired-supervision&lt;/a&gt;)
+凭空补物体  → 把&quot;要删的物体&quot;也作为条件喂进去,
+              让模型明确&quot;这块要清空&quot;        (&lt;a href=&quot;../concepts/object-background-guidance.html&quot;&gt;object-background-guidance&lt;/a&gt;)
+</code></pre>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/omnieraser.html">omnieraser</a> · 同时解决"清效果"和"别瞎补"两个毛病</li>
+<li><a href="../concepts/video-frame-paired-supervision.html">video-frame-paired-supervision</a> · 教模型"物体↔影子"因果的数据</li>
+<li><a href="../concepts/object-background-guidance.html">object-background-guidance</a> · 给模型"要删什么"的明确意识</li>
+<li><a href="../papers/lpips.html">lpips</a> · 衡量"抹完跟真背景有多像"的指标之一</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/omnieraser.html"><span class="cat">paper</span>OmniEraser · 用视频帧白送的 ground-truth 教模型&quot;连影子一起抹掉&quot;</a></li><li><a href="../concepts/object-background-guidance.html"><span class="cat">concept</span>双条件输入 · 不光告诉模型&quot;周围长啥样&quot;,还告诉它&quot;要删的是这个&quot;</a></li><li><a href="../concepts/video-frame-paired-supervision.html"><span class="cat">concept</span>视频帧白送的成对监督 · 物体自己会走,等于免费拍了 before/after</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/object-effect-removal.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

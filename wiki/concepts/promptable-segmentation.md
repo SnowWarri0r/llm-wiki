@@ -1,7 +1,7 @@
 ---
 name: promptable-segmentation
 type: concept
-sources: [sam]
+sources: [sam, omnieraser]
 updated: 2026-06-23
 ---
 

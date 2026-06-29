@@ -1,7 +1,7 @@
 ---
 name: diffusion-transformer
 type: concept
-sources: [ideogram-4, qwen-image-2, mrt, stable-diffusion-3-5, flux-1, cosmos-3, dit, krea-2]
+sources: [ideogram-4, qwen-image-2, mrt, stable-diffusion-3-5, flux-1, cosmos-3, dit, krea-2, omnieraser]
 updated: 2026-06-24
 ---
 
