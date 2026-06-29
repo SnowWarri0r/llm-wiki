@@ -24,7 +24,7 @@ updated: 2026-06-29
 本质是把"数据选择"对齐到**模型自己的分布**:它觉得顺的,训起来损失低、保住底子、不漂移。
 
 ## 为什么这是对的 · on-policy 的同构
-这跟 RL/偏好学习里"**on-policy(数据贴合当前策略)打败 off-policy**"是同一个直觉([[direct-preference-optimization]]/[[rlhf]] 那条线)。off-policy 数据离当前策略远 → 信号错位、不稳;on-policy 贴合 → 稳、有效。GRAPE 把它搬到 SFT:**选贴合分布的回答 ≈ 让 SFT 尽量 on-policy**。
+这跟 RL/偏好学习里"**on-policy(数据贴合当前策略)打败 off-policy**"([[on-policy-vs-off-policy]])是同一个直觉([[direct-preference-optimization]]/[[rlhf]] 那条线)。off-policy 数据离当前策略远 → 信号错位、不稳;on-policy 贴合 → 稳、有效。GRAPE 把它搬到 SFT:**选贴合分布的回答 ≈ 让 SFT 尽量 on-policy**。
 
 反面证据:纯用模型**自己生成**的回答(最极端的"贴合")会**塌缩**(narrow/repetitive、强化偏见)——所以要从**外部多样**候选里选合身的,既贴分布又保多样。这跟 [[generative-data-curation]] 的"合成图近亲繁殖给质量封顶"是同一个坑:合身要,但纯自产会窄死。
 

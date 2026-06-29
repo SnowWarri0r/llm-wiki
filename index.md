@@ -264,6 +264,7 @@
 - [GAE](wiki/concepts/gae.md) — 优势的"惊讶值加权和", γλ 相乘衰减, λ 在"稳但偏 ↔ 准但抖"间插值
 - [Entropy Regularization](wiki/concepts/entropy-regularization.md) — 完整 loss 第三项, 花钱买探索防过早笃定撞死
 - [RLHF](wiki/concepts/rlhf.md) — SFT → reward model → PPO 三步, 把人类排序偏好变成 LLM 训练信号
+- [on-policy vs off-policy](wiki/concepts/on-policy-vs-off-policy.md) — on-policy=学当前策略自己刚生成的(准但贵,旧数据即过期); off-policy=学别的策略/旧数据(省但分布错位); 重要性采样π/μ纠偏(裸平均5.5→纠偏2.8), 差太远比率爆方差→PPO clip限小步; SFT拿外部数据=off-policy, GRAPE选合身=拉回on-policy
 - [GSPO](wiki/concepts/gspo.md) — GRPO 后继: 重要性比率从 token 级提到序列级(每 token 只采一次→token 级是高方差噪声易崩), 稳住 MoE RL; Qwen3 用
 - [DPO · 直接偏好优化](wiki/concepts/direct-preference-optimization.md) — 跳过奖励模型+PPO, 拿赢/输成对样本当sigmoid二分类直接对齐(隐式奖励=β·log(πθ/π_ref)); 坑: 只看"赢减输"差→模型会把赢输一起压低凑差距(策略发散); Krea STPO加辅助损失顶住赢家
 - [测试时训练 TTT](wiki/concepts/test-time-training.md) — 推理时对当前这道题用无监督辅助损失临时调参(只动LoRA)再答、答完复位; 区别于不改权重的ICL; ReLAT用"重建输入"当辅助损失(N=16步,lr2e-5)

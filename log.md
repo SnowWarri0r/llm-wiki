@@ -845,3 +845,5 @@ skill 更新:
 ## [2026-06-28] ingest | relat (ReLAT: 给潜在推理闭环, 测试时重建保真) bespoke(indigo) 4图: 开环vs闭环/可微期望嵌入/ReLAT测试时循环/token效率; 4 concept (latent-reasoning, reconstruction-as-fidelity, differentiable-thought-representation, test-time-training); 核心=能从潜在重建回问题Q=没丢信息(必要非充分)+softmax期望嵌入可微+测试时临时LoRA N=16步答完复位; Qwen3-8B AIME24 50→73.3省84%token
 
 ## [2026-06-29] ingest | grape (The Best Instruction-Tuning Data are Those That Fit, NeurIPS25 spotlight) bespoke(clay) 3图+结果表: 合身vs最强分布/困惑度选择机制/自蒸馏塌缩; 2 concept (perplexity, distribution-aligned-sft); 核心=数据好坏相对模型说, 选目标模型困惑度最低的候选回答(只前向)超405B老师+13.8%/超3×数据/省算力; 跟ReLAT姊妹(都问目标模型自己)
+
+## [2026-06-29] concept | on-policy-vs-off-policy (用户问) — 学自己刚做的(准但贵) vs 学别人/旧的(省但分布错位); 重要性采样π/μ纠偏数字例(裸5.5→2.8), 差远比率爆→PPO clip; 从 grape/distribution-aligned-sft 链入
