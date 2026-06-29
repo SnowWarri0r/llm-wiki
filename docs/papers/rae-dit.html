@@ -212,9 +212,25 @@ figure.play .ra-svg .draw { stroke-dashoffset: 0; }
 </figure>
 
 <h3>为什么偏偏是 √(m/n)</h3>
-<p>flow matching 的加噪是 <code>x_t=(1−t)x+tε</code>,<strong>逐维信噪比</strong> <code>SNR(t)=((1−t)/t)²</code>(信号系数²÷噪声系数²)。那个时间步移位公式藏着一个漂亮的恒等式——代入 <code>t_m = α·t_n/(1+(α−1)·t_n)</code> 后:</p>
-<pre class="eq">(1−t_m)/t_m = (1/α)·(1−t_n)/t_n
-⟹ SNR(t_m) = (1/α²)·SNR(t_n) = (n/m)·SNR(t_n)      ← α=√(m/n) 代进去</pre>
+<p>flow matching 的加噪是 <code>x_t=(1−t)x+tε</code>,<strong>逐维信噪比</strong> <code>SNR(t)=((1−t)/t)²</code>(信号系数²÷噪声系数²)。把移位公式一步步代进去,会得到一个漂亮的恒等式:</p>
+<pre class="eq">记 D = 1+(α−1)·t_n ，移位公式：t_m = α·t_n / D
+
+① 算分子 1−t_m：
+   1 − t_m = 1 − α·t_n/D = (D − α·t_n) / D
+   而 D − α·t_n = 1 + (α−1)·t_n − α·t_n
+                = 1 + α·t_n − t_n − α·t_n = 1 − t_n      （α·t_n 抵消）
+   ⟹ 1 − t_m = (1 − t_n) / D
+
+② 分母就是  t_m = α·t_n / D
+
+③ 两者相除（D 上下抵消）：
+   (1−t_m)/t_m = [(1−t_n)/D] ÷ [α·t_n/D] = (1−t_n)/(α·t_n) = (1/α)·(1−t_n)/t_n
+
+④ 代进 SNR(t) = ((1−t)/t)²（平方一下）：
+   SNR(t_m) = ((1−t_m)/t_m)² = [(1/α)·(1−t_n)/t_n]² = (1/α²)·SNR(t_n)
+
+⑤ 因为 α = √(m/n) ⟹ α² = m/n ⟹ 1/α² = n/m：
+   ⟹ SNR(t_m) = (n/m)·SNR(t_n)</pre>
 <p>也就是说:这个 shift 把逐维信噪比<strong>在每个 t 上都精确缩小 m/n 倍</strong>。要的正是它——高维 latent 有 m/n 倍更多坐标可以平均,等于<strong>白捡 m/n 倍的有效信噪比</strong>;把逐维 SNR 压低 m/n 倍刚好抵消,让"有效去噪难度"跨维度对齐。而 <strong>SNR 是<em>方差</em>比、噪声<em>幅度</em>是它的平方根</strong>,所以幅度/时间上要缩放的是 <strong>√(m/n)=α</strong>——√ 就是从"SNR 是平方量"这来的。</p>
 
 <pre class="eq">m = N×d = 256×1152 = 294,912    n = 4096    α = √(m/n) = √72 ≈ 8.49
