@@ -211,8 +211,19 @@ figure.play .ra-svg .draw { stroke-dashoffset: 0; }
   </svg>
 </figure>
 
-<h3>为什么偏偏是 √(m/n)</h3>
-<p>flow matching 的加噪是 <code>x_t=(1−t)x+tε</code>,<strong>逐维信噪比</strong> <code>SNR(t)=((1−t)/t)²</code>(信号系数²÷噪声系数²)。把移位公式一步步代进去,会得到一个漂亮的恒等式:</p>
+<h3>为什么偏偏是 √(m/n)——先讲动机,再验算</h3>
+<p>很容易把因果讲反:<strong>不是</strong>"先拍脑袋选了 α=√(m/n),碰巧逐维 SNR 缩了 m/n 倍"。真实的链条是反的——<strong>先定下"逐维 SNR 必须缩 m/n 倍"这个目标,再反解出 α 只能是 √(m/n)</strong>。所以 n/m 是<strong>推出来的目标</strong>、α 是<strong>为命中目标定义出来的</strong>,两个都不是凑的。分两步看。</p>
+
+<p><strong>① 目标里的 n/m 哪来的:高维"白捡" m/n 倍有效信噪比。</strong> 想象干净信号的某个全局/语义量是同一个值 <code>s</code>,摊在每个维度上,每维各挂一份独立噪声、方差 <code>σ²</code>。要把 <code>s</code> 估出来,最优做法是跨维度平均——维度越多,噪声被平均掉得越狠:</p>
+<pre class="eq">n 维：平均 n 个噪声维 → 噪声方差 σ²/n → 全局 SNR = s²/(σ²/n) = n·s²/σ²
+m 维：平均 m 个噪声维 → 噪声方差 σ²/m → 全局 SNR = m·s²/σ²
+
+m 维 / n 维 = (m·s²/σ²)/(n·s²/σ²) = m/n   ← 同样的每维噪声,换到高维白捡 m/n 倍有效 SNR</pre>
+<p>也就是说:啥都没做,光是把 latent 从 n 维换到 m 维,去噪任务就<strong>免费变简单了 m/n 倍</strong>。要让高维的去噪难度跟 n 维参考一样(否则模型在高维偷懒、长期欠噪、学不到东西),就得主动把逐维 SNR <strong>砍掉 m/n 倍</strong>抵消。目标就此钉死:<code>SNR_每维(t_m) = (n/m)·SNR_每维(t_n)</code>。</p>
+
+<p><strong>② 为什么开根号、不是直接拿 m/n 当 α:因为 SNR 是平方量。</strong> flow matching 的加噪是 <code>x_t=(1−t)x+tε</code>,<strong>逐维信噪比</strong> <code>SNR(t)=((1−t)/t)²</code>(信号系数²÷噪声系数²)。想让这个<em>平方</em>量变成原来的 n/m,里头的幅度比 <code>(1−t)/t</code> 只能变 <code>√(n/m)</code>(平方之后才是 n/m)。把"幅度比要缩的倍数"记成 <code>1/α</code>,于是 <strong>α=√(m/n)</strong>——√ 纯粹来自"SNR 是幅度的平方"。</p>
+
+<p>动机讲完了。下面是<strong>验算</strong>(方向跟动机相反:假设 α=√(m/n) 和移位公式,代进去确认逐维 SNR 真的精确缩了 m/n 倍。两个方向互为充要):</p>
 <pre class="eq">记 D = 1+(α−1)·t_n ，移位公式：t_m = α·t_n / D
 
 ① 算分子 1−t_m：
@@ -231,7 +242,7 @@ figure.play .ra-svg .draw { stroke-dashoffset: 0; }
 
 ⑤ 因为 α = √(m/n) ⟹ α² = m/n ⟹ 1/α² = n/m：
    ⟹ SNR(t_m) = (n/m)·SNR(t_n)</pre>
-<p>也就是说:这个 shift 把逐维信噪比<strong>在每个 t 上都精确缩小 m/n 倍</strong>。要的正是它——高维 latent 有 m/n 倍更多坐标可以平均,等于<strong>白捡 m/n 倍的有效信噪比</strong>;把逐维 SNR 压低 m/n 倍刚好抵消,让"有效去噪难度"跨维度对齐。而 <strong>SNR 是<em>方差</em>比、噪声<em>幅度</em>是它的平方根</strong>,所以幅度/时间上要缩放的是 <strong>√(m/n)=α</strong>——√ 就是从"SNR 是平方量"这来的。</p>
+<p>验算闭环:step ⑤ 落回 <code>SNR(t_m)=(n/m)·SNR(t_n)</code>,跟 ① 钉下的目标一字不差。所以这个 shift 把逐维信噪比<strong>在每个 t 上都精确缩小 m/n 倍</strong>,刚好抵消高维白捡的那 m/n 倍,让"有效去噪难度"跨维度对齐。</p>
 
 <pre class="eq">m = N×d = 256×1152 = 294,912    n = 4096    α = √(m/n) = √72 ≈ 8.49
 移位 t_m = α·t_n /(1+(α−1)·t_n)：
