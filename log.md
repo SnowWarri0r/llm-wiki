@@ -843,3 +843,5 @@ skill 更新:
 ## [2026-06-28] expand | mrt 精装页大幅扩充(用户嫌当时太简略): 5节→11节; 新增 §04 RoPE坐标复制=重摆位机制(解旧待查,+fig-repos) / §06训练配方表 / §07 DMD蒸馏真实表(50/16/8步 FID16.02/16.21/18.58) / §08评测表(vs Qwen-Image-Layered PSNR按层数27.34/25.91/25.72,层越多越赢+用户胜率79.5/68.9/82.6) / §09消融表(FLUX13B→Qwen20B 17.79→16.15等) / §10局限; +2 concept (selective-token-masking, layered-image-generation); colophon加↗项目页出站链
 
 ## [2026-06-28] ingest | relat (ReLAT: 给潜在推理闭环, 测试时重建保真) bespoke(indigo) 4图: 开环vs闭环/可微期望嵌入/ReLAT测试时循环/token效率; 4 concept (latent-reasoning, reconstruction-as-fidelity, differentiable-thought-representation, test-time-training); 核心=能从潜在重建回问题Q=没丢信息(必要非充分)+softmax期望嵌入可微+测试时临时LoRA N=16步答完复位; Qwen3-8B AIME24 50→73.3省84%token
+
+## [2026-06-29] ingest | grape (The Best Instruction-Tuning Data are Those That Fit, NeurIPS25 spotlight) bespoke(clay) 3图+结果表: 合身vs最强分布/困惑度选择机制/自蒸馏塌缩; 2 concept (perplexity, distribution-aligned-sft); 核心=数据好坏相对模型说, 选目标模型困惑度最低的候选回答(只前向)超405B老师+13.8%/超3×数据/省算力; 跟ReLAT姊妹(都问目标模型自己)
