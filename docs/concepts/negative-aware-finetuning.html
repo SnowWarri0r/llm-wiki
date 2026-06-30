@@ -68,6 +68,29 @@ v_θ⁻ = (1+0.5)·1.0 − 0.5·1.4 = 1.5 − 0.7 = 0.8     (负速度)
 自检②:v_θ⁺ − v_θ⁻ = 0.4 = 2β·(v_θ − v_old) = 2·0.5·0.4 ✓  → 这个缝隙 = 模型离旧模型多远
 </code></pre>
 <p>✓ 含义:模型只动一个量 <code>v_θ</code>,正速度往上抬到 1.2、负速度对称压到 0.8。训练时高奖励样本把"上抬的那副"(v_θ⁺)拉准、低奖励把"压下的那副"(v_θ⁻)拉准,两股梯度合起来,就把 <code>v_θ</code> 推向"正比负更该走"的方向。采样时只用 <code>v_θ⁺</code>(被引导的正速度)——等于把 <a href="../concepts/reinforcement-guidance.html">reinforcement-guidance</a> 内建进了一个模型,不再需要 CFG 的两套模型。最优解 <code>v_θ* = v_old + (2/β)·Δ</code>,小小的改进方向 Δ 被 <code>2/β</code> 放大着学进去。</p>
+<h2>最优解从哪来 · 把损失对 v_θ 求导置零</h2>
+<p><code>v_θ* = v_old + (2/β)·Δ</code> 不是凑的,是解最优。标量推一遍。</p>
+<p><strong>① 求导:两项梯度同向叠加(这就是那个 2)。</strong> 单样本损失 <code>ℓ = r(v_θ⁺−v)² + (1−r)(v_θ⁻−v)²</code>,两副速度都由同一个 <code>v_θ</code> 来、β 符号相反:<code>dv_θ⁺/dv_θ=+β</code>、<code>dv_θ⁻/dv_θ=−β</code>。</p>
+<pre><code>dℓ/dv_θ = 2β·[ r(v_θ⁺−v) − (1−r)(v_θ⁻−v) ]
+</code></pre>
+<p>负项带 −β,梯度也把 v_θ 往同方向推 → 正样本"抬正速度"和负样本"压负速度"两股劲<strong>叠加</strong>,不抵消。这就是 2 的来源。</p>
+<p><strong>② 置零 → 奖励加权残差平衡。</strong> v_θ±、v_old 在给定 x_t 下是定值,提出期望(<code>ρ⁺=E[r]</code>、<code>ρ⁻=1−ρ⁺</code>;<code>v⁺=E[rv]/ρ⁺</code>、<code>v⁻=E[(1−r)v]/ρ⁻</code>):</p>
+<pre><code>E[r(v_θ⁺−v)] = E[(1−r)(v_θ⁻−v)]   ⟹   ρ⁺(v_θ⁺−v⁺) = ρ⁻(v_θ⁻−v⁻)   …(★)
+</code></pre>
+<p><strong>③ 两个事实把它压扁。</strong></p>
+<pre><code>事实A  v_old = E[v] = ρ⁺v⁺ + ρ⁻v⁻        旧模型 = 正负的奖励加权平均
+事实B  Δ = ρ⁺ρ⁻(v⁺−v⁻)                  (= ρ⁺(v⁺−v_old) = ρ⁻(v_old−v⁻),论文 Thm 3.1)
+</code></pre>
+<p><strong>④ 代入 (★) 解 v_θ*。</strong> 归拢 v_θ / v_old / v± 各项(用 ρ⁺+ρ⁻=1),中括号那坨用事实A 化简恰好 = 2Δ:</p>
+<pre><code>β·v_θ* = β·v_old + [ρ⁺v⁺ − ρ⁻v⁻ − (ρ⁺−ρ⁻)v_old] = β·v_old + 2ρ⁺ρ⁻(v⁺−v⁻) = β·v_old + 2Δ
+⟹ v_θ* = v_old + (2/β)·Δ
+</code></pre>
+<p><code>2/β</code> 的含义:<strong>2</strong> = 正负梯度同向叠加;<strong>1/β</strong> = 模型偏离 v_old 的部分只按 β 倍漏进被引导速度(<code>v_θ⁺=v_old+β(v_θ−v_old)</code>),所以要体现改进量 Δ,v_θ 得学一个放大 1/β 倍的偏移——β 越小,v_θ 偏得越狠。</p>
+<h3>数字核验</h3>
+<pre><code>取 ρ⁺=0.5、v⁺=1.4、v⁻=0.6 → v_old=ρ⁺v⁺+ρ⁻v⁻=1.0，Δ=ρ⁺ρ⁻(v⁺−v⁻)=0.25×0.8=0.2
+β=0.5：v_θ* = 1.0 + (2/0.5)×0.2 = 1.0 + 4×0.2 = 1.8
+回代：v_θ⁺ = (1−0.5)·1.0 + 0.5·1.8 = 1.4 = v⁺ ✓（奖励对半时,最优被引导速度正好复现正分布速度）
+</code></pre>
 <h2>链接</h2>
 <ul>
 <li><a href="../papers/diffusionnft.html">diffusionnft</a> · 提出 NFT</li>
