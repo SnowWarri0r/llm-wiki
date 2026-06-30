@@ -1,7 +1,7 @@
 ---
 name: policy-gradient
 type: concept
-sources: [ppo]
+sources: [ppo, diffusionnft]
 updated: 2026-05-28
 ---
 

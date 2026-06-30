@@ -28,21 +28,26 @@
 <div class="page">
 <div class="masthead">
   <span class="l">Connectionism · Personal Wiki</span>
-  <span class="r">精读页 · Deep Dives · 58 条目</span>
+  <span class="r">精读页 · Deep Dives · 59 条目</span>
 </div>
 
 <section class="hero">
   <div class="issue"><a href="index.html" style="color:var(--brick);text-decoration:none;">← index</a> · 按时间倒序</div>
   <h1 class="title">精读页 · Deep Dives</h1>
-  <p class="dek">共 58 条，最新在上。</p>
+  <p class="dek">共 59 条，最新在上。</p>
 </section>
 
 <div class="search">
   <input id="q" type="search" placeholder="搜索 标题 / 概念 / 术语…" autocomplete="off" spellcheck="false" />
-  <div class="chips"><button class="chip active" data-dom="">全部 <span class="c">58</span></button><button class="chip" data-dom="ML">ML <span class="c">49</span></button><button class="chip" data-dom="系统">系统 <span class="c">1</span></button><button class="chip" data-dom="金融">金融 <span class="c">7</span></button><button class="chip" data-dom="史">史 <span class="c">1</span></button></div>
+  <div class="chips"><button class="chip active" data-dom="">全部 <span class="c">59</span></button><button class="chip" data-dom="ML">ML <span class="c">50</span></button><button class="chip" data-dom="系统">系统 <span class="c">1</span></button><button class="chip" data-dom="金融">金融 <span class="c">7</span></button><button class="chip" data-dom="史">史 <span class="c">1</span></button></div>
 </div>
 <div id="nores" class="nores" hidden>没有匹配的条目 — 换个词试试</div>
 <div class="entries">
+<div class="entry paper" data-domains="ML" data-s="diffusionnft · 把扩散的 rl 从&quot;反向采样&quot;搬回&quot;前向加噪&quot; 给扩散模型做在线 rl 的老路是把反向采样切成多步 mdp 再套 grpo,但继承一身毛病(锁死一阶 sde solver、前后向不一致、cfg 要两套模型)。diffusionnft 换思路:**一条前向加噪过程是唯一的、反向去噪有无数条**,那就把 rl 直接做在前向上——用奖励把样本切成正/负两堆([[negative-aware-finetuning]]),正负速度之差就是隐式的改进方向([[reinforcement-guidance]],本质是把 cfg 当成&quot;离线版的奖励引导&quot;)。整个目标退化成一个**监督式 [[flow-matching]] 损失**:免似然、任意 solver、只要干净图不要轨迹,比 flowgrpo 快 3–25×。 diffusionnft paper ml § 01似然墙：扩散为什么不能照搬 grpo § 02关键洞察：前向只有一条，反向有无数条 § 03奖励切正负：两堆之差就是该走的方向 § 04一个模型隐式装正负，rl 揉进监督损失 § 05结果：又快又强，cfg-free 还赢 cfg 引用 / 术语表 数字例子 · 正负速度对称夹住 v_old 似然墙 flowgrpo 的三个坑 前向唯一 / 反向无数 奖励软切正负 nft · 负样本感知微调 强化引导 / δ 隐式参数化 v_θ± 监督损失（非 policy gradient） 免似然 · 任意 solver · 只存干净图 3–25× 效率 cfg-free omni-model sd3.5-m / lora r32">
+  <h3><a href="papers/diffusionnft.html">DiffusionNFT · 把扩散的 RL 从&quot;反向采样&quot;搬回&quot;前向加噪&quot;</a></h3>
+  <p class="hook">给扩散模型做在线 RL 的老路是把反向采样切成多步 MDP 再套 GRPO,但继承一身毛病(锁死一阶 SDE solver、前后向不一致、CFG 要两套模型)。DiffusionNFT 换思路:**一条前向加噪过程是唯一的、反向去噪有无数条**,那就把 RL 直接做在前向上——用奖励把样本切成正/负两堆([[negative-aware-finetuning]]),正负速度之差就是隐式的改进方向([[reinforcement-guidance]],本质是把 CFG 当成&quot;离线版的奖励引导&quot;)。整个目标退化成一个**监督式 [[flow-matching]] 损失**:免似然、任意 solver、只要干净图不要轨迹,比 FlowGRPO 快 3–25×。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-06-30</span><a class="pill" href="https://arxiv.org/html/2509.16117v1" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
 <div class="entry paper" data-domains="ML" data-s="grape · 最好的指令微调数据，是&quot;合身&quot;的那条 同一条指令、好几个老师给的候选回答，别默认挑最强老师那条；让**目标模型自己**给每个候选打分（长度归一概率 = 困惑度），选它觉得**最自然/最合身**（困惑度最低）的那条来做 sft。结果超过最强老师(405b)、超过 3× 大的数据集，还省算力。neurips 2025 spotlight。 grape paper ml § 01痛点：堆&quot;最强&quot;的数据，反而把模型拽偏 § 02命题：合身 &gt; 绝对最强 § 03grape：用目标模型的困惑度选回答 § 04为什么有效：on-policy 同构 + 别只用自己的输出 § 05结果：超最强老师、超 3× 数据、省算力 引用 / 术语表 分布漂移（sft 失效模式） 分布对齐 sft · 合身 &gt; 最强 只前向、不训练 困惑度选择 on-policy 同构 自蒸馏塌缩 超 405b 最强老师 +13.8% 超 3× 数据 / 省算力">
   <h3><a href="papers/grape.html">GRAPE · 最好的指令微调数据，是&quot;合身&quot;的那条</a></h3>
   <p class="hook">同一条指令、好几个老师给的候选回答，别默认挑最强老师那条；让**目标模型自己**给每个候选打分（长度归一概率 = 困惑度），选它觉得**最自然/最合身**（困惑度最低）的那条来做 SFT。结果超过最强老师(405B)、超过 3× 大的数据集，还省算力。NeurIPS 2025 spotlight。</p>

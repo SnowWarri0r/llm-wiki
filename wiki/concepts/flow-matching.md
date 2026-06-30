@@ -1,7 +1,7 @@
 ---
 name: flow-matching
 type: concept
-sources: [interaction-models-tml, ideogram-4, stable-diffusion-3-5, krea-2, omnieraser]
+sources: [interaction-models-tml, ideogram-4, stable-diffusion-3-5, krea-2, omnieraser, diffusionnft]
 updated: 2026-06-04
 ---
 
