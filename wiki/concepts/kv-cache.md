@@ -1,7 +1,7 @@
 ---
 name: kv-cache
 type: concept
-sources: [interaction-models-tml, fish-speech-s2-pro, unlimited-ocr]
+sources: [interaction-models-tml, fish-speech-s2-pro, unlimited-ocr, turboquant]
 updated: 2026-05-20
 ---
 

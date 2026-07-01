@@ -1,7 +1,7 @@
 ---
 name: quantization
 type: concept
-sources: [lumine]
+sources: [lumine, turboquant]
 updated: 2026-06-16
 ---
 

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>MSE 最优 ≠ 内积无偏 · 压得最像,点积却系统性偏 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · mse-vs-inner-product-bias</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>MSE 最优 ≠ 内积无偏 · 压得最像,点积却系统性偏</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>按"重建误差最小(MSE)"设计的量化器,把向量压得最像原样;但拿压完的向量去算内积(点积),结果会<strong>系统性地偏</strong>(通常偏小)——因为量化误差跟向量本身相关。两个目标不是一回事,得分开治。</p>
+<h2>直觉 · "最像"和"点积准"是两码事</h2>
+<p>量化有两种"好":</p>
+<ul>
+<li><strong>MSE 好</strong>:<code>x̂</code> 离 <code>x</code> 近(重建像)。这是逐点还原的目标。</li>
+<li><strong>内积无偏</strong>:用 <code>⟨x̂, q⟩</code> 估 <code>⟨x, q⟩</code> 时,平均意义上不偏(检索、attention 打分要的是这个)。</li>
+</ul>
+<p>问题:<strong>MSE 最优的量化器,内积估计往往有偏</strong>。直觉上,最优 MSE 量化器倾向把值往格子中心收(收缩),这个收缩是<strong>朝着向量自己的结构</strong>来的,于是 <code>⟨x̂,q⟩</code> 会<strong>系统性偏小</strong>——不是随机噪声,是每次都往同一方向偏,加再多样本也纠不回来。检索/attention 靠内积排序,系统偏差会歪掉排名。</p>
+<h2>怎么做的 · 两阶段:MSE 压主体 + QJL 残差去偏</h2>
+<p><a href="../papers/turboquant.html">turboquant</a> 的解法是把两个目标拆开、各管一段:</p>
+<pre><code>阶段1  x̂ = MSE 最优量化器(x)      # 压主体,重建像,但 ⟨x̂,q⟩ 偏
+阶段2  对残差 r = x − x̂ 做 1-bit QJL # 符号随机投影,给残差一个【无偏】内积修正
+估内积 ⟨x,q⟩ ≈ ⟨x̂,q⟩ + QJL无偏修正(r,q)   # 主体低 MSE + 修正去偏 = 低 MSE 且内积无偏
+</code></pre>
+<p><a href="../concepts/quantized-jl.html">quantized-jl</a> 那一步是无偏的,专门补上阶段1 的系统偏差。</p>
+<h2>数字例子 · 有偏 vs 无偏,差在能不能纠回</h2>
+<p>真内积 <code>⟨x,q⟩ = 1.00</code>。</p>
+<pre><code>只用 MSE 量化器(有偏):
+  ⟨x̂,q⟩ 每次都 ≈ 0.90   → 平均还是 0.90,系统性偏小 0.10,样本再多也停在 0.90 ✗
+加 QJL 残差修正(无偏):
+  ⟨x̂,q⟩ + 修正 = 0.90 + {单次乱跳但期望 0.10} → 多次平均 → 1.00 ✓
+</code></pre>
+<p>✓ 关键区别:偏差(bias)是<strong>加样本纠不掉</strong>的系统性错;方差(variance)是<strong>加样本能平均掉</strong>的随机抖。MSE 量化器给的是前者(致命),QJL 残差把它换成后者(可收敛)。所以最终估计既借 MSE 的低失真、又拿回内积的无偏。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/turboquant.html">turboquant</a> · 提出两阶段(MSE + QJL 残差)同时拿低 MSE 和内积无偏</li>
+<li><a href="../concepts/quantized-jl.html">quantized-jl</a> · 阶段2 那个无偏的残差修正器</li>
+<li><a href="../concepts/random-rotation-quantization.html">random-rotation-quantization</a> · 阶段1 的 MSE 量化器就建在旋转后的坐标上</li>
+<li><a href="../concepts/dot-product.html">dot-product</a> · 被偏掉又被纠回的那个内积</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/turboquant.html"><span class="cat">paper</span>TurboQuant · 随机旋转把&quot;任意向量&quot;变成&quot;分布已知&quot;,在线量化逼近理论最优</a></li><li><a href="../concepts/quantized-jl.html"><span class="cat">concept</span>QJL · 1-bit 符号随机投影,给内积一个无偏估计</a></li><li><a href="../concepts/random-rotation-quantization.html"><span class="cat">concept</span>随机旋转量化 · 把&quot;不知道数据长啥样&quot;变成&quot;精确知道每个坐标的分布&quot;</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/mse-vs-inner-product-bias.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
