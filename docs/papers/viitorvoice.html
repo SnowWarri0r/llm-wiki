@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>ViiTorVoice · 低帧率语义码 + 并行填声 = 60ms 流式克隆</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --petrol: #1f5a66; --petrol-soft: #cbe0e2;
+  --accent: var(--petrol); --accent-soft: var(--petrol-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(38px, 6vw, 68px); line-height: 0.99; letter-spacing: -0.03em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 36px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
+p { margin: 12px 0; } strong { font-weight: 700; }
+ul { margin: 12px 0; padding-left: 24px; } li { margin: 6px 0; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.86em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--accent-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--accent); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--accent); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+table.spec { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+table.spec td, table.spec th { border-bottom: 1px dashed var(--rule); padding: 7px 10px; text-align: left; vertical-align: top; }
+table.spec th { color: var(--accent); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+table.spec td:first-child { color: var(--muted); }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--accent-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--accent-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* vv-specific */
+.vv-svg { width: 100%; height: auto; display: block; font-family: 'JetBrains Mono', monospace; }
+.vv-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .vv-rev { opacity: 1; }
+figure.play .vv-rev.d1 { transition-delay: 0.12s; }
+figure.play .vv-rev.d2 { transition-delay: 0.40s; }
+figure.play .vv-rev.d3 { transition-delay: 0.68s; }
+figure.play .vv-rev.d4 { transition-delay: 0.96s; }
+figure.play .vv-rev.d5 { transition-delay: 1.24s; }
+figure.play .vv-rev.d6 { transition-delay: 1.52s; }
+.vv-svg .grow { transform: scaleY(0); transform-origin: bottom; transition: transform 0.9s cubic-bezier(.2,.7,.2,1); }
+figure.play .vv-svg .grow { transform: scaleY(1); }
+.vv-svg .growx { transform: scaleX(0); transform-origin: left; transition: transform 1s cubic-bezier(.2,.7,.2,1); }
+figure.play .vv-svg .growx { transform: scaleX(1); }
+@media (prefers-reduced-motion: reduce) { .vv-rev { opacity: 1; transition: none; } .vv-svg .grow, .vv-svg .growx { transform: none; transition: none; } }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · viitorvoice</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · 流式零样本 TTS · ViiTorVoice · 开源工程(无独立论文)</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 语音合成 · 低帧率 + 非自回归</div>
+  <h1 class="title">ViiTorVoice ·<br /><span class="em">低帧率语义码,并行填声。</span></h1>
+  <div class="byline">viitor-ai · An LLM-based TTS engine (viitor-voice-nar) · 思路源自 DualCodec + OmniVoice · HF: ZzWater/ViiTorVoice-NAR</div>
+  <p class="dek">实时可克隆的 TTS,卡在两条瓶颈:帧率高→序列长、逐帧自回归→生成慢。ViiTorVoice 把三样拼一条链:DualCodec 把音频压到 12.5 帧/秒的"语义码+声学码"、NAR 掩码并行一次性填声、首块流式吐音——端到端首帧约 60ms,给段参考音就克隆。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>一个开源流式零样本 TTS 引擎(<strong>没有独立论文</strong>,硬数字来自它搭积木用的两篇组件论文)。三招各砍一刀延迟:① <strong><a href="../concepts/dualcodec.html">DualCodec</a> 低帧率码</strong>——24kHz 压 1920 倍到 <strong>12.5 帧/秒</strong>(比 Encodec ~75Hz 短 6×),第 1 码本是<strong>语义</strong>(w2v-BERT-2.0 蒸馏,码本 16384)、2–8 码本补<strong>声学</strong>残差<a class="jr" href="#g-02">2</a><a class="jr" href="#g-04">4</a>;② <strong><a href="../concepts/nar-masked-speech-generation.html">NAR 掩码并行</a></strong>——不逐帧,像完形填空一次性并行填码、迭代几步收敛,步数从 200 降到 ~8<a class="jr" href="#g-01">1</a><a class="jr" href="#g-07">7</a>;③ <strong>首块流式</strong>——首帧延迟 ~60ms<a class="jr" href="#g-08">8</a>。给<a href="../concepts/voice-cloning-reference.html">参考音</a>零样本克隆<a class="jr" href="#g-09">9</a>,两路 <a href="../concepts/classifier-free-guidance.html">CFG</a> 调情绪/副语言<a class="jr" href="#g-10">10</a>。</p>
+</div>
+
+<figure id="fig-pipeline">
+  <figcaption><span>主线 · 文本 → 语义码 → 声学码 → 波形,三段各砍一刀延迟</span><span class="fnum">PIPELINE</span></figcaption>
+  <svg class="vv-svg" viewBox="0 0 720 210" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="vv-p" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#1f5a66"/></marker></defs>
+    <text class="vv-rev d1" x="360" y="24" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#1f5a66">一条链:内容用短序列先定,细节并行补,首块先出声</text>
+    <!-- box 1 text -->
+    <rect class="vv-rev d1" x="18" y="60" width="140" height="58" rx="5" fill="#eee7d2" stroke="#7a6f5d"/>
+    <text class="vv-rev d1" x="88" y="84" text-anchor="middle" font-size="12" font-weight="700" fill="#3a3128">文本</text>
+    <text class="vv-rev d1" x="88" y="102" text-anchor="middle" font-size="8.5" fill="#7a6f5d">target text</text>
+    <line class="vv-rev d2" x1="160" y1="89" x2="186" y2="89" stroke="#1f5a66" stroke-width="1.6" marker-end="url(#vv-p)"/>
+    <!-- box 2 LLM semantic -->
+    <rect class="vv-rev d2" x="188" y="60" width="150" height="58" rx="5" fill="#cbe0e2" stroke="#1f5a66"/>
+    <text class="vv-rev d2" x="263" y="82" text-anchor="middle" font-size="12" font-weight="700" fill="#134049">LLM</text>
+    <text class="vv-rev d2" x="263" y="100" text-anchor="middle" font-size="8.5" fill="#134049">→ 语义码(短序列)</text>
+    <text class="vv-rev d2" x="263" y="132" text-anchor="middle" font-size="8" fill="#7a6f5d">说什么 · 内容骨架</text>
+    <line class="vv-rev d3" x1="340" y1="89" x2="366" y2="89" stroke="#1f5a66" stroke-width="1.6" marker-end="url(#vv-p)"/>
+    <!-- box 3 NAR acoustic -->
+    <rect class="vv-rev d3" x="368" y="60" width="160" height="58" rx="5" fill="#cbe0e2" stroke="#1f5a66"/>
+    <text class="vv-rev d3" x="448" y="82" text-anchor="middle" font-size="12" font-weight="700" fill="#134049">NAR 解码器</text>
+    <text class="vv-rev d3" x="448" y="100" text-anchor="middle" font-size="8.5" fill="#134049">→ 声学码(并行填)</text>
+    <text class="vv-rev d3" x="448" y="132" text-anchor="middle" font-size="8" fill="#7a6f5d">音色/情绪/细节</text>
+    <line class="vv-rev d4" x1="530" y1="89" x2="556" y2="89" stroke="#1f5a66" stroke-width="1.6" marker-end="url(#vv-p)"/>
+    <!-- box 4 codec -->
+    <rect class="vv-rev d4" x="558" y="60" width="144" height="58" rx="5" fill="#eee7d2" stroke="#7a6f5d"/>
+    <text class="vv-rev d4" x="630" y="82" text-anchor="middle" font-size="12" font-weight="700" fill="#3a3128">DualCodec</text>
+    <text class="vv-rev d4" x="630" y="100" text-anchor="middle" font-size="8.5" fill="#7a6f5d">→ 波形 24kHz</text>
+    <text class="vv-rev d5" x="360" y="176" text-anchor="middle" font-size="10.5" font-weight="700" fill="#3a3128">砍延迟三刀:语义序列短(12.5Hz) + 声学并行(NAR) + 首块流式 → 首帧 ~60ms</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 01</span>痛点：帧率高 + 逐帧生成,实时克隆两头卡</h2>
+
+<p>LLM-based TTS 的常见做法:先把音频用神经码(codec)压成离散 token,再让模型逐帧自回归吐出来。两个瓶颈叠在一起<a class="jr" href="#g-01">1</a>:</p>
+<ul>
+  <li><strong>帧率高 → 序列长</strong>:Encodec 这类声学码在 24kHz 下约 75 帧/秒,一句几秒的话就是几百帧,序列长、模型难学、显存吃紧。</li>
+  <li><strong>逐帧自回归 → 生成慢</strong>:第 n 帧要等第 n−1 帧算完,200 帧就是 200 步,长音频天然慢、首帧延迟高。</li>
+</ul>
+<p>要做"实时、可克隆、可控情绪"的语音,得<strong>同时</strong>砍掉"序列太长"和"逐帧太慢"。ViiTorVoice 的办法是三招各砍一刀:低帧率语义码(§02)、NAR 并行填声(§03)、首块流式(§04)。</p>
+
+<h2><span class="num">§ 02</span>招一：DualCodec 低帧率码,把"内容"和"细节"分两条流</h2>
+
+<p><a href="../concepts/dualcodec.html">DualCodec</a><a class="jr" href="#g-02">2</a> 把 24kHz 波形压 1920 倍到 <strong>12.5 帧/秒</strong>——比 Encodec ~75Hz 短 6×,下游序列直接短一个数量级<a class="jr" href="#g-03">3</a>。更关键的是它<strong>双流</strong>编码:第 1 码本(RVQ-1)不是普通声学码,是从自监督模型 <strong>w2v-BERT-2.0 第 16 层</strong>蒸馏来的<strong>语义码</strong>(码本 16384),管"说什么"<a class="jr" href="#g-04">4</a>;第 2–8 码本量化"波形减掉语义"剩下的<strong>声学残差</strong>(音色/韵律/环境)<a class="jr" href="#g-05">5</a>。一共 8 个码本,走 <a href="../concepts/rvq-codec.html">RVQ</a> 残差递推<a class="jr" href="#g-06">6</a>。</p>
+
+<figure id="fig-dualcodec">
+  <figcaption><span>FIG 02 · 双流:RVQ-1 语义(w2v-BERT 蒸馏)+ RVQ 2-8 声学残差,12.5 帧/秒</span><span class="fnum">DUALCODEC</span></figcaption>
+  <svg class="vv-svg" viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="vv-d" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#7a6f5d"/></marker></defs>
+    <!-- input -->
+    <rect class="vv-rev d1" x="20" y="98" width="96" height="54" rx="5" fill="#eee7d2" stroke="#7a6f5d"/>
+    <text class="vv-rev d1" x="68" y="120" text-anchor="middle" font-size="11" font-weight="700" fill="#3a3128">24kHz</text>
+    <text class="vv-rev d1" x="68" y="137" text-anchor="middle" font-size="9" fill="#7a6f5d">波形</text>
+    <!-- split up/down -->
+    <line class="vv-rev d2" x1="116" y1="112" x2="150" y2="66" stroke="#7a6f5d" stroke-width="1.3" marker-end="url(#vv-d)"/>
+    <line class="vv-rev d2" x1="116" y1="140" x2="150" y2="186" stroke="#7a6f5d" stroke-width="1.3" marker-end="url(#vv-d)"/>
+    <!-- top lane: semantic -->
+    <rect class="vv-rev d2" x="154" y="42" width="150" height="46" rx="5" fill="#e8f0f0" stroke="#1f5a66"/>
+    <text class="vv-rev d2" x="229" y="61" text-anchor="middle" font-size="9.5" font-weight="700" fill="#134049">w2v-BERT-2.0 第16层</text>
+    <text class="vv-rev d2" x="229" y="77" text-anchor="middle" font-size="8" fill="#7a6f5d">自监督语义特征</text>
+    <line class="vv-rev d3" x1="304" y1="65" x2="336" y2="65" stroke="#1f5a66" stroke-width="1.4" marker-end="url(#vv-d)"/>
+    <rect class="vv-rev d3" x="338" y="42" width="160" height="46" rx="5" fill="#cbe0e2" stroke="#1f5a66"/>
+    <text class="vv-rev d3" x="418" y="61" text-anchor="middle" font-size="10" font-weight="700" fill="#134049">RVQ-1 · 码本 16384</text>
+    <text class="vv-rev d3" x="418" y="77" text-anchor="middle" font-size="8.5" fill="#134049">= 语义码 · 说什么</text>
+    <!-- bottom lane: acoustic -->
+    <rect class="vv-rev d2" x="154" y="164" width="150" height="46" rx="5" fill="#efe7d2" stroke="#7a6f5d"/>
+    <text class="vv-rev d2" x="229" y="183" text-anchor="middle" font-size="9.5" font-weight="700" fill="#3a3128">CNN 编码器 ÷1920</text>
+    <text class="vv-rev d2" x="229" y="199" text-anchor="middle" font-size="8" fill="#7a6f5d">strides 4·5·6·8·2</text>
+    <line class="vv-rev d3" x1="304" y1="187" x2="336" y2="187" stroke="#7a6f5d" stroke-width="1.4" marker-end="url(#vv-d)"/>
+    <rect class="vv-rev d3" x="338" y="164" width="160" height="46" rx="5" fill="#e8e0c8" stroke="#7a6f5d"/>
+    <text class="vv-rev d3" x="418" y="183" text-anchor="middle" font-size="10" font-weight="700" fill="#3a3128">残差 → RVQ 2..8</text>
+    <text class="vv-rev d3" x="418" y="199" text-anchor="middle" font-size="8.5" fill="#7a6f5d">= 声学码 · 音色/细节</text>
+    <!-- merge to output -->
+    <line class="vv-rev d4" x1="498" y1="65" x2="560" y2="112" stroke="#7a6f5d" stroke-width="1.3" marker-end="url(#vv-d)"/>
+    <line class="vv-rev d4" x1="498" y1="187" x2="560" y2="140" stroke="#7a6f5d" stroke-width="1.3" marker-end="url(#vv-d)"/>
+    <rect class="vv-rev d4" x="562" y="98" width="130" height="54" rx="5" fill="#cbe0e2" stroke="#1f5a66"/>
+    <text class="vv-rev d4" x="627" y="120" text-anchor="middle" font-size="10" font-weight="700" fill="#134049">相加 → 解码</text>
+    <text class="vv-rev d4" x="627" y="137" text-anchor="middle" font-size="8.5" fill="#134049">→ 波形</text>
+    <!-- framerate badge -->
+    <rect class="vv-rev d5" x="240" y="222" width="240" height="22" rx="11" fill="#1f5a66"/>
+    <text class="vv-rev d5" x="360" y="237" text-anchor="middle" font-size="9.5" font-weight="700" fill="#f0e9d6">12.5 帧/秒 · 比 Encodec 75Hz 短 6×</text>
+  </svg>
+</figure>
+
+<h3>数字例子 · 12.5 帧/秒的账</h3>
+<pre class="eq">输入 24000 样点/秒
+编码器总下采样 = 4×5×6×8×2 = 1920
+帧率 = 24000 / 1920 = 12.5 帧/秒     （25Hz 版去掉最后 ×2：24000/960 = 25）
+对比 Encodec 24kHz：下采样 320 → 75 帧/秒
+一句 2 秒话：DualCodec 2×12.5 = 25 帧（每帧 8 码）; Encodec 2×75 = 150 帧
+省 75/12.5 = 6× 帧数 → LLM 面对的序列短一个数量级</pre>
+<p>✓ 帧率是"每秒吐几帧码"。压得越狠(下采样 1920)帧率越低、序列越短。语义码本(RVQ-1)从 w2v-BERT 蒸馏这招,让下游只需先把很短的语义序列预测对,内容就对了——声学细节留给 §03 并行补。</p>
+
+<h2><span class="num">§ 03</span>招二：NAR 掩码并行填声,不逐帧</h2>
+
+<p>声学码那 175 个码,若逐帧自回归就是 175 步。ViiTorVoice 走<strong>非自回归(NAR)</strong><a class="jr" href="#g-01">1</a>:先把要生成的码<strong>全盖住</strong>(掩码),一次性<strong>并行</strong>预测全部,再把没把握的盖回去重猜、迭代几步收敛——像 BERT 完形填空,但用于生成<a class="jr" href="#g-07">7</a>。步数从"序列长度"降到"迭代轮数(~8)",且每步内部并行。这一脉是 SoundStorm / MaskGCT / <a href="../concepts/nar-masked-speech-generation.html">OmniVoice</a><a class="jr" href="#g-12">12</a>,从预训练 LLM 初始化。</p>
+
+<figure id="fig-nar">
+  <figcaption><span>FIG 03 · 自回归逐帧(200 步)vs 非自回归掩码并行填(~8 步)</span><span class="fnum">AR vs NAR</span></figcaption>
+  <svg class="vv-svg" viewBox="0 0 720 240" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="vv-n" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#9b2c2c"/></marker></defs>
+    <!-- LEFT: AR -->
+    <text class="vv-rev d1" x="180" y="26" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#9b2c2c">自回归 AR · 一帧等一帧</text>
+    <g class="vv-rev d2" font-size="9" fill="#fff" text-anchor="middle">
+      <rect x="40" y="52" width="34" height="26" rx="3" fill="#9b2c2c"/><text x="57" y="69">帧1</text>
+      <rect x="86" y="52" width="34" height="26" rx="3" fill="#9b2c2c"/><text x="103" y="69">帧2</text>
+      <rect x="132" y="52" width="34" height="26" rx="3" fill="#b06a6a"/><text x="149" y="69">帧3</text>
+      <rect x="178" y="52" width="34" height="26" rx="3" fill="#cf9b9b"/><text x="195" y="69" fill="#5a2020">…</text>
+      <rect x="224" y="52" width="46" height="26" rx="3" fill="#e6cfcf"/><text x="247" y="69" fill="#5a2020">帧200</text>
+    </g>
+    <g class="vv-rev d3" stroke="#9b2c2c" stroke-width="1.2">
+      <line x1="74" y1="65" x2="84" y2="65" marker-end="url(#vv-n)"/>
+      <line x1="120" y1="65" x2="130" y2="65" marker-end="url(#vv-n)"/>
+      <line x1="166" y1="65" x2="176" y2="65" marker-end="url(#vv-n)"/>
+      <line x1="212" y1="65" x2="222" y2="65" marker-end="url(#vv-n)"/>
+    </g>
+    <text class="vv-rev d3" x="180" y="102" text-anchor="middle" font-size="9.5" fill="#3a3128">200 帧 = 200 步,每步等上一帧</text>
+    <text class="vv-rev d3" x="180" y="120" text-anchor="middle" font-size="8.5" fill="#7a6f5d">成本 ∝ 序列长度 → 长音频慢</text>
+    <!-- divider -->
+    <line class="vv-rev d1" x1="360" y1="44" x2="360" y2="200" stroke="#bfb398" stroke-width="1" stroke-dasharray="4 4"/>
+    <!-- RIGHT: NAR -->
+    <text class="vv-rev d4" x="540" y="26" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#1f5a66">非自回归 NAR · 一次性并行填</text>
+    <text class="vv-rev d4" x="540" y="46" text-anchor="middle" font-size="8.5" fill="#7a6f5d">全盖住 → 并行猜 → 没把握的重盖再填</text>
+    <!-- round rows -->
+    <g class="vv-rev d5" font-size="8" text-anchor="middle">
+      <text x="404" y="72" fill="#7a6f5d" text-anchor="end">起始</text>
+      <g fill="#8a99a0"><rect x="414" y="60" width="20" height="18" rx="2"/><rect x="438" y="60" width="20" height="18" rx="2"/><rect x="462" y="60" width="20" height="18" rx="2"/><rect x="486" y="60" width="20" height="18" rx="2"/><rect x="510" y="60" width="20" height="18" rx="2"/><rect x="534" y="60" width="20" height="18" rx="2"/><rect x="558" y="60" width="20" height="18" rx="2"/><rect x="582" y="60" width="20" height="18" rx="2"/></g>
+      <text x="674" y="73" fill="#7a6f5d" text-anchor="start">全 MASK</text>
+    </g>
+    <g class="vv-rev d5" font-size="8" text-anchor="middle" fill="#fff">
+      <text x="404" y="102" fill="#7a6f5d" text-anchor="end">第1轮</text>
+      <rect x="414" y="90" width="20" height="18" rx="2" fill="#1f5a66"/><rect x="438" y="90" width="20" height="18" rx="2" fill="#8a99a0"/><rect x="462" y="90" width="20" height="18" rx="2" fill="#1f5a66"/><rect x="486" y="90" width="20" height="18" rx="2" fill="#1f5a66"/><rect x="510" y="90" width="20" height="18" rx="2" fill="#8a99a0"/><rect x="534" y="90" width="20" height="18" rx="2" fill="#1f5a66"/><rect x="558" y="90" width="20" height="18" rx="2" fill="#1f5a66"/><rect x="582" y="90" width="20" height="18" rx="2" fill="#8a99a0"/>
+    </g>
+    <g class="vv-rev d6" font-size="8" text-anchor="middle" fill="#fff">
+      <text x="404" y="132" fill="#7a6f5d" text-anchor="end">收敛</text>
+      <rect x="414" y="120" width="20" height="18" rx="2" fill="#1f5a66"/><rect x="438" y="120" width="20" height="18" rx="2" fill="#1f5a66"/><rect x="462" y="120" width="20" height="18" rx="2" fill="#1f5a66"/><rect x="486" y="120" width="20" height="18" rx="2" fill="#1f5a66"/><rect x="510" y="120" width="20" height="18" rx="2" fill="#1f5a66"/><rect x="534" y="120" width="20" height="18" rx="2" fill="#1f5a66"/><rect x="558" y="120" width="20" height="18" rx="2" fill="#1f5a66"/><rect x="582" y="120" width="20" height="18" rx="2" fill="#1f5a66"/>
+    </g>
+    <text class="vv-rev d6" x="540" y="160" text-anchor="middle" font-size="9.5" fill="#3a3128">~8 步收敛,每步并行填全部</text>
+    <text class="vv-rev d6" x="540" y="178" text-anchor="middle" font-size="8.5" fill="#7a6f5d">成本 ∝ 迭代轮数(常数) → 长音频也快</text>
+    <text class="vv-rev d6" x="360" y="220" text-anchor="middle" font-size="10.5" font-weight="700" fill="#3a3128">只要轮数(~8) ≪ 序列长度(200),NAR 就快一个数量级</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 04</span>招三：首块流式 60ms + 零样本克隆 + CFG 控制</h2>
+
+<p><strong>首块流式</strong>:不必等整段生成完再出声,算完<strong>第一块</strong>就开始吐音、后面边算边流——端到端首帧延迟 ~60ms<a class="jr" href="#g-08">8</a>。<strong>零样本克隆</strong>:给一段<a href="../concepts/voice-cloning-reference.html">参考音频</a>(或预算好的 prompt 码本),模型照着音色合成目标文本,不用微调<a class="jr" href="#g-09">9</a>——因为克隆改的是声学侧,内容(语义码)不动<a class="jr" href="#g-11">11</a>。<strong>可控</strong>:两路 <a href="../concepts/classifier-free-guidance.html">CFG</a> guidance(情绪 <code>emotion_guidance_scale</code>、非语言发声 <code>nvv_guidance_scale</code>)调情绪/副语言强度<a class="jr" href="#g-10">10</a>;局部编辑靠对齐后掩码(词级 <code>align_granularity</code>、<code>expand_mask_ratio</code>)。</p>
+
+<figure id="fig-stream">
+  <figcaption><span>FIG 04 · 等整段 vs 首块流式:首帧从"等全部"降到 ~60ms</span><span class="fnum">FIRST-BLOCK</span></figcaption>
+  <svg class="vv-svg" viewBox="0 0 720 210" xmlns="http://www.w3.org/2000/svg">
+    <!-- time axis -->
+    <line class="vv-rev d1" x1="120" y1="176" x2="690" y2="176" stroke="#7a6f5d" stroke-width="1"/>
+    <text class="vv-rev d1" x="690" y="194" text-anchor="end" font-size="9" fill="#7a6f5d">时间 →</text>
+    <!-- baseline: wait whole -->
+    <text class="vv-rev d2" x="112" y="70" text-anchor="end" font-size="9.5" font-weight="700" fill="#9b2c2c">等整段</text>
+    <rect class="vv-rev d2 growx" x="120" y="56" width="470" height="26" rx="3" fill="#e6cfcf" stroke="#9b2c2c"/>
+    <text class="vv-rev d2" x="355" y="73" text-anchor="middle" font-size="9" fill="#5a2020">整段生成中…(全程静默)</text>
+    <circle class="vv-rev d3" cx="590" cy="69" r="6" fill="#9b2c2c"/>
+    <text class="vv-rev d3" x="600" y="72" text-anchor="start" font-size="9" font-weight="700" fill="#9b2c2c">才出第一声 · 延迟高</text>
+    <!-- first-block streaming -->
+    <text class="vv-rev d4" x="112" y="130" text-anchor="end" font-size="9.5" font-weight="700" fill="#1f5a66">首块流式</text>
+    <rect class="vv-rev d4 growx" x="120" y="116" width="48" height="26" rx="3" fill="#1f5a66"/>
+    <text class="vv-rev d4" x="144" y="133" text-anchor="middle" font-size="8" fill="#fff">首块</text>
+    <circle class="vv-rev d5" cx="168" cy="129" r="6" fill="#1f5a66"/>
+    <line class="vv-rev d5" x1="168" y1="150" x2="168" y2="176" stroke="#1f5a66" stroke-width="1" stroke-dasharray="3 2"/>
+    <text class="vv-rev d5" x="168" y="192" text-anchor="middle" font-size="9" font-weight="700" fill="#1f5a66">~60ms 首帧</text>
+    <g class="vv-rev d5" fill="#cbe0e2" stroke="#1f5a66">
+      <rect class="growx" x="172" y="116" width="80" height="26" rx="3"/>
+      <rect class="growx" x="256" y="116" width="80" height="26" rx="3"/>
+      <rect class="growx" x="340" y="116" width="80" height="26" rx="3"/>
+      <rect class="growx" x="424" y="116" width="80" height="26" rx="3"/>
+    </g>
+    <text class="vv-rev d6" x="340" y="133" text-anchor="middle" font-size="8.5" fill="#134049">后面边算边流,已经在出声</text>
+    <text class="vv-rev d6" x="405" y="30" text-anchor="middle" font-size="10.5" font-weight="700" fill="#3a3128">先出第一块就发声 → 用户几乎立刻听到</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 05</span>结果与落地</h2>
+
+<p>把低帧率语义码 + NAR 并行 + 首块流式拼起来,得到一个实时、可克隆、可控的开源 TTS 引擎,拆成 gRPC v2 服务(encoder / llm / decoder / orchestrator)+ HTTP 网关(:7861)。硬数字大多来自它搭积木用的两篇组件论文:</p>
+
+<table class="spec">
+  <tr><th>维度</th><th>数字 / 来源</th></tr>
+  <tr><td>首帧延迟</td><td><strong>~60ms</strong>(首块流式,ViiTorVoice README)</td></tr>
+  <tr><td>帧率</td><td><strong>12.5 帧/秒</strong>(DualCodec;24000/1920)</td></tr>
+  <tr><td>码本</td><td>N=8;RVQ-1 语义(w2v-BERT-2.0,码本 16384)+ 2-8 声学</td></tr>
+  <tr><td>比特率</td><td>~0.75–0.93 kbps(DualCodec,胜 Mimi/DAC/Encodec)</td></tr>
+  <tr><td>NAR 速度</td><td>并行解码,组件 OmniVoice 报 GPU RTF 0.025</td></tr>
+  <tr><td>语言 / 权重</td><td>中/英(日韩粤 TODO);HF ZzWater/ViiTorVoice-NAR</td></tr>
+</table>
+
+<div class="note">
+  <span class="l">放进 wiki 这条线</span>
+  <p>ViiTorVoice 没有独立论文,亮点是<strong>工程整合</strong>:把 <a href="../concepts/dualcodec.html">DualCodec</a>(低帧率 + <a href="../concepts/semantic-vs-acoustic-tokens.html">语义/声学分流</a>)+ <a href="../concepts/nar-masked-speech-generation.html">NAR 掩码并行</a>(OmniVoice/SoundStorm 一脉)+ 首块流式,拼成一条 60ms 的实时克隆链。跟 <a href="fish-speech-s2-pro.html">fish-speech</a> 对照着看:都用 <a href="../concepts/rvq-codec.html">RVQ 码</a> + <a href="../concepts/voice-cloning-reference.html">参考音克隆</a>,但 ViiTorVoice 把生成从自回归换成 NAR 并行、把帧率压到 12.5Hz 抢延迟。一句话:<strong>内容用短语义序列先定、细节用 NAR 并行补、首块先发声——三样各砍一刀,凑出实时。</strong></p>
+</div>
+
+<!-- glossary -->
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">自回归 vs 非自回归(AR/NAR)</span> · AR 逐帧生成,成本 ∝ 序列长度;<a href="../concepts/nar-masked-speech-generation.html">NAR</a> 并行预测全部、迭代几步收敛,成本 ∝ 迭代轮数(常数)。长音频/低延迟场景 NAR 赢。</li>
+    <li id="g-02"><span class="term"><a href="../concepts/dualcodec.html">DualCodec</a></span> · 低帧率、语义增强的双流神经音频码(arXiv 2505.13000 · Interspeech 2025)。SSL 流 + 波形流,RVQ-1 语义、其余声学。</li>
+    <li id="g-03"><span class="term">低帧率 12.5Hz</span> · 24kHz 下采样 1920(strides 4·5·6·8·2)→ 12.5 帧/秒,比 Encodec ~75Hz 短 6×,下游序列短一个数量级。</li>
+    <li id="g-04"><span class="term">语义码(RVQ-1)</span> · 第 1 码本从自监督模型 w2v-BERT-2.0 第 16 层蒸馏,码本 16384,编码"说什么"(内容骨架)。</li>
+    <li id="g-05"><span class="term">声学码(RVQ 2-8)</span> · 量化"波形 − 语义"的残差,补音色/韵律/环境等细节。共 8 码本。</li>
+    <li id="g-06"><span class="term"><a href="../concepts/rvq-codec.html">RVQ 残差量化</a></span> · 一层层量化上一层的残差;码本越多还原越细。DualCodec 底层就是它。</li>
+    <li id="g-07"><span class="term"><a href="../concepts/nar-masked-speech-generation.html">掩码并行生成</a></span> · 全盖住→并行猜→没把握的重盖再填,迭代几步(~8)收敛。SoundStorm/MaskGCT/OmniVoice 一脉,像 BERT 完形填空但用于生成。</li>
+    <li id="g-08"><span class="term">首块流式 · 60ms</span> · 算完第一块就发声、后面边算边流,端到端首帧延迟约 60ms,不等整段。</li>
+    <li id="g-09"><span class="term"><a href="../concepts/voice-cloning-reference.html">零样本克隆</a></span> · 给一段参考音频(或 prompt 码本)照着音色合成目标文本,不用微调。</li>
+    <li id="g-10"><span class="term">两路 <a href="../concepts/classifier-free-guidance.html">CFG</a> 控制</span> · emotion_guidance_scale(情绪)+ nvv_guidance_scale(非语言发声),用无分类器引导调控制强度。</li>
+    <li id="g-11"><span class="term">局部编辑(掩码对齐)</span> · 把源音按词级对齐(align_granularity)后掩掉要改的段(expand_mask_ratio),只重填那部分,内容其余不动。</li>
+    <li id="g-12"><span class="term">OmniVoice</span> · 扩散语言模型式的离散 NAR 架构(arXiv 2604.00688 · k2-fsa),从预训练 LLM 初始化、全码本随机掩码训练;ViiTorVoice 的 NAR 思路来源之一。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>SOURCE · github.com/viitor-ai/viitor-voice-nar(无独立论文)· 组件:DualCodec arXiv 2505.13000 · OmniVoice arXiv 2604.00688</span>
+  <span>INGESTED · 2026-07-02</span>
+</div>
+
+</div>
+<script>
+{
+  const figs = ['fig-pipeline','fig-dualcodec','fig-nar','fig-stream'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.15 });
+    obs.observe(el);
+  });
+}
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6);}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  var items={};
+  document.querySelectorAll('.gloss ol li[id^="g-"]').forEach(function(li){items[li.id]=li.innerHTML;});
+  if(!Object.keys(items).length)return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!items[id])return;
+      e.preventDefault();
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+items[id];
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+</body>
+</html>

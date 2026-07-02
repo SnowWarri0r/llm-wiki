@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>语义码 vs 声学码 · 把&quot;说什么&quot;和&quot;听起来啥样&quot;分开 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · semantic-vs-acoustic-tokens</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>语义码 vs 声学码 · 把&quot;说什么&quot;和&quot;听起来啥样&quot;分开</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>现代 TTS 把语音拆成两类离散码:<strong>语义码</strong>只管内容(说了哪些字、什么韵律骨架)、<strong>声学码</strong>管音色和细节(谁在说、什么情绪、什么环境)。分开之后,内容用短序列先定,细节再并行补——又快又可控。</p>
+<h2>直觉 · 为什么要拆</h2>
+<p>如果只有一种码(全是声学),那"说什么"和"听起来啥样"混在一起,模型得同时学两件难事,序列还长。拆开后各管一段:</p>
+<ul>
+<li><strong>语义码</strong>:从自监督模型(w2v-BERT / HuBERT 这类)蒸馏,天然编码"内容"。序列短、信息密度高、好预测。</li>
+<li><strong>声学码</strong>:量化波形残差,还原音色/情绪/环境。信息量大但可以<strong>并行</strong>补(不必逐帧慢慢来)。</li>
+</ul>
+<p>好处很实在:① 克隆音色 = 换声学码那一路,内容不变;② 情绪控制 = 在声学侧加 CFG;③ 内容用短语义序列先定,延迟低。</p>
+<h2>怎么做的 · 两级码的分工</h2>
+<pre><code>文本 ──(LLM,自回归/短序列)──▶ 语义码   ← &quot;说什么&quot;,内容骨架
+参考音 ─▶ 声学 prompt
+语义码 + 声学 prompt ──(NAR 并行)──▶ 声学码  ← &quot;听起来啥样&quot;,音色/细节
+声学码 + 语义码 ──(codec 解码)──▶ 波形
+</code></pre>
+<p><a href="../concepts/dualcodec.html">dualcodec</a> 就是这么落地的:RVQ-1 = 语义码(w2v-BERT 蒸馏),RVQ 2–8 = 声学码(残差)。</p>
+<h2>数字例子 · 序列长度对比</h2>
+<pre><code>一句 2 秒话,帧率 12.5Hz → 25 帧
+语义码:  25 帧 × 1 码/帧 = 25 个码     ← LLM 只预测这条短序列(定内容)
+声学码:  25 帧 × 7 码/帧 = 175 个码    ← NAR 一次性并行填(补细节,不逐帧)
+</code></pre>
+<p>✓ 内容(25 个码)交给擅长序列的 LLM 逐步定;细节(175 个码)交给 NAR 并行补——各用各的长处,总延迟被压下来。若全塞给一个自回归模型逐帧吐 200 个码,就是又慢又长。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/viitorvoice.html">viitorvoice</a> · LLM 定语义、NAR 补声学的典型分工</li>
+<li><a href="../concepts/dualcodec.html">dualcodec</a> · RVQ-1 语义 / RVQ 2-8 声学的具体码</li>
+<li><a href="../concepts/nar-masked-speech-generation.html">nar-masked-speech-generation</a> · 声学码那一步的并行填充</li>
+<li><a href="../concepts/voice-cloning-reference.html">voice-cloning-reference</a> · 克隆=换声学侧,内容(语义码)不动</li>
+<li><a href="../concepts/rvq-codec.html">rvq-codec</a> · 多码本残差量化的机制</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/viitorvoice.html"><span class="cat">paper</span>ViiTorVoice · 低帧率语义码 + 并行填声 = 60ms 流式克隆</a></li><li><a href="../concepts/dualcodec.html"><span class="cat">concept</span>DualCodec · 低帧率 + 语义增强的双流音频码</a></li><li><a href="../concepts/nar-masked-speech-generation.html"><span class="cat">concept</span>NAR 掩码并行生成 · 像完形填空一样&quot;一次性填声&quot;</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/semantic-vs-acoustic-tokens.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

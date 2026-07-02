@@ -1,8 +1,8 @@
 ---
 name: rvq-codec
 type: concept
-sources: [fish-speech-s2-pro]
-updated: 2026-05-20
+sources: [fish-speech-s2-pro, viitorvoice]
+updated: 2026-07-02
 ---
 
 # RVQ Codec · 残差向量量化

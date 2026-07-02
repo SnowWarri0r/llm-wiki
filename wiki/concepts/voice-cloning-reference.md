@@ -1,8 +1,8 @@
 ---
 name: voice-cloning-reference
 type: concept
-sources: [fish-speech-s2-pro]
-updated: 2026-05-22
+sources: [fish-speech-s2-pro, viitorvoice]
+updated: 2026-07-02
 ---
 
 # Voice Cloning Reference · 声音克隆参考音频
