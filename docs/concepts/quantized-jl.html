@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>QJL · 1-bit 符号随机投影,给内积一个无偏估计 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · quantized-jl</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>QJL · 1-bit 符号随机投影,给内积一个无偏估计</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>Johnson-Lindenstrauss(JL)说随机投影能保住向量间的距离/内积;QJL 更狠——投影后<strong>只留符号(1 bit)</strong>,靠一个缩放系数,仍能给两个向量的内积一个<strong>无偏</strong>估计(平均意义上不偏不倚,只是有点方差),存储便宜到每维 1 bit。</p>
+<h2>直觉 · 为什么"只留符号"还能估内积</h2>
+<p>JL 变换:拿一个随机矩阵把高维向量投到低维,内积近似不变。QJL 把每个投影坐标<strong>压成 1 bit(只记正负号)</strong>。听着丢了很多信息,但关键在<strong>无偏</strong>:对一堆随机方向取符号、再按合适系数放大,<code>sign(⟨R,x⟩)</code> 跟另一个向量配起来,<strong>期望正好等于真内积</strong>——单次噪声大,多个方向一平均就准。省 bit 又不引入系统性偏差,正是它值钱的地方。</p>
+<h2>怎么做的 · 符号 + 缩放 = 无偏内积</h2>
+<pre><code>给随机方向 r（高斯或 ±1）：
+  存 x 时只存 1 bit：b = sign(⟨r, x⟩)
+  估 ⟨x, q⟩ 时：用 c · b · ⟨r, q⟩ 这类项,对多个随机方向取平均
+    → E[估计] = ⟨x, q⟩     （无偏；c 是与维度有关的缩放常数）
+</code></pre>
+<p>在 <a href="../papers/turboquant.html">turboquant</a> 里 QJL 不是单独用,而是<strong>接在 MSE 量化器后面纠偏</strong>:MSE 量化器压完主体、内积估计会偏(<a href="../concepts/mse-vs-inner-product-bias.html">mse-vs-inner-product-bias</a>),对残差 <code>r=x−x̂</code> 再做 1-bit QJL,把那点偏差无偏地补回来——最终既低 MSE、内积又无偏。</p>
+<h2>数字例子 · 符号项平均出真内积</h2>
+<p>设真内积 <code>⟨x,q⟩=0.8</code>。单个随机方向的符号项估计噪声很大(可能给 +2.1、−0.5、+1.3…),但<strong>期望</strong>对准 0.8:</p>
+<pre><code>方向1: +2.1   方向2: −0.5   方向3: +1.3   方向4: +0.3   …（单次乱跳,但无系统偏差）
+取 4 个平均:(2.1−0.5+1.3+0.3)/4 = 0.80   ✓ 逼近真值,且不偏
+方向越多 → 方差越小 → 越准；每方向只花 1 bit
+</code></pre>
+<p>✓ 对比:一个<strong>有偏</strong>的估计器可能永远给 0.72(系统性偏小),加再多样本也纠不回来。QJL 的价值是<strong>无偏</strong>——加方向就能收敛到真值,这正是 TurboQuant 拿它做残差纠偏的原因。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/turboquant.html">turboquant</a> · 用 1-bit QJL 对残差纠偏,得无偏内积量化</li>
+<li><a href="../concepts/mse-vs-inner-product-bias.html">mse-vs-inner-product-bias</a> · QJL 要修的那个"MSE 最优→内积有偏"</li>
+<li><a href="../concepts/random-rotation-quantization.html">random-rotation-quantization</a> · 同属"随机投影/旋转"家族(都靠随机线性变换 + 高维集中)</li>
+<li><a href="../concepts/dot-product.html">dot-product</a> · 要估计并保住的量</li>
+<li><a href="../concepts/faiss-ann-search.html">faiss-ann-search</a> · 向量检索里同样靠"低比特 + 保内积/距离"</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/turboquant.html"><span class="cat">paper</span>TurboQuant · 随机旋转把&quot;任意向量&quot;变成&quot;分布已知&quot;,在线量化逼近理论最优</a></li><li><a href="../concepts/mse-vs-inner-product-bias.html"><span class="cat">concept</span>MSE 最优 ≠ 内积无偏 · 压得最像,点积却系统性偏</a></li><li><a href="../concepts/random-rotation-quantization.html"><span class="cat">concept</span>随机旋转量化 · 把&quot;不知道数据长啥样&quot;变成&quot;精确知道每个坐标的分布&quot;</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/quantized-jl.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

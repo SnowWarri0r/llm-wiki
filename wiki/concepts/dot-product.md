@@ -1,7 +1,7 @@
 ---
 name: dot-product
 type: concept
-sources: []
+sources: [turboquant]
 updated: 2026-06-18
 ---
 

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>随机旋转量化 · 把&quot;不知道数据长啥样&quot;变成&quot;精确知道每个坐标的分布&quot; · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · random-rotation-quantization</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>随机旋转量化 · 把&quot;不知道数据长啥样&quot;变成&quot;精确知道每个坐标的分布&quot;</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>在线量化的死结是"看不到数据统计,不知道该把量化格子切在哪";随机旋转一下向量,它每个坐标就服从一个<strong>固定、已知</strong>的分布(集中的 Beta),而且高维下坐标之间<strong>近独立</strong>——于是最优量化器能<strong>离线预制好、在线只旋转+套用</strong>,完全不看数据。</p>
+<h2>直觉 · 旋转不是压得更狠,是把未知变已知</h2>
+<p>量化就是"把连续值塞进有限几个格子"。切格子要切在数据多的地方才省 bit——可<strong>在线场景看不到全量数据</strong>(KV 向量边生成边存、检索向量边来边压),不知道数据往哪偏,只能保守地均匀切,浪费。</p>
+<p>随机旋转破局。关键几何事实:<strong>把任意向量乘一个随机正交矩阵(旋一下,长度不变),它的坐标就被"搅匀"成各向同性</strong>——单位向量的每个坐标,统计上都长一个样、服从同一个已知分布。原来"数据往哪偏我不知道",旋转后变成"每个坐标都服从我算得出来的那个分布"。<strong>未知 → 已知</strong>,这才是杠杆。分布已知,就能<strong>离线</strong>把最优标量量化器设计好;在线只需旋转 + 套这个预制量化器,零数据依赖(data-oblivious)。</p>
+<h2>怎么做的 · 旋转 → 每坐标最优标量量化 → 转回</h2>
+<pre><code>离线(一次性):按已知的坐标分布,设计一个最优标量量化器(格子切在概率密度高处)
+在线(每个向量 x):
+
+  1. x' = R·x           # R 随机正交矩阵,旋转,长度不变
+  2. 每个坐标 x'_i 各自套那个预制标量量化器 → 量化码
+  3. 解码时反旋转 Rᵀ 转回
+</code></pre>
+<p>两个性质让它成立:① <strong>坐标分布已知</strong>(旋转后是集中的 Beta,见下);② <strong>高维近独立</strong>——不同坐标几乎不相关,所以"每坐标各自最优"复合起来 ≈ 整个向量的最优(<a href="../papers/turboquant.html">turboquant</a> 证明只差信息论下界 ≈2.7×)。</p>
+<h2>数字例子 · 旋转后坐标全挤到 ±1/√d 附近</h2>
+<p>单位向量(长度 1)随机旋转后,每个坐标平方 <code>x_i²</code> 服从 <code>Beta(1/2, (d−1)/2)</code>,期望 <code>E[x_i²]=1/d</code>。所以典型坐标幅度 ≈ <code>1/√d</code>——<strong>维度越高,所有坐标越挤在 ±1/√d 附近这一薄壳里</strong>。</p>
+<pre><code>d=4:   每坐标 ~ ±1/√4 = ±0.5      （例:旋转后 x'≈[0.5, −0.5, 0.5, −0.5]，长度 √(4·0.25)=1 ✓）
+d=100: 每坐标 ~ ±1/√100 = ±0.1    每个都 0.1 上下,分布又窄又已知
+d=1000:每坐标 ~ ±0.0316           越高维越集中
+</code></pre>
+<p>✓ 含义:旋转前坐标可能一个 0.98、其余接近 0(能量全堆一处,量化器不知道堆哪);旋转后<strong>每个坐标都是同一个窄分布</strong>,一个离线预制的量化器对所有坐标、所有输入都好使。这就是"未知变已知"的数字面孔——<code>E[x_i²]=1/d</code> 是拿到手就能算的常数,不用看任何数据。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/turboquant.html">turboquant</a> · 提出用它做在线向量量化,逼近下界 ≈2.7×</li>
+<li><a href="../concepts/bin-quantization.html">bin-quantization</a> / <a href="../concepts/quantization.html">quantization</a> · 每坐标套的就是最优标量(bin)量化器</li>
+<li><a href="../concepts/quantized-jl.html">quantized-jl</a> · 同样"随机投影"家族;TurboQuant 用它做残差纠偏</li>
+<li><a href="../concepts/kv-cache.html">kv-cache</a> · 主要落地场景(边生成边压 KV,天然 online/data-oblivious)</li>
+<li><a href="../concepts/mse-vs-inner-product-bias.html">mse-vs-inner-product-bias</a> · 旋转+MSE 量化后,内积仍有偏,需第二阶段</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/turboquant.html"><span class="cat">paper</span>TurboQuant · 随机旋转把&quot;任意向量&quot;变成&quot;分布已知&quot;,在线量化逼近理论最优</a></li><li><a href="../concepts/mse-vs-inner-product-bias.html"><span class="cat">concept</span>MSE 最优 ≠ 内积无偏 · 压得最像,点积却系统性偏</a></li><li><a href="../concepts/quantized-jl.html"><span class="cat">concept</span>QJL · 1-bit 符号随机投影,给内积一个无偏估计</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/random-rotation-quantization.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 ---
 name: bin-quantization
 type: concept
-sources: [dmel]
+sources: [dmel, turboquant]
 updated: 2026-05-21
 ---
 
