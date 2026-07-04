@@ -875,3 +875,5 @@ skill 更新:
 ## [2026-07-02] ingest | viitorvoice (ViiTorVoice / viitor-voice-nar, 开源 LLM-based 流式 TTS 引擎, 无独立论文, 思路源自 DualCodec+OmniVoice) bespoke(petrol) 4图: 三段管线(文本→LLM语义码→NAR声学码→DualCodec波形)/DualCodec双流(RVQ-1语义w2v-BERT蒸馏码本16384 + RVQ2-8声学残差, 24000/1920=12.5帧秒)/AR逐帧200步 vs NAR掩码并行~8步/首块流式60ms; 3 concept (dualcodec, semantic-vs-acoustic-tokens, nar-masked-speech-generation) + 复用 rvq-codec/voice-cloning-reference/classifier-free-guidance 补 source; 硬数字来自组件论文 DualCodec arXiv2505.13000(Interspeech25) + OmniVoice arXiv2604.00688(k2-fsa); 60ms首帧/12.5帧秒/N=8码本/~0.75-0.93kbps/中英日韩粤TODO; HF ZzWater/ViiTorVoice-NAR
 
 ## [2026-07-03] fix | viitorvoice fig-stream 误导: 原"首块流式"行比"等整段"行短→像流式整体更快完成; 实际总时长一样只是首声更早出. 对齐两行右边缘到同一 finish 线(x590)+加"两者约同时生成完"共享虚线; caption 改"总时长一样,差别在第一声何时出来"
+
+## [2026-07-03] expand | viitorvoice 加机制细节(嫌讲太粗): §02 加"RVQ 残差递推"——每码本咬上层残差,数字例 x=[.9,.4] 三层码字逼近到 0,8码本=1语义+7声学; §03 加"迭代到底怎么迭代"——置信度(softmax最高档)+余弦式定稿,4步25/50/75/100%示意,定稿按把握非从左到右+随机掩码训练/LLM初始化; §04 加"CFG外推公式"out=uncond+s·(cond−uncond)数字例(0.2+3·0.3=1.1)+两路s(情绪/nvv), 加克隆(prompt前缀条件,内容来自文本音色来自prompt)与流式(block切分,首块=60ms,低帧率帮忙)细节; glossary 12→15(g13残差递推/g14置信度余弦定稿/g15 CFG外推)

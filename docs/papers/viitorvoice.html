@@ -211,6 +211,15 @@ figure.play .vv-svg .growx { transform: scaleX(1); }
 省 75/12.5 = 6× 帧数 → LLM 面对的序列短一个数量级</pre>
 <p>✓ 帧率是"每秒吐几帧码"。压得越狠(下采样 1920)帧率越低、序列越短。语义码本(RVQ-1)从 w2v-BERT 蒸馏这招,让下游只需先把很短的语义序列预测对,内容就对了——声学细节留给 §03 并行补。</p>
 
+<h3>细节 · RVQ 残差递推:8 个码本怎么一层层逼近</h3>
+<p>为什么要 8 个码本?<a href="../concepts/rvq-codec.html">RVQ</a> 的玩法是<strong>每个码本只管上一层没编准的"残差"</strong><a class="jr" href="#g-13">13</a>:第 1 个码本先粗粗量化,剩下的误差交给第 2 个,再剩的交给第 3 个……码本越多、还原越细。DualCodec 里 RVQ-1 特殊(语义,从 w2v-BERT 蒸馏),声学侧的 RVQ 2–8 就是对"波形 − 语义"的残差做这套逐层逼近。每层"量化"= 在这层的码本(一堆预置码字)里挑一个<strong>离当前残差最近的</strong>,只存它的编号。</p>
+<pre class="eq">目标(某帧的声学残差向量) x = [0.90, 0.40]
+码本2 挑最近码字 [ 1.0, 0.5] → 累计 [1.0, 0.5]  剩余残差 [−0.10, −0.10]  (还差 0.14)
+码本3 挑最近码字 [−0.1,−0.2] → 累计 [0.9, 0.3]  剩余残差 [ 0.00,  0.10]  (还差 0.10)
+码本4 挑最近码字 [ 0.0, 0.1] → 累计 [0.9, 0.4]  剩余残差 [ 0.00,  0.00]  (还差 0)
+每层只咬住上一层的残差 → 码本越多越精;存这一帧 = 存这几个码字的编号</pre>
+<p>✓ 所以"8 个码本"= 1 层语义骨架 + 7 层声学细化。低比特率(~0.75–0.93 kbps)靠的就是每帧只存 8 个小整数(码字编号),而不是几千个原始波形样点。想要更高音质就多留几层残差、想更省就砍层——一个可调的清晰旋钮。</p>
+
 <h2><span class="num">§ 03</span>招二：NAR 掩码并行填声,不逐帧</h2>
 
 <p>声学码那 175 个码,若逐帧自回归就是 175 步。ViiTorVoice 走<strong>非自回归(NAR)</strong><a class="jr" href="#g-01">1</a>:先把要生成的码<strong>全盖住</strong>(掩码),一次性<strong>并行</strong>预测全部,再把没把握的盖回去重猜、迭代几步收敛——像 BERT 完形填空,但用于生成<a class="jr" href="#g-07">7</a>。步数从"序列长度"降到"迭代轮数(~8)",且每步内部并行。这一脉是 SoundStorm / MaskGCT / <a href="../concepts/nar-masked-speech-generation.html">OmniVoice</a><a class="jr" href="#g-12">12</a>,从预训练 LLM 初始化。</p>
@@ -261,6 +270,17 @@ figure.play .vv-svg .growx { transform: scaleX(1); }
   </svg>
 </figure>
 
+<h3>细节 · 迭代到底怎么迭代:置信度 + 余弦式定稿</h3>
+<p>"迭代几步收敛"具体是这样:每一步模型对<strong>所有还盖着的位置并行给出预测</strong>,同时给每个预测一个<strong>置信度</strong>(它对这个猜测有多确定,取 softmax 里最高那档概率)。然后<strong>只把置信度最高的一批"定稿",其余盖回去下一步重猜</strong>——定稿的那些会成为下一步的上下文,让难猜的位置越来越好猜<a class="jr" href="#g-14">14</a>。每步定稿多少,按一条<strong>余弦式日程</strong>:早期少定(还不确定,先钉最有把握的),越往后一次定越多。</p>
+<pre class="eq">200 个声学位置,4 步解码(示意):
+起始   : 200 个全 [MASK]
+第1步  : 并行预测 200 → 只定稿置信度最高的 ~50 个(25%)   剩 150 盖回
+第2步  : 并行预测剩 150 → 累计定稿 ~100 个(50%)         剩 100 盖回
+第3步  : 并行预测剩 100 → 累计定稿 ~150 个(75%)         剩 50 盖回
+第4步  : 并行预测剩 50  → 全部 200 定稿                   收敛
+对比自回归:200 个位置 = 200 步,逐帧等;这里 4 步,每步内部并行</pre>
+<p>✓ 关键:定稿顺序按<strong>把握大小</strong>走、不是从左到右——先钉住确定的锚点,再让它们帮着定不确定的。训练时用<strong>随机掩码</strong>(盖住一部分让模型学着从上下文补全),并从预训练 <a href="../concepts/nar-masked-speech-generation.html">LLM 初始化</a>,让它一上来就带语言/序列先验,不用从零学"话该怎么接"。</p>
+
 <h2><span class="num">§ 04</span>招三：首块流式 60ms + 零样本克隆 + CFG 控制</h2>
 
 <p><strong>首块流式</strong>:不必等整段生成完再出声,算完<strong>第一块</strong>就开始吐音、后面边算边流——端到端首帧延迟 ~60ms<a class="jr" href="#g-08">8</a>。<strong>零样本克隆</strong>:给一段<a href="../concepts/voice-cloning-reference.html">参考音频</a>(或预算好的 prompt 码本),模型照着音色合成目标文本,不用微调<a class="jr" href="#g-09">9</a>——因为克隆改的是声学侧,内容(语义码)不动<a class="jr" href="#g-11">11</a>。<strong>可控</strong>:两路 <a href="../concepts/classifier-free-guidance.html">CFG</a> guidance(情绪 <code>emotion_guidance_scale</code>、非语言发声 <code>nvv_guidance_scale</code>)调情绪/副语言强度<a class="jr" href="#g-10">10</a>;局部编辑靠对齐后掩码(词级 <code>align_granularity</code>、<code>expand_mask_ratio</code>)。</p>
@@ -298,6 +318,18 @@ figure.play .vv-svg .growx { transform: scaleX(1); }
   </svg>
 </figure>
 
+<h3>细节 · CFG 怎么"调"情绪:同一步跑两遍再外推</h3>
+<p><a href="../concepts/classifier-free-guidance.html">无分类器引导(CFG)</a> 的做法:同一步跑两遍——一遍<strong>带条件</strong>(cond,比如"高兴")、一遍<strong>不带条件</strong>(uncond),再朝"带 − 不带"的方向<strong>外推</strong>一个比例 s<a class="jr" href="#g-15">15</a>:</p>
+<pre class="eq">out = uncond + s · (cond − uncond)
+某维输出(示意)：uncond = 0.2, cond(高兴) = 0.5, 比例 s = 3
+ → out = 0.2 + 3·(0.5 − 0.2) = 0.2 + 0.9 = 1.1      把"高兴"方向放大
+s = 1 → 普通条件生成; s > 1 → 放大条件(更"高兴"); s 太大 → 失真/发飘</pre>
+<p>ViiTorVoice 开<strong>两路</strong>这种外推:<code>emotion_guidance_scale</code> 管情绪强度、<code>nvv_guidance_scale</code> 管非语言发声(笑声/叹气/停顿这类)。两个旋钮各调一件事——"情绪多浓""副语言多明显",互不打架。</p>
+
+<h3>细节 · 克隆与流式各是怎么成立的</h3>
+<p><strong>克隆</strong>:参考音先过 encoder 变成 prompt 的语义/声学码,拼在目标序列前面当"前缀条件"。因为<a href="../concepts/semantic-vs-acoustic-tokens.html">内容来自文本(语义码)、音色来自参考音(声学码)</a>,模型顺着 prompt 的声学风格续写目标文本,就得到"这个人说这句话"——不为每个说话人微调。给"prompt 音频"还是"预算好的 prompt 码本"是同一件事的两种入口,后者省掉每次重新编码。</p>
+<p><strong>流式</strong>:把输出切成一个个 block(若干帧一小段),算完<strong>第一个 block</strong> 就交给 <a href="../concepts/dualcodec.html">DualCodec</a> 解成波形吐出去、后面边算边补。"首帧延迟 ~60ms"说的就是"第一个 block 出来"的时间,而不是等整段生成完(见 FIG 04)。低帧率在这也帮忙:12.5Hz 下一个 block 只有几帧,算得快、首块自然早。</p>
+
 <h2><span class="num">§ 05</span>结果与落地</h2>
 
 <p>把低帧率语义码 + NAR 并行 + 首块流式拼起来,得到一个实时、可克隆、可控的开源 TTS 引擎,拆成 gRPC v2 服务(encoder / llm / decoder / orchestrator)+ HTTP 网关(:7861)。硬数字大多来自它搭积木用的两篇组件论文:</p>
@@ -333,6 +365,9 @@ figure.play .vv-svg .growx { transform: scaleX(1); }
     <li id="g-10"><span class="term">两路 <a href="../concepts/classifier-free-guidance.html">CFG</a> 控制</span> · emotion_guidance_scale(情绪)+ nvv_guidance_scale(非语言发声),用无分类器引导调控制强度。</li>
     <li id="g-11"><span class="term">局部编辑(掩码对齐)</span> · 把源音按词级对齐(align_granularity)后掩掉要改的段(expand_mask_ratio),只重填那部分,内容其余不动。</li>
     <li id="g-12"><span class="term">OmniVoice</span> · 扩散语言模型式的离散 NAR 架构(arXiv 2604.00688 · k2-fsa),从预训练 LLM 初始化、全码本随机掩码训练;ViiTorVoice 的 NAR 思路来源之一。</li>
+    <li id="g-13"><span class="term">RVQ 残差递推</span> · 每个码本只量化上一层的残差(挑最近码字),一层层逼近;码本越多越精。DualCodec 声学侧 RVQ 2-8 就这么把"波形−语义"残差补细。</li>
+    <li id="g-14"><span class="term">置信度 + 余弦式定稿</span> · NAR 每步并行预测全部,只定稿置信度(softmax 最高档)最高的一批、其余重盖;每步定多少按余弦日程(早少晚多)。定稿的锚点帮着定难位。</li>
+    <li id="g-15"><span class="term">CFG 外推公式</span> · out = uncond + s·(cond−uncond)。s=1 普通条件,s&gt;1 放大条件,太大失真。ViiTorVoice 两路 s(情绪 / 非语言发声)。</li>
   </ol>
 </div>
 
