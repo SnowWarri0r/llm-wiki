@@ -15,6 +15,42 @@ updated: 2026-06-28
 
 解法是**连续松弛**：与其挑一个 token，不如**按概率把所有 token 的嵌入混起来**。概率从 logits 经 [[softmax]] 来，混合是加权平均——整条路就可导了。
 
+下图用两个 token 的情形看（横轴 `z = logit_cat − logit_dog`，纵轴 = 给 cat 的权重）：硬选是台阶、软化是光滑 S 形。
+
+<figure style="margin:26px 0; padding:22px; background:#eef2f7; border:1px solid #9fb3c8; border-radius:4px;">
+<svg viewBox="0 0 660 312" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:'JetBrains Mono',monospace;">
+  <!-- axes: x=z (y=258), y=value (x=80); v=0→248 v=1→78 ; x(z)=340+62z -->
+  <line class="reveal d1" x1="80" y1="60" x2="80" y2="258" stroke="#9fb3c8" stroke-width="1"/>
+  <line class="reveal d1" x1="80" y1="258" x2="600" y2="258" stroke="#9fb3c8" stroke-width="1.1"/>
+  <g class="reveal d1" font-size="9" fill="#5b6b7d" text-anchor="end">
+    <text x="74" y="81">1</text><text x="74" y="166">0.5</text><text x="74" y="251">0</text>
+  </g>
+  <g class="reveal d1" font-size="9" fill="#5b6b7d" text-anchor="middle">
+    <text x="92" y="272">-4</text><text x="340" y="272">0</text><text x="588" y="272">4</text>
+  </g>
+  <text class="reveal d1" x="612" y="261" text-anchor="start" font-size="9" fill="#5b6b7d">z</text>
+  <!-- 软化 softmax: 光滑 sigmoid -->
+  <polyline class="reveal d3" points="92,244.9 154,240.0 216,227.8 278,202.3 340,163.0 402,123.7 464,98.2 526,86.0 588,81.1" fill="none" stroke="#3d4a9e" stroke-width="2.4"/>
+  <!-- 硬选 argmax: 台阶 + 跳变 -->
+  <polyline class="reveal d2" points="92,248 340,248" fill="none" stroke="#9b2c2c" stroke-width="2.2"/>
+  <polyline class="reveal d2" points="340,78 588,78" fill="none" stroke="#9b2c2c" stroke-width="2.2"/>
+  <line class="reveal d2" x1="340" y1="248" x2="340" y2="78" stroke="#9b2c2c" stroke-width="1.4" stroke-dasharray="4 3"/>
+  <circle class="reveal d2" cx="340" cy="248" r="3.4" fill="#eef2f7" stroke="#9b2c2c" stroke-width="1.4"/>
+  <circle class="reveal d2" cx="340" cy="78" r="3.4" fill="#9b2c2c"/>
+  <!-- legend top-left (empty zone) -->
+  <g class="reveal d4">
+    <rect x="96" y="66" width="232" height="46" rx="4" fill="#faf4e1" stroke="#bfb398"/>
+    <line x1="108" y1="82" x2="132" y2="82" stroke="#9b2c2c" stroke-width="2.2"/><text x="138" y="85" font-size="9.5" fill="#3a3128" text-anchor="start">硬选 argmax · 台阶(跳变)</text>
+    <line x1="108" y1="102" x2="132" y2="102" stroke="#3d4a9e" stroke-width="2.4"/><text x="138" y="105" font-size="9.5" fill="#3a3128" text-anchor="start">软化 softmax · 光滑 S 形</text>
+  </g>
+  <!-- captions below plot, color-coded, no crossing -->
+  <text class="reveal d5" x="80" y="290" text-anchor="start" font-size="9.5" fill="#9b2c2c">argmax：z=0 跳变 → 连续都不是；两侧平 → 梯度=0 → 反传断</text>
+  <text class="reveal d5" x="80" y="306" text-anchor="start" font-size="9.5" fill="#3d4a9e">softmax：处处光滑可导(可导⟹连续) → 梯度顺 z 反传</text>
+</svg>
+</figure>
+
+**层级：可导 ⊊ 连续。** argmax 在 z=0 跳变（空心点=右极限取不到、实心点=跳到的值），连"连续"都不算；softmax 是光滑曲线、处处可导（可导自然连续）。中间还有"连续但不可导"一档，典型是 `|x|` 在 0 点的尖角——softmax 连这种尖角都没有。所以"连续松弛"这名字偏松：反传真正要的是**可导**，softmax 给的是**光滑**（比连续更强）。
+
 ## 怎么做的
 ```
 某一步词表 logits  ℓ ∈ ℝ^V
