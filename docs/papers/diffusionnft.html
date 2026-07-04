@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>DiffusionNFT · 把扩散的 RL 从反向采样搬回前向加噪</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --aubergine: #4f2a52; --aubergine-soft: #e6d8e8;
+  --accent: var(--aubergine); --accent-soft: var(--aubergine-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(38px, 6vw, 70px); line-height: 0.98; letter-spacing: -0.03em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 36px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
+p { margin: 12px 0; } strong { font-weight: 700; }
+ul { margin: 12px 0; padding-left: 24px; } li { margin: 6px 0; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.86em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--accent-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--accent); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--accent); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+table.spec { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+table.spec td, table.spec th { border-bottom: 1px dashed var(--rule); padding: 7px 10px; text-align: left; vertical-align: top; }
+table.spec th { color: var(--accent); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+table.spec td:first-child { color: var(--muted); }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--accent-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--accent-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* nf-specific */
+.nf-svg { width: 100%; height: auto; display: block; font-family: 'JetBrains Mono', monospace; }
+.nf-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .nf-rev { opacity: 1; }
+figure.play .nf-rev.d1 { transition-delay: 0.12s; }
+figure.play .nf-rev.d2 { transition-delay: 0.40s; }
+figure.play .nf-rev.d3 { transition-delay: 0.68s; }
+figure.play .nf-rev.d4 { transition-delay: 0.96s; }
+figure.play .nf-rev.d5 { transition-delay: 1.24s; }
+figure.play .nf-rev.d6 { transition-delay: 1.52s; }
+.nf-svg .draw { stroke-dasharray: 1000; stroke-dashoffset: 1000; transition: stroke-dashoffset 1.5s ease; }
+figure.play .nf-svg .draw { stroke-dashoffset: 0; }
+@media (prefers-reduced-motion: reduce) { .nf-rev { opacity: 1; transition: none; } .nf-svg .draw { stroke-dashoffset: 0; transition: none; } }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · diffusionnft</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · 扩散在线 RL · DiffusionNFT · ICLR 2026</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 扩散强化学习 · 前向过程优化</div>
+  <h1 class="title">DiffusionNFT ·<br /><span class="em">在唯一的前向上做 RL。</span></h1>
+  <div class="byline">清华 / NVIDIA 等 · Online Diffusion Reinforcement with Forward Process · arXiv 2509.16117 · ICLR 2026</div>
+  <p class="dek">给扩散模型做在线 RL 的老路,是把反向采样切成多步 MDP 再套 GRPO——却继承一身毛病。DiffusionNFT 抓住一个事实:前向加噪只有一条、反向去噪有无数条,于是把 RL 直接做在前向上。用奖励切正负样本,正负之差就是该走的方向;整件事退化成一个监督式 flow-matching 损失。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>扩散的似然算不出来<a class="jr" href="#g-01">1</a>,所以没法照搬 <a href="../concepts/grpo.html">GRPO</a>。FlowGRPO 的绕法是把<strong>反向去噪</strong>切成多步马尔可夫过程(每步高斯可算概率),但落三个坑:锁死一阶 SDE solver、偏离前向过程、CFG 要两套模型<a class="jr" href="#g-02">2</a>。DiffusionNFT 换思路——<strong>前向加噪唯一、反向去噪无数</strong>,把 RL 搬回前向 <a href="flow-matching.html">flow matching</a><a class="jr" href="#g-03">3</a>:用奖励 <code>r</code> 把样本软切成正分布 <code>π⁺∝r·π_old</code> / 负分布 <code>π⁻∝(1−r)·π_old</code><a class="jr" href="#g-04">4</a>,正负速度之差 <code>Δ</code> 就是隐式的<strong>强化引导</strong>方向(CFG 不过是它的离线版)<a class="jr" href="#g-06">6</a>。一个模型隐式同时装正负速度,RL 揉进一个<strong>监督损失</strong><a class="jr" href="#g-07">7</a>:免似然、任意 solver、只要干净图。SD3.5-M 上 GenEval ~1k 步逼 <strong>0.98</strong>,比 FlowGRPO 快 <strong>3–25×</strong><a class="jr" href="#g-10">10</a>。</p>
+</div>
+
+<h2><span class="num">§ 01</span>似然墙：扩散为什么不能照搬 GRPO</h2>
+
+<p>RL 微调 LLM 顺手,是因为策略梯度要的"模型给这个样本的概率"唾手可得:每个 token 输出的就是概率分布,一条回答的概率 = 逐 token 概率连乘。奖励一来,乘上对数概率的梯度就更新。<a href="../concepts/policy-gradient.html">policy gradient</a> / <a href="ppo.html">PPO</a> / <a href="../concepts/grpo.html">GRPO</a> 都吃这口。</p>
+
+<p>扩散没有这种现成概率<a class="jr" href="#g-01">1</a>。一张图是从噪声经几十步去噪来的,"模型生成这张图的概率"要对所有路径积分,只能靠概率流 ODE 或 SDE 变分界<strong>昂贵地近似</strong>。这就是<strong>似然墙</strong>。主流绕法(FlowGRPO / DanceGRPO):把<strong>反向采样</strong>看成多步马尔可夫决策过程,每步状态转移是个高斯——高斯概率可算,于是能套 GRPO。但这条路有代价。</p>
+
+<figure id="fig-barrier">
+  <figcaption><span>FIG 01 · 似然墙逼出"绕反向",代价是三个坑</span><span class="fnum">THE LIKELIHOOD WALL</span></figcaption>
+  <svg class="nf-svg" viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg">
+    <!-- LLM ok -->
+    <g class="nf-rev d1">
+      <rect x="40" y="36" width="300" height="80" rx="5" fill="#d8e6ce" stroke="#4a6b3a"/>
+      <text x="190" y="58" text-anchor="middle" font-size="11" font-weight="700" fill="#2f5a2a">LLM · 似然现成</text>
+      <text x="190" y="78" text-anchor="middle" font-size="9.5" fill="#3a3128">每个 token 输出概率,连乘 = 整句概率</text>
+      <text x="190" y="96" text-anchor="middle" font-size="10" font-weight="700" fill="#2f5a2a">→ 直接套 GRPO ✓</text>
+    </g>
+    <!-- diffusion blocked -->
+    <g class="nf-rev d2">
+      <rect x="380" y="36" width="300" height="80" rx="5" fill="#efd6c8" stroke="#9b2c2c"/>
+      <text x="530" y="58" text-anchor="middle" font-size="11" font-weight="700" fill="#7a2020">扩散 · 似然算不出</text>
+      <text x="530" y="78" text-anchor="middle" font-size="9.5" fill="#3a3128">几十步去噪,概率要对所有路径积分</text>
+      <text x="530" y="96" text-anchor="middle" font-size="10" font-weight="700" fill="#7a2020">→ policy gradient 卡住 ✗</text>
+    </g>
+    <!-- FlowGRPO hack -->
+    <line class="nf-rev d3" x1="530" y1="116" x2="530" y2="142" stroke="#7a6f5d" stroke-width="1.3"/><polygon class="nf-rev d3" points="530,142 526,134 534,134" fill="#7a6f5d"/>
+    <rect class="nf-rev d3" x="300" y="146" width="460" height="44" rx="5" fill="#faf4e1" stroke="#b8841c"/>
+    <text class="nf-rev d3" x="530" y="164" text-anchor="middle" font-size="10.5" font-weight="700" fill="#8a5a0c">FlowGRPO 的绕法:把反向采样切成多步 MDP(每步高斯可算)</text>
+    <text class="nf-rev d3" x="530" y="181" text-anchor="middle" font-size="9" fill="#3a3128">概率有了 → 能套 GRPO,但继承三个坑 ↓</text>
+    <!-- three pits -->
+    <g class="nf-rev d4">
+      <rect x="300" y="206" width="146" height="74" rx="4" fill="#f3d9d9" stroke="#9b2c2c"/>
+      <text x="373" y="226" text-anchor="middle" font-size="10" font-weight="700" fill="#7a2020">① 锁死 solver</text>
+      <text x="373" y="244" text-anchor="middle" font-size="8.5" fill="#3a3128">耦死一阶 SDE,</text>
+      <text x="373" y="258" text-anchor="middle" font-size="8.5" fill="#3a3128">用不了 ODE/高阶</text>
+    </g>
+    <g class="nf-rev d5">
+      <rect x="456" y="206" width="148" height="74" rx="4" fill="#f3d9d9" stroke="#9b2c2c"/>
+      <text x="530" y="226" text-anchor="middle" font-size="10" font-weight="700" fill="#7a2020">② 前后向不一致</text>
+      <text x="530" y="244" text-anchor="middle" font-size="8.5" fill="#3a3128">只盯反向 → 可能</text>
+      <text x="530" y="258" text-anchor="middle" font-size="8.5" fill="#3a3128">退化成级联高斯</text>
+    </g>
+    <g class="nf-rev d6">
+      <rect x="614" y="206" width="146" height="74" rx="4" fill="#f3d9d9" stroke="#9b2c2c"/>
+      <text x="687" y="226" text-anchor="middle" font-size="10" font-weight="700" fill="#7a2020">③ CFG 难搞</text>
+      <text x="687" y="244" text-anchor="middle" font-size="8.5" fill="#3a3128">硬塞 → 又慢又繁</text>
+      <text x="687" y="258" text-anchor="middle" font-size="8.5" fill="#3a3128">的两模型优化</text>
+    </g>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 02</span>关键洞察：前向只有一条，反向有无数条</h2>
+
+<p>DiffusionNFT 的转身就一句话<a class="jr" href="#g-03">3</a>:<strong>前向加噪过程是唯一且良定义的(图一点点变成噪声,只此一条);反向去噪有无数条路(同一团噪声能还原出无数种采样轨迹)。</strong> FlowGRPO 偏要在那"无数条反向"里挑一条来训,才落得锁死 solver、偏离前向。既然前向唯一,那就把 RL 做在前向上——而前向正是 <a href="flow-matching.html">flow matching</a> 的训练地盘,等于把 RL 接回最朴素的监督训练。于是三个好处一起来:<strong>免似然估计、数据可用任意黑盒 solver 采、只存干净图不存采样轨迹</strong><a class="jr" href="#g-09">9</a>。</p>
+
+<figure id="fig-forward">
+  <figcaption><span>FIG 02 · 把 RL 放到唯一的前向过程上</span><span class="fnum">ONE FORWARD · MANY REVERSE</span></figcaption>
+  <svg class="nf-svg" viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="nf-fw" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#4f2a52"/></marker>
+      <marker id="nf-rv" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#7a6f5d"/></marker>
+    </defs>
+    <!-- endpoints -->
+    <rect class="nf-rev d1" x="60" y="96" width="90" height="58" rx="4" fill="#e6d8e8" stroke="#4f2a52"/><text class="nf-rev d1" x="105" y="129" text-anchor="middle" font-size="11" font-weight="700" fill="#4f2a52">图 x₀</text>
+    <rect class="nf-rev d1" x="570" y="96" width="90" height="58" rx="4" fill="#e8e0c8" stroke="#7a6f5d"/><text class="nf-rev d1" x="615" y="129" text-anchor="middle" font-size="11" font-weight="700" fill="#3a3128">噪声</text>
+    <!-- forward single bold arrow -->
+    <line class="nf-rev d2" x1="152" y1="112" x2="568" y2="112" stroke="#4f2a52" stroke-width="3" marker-end="url(#nf-fw)"/>
+    <text class="nf-rev d2" x="360" y="104" text-anchor="middle" font-size="11" font-weight="700" fill="#4f2a52">前向加噪：唯一一条（flow matching 的地盘）</text>
+    <!-- reverse many wavy arrows -->
+    <path class="nf-rev d3" d="M568,140 C460,170 260,170 154,144" fill="none" stroke="#7a6f5d" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#nf-rv)"/>
+    <path class="nf-rev d3" d="M568,150 C460,200 260,200 154,156" fill="none" stroke="#7a6f5d" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#nf-rv)"/>
+    <path class="nf-rev d4" d="M568,158 C460,230 260,230 154,168" fill="none" stroke="#7a6f5d" stroke-width="1.3" stroke-dasharray="4 3" marker-end="url(#nf-rv)"/>
+    <text class="nf-rev d4" x="360" y="222" text-anchor="middle" font-size="11" font-weight="700" fill="#7a6f5d">反向去噪：无数条（FlowGRPO 在这里挑一条训）</text>
+    <!-- verdict -->
+    <text class="nf-rev d5" x="360" y="34" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#4f2a52">NFT 在唯一的前向上做 RL → 免似然 · 任意 solver · 只存干净图</text>
+    <text class="nf-rev d5" x="360" y="56" text-anchor="middle" font-size="9" fill="#7a6f5d">采样这一步可用任意黑盒 solver；训练只认前向，不耦合采样器</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 03</span>奖励切正负：两堆之差就是该走的方向</h2>
+
+<p>怎么在前向上注入奖励?给每张采来的图打个奖励 <code>r∈[0,1]</code>,按 <code>r</code> 把样本<strong>软切</strong>成两堆<a class="jr" href="#g-04">4</a>:正分布 <code>π⁺∝r·π_old</code>(高奖励权重大)、负分布 <code>π⁻∝(1−r)·π_old</code>(低奖励权重大)。两堆各自对应一个去噪速度,<strong>正速度减负速度</strong>得到方向 <code>Δ</code>——它指向"怎么改能更高分",就是<strong>强化引导</strong><a class="jr" href="#g-06">6</a>。</p>
+
+<figure id="fig-posneg">
+  <figcaption><span>FIG 03 · 奖励切正负，Δ = 改进方向（≈ CFG 的 cond−uncond）</span><span class="fnum">POSITIVE − NEGATIVE = Δ</span></figcaption>
+  <svg class="nf-svg" viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="nf-d" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#b8841c"/></marker>
+    </defs>
+    <!-- samples -->
+    <text class="nf-rev d1" x="80" y="34" text-anchor="start" font-size="10" fill="#7a6f5d">一批采样图 → 各打奖励 r</text>
+    <g class="nf-rev d1" fill="#7a6f5d"><circle cx="80" cy="60" r="4"/><circle cx="104" cy="74" r="4"/><circle cx="92" cy="92" r="4"/><circle cx="120" cy="60" r="4"/><circle cx="116" cy="92" r="4"/></g>
+    <!-- gate -->
+    <line class="nf-rev d2" x1="140" y1="76" x2="190" y2="76" stroke="#7a6f5d" stroke-width="1.3"/><polygon class="nf-rev d2" points="190,76 182,72 182,80" fill="#7a6f5d"/>
+    <text class="nf-rev d2" x="165" y="68" text-anchor="middle" font-size="8" fill="#7a6f5d">按 r 软切</text>
+    <!-- positive cluster -->
+    <g class="nf-rev d3">
+      <rect x="200" y="40" width="160" height="64" rx="5" fill="#d8e6ce" stroke="#4a6b3a"/>
+      <text x="280" y="58" text-anchor="middle" font-size="10" font-weight="700" fill="#2f5a2a">正堆 π⁺ ∝ r·π_old</text>
+      <text x="280" y="74" text-anchor="middle" font-size="8.5" fill="#3a3128">高奖励样本权重大</text>
+      <text x="280" y="92" text-anchor="middle" font-size="8.5" fill="#3a3128">→ 正速度 v⁺</text>
+    </g>
+    <!-- negative cluster -->
+    <g class="nf-rev d3">
+      <rect x="200" y="120" width="160" height="64" rx="5" fill="#e8e0c8" stroke="#7a6f5d"/>
+      <text x="280" y="138" text-anchor="middle" font-size="10" font-weight="700" fill="#3a3128">负堆 π⁻ ∝ (1−r)·π_old</text>
+      <text x="280" y="154" text-anchor="middle" font-size="8.5" fill="#3a3128">低奖励样本权重大</text>
+      <text x="280" y="172" text-anchor="middle" font-size="8.5" fill="#3a3128">→ 负速度 v⁻</text>
+    </g>
+    <!-- delta arrow neg->pos -->
+    <line class="nf-rev d4" x1="390" y1="152" x2="390" y2="72" stroke="#b8841c" stroke-width="2.4" marker-end="url(#nf-d)"/>
+    <text class="nf-rev d4" x="404" y="116" text-anchor="start" font-size="12" font-weight="700" fill="#8a5a0c">Δ = v⁺ − v⁻</text>
+    <text class="nf-rev d4" x="404" y="134" text-anchor="start" font-size="9" fill="#3a3128">= 改进方向（强化引导）</text>
+    <!-- CFG analogy -->
+    <g class="nf-rev d5">
+      <rect x="540" y="64" width="160" height="96" rx="5" fill="#faf4e1" stroke="#4f2a52"/>
+      <text x="620" y="84" text-anchor="middle" font-size="10" font-weight="700" fill="#4f2a52">类比 CFG</text>
+      <text x="620" y="104" text-anchor="middle" font-size="8.5" fill="#3a3128">CFG 用 cond − uncond</text>
+      <text x="620" y="120" text-anchor="middle" font-size="8.5" fill="#3a3128">NFT 用 v⁺ − v⁻</text>
+      <text x="620" y="140" text-anchor="middle" font-size="8.5" fill="#3a3128">都是"差向量当引导"</text>
+      <text x="620" y="154" text-anchor="middle" font-size="8" fill="#7a2020">CFG = 离线固定版</text>
+    </g>
+    <text class="nf-rev d6" x="360" y="218" text-anchor="middle" font-size="11" fill="#7a6f5d">奖励切出正负,正负之差 Δ 指向"怎么改更高分"——这就是在线学出来的引导</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 04</span>一个模型隐式装正负，RL 揉进监督损失</h2>
+
+<p>不真去训两个模型——这套"奖励切正负 + 前向监督"的做法就是<strong>负样本感知微调(NFT)</strong><a class="jr" href="#g-05">5</a>。一个 velocity 网络 <code>v_θ</code> 通过<strong>参数插值</strong>同时表示正负两副动态(都围绕冻结的旧模型 <code>v_old</code>)<a class="jr" href="#g-07">7</a>:正速度 <code>v_θ⁺=(1−β)v_old+β·v_θ</code>、负速度 <code>v_θ⁻=(1+β)v_old−β·v_θ</code>。损失是<strong>纯监督 flow matching</strong>(不是 policy gradient)<a class="jr" href="#g-08">8</a>:<code>L=E[ r·‖v_θ⁺−v‖² + (1−r)·‖v_θ⁻−v‖² ]</code>——高奖励样本(r→1)把正速度拉准、低奖励(r→0)把负速度拉准,两股梯度合起来把 <code>v_θ</code> 推向 Δ 指示的方向。</p>
+
+<figure id="fig-implicit">
+  <figcaption><span>FIG 04 · 单模型隐式参数化：正负对称夹住 v_old</span><span class="fnum">IMPLICIT v⁺ / v⁻</span></figcaption>
+  <svg class="nf-svg" viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg">
+    <!-- the single model -->
+    <rect class="nf-rev d1" x="40" y="100" width="120" height="50" rx="5" fill="#e6d8e8" stroke="#4f2a52" stroke-width="1.6"/>
+    <text class="nf-rev d1" x="100" y="120" text-anchor="middle" font-size="12" font-weight="700" fill="#4f2a52">v_θ</text>
+    <text class="nf-rev d1" x="100" y="138" text-anchor="middle" font-size="8.5" fill="#3a3128">唯一可训模型</text>
+    <!-- v_old reference line -->
+    <line class="nf-rev d2" x1="220" y1="125" x2="470" y2="125" stroke="#7a6f5d" stroke-width="1.2" stroke-dasharray="5 4"/>
+    <text class="nf-rev d2" x="245" y="120" text-anchor="start" font-size="9" fill="#7a6f5d">v_old（冻结旧模型，对称轴）</text>
+    <!-- positive up -->
+    <line class="nf-rev d3" x1="160" y1="120" x2="300" y2="86" stroke="#4a6b3a" stroke-width="1.6"/>
+    <rect class="nf-rev d3" x="300" y="68" width="200" height="36" rx="4" fill="#d8e6ce" stroke="#4a6b3a"/>
+    <text class="nf-rev d3" x="400" y="91" text-anchor="middle" font-size="10" fill="#2f5a2a">v_θ⁺ = (1−β)v_old + β·v_θ</text>
+    <!-- negative down -->
+    <line class="nf-rev d4" x1="160" y1="130" x2="300" y2="164" stroke="#7a6f5d" stroke-width="1.6"/>
+    <rect class="nf-rev d4" x="300" y="146" width="200" height="36" rx="4" fill="#e8e0c8" stroke="#7a6f5d"/>
+    <text class="nf-rev d4" x="400" y="169" text-anchor="middle" font-size="10" fill="#3a3128">v_θ⁻ = (1+β)v_old − β·v_θ</text>
+    <text class="nf-rev d4" x="510" y="129" text-anchor="start" font-size="9" fill="#7a6f5d">v⁺ + v⁻ = 2·v_old（对称）</text>
+    <!-- loss -->
+    <rect class="nf-rev d5" x="120" y="200" width="480" height="38" rx="5" fill="#faf4e1" stroke="#b8841c"/>
+    <text class="nf-rev d5" x="360" y="218" text-anchor="middle" font-size="10.5" font-weight="700" fill="#8a5a0c">监督损失 L = E[ r·‖v_θ⁺ − v‖² + (1−r)·‖v_θ⁻ − v‖² ]</text>
+    <text class="nf-rev d5" x="360" y="232" text-anchor="middle" font-size="8.5" fill="#3a3128">高奖励拉准正速度，低奖励拉准负速度 → 一个监督目标里装下 RL</text>
+  </svg>
+</figure>
+
+<h3>数字例子 · 正负速度对称夹住 v_old</h3>
+<p>取标量简化(真实是逐维速度向量):旧模型 <code>v_old=1.0</code>、模型当前输出 <code>v_θ=1.4</code>、引导强度 <code>β=0.5</code>。</p>
+<pre class="eq">v_θ⁺ = (1−0.5)·1.0 + 0.5·1.4 = 0.5 + 0.7 = 1.2     (正速度)
+v_θ⁻ = (1+0.5)·1.0 − 0.5·1.4 = 1.5 − 0.7 = 0.8     (负速度)
+
+自检①  v_θ⁺ + v_θ⁻ = 1.2 + 0.8 = 2.0 = 2·v_old   → 正负永远对称夹住 v_old ✓
+自检②  v_θ⁺ − v_θ⁻ = 0.4 = 2β·(v_θ − v_old) = 2·0.5·0.4 ✓   → 缝隙 = 离旧模型多远
+最优解  v_θ* = v_old + (2/β)·Δ ，小小的改进方向 Δ 被 2/β=4 放大着学进去</pre>
+<p>✓ 含义:模型只动一个量 <code>v_θ</code>,正速度抬到 1.2、负速度对称压到 0.8。采样时只取被引导的正速度 <code>v_θ⁺</code>——等于把<a href="../concepts/reinforcement-guidance.html">强化引导</a>内建进了一个模型,不再要 <a href="../concepts/classifier-free-guidance.html">CFG</a> 的两套模型/两遍前向。这也是它跟 <a href="../concepts/direct-preference-optimization.html">DPO</a> 的亲缘:都靠正负对比把 RL 折成类监督损失,只是 DPO 在 LLM 对数似然上、NFT 在扩散速度场上。</p>
+
+<h2><span class="num">§ 05</span>结果：又快又强，CFG-free 还赢 CFG</h2>
+
+<p>在 <a href="stable-diffusion-3-5.html">SD3.5-Medium</a>(2.5B,<a href="../concepts/lora.html">LoRA</a> r32,512²)上训<a class="jr" href="#g-12">12</a>。GenEval 从无 CFG 的 <strong>0.24</strong>、开 CFG 的 0.63,到 FlowGRPO 跑 5k+ 步的 0.95;<strong>DiffusionNFT ~1.7k 步就 0.94、~1k 步逼 0.98</strong>,墙钟比 FlowGRPO 快 <strong>3–25×</strong><a class="jr" href="#g-10">10</a>。而且它训的是个 <strong>CFG-free 的 omni-model</strong>:起点因为没 CFG 引导而很低,却一路反超开 CFG 的基线,PickScore / HPSv2.1 / Aesthetics / ImageReward 全面更高,OOD 上还压过更大的 SD3.5-Large 和 <a href="flux-1.html">FLUX.1-dev</a><a class="jr" href="#g-11">11</a>。</p>
+
+<figure id="fig-results">
+  <figcaption><span>FIG 05 · GenEval：~1k 步逼 0.98，比 FlowGRPO 快几倍到几十倍</span><span class="fnum">REWARD vs ITERATIONS</span></figcaption>
+  <svg class="nf-svg" viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg">
+    <!-- axes -->
+    <line x1="80" y1="50" x2="80" y2="230" stroke="#7a6f5d" stroke-width="1.2"/>
+    <line x1="80" y1="230" x2="680" y2="230" stroke="#7a6f5d" stroke-width="1.2"/>
+    <text x="40" y="60" text-anchor="start" font-size="9" fill="#7a6f5d">GenEval</text>
+    <text x="40" y="234" text-anchor="start" font-size="9" fill="#7a6f5d">0.2</text>
+    <text x="40" y="58" text-anchor="start" font-size="9" fill="#7a6f5d">1.0</text>
+    <text x="680" y="246" text-anchor="end" font-size="9" fill="#7a6f5d">训练迭代 →（约 5k）</text>
+    <!-- no-CFG flat 0.24 -->
+    <line class="nf-rev d1" x1="80" y1="221" x2="680" y2="221" stroke="#7a6f5d" stroke-width="1.4" stroke-dasharray="4 3"/>
+    <text class="nf-rev d1" x="684" y="224" text-anchor="start" font-size="9" fill="#7a6f5d">无 CFG 0.24</text>
+    <!-- CFG flat 0.63 -->
+    <line class="nf-rev d2" x1="80" y1="133" x2="680" y2="133" stroke="#9b2c2c" stroke-width="1.4" stroke-dasharray="4 3"/>
+    <text class="nf-rev d2" x="684" y="136" text-anchor="start" font-size="9" fill="#9b2c2c">CFG 0.63</text>
+    <!-- FlowGRPO curve to 0.95 at 5k -->
+    <polyline class="nf-rev d3 draw" points="80,210 250,120 450,80 660,61" fill="none" stroke="#b8841c" stroke-width="2.4" pathLength="1000"/>
+    <circle class="nf-rev d4" cx="660" cy="61" r="4" fill="#b8841c"/>
+    <text class="nf-rev d4" x="648" y="52" text-anchor="end" font-size="9" font-weight="700" fill="#8a5a0c">FlowGRPO 0.95（5k+ 步）</text>
+    <!-- NFT steep curve to 0.98 by ~1k -->
+    <polyline class="nf-rev d5 draw" points="80,221 130,120 196,60 400,55 660,52" fill="none" stroke="#4f2a52" stroke-width="2.8" pathLength="1000"/>
+    <circle class="nf-rev d6" cx="196" cy="60" r="4.5" fill="#4f2a52"/>
+    <text class="nf-rev d6" x="206" y="56" text-anchor="start" font-size="10" font-weight="700" fill="#4f2a52">DiffusionNFT ~1k 步 ≈0.98</text>
+    <text class="nf-rev d6" x="206" y="72" text-anchor="start" font-size="8.5" fill="#7a6f5d">同样分数,迭代/墙钟省 3–25×</text>
+    <text class="nf-rev d6" x="120" y="250" text-anchor="start" font-size="8.5" fill="#7a6f5d">注:NFT 起点(CFG-free)比开 CFG 低,但很快反超</text>
+  </svg>
+</figure>
+
+<table class="spec">
+  <tr><th>维度</th><th>DiffusionNFT</th><th>FlowGRPO（反向路线）</th></tr>
+  <tr><td>训练落点</td><td>前向过程（flow matching）</td><td>反向采样（多步 MDP）</td></tr>
+  <tr><td>似然</td><td><strong>免似然</strong></td><td>要 SDE 轨迹的似然</td></tr>
+  <tr><td>solver</td><td>任意（ODE/SDE/高阶）</td><td>耦死一阶 SDE</td></tr>
+  <tr><td>前向一致性</td><td>保住</td><td>易破（级联高斯风险）</td></tr>
+  <tr><td>CFG</td><td>隐式（单模型）</td><td>显式（两模型）</td></tr>
+  <tr><td>存什么</td><td>只存干净图</td><td>整条采样轨迹</td></tr>
+  <tr><td>目标</td><td>监督 flow matching</td><td>policy gradient</td></tr>
+  <tr><td>效率</td><td><strong>快 3–25×</strong></td><td>基线</td></tr>
+</table>
+
+<div class="note">
+  <span class="l">放进 wiki 这条线</span>
+  <p>DiffusionNFT 把 LLM 的 <a href="../concepts/grpo.html">GRPO</a>/<a href="ppo.html">PPO</a>/<a href="../concepts/direct-preference-optimization.html">DPO</a> 那条 RL 线接到了扩散上,但绕开了"反向离散化"的弯路——靠的是 <a href="../concepts/negative-aware-finetuning.html">NFT</a>(奖励切正负、前向 <a href="flow-matching.html">flow matching</a>、单模型隐式参数化)和 <a href="../concepts/reinforcement-guidance.html">强化引导</a>(把 <a href="../concepts/classifier-free-guidance.html">CFG</a> 重新理解成"离线版的奖励引导")。它跟 <a href="../concepts/direct-preference-optimization.html">DPO</a> 是表亲(正负对比、RL 折成类监督),跟 <a href="krea-2.html">Krea 2</a> 的多奖励 RL 是同领域不同路。一句话:<strong>反向去噪千条路、前向加噪只一条;在那唯一的前向上做 RL,似然墙、solver 限制、CFG 两模型一次性全绕开——正负样本之差就是该走的方向。</strong></p>
+</div>
+
+<!-- glossary -->
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term"><a href="../concepts/diffusion-rl-likelihood-barrier.html">似然墙</a></span> · 策略梯度要"模型给样本的概率",LLM 逐 token 现成、扩散只能靠概率流 ODE / SDE 变分界昂贵近似;所以没法直接套 GRPO。</li>
+    <li id="g-02"><span class="term">FlowGRPO 的三个坑</span> · 把反向采样切成多步 MDP 以套 GRPO,代价:① 耦死一阶 SDE solver;② 偏离前向、易退化成级联高斯;③ CFG 变两模型优化。</li>
+    <li id="g-03"><span class="term">前向唯一 / 反向无数</span> · 前向加噪只一条且良定义;反向去噪有无数采样轨迹。NFT 把 RL 放到唯一的前向上,接回 <a href="flow-matching.html">flow matching</a> 的监督训练。</li>
+    <li id="g-04"><span class="term">奖励软切正负</span> · 给样本打 r∈[0,1],正分布 π⁺∝r·π_old(高奖励权重大)、负分布 π⁻∝(1−r)·π_old(低奖励权重大)。</li>
+    <li id="g-05"><span class="term"><a href="../concepts/negative-aware-finetuning.html">NFT · 负样本感知微调</a></span> · 在前向过程上、用正负对比把扩散在线 RL 折成加权监督 flow-matching 损失;免似然、只要干净图。</li>
+    <li id="g-06"><span class="term"><a href="../concepts/reinforcement-guidance.html">强化引导 / Δ</a></span> · 正速度减负速度 Δ=v⁺−v⁻,指向"怎么改更高分"。CFG 的 cond−uncond 是它的离线固定版;两者都是"差向量当引导"。</li>
+    <li id="g-07"><span class="term">隐式参数化 v_θ± </span> · 单模型 v_θ 同时表示正负:v_θ⁺=(1−β)v_old+β·v_θ、v_θ⁻=(1+β)v_old−β·v_θ,对称夹住 v_old(相加=2v_old)。</li>
+    <li id="g-08"><span class="term">监督损失（非 policy gradient）</span> · L=E[ r·‖v_θ⁺−v‖²+(1−r)·‖v_θ⁻−v‖² ];最优解 v_θ*=v_old+(2/β)·Δ。RL 信号靠 r vs 1−r 的对比权重揉进监督目标。</li>
+    <li id="g-09"><span class="term">免似然 · 任意 solver · 只存干净图</span> · 训练与采样解耦:数据可用任意黑盒 solver(ODE/高阶) 采,不存轨迹只存 x₀,全程不估似然。</li>
+    <li id="g-10"><span class="term">3–25× 效率</span> · 墙钟比 FlowGRPO 快 3–25×;GenEval ~1k 步逼 0.98,FlowGRPO 5k+ 步才 0.95。</li>
+    <li id="g-11"><span class="term">CFG-free omni-model</span> · 训出单个不依赖 CFG 的模型,起点低却反超开 CFG 基线;OOD 上压过更大的 SD3.5-Large、FLUX.1-dev。</li>
+    <li id="g-12"><span class="term">SD3.5-M / LoRA r32</span> · 基座 <a href="stable-diffusion-3-5.html">Stable Diffusion 3.5 Medium</a>(2.5B)、512²、LoRA(α=64,r=32)。奖励含 GenEval/OCR(规则) + PickScore/HPSv2.1/Aesthetics/ImageReward(模型)。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>SOURCE · arXiv 2509.16117 · DiffusionNFT: Online Diffusion Reinforcement with Forward Process (ICLR 2026)</span>
+  <span>INGESTED · 2026-06-30</span>
+</div>
+
+</div>
+<script>
+{
+  const figs = ['fig-barrier','fig-forward','fig-posneg','fig-implicit','fig-results'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.15 });
+    obs.observe(el);
+  });
+}
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6);}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  var items={};
+  document.querySelectorAll('.gloss ol li[id^="g-"]').forEach(function(li){items[li.id]=li.innerHTML;});
+  if(!Object.keys(items).length)return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!items[id])return;
+      e.preventDefault();
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+items[id];
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+</body>
+</html>

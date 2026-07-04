@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>扩散 RL 的似然墙 · 为什么不能照搬 GRPO,以及绕反向的代价 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · diffusion-rl-likelihood-barrier</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>扩散 RL 的似然墙 · 为什么不能照搬 GRPO,以及绕反向的代价</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p><a href="../concepts/policy-gradient.html">policy-gradient</a>/<a href="../papers/ppo.html">ppo</a>/<a href="../concepts/grpo.html">grpo</a> 都要"模型给这个样本的概率",LLM 逐 token 现成、扩散却算不出来(似然只能靠昂贵近似);主流绕法是把<strong>反向去噪</strong>切成多步马尔可夫过程让每步概率可算,但这条路锁死采样器、还可能让模型偏离前向过程。</p>
+<h2>直觉 · LLM 能直接做 RL,扩散卡在哪</h2>
+<p>RL 微调 LLM 顺手,是因为策略梯度要的 <code>π(动作)</code> 唾手可得:模型对每个 token 输出的就是概率分布,一条回答的概率=逐 token 概率连乘。奖励一来,乘上对数概率的梯度就能更新。</p>
+<p>扩散没有这种现成概率。一张图是从噪声经几十步去噪来的,"模型生成这张图的概率"要对所有可能路径积分——只能靠<strong>概率流 ODE</strong> 或 <strong>SDE 的变分下界</strong>昂贵地近似。没有可算的似然,policy gradient 这一系就直接卡住。这就是似然墙。</p>
+<h2>怎么做的 · FlowGRPO 的绕法与三个坑</h2>
+<p>FlowGRPO / DanceGRPO 的招:把<strong>反向采样</strong>(噪声→图,逐步去噪)看成一个<strong>多步马尔可夫决策过程</strong>,每一步的状态转移是个高斯——高斯概率可算,于是每步就有了可算的"动作概率",能套 <a href="../concepts/grpo.html">grpo</a> 了。代价是继承三个毛病:</p>
+<pre><code>① 锁死 solver:训练损失耦死一阶 SDE 采样器,用不了扩散默认更高效的 ODE / 高阶 solver
+② 前后向不一致:只盯反向动态,丢掉对唯一前向过程的忠实,模型可能退化成&quot;级联高斯&quot;
+③ CFG 难搞:扩散重度依赖 CFG,RL 里硬塞 → 变成又慢又繁的两模型优化
+</code></pre>
+<p><a href="../papers/diffusionnft.html">diffusionnft</a> 正是冲着这三点来的:既然<strong>前向加噪只有一条、反向去噪有无数条</strong>,就把 RL 搬回唯一的前向过程,似然墙、solver 锁死、CFG 两模型一次性全绕开。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/diffusionnft.html">diffusionnft</a> · 绕过这堵墙的方案(回到前向过程)</li>
+<li><a href="../concepts/negative-aware-finetuning.html">negative-aware-finetuning</a> · 它在前向上具体怎么做</li>
+<li><a href="../concepts/grpo.html">grpo</a> / <a href="../concepts/policy-gradient.html">policy-gradient</a> / <a href="../papers/ppo.html">ppo</a> · 被似然墙挡住的那一系</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · 前向过程的训练目标,NFT 接回它</li>
+<li><a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a> · 坑③里那个"两模型"的来源</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/diffusionnft.html"><span class="cat">paper</span>DiffusionNFT · 把扩散的 RL 从&quot;反向采样&quot;搬回&quot;前向加噪&quot;</a></li><li><a href="../concepts/negative-aware-finetuning.html"><span class="cat">concept</span>负样本感知微调 · NFT · 用奖励切正负,在前向过程上把 RL 折成监督损失</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/diffusion-rl-likelihood-barrier.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

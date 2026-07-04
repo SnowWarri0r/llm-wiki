@@ -57,6 +57,7 @@
 - [HiDream-O1-Image · 像素级统一 Transformer](wiki/papers/hidream-o1.md) — 文生图反向操作: 无VAE像素空间扩散 + 文本编码器收进主干(Qwen3-VL) + 混合注意力 + O1推理agent先想后画; 8B 超更大模型
 - [Qwen-Image-2.0 · 生成与编辑统一](wiki/papers/qwen-image-2.md) — 20B MMDiT: 生成vs编辑=条件里塞不塞原图latent(Concat), 同backbone, 没点名天然照抄; frozen Qwen3-VL条件编码器 + VAE升16×(f16c64) + MSRoPE + DMD蒸馏4-NFE; 中文文字渲染 + 1K token直出信息图; LMArena中文#1
 - [PiD · 像素扩散解码器](wiki/papers/pid-pixel-diffusion.md) — NVIDIA 把 latent→像素的确定性 VAE 解码器换成条件像素扩散: 解码从"忠实还原"升级成"生成式补细节+顺手超分4×/8×"; sigma-aware adapter 吃半成品 latent 让 latent 扩散早停 + DMD2 蒸 4 步 + 通吃 VAE/语义 latent; 512²→2048² 1秒内
+- [DiffusionNFT · 扩散 RL 搬回前向过程](wiki/papers/diffusionnft.md) — 扩散在线RL(ICLR2026,SD3.5-M基座): 似然算不出没法直接GRPO,FlowGRPO把反向采样切多步MDP但锁死一阶SDE/偏离前向/CFG两模型; 洞察=前向加噪唯一、反向去噪无数→把RL搬到前向flow matching上; 奖励r切正负分布(π⁺∝r·π_old/π⁻∝(1−r)π_old),正负速度之差Δ=强化引导(CFG=它的离线版); 单模型隐式装正负(v±=(1∓β)v_old±βv_θ对称夹v_old),RL揉进监督损失L=E[r‖v⁺−v‖²+(1−r)‖v⁻−v‖²]; 免似然/任意solver/只存干净图; GenEval~1k步逼0.98比FlowGRPO快3–25×,CFG-free还超CFG
 - [RAE-DiT · 表征自编码器当 latent](wiki/papers/rae-dit.md) — 别单训没语义的VAE压缩器, 拿冻结SigLIP-2/DINOv2当编码器(高维语义latent)只训解码器, 扩散在"看懂图"的空间里跑; 收敛快4×/VAE 64epoch崩RAE稳到256/越scale越赢; 唯一不能省=维度相关噪声调度(α=√(m/n))
 - [MRT · Masked Region Transformer](wiki/papers/mrt.md) — 分层图像生成编辑(CVPR2026,Canva): 产出可编辑RGBA图层而非拍平图; masking哪些图层干净/噪声=切文生层/拆图成层/层改层三任务(Qwen-Image-2.0"条件→目标"的分层升级); anonymous region transformer + overflow画布留溢出 + DMD蒸馏50→8步; 比Qwen-Image-Layered快10~100×
 - [OmniEraser · 连影子一起抹掉](wiki/papers/omnieraser.md) — 对象消除(PRIS-CV/北邮): 两个老毛病=影子赖着不走(合成数据没真实光影)+凭空补新物体(只给背景上下文); 解法一=视频帧白送ground-truth(有物体的帧当输入/物体离开后的帧当目标,影子在后帧真没了)且mask故意只圈物体不圈影子逼模型学因果, 全自动挖13.4万对Video4Removal(MOG分前景背景>0.15 + MSE配帧 + GroundingDINO/SAM2出mask); 解法二=object-background双条件把"要删的物体"也喂进FLUX.1-dev DiT(LoRA r32); RemovalBench FID 39.52(SOTA 55.49), 两组消融各从一百多砍到39.52
@@ -184,6 +185,9 @@
 - [Diffusion Transformer](wiki/concepts/diffusion-transformer.md) — 去噪网络从 U-Net 换成 Transformer；单流 vs 双流 MMDiT（原始论文精装见 papers/dit）
 - [Adaptive LayerNorm · adaLN-Zero](wiki/concepts/adaptive-layernorm.md) — 不用固定γ/β,从(时间步t+条件c)算出来拧每层归一化; 零初始化门控α让块起步即恒等; DiT注入t/c的标准做法,比cross-attn/in-context好且省
 - [SwiGLU](wiki/concepts/swiglu.md) — 带门的FFN: 一条算内容、一条过Swish当门,逐元素相乘,网络自己挑哪些特征通过; LLaMA/SD3/FLUX都用; 注意原版DiT用GELU不是它
+- [负样本感知微调 NFT](wiki/concepts/negative-aware-finetuning.md) — 扩散在线RL:奖励r软切正负分布,单模型隐式装正负速度(v±对称夹v_old),RL折成加权监督flow-matching损失;免似然/只要干净图;DiffusionNFT
+- [强化引导](wiki/concepts/reinforcement-guidance.md) — 正速度减负速度Δ=该往哪改;CFG的cond−uncond是它的离线固定版,两者都是"外推一个差向量";单模型在线学引导替掉CFG两模型
+- [扩散RL的似然墙](wiki/concepts/diffusion-rl-likelihood-barrier.md) — 扩散似然算不出没法照搬GRPO;FlowGRPO绕法=把反向去噪切多步MDP(每步高斯可算),代价三坑(锁solver/偏离前向/CFG两模型)
 - [并行 Transformer 块](wiki/concepts/parallel-transformer-block.md) — attention和MLP不接力: 读同一份归一化输入各算各的再加回主干; 省一次LN+两路第一个矩阵乘拼成一个大GEMM(3072→21504)一次算,快~15%; 代价=MLP看不到同层注意力但摞深了不亏; GPT-J/PaLM/ViT-22B/FLUX单流块
 - [MMDiT](wiki/concepts/mmdit.md) — 双流多模态扩散 Transformer: 文字图像同序列共享注意力、各用各的权重; SD3/FLUX/Qwen-Image 主干
 - [像素扩散解码器](wiki/concepts/pixel-diffusion-decoder.md) — 把 latent→像素的确定性 VAE 解码器换成条件扩散; "复印机→插画师", 边解码边补细节+超分; latent 与全像素扩散两路线的缝合

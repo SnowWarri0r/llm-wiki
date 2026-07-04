@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>负样本感知微调 · NFT · 用奖励切正负,在前向过程上把 RL 折成监督损失 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · negative-aware-finetuning</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>负样本感知微调 · NFT · 用奖励切正负,在前向过程上把 RL 折成监督损失</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>给每张生成图打个奖励 <code>r∈[0,1]</code>,按 <code>r</code> 把样本软切成正堆(高奖励)和负堆(低奖励);让一个模型同时学"正速度"和"负速度",正负之差自然指向"该往哪改"——于是扩散的在线 RL 退化成一个<strong>加权的监督 <a href="../concepts/flow-matching.html">flow-matching</a> 损失</strong>,不碰似然、不碰反向采样轨迹。</p>
+<h2>直觉 · 为什么要绕开反向、回到前向</h2>
+<p>扩散做 RL 卡在似然算不出来(<a href="../concepts/diffusion-rl-likelihood-barrier.html">diffusion-rl-likelihood-barrier</a>)。主流绕法(FlowGRPO)是把<strong>反向去噪</strong>切成多步马尔可夫过程让概率可算,再套 <a href="../concepts/grpo.html">grpo</a>——但反向路有无数条,盯着它训会锁死采样器、还可能让模型偏离真正的前向过程。</p>
+<p>NFT 的洞察一句话:<strong>前向加噪只有一条、反向去噪有无数条</strong>。既然前向是唯一且良定义的,那就把 RL 做在前向上。前向过程正是 <a href="../concepts/flow-matching.html">flow-matching</a> 的训练地盘——所以整件事能接回最朴素的监督训练,几乎不改代码。</p>
+<h2>怎么做的 · 奖励软切 + 单模型隐式装正负</h2>
+<pre><code>
+1. 用任意 solver(ODE/SDE/高阶都行)采一批干净图 x₀,各打奖励 r∈[0,1]
+2. 概念上切两堆:
+     正分布 π⁺ ∝ r · π_old        (高奖励样本权重大)
+     负分布 π⁻ ∝ (1−r) · π_old    (低奖励样本权重大)
+
+3. 一个 velocity 网络 v_θ 隐式同时表示正负两副动态(围绕冻结的旧模型 v_old):
+     v_θ⁺ = (1−β)·v_old + β·v_θ      (正/被引导的速度)
+     v_θ⁻ = (1+β)·v_old − β·v_θ      (负速度)   ← 两者对称于 v_old
+
+4. 监督损失(纯 flow matching,不是 policy gradient):
+     L = E[ r·‖v_θ⁺ − v‖² + (1−r)·‖v_θ⁻ − v‖² ]
+   高奖励样本(r→1)把 v_θ⁺ 拉向它的真速度、低奖励(r→0)把 v_θ⁻ 拉向它的真速度
+</code></pre>
+<p>正负只要存<strong>干净图</strong>就能算,不用整条采样轨迹;<code>r</code> vs <code>1−r</code> 的对比权重 + 隐式参数化,把强化信号揉进了普通的监督目标。</p>
+<h2>数字例子 · 隐式参数化对称在 v_old 周围</h2>
+<p>取标量简化(真实是逐维速度向量):旧模型速度 <code>v_old=1.0</code>、模型当前输出 <code>v_θ=1.4</code>、引导强度 <code>β=0.5</code>。</p>
+<pre><code>v_θ⁺ = (1−0.5)·1.0 + 0.5·1.4 = 0.5 + 0.7 = 1.2     (正速度)
+v_θ⁻ = (1+0.5)·1.0 − 0.5·1.4 = 1.5 − 0.7 = 0.8     (负速度)
+
+自检①:v_θ⁺ + v_θ⁻ = 1.2 + 0.8 = 2.0 = 2·v_old   → 正负永远对称夹着 v_old ✓
+自检②:v_θ⁺ − v_θ⁻ = 0.4 = 2β·(v_θ − v_old) = 2·0.5·0.4 ✓  → 这个缝隙 = 模型离旧模型多远
+</code></pre>
+<p>✓ 含义:模型只动一个量 <code>v_θ</code>,正速度往上抬到 1.2、负速度对称压到 0.8。训练时高奖励样本把"上抬的那副"(v_θ⁺)拉准、低奖励把"压下的那副"(v_θ⁻)拉准,两股梯度合起来,就把 <code>v_θ</code> 推向"正比负更该走"的方向。采样时只用 <code>v_θ⁺</code>(被引导的正速度)——等于把 <a href="../concepts/reinforcement-guidance.html">reinforcement-guidance</a> 内建进了一个模型,不再需要 CFG 的两套模型。最优解 <code>v_θ* = v_old + (2/β)·Δ</code>,小小的改进方向 Δ 被 <code>2/β</code> 放大着学进去。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/diffusionnft.html">diffusionnft</a> · 提出 NFT</li>
+<li><a href="../concepts/reinforcement-guidance.html">reinforcement-guidance</a> · 正负之差 Δ = 改进方向,CFG 是它的离线版</li>
+<li><a href="../concepts/diffusion-rl-likelihood-barrier.html">diffusion-rl-likelihood-barrier</a> · 它绕开的那堵墙</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · 损失就长在它身上</li>
+<li><a href="../concepts/direct-preference-optimization.html">direct-preference-optimization</a> · 近亲:也靠正负对比把 RL 折成类监督损失(但 DPO 在 LLM 对数似然、配对偏好)</li>
+<li><a href="../concepts/grpo.html">grpo</a> · 被对照的反向路线</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/diffusionnft.html"><span class="cat">paper</span>DiffusionNFT · 把扩散的 RL 从&quot;反向采样&quot;搬回&quot;前向加噪&quot;</a></li><li><a href="../concepts/diffusion-rl-likelihood-barrier.html"><span class="cat">concept</span>扩散 RL 的似然墙 · 为什么不能照搬 GRPO,以及绕反向的代价</a></li><li><a href="../concepts/reinforcement-guidance.html"><span class="cat">concept</span>强化引导 · 正负样本之差就是&quot;该往哪走&quot;,CFG 不过是它的离线版</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/negative-aware-finetuning.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
