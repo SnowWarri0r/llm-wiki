@@ -24,6 +24,7 @@
 - [dMel](wiki/papers/dmel.md) — 跳过 neural codec 直接 bin quantize log-mel，简单方案跟 RVQ 一样好
 - [Interaction Models · Thinking Machines](wiki/papers/interaction-models-tml.md) — 把交互能力做进权重的 276B MoE 模型
 - [Fish Audio S2 Pro](wiki/papers/fish-speech-s2-pro.md) — Dual-AR + RVQ + GRPO 的开源 TTS
+- [ViiTorVoice · 低帧率语义码+并行填声](wiki/papers/viitorvoice.md) — 开源流式零样本 TTS 引擎(无独立论文,思路源自 DualCodec+OmniVoice): 三招各砍一刀延迟—①DualCodec 把 24kHz 压到 12.5 帧/秒,RVQ-1 语义(w2v-BERT 蒸馏,码本16384)+RVQ 2-8 声学残差; ②NAR 掩码并行填声(像完形填空,步数从200降到~8); ③首块流式首帧~60ms; 给参考音零样本克隆+两路CFG调情绪
 - [RoPE · Rotary Position Embedding](wiki/papers/rope.md) — 不加位置向量，旋转 Q/K 让点积天然含相对位置；LLaMA / Mistral / Qwen 全在用
 - [Whisper](wiki/papers/whisper.md) — 68 万小时弱监督训 ASR，zero-shot 碾压精标模型；语音领域的 GPT 时刻
 - [Qwen3-ASR · 给 LLM 接个耳朵](wiki/papers/qwen3-asr.md) — 不从头训ASR: 预训练Qwen3当解码器+AuT音频编码器(8×下采样12.5Hz+动态窗口流式/离线)+projector; modality-projector生产级; prompt塞热词定制转写; RL用GSPO; 带口音英语完胜Whisper
@@ -238,6 +239,9 @@
 - [MFCC · 梅尔频率倒谱系数](wiki/concepts/mfcc.md) — log-mel 再做一步 DCT 拆"形状基"取前~13系数=音色; 去相关+降维, GMM/i-vector/x-vector 时代标配; 现代深度模型跳过DCT直接喂log-mel
 - [Bin Quantization](wiki/concepts/bin-quantization.md) — dMel 的核心，等距分箱量化
 - [dMel](wiki/concepts/dmel.md) — log-mel 直接 bin quantize（避开 codec）
+- [DualCodec](wiki/concepts/dualcodec.md) — 低帧率(12.5Hz)双流音频码: RVQ-1 语义(w2v-BERT蒸馏,码本16384)+RVQ 2-8 声学残差; 比 Encodec 75Hz 短6×
+- [语义码 vs 声学码](wiki/concepts/semantic-vs-acoustic-tokens.md) — 把"说什么"和"听起来啥样"分两级码: 内容用短序列先定, 细节并行补
+- [NAR 掩码并行生成](wiki/concepts/nar-masked-speech-generation.md) — 非自回归填空式生成: 全盖住→并行猜→迭代几步收敛; SoundStorm/MaskGCT/OmniVoice 一脉
 
 ### 语音 / ASR
 - [Weak Supervision at Scale](wiki/concepts/weak-supervision-at-scale.md) — 弱标注 + 量大力飞，Whisper 核心策略

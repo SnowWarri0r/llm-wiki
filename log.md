@@ -871,3 +871,5 @@ skill 更新:
 ## [2026-07-01] fix | turboquant fig-qjl 文案遮挡: "running 平均→收敛到0.80" 原压在绿线+右侧红点上; 挪到右上空白, 加绿虚线 leader 引到终点绿点
 
 ## [2026-07-01] expand | turboquant §02 补"参数为什么是 ½"(半个每维): Beta 第一参数 a 管 0 附近形状 x^(a−1),a=½→1/√x 尖峰; 尖峰来自平方换元——等宽 g 段平方后落到的 y 段越靠 0 越窄(宽∝√y),同概率挤进越窄区间→密度∝1/√y→指数−½=形状½; 独立平方高斯 shape 相加→1坐标½/其余(d−1)/2/全体d/2, ½约掉留 1/d; 数字例(g[.1,.2]/[.5,.6]/[1,1.1]→宽.03/.11/.21); 加 fig-half(左:三色等宽g段→不等宽y段+平方箭头; 右:1/√y尖峰; 底:加法规则→均值1/d); 下游 FIG04/05/06→05/06/07 顺延
+
+## [2026-07-02] ingest | viitorvoice (ViiTorVoice / viitor-voice-nar, 开源 LLM-based 流式 TTS 引擎, 无独立论文, 思路源自 DualCodec+OmniVoice) bespoke(petrol) 4图: 三段管线(文本→LLM语义码→NAR声学码→DualCodec波形)/DualCodec双流(RVQ-1语义w2v-BERT蒸馏码本16384 + RVQ2-8声学残差, 24000/1920=12.5帧秒)/AR逐帧200步 vs NAR掩码并行~8步/首块流式60ms; 3 concept (dualcodec, semantic-vs-acoustic-tokens, nar-masked-speech-generation) + 复用 rvq-codec/voice-cloning-reference/classifier-free-guidance 补 source; 硬数字来自组件论文 DualCodec arXiv2505.13000(Interspeech25) + OmniVoice arXiv2604.00688(k2-fsa); 60ms首帧/12.5帧秒/N=8码本/~0.75-0.93kbps/中英日韩粤TODO; HF ZzWater/ViiTorVoice-NAR
