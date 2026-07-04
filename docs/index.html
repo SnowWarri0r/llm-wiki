@@ -31,7 +31,7 @@
 <div class="page">
 <div class="masthead">
   <span class="l">Connectionism · Personal Wiki</span>
-  <span class="r">索引 · 260 条目</span>
+  <span class="r">索引 · 261 条目</span>
 </div>
 
 <section class="hero">
@@ -45,7 +45,7 @@
 <a class="catcard" href="papers.html"><span class="n">58</span><span class="lbl">精读页 · Deep Dives</span><span class="d">手工打磨的论文 / 源码精读页</span></a>
 <a class="catcard" href="books.html"><span class="n">22</span><span class="lbl">Books · 书籍精讲</span><span class="d">非 ML 书籍的章节精讲</span></a>
 <a class="catcard" href="topics.html"><span class="n">4</span><span class="lbl">Topics · 综合</span><span class="d">跨多个源的横向综合</span></a>
-<a class="catcard" href="concepts.html"><span class="n">174</span><span class="lbl">Concepts · 概念</span><span class="d">跨论文复用的概念颗粒</span></a>
+<a class="catcard" href="concepts.html"><span class="n">175</span><span class="lbl">Concepts · 概念</span><span class="d">跨论文复用的概念颗粒</span></a>
 <a class="catcard" href="threads.html"><span class="n">2</span><span class="lbl">Threads · 思考</span><span class="d">个人思考线 / 开放问题</span></a>
 </div>
 
@@ -58,13 +58,13 @@
 <a class="tl-row" href="concepts/object-background-guidance.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">双条件输入 · 不光告诉模型&quot;周围长啥样&quot;,还告诉它&quot;要删的是这个&quot;</span><span class="tl-hook">普通 inpaint 只把**背景上下文**喂给扩散模型,模型不知道挖空的洞里&quot;本该是空的&quot;,于是照周围猜着补出个新物体;OmniEraser 把**要删的物体本身**也作为一路条件一起喂进去,模型就明确知道&quot;这块是要清掉的东西、那块是要保留的背景&quot;,不再瞎补。</span></a>
 <a class="tl-row" href="concepts/object-effect-removal.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">对象效果消除 · 抹的不只是物体,还有它在世界上留下的痕迹</span><span class="tl-hook">真正的&quot;删除一个物体&quot;要连它的**影子、反光、倒影**一起抹掉,并把那块还原成合理的空背景;只抠掉物体本体、留下一摊孤零零的影子,看着比不删还假。</span></a>
 <a class="tl-row" href="concepts/on-policy-vs-off-policy.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">on-policy vs off-policy · 学自己刚做的，还是学别人/旧的</span><span class="tl-hook">on-policy = 拿**当前策略自己刚生成**的数据学（信号对得准、稳，但得不断现采）；off-policy = 拿**别的策略**（旧的自己/别的模型/人类）的数据学（能复用、便宜，但分布错位、要纠偏）。</span></a>
+<a class="tl-row" href="concepts/parallel-transformer-block.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">并行 Transformer 块 · attention 和 MLP 不接力,同时算再相加</span><span class="tl-hook">普通 Transformer 块是&quot;先注意力、再前馈&quot;两路接力;并行块让两路**读同一份归一化输入、各算各的、最后一起加回主干**,省一次归一化、还能把两路的第一个大矩阵乘拼成一个 GEMM 一次算完——快 ~15%,表达力几乎不掉。GPT-J / PaLM / ViT-22B / [[flux-1]] 单流块都用它。</span></a>
 <a class="tl-row" href="concepts/perplexity.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">困惑度 Perplexity · 模型对一段话有多&quot;意外&quot;</span><span class="tl-hook">把模型在一段文本上的平均交叉熵取指数，得到一个&quot;等效分支数&quot;：困惑度 = exp(平均每 token 的负对数概率)；越低 = 模型觉得这段话越自然、越在意料之中。</span></a>
 <a class="tl-row" href="concepts/video-frame-paired-supervision.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">视频帧白送的成对监督 · 物体自己会走,等于免费拍了 before/after</span><span class="tl-hook">要教模型&quot;把物体连影子一起抹掉&quot;,最难的是拿到 ground-truth(抹干净后的真实画面);视频里物体本来就会移动,**有物体的那一帧当输入、物体离开后的那一帧当目标**,影子/反光在后一帧里真的没了——监督信号白送,不用手工修图。</span></a>
 <a class="tl-row" href="papers/relat.html"><span class="tl-date">2026-06-28</span><span class="tl-cat">paper</span><span class="tl-title">ReLAT · 给潜在推理&quot;闭环&quot;：测试时用重建当保真检查</span><span class="tl-hook">潜在推理把中间思考从自然语言搬进不透明的潜在向量里图省事，但没人检查这些向量是否还忠于原问题（开环）。ReLAT 在答题前先做一圈 **问题→潜在思考→重建问题**：如果从潜在向量重建得回原问题，说明它没丢信息；用这个重建损失在测试时临时调一组 LoRA，再正式作答，答完即弃。</span></a>
 <a class="tl-row" href="concepts/differentiable-thought-representation.html"><span class="tl-date">2026-06-28</span><span class="tl-cat">concept</span><span class="tl-title">可微思考表示 · 别硬选一个 token，取嵌入的加权混合</span><span class="tl-hook">要让&quot;选哪个 token&quot;这一步能反传梯度，就不硬选（argmax 不可导），而是对词表 logits 做 softmax 得分布 α，用它加权各 token 的嵌入算一个**期望嵌入**——既留在嵌入空间里，又对下游损失可微。</span></a>
 <a class="tl-row" href="concepts/latent-reasoning.html"><span class="tl-date">2026-06-28</span><span class="tl-cat">concept</span><span class="tl-title">潜在推理 · 把&quot;想&quot;压进连续向量，不摊成语言</span><span class="tl-hook">不把推理的中间步写成自然语言（CoT），而是产出一串连续潜在向量当&quot;思考&quot;，被下游当条件反复用——省 token、但不透明，还可能悄悄丢了原问题的约束。</span></a>
 <a class="tl-row" href="concepts/layered-image-generation.html"><span class="tl-date">2026-06-28</span><span class="tl-cat">concept</span><span class="tl-title">分层图像生成 · 产出一摞可编辑图层，不是一张拍平图</span><span class="tl-hook">生成的不是糊在一个平面上的像素图，而是一摞带透明通道（RGBA）的图层（画布+背景+K 个前景），每层能单独挪/改/重组——图像版的&quot;逐元素编辑&quot;。</span></a>
-<a class="tl-row" href="concepts/reconstruction-as-fidelity.html"><span class="tl-date">2026-06-28</span><span class="tl-cat">concept</span><span class="tl-title">重建即保真 · 能还原回输入，就说明中间表示没丢信息</span><span class="tl-hook">要检查一个中间表示是否忠于输入，不必有标签——只问&quot;能不能从它**重建回原输入**&quot;：还原得回，信息就在；还原不回，关键信息已经丢了。</span></a>
 </div>
 <div class="colophon">
   Renderer / <code>render.py</code> · Pattern / <a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f" target="_blank">Karpathy LLM Wiki</a> · Source / <a href="https://github.com/SnowWarri0r/llm-wiki" target="_blank">github.com/SnowWarri0r/llm-wiki</a>

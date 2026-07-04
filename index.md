@@ -184,6 +184,7 @@
 - [Diffusion Transformer](wiki/concepts/diffusion-transformer.md) — 去噪网络从 U-Net 换成 Transformer；单流 vs 双流 MMDiT（原始论文精装见 papers/dit）
 - [Adaptive LayerNorm · adaLN-Zero](wiki/concepts/adaptive-layernorm.md) — 不用固定γ/β,从(时间步t+条件c)算出来拧每层归一化; 零初始化门控α让块起步即恒等; DiT注入t/c的标准做法,比cross-attn/in-context好且省
 - [SwiGLU](wiki/concepts/swiglu.md) — 带门的FFN: 一条算内容、一条过Swish当门,逐元素相乘,网络自己挑哪些特征通过; LLaMA/SD3/FLUX都用; 注意原版DiT用GELU不是它
+- [并行 Transformer 块](wiki/concepts/parallel-transformer-block.md) — attention和MLP不接力: 读同一份归一化输入各算各的再加回主干; 省一次LN+两路第一个矩阵乘拼成一个大GEMM(3072→21504)一次算,快~15%; 代价=MLP看不到同层注意力但摞深了不亏; GPT-J/PaLM/ViT-22B/FLUX单流块
 - [MMDiT](wiki/concepts/mmdit.md) — 双流多模态扩散 Transformer: 文字图像同序列共享注意力、各用各的权重; SD3/FLUX/Qwen-Image 主干
 - [像素扩散解码器](wiki/concepts/pixel-diffusion-decoder.md) — 把 latent→像素的确定性 VAE 解码器换成条件扩散; "复印机→插画师", 边解码边补细节+超分; latent 与全像素扩散两路线的缝合
 - [表征自编码器 RAE](wiki/concepts/representation-autoencoder.md) — 冻结SigLIP-2/DINOv2当编码器(高维语义latent)+只训解码器; 扩散在"看懂图"的概念坐标里跑, 比VAE快/抗过拟合; PiD换解码端、RAE换编码端
