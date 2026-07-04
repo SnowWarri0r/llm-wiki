@@ -863,3 +863,5 @@ skill 更新:
 ## [2026-07-01] ingest | turboquant (TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate, arXiv 2504.19874, ICLR2026, Google) bespoke(denim) 4图+对照表+2数字例: 在线盲切格子/随机旋转把分布变已知(±1/√d薄壳)/高维近独立各坐标最优≈向量最优(≈2.7×下界)/MSE有偏QJL残差纠无偏; 3 concept (random-rotation-quantization, quantized-jl, mse-vs-inner-product-bias); 核心=随机旋转把"不知道数据长啥样"变"精确知道每坐标分布"→最优量化器离线预制在线零成本套(data-oblivious); 两阶段MSE+QJL 1-bit残差; KV 3.5bit无损/≥6×省内存/H100 attention快8×; 数字例(±1/√d shell + bias0.90 vs unbias1.00)
 
 ## [2026-07-01] expand | turboquant 补主线+QJL机制: 开头加 fig-throughline(难题→招1随机旋转→招2 QJL残差→结果 4段路线图,回答"这几块零件咋合起来解量化难题"); §04 深化 QJL "怎么做的"——只存 sign(⟨r,x⟩) 1bit + query 投同方向 ⟨r,q⟩ ×缩放常数取平均=无偏内积(同方向分量累加/垂直分量相消), 加 fig-qjl(单方向符号项乱跳→running平均收敛到0.80)+数字例(±1符号项(2.1,−0.5,1.3,0.3)/4=0.80); 加 .draw stroke 动画
+
+## [2026-07-01] expand | turboquant §02 补"为什么是 Beta / 均值为什么 1/d": Beta=描述0~1占比的分布,均值a/(a+b),a小b大挤向0; 随机旋转=球面均匀撒点=高斯归一化→x_i²=g_i²/Σg²=能量占比(落0~1→天然Beta),参数1/2=这一坐标/(d−1)/2=其余; 均值1/d的对称论证(平方和恒=1,d份平分); 数字例 g=[2,1,0,1]/√6→占比[.667,.167,0,.167]Σ=1→多次平均→1/4→幅度1/√4; 加 fig-beta(左:一次抽样能量占比stacked bar; 右:Beta密度cliff+均值1/d虚线); 下游图 FIG03/04/05→04/05/06 顺延
