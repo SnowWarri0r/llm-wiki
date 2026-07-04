@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>分布对齐的 SFT · 数据好不好，是相对你这个模型说的 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · distribution-aligned-sft</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>分布对齐的 SFT · 数据好不好，是相对你这个模型说的</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>微调时别只挑"绝对最强"的回答，挑<strong>贴合目标模型自己分布</strong>的那条（它给高概率/低困惑度）——既学到任务，又少把模型从预训练分布上拽走。</p>
+<h2>直觉 · 高质量 ≠ 合身</h2>
+<p>常识是"训练回答越强越好",于是大家拿最大模型的输出来做 SFT。但 <a href="../papers/grape.html">grape</a> 指出一个被忽视的失效模式:这些强回答常常<strong>落在目标模型的分布之外</strong>(OOD)。硬塞 OOD 数据,哪怕质量高,也会把模型从它稳健的预训练分布上<strong>拽偏</strong>——规模一大就边际递减、甚至伤鲁棒性(灾难性遗忘、学到假相关)。</p>
+<p>换个视角:预训练分布是模型几辈子读书攒下的"底子",稳又能泛化。SFT 的理想是<strong>在这个底子上轻轻校准到任务</strong>,而不是用一堆"它接不住的漂亮话"把底子冲掉。所以判据从"<strong>这回答多强</strong>"换成"<strong>这回答多合身</strong>"——目标模型自己给它多高概率(低 <a href="../concepts/perplexity.html">perplexity</a> 困惑度)。</p>
+<h2>怎么做的 · 用模型自己的概率当尺</h2>
+<pre><code>对每条指令的每个候选回答 y:
+  合身度 = 目标模型 π_θ₀ 给 y 的长度归一概率（= 低困惑度）
+选最合身的那条做 SFT（不是选最强老师那条）
+</code></pre>
+<p>本质是把"数据选择"对齐到<strong>模型自己的分布</strong>:它觉得顺的,训起来损失低、保住底子、不漂移。</p>
+<h2>为什么这是对的 · on-policy 的同构</h2>
+<p>这跟 RL/偏好学习里"<strong>on-policy(数据贴合当前策略)打败 off-policy</strong>"是同一个直觉(<a href="../concepts/direct-preference-optimization.html">direct-preference-optimization</a>/<a href="../concepts/rlhf.html">rlhf</a> 那条线)。off-policy 数据离当前策略远 → 信号错位、不稳;on-policy 贴合 → 稳、有效。GRAPE 把它搬到 SFT:<strong>选贴合分布的回答 ≈ 让 SFT 尽量 on-policy</strong>。</p>
+<p>反面证据:纯用模型<strong>自己生成</strong>的回答(最极端的"贴合")会<strong>塌缩</strong>(narrow/repetitive、强化偏见)——所以要从<strong>外部多样</strong>候选里选合身的,既贴分布又保多样。这跟 <a href="../concepts/generative-data-curation.html">generative-data-curation</a> 的"合成图近亲繁殖给质量封顶"是同一个坑:合身要,但纯自产会窄死。</p>
+<h2>数字例子 · 合身的更好训</h2>
+<p>同指令两个候选,目标模型给的逐 token 概率 → 困惑度:</p>
+<pre><code>候选 A（合身）  PPL 2.15   训练损失低、保住底子   ← 选它
+候选 B（强老师）PPL 5.50   OOD,硬训会把模型拽偏
+</code></pre>
+<p>✓ 自检:B 也许出自 405B 大模型,但目标模型对它"困惑"(PPL 5.50),硬塞=逆着自己的分布学。A 困惑度低=顺着分布学。GRAPE 实测:选 A 这类,<strong>超过用 B(最强老师)那条、甚至超过 3× 大的数据集</strong>。结论一句话:<strong>喂它接得住的话,别灌它最聪明的话。</strong></p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/grape.html">grape</a> · 把这条原则落地成"按目标模型困惑度选回答"</li>
+<li><a href="../concepts/perplexity.html">perplexity</a> · "合身"的量化尺:低困惑度 = 贴合分布</li>
+<li><a href="../concepts/direct-preference-optimization.html">direct-preference-optimization</a> / <a href="../concepts/rlhf.html">rlhf</a> · on-policy 打败 off-policy 的同源直觉</li>
+<li><a href="../concepts/generative-data-curation.html">generative-data-curation</a> · 纯自产会塌缩,同一个坑的另一面</li>
+<li><a href="../concepts/pretrain-finetune-paradigm.html">pretrain-finetune-paradigm</a> · "保住预训练分布"是立论基础</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/grape.html"><span class="cat">paper</span>GRAPE · 最好的指令微调数据，是&quot;合身&quot;的那条</a></li><li><a href="../concepts/perplexity.html"><span class="cat">concept</span>困惑度 Perplexity · 模型对一段话有多&quot;意外&quot;</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/distribution-aligned-sft.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
