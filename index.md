@@ -203,6 +203,8 @@
 - [DINOv3 多样性奖励](wiki/concepts/dinov3-diversity-reward.md) — 一组图DINOv3向量两两距离均值当多样性分加进奖励, 防RL只追质量塌成一种house style; λ调小立刻塌要全程保活
 - [Prompt Expansion](wiki/concepts/prompt-expansion.md) — 短输入扩成富caption: SFT反造用户caption学扩写, RL用GDPO(偏好对模型自己生成+多奖励自动判)调"提质不跑题"; 忠实奖励一票否决跑题扩写
 - [Style Reference](wiki/concepts/style-reference.md) — 只借参考图风格别搬内容(content leakage是核心翻车); 自监督造对强制风格/内容分通道+偏好优化压泄漏; "是什么"归文字"什么质感"归参考图
+- [选择性 token masking](wiki/concepts/selective-token-masking.md) — 同一扩散模型靠"哪些token干净给定/哪些噪声待生成"切任务(换mask=换任务,权重不动); 干净↔噪声full attention; MRT三任务统一, 是Qwen-Image"条件concat"的推广+BERT遮词同母题
+- [分层图像生成](wiki/concepts/layered-image-generation.md) — 产出一摞RGBA图层(画布+背景+K前景)而非拍平图, 每层可单独挪改重组=图像版逐元素编辑; 难点: 图层定义ill-posed/遮挡补全/溢出(overflow画布留住边界外像素); MRT代表作
 - [渐进式分辨率训练](wiki/concepts/progressive-resolution-training.md) — 256P→512P→2K: 先小图便宜学构图再升大图抠细节; 类比缩略图→放大
 - [Unified Transformer](wiki/concepts/unified-transformer.md) — 像素+文本+条件一条流 + 混合注意力(文本causal/生成full)；LLM 和 DiT 缝成一个
 - [Perceptual Loss](wiki/concepts/perceptual-loss.md) — 不逐像素比图，在预训练网络特征空间里比；LPIPS(VGG·纹理) + DINO(自监督ViT·语义)
