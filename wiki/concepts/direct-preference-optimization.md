@@ -1,7 +1,7 @@
 ---
 name: direct-preference-optimization
 type: concept
-sources: [krea-2]
+sources: [krea-2, diffusionnft]
 updated: 2026-06-25
 ---
 
