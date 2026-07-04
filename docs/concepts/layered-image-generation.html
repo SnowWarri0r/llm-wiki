@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>分层图像生成 · 产出一摞可编辑图层，不是一张拍平图 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · layered-image-generation</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>分层图像生成 · 产出一摞可编辑图层，不是一张拍平图</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>生成的不是糊在一个平面上的像素图，而是一摞带透明通道（RGBA）的图层（画布+背景+K 个前景），每层能单独挪/改/重组——图像版的"逐元素编辑"。</p>
+<h2>直觉 · 拍平图改不动</h2>
+<p>普通文生图产出<strong>拍平（flat）</strong>的图：所有元素压成一个像素平面。想挪个 logo、换句文案、重排版，只能<strong>整张重画</strong>。设计真正要的是<strong>图层</strong>：画布、背景、每个前景元素各一层、透明可叠，单独编辑、可复用。<a href="../papers/mrt.html">mrt</a> 把分层生成推到了大规模。</p>
+<h2>怎么做的 · 表示与三个硬骨头</h2>
+<p>表示成 <code>{I_canvas, I_bg, {I_fg^i}_{i=1..K}}</code>：</p>
+<pre><code>画布层 canvas   全尺寸、透明底（承载溢出，见下）
+背景层 bg       半透明 RGBA
+前景层 fg^i     各自一块 RGBA(带 Alpha 通道存透明/羽化)
+</code></pre>
+<p>每层用 VAE（<a href="../papers/mrt.html">mrt</a> 用 <a href="../concepts/video-vae.html">video-vae</a>，即 WAN-2.1-VAE）编码，<strong>Alpha 通道</strong>让"半透明/镂空"能被表示和合成。难点有三个，都来自"图层"本身：</p>
+<ul>
+<li><strong>图层定义本就 ill-posed</strong>：一张图"该分成几层、怎么分"没有唯一正确答案（没有干净的 ground-truth）。</li>
+<li><strong>遮挡补全</strong>：被上层挡住的部分要补全，半透明叠加时尤其难。</li>
+<li><strong>溢出（overflow）</strong>：元素常超出可见画布边界（<a href="../papers/mrt.html">mrt</a> 说 60%+ 设计有），旧做法在边界截断丢像素 → 挪回来缺一块；overflow 画布层把溢出也完整留住。</li>
+</ul>
+<h2>具体例子 · 一张促销图拆成什么</h2>
+<pre><code>拍平图: [背景渐变 + 一张产品照 + &quot;5折&quot; 大字 + 角标logo] 糊成一张
+分层后:
+  canvas  : 全尺寸透明（含被裁出可见区的产品照边角）
+  bg      : 渐变背景（半透明）
+  fg¹     : 产品照（可单独换图/挪位）
+  fg²     : &quot;5折&quot;文字（可改文案/字色）
+  fg³     : 角标 logo（可替换/缩放）
+</code></pre>
+<p>✓ 自检：要把"5折"改成"3折"，分层下只重生成 fg² 一层，其余原封不动；拍平图则得整张重画、还可能改坏背景。这就是分层的价值——<strong>可编辑性 + 可复用性</strong>，代价是模型要学会"拆得干净 + 补得上遮挡 + 留住溢出"。</p>
+<h2>局限（<a href="../papers/mrt.html">mrt</a> 自己列的）</h2>
+<p>设计数据训出来的模型<strong>对真实照片泛化弱</strong>（缺真实光影）、<strong>阴影/反射</strong>这类效果学不好、复杂半透明叠加的<strong>遮挡补全</strong>仍难、图层粒度因 ill-posed 而有歧义。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/mrt.html">mrt</a> · 把分层生成做到大规模的代表作（三任务 + overflow + 蒸馏）</li>
+<li><a href="../concepts/selective-token-masking.html">selective-token-masking</a> · 分层生成/编辑统一成一个模型的开关</li>
+<li><a href="../concepts/video-vae.html">video-vae</a> · WAN-2.1-VAE：抽每层的 region latent</li>
+<li><a href="../papers/qwen-image-2.html">qwen-image-2</a> · 拍平图生成/编辑的底座；分层是其上的升级</li>
+<li><a href="../concepts/kl-vae.html">kl-vae</a> · latent 表示的地基</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/mrt.html"><span class="cat">paper</span>MRT · Masked Region Transformer · 分层图像生成与编辑</a></li><li><a href="../concepts/selective-token-masking.html"><span class="cat">concept</span>选择性 token masking · 用&quot;哪些给定/哪些待生成&quot;当任务开关</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/layered-image-generation.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

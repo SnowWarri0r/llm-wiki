@@ -158,7 +158,7 @@ figure.play .mr-svg .draw { stroke-dashoffset: 0; }
 <!-- §02 -->
 <h2><span class="num">§ 02</span>核心：masking 哪些干净/哪些噪声 = 切任务</h2>
 
-<p>MRT 是个在<strong>图层 token 上跑的扩散模型</strong>。最妙的一手：<strong>你控制哪些图层从"干净 latent（给定、不预测）"开始、哪些从"噪声（要生成）"开始——这个开关本身就是任务</strong>。一个 20B 模型，翻翻 mask 就干三件事：</p>
+<p>MRT 是个在<strong>图层 token 上跑的扩散模型</strong>。最妙的一手：<strong>你控制哪些图层从"干净 latent（给定、不预测）"开始、哪些从"噪声（要生成）"开始——这个开关本身就是任务</strong>。一个 20B 模型，翻翻 mask 就干<a class="jr" href="#g-06">6</a>三件事：</p>
 
 <figure id="fig-mask" class="fig-mask">
   <figcaption>
@@ -204,7 +204,7 @@ figure.play .mr-svg .draw { stroke-dashoffset: 0; }
   </svg>
 </figure>
 
-<p>这正是 <a href="qwen-image-2.html">Qwen-Image-2.0</a> "条件→目标、编辑=条件里塞原图"的<strong>升级版</strong>：不再只塞一张原图，而是<strong>任意一组图层都能当"干净条件"、其余当"噪声目标"</strong>。</p>
+<p>这正是 <a href="qwen-image-2.html">Qwen-Image-2.0</a> "条件→目标、编辑=条件里塞原图"的<strong>升级版</strong>：不再只塞一张原图，而是<strong>任意一组图层都能当"干净条件"、其余当"噪声目标"</strong>。机制详见 <a href="../concepts/selective-token-masking.html">selective-token-masking</a>。</p>
 
 <div class="note">
   <span class="l">一个类比</span>
@@ -215,7 +215,7 @@ figure.play .mr-svg .draw { stroke-dashoffset: 0; }
 <!-- §03 -->
 <h2><span class="num">§ 03</span>Anonymous Region Transformer</h2>
 
-<p>每个图层先被<strong>裁剪成一块区域</strong>，用 <a href="../concepts/video-vae.html">WAN-2.1-VAE</a> 编成各自的 <strong>region token</strong>；所有前景层 token + 背景层 token + 合成图 token 一起做 <strong>full attention</strong>（生成的层能看见给定的层，层间一致）。</p>
+<p>一个设计被表示成 <code>{合成全图, 背景层, 前景层¹…ᴷ}</code>：画布是全尺寸透明底、背景半透明、每个前景是一块 RGBA。每个图层先被<strong>裁剪成一块区域</strong>，用 <a href="../concepts/video-vae.html">WAN-2.1-VAE</a> 编成各自的 <strong>region token</strong>；所有前景层 token + 背景层 token + 合成图 token 一起做 <strong>full attention</strong>（生成的层能看见给定的层，层间一致）。训练数据规模撑起了这件事：<strong>10M+ 多语设计、43M+ 独立图层、7M+ 溢出元素</strong>。详见 <a href="../concepts/layered-image-generation.html">layered-image-generation</a>。</p>
 
 <p>"<strong>匿名（anonymous）</strong>"的意思：<strong>不给图层身份标签</strong>，模型纯靠每块区域的<strong>空间位置 + 视觉内容</strong>推断它是什么角色。好处是每个前景层都保留<strong>完整空间信息 → 能任意重新摆位</strong>，复用性拉满。</p>
 
@@ -227,14 +227,50 @@ figure.play .mr-svg .draw { stroke-dashoffset: 0; }
 <p>底座是 Qwen-Image（~20B，60 层 / hidden 3584 / 24 头）。因为"平图→分层"分布变化大，<strong>做全参数微调（不是只调 LoRA）</strong>，FSDP2 训。</p>
 
 
-<!-- §04 -->
-<h2><span class="num">§ 04</span>Overflow 画布：别在边界把图层切了</h2>
+<!-- §04 RoPE repositioning -->
+<h2><span class="num">§ 04</span>层为什么能任意重摆：复制 RoPE 坐标</h2>
 
-<p>以前的分层做法在<strong>画布边界把图层截断</strong>——超出可见区的像素直接丢。结果你想把元素往外挪一点再挪回来，它<strong>缺了一块</strong>，不可编辑。MRT 加一个<strong>全尺寸透明画布层</strong>，把溢出部分也<strong>完整留住</strong>（训练集 60%+ 的设计有溢出层）。</p>
+<p>"匿名"靠位置推角色，那<strong>位置信息从哪来、又凭什么能改</strong>？答案是 <a href="../concepts/rotary-position-embedding.html">RoPE</a> 坐标<a class="jr" href="#g-07">7</a>：把<strong>原图层 token 的 RoPE 位置坐标，原样复制给它对应的条件 token</strong>，让两者带"相同的空间位置线索"。于是模型始终知道"这一层该落在画布的哪个 (行,列)"；想重新摆位，<strong>改这套坐标即可，图层内容一个像素都不用动</strong>。这就是分层可复用、可重排的底层机制。</p>
+
+<figure id="fig-repos" class="fig-repos">
+  <figcaption>
+    <span>Fig 03 · 复制 RoPE 坐标 → 图层任意重摆位</span>
+    <span class="fnum">改坐标不改内容</span>
+  </figcaption>
+  <svg class="mr-svg" viewBox="0 0 720 230" xmlns="http://www.w3.org/2000/svg">
+    <!-- left: a layer token with coords -->
+    <text class="mr-rev d1" x="120" y="40" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#2f6db0">前景层 token</text>
+    <rect class="mr-rev d1" x="60" y="56" width="120" height="86" rx="4" fill="#d8e6ce" stroke="#4a6b3a"/>
+    <text class="mr-rev d1" x="120" y="103" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#3a5a2a">logo 内容</text>
+    <text class="mr-rev d2" x="120" y="160" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9" fill="#2f6db0">RoPE 坐标 = (行 r, 列 c)</text>
+    <!-- arrow copy coords -->
+    <line class="mr-rev d3" x1="190" y1="99" x2="270" y2="99" stroke="#7a6f5d" stroke-width="1.4"/>
+    <polygon class="mr-rev d3" points="270,99 262,95 262,103" fill="#7a6f5d"/>
+    <text class="mr-rev d3" x="230" y="90" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#7a6f5d">复制坐标</text>
+    <!-- right: canvas with placed + ghost -->
+    <text class="mr-rev d4" x="490" y="40" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#2f6db0">画布：换坐标 = 重摆位</text>
+    <rect class="mr-rev d4" x="300" y="52" width="380" height="130" rx="3" fill="#faf4e1" stroke="#3a3128" stroke-width="1.2"/>
+    <!-- placed solid at (r,c) -->
+    <rect class="mr-rev d4" x="330" y="74" width="90" height="60" rx="3" fill="#d8e6ce" stroke="#4a6b3a"/>
+    <text class="mr-rev d4" x="375" y="108" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#3a5a2a">(r,c)</text>
+    <!-- ghost moved -->
+    <rect class="mr-rev d5" x="540" y="104" width="90" height="60" rx="3" fill="none" stroke="#2f6db0" stroke-width="1.3" stroke-dasharray="5 3"/>
+    <text class="mr-rev d5" x="585" y="138" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" fill="#2f6db0">(r',c')</text>
+    <line class="mr-rev d5" x1="422" y1="104" x2="538" y2="120" stroke="#2f6db0" stroke-width="1" stroke-dasharray="3 2"/>
+    <polygon class="mr-rev d5" points="538,120 529,118 532,126" fill="#2f6db0"/>
+    <text class="mr-rev d6" x="490" y="204" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#2f6db0">同一层内容，改 RoPE 坐标就挪到新位置（内容不变）</text>
+  </svg>
+</figure>
+
+
+<!-- §05 -->
+<h2><span class="num">§ 05</span>Overflow 画布：别在边界把图层切了</h2>
+
+<p>以前的分层做法在<strong>画布边界把图层截断</strong>——超出可见区的像素直接丢。结果你想把元素往外挪一点再挪回来，它<strong>缺了一块</strong>，不可编辑。MRT 加一个<strong>全尺寸透明画布层</strong>，把溢出部分也<strong>完整留住</strong>（训练集 60%+ 的设计有溢出层）。这个画布层还顺带支持<strong>半透明背景合成</strong>——每层都是 RGBA、靠 <strong>Alpha 通道</strong>表示透明/羽化，合成与拆解时透明度都保得住。详见 <a href="../concepts/layered-image-generation.html">layered-image-generation</a>。</p>
 
 <figure id="fig-overflow" class="fig-overflow">
   <figcaption>
-    <span>Fig 03 · 截断丢像素 vs 留住溢出</span>
+    <span>Fig 04 · 截断丢像素 vs 留住溢出</span>
     <span class="fnum">旧：边界切掉 · MRT：全画布存完整</span>
   </figcaption>
   <svg class="mr-svg" viewBox="0 0 720 230" xmlns="http://www.w3.org/2000/svg">
@@ -263,27 +299,90 @@ figure.play .mr-svg .draw { stroke-dashoffset: 0; }
 </figure>
 
 
-<!-- §05 -->
-<h2><span class="num">§ 05</span>蒸馏 · 结果 · 放进 wiki</h2>
+<!-- §06 -->
+<h2><span class="num">§ 06</span>训练配方</h2>
 
-<div class="note">
-  <span class="l">DMD 蒸馏：50 步 → 8 步</span>
-  <p>跟 <a href="qwen-image-2.html">Qwen-Image-2.0</a> 同一个 <strong>DMD（Distribution Matching Distillation）</strong>：最小化师生<strong>转移分布的 <a href="../concepts/closed-form-kl.html">KL</a></strong>（去噪每步是 <a href="../concepts/markov-chain.html">高斯马尔可夫</a> 转移），把 50 步老师压成 <strong>8 步学生</strong>，6× 提速、FID 仅 16.02→18.58，H200 上 ~2.3s 实时；~20 层时峰值提速 <strong>108.5×</strong>。同 <a href="drifting-models.html">Drifting</a>/<a href="diffusion-opd.html">DiffusionOPD</a> 的少步化线。</p>
-</div>
+<p>"平图→分层"分布漂移大，所以<strong>全参数微调</strong>（不是 LoRA），并走<strong>两阶段渐进分辨率</strong>：先在 512 把构图/分层学起来，再升 1024 抠细节。一个细节增广很关键——<strong>layer-grouping</strong>：训练时随机把重叠/相邻的层合并，逼模型对"测试时杂乱的图层划分"更鲁棒。</p>
 
 <table class="spec">
-  <tr><th>项</th><th>数</th></tr>
-  <tr><td>底座 / 规模</td><td>Qwen-Image · 20B（60 层 / hidden 3584 / 24 头）</td></tr>
-  <tr><td>数据</td><td>10M+ 多语设计（43M+ 图层 / 7M+ 溢出元素）</td></tr>
-  <tr><td>text→layers FID</td><td>15.63</td></tr>
-  <tr><td>image→layers 用户胜率</td><td>79.5% 质量 / 68.9% 完整 / 82.6% 粒度（vs Qwen-Image-Layered）</td></tr>
-  <tr><td>速度 / 显存</td><td>快 10~100× · 省 50~90% 显存 · 峰值 108.5×</td></tr>
+  <tr><th>项</th><th>配置</th></tr>
+  <tr><td>底座</td><td>Qwen-Image 20B（60 层 / hidden 3584 / 24 头），HF 权重初始化</td></tr>
+  <tr><td>微调</td><td>全参数（非 LoRA）· FSDP2</td></tr>
+  <tr><td>算力 / batch</td><td>64×H200 · 每卡 16 · 全局 batch 1024</td></tr>
+  <tr><td>阶段 1</td><td>512×512 · ~7 万步 · 全 10M 数据</td></tr>
+  <tr><td>阶段 2</td><td>1024×1024 · ~2 万步（渐进升分辨率）</td></tr>
+  <tr><td>优化器</td><td>AdamW · lr 1e-4 恒定</td></tr>
+  <tr><td>增广</td><td>layer-grouping（随机合并重叠/相邻层）</td></tr>
+  <tr><td>数据</td><td>10M+ 多语设计 / 43M+ 图层 / 7M+ 溢出元素（双语 caption 由 GPT-4 mini 生成）</td></tr>
 </table>
 
+
+<!-- §07 -->
+<h2><span class="num">§ 07</span>DMD 蒸馏：50 步压到 8 步</h2>
+
+<p>跟 <a href="qwen-image-2.html">Qwen-Image-2.0</a> 同一个 <a href="../concepts/dmd-distillation.html">DMD（Distribution Matching Distillation）</a>：最小化师生<strong>转移分布的 <a href="../concepts/closed-form-kl.html">KL</a></strong>（去噪每步是 <a href="../concepts/markov-chain.html">高斯马尔可夫</a> 转移）。50 步老师压成 8 步学生，FID 只从 16.02 升到 18.58；16 步几乎无损。</p>
+
+<table class="spec">
+  <tr><th>步数</th><th>提速</th><th>FID</th><th>备注</th></tr>
+  <tr><td>50（老师）</td><td>1×</td><td>16.02</td><td>原始</td></tr>
+  <tr><td>16（DMD）</td><td>3.2×</td><td>16.21</td><td>几乎不掉</td></tr>
+  <tr><td>8（DMD）</td><td>6.26×</td><td>18.58</td><td>实时</td></tr>
+</table>
+
+<p><strong>分层生成的成本本来随层数爆炸，蒸馏把它压平了</strong>：image→layers 单 H100 约 <strong>2.3s</strong>；~20 层的设计峰值提速达 <strong>108.5×</strong>、省 <strong>50~90%</strong> 激活显存。这才是标题里"at scale"的实际含义。接 <a href="drifting-models.html">Drifting</a>/<a href="diffusion-opd.html">DiffusionOPD</a> 的少步化线。</p>
+
+
+<!-- §08 -->
+<h2><span class="num">§ 08</span>评测：层越多，MRT 越赢</h2>
+
+<p>跟并发的 <strong>Qwen-Image-Layered</strong> 在域外 100 个设计上比 <code>PSNR_merged</code>（合成图重建质量；另有只算非透明像素的 layer 版、以及 FID_merged）。关键看<strong>按层数分档</strong>——层越多，MRT 的优势越大：</p>
+
+<table class="spec">
+  <tr><th>层数档</th><th>MRT</th><th>Qwen-Image-Layered</th><th>差</th></tr>
+  <tr><td>[4, 8)</td><td>27.34</td><td>25.81</td><td>+1.53</td></tr>
+  <tr><td>[8, 16)</td><td>25.91</td><td>23.06</td><td>+2.85</td></tr>
+  <tr><td>[16, 32)</td><td>25.72</td><td>22.18</td><td>+3.54</td></tr>
+</table>
+
+<p>用户研究（盲评，image→layers）MRT 胜率：<strong>质量 79.5% · 完整 68.9% · 粒度 82.6%</strong>；对比 ART、LayerD 等也一致更受偏好，且 MRT 是首个<strong>原生支持溢出层</strong>的。</p>
+
 <div class="note">
-  <span class="l">放进 wiki 这条线</span>
-  <p>MRT = <a href="qwen-image-2.html">Qwen-Image-2.0</a> "条件→目标"思路的<strong>分层升级</strong>：把"塞不塞一张原图"推广成"<strong>任意子集图层当干净条件、其余当噪声目标</strong>"，一个 mask 切三任务。同底座（Qwen-Image 20B）、同蒸馏（DMD，接 <a href="drifting-models.html">Drifting</a>/<a href="diffusion-opd.html">DiffusionOPD</a>/<a href="../concepts/closed-form-kl.html">closed-form-kl</a>）。一句话：<strong>别产出拍平的图，产出一摞能单独编辑、还留住溢出的 RGBA 图层。</strong></p>
+  <span class="l">为什么"层越多越赢"是重点</span>
+  <p>差距随层数从 +1.53 拉到 +3.54——分层生成最难、成本最高的恰恰是<strong>层多</strong>的复杂设计，MRT 偏偏在那头优势最大。配合峰值 108.5× 提速 + 省一半以上显存，"分层 at scale"才真正落地。</p>
 </div>
+
+
+<!-- §09 -->
+<h2><span class="num">§ 09</span>消融：哪几样真有用</h2>
+
+<table class="spec">
+  <tr><th>改动</th><th>FID 变化</th><th>结论</th></tr>
+  <tr><td>模型 scaling（FLUX 13B → Qwen 20B）</td><td>17.79 → 16.15</td><td>底座越大越好</td></tr>
+  <tr><td>数据 scaling（0.5M → 10M）</td><td>16.15 → 15.63</td><td>数据规模有效</td></tr>
+  <tr><td>加 overflow 支持</td><td>15.68 → 16.15（略升）</td><td>FID 微涨，换来完整可编辑——值</td></tr>
+  <tr><td>多任务联训（T2L+I2L+L2L）</td><td>几乎不掉点</td><td>三任务能共存、还互相借力</td></tr>
+  <tr><td>layer-grouping 增广</td><td>+0.3 PSNR 左右</td><td>稳定小涨</td></tr>
+</table>
+
+
+<!-- §10 -->
+<h2><span class="num">§ 10</span>局限（作者自陈）</h2>
+<ul>
+  <li><strong>真实照片泛化弱</strong>：训练全是设计稿，迁到真实场景保不住保真度。</li>
+  <li><strong>图层粒度有歧义</strong>：一张图"该分几层、怎么分"本就 ill-posed，没有唯一 ground-truth。</li>
+  <li><strong>遮挡补全难</strong>：被挡住的部分要补全，半透明/复杂叠加时尤其吃力。</li>
+  <li><strong>阴影/反射学不好</strong>：设计数据缺真实光影，这类效果是失败重灾区。</li>
+</ul>
+
+
+<!-- §11 -->
+<h2><span class="num">§ 11</span>放进 wiki 这条线</h2>
+
+<div class="note">
+  <span class="l">一句话坐标</span>
+  <p>MRT = <a href="qwen-image-2.html">Qwen-Image-2.0</a> "条件→目标"思路的<strong>分层升级</strong>：把"塞不塞一张原图"推广成"<strong>任意子集图层当干净条件、其余当噪声目标</strong>"（<a href="../concepts/selective-token-masking.html">selective-token-masking</a>），一个 mask 切三任务；产出 <a href="../concepts/layered-image-generation.html">RGBA 图层</a>而非拍平图，靠<strong>复制 RoPE 坐标</strong>实现任意重摆位，<strong>overflow 画布</strong>留住溢出。同底座（Qwen-Image 20B）、同蒸馏（<a href="../concepts/dmd-distillation.html">DMD</a>，接 <a href="drifting-models.html">Drifting</a>/<a href="diffusion-opd.html">DiffusionOPD</a>/<a href="../concepts/closed-form-kl.html">closed-form-kl</a>）。一句话：<strong>别产出拍平的图，产出一摞能单独编辑、还留住溢出的 RGBA 图层；masking 哪些干净/噪声 = 切任务。</strong></p>
+</div>
+<p style="font-size:15px;color:var(--muted);"><em>本站图为机制示意；真实分层效果与可交互 demo <a href="https://mrt-cvpr.github.io">↗ 见项目主页</a>。</em></p>
 
 
 <!-- glossary -->
@@ -296,6 +395,7 @@ figure.play .mr-svg .draw { stroke-dashoffset: 0; }
     <li id="g-04"><span class="term">Overflow 画布层</span> · 全尺寸透明画布留住超出可见区的溢出像素(60%+ 设计有溢出)，避免旧做法在边界截断丢像素 → 完整可编辑。</li>
     <li id="g-05"><span class="term"><a href="../concepts/dmd-distillation.html">DMD 蒸馏 · 8 步</a></span> · Distribution Matching Distillation：最小化师生分布的 <a href="../concepts/closed-form-kl.html">KL</a>，50 步→8 步（<a href="../concepts/dmd-distillation.html">NFE</a>↓）、6× 提速(FID 16.02→18.58)。同 <a href="qwen-image-2.html">Qwen-Image-2.0</a>/<a href="drifting-models.html">Drifting</a> 的少步化。</li>
     <li id="g-06"><span class="term">三任务</span> · text-to-layers(文生整摞) / image-to-layers(平图拆成层=分割+补全) / layers-to-layers(加层 or 改风格)。一个模型靠 masking 全包。</li>
+    <li id="g-07"><span class="term">复制 RoPE 坐标 → 重摆位</span> · 把原图层 token 的 <a href="../concepts/rotary-position-embedding.html">RoPE</a> 位置坐标原样复制给条件 token，使两者有相同空间线索；想重摆位只改这套坐标、图层内容不动。这是分层可复用/可重排的底层机制。</li>
   </ol>
 </div>
 
@@ -307,7 +407,7 @@ figure.play .mr-svg .draw { stroke-dashoffset: 0; }
 </div>
 <script>
 {
-  const figs = ['fig-layers','fig-mask','fig-overflow'];
+  const figs = ['fig-layers','fig-mask','fig-repos','fig-overflow'];
   figs.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
