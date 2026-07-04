@@ -128,7 +128,7 @@ figure.play .op-svg .draw.d3 { transition-delay: 0.70s; }
 <p>给文生图扩散模型"调好"——更美、能正确渲染文字、更听指令——本质是 <a href="ppo.html">RLHF/RL 对齐</a>：拿奖励信号把模型往人喜欢的方向推。一个奖励还好，<strong>同时要好几个</strong>就难了：</p>
 
 <ul>
-<li><strong>联合多奖励 RL</strong>（几个奖励加一起一起优化）：不同任务给的优化方向<strong>互相矛盾</strong>（cross-task interference），还有<strong>难易不均</strong>——简单任务的梯度抢戏，难任务学不动。</li>
+<li><strong>联合多奖励 RL</strong>（几个奖励加一起一起优化）：不同任务给的优化方向<strong>互相矛盾</strong>（cross-task interference<a class="jr" href="#g-05">5</a>），还有<strong>难易不均</strong>——简单任务的梯度抢戏，难任务学不动。</li>
 <li><strong>级联 RL</strong>（一个任务训完再训下一个）：要多阶段、精调度，且<strong>灾难性遗忘</strong>——学后面的把前面的本事忘了。</li>
 </ul>
 
@@ -138,9 +138,9 @@ figure.play .op-svg .draw.d3 { transition-delay: 0.70s; }
 <!-- §02 -->
 <h2><span class="num">§ 02</span>On-Policy Distillation：在学生自己走到的状态上学老师</h2>
 
-<p>先讲核心招式 OPD，它从 LLM 那边借来。普通（off-policy）蒸馏是<strong>老师生成数据、学生照抄固定数据集</strong>——问题是学生一旦走到<strong>自己没练过的状态</strong>，不会救（训练/推理分布不一致）。</p>
+<p>先讲核心招式 OPD，它从 LLM 那边借来。普通（off-policy<a class="jr" href="#g-07">7</a>）蒸馏是<strong>老师生成数据、学生照抄固定数据集</strong>——问题是学生一旦走到<strong>自己没练过的状态</strong>，不会救（训练/推理分布不一致）。</p>
 
-<p><strong>On-policy 蒸馏</strong>反过来：<strong>学生自己 rollout 生成整条轨迹，然后在学生<u>实际走到</u>的那些状态上，去匹配老师的下一步</strong>。这样监督是<strong>每步稠密</strong>的（对比 RL 只有稀疏的终局奖励），而且专治学生自己的薄弱状态。</p>
+<p><strong>On-policy 蒸馏</strong>反过来：<strong>学生自己 rollout 生成整条轨迹，然后在学生<u>实际走到</u>的那些状态上，去匹配老师的下一步</strong>。这样监督是<strong>每步稠密</strong>的（对比 RL 只有稀疏的终局奖励）<a class="jr" href="#g-08">8</a>，而且专治学生自己的薄弱状态。</p>
 
 <figure id="fig-onpolicy" class="fig-onpolicy">
   <figcaption>
@@ -179,7 +179,7 @@ figure.play .op-svg .draw.d3 { transition-delay: 0.70s; }
 <!-- §03 -->
 <h2><span class="num">§ 03</span>两阶段：先各请专家，再蒸进一个学生</h2>
 
-<p>把上面的招式套成一个干净的两阶段流程：</p>
+<p>把上面的招式套成一个干净的两阶段流程<a class="jr" href="#g-09">9</a>：</p>
 
 <pre class="eq">Stage 1：每个任务各用 RL 训一个【专家老师】   # 单任务探索，互不干扰
 Stage 2：沿【学生自己 rollout】的轨迹            # on-policy
@@ -228,6 +228,23 @@ Stage 2：沿【学生自己 rollout】的轨迹            # on-policy
 <pre class="eq">KL( N(μ_s, σ²I) ‖ N(μ_t, σ²I) ) = ‖μ_s − μ_t‖² / (2σ²)
                                     └ 同协方差 → 只剩均值之差的平方 ┘</pre>
 
+<h3>为什么会塌成 MSE · 通用高斯 KL 三项,同协方差消掉两项</h3>
+<p>两个 d 维高斯的 KL 通用公式有<strong>三块</strong><a class="jr" href="#g-12">12</a>——形状、位置、体积:</p>
+<pre class="eq">KL(N(μ_s,Σ_s) ‖ N(μ_t,Σ_t)) = ½[ tr(Σ_t⁻¹Σ_s) − d + (μ_t−μ_s)ᵀΣ_t⁻¹(μ_t−μ_s) + ln(detΣ_t/detΣ_s) ]
+                                └── 形状项 ──┘   └──── 位置项(均值差) ────┘   └── 体积项 ──┘</pre>
+<p>去噪每步这两个高斯<strong>同协方差</strong> <code>Σ_s=Σ_t=σ²I</code>(协方差只由 noise schedule 定<a class="jr" href="#g-10">10</a>、跟学生/老师是谁无关),三项里两项直接归零:</p>
+<pre class="eq">形状项 tr(Σ_t⁻¹Σ_s) − d = tr(I) − d = d − d = 0        # 一样宽,没形状差
+体积项 ln(detΣ_t/detΣ_s) = ln(1) = 0                    # 一样宽,没体积差
+位置项 (μ_t−μ_s)ᵀ(σ²I)⁻¹(μ_t−μ_s) = ‖μ_s−μ_t‖²/σ²       # 只剩峰心错开多少
+⟹ KL = ½ · ‖μ_s−μ_t‖²/σ² = ‖μ_s−μ_t‖²/(2σ²)            # 就是均值差的 MSE</pre>
+<p>直觉:两条钟形一样胖(σ 同),那它们的差别就只能是"峰心错开多少",自然只剩均值差的平方。</p>
+<h3>数字例子</h3>
+<pre class="eq">取 μ_s=[1,5]、μ_t=[1,4]、σ=0.5(σ²=0.25)、d=2：
+‖μ_s−μ_t‖² = ‖[0,1]‖² = 0² + 1² = 1
+短式   KL = 1 / (2·0.25) = 1 / 0.5 = 2
+全式核对：½[ tr(I)=2  −d=−2  位置=1/0.25=4  体积=0 ] = ½·(0+4+0) = 2   ✓ 两式一致</pre>
+<p>✓ 所以每步蒸馏 = 让学生的一步去噪均值 <code>μ_s</code> 贴近老师的 <code>μ_t</code>,一个纯 MSE;<code>σ</code> 只当每步的权重(近数据端 σ 小 → 权重大)。没有 RL 的采样方差、没有奖励建模。</p>
+
 <figure id="fig-kl" class="fig-kl">
   <figcaption>
     <span>Fig 03 · 同宽高斯 → KL = 均值差²</span>
@@ -252,7 +269,7 @@ Stage 2：沿【学生自己 rollout】的轨迹            # on-policy
   </svg>
 </figure>
 
-<p>把它逐时间步求和，就是 DiffusionOPD 的训练目标（SDE 版带 <code>1/σ</code>，ODE 版更干脆）：</p>
+<p>把它逐时间步求和，就是 DiffusionOPD 的训练目标（SDE 版带 <code>1/σ</code>，ODE 版更干脆）<a class="jr" href="#g-11">11</a>：</p>
 
 <pre class="eq">L_OPD = E[ Σⱼ ‖μ_s(x_tⱼ; θ) − μ_t(x_tⱼ)‖² / (2σⱼ²) ]     # SDE 版
 L_OPD-ODE = E[ Σⱼ (1/2)‖μ_s(x_tⱼ; θ) − μ_t(x_tⱼ)‖² ]      # ODE 版</pre>
@@ -277,7 +294,7 @@ for 每个任务 m:
   <tr><td><strong>DiffusionOPD</strong></td><td><strong>0.929</strong></td><td>更快更省（训练时间也更短）</td></tr>
 </table>
 
-<p>美学 6.15、OCR 0.94、GenEval 0.96，全 SOTA，收敛更快、上限更高。</p>
+<p>美学 6.15、OCR 0.94、GenEval 0.96，全 SOTA，收敛更快、上限更高<a class="jr" href="#g-06">6</a>。</p>
 
 <div class="note">
   <span class="l">放进 wiki 这条线</span>
@@ -294,7 +311,13 @@ for 每个任务 m:
     <li id="g-03"><span class="term"><a href="../concepts/markov-chain.html">高斯马尔可夫链</a></span> · <strong>只看当下、每步钟形雾</strong>的状态链。去噪过程来自<a href="ode-sde.html">反向 SDE</a> 离散化，每步是一个高斯转移；雾胖瘦（协方差）只由 noise schedule 定、与策略无关。（不懂先点进去）</li>
     <li id="g-04"><span class="term"><a href="../concepts/closed-form-kl.html">闭式 KL</a></span> · "闭式"=公式直接算、不用撒点估。同协方差高斯：<code>KL(N(μ_s,σ²I)‖N(μ_t,σ²I)) = ‖μ_s−μ_t‖²/(2σ²)</code>，每步 on-policy KL 蒸馏塌成学生 vs 老师去噪均值的 MSE，无 RL 方差。</li>
     <li id="g-05"><span class="term">cross-task interference / 遗忘</span> · 多奖励联合 RL 的两大病：任务优化方向矛盾、简单任务抢戏；级联 RL 则灾难性遗忘。OPD 用解耦+蒸馏避开。</li>
-    <li id="g-06"><span class="term">结果</span> · 平均归一化 0.929 vs 级联 0.851 / 多任务 RL 0.763；美学/OCR/GenEval 全 SOTA，训练更快更省。</li>
+    <li id="g-06"><span class="term">结果</span> · 平均归一化 0.929 vs 级联 0.851 / 多任务 RL 0.763；美学 6.15 / OCR 0.94 / GenEval 0.96 全 SOTA，训练更快更省。</li>
+    <li id="g-07"><span class="term">off-policy 蒸馏</span> · 老师生成固定数据、学生照抄。学生自己推理会走到<strong>数据集里没有的状态</strong>,那儿没被教到 → 一偏就滚雪球(训练/推理分布不一致)。OPD 正是它的反面。</li>
+    <li id="g-08"><span class="term">稠密监督 vs 稀疏奖励</span> · OPD 每一步去噪都有老师给"下一步该往哪"(稠密);RL 只有整张图生成完才给一个终局奖励(稀疏),信号少、方差大。</li>
+    <li id="g-09"><span class="term">专家老师 / 统一学生</span> · Stage 1 每个奖励各训一个单任务专家(RL,只顾自己不打架);Stage 2 沿学生轨迹把 M 个老师蒸进<strong>一个</strong>扛全部任务的学生。</li>
+    <li id="g-10"><span class="term">协方差由 noise schedule 定</span> · 去噪每步高斯的"胖瘦"(协方差 σ²I)只由预设的加噪时间表决定,跟学生/老师是谁无关 → 学生老师两步永远<strong>同协方差</strong>,这是 KL 能塌成 MSE 的前提。</li>
+    <li id="g-11"><span class="term">SDE 版 / ODE 版损失</span> · <code>L_OPD=E[Σⱼ‖μ_s−μ_t‖²/(2σⱼ²)]</code>(SDE,带 1/σ² 权重);ODE 采样确定、去掉权重 <code>L=E[Σⱼ½‖μ_s−μ_t‖²]</code>。都是逐步 MSE 求和。</li>
+    <li id="g-12"><span class="term"><a href="../concepts/closed-form-kl.html">通用高斯 KL 三项</a></span> · <code>KL=½[tr(Σ_t⁻¹Σ_s)−d + (μ_t−μ_s)ᵀΣ_t⁻¹(μ_t−μ_s) + ln(detΣ_t/detΣ_s)]</code>:形状项 + 位置项 + 体积项。同协方差时形状/体积项归零,只剩位置项 = 均值差 MSE。</li>
   </ol>
 </div>
 
