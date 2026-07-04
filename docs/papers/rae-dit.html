@@ -180,7 +180,7 @@ figure.play .ra-svg .draw { stroke-dashoffset: 0; }
 <!-- §03 -->
 <h2><span class="num">§ 03</span>唯一不能省的：维度相关噪声调度</h2>
 
-<p>语义 latent 的维度 <code>m = N×d</code> 比 VAE 大得多。高维空间里有个反直觉的事:<strong>加"同样大小"的噪声,相对腐蚀得更少</strong>(噪声被摊到更多维上)。所以扩散的<strong>时间步必须按维度重新缩放</strong>,否则训练时模型见到的"信噪比"全错位。</p>
+<p>RAE 的 latent 是语义特征:<code>N=256</code> token × <code>d=1152</code> 维,<strong>有效维度 m = N×d = 294,912</strong>,比 VAE latent 大得多(参考维度 <code>n=4096</code>)。高维空间有个反直觉的事实:<strong>同一个名义时间步,维度越高、相对信噪比越高</strong>——全局/语义结构能在更多坐标上"平均"出来、噪声被摊薄。直接套 VAE 那套 schedule,在高维 latent 上就<strong>长期欠噪</strong>(模型见到的目标太干净),训练信号全错位。</p>
 
 <figure id="fig-noise">
   <figcaption><span>FIG 02 · 高维要把时间步往"更多噪声"挪</span><span class="fnum">DIMENSION-DEPENDENT SHIFT</span></figcaption>
@@ -211,7 +211,19 @@ figure.play .ra-svg .draw { stroke-dashoffset: 0; }
   </svg>
 </figure>
 
-<p>公式 <code>t_m = α·t_n / (1 + (α−1)·t_n)</code>,<code>α = √(m/n)</code>(参考维度 n=4096)。这是论文里<strong>唯一不能省</strong>的关键技术——去掉它性能直接腰斩。</p>
+<h3>为什么偏偏是 √(m/n)</h3>
+<p>flow matching 的加噪是 <code>x_t=(1−t)x+tε</code>,<strong>逐维信噪比</strong> <code>SNR(t)=((1−t)/t)²</code>(信号系数²÷噪声系数²)。那个时间步移位公式藏着一个漂亮的恒等式——代入 <code>t_m = α·t_n/(1+(α−1)·t_n)</code> 后:</p>
+<pre class="eq">(1−t_m)/t_m = (1/α)·(1−t_n)/t_n
+⟹ SNR(t_m) = (1/α²)·SNR(t_n) = (n/m)·SNR(t_n)      ← α=√(m/n) 代进去</pre>
+<p>也就是说:这个 shift 把逐维信噪比<strong>在每个 t 上都精确缩小 m/n 倍</strong>。要的正是它——高维 latent 有 m/n 倍更多坐标可以平均,等于<strong>白捡 m/n 倍的有效信噪比</strong>;把逐维 SNR 压低 m/n 倍刚好抵消,让"有效去噪难度"跨维度对齐。而 <strong>SNR 是<em>方差</em>比、噪声<em>幅度</em>是它的平方根</strong>,所以幅度/时间上要缩放的是 <strong>√(m/n)=α</strong>——√ 就是从"SNR 是平方量"这来的。</p>
+
+<pre class="eq">m = N×d = 256×1152 = 294,912    n = 4096    α = √(m/n) = √72 ≈ 8.49
+移位 t_m = α·t_n /(1+(α−1)·t_n)：
+  t_n=0.1 → t_m=0.485    逐维 SNR  81.0  → 1.125     (÷72)
+  t_n=0.5 → t_m=0.895    逐维 SNR  1.00  → 0.0139    (÷72)
+  t_n=0.8 → t_m=0.971    逐维 SNR  0.063 → 0.00087   (÷72)
+每个 t 都精确 ÷72 = ÷(m/n) ✓</pre>
+<p>✓ 自检:名义"中点" <code>t=0.5</code>(逐维 SNR=1)在这个 294,912 维 latent 里,其实要用到 <code>t≈0.9</code> 那么多的噪声(SNR≈0.014)才对得上"等效难度"。这是论文里<strong>唯一不能省</strong>的技术:加了 GenEval 49.6 / DPG-Bench 76.8,去掉直接掉到 <strong>23.6 / 54.8</strong>(腰斩)。公式本身出自 Zheng et al. 的 logit-SNR 时间移位,RAE 把移位量 α 锚到了维度比。</p>
 
 
 <!-- §04 -->
