@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>on-policy vs off-policy · 学自己刚做的，还是学别人/旧的 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · on-policy-vs-off-policy</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>on-policy vs off-policy · 学自己刚做的，还是学别人/旧的</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>on-policy = 拿<strong>当前策略自己刚生成</strong>的数据学（信号对得准、稳，但得不断现采）；off-policy = 拿<strong>别的策略</strong>（旧的自己/别的模型/人类）的数据学（能复用、便宜，但分布错位、要纠偏）。</p>
+<h2>直觉 · policy 是什么</h2>
+<p><strong>策略（policy）</strong> = 智能体当前的行为方式：给定状态，它会做什么。放到 LLM 上，<strong>策略就是模型本身</strong>——给定上下文它吐出什么 token，就是它的策略。</p>
+<ul>
+<li><strong>on-policy</strong>：学习用的数据，正是<strong>这个模型现在自己会产生</strong>的。边走边学。</li>
+<li><strong>off-policy</strong>：学习用的数据来自<strong>另一个分布</strong>——旧版自己、别的模型、人类标注、回放池。</li>
+</ul>
+<p>核心张力一句话：<strong>对得准 vs 能复用</strong>。</p>
+<ul>
+<li>on-policy：数据 = "模型此刻真实的做法"，更新信号<strong>贴合、稳</strong>；代价是<strong>得一直现采</strong>（模型一更新，旧数据就过期，基本不能复用）。</li>
+<li>off-policy：能<strong>复用旧数据/蹭别人的数据</strong>（省、样本效率高）；代价是<strong>分布错位</strong>——数据来自别的分布，直接学有偏、不稳，要纠偏。</li>
+</ul>
+<blockquote>
+<p>开车类比：on-policy = 学<strong>自己开车</strong>（反馈贴合你的手感，但得一直开）；off-policy = 看 <strong>F1 录像/自己几年前的旧录像</strong>学（素材便宜又多，但是别人的/旧的开法，照搬未必迁得到你现在的车）。</p>
+</blockquote>
+<h2>数字例子 · 分布错位为什么有偏，重要性采样怎么纠</h2>
+<p>两个动作 A、B，奖励 <code>r(A)=1, r(B)=10</code>。</p>
+<ul>
+<li><strong>当前策略 π</strong>（我们关心的）：<code>π(A)=0.8, π(B)=0.2</code></li>
+<li><strong>数据来源 μ</strong>（旧的/别的策略，off-policy 数据从它来）：<code>μ(A)=0.5, μ(B)=0.5</code></li>
+</ul>
+<pre><code>我们想要的:  E_π[r] = 0.8·1 + 0.2·10 = 2.8
+
+直接拿 μ 的数据平均(off-policy 不纠偏):
+  E_μ[r] = 0.5·1 + 0.5·10 = 5.5   ✗ 偏了(μ 比 π 多采了高奖励的 B)
+
+重要性采样纠偏: 每条样本乘权重 w = π(a)/μ(a)
+  A: w = 0.8/0.5 = 1.6   B: w = 0.2/0.5 = 0.4
+  Σ μ(a)·w(a)·r(a) = 0.5·1.6·1 + 0.5·0.4·10 = 0.8 + 2.0 = 2.8   ✓ 回到真值
+</code></pre>
+<p>✓ 自检：μ 过采了 B（高奖励），所以裸平均 5.5 偏高；重要性采样把"π 比 μ 更/更不偏好某动作"折算回来（B 的权重 0.4 把它压下去），就还原成 π 的真实期望 2.8。一句话：<strong>用 π/μ 这个比率把"别人的数据"重新加权成"像我自己采的"</strong>。</p>
+<p><strong>代价（为什么不能随便 off-policy）</strong>：当 π 和 μ 差很远，比率 <code>π/μ</code> 会在某些动作上<strong>爆掉</strong>（μ 很少采、π 很想要的地方，权重巨大）→ 估计方差爆炸、训练不稳。所以离当前策略越远越危险。<a href="../papers/ppo.html">ppo</a> 的 clip、<a href="../concepts/clipped-surrogate-objective.html">clipped-surrogate-objective</a> 正是"<strong>只允许小步 off-policy</strong>"的纠偏阀门：把比率裁在 1 附近。</p>
+<h2>接回 wiki</h2>
+<ul>
+<li><a href="../papers/ppo.html">ppo</a> / <a href="../concepts/grpo.html">grpo</a> / <a href="../concepts/rlhf.html">rlhf</a> 是 <strong>on-policy</strong>：模型自己 rollout、自己学；clip/重要性采样让它能安全地复用几步内的旧数据。</li>
+<li>普通 SFT 拿<strong>外部强模型</strong>的回答训 = <strong>off-policy</strong>（数据来自别的分布）。</li>
+<li><a href="../papers/grape.html">grape</a> / <a href="../concepts/distribution-aligned-sft.html">distribution-aligned-sft</a>：选"目标模型自己给高概率(<a href="../concepts/perplexity.html">perplexity</a> 低)"的回答 = <strong>把 SFT 往 on-policy 拉</strong>——挑贴合自己分布的素材，少漂移。</li>
+<li><a href="../concepts/direct-preference-optimization.html">direct-preference-optimization</a>：在固定偏好集上训(偏 off-policy)，所以才有 on-policy 变体/STPO 来缓解错位。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/ppo.html">ppo</a> · clip = 只允许小步 off-policy 的纠偏阀门</li>
+<li><a href="../concepts/clipped-surrogate-objective.html">clipped-surrogate-objective</a> · 把重要性比率裁在 1 附近</li>
+<li><a href="../concepts/grpo.html">grpo</a> / <a href="../concepts/rlhf.html">rlhf</a> · on-policy RL 的代表</li>
+<li><a href="../papers/grape.html">grape</a> / <a href="../concepts/distribution-aligned-sft.html">distribution-aligned-sft</a> · 把 off-policy 的 SFT 数据筛得像 on-policy</li>
+<li><a href="../concepts/policy-gradient.html">policy-gradient</a> · 策略梯度的 on-policy 本性</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/grape.html"><span class="cat">paper</span>GRAPE · 最好的指令微调数据，是&quot;合身&quot;的那条</a></li><li><a href="../concepts/distribution-aligned-sft.html"><span class="cat">concept</span>分布对齐的 SFT · 数据好不好，是相对你这个模型说的</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/on-policy-vs-off-policy.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
