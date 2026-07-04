@@ -59,6 +59,7 @@
 - [PiD · 像素扩散解码器](wiki/papers/pid-pixel-diffusion.md) — NVIDIA 把 latent→像素的确定性 VAE 解码器换成条件像素扩散: 解码从"忠实还原"升级成"生成式补细节+顺手超分4×/8×"; sigma-aware adapter 吃半成品 latent 让 latent 扩散早停 + DMD2 蒸 4 步 + 通吃 VAE/语义 latent; 512²→2048² 1秒内
 - [RAE-DiT · 表征自编码器当 latent](wiki/papers/rae-dit.md) — 别单训没语义的VAE压缩器, 拿冻结SigLIP-2/DINOv2当编码器(高维语义latent)只训解码器, 扩散在"看懂图"的空间里跑; 收敛快4×/VAE 64epoch崩RAE稳到256/越scale越赢; 唯一不能省=维度相关噪声调度(α=√(m/n))
 - [MRT · Masked Region Transformer](wiki/papers/mrt.md) — 分层图像生成编辑(CVPR2026,Canva): 产出可编辑RGBA图层而非拍平图; masking哪些图层干净/噪声=切文生层/拆图成层/层改层三任务(Qwen-Image-2.0"条件→目标"的分层升级); anonymous region transformer + overflow画布留溢出 + DMD蒸馏50→8步; 比Qwen-Image-Layered快10~100×
+- [OmniEraser · 连影子一起抹掉](wiki/papers/omnieraser.md) — 对象消除(PRIS-CV/北邮): 两个老毛病=影子赖着不走(合成数据没真实光影)+凭空补新物体(只给背景上下文); 解法一=视频帧白送ground-truth(有物体的帧当输入/物体离开后的帧当目标,影子在后帧真没了)且mask故意只圈物体不圈影子逼模型学因果, 全自动挖13.4万对Video4Removal(MOG分前景背景>0.15 + MSE配帧 + GroundingDINO/SAM2出mask); 解法二=object-background双条件把"要删的物体"也喂进FLUX.1-dev DiT(LoRA r32); RemovalBench FID 39.52(SOTA 55.49), 两组消融各从一百多砍到39.52
 - [Qwen3-VL · 视觉语言模型怎么看图](wiki/papers/qwen3-vl-report.md) — VLM三件套(SigLIP-2 ViT眼睛+MLP merger插头+Qwen3 LLM大脑); 图按原生分辨率变长token; 三升级 Interleaved-MRoPE(频谱均衡长视频)/DeepStack(3层ViT注入前3层LLM)/文字时间戳; 四阶段预训练到256K+thinking; OCR32语种/2D3D grounding/GUI agent
 - [DINO · 自监督 ViT](wiki/papers/dino.md) — 无标签自蒸馏: student 对齐 EMA teacher + multi-crop 局部猜全局 + centering/sharpening 防坍缩; 涌现物体注意力, DINO loss 的来历
 - [LPIPS · 深层特征当感知度量](wiki/papers/lpips.md) — 像素L2跟人眼差很远: 过预训练网络比深层特征 + 人类2AFC校准权重; 感知相似是深度表征的涌现属性, 既度量又当损失
@@ -201,6 +202,10 @@
 - [SigLIP 语义去重](wiki/concepts/siglip-semantic-dedup.md) — 图压成向量, 余弦相似度>阈值算近重复每簇留一张; 删的是"语义重复"(裁剪/压缩/改水印的同一张)而非字节相同, 哈希抓不到
 - [层级 k-means 策展](wiki/concepts/hierarchical-kmeans-curation.md) — 十亿图没法逐张看: FAISS递归k-means聚成簇树, 簇心代表图给VLM审一眼按簇整批取舍; 把"逐张审查"压成"逐簇审查"
 - [FAISS · 近似最近邻](wiki/concepts/faiss-ann-search.md) — 十亿向量精确比太慢: IVF倒排(先分√N个桶只翻几桶,跳过99%)+PQ乘积量化(向量切段各压成1字节,768维float→8字节384×); 召回↔速度/内存权衡
+- [对象效果消除](wiki/concepts/object-effect-removal.md) — 删物体要连影子/反光一起抹+别凭空补; 难点=效果区常不在mask里; 两式翻车(影子赖着不走/补出新物体)对应两条解法(数据教因果/条件给意识); OmniEraser
+- [视频帧配对监督](wiki/concepts/video-frame-paired-supervision.md) — 固定机位下有物体的帧当输入、物体走后的帧当目标,影子在后帧真没了=免费ground-truth; mask只圈物体不圈影子(8%<11%)逼模型学"物体↔影子"因果; OmniEraser造13.4万对
+- [双条件输入 object-background](wiki/concepts/object-background-guidance.md) — 普通inpaint只给背景→模型不知该空就瞎补; 把"要删的物体"latent也作一路条件拼进去(物体+背景+mask+噪声→linear→DiT)→明确该删什么; 消融FID 119.94→39.52
+- [背景建模 MOG](wiki/concepts/background-subtraction.md) — 固定机位谁老不变=背景谁突变=前景; 每像素学"常态颜色"高斯混合分布(容忍树叶晃/光照抖), 偏离2.5σ判前景, 一帧前景占比>0.15算"有物体"; OmniEraser从视频挑帧
 - [PageRank 实体覆盖](wiki/concepts/pagerank-entity-coverage.md) — 维基链接图跑PageRank给条目算重要度(=随机冲浪Markov链平稳分布), 取top90%≈500万概念校验训练集覆盖; 孤儿页卡在floor(1-d)/N
 - [DINOv3 多样性奖励](wiki/concepts/dinov3-diversity-reward.md) — 一组图DINOv3向量两两距离均值当多样性分加进奖励, 防RL只追质量塌成一种house style; λ调小立刻塌要全程保活
 - [Prompt Expansion](wiki/concepts/prompt-expansion.md) — 短输入扩成富caption: SFT反造用户caption学扩写, RL用GDPO(偏好对模型自己生成+多奖励自动判)调"提质不跑题"; 忠实奖励一票否决跑题扩写

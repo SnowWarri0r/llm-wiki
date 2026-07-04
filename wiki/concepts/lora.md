@@ -1,7 +1,7 @@
 ---
 name: lora
 type: concept
-sources: []
+sources: [omnieraser]
 updated: 2026-06-17
 ---
 

@@ -31,7 +31,7 @@
 <div class="page">
 <div class="masthead">
   <span class="l">Connectionism · Personal Wiki</span>
-  <span class="r">索引 · 255 条目</span>
+  <span class="r">索引 · 260 条目</span>
 </div>
 
 <section class="hero">
@@ -42,29 +42,29 @@
 
 <h2><span class="num">§ 01</span>浏览 · Browse by type</h2>
 <div class="catcards">
-<a class="catcard" href="papers.html"><span class="n">57</span><span class="lbl">精读页 · Deep Dives</span><span class="d">手工打磨的论文 / 源码精读页</span></a>
+<a class="catcard" href="papers.html"><span class="n">58</span><span class="lbl">精读页 · Deep Dives</span><span class="d">手工打磨的论文 / 源码精读页</span></a>
 <a class="catcard" href="books.html"><span class="n">22</span><span class="lbl">Books · 书籍精讲</span><span class="d">非 ML 书籍的章节精讲</span></a>
 <a class="catcard" href="topics.html"><span class="n">4</span><span class="lbl">Topics · 综合</span><span class="d">跨多个源的横向综合</span></a>
-<a class="catcard" href="concepts.html"><span class="n">170</span><span class="lbl">Concepts · 概念</span><span class="d">跨论文复用的概念颗粒</span></a>
+<a class="catcard" href="concepts.html"><span class="n">174</span><span class="lbl">Concepts · 概念</span><span class="d">跨论文复用的概念颗粒</span></a>
 <a class="catcard" href="threads.html"><span class="n">2</span><span class="lbl">Threads · 思考</span><span class="d">个人思考线 / 开放问题</span></a>
 </div>
 
 <h2><span class="num">§ 02</span>最近更新 · Recent</h2>
 <div class="timeline">
 <a class="tl-row" href="papers/grape.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">paper</span><span class="tl-title">GRAPE · 最好的指令微调数据，是&quot;合身&quot;的那条</span><span class="tl-hook">同一条指令、好几个老师给的候选回答，别默认挑最强老师那条；让**目标模型自己**给每个候选打分（长度归一概率 = 困惑度），选它觉得**最自然/最合身**（困惑度最低）的那条来做 SFT。结果超过最强老师(405B)、超过 3× 大的数据集，还省算力。NeurIPS 2025 spotlight。</span></a>
+<a class="tl-row" href="papers/omnieraser.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">paper</span><span class="tl-title">OmniEraser · 用视频帧白送的 ground-truth 教模型&quot;连影子一起抹掉&quot;</span><span class="tl-hook">对象消除的真痛点不是&quot;把物体抠掉&quot;,而是**连它的影子/反光一起干净抹除、且别凭空补出个新东西**。OmniEraser 两手都解决:数据上用**视频帧白送真 ground-truth**([[video-frame-paired-supervision]])——物体在场的帧当输入、物体离开后的帧当目标,影子在后一帧里真的没了;模型上用**双条件输入**([[object-background-guidance]])把&quot;要删的物体&quot;也喂进去,让 [[flux-1]] DiT 明确知道哪块该清空,不再瞎补。</span></a>
+<a class="tl-row" href="concepts/background-subtraction.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">背景建模(MOG) · 固定机位下,谁老不变就是背景,谁突然变就是前景</span><span class="tl-hook">固定机位拍的视频里,背景的每个像素长期稳定、前景(走动的物体)经过时才突变;给每个像素建一个&quot;它平时是什么颜色&quot;的概率模型(高斯混合),某帧某像素偏离太多就判为前景——这样不用人工就能从视频自动挑出&quot;有物体 / 没物体&quot;的帧。</span></a>
 <a class="tl-row" href="concepts/distribution-aligned-sft.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">分布对齐的 SFT · 数据好不好，是相对你这个模型说的</span><span class="tl-hook">微调时别只挑&quot;绝对最强&quot;的回答，挑**贴合目标模型自己分布**的那条（它给高概率/低困惑度）——既学到任务，又少把模型从预训练分布上拽走。</span></a>
+<a class="tl-row" href="concepts/object-background-guidance.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">双条件输入 · 不光告诉模型&quot;周围长啥样&quot;,还告诉它&quot;要删的是这个&quot;</span><span class="tl-hook">普通 inpaint 只把**背景上下文**喂给扩散模型,模型不知道挖空的洞里&quot;本该是空的&quot;,于是照周围猜着补出个新物体;OmniEraser 把**要删的物体本身**也作为一路条件一起喂进去,模型就明确知道&quot;这块是要清掉的东西、那块是要保留的背景&quot;,不再瞎补。</span></a>
+<a class="tl-row" href="concepts/object-effect-removal.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">对象效果消除 · 抹的不只是物体,还有它在世界上留下的痕迹</span><span class="tl-hook">真正的&quot;删除一个物体&quot;要连它的**影子、反光、倒影**一起抹掉,并把那块还原成合理的空背景;只抠掉物体本体、留下一摊孤零零的影子,看着比不删还假。</span></a>
 <a class="tl-row" href="concepts/on-policy-vs-off-policy.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">on-policy vs off-policy · 学自己刚做的，还是学别人/旧的</span><span class="tl-hook">on-policy = 拿**当前策略自己刚生成**的数据学（信号对得准、稳，但得不断现采）；off-policy = 拿**别的策略**（旧的自己/别的模型/人类）的数据学（能复用、便宜，但分布错位、要纠偏）。</span></a>
 <a class="tl-row" href="concepts/perplexity.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">困惑度 Perplexity · 模型对一段话有多&quot;意外&quot;</span><span class="tl-hook">把模型在一段文本上的平均交叉熵取指数，得到一个&quot;等效分支数&quot;：困惑度 = exp(平均每 token 的负对数概率)；越低 = 模型觉得这段话越自然、越在意料之中。</span></a>
+<a class="tl-row" href="concepts/video-frame-paired-supervision.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">视频帧白送的成对监督 · 物体自己会走,等于免费拍了 before/after</span><span class="tl-hook">要教模型&quot;把物体连影子一起抹掉&quot;,最难的是拿到 ground-truth(抹干净后的真实画面);视频里物体本来就会移动,**有物体的那一帧当输入、物体离开后的那一帧当目标**,影子/反光在后一帧里真的没了——监督信号白送,不用手工修图。</span></a>
 <a class="tl-row" href="papers/relat.html"><span class="tl-date">2026-06-28</span><span class="tl-cat">paper</span><span class="tl-title">ReLAT · 给潜在推理&quot;闭环&quot;：测试时用重建当保真检查</span><span class="tl-hook">潜在推理把中间思考从自然语言搬进不透明的潜在向量里图省事，但没人检查这些向量是否还忠于原问题（开环）。ReLAT 在答题前先做一圈 **问题→潜在思考→重建问题**：如果从潜在向量重建得回原问题，说明它没丢信息；用这个重建损失在测试时临时调一组 LoRA，再正式作答，答完即弃。</span></a>
 <a class="tl-row" href="concepts/differentiable-thought-representation.html"><span class="tl-date">2026-06-28</span><span class="tl-cat">concept</span><span class="tl-title">可微思考表示 · 别硬选一个 token，取嵌入的加权混合</span><span class="tl-hook">要让&quot;选哪个 token&quot;这一步能反传梯度，就不硬选（argmax 不可导），而是对词表 logits 做 softmax 得分布 α，用它加权各 token 的嵌入算一个**期望嵌入**——既留在嵌入空间里，又对下游损失可微。</span></a>
 <a class="tl-row" href="concepts/latent-reasoning.html"><span class="tl-date">2026-06-28</span><span class="tl-cat">concept</span><span class="tl-title">潜在推理 · 把&quot;想&quot;压进连续向量，不摊成语言</span><span class="tl-hook">不把推理的中间步写成自然语言（CoT），而是产出一串连续潜在向量当&quot;思考&quot;，被下游当条件反复用——省 token、但不透明，还可能悄悄丢了原问题的约束。</span></a>
 <a class="tl-row" href="concepts/layered-image-generation.html"><span class="tl-date">2026-06-28</span><span class="tl-cat">concept</span><span class="tl-title">分层图像生成 · 产出一摞可编辑图层，不是一张拍平图</span><span class="tl-hook">生成的不是糊在一个平面上的像素图，而是一摞带透明通道（RGBA）的图层（画布+背景+K 个前景），每层能单独挪/改/重组——图像版的&quot;逐元素编辑&quot;。</span></a>
 <a class="tl-row" href="concepts/reconstruction-as-fidelity.html"><span class="tl-date">2026-06-28</span><span class="tl-cat">concept</span><span class="tl-title">重建即保真 · 能还原回输入，就说明中间表示没丢信息</span><span class="tl-hook">要检查一个中间表示是否忠于输入，不必有标签——只问&quot;能不能从它**重建回原输入**&quot;：还原得回，信息就在；还原不回，关键信息已经丢了。</span></a>
-<a class="tl-row" href="concepts/selective-token-masking.html"><span class="tl-date">2026-06-28</span><span class="tl-cat">concept</span><span class="tl-title">选择性 token masking · 用&quot;哪些给定/哪些待生成&quot;当任务开关</span><span class="tl-hook">同一个扩散模型，靠&quot;哪些 token 从干净 latent（给定、不预测）初始化、哪些从噪声（待生成）初始化&quot;这个开关，把生成/分解/编辑统一成一个模型——换 mask = 换任务，权重不动。</span></a>
-<a class="tl-row" href="concepts/test-time-training.html"><span class="tl-date">2026-06-28</span><span class="tl-cat">concept</span><span class="tl-title">测试时训练 TTT · 每道题临时调一下参数，答完即弃</span><span class="tl-hook">推理时对**当前这一个输入**用一个无监督辅助损失临时更新参数（通常只动 LoRA），调好后作答，然后把更新**复位**——下一题重来。</span></a>
-<a class="tl-row" href="concepts/dinov3-diversity-reward.html"><span class="tl-date">2026-06-26</span><span class="tl-cat">concept</span><span class="tl-title">DINOv3 多样性奖励 · 给&quot;组内整齐划一&quot;扣钱，防风格塌缩</span><span class="tl-hook">一条 prompt 生成一组图，用 DINOv3 把每张压成向量，算组内两两的平均距离当&quot;多样性分&quot;，加进奖励——逼模型每次给的几张互不雷同。</span></a>
-<a class="tl-row" href="concepts/faiss-ann-search.html"><span class="tl-date">2026-06-26</span><span class="tl-cat">concept</span><span class="tl-title">FAISS / 近似最近邻 · 用一点精度换十亿级的速度</span><span class="tl-hook">精确最近邻要拿查询跟全部向量逐个比，十亿级太慢；FAISS 用&quot;先分桶只翻几桶&quot;(IVF)+&quot;把向量压成几字节&quot;(PQ)两招，换来毫秒级近似检索。</span></a>
-<a class="tl-row" href="concepts/hierarchical-kmeans-curation.html"><span class="tl-date">2026-06-26</span><span class="tl-cat">concept</span><span class="tl-title">层级 k-means 策展 · 把&quot;逐张审查&quot;压成&quot;逐簇审查&quot;</span><span class="tl-hook">十亿张图没法一张张看；先用 k-means 把它们按视觉语义聚成簇、再递归切子簇，每个簇心附近挑几张代表图让 VLM 审一眼，按簇整批保留/丢弃/补采。</span></a>
 </div>
 <div class="colophon">
   Renderer / <code>render.py</code> · Pattern / <a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f" target="_blank">Karpathy LLM Wiki</a> · Source / <a href="https://github.com/SnowWarri0r/llm-wiki" target="_blank">github.com/SnowWarri0r/llm-wiki</a>

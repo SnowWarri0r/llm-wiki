@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>双条件输入 · 不光告诉模型&quot;周围长啥样&quot;,还告诉它&quot;要删的是这个&quot; · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · object-background-guidance</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>双条件输入 · 不光告诉模型&quot;周围长啥样&quot;,还告诉它&quot;要删的是这个&quot;</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>普通 inpaint 只把<strong>背景上下文</strong>喂给扩散模型,模型不知道挖空的洞里"本该是空的",于是照周围猜着补出个新物体;OmniEraser 把<strong>要删的物体本身</strong>也作为一路条件一起喂进去,模型就明确知道"这块是要清掉的东西、那块是要保留的背景",不再瞎补。</p>
+<h2>直觉 · 为什么只给背景会"凭空补物体"</h2>
+<p>inpaint 的标准做法:把要删的区域抠成洞,让模型"根据洞周围的内容把洞填上"。但"填上"这个目标本身是模糊的——</p>
+<blockquote>
+<p>洞周围是草地和栏杆,模型很自然地觉得"这里应该也有点东西",于是补出一只新的狗、一个新的影子、或者一团 shape-like 的怪东西。</p>
+</blockquote>
+<p>根子在于:<strong>模型对洞里"应该变空"这件事毫无意识</strong>。它只会延续周围的视觉线索。你越想删干净,它越觉得"这么大块地方总得长点啥"。这就是 <a href="../papers/omnieraser.html">omnieraser</a> 说的 "synthesize a new object rather than faithfully removing"。</p>
+<h2>怎么做的 · 把"物体"和"背景"当两路独立条件拼进去</h2>
+<pre><code>拼接(在 latent 通道维) 四样:
+  ① 被抠出来的物体 latent   ← &quot;这是要删的东西&quot;
+  ② 背景 latent             ← &quot;这是要保留的上下文&quot;
+  ③ 噪声                    ← 扩散的起点
+  ④ 二值 mask               ← &quot;要动的位置在这&quot;
+拼好 → 过一个可训练 linear 投影 → 进 DiT 去噪
+</code></pre>
+<p>关键差别:物体不再是"被挖掉的洞",而是<strong>一路显式条件</strong>。模型同时看到"要删什么"和"要留什么",任务从含糊的"把洞填得像周围"变成明确的"把这个物体抹成背景"。</p>
+<h2>数字例子 · 加了"物体条件"FID 砍多少</h2>
+<p>RemovalBench 消融(越低越好):</p>
+<pre><code>只给背景(background-only)   FID 119.94   LPIPS 0.241   CMMD 0.509
+加物体条件(object-background) FID  39.52   LPIPS 0.133   CMMD 0.208
+                              ▲ FID 砍 66%
+</code></pre>
+<p>✓ 自检:FID 从 119.94 掉到 39.52,降了三分之二——这说明"凭空补物体"是主要失分项,一旦让模型明确知道"要删的是这个、别再创作",生成质量立刻上一个台阶。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/omnieraser.html">omnieraser</a> · 提出这套双条件输入</li>
+<li><a href="../concepts/video-frame-paired-supervision.html">video-frame-paired-supervision</a> · 配套的数据,两个改动各砍一截 FID</li>
+<li><a href="../concepts/object-effect-removal.html">object-effect-removal</a> · 它服务的任务</li>
+<li><a href="../papers/flux-1.html">flux-1</a> / <a href="../papers/dit.html">dit</a> · 底座,条件拼接后进它去噪</li>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · 条件注入发生的地方</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/omnieraser.html"><span class="cat">paper</span>OmniEraser · 用视频帧白送的 ground-truth 教模型&quot;连影子一起抹掉&quot;</a></li><li><a href="../concepts/object-effect-removal.html"><span class="cat">concept</span>对象效果消除 · 抹的不只是物体,还有它在世界上留下的痕迹</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/object-background-guidance.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
