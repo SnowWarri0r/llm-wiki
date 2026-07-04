@@ -45,6 +45,11 @@ p { margin: 12px 0; }
 strong { font-weight: 700; color: var(--ink); }
 code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
 a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+table.spec { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+table.spec td, table.spec th { border-bottom: 1px dashed var(--rule); padding: 7px 10px; text-align: left; vertical-align: top; }
+table.spec th { color: var(--accent); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+table.spec td:first-child { color: var(--muted); }
 .jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--ochre-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--ochre); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
 .jr:hover { background: var(--ochre); color: var(--paper); }
 figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
@@ -194,6 +199,18 @@ figure.play .co-svg .grow { transform: scaleX(1); }
   </svg>
 </figure>
 
+<h3>数字例子 · 两塔的账:总参 2×,每 token 只花 1× 单塔</h3>
+<p>"两套权重"听着像要双倍算力,其实不是——每个 token 只过它该过的那一塔。拿 Super(底座 dense 32B)算一笔:</p>
+<pre class="eq">每塔 ≈ 32B(=稠密底座)，两塔 → 总参 ≈ 64B
+一条序列：N 个 AR token + M 个扩散 token
+  AR token  → 只过 reasoner 塔(32B)，generator 塔不激活
+  扩散 token → 只过 generator 塔(32B)，reasoner 塔不激活
+每个 token 的算力 ≈ 32B（单塔），不是 64B
+
+对照：拿一个 64B dense 模型同时干理解+生成 → 每 token 都吃 64B
+→ MoT 拿到 2× 容量(两套专用权重)，却只花 1× 单塔的每-token 算力</pre>
+<p>✓ 自检:显存得装下两塔(64B),但<strong>算力(FLOPs/token)≈ 单塔</strong>。这跟 <a href="../concepts/moe.html">MoE</a> 的"总参大、激活小"是同一个味道,区别只在<strong>怎么分</strong>:MoE 按 FFN 专家、每 token 路由到几个专家、共享注意力(为省算力);MoT 按整条 transformer 通路分两塔、按模态/任务路由、共用一次联合注意力(为消解"理解要因果、生成要双向"的冲突)。一个为效率,一个为统一,别混。</p>
+
 <h2><span class="num">§ 03</span>联合注意力：推理保因果，生成看全部</h2>
 <p>两塔权重虽分开，却在<strong>同一次注意力</strong>里相遇<a class="jr" href="#g-05">5</a>，这是统一的关键。规则两条：AR token 只<strong>因果</strong>看 AR（保住像 LLM 那样的文本生成）；扩散 token 用<strong>全双向</strong>注意力看 <code>[AR; 扩散]</code> 的全部（能看到文字 prompt + 所有条件和生成 token，保持时空一致）。而且 AR <strong>永不被扩散 token 更新</strong>——条件通路的因果完整性不破。</p>
 
@@ -253,6 +270,8 @@ figure.play .co-svg .grow { transform: scaleX(1); }
   </svg>
 </figure>
 
+<p>这里最该单说的是<strong>动作</strong>:Cosmos 3 把它当成<strong>一等模态</strong>对待,专门设了一类 <strong>action token</strong><a class="jr" href="#g-11">11</a>,跟语言/图/视频/音频一样先过一个模态专用 encoder 投进统一表示空间。推理时,语言走自回归逐 token 预测,<strong>其它模态(含动作)都靠迭代去噪生成</strong>——所以"出动作"和"出视频"在机制上是同一套生成,这正是它能既当世界模拟器又当机器人策略的根。前向动力学(给状态+动作→预测下一帧)、逆动力学(给两帧→反推动作)、策略(给目标→出动作)都只是 token 怎么摆的不同。</p>
+
 <h2><span class="num">§ 05</span>结果与规模</h2>
 <p>后训练版同时拿下三个"最强开源/最强"：Artificial Analysis 评的<strong>最强开源文生图 + 图生视频</strong>，RoboArena 评的<strong>最强策略模型</strong><a class="jr" href="#g-08">8</a>——理解、生成、动作三头都打到 SOTA。三档规模 Edge 4B / Nano 16B / Super 64B，注意总参≈<strong>2× 稠密底座</strong>（因为每层两塔），但每个 token 只过一塔，激活量≈单塔。</p>
 
@@ -278,6 +297,14 @@ figure.play .co-svg .grow { transform: scaleX(1); }
   </svg>
 </figure>
 
+<table class="spec">
+  <tr><th>变体</th><th>总参 / 稠密底座</th><th>说明</th></tr>
+  <tr><td>Cosmos3-Edge</td><td>4B / 2B</td><td>端侧;底座 28 层·hidden 2048·16 头(8 KV)·头维 128·FFN 9216,Qwen3-1.7B 式(去 QK-Norm、ReLU² FFN);稍后发布</td></tr>
+  <tr><td>Cosmos3-Nano</td><td>16B / 8B</td><td>底座 Qwen3-VL 8B;本次发布</td></tr>
+  <tr><td>Cosmos3-Super</td><td>64B / 32B</td><td>底座 Qwen3-VL 32B;最强档,本次发布</td></tr>
+</table>
+<p>总参 = 2× 稠密底座(两塔),但每 token 只过一塔、激活≈单塔(见 §02 数字例子)。三档跨度从端侧机器人到数据中心。</p>
+
 <div class="note">
   <span class="l">放进 wiki 这条线</span>
   <p>Cosmos 3 是 <a href="../concepts/world-foundation-model.html">世界基础模型</a> 这条线给 <a href="../concepts/physical-ai.html">Physical AI</a> 做的集大成。它的发动机 <a href="../concepts/mixture-of-transformers.html">MoT</a> 是 <a href="../concepts/unified-transformer.html">unified-transformer</a>（一条序列、混合注意力同时理解+生成）的升级——把权重拆成两塔，跟 <a href="../concepts/moe.html">MoE</a>（FFN 专家、为省算力）是两回事。generator 塔就是 <a href="stable-diffusion-3-5.html">DiT</a> + 扩散一族；两塔都从 <a href="qwen3-vl-report.html">Qwen3-VL</a> 初始化。跟 <a href="lumine.html">Lumine</a> 同属具身，但 Lumine 纯 AR 学策略、Cosmos 3 把生成交给扩散塔。一句话：<strong>理解要因果、生成要双向，硬塞一套权重会打架——那就给每种工作模式一套完整权重(塔)，但共用一次联合注意力让它们对齐；于是一个模型把 VLM、视频生成、世界模拟、动作策略全收了。</strong></p>
@@ -296,6 +323,7 @@ figure.play .co-svg .grow { transform: scaleX(1); }
     <li id="g-08"><span class="term">三头 SOTA</span> · 最强开源文生图 + 图生视频（Artificial Analysis）、最强策略模型（RoboArena）——理解/生成/动作三头同时打到顶。</li>
     <li id="g-09"><span class="term">omnimodal</span> · 五模态（语言/图像/视频/音频/动作）统一处理+生成；subsume 了 VLM、视频生成、世界模拟、世界-动作模型。</li>
     <li id="g-10"><span class="term">VLA / 世界-动作模型</span> · 出动作的模型（Vision-Language-Action / World-Action Model）；Cosmos 3 把动作当一种可生成模态，跟视频平起平坐。</li>
+    <li id="g-11"><span class="term">action token · 动作一等模态</span> · 动作设专门一类 token，先过模态专用 encoder 进统一空间，推理时跟图/视频/音频一样靠<strong>迭代去噪</strong>生成(语言才走自回归)。前向/逆动力学/策略只是 token 摆法不同。</li>
   </ol>
 </div>
 
