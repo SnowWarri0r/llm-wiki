@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>潜在推理 · 把&quot;想&quot;压进连续向量，不摊成语言 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · latent-reasoning</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>潜在推理 · 把&quot;想&quot;压进连续向量，不摊成语言</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>不把推理的中间步写成自然语言（CoT），而是产出一串连续潜在向量当"思考"，被下游当条件反复用——省 token、但不透明，还可能悄悄丢了原问题的约束。</p>
+<h2>直觉 · 为什么不写成话</h2>
+<p>显式思维链（CoT）把"想"摊成一长串语言 token：清楚、可读，但<strong>又长又慢</strong>（几千 token 起）。潜在推理的主张是：思考没必要落成人话，<strong>压成 K 个连续向量</strong>（ℝ^d，<a href="../papers/relat.html">relat</a> 默认 K=16）就行，下游模型直接拿这串向量当条件接着算。好处是<strong>省 token、快</strong>。</p>
+<p>代价是两条：<strong>不透明</strong>（向量没法像句子那样读懂在想什么）；以及 <a href="../papers/relat.html">relat</a> 点出的<strong>开环</strong>风险——</p>
+<h2>开环：生成完没人验</h2>
+<pre><code>潜在生成:  ℰ = g(Q)              把问题 Q 压成 K 个潜在向量
+下游消费:  z = f([Q; ℰ])          直接拿 ℰ 当条件接着推
+</code></pre>
+<p>问题在于：<code>ℰ</code> 一旦生成就被下游消费，<strong>没有任何环节回头检查它是否还忠于 Q 的约束</strong>。潜在状态要是悄悄漂移（丢了"3 岁""红色"这种关键约束），错误会顺着推理链传下去、还发现不了。这叫<strong>开环（open-loop）</strong>。<a href="../papers/relat.html">relat</a> 的整篇就是给它"闭环"——用 <a href="../concepts/reconstruction-as-fidelity.html">reconstruction-as-fidelity</a> 在作答前把潜在拽回忠于原题。</p>
+<blockquote>
+<p>注意它跟"单次前向里的隐藏状态"不同：隐藏态是一次性内部量；这里的 ℰ 是<strong>被显式存下、反复当条件用</strong>的，所以一旦带病就会持续传染。</p>
+</blockquote>
+<h2>数字例子 · 省在哪、险在哪</h2>
+<pre><code>显式 CoT:   ~2000 token 的推理文字 → 可读、可查，但长、慢
+潜在推理:   K=16 个向量          → 等效&quot;思考&quot;，token 量小两个数量级
+              但: 16 个向量里到底编了 Q 的哪些约束？没人验 = 开环
+</code></pre>
+<p>✓ 自检：把"想"从 2000 token 压到 16 个向量，省的是显式生成那串字的成本；丢的是可读性和"中途自检"的机会。ReLAT 的贡献不是放弃潜在推理，而是在保留这份省的同时，<strong>补一道输入保真的闭环检查</strong>。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/relat.html">relat</a> · 给潜在推理补闭环（重建检查 + 测试时调参）</li>
+<li><a href="../concepts/reconstruction-as-fidelity.html">reconstruction-as-fidelity</a> · 闭环用的信号：能不能重建回输入</li>
+<li><a href="../concepts/kv-cache.html">kv-cache</a> · 另一种"把中间计算存下来反复用"的形态（缓存而非思考向量）</li>
+<li><a href="../concepts/in-context-learning.html">in-context-learning</a> · 对照：把推理留在上下文里 vs 压进潜在</li>
+<li><a href="../concepts/differentiable-thought-representation.html">differentiable-thought-representation</a> · 让潜在思考可微，才能被优化</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/relat.html"><span class="cat">paper</span>ReLAT · 给潜在推理&quot;闭环&quot;：测试时用重建当保真检查</a></li><li><a href="../concepts/reconstruction-as-fidelity.html"><span class="cat">concept</span>重建即保真 · 能还原回输入，就说明中间表示没丢信息</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/latent-reasoning.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
