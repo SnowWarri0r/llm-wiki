@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>视频帧白送的成对监督 · 物体自己会走,等于免费拍了 before/after · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · video-frame-paired-supervision</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>视频帧白送的成对监督 · 物体自己会走,等于免费拍了 before/after</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>要教模型"把物体连影子一起抹掉",最难的是拿到 ground-truth(抹干净后的真实画面);视频里物体本来就会移动,<strong>有物体的那一帧当输入、物体离开后的那一帧当目标</strong>,影子/反光在后一帧里真的没了——监督信号白送,不用手工修图。</p>
+<h2>直觉 · 为什么这是关键</h2>
+<p>对象消除的死结是<strong>没有真答案</strong>。你想训一个"抹掉物体"的模型,得有成对样本:<code>(带物体的图, 抹干净的图)</code>。但"抹干净的图"怎么来?</p>
+<ul>
+<li><strong>手工 P 图</strong>:贵,而且人也很难把影子/反光 P 得物理正确。</li>
+<li><strong>copy-paste / 随机 mask 合成</strong>:把一个物体贴到背景上当"带物体",原背景当"抹干净"。问题是贴上去的物体<strong>没有真实影子和反光</strong>,模型从这种假数据里永远学不到"物体走了、地上的影子也该消失"。</li>
+</ul>
+<p>视频破局:<strong>同一个固定机位,物体是会动的</strong>。第 10 帧有个人站在地上(脚下有影子),第 40 帧人走出画面了——这第 40 帧就是第 10 帧"把人抹掉后的真实样子",而且<strong>影子在第 40 帧里是真没了</strong>(物理上就消失了,不是 P 的)。把这两帧配成一对,你白捡了一个带真实光影的 ground-truth。</p>
+<h2>怎么做的 · 配对 + mask 故意不圈影子</h2>
+<pre><code>
+1. 从视频里找&quot;前景帧&quot;(有物体)和&quot;背景帧&quot;(物体已离开)
+2. 给前景帧配一张时间最近、光照最像的背景帧 → (输入, 目标)
+3. 给前景帧的物体画 mask —— 关键:mask 只圈物体本体,不圈影子/反光
+4. 喂给模型:输入=前景帧+物体mask，目标=背景帧
+</code></pre>
+<p>点睛在第 3 步:<strong>mask 故意不盖影子</strong>。于是模型看到的任务是"我只告诉你物体在哪(mask),但你要还原出的目标里,影子也得消失"。影子区域不在 mask 里、却必须变干净——模型被逼着<strong>自己学会"这片影子属于这个物体"</strong>这种关联,不需要任何人去标注影子。这叫端到端学物体↔效果。</p>
+<h2>数字例子 · mask 覆盖 vs 目标要求</h2>
+<pre><code>一张 1024×1024 图,一个人占 ~8% 像素(物体 mask)、影子另占 ~3%。
+输入告诉模型的&quot;要动的区域&quot; = mask = 8%(只有人)
+目标(背景帧)里变了的区域           = 11%(人 + 影子都没了)
+                                       ▲ 多出来的 3% 影子,模型得自己推出来
+</code></pre>
+<p>✓ 自检:如果 mask 把影子也圈进去(11%),模型就只是"照 mask 填洞",学不到"物体和影子的因果"。正因为 mask(8%) &lt; 真实该清理的区域(11%),那 3% 的差额逼出了泛化能力——换个没标注的新场景,模型也知道顺手把影子清掉。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/omnieraser.html">omnieraser</a> · 用这招造了 134,281 对的 Video4Removal 数据集</li>
+<li><a href="../concepts/background-subtraction.html">background-subtraction</a> · 怎么从视频里自动判定"物体在/不在"(分前景背景)</li>
+<li><a href="../concepts/object-effect-removal.html">object-effect-removal</a> · 这套监督要解决的任务</li>
+<li><a href="../papers/sam.html">sam</a> / <a href="../concepts/promptable-segmentation.html">promptable-segmentation</a> · 自动给物体出 mask(只圈本体)</li>
+<li><a href="../papers/grape.html">grape</a> · 同一个大主题:数据怎么选/怎么造,常比改模型更值钱</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/omnieraser.html"><span class="cat">paper</span>OmniEraser · 用视频帧白送的 ground-truth 教模型&quot;连影子一起抹掉&quot;</a></li><li><a href="../concepts/background-subtraction.html"><span class="cat">concept</span>背景建模(MOG) · 固定机位下,谁老不变就是背景,谁突然变就是前景</a></li><li><a href="../concepts/object-background-guidance.html"><span class="cat">concept</span>双条件输入 · 不光告诉模型&quot;周围长啥样&quot;,还告诉它&quot;要删的是这个&quot;</a></li><li><a href="../concepts/object-effect-removal.html"><span class="cat">concept</span>对象效果消除 · 抹的不只是物体,还有它在世界上留下的痕迹</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/video-frame-paired-supervision.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

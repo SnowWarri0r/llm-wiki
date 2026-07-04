@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>背景建模(MOG) · 固定机位下,谁老不变就是背景,谁突然变就是前景 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · background-subtraction</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>背景建模(MOG) · 固定机位下,谁老不变就是背景,谁突然变就是前景</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>固定机位拍的视频里,背景的每个像素长期稳定、前景(走动的物体)经过时才突变;给每个像素建一个"它平时是什么颜色"的概率模型(高斯混合),某帧某像素偏离太多就判为前景——这样不用人工就能从视频自动挑出"有物体 / 没物体"的帧。</p>
+<h2>直觉 · 为什么用"概率模型"而不是"减一下"</h2>
+<p>最朴素的想法:拿当前帧减去一张"空背景图",差大的地方就是前景。但现实里背景自己也会轻微抖:树叶晃、光照变、相机噪点。硬阈值一减,满屏都是假前景。</p>
+<p>所以给<strong>每个像素</strong>单独学一个"它平时的颜色分布"。一片墙的像素常年是 <code>灰=128 上下小幅波动</code>,就用一个均值 128、方差小的高斯描述它。来了新一帧,这个像素如果还是 ~128,落在分布里 → 背景;如果突然变成 <code>60</code>(有人穿黑衣走过)→ 离分布老远 → 前景。用<strong>分布</strong>而不是单个值,就能容忍背景的正常抖动,只对真正的闯入者报警。</p>
+<p>MOG(Mixture of Gaussians,高斯混合)再进一步:一个像素平时可能在<strong>几个</strong>状态间切换(树叶晃过来是绿、晃过去露出后面的天是蓝),所以用<strong>几个</strong>高斯一起描述它的常态,任意一个匹配上都算背景。</p>
+<h2>怎么做的 · 每像素几个高斯 + 占比阈值挑帧</h2>
+<pre><code>对每个像素维护 K 个高斯(均值 μ、方差 σ²、权重 w):
+  新像素值落进某个高斯(|值−μ| &lt; 2.5σ) → 背景,更新该高斯
+  都不匹配 → 前景,顶掉权重最低的那个高斯换新的
+一帧里前景像素占比 &gt; 0.15 → 判定&quot;这帧有物体&quot;(前景帧)
+            占比很低     → &quot;这帧物体已离开&quot;(背景帧)
+</code></pre>
+<p><a href="../papers/omnieraser.html">omnieraser</a> 就用这个 0.15 阈值把视频帧粗分成前景帧 / 背景帧,再去配对。</p>
+<h2>数字例子 · 一个像素判前景还是背景</h2>
+<p>某墙面像素,常态高斯 μ=128、σ=4:</p>
+<pre><code>匹配带 = μ ± 2.5σ = 128 ± 10 = [118, 138]
+新帧该像素 = 130  → 在带内 → 背景 ✓(只是正常抖动)
+新帧该像素 = 55   → 离带老远 → 前景 ✓(有人走过遮住墙)
+</code></pre>
+<p>整帧统计:1024×1024≈100 万像素,若 18 万个像素被判前景(占比 0.176 &gt; 0.15)→ 这帧标"有物体"。
+✓ 自检:用 2.5σ 的带宽(覆盖正态约 99%),背景的正常波动几乎都落带内不误报;只有真被遮挡、颜色大跳的像素才算前景。阈值 0.15 是为了滤掉零星噪点——得有成片像素变了才算"真有个物体"。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/omnieraser.html">omnieraser</a> · 用 MOG + 0.15 阈值从视频挑前景/背景帧</li>
+<li><a href="../concepts/video-frame-paired-supervision.html">video-frame-paired-supervision</a> · 挑完帧后怎么配成 (输入, 目标) 对</li>
+<li><a href="../papers/sam.html">sam</a> · 判定"有物体"后,再用 SAM2 精确画出物体 mask</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/omnieraser.html"><span class="cat">paper</span>OmniEraser · 用视频帧白送的 ground-truth 教模型&quot;连影子一起抹掉&quot;</a></li><li><a href="../concepts/video-frame-paired-supervision.html"><span class="cat">concept</span>视频帧白送的成对监督 · 物体自己会走,等于免费拍了 before/after</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/background-subtraction.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
