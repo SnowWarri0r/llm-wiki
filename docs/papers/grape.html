@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>GRAPE · 最好的指令微调数据是"合身"的那条 · 个人 wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --clay: #a85432; --clay-soft: #f1dccd;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --accent: var(--clay); --accent-soft: var(--clay-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(40px, 6.5vw, 76px); line-height: 0.96; letter-spacing: -0.03em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 36px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
+p { margin: 12px 0; } strong { font-weight: 700; color: var(--ink); }
+ul { margin: 12px 0; padding-left: 24px; } li { margin: 6px 0; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.86em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--clay-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--clay); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--clay); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+.calc { background: var(--paper-3); border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: 0 4px 4px 0; padding: 16px 20px; margin: 22px 0; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.75; overflow-x: auto; white-space: pre; color: var(--ink-2); }
+table.spec { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+table.spec td, table.spec th { border-bottom: 1px dashed var(--rule); padding: 7px 10px; text-align: left; }
+table.spec th { color: var(--accent); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+table.spec td:first-child { color: var(--muted); }
+table.spec tr.win td { background: var(--clay-soft); font-weight: 700; }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--clay-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--brick-soft); } 100% { background: var(--clay-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+.gp-svg { width: 100%; height: auto; display: block; font-family: 'JetBrains Mono', monospace; }
+.gp-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .gp-rev { opacity: 1; }
+figure.play .gp-rev.d1 { transition-delay: 0.12s; }
+figure.play .gp-rev.d2 { transition-delay: 0.34s; }
+figure.play .gp-rev.d3 { transition-delay: 0.56s; }
+figure.play .gp-rev.d4 { transition-delay: 0.78s; }
+figure.play .gp-rev.d5 { transition-delay: 1.00s; }
+figure.play .gp-rev.d6 { transition-delay: 1.22s; }
+@media (prefers-reduced-motion: reduce) { .gp-rev { opacity: 1; transition: none; } }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · grape</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · SFT 数据 · GRAPE · NeurIPS 2025</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 指令微调 / 数据选择</div>
+  <h1 class="title">最好的微调数据，<br /><span class="em">是合身的那条</span></h1>
+  <div class="byline">Dylan Zhang · Qirun Dai · Hao Peng (UIUC) · The Best Instruction-Tuning Data are Those That Fit · NeurIPS 2025 spotlight · arXiv 2502.04194</div>
+  <p class="dek">同一条指令、好几个老师给的候选回答，别默认挑最强老师那条。让目标模型自己打分，选它觉得最自然、最合身的那条——结果超过 405B 最强老师、超过 3× 大的数据集，还省算力。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>SFT 数据大家默认"回答越强越好"，可强模型的回答常常<strong>落在目标模型分布之外</strong>（OOD），硬塞进去会<a class="jr" href="#g-01">分布漂移</a>、规模一大反而伤性能。GRAPE 的主张：<strong>数据好不好是<em>相对</em>你这个模型说的</strong>——选<a class="jr" href="#g-02">贴合目标模型分布</a>的回答（"合身"）而非"绝对最强"。做法极简（<a class="jr" href="#g-03">只前向、不训练</a>）：每条指令的多个候选，用目标模型算<a class="jr" href="#g-04">长度归一概率 = 困惑度</a>，<strong>选困惑度最低</strong>那条做 SFT，逐模型定制。为什么有效：跟 RL 里 <a class="jr" href="#g-05">on-policy 打败 off-policy</a> 同源；而纯用<a class="jr" href="#g-06">自己输出会塌缩</a>，所以要从外部多样候选里选合身的。结果：超 <a class="jr" href="#g-07">405B 最强老师 +13.8%</a>、超 <a class="jr" href="#g-08">3× 数据(+30.9%)</a>、约 <strong>1/6 算力</strong>就超 Tulu3-8B-SFT。</p>
+</div>
+
+<h2><span class="num">§ 01</span>痛点：堆"最强"的数据，反而把模型拽偏</h2>
+<p>SFT 数据通常是"指令 + 从各种强模型拿来的回答"，大家默认<strong>回答越强越好</strong>。但这些回答往往<strong>落在目标模型的分布之外</strong>（OOD）——哪怕质量很高，硬塞进去也带来<a class="jr" href="#g-01">分布漂移</a><a class="jr" href="#g-01">1</a>：规模一大就边际递减、甚至伤害性能和鲁棒性（灾难性遗忘、学到假相关）。一个被忽视的失效模式：<strong>高质量 ≠ 合身</strong>。</p>
+
+<h2><span class="num">§ 02</span>命题：合身 > 绝对最强</h2>
+<p>预训练分布是模型几辈子读书攒下的"底子"，稳又能泛化。SFT 的理想是<strong>在这个底子上轻轻校准到任务</strong>，而不是用一堆"它接不住的漂亮话"把底子冲掉。所以判据从"<strong>这回答多强</strong>"换成"<strong>这回答多合身</strong>"——目标模型自己给它多高概率。详见 <a href="../concepts/distribution-aligned-sft.html">distribution-aligned-sft</a>。</p>
+
+<figure id="fig-shift">
+  <figcaption><span>Fig 01 · 最强老师回答常落分布外；合身的在分布内</span><span class="fnum">FIT &gt; STRONGEST</span></figcaption>
+  <svg class="gp-svg" viewBox="0 0 720 250" role="img" aria-label="目标模型分布:合身回答在内,最强老师回答在外">
+    <ellipse class="gp-rev d1" cx="360" cy="140" rx="250" ry="78" fill="#f1dccd" stroke="#a85432" stroke-width="1.4" opacity="0.55"/>
+    <text class="gp-rev d1" x="360" y="205" text-anchor="middle" font-size="10" fill="#7a4322">目标模型的分布（预训练稳健底子）</text>
+    <!-- in-distribution candidate dots (gray) -->
+    <g class="gp-rev d2" fill="#bfb398"><circle cx="280" cy="120" r="5"/><circle cx="420" cy="160" r="5"/><circle cx="470" cy="118" r="5"/></g>
+    <!-- GRAPE pick: fitting, green, inside -->
+    <circle class="gp-rev d3" cx="345" cy="138" r="8" fill="#4a6b3a"/>
+    <text class="gp-rev d3" x="345" y="120" text-anchor="middle" font-size="9.5" font-weight="700" fill="#4a6b3a">GRAPE 选：合身</text>
+    <text class="gp-rev d3" x="345" y="156" text-anchor="middle" font-size="8" fill="#3a5a2a">目标模型给高概率</text>
+    <!-- strongest teacher: red, far outside top-right -->
+    <circle class="gp-rev d4" cx="650" cy="44" r="8" fill="#9b2c2c"/>
+    <text class="gp-rev d4" x="650" y="30" text-anchor="middle" font-size="9.5" font-weight="700" fill="#9b2c2c">最强老师 405B</text>
+    <text class="gp-rev d4" x="650" y="64" text-anchor="middle" font-size="8" fill="#9b2c2c">高质但 OOD</text>
+    <!-- arrow showing OOD pull -->
+    <line class="gp-rev d5" x1="630" y1="56" x2="540" y2="100" stroke="#9b2c2c" stroke-width="1.3" stroke-dasharray="4 3"/>
+    <polygon class="gp-rev d5" points="540,100 549,98 545,107" fill="#9b2c2c"/>
+    <text class="gp-rev d5" x="560" y="128" text-anchor="middle" font-size="9" fill="#9b2c2c">硬塞 → 把模型从分布拽偏（漂移）</text>
+    <text class="gp-rev d6" x="345" y="234" text-anchor="middle" font-size="9.5" fill="#4a6b3a">选分布内的合身回答 → 顺着底子校准，不漂移</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 03</span>GRAPE：用目标模型的困惑度选回答</h2>
+<p>两步，且<strong>只要前向、不要梯度</strong><a class="jr" href="#g-03">3</a>：① 每条指令从多个来源（不同老师）各拿若干候选；② 对每个候选，用<strong>目标模型</strong>拼成 "Question:…\nAnswer:…" 跑一次前向算条件对数概率，<strong>按长度归一</strong>（= <a href="../concepts/perplexity.html">困惑度</a>，逐 token 几何平均，公平比不同长度），<strong>选困惑度最低</strong>那条做 SFT。逐模型定制——同一条指令，Llama / Mistral / Qwen 各自选的不一样。</p>
+
+<figure id="fig-select">
+  <figcaption><span>Fig 02 · 多候选 → 目标模型算困惑度 → 选最低（≠最强老师）</span><span class="fnum">GRAPE SELECT</span></figcaption>
+  <svg class="gp-svg" viewBox="0 0 720 250" role="img" aria-label="GRAPE 困惑度选择机制">
+    <rect class="gp-rev d1" x="36" y="100" width="96" height="44" rx="5" fill="#faf4e1" stroke="#7a6f5d"/>
+    <text class="gp-rev d1" x="84" y="120" text-anchor="middle" font-size="10" font-weight="700" fill="#181410">一条指令</text>
+    <text class="gp-rev d1" x="84" y="135" text-anchor="middle" font-size="8" fill="#7a6f5d">x</text>
+    <!-- candidates -->
+    <g class="gp-rev d2" font-size="8.5" text-anchor="start" fill="#3a3128">
+      <rect x="200" y="50" width="200" height="30" rx="4" fill="#faf4e1" stroke="#bfb398"/><text x="210" y="69">候选 A · 老师 Mistral-small</text>
+      <rect x="200" y="106" width="200" height="30" rx="4" fill="#faf4e1" stroke="#bfb398"/><text x="210" y="125">候选 B · 最强老师 405B</text>
+      <rect x="200" y="162" width="200" height="30" rx="4" fill="#faf4e1" stroke="#bfb398"/><text x="210" y="181">候选 C · 老师 Qwen-72B</text>
+    </g>
+    <g class="gp-rev d2" stroke="#7a6f5d" stroke-width="1"><line x1="132" y1="118" x2="198" y2="65"/><line x1="132" y1="121" x2="198" y2="121"/><line x1="132" y1="124" x2="198" y2="177"/></g>
+    <!-- target model scores -->
+    <line class="gp-rev d3" x1="400" y1="65" x2="452" y2="90" stroke="#a85432" stroke-width="1"/>
+    <line class="gp-rev d3" x1="400" y1="121" x2="452" y2="121" stroke="#a85432" stroke-width="1"/>
+    <line class="gp-rev d3" x1="400" y1="177" x2="452" y2="152" stroke="#a85432" stroke-width="1"/>
+    <rect class="gp-rev d3" x="454" y="98" width="96" height="46" rx="5" fill="#f1dccd" stroke="#a85432" stroke-width="1.4"/>
+    <text class="gp-rev d3" x="502" y="118" text-anchor="middle" font-size="9.5" font-weight="700" fill="#a85432">目标模型</text>
+    <text class="gp-rev d3" x="502" y="133" text-anchor="middle" font-size="8" fill="#7a4322">前向算困惑度</text>
+    <!-- ppl results -->
+    <g class="gp-rev d4" font-size="9" text-anchor="start">
+      <text x="576" y="69" fill="#3a3128">A · PPL 2.15</text><rect x="650" y="60" width="14" height="12" rx="2" fill="#4a6b3a"/><text x="670" y="69" fill="#4a6b3a" font-weight="700">选✓</text>
+      <text x="576" y="125" fill="#9b2c2c">B · PPL 5.50</text><text x="650" y="125" fill="#9b2c2c" font-size="8">最强但不合身</text>
+      <text x="576" y="181" fill="#3a3128">C · PPL 3.80</text>
+    </g>
+    <line class="gp-rev d4" x1="550" y1="121" x2="572" y2="100" stroke="#7a6f5d" stroke-width="1"/>
+    <line class="gp-rev d4" x1="550" y1="121" x2="572" y2="121" stroke="#7a6f5d" stroke-width="1"/>
+    <line class="gp-rev d4" x1="550" y1="121" x2="572" y2="156" stroke="#7a6f5d" stroke-width="1"/>
+    <text class="gp-rev d5" x="360" y="226" text-anchor="middle" font-size="10" font-weight="700" fill="#a85432">选困惑度最低的 A（不是最强老师 B）→ 拿去做 SFT</text>
+  </svg>
+</figure>
+
+<div class="calc">同一指令两个候选，看目标模型给每个真值 token 的概率 → 困惑度（逐 token 几何平均，已按长度归一）：
+  候选 A（合身）   逐token概率 [0.5, 0.4, 0.5]  → 平均NLL 0.768 → PPL exp(0.768)=2.15  ← 选它
+  候选 B（强老师） 逐token概率 [0.2, 0.1, 0.3]  → 平均NLL 1.705 → PPL exp(1.705)=5.50
+→ B 也许出自 405B，但目标模型对它"困惑"(5.50)；A 顺(2.15)=贴合分布。喂它接得住的话，别灌最聪明的话。</div>
+
+<h2><span class="num">§ 04</span>为什么有效：on-policy 同构 + 别只用自己的输出</h2>
+<p>"选贴合分布的回答"本质上是让 SFT 尽量 <strong>on-policy</strong><a class="jr" href="#g-05">5</a>——跟 RL/偏好学习里"<a href="../concepts/direct-preference-optimization.html">on-policy 打败 off-policy</a>"同一个直觉：数据离当前分布近，信号才不错位。训练损失曲线也印证：合身的从一开始就比随机/不合身的好训。</p>
+<p>但有个反面陷阱：纯拿模型<strong>自己生成</strong>的回答做 SFT（最极端的"贴合"）会<strong>塌缩</strong><a class="jr" href="#g-06">6</a>——输出窄、重复、强化偏见，实测自蒸馏 Mistral 32.7→29.4（−3.3%）。所以 GRAPE 是从<strong>外部多样</strong>候选里<strong>选</strong>合身的：既贴分布、又保多样。这跟 <a href="../concepts/generative-data-curation.html">数据策展里"合成图近亲繁殖给质量封顶"</a>是同一个坑的两面。</p>
+
+<figure id="fig-collapse">
+  <figcaption><span>Fig 03 · 纯自产 → 塌缩 vs 选外部合身 → 贴分布且多样</span><span class="fnum">NO SELF-COLLAPSE</span></figcaption>
+  <svg class="gp-svg" viewBox="0 0 720 220" role="img" aria-label="自蒸馏塌缩 vs GRAPE 选外部多样">
+    <text class="gp-rev d1" x="180" y="30" text-anchor="middle" font-size="11" font-weight="700" fill="#9b2c2c">纯用自己的输出 → 塌缩</text>
+    <rect class="gp-rev d1" x="60" y="50" width="64" height="30" rx="4" fill="#faf4e1" stroke="#7a6f5d"/><text class="gp-rev d1" x="92" y="69" text-anchor="middle" font-size="9" fill="#181410">模型</text>
+    <path class="gp-rev d2" d="M124,58 C180,46 180,84 128,74" fill="none" stroke="#9b2c2c" stroke-width="1.3"/>
+    <polygon class="gp-rev d2" points="128,74 137,72 132,80" fill="#9b2c2c"/>
+    <text class="gp-rev d2" x="205" y="58" text-anchor="start" font-size="8.5" fill="#7a6f5d">喂自己生成的回答</text>
+    <g class="gp-rev d3" fill="#9b2c2c"><circle cx="120" cy="120" r="4"/><circle cx="128" cy="124" r="4"/><circle cx="124" cy="132" r="4"/><circle cx="132" cy="128" r="4"/></g>
+    <text class="gp-rev d3" x="180" y="126" text-anchor="start" font-size="9" fill="#9b2c2c">输出挤成一团：窄/重复</text>
+    <text class="gp-rev d3" x="180" y="150" text-anchor="middle" font-size="9.5" fill="#9b2c2c">自蒸馏 32.7 → 29.4（−3.3%）</text>
+    <line class="gp-rev d3" x1="368" y1="20" x2="368" y2="196" stroke="#bfb398" stroke-width="1" stroke-dasharray="4 4"/>
+    <text class="gp-rev d4" x="545" y="30" text-anchor="middle" font-size="11" font-weight="700" fill="#a85432">GRAPE：从外部多样候选里选合身</text>
+    <g class="gp-rev d5" fill="#bfb398"><circle cx="470" cy="70" r="4"/><circle cx="560" cy="62" r="4"/><circle cx="640" cy="78" r="4"/><circle cx="510" cy="100" r="4"/><circle cx="610" cy="108" r="4"/></g>
+    <circle class="gp-rev d5" cx="540" cy="86" r="6" fill="#4a6b3a"/>
+    <ellipse class="gp-rev d5" cx="545" cy="86" rx="110" ry="40" fill="none" stroke="#a85432" stroke-width="1.2" stroke-dasharray="4 3"/>
+    <text class="gp-rev d6" x="545" y="150" text-anchor="middle" font-size="9" fill="#a85432">多个老师的候选铺开（多样）→ 选落在分布内的那个（合身）</text>
+    <text class="gp-rev d6" x="545" y="172" text-anchor="middle" font-size="9.5" font-weight="700" fill="#4a6b3a">既贴分布、又不塌缩</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 05</span>结果：超最强老师、超 3× 数据、省算力</h2>
+<p>控制实验（UltraInteract-SFT，平均分跨 HumanEval/MBPP/MATH/GSM-Plus/BBH/MMLU 等）。同样 280.8K 数据，只是<strong>换了"选哪条回答"</strong>：</p>
+
+<table class="spec">
+  <tr><th>模型</th><th>用什么回答</th><th>数据量</th><th>平均分</th></tr>
+  <tr><td>Mistral-7B</td><td>全用 405B 最强老师</td><td>280.8K</td><td>31.9</td></tr>
+  <tr class="win"><td>Mistral-7B</td><td>GRAPE 选合身</td><td>280.8K</td><td>36.3 （+13.8%）</td></tr>
+  <tr><td>Llama3.1-8B</td><td>3× 数据（全堆）</td><td>842.4K</td><td>31.7</td></tr>
+  <tr class="win"><td>Llama3.1-8B</td><td>GRAPE 选合身</td><td>280.8K</td><td>41.5 （+30.9%）</td></tr>
+  <tr><td>Qwen2.5-7B</td><td>3× 数据（全堆）</td><td>842.4K</td><td>48.3</td></tr>
+  <tr class="win"><td>Qwen2.5-7B</td><td>GRAPE 选合身</td><td>280.8K</td><td>56.7 （+17.3%）</td></tr>
+</table>
+<p>真实数据（Tulu-3/Olmo-2）：350K 选出的数据、<strong>约 1/6 算力</strong>就超过 Tulu3-8B-SFT（它跑 2 epoch × 3 数据）；比"全量 4.5× 数据"高 6.1%、比 LESS/S2L 等选择法平均高 3.9%。<strong>更少、更省、更准</strong>——只因为选了合身的。</p>
+
+<div class="note">
+  <span class="l">放进 wiki 这条线</span>
+  <p>GRAPE 一句话：<strong>数据好不好是<em>相对</em>你这个模型的——最强老师的回答可能"不合身"，目标模型自己给高概率（低 <a href="../concepts/perplexity.html">困惑度</a>）的那条才好训</strong>（<a href="../concepts/distribution-aligned-sft.html">distribution-aligned-sft</a>）。它跟 <a href="relat.html">ReLAT</a> 是姊妹直觉——都"问目标模型自己":ReLAT 测"能否重建回问题"(保真)、GRAPE 测"对回答给多高概率"(合身)，都只用前向、不训主模型。跟 <a href="../concepts/direct-preference-optimization.html">on-policy&gt;off-policy</a> 同源，跟 <a href="../concepts/generative-data-curation.html">自产塌缩</a> 互为镜像。SFT 不是"灌进最聪明的话"，是"喂它接得住的话"。</p>
+</div>
+<p style="font-size:15px;color:var(--muted);"><em>完整表格、消融与 GRAPE-selected 分布分析 <a href="https://arxiv.org/abs/2502.04194">↗ 见 arXiv 论文</a>。</em></p>
+
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">分布漂移（SFT 失效模式）</span> · 用 OOD（落在目标模型分布外）的回答微调，哪怕质量高，也把模型从稳健的预训练分布拽偏 → 边际递减、灾难性遗忘、学到假相关。</li>
+    <li id="g-02"><span class="term"><a href="../concepts/distribution-aligned-sft.html">分布对齐 SFT · 合身 &gt; 最强</a></span> · 选贴合目标模型自己分布的回答（它给高概率），而非绝对最强的；数据好坏是相对模型说的。</li>
+    <li id="g-03"><span class="term">只前向、不训练</span> · GRAPE 选数据只需目标模型跑前向算概率，无梯度、无优化 → 便宜；选完才做标准 SFT。</li>
+    <li id="g-04"><span class="term"><a href="../concepts/perplexity.html">困惑度选择</a></span> · 对每个候选回答算长度归一对数概率 = 困惑度（逐 token 几何平均，公平比不同长度），选最低那条。</li>
+    <li id="g-05"><span class="term">on-policy 同构</span> · "选贴合分布的回答"≈ 让 SFT 尽量 on-policy；呼应 RL/偏好学习里 on-policy 打败 off-policy 的直觉。</li>
+    <li id="g-06"><span class="term">自蒸馏塌缩</span> · 纯用模型自己生成的回答做 SFT 会塌缩（窄/重复/强化偏见，−3.3%）；故从外部多样候选里选合身的，既贴分布又保多样。</li>
+    <li id="g-07"><span class="term">超 405B 最强老师 +13.8%</span> · Mistral-7B：全用 Llama-3.1-405B 那条 31.9 → GRAPE 选合身 36.3。强 ≠ 合身。</li>
+    <li id="g-08"><span class="term">超 3× 数据 / 省算力</span> · Llama 比 3× 数据 +30.9%、Qwen +17.3%；真实数据上约 1/6 算力即超 Tulu3-8B-SFT。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>SOURCE · arXiv 2502.04194 · The Best Instruction-Tuning Data are Those That Fit · Zhang/Dai/Peng (UIUC) · NeurIPS 2025</span>
+  <span>INGESTED · 2026-06-29</span>
+</div>
+
+</div>
+<script>
+{
+  const figs = ['fig-shift','fig-select','fig-collapse'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.12 });
+    obs.observe(el);
+  });
+}
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6);}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  var items={};
+  document.querySelectorAll('.gloss ol li[id^="g-"]').forEach(function(li){items[li.id]=li.innerHTML;});
+  if(!Object.keys(items).length)return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!items[id])return;
+      e.preventDefault();
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+items[id];
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+</body>
+</html>

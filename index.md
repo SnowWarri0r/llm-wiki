@@ -15,6 +15,7 @@
 - [GPT-1](wiki/papers/gpt-1.md) — 只要 Transformer decoder，causal LM 预训练，用输入格式编码任务结构
 - [GPT-2](wiki/papers/gpt-2.md) — 同架构 scale 13× 到 1.5B + WebText，发现 prompt 能 zero-shot 触发任务
 - [GPT-3](wiki/papers/gpt-3.md) — 同架构再 scale 100× 到 175B，prompt 里给几个例子模型现学（ICL），ChatGPT 时代由此开始
+- [GRAPE · 最好的微调数据是"合身"的那条](wiki/papers/grape.md) — SFT数据选择(NeurIPS25 spotlight): 别默认挑最强老师那条回答,数据好坏是相对模型说的; 让目标模型给每个候选算长度归一概率=困惑度,选最低(最合身)那条做SFT(只前向不训练); 为什么=on-policy>off-policy同构+纯自产会塌缩故选外部多样; 超405B最强老师+13.8%、超3×数据+30.9%、约1/6算力超Tulu3-SFT
 - [ReLAT · 给潜在推理闭环](wiki/papers/relat.md) — 潜在推理(把"想"压进K个连续向量省token)是开环:生成完没人验它是否还忠于原问题。ReLAT用"能否从潜在重建回问题Q"当保真信号(必要非充分,纯自监督);潜在用softmax期望嵌入做成可微,测试时只调临时LoRA(N=16步)最小化重建损失再答、答完复位;Qwen3-8B AIME24 50→73.3(比开环+16.6)、比Self-Refine省84%token还更准
 - [Flow Matching](wiki/papers/flow-matching.md) — 把 diffusion 的 score matching 换成"学速度场 + ODE 积分"，简单 + 少步推理
 - [ODE vs SDE · 确定性流与随机流](wiki/papers/ode-sde.md) — 方法底层页: ODE=风场弹珠确定/SDE=醉汉每步随机踹; 桥=同一团云两看法; Euler 真数字演算(同起点ODE永远落5/SDE跑出6.13与3.30); 接 flow-matching + diffusion
@@ -269,6 +270,8 @@
 - [潜在推理](wiki/concepts/latent-reasoning.md) — 把推理中间步从语言CoT压成K个连续潜在向量当条件,省token但不透明; 开环风险:生成完没人验是否还忠于原问题,漂移会传下去(ReLAT补闭环)
 - [重建即保真](wiki/concepts/reconstruction-as-fidelity.md) — 检查中间表示忠不忠于输入不必有标签,只问"能否重建回输入";必要非充分(重建错一定丢信息,重建对≠答案对)→当过滤器拦跑偏潜在; 自编码母题
 - [可微思考表示](wiki/concepts/differentiable-thought-representation.md) — 选token的argmax不可导→对logits做softmax得α、取期望嵌入ê=αᵀW_emb(各token嵌入加权混合),留在嵌入空间又可微让梯度反传; Gumbel-softmax近亲
+- [困惑度 Perplexity](wiki/concepts/perplexity.md) — exp(平均每token负对数概率)=等效分支数,越低模型越觉自然; 逐token几何平均=已按长度归一,公平比不同长度回答; GRAPE用它给候选排序; PPL=exp(平均交叉熵)
+- [分布对齐 SFT](wiki/concepts/distribution-aligned-sft.md) — 微调数据好坏是相对模型说的: 选贴合目标模型分布(给高概率/低困惑度)的回答而非绝对最强,少把模型从预训练底子拽走; on-policy>off-policy同源; 纯自产会塌缩故选外部多样(GRAPE)
 
 ### Agent 记忆
 - [Deep Research](wiki/concepts/deep-research.md) — 派会上网的研究员: 拆问题→规划→多轮搜读→核对→带引用报告; 4 根轴(脑子/工具/规划/可信)拆任何深度研究系统

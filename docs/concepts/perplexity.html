@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>困惑度 Perplexity · 模型对一段话有多&quot;意外&quot; · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · perplexity</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>困惑度 Perplexity · 模型对一段话有多&quot;意外&quot;</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把模型在一段文本上的平均交叉熵取指数，得到一个"等效分支数"：困惑度 = exp(平均每 token 的负对数概率)；越低 = 模型觉得这段话越自然、越在意料之中。</p>
+<h2>直觉 · "平均下来它在几个里猜"</h2>
+<p>模型每步预测下一个 token，给真值 token 一个概率。概率高 = 不意外；概率低 = 意外。把整段的"意外程度"汇总成一个数，就是困惑度。</p>
+<p>它有个好懂的解读：<strong>等效分支数</strong>。困惑度=10 ≈ "模型平均每步像在 10 个等可能选项里猜"；困惑度=2 ≈ "平均每步像在 2 个里猜"——越小越笃定。所以困惑度低 = 这段话<strong>对模型很顺</strong>。</p>
+<h2>怎么做的</h2>
+<pre><code>一段 N 个 token，模型给每个真值 token 的概率 p₁…p_N：
+平均 NLL = −(1/N) Σ log pₜ        （= 平均每 token 的交叉熵）
+困惑度  PPL = exp( 平均 NLL )
+</code></pre>
+<p>关键是那个 <strong>1/N</strong>：困惑度是<strong>逐 token 的几何平均</strong>，已经<strong>按长度归一</strong>了。所以它能<strong>公平比较不同长度的回答</strong>——长回答不会因为 token 多就吃亏，这正是 <a href="../papers/grape.html">grape</a> 用它给候选回答排序的原因。</p>
+<h2>数字例子 · 两段回答比"合身"</h2>
+<p>同一指令的两个候选，看目标模型给每个真值 token 的概率：</p>
+<pre><code>候选 A（合身）:   逐 token 概率 [0.5, 0.4, 0.5]
+  平均 NLL = −(ln0.5+ln0.4+ln0.5)/3 = 0.768
+  PPL = exp(0.768) = 2.15      ← 模型平均像在 ~2 个里猜，很顺
+
+候选 B（强老师但不合身）: [0.2, 0.1, 0.3]
+  平均 NLL = −(ln0.2+ln0.1+ln0.3)/3 = 1.705
+  PPL = exp(1.705) = 5.50      ← 平均像在 ~5.5 个里猜，别扭
+</code></pre>
+<p>✓ 自检：A 的困惑度 2.15 &lt; B 的 5.50。哪怕 B 来自更强的老师，<strong>目标模型觉得 A 更自然</strong>——<a href="../papers/grape.html">grape</a> 就选 A。注意用困惑度(而非总对数概率)是关键：总概率会偏向短回答，逐 token 几何平均把长度拉平了，比的是"平均每 token 多顺"。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/grape.html">grape</a> · 用困惑度给候选回答排序，选最低(最合身)那条</li>
+<li><a href="../concepts/cross-entropy.html">cross-entropy</a> · 困惑度 = exp(平均交叉熵/NLL)，一对孪生量</li>
+<li><a href="../concepts/distribution-aligned-sft.html">distribution-aligned-sft</a> · "低困惑度 = 贴合模型分布"是它的判据</li>
+<li><a href="../concepts/softmax.html">softmax</a> · 每步的概率来自 softmax</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/grape.html"><span class="cat">paper</span>GRAPE · 最好的指令微调数据，是&quot;合身&quot;的那条</a></li><li><a href="../concepts/distribution-aligned-sft.html"><span class="cat">concept</span>分布对齐的 SFT · 数据好不好，是相对你这个模型说的</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/perplexity.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

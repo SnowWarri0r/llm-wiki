@@ -31,7 +31,7 @@
 <div class="page">
 <div class="masthead">
   <span class="l">Connectionism · Personal Wiki</span>
-  <span class="r">索引 · 251 条目</span>
+  <span class="r">索引 · 254 条目</span>
 </div>
 
 <section class="hero">
@@ -42,15 +42,18 @@
 
 <h2><span class="num">§ 01</span>浏览 · Browse by type</h2>
 <div class="catcards">
-<a class="catcard" href="papers.html"><span class="n">56</span><span class="lbl">精读页 · Deep Dives</span><span class="d">手工打磨的论文 / 源码精读页</span></a>
+<a class="catcard" href="papers.html"><span class="n">57</span><span class="lbl">精读页 · Deep Dives</span><span class="d">手工打磨的论文 / 源码精读页</span></a>
 <a class="catcard" href="books.html"><span class="n">22</span><span class="lbl">Books · 书籍精讲</span><span class="d">非 ML 书籍的章节精讲</span></a>
 <a class="catcard" href="topics.html"><span class="n">4</span><span class="lbl">Topics · 综合</span><span class="d">跨多个源的横向综合</span></a>
-<a class="catcard" href="concepts.html"><span class="n">167</span><span class="lbl">Concepts · 概念</span><span class="d">跨论文复用的概念颗粒</span></a>
+<a class="catcard" href="concepts.html"><span class="n">169</span><span class="lbl">Concepts · 概念</span><span class="d">跨论文复用的概念颗粒</span></a>
 <a class="catcard" href="threads.html"><span class="n">2</span><span class="lbl">Threads · 思考</span><span class="d">个人思考线 / 开放问题</span></a>
 </div>
 
 <h2><span class="num">§ 02</span>最近更新 · Recent</h2>
 <div class="timeline">
+<a class="tl-row" href="papers/grape.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">paper</span><span class="tl-title">GRAPE · 最好的指令微调数据，是&quot;合身&quot;的那条</span><span class="tl-hook">同一条指令、好几个老师给的候选回答，别默认挑最强老师那条；让**目标模型自己**给每个候选打分（长度归一概率 = 困惑度），选它觉得**最自然/最合身**（困惑度最低）的那条来做 SFT。结果超过最强老师(405B)、超过 3× 大的数据集，还省算力。NeurIPS 2025 spotlight。</span></a>
+<a class="tl-row" href="concepts/distribution-aligned-sft.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">分布对齐的 SFT · 数据好不好，是相对你这个模型说的</span><span class="tl-hook">微调时别只挑&quot;绝对最强&quot;的回答，挑**贴合目标模型自己分布**的那条（它给高概率/低困惑度）——既学到任务，又少把模型从预训练分布上拽走。</span></a>
+<a class="tl-row" href="concepts/perplexity.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">困惑度 Perplexity · 模型对一段话有多&quot;意外&quot;</span><span class="tl-hook">把模型在一段文本上的平均交叉熵取指数，得到一个&quot;等效分支数&quot;：困惑度 = exp(平均每 token 的负对数概率)；越低 = 模型觉得这段话越自然、越在意料之中。</span></a>
 <a class="tl-row" href="papers/relat.html"><span class="tl-date">2026-06-28</span><span class="tl-cat">paper</span><span class="tl-title">ReLAT · 给潜在推理&quot;闭环&quot;：测试时用重建当保真检查</span><span class="tl-hook">潜在推理把中间思考从自然语言搬进不透明的潜在向量里图省事，但没人检查这些向量是否还忠于原问题（开环）。ReLAT 在答题前先做一圈 **问题→潜在思考→重建问题**：如果从潜在向量重建得回原问题，说明它没丢信息；用这个重建损失在测试时临时调一组 LoRA，再正式作答，答完即弃。</span></a>
 <a class="tl-row" href="concepts/differentiable-thought-representation.html"><span class="tl-date">2026-06-28</span><span class="tl-cat">concept</span><span class="tl-title">可微思考表示 · 别硬选一个 token，取嵌入的加权混合</span><span class="tl-hook">要让&quot;选哪个 token&quot;这一步能反传梯度，就不硬选（argmax 不可导），而是对词表 logits 做 softmax 得分布 α，用它加权各 token 的嵌入算一个**期望嵌入**——既留在嵌入空间里，又对下游损失可微。</span></a>
 <a class="tl-row" href="concepts/latent-reasoning.html"><span class="tl-date">2026-06-28</span><span class="tl-cat">concept</span><span class="tl-title">潜在推理 · 把&quot;想&quot;压进连续向量，不摊成语言</span><span class="tl-hook">不把推理的中间步写成自然语言（CoT），而是产出一串连续潜在向量当&quot;思考&quot;，被下游当条件反复用——省 token、但不透明，还可能悄悄丢了原问题的约束。</span></a>
@@ -62,9 +65,6 @@
 <a class="tl-row" href="concepts/faiss-ann-search.html"><span class="tl-date">2026-06-26</span><span class="tl-cat">concept</span><span class="tl-title">FAISS / 近似最近邻 · 用一点精度换十亿级的速度</span><span class="tl-hook">精确最近邻要拿查询跟全部向量逐个比，十亿级太慢；FAISS 用&quot;先分桶只翻几桶&quot;(IVF)+&quot;把向量压成几字节&quot;(PQ)两招，换来毫秒级近似检索。</span></a>
 <a class="tl-row" href="concepts/hierarchical-kmeans-curation.html"><span class="tl-date">2026-06-26</span><span class="tl-cat">concept</span><span class="tl-title">层级 k-means 策展 · 把&quot;逐张审查&quot;压成&quot;逐簇审查&quot;</span><span class="tl-hook">十亿张图没法一张张看；先用 k-means 把它们按视觉语义聚成簇、再递归切子簇，每个簇心附近挑几张代表图让 VLM 审一眼，按簇整批保留/丢弃/补采。</span></a>
 <a class="tl-row" href="concepts/pagerank-entity-coverage.html"><span class="tl-date">2026-06-26</span><span class="tl-cat">concept</span><span class="tl-title">PageRank 实体覆盖 · 用链接结构挑出&quot;必须见过的概念&quot;</span><span class="tl-hook">拿维基百科的链接图跑 PageRank，给每个条目算个&quot;重要度&quot;，取排名前 90% 当&quot;必须覆盖的概念&quot;（约 500 万个），再回头查训练集有没有图文对覆盖到它们。</span></a>
-<a class="tl-row" href="concepts/prompt-expansion.html"><span class="tl-date">2026-06-26</span><span class="tl-cat">concept</span><span class="tl-title">Prompt Expansion · 把短输入扩成富 caption（还得防塌成一种风格）</span><span class="tl-hook">模型训在信息密集的长 caption 上，用户却爱打短句；前面挂一个会写字的 LLM 把短输入扩成富 caption，用 SFT 学会扩写、再用 GDPO + 多奖励把扩写调到&quot;提质又不跑题、还别塌成一种风格&quot;。</span></a>
-<a class="tl-row" href="concepts/siglip-semantic-dedup.html"><span class="tl-date">2026-06-26</span><span class="tl-cat">concept</span><span class="tl-title">SigLIP 语义去重 · 删的是&quot;长得像&quot;，不是&quot;字节一样&quot;</span><span class="tl-hook">把每张图用 SigLIP 压成一个向量，向量方向接近（余弦相似度高过阈值）就当近重复，每簇只留一张。</span></a>
-<a class="tl-row" href="concepts/style-reference.html"><span class="tl-date">2026-06-26</span><span class="tl-cat">concept</span><span class="tl-title">Style Reference · 只借参考图的&quot;风格&quot;，别把它的&quot;内容&quot;也搬来</span><span class="tl-hook">用文字生成、再拿一/多张参考图导风格；核心难题是别让参考图的主体/物件钻进结果（内容泄漏），靠自监督训练 + 偏好优化把&quot;风格&quot;和&quot;内容&quot;两条通道拆开。</span></a>
 </div>
 <div class="colophon">
   Renderer / <code>render.py</code> · Pattern / <a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f" target="_blank">Karpathy LLM Wiki</a> · Source / <a href="https://github.com/SnowWarri0r/llm-wiki" target="_blank">github.com/SnowWarri0r/llm-wiki</a>
