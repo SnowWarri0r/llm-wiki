@@ -115,7 +115,7 @@ figure.play .fx-svg .draw { stroke-dashoffset: 0; }
 
 <div class="tldr">
   <span class="label">TL;DR</span>
-  <p>FLUX.1（Black Forest Labs，<strong>原 SD/LDM 作者</strong>，2024-08）是 <strong>12B 整流流 Transformer</strong>。架构招牌：<strong>先双流后单流的混合</strong><a class="jr" href="#g-01">1</a>——前段 <a href="../concepts/mmdit.html">双流 MMDiT 块</a>（文字图像各用各的 FFN/AdaLN 对齐），后段 <strong>单流块</strong>（所有 token 共享权重、更省）。再叠两道<strong>正交</strong>蒸馏：<strong>引导蒸馏</strong><a class="jr" href="#g-02">2</a>（把 <a href="../concepts/classifier-free-guidance.html">CFG</a> 的每步 2 次前向压成 1 次，引导强度当输入喂进去）做出 <strong>dev</strong>；再 <a href="../concepts/dmd-distillation.html">步数蒸馏</a>到 4 步做出 <strong>schnell</strong><a class="jr" href="#g-03">3</a>。仍是整流流（<a href="flow-matching.html">flow-matching</a>）+ T5/CLIP 文本编码 + <a href="../concepts/kl-vae.html">VAE latent</a>。三档：pro(闭源旗舰) / dev(引导蒸馏,非商用) / schnell(再步数蒸馏,Apache 2.0)<a class="jr" href="#g-04">4</a>。</p>
+  <p>FLUX.1（Black Forest Labs，<strong>原 SD/LDM 作者</strong>，2024-08）是 <strong>12B 整流流 Transformer</strong>。架构招牌：<strong>先双流后单流的混合</strong><a class="jr" href="#g-01">1</a>——前段 <a href="../concepts/mmdit.html">双流 MMDiT 块</a>（文字图像各用各的 FFN/AdaLN 对齐），后段 <strong>单流块</strong>（所有 token 共享权重、更省）。再叠两道<strong>正交</strong>蒸馏：<strong>引导蒸馏</strong><a class="jr" href="#g-02">2</a>（把 <a href="../concepts/classifier-free-guidance.html">CFG</a> 的每步 2 次前向压成 1 次，引导强度当输入喂进去）做出 <strong>dev</strong>；再 <a href="../concepts/dmd-distillation.html">步数蒸馏</a>到 4 步做出 <strong>schnell</strong><a class="jr" href="#g-03">3</a>。仍是整流流（<a href="flow-matching.html">flow-matching</a>）+ T5/CLIP 文本编码 + <a href="../concepts/kl-vae.html">VAE latent</a>。三档：pro(闭源旗舰) / dev(引导蒸馏,非商用) / schnell(再步数蒸馏,Apache 2.0)<a class="jr" href="#g-04">4</a>。底座具体数：<strong>19 双流块 + 38 单流块</strong>、hidden 3072(24 头×128)、<a href="rope.html">RoPE</a> 位置编码、<strong>16 通道 VAE</strong>(f8,比老 SD 的 4 通道厚 4×)<a class="jr" href="#g-05">5</a>。</p>
 </div>
 
 
@@ -125,13 +125,84 @@ figure.play .fx-svg .draw { stroke-dashoffset: 0; }
 <p>做 FLUX 的 <strong>Black Forest Labs</strong>，核心成员<strong>就是当年 Stable Diffusion / Latent Diffusion 论文的作者</strong>，从 Stability 出走后另起炉灶。所以 FLUX 是"SD 原班人马的下一代答卷"——2024-08 一出就把开源文生图的天花板顶上去。底子和 <a href="stable-diffusion-3-5.html">SD3.5</a> 同源（整流流 + <a href="../concepts/mmdit.html">MMDiT</a> + <a href="../concepts/kl-vae.html">VAE latent</a>），但有两个自己的招。</p>
 
 
-<!-- §02 -->
-<h2><span class="num">§ 02</span>招一：先双流对齐，再单流干完</h2>
+<!-- §02 anatomy -->
+<h2><span class="num">§ 02</span>整体解剖：12B 是怎么搭起来的</h2>
+
+<p>先把零件摆清楚,后面两招才有地方挂。一句 prompt 进来要走三路条件,图在压缩后的 latent 里去噪,主干是 57 个 Transformer 块,最后解码回像素。</p>
+
+<figure id="fig-anatomy">
+  <figcaption><span>FIG 01 · 一张图看清 FLUX 的数据流与块数</span><span class="fnum">ANATOMY · 12B</span></figcaption>
+  <svg class="fx-svg" viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="fa-h" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#7a6f5d"/></marker>
+    </defs>
+    <!-- 左列:条件 -->
+    <text class="fx-rev d1" x="20" y="30" text-anchor="start" font-size="10" font-weight="700" fill="#4a6b3a">① 文本条件(两路)</text>
+    <rect class="fx-rev d1" x="20" y="40" width="150" height="30" rx="3" fill="#d8e6ce" stroke="#4a6b3a"/>
+    <text class="fx-rev d1" x="95" y="59" text-anchor="middle" font-size="8.5" fill="#2f5a2a">T5-XXL → 4096维 序列</text>
+    <rect class="fx-rev d1" x="20" y="74" width="150" height="30" rx="3" fill="#d8e6ce" stroke="#4a6b3a"/>
+    <text class="fx-rev d1" x="95" y="93" text-anchor="middle" font-size="8.5" fill="#2f5a2a">CLIP-L → pooled 向量</text>
+    <!-- 时间步+引导 -->
+    <text class="fx-rev d2" x="20" y="134" text-anchor="start" font-size="10" font-weight="700" fill="#1f4d3a">② 时间步 t + 引导 w</text>
+    <rect class="fx-rev d2" x="20" y="144" width="150" height="30" rx="3" fill="#cde0d4" stroke="#1f4d3a"/>
+    <text class="fx-rev d2" x="95" y="159" text-anchor="middle" font-size="8.5" fill="#1f4d3a">MLP → vec(调制)</text>
+    <text class="fx-rev d2" x="95" y="170" text-anchor="middle" font-size="7" fill="#7a6f5d">经 AdaLN 拧每个块</text>
+    <!-- 图像 latent -->
+    <text class="fx-rev d3" x="20" y="222" text-anchor="start" font-size="10" font-weight="700" fill="#9b2c2c">③ 图像 latent</text>
+    <rect class="fx-rev d3" x="20" y="232" width="150" height="34" rx="3" fill="#efd6c8" stroke="#9b2c2c"/>
+    <text class="fx-rev d3" x="95" y="249" text-anchor="middle" font-size="8.5" fill="#7a2020">噪声 128×128×16</text>
+    <text class="fx-rev d3" x="95" y="261" text-anchor="middle" font-size="7" fill="#7a6f5d">VAE f8 把 1024²×3 压到这</text>
+    <!-- 主干 -->
+    <rect class="fx-rev d4" x="230" y="50" width="240" height="250" rx="6" fill="#faf4e1" stroke="#1f4d3a" stroke-width="1.8"/>
+    <text class="fx-rev d4" x="350" y="74" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#1f4d3a">主干 · 57 块</text>
+    <g class="fx-rev d4">
+      <rect x="250" y="90" width="200" height="80" rx="4" fill="#e3eee6" stroke="#1f4d3a"/>
+      <text x="350" y="108" text-anchor="middle" font-size="10" font-weight="700" fill="#1f4d3a">19 双流块</text>
+      <text x="350" y="124" text-anchor="middle" font-size="8" fill="#3a3128">文/图各一套 FFN+AdaLN</text>
+      <text x="350" y="138" text-anchor="middle" font-size="8" fill="#3a3128">只在 attention 合流(对齐)</text>
+      <text x="350" y="156" text-anchor="middle" font-size="8" fill="#7a6f5d">RoPE 给每个 token 标位置</text>
+    </g>
+    <text class="fx-rev d5" x="350" y="190" text-anchor="middle" font-size="9" fill="#1f4d3a">↓ 文图拼成一条序列 ↓</text>
+    <g class="fx-rev d5">
+      <rect x="250" y="198" width="200" height="86" rx="4" fill="#cde0d4" stroke="#1f4d3a"/>
+      <text x="350" y="216" text-anchor="middle" font-size="10" font-weight="700" fill="#1f4d3a">38 单流块</text>
+      <text x="350" y="232" text-anchor="middle" font-size="8" fill="#3a3128">所有 token 共享一套权重</text>
+      <text x="350" y="246" text-anchor="middle" font-size="8" fill="#3a3128">attention 与 MLP 并行算</text>
+      <text x="350" y="264" text-anchor="middle" font-size="8" fill="#7a6f5d">hidden 3072 · 24 头×128</text>
+    </g>
+    <!-- 右列:出图 -->
+    <line class="fx-rev d5" x1="170" y1="89" x2="228" y2="120" stroke="#7a6f5d" stroke-width="1.2" marker-end="url(#fa-h)"/>
+    <line class="fx-rev d5" x1="170" y1="159" x2="228" y2="150" stroke="#7a6f5d" stroke-width="1.2" marker-end="url(#fa-h)"/>
+    <line class="fx-rev d5" x1="170" y1="249" x2="228" y2="200" stroke="#7a6f5d" stroke-width="1.2" marker-end="url(#fa-h)"/>
+    <line class="fx-rev d6" x1="470" y1="175" x2="520" y2="175" stroke="#7a6f5d" stroke-width="1.4" marker-end="url(#fa-h)"/>
+    <rect class="fx-rev d6" x="524" y="120" width="166" height="36" rx="4" fill="#faf4e1" stroke="#7a6f5d"/>
+    <text class="fx-rev d6" x="607" y="138" text-anchor="middle" font-size="8.5" fill="#3a3128">输出 velocity(速度场)</text>
+    <text class="fx-rev d6" x="607" y="150" text-anchor="middle" font-size="7" fill="#7a6f5d">整流流积分若干步</text>
+    <rect class="fx-rev d6" x="524" y="166" width="166" height="36" rx="4" fill="#efd6c8" stroke="#9b2c2c"/>
+    <text class="fx-rev d6" x="607" y="184" text-anchor="middle" font-size="8.5" fill="#7a2020">VAE decoder → 1024²</text>
+    <line class="fx-rev d6" x1="607" y1="156" x2="607" y2="165" stroke="#7a6f5d" stroke-width="1.2" marker-end="url(#fa-h)"/>
+    <text class="fx-rev d6" x="607" y="232" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="11" font-weight="700" fill="#1f4d3a">12B 参数</text>
+    <text class="fx-rev d6" x="607" y="250" text-anchor="middle" font-size="8" fill="#7a6f5d">先双流对齐 → 后单流干完</text>
+  </svg>
+</figure>
+
+<p>三路条件:<strong>T5-XXL</strong><a class="jr" href="#g-11">11</a>(给细粒度的文字语义,4096 维序列)+ <strong>CLIP-L</strong>(给一个全局 pooled 向量)管"画什么";<strong>时间步 t 和引导强度 w</strong> 过一个小 MLP 变成调制向量 <code>vec</code>,经 <a href="../concepts/adaptive-layernorm.html">AdaLN</a><a class="jr" href="#g-12">12</a> 拧每个块的归一化(跟 <a href="../concepts/diffusion-transformer.html">DiT</a> 注入条件一个套路);图像那路在 <strong>VAE 压出来的 latent</strong> 里去噪。</p>
+
+<h3>数字例子 · VAE 把图压掉多少</h3>
+<p>FLUX 的 VAE 是 <strong>f8 + 16 通道</strong><a class="jr" href="#g-07">7</a>:空间每边下采样 8 倍、通道从 RGB 的 3 升到 16。一张 1024×1024 的图:</p>
+<pre class="eq">原图像素数   = 1024 × 1024 × 3  = 3,145,728 个数
+压缩后 latent = 128  × 128  × 16 =   262,144 个数   (1024÷8=128)
+压缩倍数     = 3,145,728 / 262,144 = 12×</pre>
+<p>✓ 自检:空间上 8×8=64 倍更少的格子,但每格通道厚了 16/3≈5.3 倍,净下来 64 ÷ 5.3 ≈ <strong>12 倍</strong>。扩散全程在这 12 倍小的空间里跑,省的就是这块算力;通道开到 16(老 SD 只有 4)是为了少压点细节、把"压得狠"和"还原得清"平衡好。</p>
+
+
+<!-- §03 招一 -->
+<h2><span class="num">§ 03</span>招一：先双流对齐，再单流干完</h2>
 
 <p>你在 <a href="../concepts/diffusion-transformer.html">DiT</a> / <a href="../concepts/mmdit.html">MMDiT</a> 学过"单流 vs 双流"的分歧：双流（文字图像各用各的权重，只在 attention 合流）对齐强但参数多；单流（共享一套权重一条序列）省但表达弱。<strong>FLUX 两个都要，而且分前后。</strong></p>
 
 <figure id="fig-hybrid">
-  <figcaption><span>FIG 01 · 三种把文字图像放一起的方式</span><span class="fnum">DOUBLE → SINGLE</span></figcaption>
+  <figcaption><span>FIG 02 · 三种把文字图像放一起的方式</span><span class="fnum">DOUBLE → SINGLE</span></figcaption>
   <svg class="fx-svg" viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg">
     <!-- A: SD3 全双流 -->
     <text class="fx-rev d1" x="120" y="32" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#9b2c2c">SD3 · 全程双流</text>
@@ -184,14 +255,16 @@ figure.play .fx-svg .draw { stroke-dashoffset: 0; }
 
 <p><strong>前段双流</strong>：文字和图像还在"互相认识"，各带各的 FFN / AdaLN（各说母语）把两种模态对齐好。<strong>对齐之后切单流</strong>：它们已经融成一锅，再分两套权重就浪费，合成一条共享序列更省。<strong>先用贵的把齐对上，再用省的把活干完。</strong></p>
 
+<p>具体分配:<strong>19 个双流块在前、38 个单流块在后</strong><a class="jr" href="#g-08">8</a>(单流占了三分之二,印证"对齐是少数、干活是多数")。还有个省算力的细节:单流块里 <strong>attention 和 MLP 是并行算的</strong>——不是"先注意力、再前馈"串起来,而是从同一个归一化输入同时分出 QKV 和 MLP 两路、各算各的再相加(跟 GPT-J / ViT-22B 一个路子)。少一次中间归一化、两个大矩阵乘能拼成一次,实测更快且不掉质量。</p>
 
-<!-- §03 -->
-<h2><span class="num">§ 03</span>招二：引导蒸馏 —— CFG 两遍压成一遍</h2>
+
+<!-- §04 -->
+<h2><span class="num">§ 04</span>招二：引导蒸馏 —— CFG 两遍压成一遍</h2>
 
 <p>普通文生图靠 <a href="../concepts/classifier-free-guidance.html">CFG</a> 提质量：每步要算<strong>两遍</strong>（一遍带 prompt、一遍空 prompt），再按引导强度 <code>w</code> 把差值外推 → <strong>每步 2× 算力</strong>。FLUX.1-dev 把这事<strong>蒸进模型</strong>：把引导强度 <code>w</code> 当成一个<strong>输入喂进去</strong>，模型<strong>一遍前向</strong>就直接吐出"已经引导好"的结果。</p>
 
 <figure id="fig-guidance">
-  <figcaption><span>FIG 02 · CFG 两遍 → 引导蒸馏一遍</span><span class="fnum">GUIDANCE DISTILLATION</span></figcaption>
+  <figcaption><span>FIG 03 · CFG 两遍 → 引导蒸馏一遍</span><span class="fnum">GUIDANCE DISTILLATION</span></figcaption>
   <svg class="fx-svg" viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <marker id="fg-h" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#7a6f5d"/></marker>
@@ -226,13 +299,63 @@ figure.play .fx-svg .draw { stroke-dashoffset: 0; }
   </svg>
 </figure>
 
-<p>引导蒸馏让 dev 在<strong>不掉质量</strong>的前提下省掉那一半算力（老师是闭源的 pro，dev 被训成"一遍就复现 pro 带 CFG 的结果"）。注意：dev 的 <code>guidance</code> 参数是<strong>喂进模型的输入</strong>，跟标准 CFG 的 <code>w</code> 不是一回事。</p>
+<p>引导蒸馏让 dev 在<strong>不掉质量</strong>的前提下省掉那一半算力（老师是闭源的 pro，dev 被训成"一遍就复现 pro 带 CFG 的结果"）。<strong>引导强度具体怎么"喂进去"?</strong> 跟时间步 t 走同一条路:guidance 标量过一个小 MLP 变成一个 embedding,加进调制向量 <code>vec</code>,再经 <a href="../concepts/adaptive-layernorm.html">AdaLN</a> 拧每个块。所以 dev 的 <code>guidance</code> 是<strong>模型的一个条件输入</strong>,跟标准 CFG 推理时在外面手动外推的 <code>w</code> 不是一回事——后者被蒸进了前者。</p>
+
+<h3>数字例子 · 被蒸掉的"外推"到底在算什么</h3>
+<p>把速度场想成方向向量,看标准 CFG 那两遍前向在干嘛(引导蒸馏要复现的就是这个结果):</p>
+<pre class="eq">v_uncond = [1, 0]        蒙眼:大致"画个合理的图"
+v_cond   = [1, 0.5]      给"红色汽车":多了点往"红车"偏的分量
+差值      = v_cond − v_uncond = [0, 0.5]   ← 纯粹因这句 prompt 多走的那部分
+CFG(w=3): v = v_uncond + 3 × [0, 0.5] = [1, 1.5]   往"红车"方向使劲推</pre>
+<p>✓ 自检:注意结果 <code>[1,1.5]</code> 比 <code>v_cond</code> 的 <code>[1,0.5]</code> 还要"红车"——这是<strong>外推</strong><a class="jr" href="#g-09">9</a>(冲过条件解),不是在两者间插值,所以 w 太大会过饱和失真。标准 CFG 每步要跑两遍前向才能拿到这两个向量;dev 把"给定 w 直接输出这个外推结果"学进了一遍前向里。</p>
 
 
-<!-- §04 -->
-<h2><span class="num">§ 04</span>两道蒸馏叠出三档</h2>
+<!-- §05 DMD 步数蒸馏 -->
+<h2><span class="num">§ 05</span>招三：步数蒸馏 —— 50 步压到 4 步做 schnell</h2>
 
-<p>两道蒸馏是<strong>正交</strong>的——引导蒸馏省"每步的 2×"，<a href="../concepts/dmd-distillation.html">步数蒸馏</a>省"步数"。schnell = 两个都吃：</p>
+<p>引导蒸馏省的是"每步两遍",但<strong>步数</strong>还在(整流流<a class="jr" href="#g-06">6</a>采样仍要几十步积分)。schnell 再叠一道 <a href="../concepts/dmd-distillation.html">DMD 步数蒸馏</a><a class="jr" href="#g-10">10</a>,把出图压到 <strong>4 步</strong>。关键不是"让 4 大步去抄 50 小步的轨迹"(抄不像),而是<strong>只要求学生 4 步出来的图,整体分布跟老师 50 步的一样</strong>。</p>
+
+<figure id="fig-dmd">
+  <figcaption><span>FIG 04 · 不抄轨迹,只对齐出图分布</span><span class="fnum">DMD · 50 → 4 STEPS</span></figcaption>
+  <svg class="fx-svg" viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="fd-h" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#7a6f5d"/></marker>
+    </defs>
+    <!-- 老师:多步小步 -->
+    <text class="fx-rev d1" x="40" y="34" text-anchor="start" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#9b2c2c">老师(pro/dev)· ~50 步</text>
+    <circle class="fx-rev d1" cx="56" cy="64" r="5" fill="#7a6f5d"/>
+    <polyline class="fx-rev d2 draw" points="56,64 86,58 116,66 146,56 176,64 206,55 236,62 266,54 296,60 326,54" fill="none" stroke="#9b2c2c" stroke-width="2" pathLength="1000"/>
+    <circle class="fx-rev d2" cx="326" cy="54" r="6" fill="#9b2c2c"/>
+    <text class="fx-rev d2" x="190" y="88" text-anchor="middle" font-size="8" fill="#7a6f5d">很多小步,慢但稳</text>
+    <!-- 学生:4 大步 -->
+    <text class="fx-rev d3" x="40" y="128" text-anchor="start" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#1f4d3a">学生(schnell)· 4 步</text>
+    <circle class="fx-rev d3" cx="56" cy="158" r="5" fill="#7a6f5d"/>
+    <line class="fx-rev d4" x1="56" y1="158" x2="146" y2="150" stroke="#1f4d3a" stroke-width="2.2" marker-end="url(#fd-h)"/>
+    <line class="fx-rev d4" x1="146" y1="150" x2="236" y2="156" stroke="#1f4d3a" stroke-width="2.2" marker-end="url(#fd-h)"/>
+    <line class="fx-rev d4" x1="236" y1="156" x2="290" y2="150" stroke="#1f4d3a" stroke-width="2.2" marker-end="url(#fd-h)"/>
+    <line class="fx-rev d4" x1="290" y1="150" x2="326" y2="148" stroke="#1f4d3a" stroke-width="2.2" marker-end="url(#fd-h)"/>
+    <circle class="fx-rev d4" cx="326" cy="148" r="6" fill="#1f4d3a"/>
+    <text class="fx-rev d4" x="190" y="180" text-anchor="middle" font-size="8" fill="#7a6f5d">4 大步,快</text>
+    <!-- 右:分布匹配 -->
+    <line class="fx-rev d5" x1="360" y1="105" x2="360" y2="200" stroke="#bfb398" stroke-width="1" stroke-dasharray="5 4"/>
+    <text class="fx-rev d5" x="540" y="40" text-anchor="middle" font-size="10" font-weight="700" fill="#1f4d3a">不比轨迹,比"出图分布"</text>
+    <rect class="fx-rev d5" x="400" y="56" width="280" height="70" rx="5" fill="#faf4e1" stroke="#1f4d3a"/>
+    <text class="fx-rev d5" x="540" y="80" text-anchor="middle" font-size="9" fill="#3a3128">学生终点的图 vs 老师终点的图</text>
+    <text class="fx-rev d5" x="540" y="98" text-anchor="middle" font-size="9" fill="#3a3128">用一个判别项把两堆图的分布拉到一起</text>
+    <text class="fx-rev d5" x="540" y="114" text-anchor="middle" font-size="8" fill="#7a6f5d">teacher_score − fake_score(吸老师·斥自己)</text>
+    <text class="fx-rev d6" x="540" y="158" text-anchor="middle" font-size="9" fill="#1f4d3a">所以 4 步不必走老师的路,</text>
+    <text class="fx-rev d6" x="540" y="174" text-anchor="middle" font-size="9" fill="#1f4d3a">只要终点落在"对的那堆图"里</text>
+    <text class="fx-rev d6" x="540" y="196" text-anchor="middle" font-size="8" fill="#7a6f5d">与引导蒸馏正交,可叠加</text>
+  </svg>
+</figure>
+
+<p>两道蒸馏因此<strong>互不打架(正交)</strong>:引导蒸馏砍掉"每步的 2×"、步数蒸馏砍掉"步数本身"。一个管单步多贵、一个管走几步,各省各的,叠起来就是 schnell。<a href="../concepts/dmd-distillation.html">DMD</a> 那套"吸老师分布、斥自己分布"跟 <a href="drifting-models.html">Drifting</a> 是同构的,细节见概念页。</p>
+
+
+<!-- §06 -->
+<h2><span class="num">§ 06</span>三档：两道蒸馏怎么叠出来</h2>
+
+<p>把三档摆开看,就是"老师 + 两道正交蒸馏依次叠"的关系:</p>
 
 <table class="spec">
   <tr><th>版本</th><th>蒸了什么</th><th>开源协议</th></tr>
@@ -266,6 +389,14 @@ figure.play .fx-svg .draw { stroke-dashoffset: 0; }
     <li id="g-02"><span class="term"><a href="../concepts/guidance-distillation.html">引导蒸馏 · guidance distillation</a></span> · 把 <a href="../concepts/classifier-free-guidance.html">CFG</a> 的每步 2 次前向（条件+无条件）蒸成 1 次：引导强度当输入喂模型，直接吐"已引导"结果。dev 这么训出来（老师=pro）。省一半算力、不掉质量。</li>
     <li id="g-03"><span class="term"><a href="../concepts/dmd-distillation.html">步数蒸馏 · schnell</a></span> · 在 dev 基础上把采样步数蒸到 4 步。与引导蒸馏<strong>正交</strong>（一个省每步算力、一个省步数）。schnell = 两道都叠。</li>
     <li id="g-04"><span class="term">pro / dev / schnell 三档</span> · pro 闭源旗舰当老师；dev 引导蒸馏、开放权重非商用；schnell 再步数蒸馏、4 步、Apache 2.0 全开放。都是 12B 整流流 Transformer。</li>
+    <li id="g-05"><span class="term">架构具体数</span> · <strong>19 双流块 + 38 单流块</strong>(单流占 2/3)、hidden 3072(24 头 × 头维 128)、<a href="rope.html">RoPE</a> 位置编码、<strong>16 通道 VAE</strong>(f8)。整体 12B 参数。</li>
+    <li id="g-06"><span class="term"><a href="flow-matching.html">整流流 · rectified flow</a></span> · 把噪声→数据的路径学成尽量<strong>直</strong>的线;直线少拐弯,所以少步也能采得准。FLUX 的训练目标(flow matching 一种)。</li>
+    <li id="g-07"><span class="term">VAE · f8 + 16 通道</span> · 空间每边压 8 倍、通道 3→16;1024² 图压成 128×128×16 ≈ 少 12× 的数。扩散全程在这小空间跑;16 通道(老 SD 才 4)是为了少丢细节。</li>
+    <li id="g-08"><span class="term">双流块 / 单流块</span> · 双流=文图<strong>各一套权重</strong>、只在 attention 合流(对齐强但贵);单流=合并<strong>共享权重</strong>且 attention 与 MLP <strong>并行算</strong>(省)。FLUX = 19 双 + 38 单。</li>
+    <li id="g-09"><span class="term"><a href="../concepts/classifier-free-guidance.html">CFG 外推</a></span> · <code>v_uncond + w·(v_cond − v_uncond)</code>,把"因 prompt 多走的那部分"放大。是<strong>外推</strong>(冲过条件解)非插值,w 太大会过饱和。被引导蒸馏吸进一遍前向。</li>
+    <li id="g-10"><span class="term"><a href="../concepts/dmd-distillation.html">DMD 分布匹配</a></span> · 步数蒸馏<strong>不抄老师轨迹</strong>,只让学生少步出图的<em>分布</em> ≈ 老师;teacher_score − fake_score(吸老师·斥自己),跟 <a href="drifting-models.html">Drifting</a> 同构。</li>
+    <li id="g-11"><span class="term">双文本编码</span> · <strong>T5-XXL</strong> 给 4096 维细粒度序列 + <strong>CLIP-L</strong> 给全局 pooled 向量,两路一起管"画什么"。</li>
+    <li id="g-12"><span class="term"><a href="../concepts/adaptive-layernorm.html">AdaLN 调制注入</a></span> · 时间步 t 和引导 w 过 MLP 成调制向量 <code>vec</code>,经 adaptive LayerNorm 拧每个块的归一化——这是 <a href="../concepts/diffusion-transformer.html">DiT</a> 注入条件的标准做法。</li>
   </ol>
 </div>
 
@@ -277,7 +408,7 @@ figure.play .fx-svg .draw { stroke-dashoffset: 0; }
 </div>
 <script>
 {
-  const figs = ['fig-hybrid','fig-guidance'];
+  const figs = ['fig-anatomy','fig-hybrid','fig-guidance','fig-dmd'];
   figs.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
