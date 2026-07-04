@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>NAR 掩码并行生成 · 像完形填空一样&quot;一次性填声&quot; · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · nar-masked-speech-generation</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>NAR 掩码并行生成 · 像完形填空一样&quot;一次性填声&quot;</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>不逐帧自回归吐 token,而是先把要生成的码全部盖住(掩码),一次性<strong>并行</strong>猜出全部、再迭代几步把没把握的重猜——生成语音从"逐帧慢慢来"变成"整段一起填",快很多。</p>
+<h2>直觉 · 自回归 vs 非自回归</h2>
+<ul>
+<li><strong>自回归(AR)</strong>:一帧一帧生成,第 n 帧要等第 n−1 帧算完。200 帧就要 200 步,长音频天然慢、延迟高。</li>
+<li><strong>非自回归(NAR)</strong>:所有帧<strong>同时</strong>预测。像 BERT 完形填空——把整句盖住,一次性并行填空,再看哪几个填得没把握、盖回去重填,几轮就收敛。步数固定(几步),跟长度基本无关 → 快。</li>
+</ul>
+<p>关键区别:AR 的成本 ∝ 序列长度;NAR 的成本 ∝ 迭代轮数(常数)。所以 NAR 在长音频、低延迟场景赢。代价是要迭代精修才能补回 AR 那种逐帧一致性。</p>
+<h2>怎么做的 · 掩码 → 并行猜 → 迭代精修</h2>
+<pre><code>初始:  [MASK][MASK][MASK] … [MASK]     全盖住
+第1轮:  并行预测全部码 → 保留置信度高的,低的重新盖回
+第2轮:  只对盖回的位置再并行预测 …
+…几轮后收敛,所有位置定稿
+</code></pre>
+<p>训练用<strong>随机掩码</strong>:盖住一部分码让模型学着从上下文补全(OmniVoice 用"全码本随机掩码",并从预训练 LLM 初始化)。这就是 SoundStorm / MaskGCT / OmniVoice 一脉,<a href="../papers/viitorvoice.html">viitorvoice</a> 的声学解码器属于这家。</p>
+<h2>数字例子 · 步数对比</h2>
+<pre><code>生成 200 帧声学码:
+AR:   200 步(逐帧,每步等前一帧)
+NAR:  ~8 步(每步并行填全部 200 帧的剩余位置)
+      → 步数从 200 降到 ~8,且每步内部并行
+</code></pre>
+<p>✓ 只要迭代轮数(~8)远小于序列长度(200),NAR 就快一个数量级。TTS 里语义骨架已由 LLM 定好,声学细节容错高,正适合这种"并行填、几步收敛"。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/viitorvoice.html">viitorvoice</a> · 声学码用 NAR 掩码并行填,配合首块流式做到 60ms</li>
+<li><a href="../concepts/semantic-vs-acoustic-tokens.html">semantic-vs-acoustic-tokens</a> · NAR 补的是声学码那一路(细节)</li>
+<li><a href="../concepts/dualcodec.html">dualcodec</a> · 被并行填的就是它的 8 个码本</li>
+<li><a href="../concepts/masked-language-model.html">masked-language-model</a> · 同源思想(BERT 掩码填空),但这里用于生成、要迭代</li>
+<li><a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a> · 并行生成时用 CFG 调情绪/强度</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/viitorvoice.html"><span class="cat">paper</span>ViiTorVoice · 低帧率语义码 + 并行填声 = 60ms 流式克隆</a></li><li><a href="../concepts/dualcodec.html"><span class="cat">concept</span>DualCodec · 低帧率 + 语义增强的双流音频码</a></li><li><a href="../concepts/semantic-vs-acoustic-tokens.html"><span class="cat">concept</span>语义码 vs 声学码 · 把&quot;说什么&quot;和&quot;听起来啥样&quot;分开</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/nar-masked-speech-generation.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
