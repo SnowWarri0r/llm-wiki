@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>TurboQuant · 随机旋转把"任意向量"变成"分布已知"</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
+  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
+  --brick: #9b2c2c; --brick-soft: #efd6c8;
+  --ochre: #b8841c; --ochre-soft: #f0e0a8;
+  --moss: #4a6b3a; --moss-soft: #d8e6ce;
+  --deep: #1f3a5f; --deep-soft: #c8d4e2;
+  --denim: #34618c; --denim-soft: #cfdcea;
+  --accent: var(--denim); --accent-soft: var(--denim-soft);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
+.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
+.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
+.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
+.hero { margin-bottom: 64px; }
+.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
+.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(38px, 6vw, 68px); line-height: 0.99; letter-spacing: -0.03em; margin: 0 0 12px; }
+h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
+.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
+.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
+.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
+.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
+h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 36px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
+h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
+h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
+p { margin: 12px 0; } strong { font-weight: 700; }
+ul { margin: 12px 0; padding-left: 24px; } li { margin: 6px 0; }
+code { font-family: 'JetBrains Mono', monospace; font-size: 0.86em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
+pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--accent-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--accent); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
+.jr:hover { background: var(--accent); color: var(--paper); }
+figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
+figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
+figcaption .fnum { color: var(--accent); font-weight: 700; }
+.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
+.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
+table.spec { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+table.spec td, table.spec th { border-bottom: 1px dashed var(--rule); padding: 7px 10px; text-align: left; vertical-align: top; }
+table.spec th { color: var(--accent); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
+table.spec td:first-child { color: var(--muted); }
+.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
+.gloss h2 { font-size: 26px; margin-top: 0; }
+.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
+.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
+.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
+.gloss li:target { background: var(--accent-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
+@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--accent-soft); } }
+.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
+.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
+
+/* tq-specific */
+.tq-svg { width: 100%; height: auto; display: block; font-family: 'JetBrains Mono', monospace; }
+.tq-rev { opacity: 0; transition: opacity 0.6s ease; }
+figure.play .tq-rev { opacity: 1; }
+figure.play .tq-rev.d1 { transition-delay: 0.12s; }
+figure.play .tq-rev.d2 { transition-delay: 0.40s; }
+figure.play .tq-rev.d3 { transition-delay: 0.68s; }
+figure.play .tq-rev.d4 { transition-delay: 0.96s; }
+figure.play .tq-rev.d5 { transition-delay: 1.24s; }
+figure.play .tq-rev.d6 { transition-delay: 1.52s; }
+.tq-svg .grow { transform: scaleY(0); transform-origin: bottom; transition: transform 0.9s cubic-bezier(.2,.7,.2,1); }
+figure.play .tq-svg .grow { transform: scaleY(1); }
+@media (prefers-reduced-motion: reduce) { .tq-rev { opacity: 1; transition: none; } .tq-svg .grow { transform: scaleY(1); transition: none; } }
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · turboquant</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+
+<div class="masthead">
+  <span class="l">Connectionism · Personal Wiki</span>
+  <span class="r">Paper · 向量量化/KV 压缩 · TurboQuant · ICLR 2026</span>
+</div>
+
+<section class="hero">
+  <div class="issue">FIELD NOTES · 在线向量量化 · 随机旋转</div>
+  <h1 class="title">TurboQuant ·<br /><span class="em">把未知,旋成已知。</span></h1>
+  <div class="byline">Google Research · Online Vector Quantization with Near-optimal Distortion Rate · arXiv 2504.19874 · ICLR 2026</div>
+  <p class="dek">在线量化的死结:边来边压、看不到数据统计,不知道量化格子该切在哪。TurboQuant 一个几何洞察破局——先随机旋转向量,它每个坐标就服从一个固定已知的分布,于是最优量化器能离线预制、在线零成本套用。逼近信息论下界只差 ~2.7×。</p>
+</section>
+
+<div class="tldr">
+  <span class="label">TL;DR</span>
+  <p>KV cache 压缩和向量检索都要<strong>在线 / data-oblivious</strong> 量化:向量边生成边压,没法先扫全量数据算统计再定格子<a class="jr" href="#g-01">1</a>。TurboQuant 的招:<strong>先随机旋转</strong>——单位向量旋转后每个坐标服从固定已知的集中 Beta 分布(挤在 <code>±1/√d</code> 附近)、且高维<strong>近独立</strong><a class="jr" href="#g-02">2</a>,于是<strong>离线就能设计好一个最优标量量化器、在线只旋转+套</strong>,不看数据<a class="jr" href="#g-03">3</a>。各坐标各自最优复合起来 ≈ 向量最优,逼近信息论下界只差 <strong>≈2.7×</strong><a class="jr" href="#g-05">5</a>。再补一手:<strong>MSE 最优量化器会让内积估计有偏</strong>,后接 1-bit <a href="../concepts/quantized-jl.html">QJL</a> 残差纠成无偏<a class="jr" href="#g-06">6</a>。<a href="../concepts/kv-cache.html">KV</a> 上 3.5-bit 无损、2.5-bit 微降,<strong>≥6× 省内存、H100 attention 快 8×</strong><a class="jr" href="#g-11">11</a>。</p>
+</div>
+
+<h2><span class="num">§ 01</span>痛点：在线量化看不到数据,只能盲切格子</h2>
+
+<p>量化就是"把连续值塞进有限几个格子"。切格子要切在<strong>数据密集处</strong>才省 bit——离线场景可以先扫一遍全量数据、看清分布再切。但很多场景是<strong>在线 / data-oblivious</strong> 的<a class="jr" href="#g-01">1</a>:<a href="../concepts/kv-cache.html">KV cache</a><a class="jr" href="#g-12">12</a> 的 key/value 向量边生成边存、向量检索的索引也想"建索引近零成本",都<strong>没机会先看全量数据统计</strong>。不知道数据往哪偏,只能保守地均匀切,浪费 bit、失真大。</p>
+
+<figure id="fig-online">
+  <figcaption><span>FIG 01 · 离线能看清分布再切,在线只能盲切</span><span class="fnum">DATA-OBLIVIOUS</span></figcaption>
+  <svg class="tq-svg" viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg">
+    <!-- offline -->
+    <text class="tq-rev d1" x="185" y="30" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#4a6b3a">离线:先看清分布,格子切在密处</text>
+    <path class="tq-rev d1" d="M40,150 C90,150 110,70 185,70 C260,70 280,150 330,150" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.5"/>
+    <g class="tq-rev d2" stroke="#4a6b3a" stroke-width="0.8" stroke-dasharray="2 2">
+      <line x1="150" y1="80" x2="150" y2="150"/><line x1="170" y1="72" x2="170" y2="150"/><line x1="185" y1="70" x2="185" y2="150"/><line x1="200" y1="72" x2="200" y2="150"/><line x1="220" y1="80" x2="220" y2="150"/>
+    </g>
+    <text class="tq-rev d2" x="185" y="168" text-anchor="middle" font-size="8.5" fill="#7a6f5d">密处细格、疏处粗格 → 省 bit</text>
+    <!-- online -->
+    <text class="tq-rev d3" x="540" y="30" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#9b2c2c">在线:分布未知,只能均匀盲切</text>
+    <g class="tq-rev d3" stroke="#9b2c2c" stroke-width="1.1"><line x1="410" y1="72" x2="470" y2="60" marker-end="url(#tq-a1)"/></g>
+    <defs><marker id="tq-a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#9b2c2c"/></marker></defs>
+    <text class="tq-rev d3" x="405" y="66" text-anchor="end" font-size="8.5" fill="#9b2c2c">向量边来边压…</text>
+    <g class="tq-rev d4" stroke="#9b2c2c" stroke-width="0.8" stroke-dasharray="2 2">
+      <line x1="470" y1="80" x2="470" y2="150"/><line x1="505" y1="80" x2="505" y2="150"/><line x1="540" y1="80" x2="540" y2="150"/><line x1="575" y1="80" x2="575" y2="150"/><line x1="610" y1="80" x2="610" y2="150"/><line x1="645" y1="80" x2="645" y2="150"/>
+    </g>
+    <line class="tq-rev d4" x1="470" y1="150" x2="645" y2="150" stroke="#9b2c2c" stroke-width="1"/>
+    <text class="tq-rev d4" x="557" y="168" text-anchor="middle" font-size="8.5" fill="#7a6f5d">等宽格子,不知道数据堆哪 → 浪费</text>
+    <text class="tq-rev d5" x="360" y="204" text-anchor="middle" font-size="10.5" fill="#3a3128">难点:在线拿不到分布 →TurboQuant 的办法是"把分布变成已知的"(§02)</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 02</span>招一：随机旋转,把分布从"未知"变"已知"</h2>
+
+<p>核心不是压得更狠,是<strong>把未知变已知</strong><a class="jr" href="#g-02">2</a>。几何事实:<strong>把任意向量乘一个随机正交矩阵(旋一下,长度不变),坐标就被搅匀成各向同性</strong>——原来能量可能全堆在某几个坐标(不知道堆哪),旋转后<strong>每个坐标统计上都长一个样、服从同一个算得出来的分布</strong>。分布已知,就能<strong>离线</strong>把最优标量量化器设计好;在线只需旋转 + 套这个预制器<a class="jr" href="#g-03">3</a>,零数据依赖。</p>
+
+<figure id="fig-rotate">
+  <figcaption><span>FIG 02 · 旋转前能量乱堆(不知往哪偏)→ 旋转后每坐标同一窄分布</span><span class="fnum">RANDOM ROTATION</span></figcaption>
+  <svg class="tq-svg" viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="tq-r" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#34618c"/></marker></defs>
+    <!-- before: energy concentrated -->
+    <text class="tq-rev d1" x="140" y="30" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#9b2c2c">旋转前:能量乱堆</text>
+    <line x1="46" y1="180" x2="250" y2="180" class="tq-rev d1" stroke="#7a6f5d" stroke-width="1"/>
+    <g class="tq-rev d1" fill="#9b2c2c">
+      <rect class="grow" x="60" y="56" width="26" height="124" rx="2"/>
+      <rect class="grow" x="98" y="168" width="26" height="12" rx="2"/>
+      <rect class="grow" x="136" y="172" width="26" height="8" rx="2"/>
+      <rect class="grow" x="174" y="166" width="26" height="14" rx="2"/>
+      <rect class="grow" x="212" y="170" width="26" height="10" rx="2"/>
+    </g>
+    <text class="tq-rev d2" x="148" y="198" text-anchor="middle" font-size="8.5" fill="#7a6f5d">一个坐标 0.98、其余≈0 → 不知道堆哪</text>
+    <!-- rotate arrow -->
+    <line class="tq-rev d3" x1="262" y1="120" x2="330" y2="120" stroke="#34618c" stroke-width="2" marker-end="url(#tq-r)"/>
+    <text class="tq-rev d3" x="296" y="112" text-anchor="middle" font-size="10" font-weight="700" fill="#34618c">随机旋转 R</text>
+    <text class="tq-rev d3" x="296" y="134" text-anchor="middle" font-size="8" fill="#7a6f5d">长度不变</text>
+    <!-- after: uniform thin shell -->
+    <text class="tq-rev d4" x="500" y="30" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#34618c">旋转后:每坐标同一窄分布</text>
+    <rect class="tq-rev d4" x="360" y="96" width="300" height="40" rx="3" fill="#cfdcea" stroke="#34618c" stroke-dasharray="4 3"/>
+    <text class="tq-rev d4" x="666" y="112" text-anchor="end" font-size="8" fill="#34618c">±1/√d 薄壳</text>
+    <line x1="360" y1="180" x2="664" y2="180" class="tq-rev d4" stroke="#7a6f5d" stroke-width="1"/>
+    <g class="tq-rev d5" fill="#34618c">
+      <rect class="grow" x="372" y="116" width="24" height="64" rx="2"/><rect class="grow" x="404" y="120" width="24" height="60" rx="2"/><rect class="grow" x="436" y="114" width="24" height="66" rx="2"/><rect class="grow" x="468" y="118" width="24" height="62" rx="2"/><rect class="grow" x="500" y="116" width="24" height="64" rx="2"/><rect class="grow" x="532" y="120" width="24" height="60" rx="2"/><rect class="grow" x="564" y="115" width="24" height="65" rx="2"/><rect class="grow" x="596" y="118" width="24" height="62" rx="2"/><rect class="grow" x="628" y="117" width="24" height="63" rx="2"/>
+    </g>
+    <text class="tq-rev d6" x="512" y="198" text-anchor="middle" font-size="8.5" fill="#7a6f5d">全挤在 ±1/√d → 分布已知 → 一个离线预制量化器通吃所有坐标</text>
+    <text class="tq-rev d6" x="360" y="228" text-anchor="middle" font-size="10.5" font-weight="700" fill="#34618c">旋转的价值:不是压更狠,是把"数据往哪偏"从未知变成已知</text>
+  </svg>
+</figure>
+
+<h3>数字例子 · 旋转后坐标全挤到 ±1/√d</h3>
+<p>单位向量(长度 1)随机旋转后,每个坐标平方 <code>x_i²</code> 服从 <code>Beta(1/2,(d−1)/2)</code>,期望 <code>E[x_i²]=1/d</code>,所以典型幅度 ≈ <code>1/√d</code>——维度越高,所有坐标越挤在这层薄壳里:</p>
+<pre class="eq">d=4:    每坐标 ~ ±1/√4  = ±0.5     例:旋后 [0.5,−0.5,0.5,−0.5]，长度 √(4·0.25)=1 ✓
+d=100:  每坐标 ~ ±1/√100= ±0.1     每个都在 0.1 上下,同一个窄分布
+d=1000: 每坐标 ~ ±0.0316           越高维越集中</pre>
+<p>✓ 旋转前坐标可能一个 0.98、其余≈0(能量堆一处,量化器不知道堆哪);旋转后<strong>每个坐标都是同一个窄分布</strong>,`E[x_i²]=1/d` 是拿到手就能算的常数、不看任何数据——一个离线预制的量化器对所有坐标、所有输入都好使。</p>
+
+<h2><span class="num">§ 03</span>高维近独立 → 每坐标各自最优 ≈ 向量最优</h2>
+
+<p>旋转还带来第二个礼物:<strong>高维下不同坐标近独立</strong>(几乎不相关)。所以不用去解"整个向量怎么量化最优"这个难题,只要<strong>每个坐标各自用它那个一维最优标量量化器</strong>(<a href="../concepts/bin-quantization.html">bin 量化</a>的最优版<a class="jr" href="#g-09">9</a>),复合起来就 ≈ 整个向量的最优<a class="jr" href="#g-04">4</a>。TurboQuant 证明:这套逼近<strong>信息论失真下界</strong>(任何量化器的理论极限),只差一个小常数 <strong>≈2.7×</strong><a class="jr" href="#g-05">5</a>——所有 bit 宽、所有维度都成立。</p>
+
+<figure id="fig-indep">
+  <figcaption><span>FIG 03 · 近独立:各坐标各自最优,复合逼近向量最优</span><span class="fnum">≈ 2.7× LOWER BOUND</span></figcaption>
+  <svg class="tq-svg" viewBox="0 0 720 210" xmlns="http://www.w3.org/2000/svg">
+    <text class="tq-rev d1" x="150" y="28" text-anchor="middle" font-size="10" font-weight="700" fill="#34618c">每坐标 · 一维最优标量量化器</text>
+    <g class="tq-rev d2" font-size="8" fill="#3a3128" text-anchor="middle">
+      <rect x="60" y="44" width="180" height="24" rx="3" fill="#cfdcea" stroke="#34618c"/><text x="150" y="60">坐标 1 → [格子]最优标量量化</text>
+      <rect x="60" y="76" width="180" height="24" rx="3" fill="#cfdcea" stroke="#34618c"/><text x="150" y="92">坐标 2 → [格子]最优标量量化</text>
+      <rect x="60" y="108" width="180" height="24" rx="3" fill="#cfdcea" stroke="#34618c"/><text x="150" y="124">坐标 3 → [格子]最优标量量化</text>
+      <text x="150" y="150" fill="#7a6f5d">… d 个坐标,各自独立最优 …</text>
+    </g>
+    <line class="tq-rev d3" x1="248" y1="96" x2="312" y2="96" stroke="#7a6f5d" stroke-width="1.4"/>
+    <polygon class="tq-rev d3" points="312,96 304,92 304,100" fill="#7a6f5d"/>
+    <text class="tq-rev d3" x="280" y="88" text-anchor="middle" font-size="8" fill="#7a6f5d">近独立→可复合</text>
+    <rect class="tq-rev d4" x="320" y="66" width="180" height="60" rx="4" fill="#d8e6ce" stroke="#4a6b3a"/>
+    <text class="tq-rev d4" x="410" y="90" text-anchor="middle" font-size="10" font-weight="700" fill="#2f5a2a">复合 ≈ 向量最优</text>
+    <text class="tq-rev d4" x="410" y="108" text-anchor="middle" font-size="8" fill="#3a3128">不用解"整向量最优"难题</text>
+    <!-- bound bar -->
+    <text class="tq-rev d5" x="610" y="52" text-anchor="middle" font-size="9.5" font-weight="700" fill="#34618c">离信息论下界</text>
+    <line class="tq-rev d5" x1="540" y1="150" x2="680" y2="150" stroke="#7a6f5d" stroke-width="1"/>
+    <rect class="tq-rev d5 grow" x="556" y="90" width="30" height="60" rx="2" fill="#7a6f5d"/><text class="tq-rev d5" x="571" y="164" text-anchor="middle" font-size="8" fill="#7a6f5d">下界 1×</text>
+    <rect class="tq-rev d6 grow" x="620" y="70" width="30" height="80" rx="2" fill="#34618c"/><text class="tq-rev d6" x="635" y="164" text-anchor="middle" font-size="8" font-weight="700" fill="#34618c">TQ ≈2.7×</text>
+    <text class="tq-rev d6" x="610" y="184" text-anchor="middle" font-size="8" fill="#7a6f5d">小常数差距,所有 bit/维成立</text>
+  </svg>
+</figure>
+
+<h2><span class="num">§ 04</span>招二：MSE 最优会让内积有偏,QJL 残差纠回无偏</h2>
+
+<p>量化有两种"好":<strong>MSE 好</strong>(压得像原样)和<strong>内积无偏</strong>(拿压完的向量算点积,平均不偏)。麻烦是:<strong>MSE 最优的量化器,内积估计往往系统性偏小</strong>——量化误差跟向量结构相关,不是随机噪声,是每次都往同方向偏,<strong>加再多样本也纠不掉</strong><a class="jr" href="#g-06">6</a>。检索 / attention 靠内积排序,系统偏差会歪掉排名。</p>
+
+<p>TurboQuant 两阶段各管一段:阶段 1 用 MSE 量化器压主体(低失真);阶段 2 对<strong>残差</strong> <code>r=x−x̂</code> 做 <strong>1-bit <a href="../concepts/quantized-jl.html">QJL</a></strong>(符号随机投影,内积<strong>无偏</strong>)<a class="jr" href="#g-07">7</a>,把那点系统偏差换成能被平均掉的方差。</p>
+
+<figure id="fig-twostage">
+  <figcaption><span>FIG 04 · MSE-only 系统偏小(纠不掉)→ QJL 残差补回无偏</span><span class="fnum">MSE + QJL</span></figcaption>
+  <svg class="tq-svg" viewBox="0 0 720 220" xmlns="http://www.w3.org/2000/svg">
+    <defs><marker id="tq-q" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#4a6b3a"/></marker></defs>
+    <!-- number line for inner product estimate -->
+    <line x1="80" y1="120" x2="660" y2="120" class="tq-rev d1" stroke="#7a6f5d" stroke-width="1.2"/>
+    <text class="tq-rev d1" x="80" y="140" text-anchor="middle" font-size="9" fill="#7a6f5d">0.8</text>
+    <text class="tq-rev d1" x="620" y="140" text-anchor="middle" font-size="9" fill="#7a6f5d">1.05</text>
+    <!-- true value at 1.0 -->
+    <line class="tq-rev d2" x1="560" y1="80" x2="560" y2="140" stroke="#34618c" stroke-width="1.6" stroke-dasharray="4 3"/>
+    <text class="tq-rev d2" x="560" y="72" text-anchor="middle" font-size="10" font-weight="700" fill="#34618c">真内积 ⟨x,q⟩=1.00</text>
+    <!-- MSE-only biased at 0.90 -->
+    <circle class="tq-rev d3" cx="440" cy="120" r="5.5" fill="#9b2c2c"/>
+    <text class="tq-rev d3" x="440" y="104" text-anchor="middle" font-size="10" font-weight="700" fill="#9b2c2c">MSE-only ≈0.90</text>
+    <text class="tq-rev d3" x="440" y="160" text-anchor="middle" font-size="8.5" fill="#9b2c2c">系统偏小,加样本纠不掉</text>
+    <!-- QJL residual correction arrow -->
+    <line class="tq-rev d4" x1="448" y1="120" x2="552" y2="120" stroke="#4a6b3a" stroke-width="2.2" marker-end="url(#tq-q)"/>
+    <text class="tq-rev d4" x="500" y="112" text-anchor="middle" font-size="9" font-weight="700" fill="#2f5a2a">+ QJL 1-bit 残差(无偏)</text>
+    <circle class="tq-rev d5" cx="560" cy="120" r="5.5" fill="#4a6b3a"/>
+    <text class="tq-rev d5" x="560" y="178" text-anchor="middle" font-size="9" font-weight="700" fill="#2f5a2a">补回 1.00 · 多次平均收敛到真值</text>
+    <text class="tq-rev d6" x="360" y="206" text-anchor="middle" font-size="10.5" fill="#3a3128">偏差(bias)加样本纠不掉;方差(variance)能平均掉 → QJL 把前者换成后者</text>
+  </svg>
+</figure>
+
+<h3>数字例子 · 有偏 vs 无偏,差在能不能纠回</h3>
+<pre class="eq">真内积 ⟨x,q⟩ = 1.00
+只用 MSE 量化器(有偏)：每次都 ≈ 0.90 → 平均还是 0.90,系统偏小 0.10,样本再多也停 ✗
+加 QJL 残差(无偏)：0.90 + {单次乱跳、期望 0.10} → 多次平均 → 1.00 ✓</pre>
+<p>✓ 关键区别:<strong>偏差(bias)是加样本纠不掉的系统错;方差(variance)是加样本能平均掉的随机抖</strong><a class="jr" href="#g-08">8</a>。MSE 量化器给的是前者(致命),QJL 残差把它换成后者(可收敛)。最终估计既借 MSE 的低失真、又拿回内积的无偏。</p>
+
+<h2><span class="num">§ 05</span>结果与落地</h2>
+
+<p>把随机旋转 + 每坐标最优标量量化 + MSE/QJL 两阶段拼起来,得到一个逼近理论最优、又完全 data-oblivious 的在线量化器。落到 <a href="../concepts/kv-cache.html">KV cache</a> 和向量检索<a class="jr" href="#g-10">10</a>:</p>
+
+<table class="spec">
+  <tr><th>指标</th><th>TurboQuant</th></tr>
+  <tr><td>KV 量化质量</td><td><strong>3.5 bit/通道无损</strong>,2.5 bit/通道微降</td></tr>
+  <tr><td>KV 内存</td><td><strong>≥6× 省</strong></td></tr>
+  <tr><td>attention 速度</td><td>H100 上 <strong>快 8×</strong></td></tr>
+  <tr><td>离下界</td><td>≈2.7×(所有 bit 宽/维度)</td></tr>
+  <tr><td>向量检索</td><td>recall 超现有 product quantization,建索引成本近零</td></tr>
+</table>
+
+<div class="note">
+  <span class="l">放进 wiki 这条线</span>
+  <p>TurboQuant 把几条线拧一起:<a href="../concepts/random-rotation-quantization.html">随机旋转</a>(把未知分布变已知,data-oblivious 的真杠杆)+ <a href="../concepts/bin-quantization.html">最优标量量化</a>(每坐标各自最优)+ <a href="../concepts/quantized-jl.html">QJL</a> 残差(治 <a href="../concepts/mse-vs-inner-product-bias.html">MSE 最优→内积有偏</a>)。落地 <a href="../concepts/kv-cache.html">KV cache</a> 压缩与 <a href="../concepts/faiss-ann-search.html">向量检索</a>,attention 加速接 <a href="../concepts/flash-attention.html">FlashAttention</a> 那条线。一句话:<strong>随机旋转不是压得更狠,是把"我不知道数据长啥样"变成"我精确知道每个坐标的分布"——于是最优量化器离线预制、在线零成本套用。</strong></p>
+</div>
+
+<!-- glossary -->
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">在线 / data-oblivious 量化</span> · 向量边来边压,拿不到全量数据统计再定量化格子(<a href="../concepts/kv-cache.html">KV cache</a>、检索索引都是)。对比离线可先扫数据看清分布。</li>
+    <li id="g-02"><span class="term"><a href="../concepts/random-rotation-quantization.html">随机旋转 → 分布已知</a></span> · 乘随机正交矩阵旋转(长度不变),单位向量每坐标平方服从 <code>Beta(1/2,(d−1)/2)</code>、挤在 ±1/√d 附近,分布固定已知且高维近独立。</li>
+    <li id="g-03"><span class="term">离线预制 · 在线套用</span> · 分布已知 → 离线设计好最优标量量化器;在线只旋转+套,零数据依赖。旋转的价值=把未知变已知,不是压更狠。</li>
+    <li id="g-04"><span class="term">高维近独立 → 每坐标各自最优</span> · 旋转后不同坐标近独立,不必解"整向量最优",每坐标用一维最优标量量化(<a href="../concepts/bin-quantization.html">bin 量化</a>最优版)复合即可。</li>
+    <li id="g-05"><span class="term">≈2.7× 信息论下界</span> · 论文给出任何量化器的失真理论极限,TurboQuant 在所有 bit 宽/维度下只差一个小常数(≈2.7×)。</li>
+    <li id="g-06"><span class="term"><a href="../concepts/mse-vs-inner-product-bias.html">MSE 最优 → 内积有偏</a></span> · 重建最像的量化器,内积估计系统性偏(通常偏小),量化误差与向量相关 → 加样本纠不掉。检索/attention 排序会被歪。</li>
+    <li id="g-07"><span class="term"><a href="../concepts/quantized-jl.html">QJL 残差纠偏</a></span> · 阶段1 MSE 压主体,阶段2 对残差 r=x−x̂ 做 1-bit 符号随机投影(内积无偏),把系统偏差换成可平均掉的方差 → 低 MSE 且内积无偏。</li>
+    <li id="g-08"><span class="term">偏差 vs 方差</span> · 偏差=系统性错、加样本纠不掉;方差=随机抖、加样本能平均掉。两阶段的本质是把致命的偏差换成可收敛的方差。</li>
+    <li id="g-09"><span class="term">最优标量量化(bin)</span> · 一维上把格子切在概率密度高处使失真最小(Lloyd-Max 那类)。旋转后坐标分布已知,这个能离线一次算好。</li>
+    <li id="g-10"><span class="term">向量检索 / product quantization</span> · 把高维向量压成离散码做快速召回;TurboQuant recall 超现有 PQ(见 <a href="../concepts/faiss-ann-search.html">FAISS</a>),且建索引近零成本。</li>
+    <li id="g-11"><span class="term">落地数字</span> · KV 3.5-bit 无损 / 2.5-bit 微降;≥6× 省 KV 内存;H100 attention 快 8×。</li>
+    <li id="g-12"><span class="term"><a href="../concepts/kv-cache.html">KV cache</a></span> · LLM 推理缓存每层 key/value 避免重算;越长上下文越吃显存,是量化压缩的主战场,天然 online。</li>
+  </ol>
+</div>
+
+<div class="colophon">
+  <span>SOURCE · arXiv 2504.19874 · TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate (Google Research · ICLR 2026)</span>
+  <span>INGESTED · 2026-07-01</span>
+</div>
+
+</div>
+<script>
+{
+  const figs = ['fig-online','fig-rotate','fig-indep','fig-twostage'];
+  figs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const obs = new IntersectionObserver(es => {
+      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
+    }, { threshold: 0.15 });
+    obs.observe(el);
+  });
+}
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6);}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  var items={};
+  document.querySelectorAll('.gloss ol li[id^="g-"]').forEach(function(li){items[li.id]=li.innerHTML;});
+  if(!Object.keys(items).length)return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!items[id])return;
+      e.preventDefault();
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+items[id];
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+</body>
+</html>

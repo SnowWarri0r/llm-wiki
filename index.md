@@ -37,6 +37,7 @@
 - [CLIP · Learning Transferable Visual Models](wiki/papers/clip.md) — 4 亿图文对对比学习, 图像和文本对齐到同一向量空间; DALL-E / SD / LLaVA 都靠它
 - [SAM · Segment Anything](wiki/papers/sam.md) — 分割界的基础模型(Meta): 可提示分割(给点/框/字返回掩码,歧义就吐3个+IoU挑)+重编码器跑一次轻解码器~50ms可交互+数据引擎飞轮造出SA-1B(11M图/1.1B掩码,99.1%全自动,400×); 零样本迁移多任务; 图像编码器被DeepSeek-OCR借去当DeepEncoder前半
 - [PPO · Proximal Policy Optimization](wiki/papers/ppo.md) — 一行 clip 干掉 TRPO 的复杂; RLHF 的训练发动机, 撑起 ChatGPT 的对齐
+- [TurboQuant · 随机旋转把向量分布变已知](wiki/papers/turboquant.md) — 在线向量量化(ICLR2026,Google): 在线量化看不到数据统计只能盲切格子; 洞察=随机旋转让每坐标服从固定已知的集中Beta(挤±1/√d)+高维近独立→离线预制最优标量量化器在线只旋转+套(data-oblivious),逼近信息论下界差≈2.7×; 两阶段治内积偏差(MSE最优→内积系统偏小,1-bit QJL残差纠无偏); KV 3.5bit无损/2.5bit微降,≥6×省内存+H100 attention快8×; recall超PQ建索引近零成本
 - [Go GC · 从 mark-sweep 到 Green Tea](wiki/papers/go-gc.md) — 系统/runtime 深度页: 三色并发 mark-sweep + write barrier + GOGC/GOMEMLIMIT, 到 Go 1.26 默认的 Green Tea 按页扫优化
 - [康波周期 · 经济的四季](wiki/papers/kondratiev-wave.md) — 宏观/有争议框架: 50–60 年长波 + 五次技术浪潮 + 四季资产轮动 + 多周期嵌套 + 周金涛本土化; 当罗盘不当钟表
 - [缠论 · 把走势拆成可数的结构](wiki/papers/chan-theory.md) — 技术分析/自洽但主观: 分型→笔→线段→中枢 + 级别自相似 + 背驰 + 三类买卖点; 坐标系不是预言机 ｜ 形态学(主篇)
@@ -206,6 +207,9 @@
 - [生成模型数据策展](wiki/concepts/generative-data-curation.md) — 别按美学分过滤(等于把打分器偏见焊死+剪掉分布尾巴→审美收敛), 关口换成"caption准不准"; 预训练0张AI合成图(合成图"更好学"会把模型往简单分布拽给质量封顶); Krea 2灵魂
 - [SigLIP 语义去重](wiki/concepts/siglip-semantic-dedup.md) — 图压成向量, 余弦相似度>阈值算近重复每簇留一张; 删的是"语义重复"(裁剪/压缩/改水印的同一张)而非字节相同, 哈希抓不到
 - [层级 k-means 策展](wiki/concepts/hierarchical-kmeans-curation.md) — 十亿图没法逐张看: FAISS递归k-means聚成簇树, 簇心代表图给VLM审一眼按簇整批取舍; 把"逐张审查"压成"逐簇审查"
+- [随机旋转量化](wiki/concepts/random-rotation-quantization.md) — 在线量化死结=看不到分布;随机旋转把任意向量搅成各向同性,每坐标服从固定已知分布(±1/√d薄壳)+近独立→离线预制最优标量量化器、在线零成本套(data-oblivious);未知变已知才是杠杆
+- [QJL · 量化JL](wiki/concepts/quantized-jl.md) — 随机投影后只留符号(1bit),靠缩放仍给内积无偏估计(单次噪声大、多方向平均即准);TurboQuant拿它对残差纠偏
+- [MSE最优≠内积无偏](wiki/concepts/mse-vs-inner-product-bias.md) — 压得最像的量化器,点积却系统性偏小(误差与向量相关,加样本纠不掉);两阶段=MSE压主体+QJL残差把偏差换成可平均的方差
 - [FAISS · 近似最近邻](wiki/concepts/faiss-ann-search.md) — 十亿向量精确比太慢: IVF倒排(先分√N个桶只翻几桶,跳过99%)+PQ乘积量化(向量切段各压成1字节,768维float→8字节384×); 召回↔速度/内存权衡
 - [对象效果消除](wiki/concepts/object-effect-removal.md) — 删物体要连影子/反光一起抹+别凭空补; 难点=效果区常不在mask里; 两式翻车(影子赖着不走/补出新物体)对应两条解法(数据教因果/条件给意识); OmniEraser
 - [视频帧配对监督](wiki/concepts/video-frame-paired-supervision.md) — 固定机位下有物体的帧当输入、物体走后的帧当目标,影子在后帧真没了=免费ground-truth; mask只圈物体不圈影子(8%<11%)逼模型学"物体↔影子"因果; OmniEraser造13.4万对

@@ -28,21 +28,26 @@
 <div class="page">
 <div class="masthead">
   <span class="l">Connectionism · Personal Wiki</span>
-  <span class="r">精读页 · Deep Dives · 59 条目</span>
+  <span class="r">精读页 · Deep Dives · 60 条目</span>
 </div>
 
 <section class="hero">
   <div class="issue"><a href="index.html" style="color:var(--brick);text-decoration:none;">← index</a> · 按时间倒序</div>
   <h1 class="title">精读页 · Deep Dives</h1>
-  <p class="dek">共 59 条，最新在上。</p>
+  <p class="dek">共 60 条，最新在上。</p>
 </section>
 
 <div class="search">
   <input id="q" type="search" placeholder="搜索 标题 / 概念 / 术语…" autocomplete="off" spellcheck="false" />
-  <div class="chips"><button class="chip active" data-dom="">全部 <span class="c">59</span></button><button class="chip" data-dom="ML">ML <span class="c">50</span></button><button class="chip" data-dom="系统">系统 <span class="c">1</span></button><button class="chip" data-dom="金融">金融 <span class="c">7</span></button><button class="chip" data-dom="史">史 <span class="c">1</span></button></div>
+  <div class="chips"><button class="chip active" data-dom="">全部 <span class="c">60</span></button><button class="chip" data-dom="ML">ML <span class="c">51</span></button><button class="chip" data-dom="系统">系统 <span class="c">1</span></button><button class="chip" data-dom="金融">金融 <span class="c">7</span></button><button class="chip" data-dom="史">史 <span class="c">1</span></button></div>
 </div>
 <div id="nores" class="nores" hidden>没有匹配的条目 — 换个词试试</div>
 <div class="entries">
+<div class="entry paper" data-domains="ML" data-s="turboquant · 随机旋转把&quot;任意向量&quot;变成&quot;分布已知&quot;,在线量化逼近理论最优 在线向量量化(边来边压、看不到数据统计)老做不到最优失真。turboquant 一个几何洞察破局:**先随机旋转向量,它的每个坐标就服从一个固定已知的分布(集中的 beta),而且高维下坐标之间近独立**([[random-rotation-quantization]])——于是可以**离线就设计好一个最优标量量化器、在线只旋转+套用**,不看数据。逼近信息论下界只差 ~2.7×。再补一手两阶段:mse 量化器会让内积估计有偏,后接 1-bit [[quantized-jl]] 残差纠成无偏([[mse-vs-inner-product-bias]])。用在 [[kv-cache]] 压缩:3.5-bit 质量无损、2.5-bit 微降,≥6× 省内存、h100 上 attention 快 8×。 turboquant paper ml § 01痛点：在线量化看不到数据,只能盲切格子 § 02招一：随机旋转,把分布从&quot;未知&quot;变&quot;已知&quot; § 03高维近独立 → 每坐标各自最优 ≈ 向量最优 § 04招二：mse 最优会让内积有偏,qjl 残差纠回无偏 § 05结果与落地 引用 / 术语表 数字例子 · 旋转后坐标全挤到 ±1/√d 数字例子 · 有偏 vs 无偏,差在能不能纠回 在线 / data-oblivious 量化 随机旋转 → 分布已知 离线预制 · 在线套用 高维近独立 → 每坐标各自最优 ≈2.7× 信息论下界 mse 最优 → 内积有偏 qjl 残差纠偏 偏差 vs 方差 最优标量量化(bin) 向量检索 / product quantization 落地数字 kv cache">
+  <h3><a href="papers/turboquant.html">TurboQuant · 随机旋转把&quot;任意向量&quot;变成&quot;分布已知&quot;,在线量化逼近理论最优</a></h3>
+  <p class="hook">在线向量量化(边来边压、看不到数据统计)老做不到最优失真。TurboQuant 一个几何洞察破局:**先随机旋转向量,它的每个坐标就服从一个固定已知的分布(集中的 Beta),而且高维下坐标之间近独立**([[random-rotation-quantization]])——于是可以**离线就设计好一个最优标量量化器、在线只旋转+套用**,不看数据。逼近信息论下界只差 ~2.7×。再补一手两阶段:MSE 量化器会让内积估计有偏,后接 1-bit [[quantized-jl]] 残差纠成无偏([[mse-vs-inner-product-bias]])。用在 [[kv-cache]] 压缩:3.5-bit 质量无损、2.5-bit 微降,≥6× 省内存、H100 上 attention 快 8×。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-07-01</span><a class="pill" href="https://arxiv.org/abs/2504.19874" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
 <div class="entry paper" data-domains="ML" data-s="diffusionnft · 把扩散的 rl 从&quot;反向采样&quot;搬回&quot;前向加噪&quot; 给扩散模型做在线 rl 的老路是把反向采样切成多步 mdp 再套 grpo,但继承一身毛病(锁死一阶 sde solver、前后向不一致、cfg 要两套模型)。diffusionnft 换思路:**一条前向加噪过程是唯一的、反向去噪有无数条**,那就把 rl 直接做在前向上——用奖励把样本切成正/负两堆([[negative-aware-finetuning]]),正负速度之差就是隐式的改进方向([[reinforcement-guidance]],本质是把 cfg 当成&quot;离线版的奖励引导&quot;)。整个目标退化成一个**监督式 [[flow-matching]] 损失**:免似然、任意 solver、只要干净图不要轨迹,比 flowgrpo 快 3–25×。 diffusionnft paper ml § 01似然墙：扩散为什么不能照搬 grpo § 02关键洞察：前向只有一条，反向有无数条 § 03奖励切正负：两堆之差就是该走的方向 § 04一个模型隐式装正负，rl 揉进监督损失 § 05结果：又快又强，cfg-free 还赢 cfg 引用 / 术语表 数字例子 · 正负速度对称夹住 v_old 似然墙 flowgrpo 的三个坑 前向唯一 / 反向无数 奖励软切正负 nft · 负样本感知微调 强化引导 / δ 隐式参数化 v_θ± 监督损失（非 policy gradient） 免似然 · 任意 solver · 只存干净图 3–25× 效率 cfg-free omni-model sd3.5-m / lora r32">
   <h3><a href="papers/diffusionnft.html">DiffusionNFT · 把扩散的 RL 从&quot;反向采样&quot;搬回&quot;前向加噪&quot;</a></h3>
   <p class="hook">给扩散模型做在线 RL 的老路是把反向采样切成多步 MDP 再套 GRPO,但继承一身毛病(锁死一阶 SDE solver、前后向不一致、CFG 要两套模型)。DiffusionNFT 换思路:**一条前向加噪过程是唯一的、反向去噪有无数条**,那就把 RL 直接做在前向上——用奖励把样本切成正/负两堆([[negative-aware-finetuning]]),正负速度之差就是隐式的改进方向([[reinforcement-guidance]],本质是把 CFG 当成&quot;离线版的奖励引导&quot;)。整个目标退化成一个**监督式 [[flow-matching]] 损失**:免似然、任意 solver、只要干净图不要轨迹,比 FlowGRPO 快 3–25×。</p>

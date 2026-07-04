@@ -31,7 +31,7 @@
 <div class="page">
 <div class="masthead">
   <span class="l">Connectionism · Personal Wiki</span>
-  <span class="r">索引 · 265 条目</span>
+  <span class="r">索引 · 269 条目</span>
 </div>
 
 <section class="hero">
@@ -42,15 +42,19 @@
 
 <h2><span class="num">§ 01</span>浏览 · Browse by type</h2>
 <div class="catcards">
-<a class="catcard" href="papers.html"><span class="n">59</span><span class="lbl">精读页 · Deep Dives</span><span class="d">手工打磨的论文 / 源码精读页</span></a>
+<a class="catcard" href="papers.html"><span class="n">60</span><span class="lbl">精读页 · Deep Dives</span><span class="d">手工打磨的论文 / 源码精读页</span></a>
 <a class="catcard" href="books.html"><span class="n">22</span><span class="lbl">Books · 书籍精讲</span><span class="d">非 ML 书籍的章节精讲</span></a>
 <a class="catcard" href="topics.html"><span class="n">4</span><span class="lbl">Topics · 综合</span><span class="d">跨多个源的横向综合</span></a>
-<a class="catcard" href="concepts.html"><span class="n">178</span><span class="lbl">Concepts · 概念</span><span class="d">跨论文复用的概念颗粒</span></a>
+<a class="catcard" href="concepts.html"><span class="n">181</span><span class="lbl">Concepts · 概念</span><span class="d">跨论文复用的概念颗粒</span></a>
 <a class="catcard" href="threads.html"><span class="n">2</span><span class="lbl">Threads · 思考</span><span class="d">个人思考线 / 开放问题</span></a>
 </div>
 
 <h2><span class="num">§ 02</span>最近更新 · Recent</h2>
 <div class="timeline">
+<a class="tl-row" href="papers/turboquant.html"><span class="tl-date">2026-07-01</span><span class="tl-cat">paper</span><span class="tl-title">TurboQuant · 随机旋转把&quot;任意向量&quot;变成&quot;分布已知&quot;,在线量化逼近理论最优</span><span class="tl-hook">在线向量量化(边来边压、看不到数据统计)老做不到最优失真。TurboQuant 一个几何洞察破局:**先随机旋转向量,它的每个坐标就服从一个固定已知的分布(集中的 Beta),而且高维下坐标之间近独立**([[random-rotation-quantization]])——于是可以**离线就设计好一个最优标量量化器、在线只旋转+套用**,不看数据。逼近信息论下界只差 ~2.7×。再补一手两阶段:MSE 量化器会让内积估计有偏,后接 1-bit [[quantized-jl]] 残差纠成无偏([[mse-vs-inner-product-bias]])。用在 [[kv-cache]] 压缩:3.5-bit 质量无损、2.5-bit 微降,≥6× 省内存、H100 上 attention 快 8×。</span></a>
+<a class="tl-row" href="concepts/mse-vs-inner-product-bias.html"><span class="tl-date">2026-07-01</span><span class="tl-cat">concept</span><span class="tl-title">MSE 最优 ≠ 内积无偏 · 压得最像,点积却系统性偏</span><span class="tl-hook">按&quot;重建误差最小(MSE)&quot;设计的量化器,把向量压得最像原样;但拿压完的向量去算内积(点积),结果会**系统性地偏**(通常偏小)——因为量化误差跟向量本身相关。两个目标不是一回事,得分开治。</span></a>
+<a class="tl-row" href="concepts/quantized-jl.html"><span class="tl-date">2026-07-01</span><span class="tl-cat">concept</span><span class="tl-title">QJL · 1-bit 符号随机投影,给内积一个无偏估计</span><span class="tl-hook">Johnson-Lindenstrauss(JL)说随机投影能保住向量间的距离/内积;QJL 更狠——投影后**只留符号(1 bit)**,靠一个缩放系数,仍能给两个向量的内积一个**无偏**估计(平均意义上不偏不倚,只是有点方差),存储便宜到每维 1 bit。</span></a>
+<a class="tl-row" href="concepts/random-rotation-quantization.html"><span class="tl-date">2026-07-01</span><span class="tl-cat">concept</span><span class="tl-title">随机旋转量化 · 把&quot;不知道数据长啥样&quot;变成&quot;精确知道每个坐标的分布&quot;</span><span class="tl-hook">在线量化的死结是&quot;看不到数据统计,不知道该把量化格子切在哪&quot;;随机旋转一下向量,它每个坐标就服从一个**固定、已知**的分布(集中的 Beta),而且高维下坐标之间**近独立**——于是最优量化器能**离线预制好、在线只旋转+套用**,完全不看数据。</span></a>
 <a class="tl-row" href="papers/diffusionnft.html"><span class="tl-date">2026-06-30</span><span class="tl-cat">paper</span><span class="tl-title">DiffusionNFT · 把扩散的 RL 从&quot;反向采样&quot;搬回&quot;前向加噪&quot;</span><span class="tl-hook">给扩散模型做在线 RL 的老路是把反向采样切成多步 MDP 再套 GRPO,但继承一身毛病(锁死一阶 SDE solver、前后向不一致、CFG 要两套模型)。DiffusionNFT 换思路:**一条前向加噪过程是唯一的、反向去噪有无数条**,那就把 RL 直接做在前向上——用奖励把样本切成正/负两堆([[negative-aware-finetuning]]),正负速度之差就是隐式的改进方向([[reinforcement-guidance]],本质是把 CFG 当成&quot;离线版的奖励引导&quot;)。整个目标退化成一个**监督式 [[flow-matching]] 损失**:免似然、任意 solver、只要干净图不要轨迹,比 FlowGRPO 快 3–25×。</span></a>
 <a class="tl-row" href="concepts/diffusion-rl-likelihood-barrier.html"><span class="tl-date">2026-06-30</span><span class="tl-cat">concept</span><span class="tl-title">扩散 RL 的似然墙 · 为什么不能照搬 GRPO,以及绕反向的代价</span><span class="tl-hook">[[policy-gradient]]/[[ppo]]/[[grpo]] 都要&quot;模型给这个样本的概率&quot;,LLM 逐 token 现成、扩散却算不出来(似然只能靠昂贵近似);主流绕法是把**反向去噪**切成多步马尔可夫过程让每步概率可算,但这条路锁死采样器、还可能让模型偏离前向过程。</span></a>
 <a class="tl-row" href="concepts/negative-aware-finetuning.html"><span class="tl-date">2026-06-30</span><span class="tl-cat">concept</span><span class="tl-title">负样本感知微调 · NFT · 用奖励切正负,在前向过程上把 RL 折成监督损失</span><span class="tl-hook">给每张生成图打个奖励 `r∈[0,1]`,按 `r` 把样本软切成正堆(高奖励)和负堆(低奖励);让一个模型同时学&quot;正速度&quot;和&quot;负速度&quot;,正负之差自然指向&quot;该往哪改&quot;——于是扩散的在线 RL 退化成一个**加权的监督 [[flow-matching]] 损失**,不碰似然、不碰反向采样轨迹。</span></a>
@@ -61,10 +65,6 @@
 <a class="tl-row" href="concepts/distribution-aligned-sft.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">分布对齐的 SFT · 数据好不好，是相对你这个模型说的</span><span class="tl-hook">微调时别只挑&quot;绝对最强&quot;的回答，挑**贴合目标模型自己分布**的那条（它给高概率/低困惑度）——既学到任务，又少把模型从预训练分布上拽走。</span></a>
 <a class="tl-row" href="concepts/object-background-guidance.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">双条件输入 · 不光告诉模型&quot;周围长啥样&quot;,还告诉它&quot;要删的是这个&quot;</span><span class="tl-hook">普通 inpaint 只把**背景上下文**喂给扩散模型,模型不知道挖空的洞里&quot;本该是空的&quot;,于是照周围猜着补出个新物体;OmniEraser 把**要删的物体本身**也作为一路条件一起喂进去,模型就明确知道&quot;这块是要清掉的东西、那块是要保留的背景&quot;,不再瞎补。</span></a>
 <a class="tl-row" href="concepts/object-effect-removal.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">对象效果消除 · 抹的不只是物体,还有它在世界上留下的痕迹</span><span class="tl-hook">真正的&quot;删除一个物体&quot;要连它的**影子、反光、倒影**一起抹掉,并把那块还原成合理的空背景;只抠掉物体本体、留下一摊孤零零的影子,看着比不删还假。</span></a>
-<a class="tl-row" href="concepts/on-policy-vs-off-policy.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">on-policy vs off-policy · 学自己刚做的，还是学别人/旧的</span><span class="tl-hook">on-policy = 拿**当前策略自己刚生成**的数据学（信号对得准、稳，但得不断现采）；off-policy = 拿**别的策略**（旧的自己/别的模型/人类）的数据学（能复用、便宜，但分布错位、要纠偏）。</span></a>
-<a class="tl-row" href="concepts/parallel-transformer-block.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">并行 Transformer 块 · attention 和 MLP 不接力,同时算再相加</span><span class="tl-hook">普通 Transformer 块是&quot;先注意力、再前馈&quot;两路接力;并行块让两路**读同一份归一化输入、各算各的、最后一起加回主干**,省一次归一化、还能把两路的第一个大矩阵乘拼成一个 GEMM 一次算完——快 ~15%,表达力几乎不掉。GPT-J / PaLM / ViT-22B / [[flux-1]] 单流块都用它。</span></a>
-<a class="tl-row" href="concepts/perplexity.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">困惑度 Perplexity · 模型对一段话有多&quot;意外&quot;</span><span class="tl-hook">把模型在一段文本上的平均交叉熵取指数，得到一个&quot;等效分支数&quot;：困惑度 = exp(平均每 token 的负对数概率)；越低 = 模型觉得这段话越自然、越在意料之中。</span></a>
-<a class="tl-row" href="concepts/video-frame-paired-supervision.html"><span class="tl-date">2026-06-29</span><span class="tl-cat">concept</span><span class="tl-title">视频帧白送的成对监督 · 物体自己会走,等于免费拍了 before/after</span><span class="tl-hook">要教模型&quot;把物体连影子一起抹掉&quot;,最难的是拿到 ground-truth(抹干净后的真实画面);视频里物体本来就会移动,**有物体的那一帧当输入、物体离开后的那一帧当目标**,影子/反光在后一帧里真的没了——监督信号白送,不用手工修图。</span></a>
 </div>
 <div class="colophon">
   Renderer / <code>render.py</code> · Pattern / <a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f" target="_blank">Karpathy LLM Wiki</a> · Source / <a href="https://github.com/SnowWarri0r/llm-wiki" target="_blank">github.com/SnowWarri0r/llm-wiki</a>
