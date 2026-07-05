@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>MAS · 动态规划找文本↔音频的单调对齐 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · monotonic-alignment-search</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>MAS · 动态规划找文本↔音频的单调对齐</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>文本有 N 个音素、音频有 T 帧(T 远大于 N),谁对应谁不知道;MAS 用动态规划找一条<strong>单调</strong>(不回头)的对齐——每个音素占连续的若干帧、依次铺满全部 T 帧——且让整体似然最大,不需要外部对齐器。</p>
+<h2>直觉 · 为什么难,为什么必须单调</h2>
+<p>一个音素会持续好几帧(拖长音就更多),但训练时没人告诉你"第 3 帧属于第几个音素"。要学好,得知道这个对齐。两个约束让问题可解:</p>
+<ul>
+<li><strong>单调</strong>:说话是从左念到右的,对齐不能倒退、不能跳过——第 i 帧对应的音素,不会比第 i−1 帧的更靠前。</li>
+<li><strong>满覆盖</strong>:每个音素至少占 1 帧,所有帧都被覆盖。</li>
+</ul>
+<p>在这两个约束下,"最优对齐"能用动态规划高效搜出来(类似 DTW 找最优路径),避免了穷举天文数字种对齐。</p>
+<h2>怎么做的 · DP 在对齐矩阵上找最优单调路径</h2>
+<pre><code>建一张 N×T 的打分表,格子(i,j)= &quot;第 i 个音素配第 j 帧&quot;的对数似然
+只允许两种走法(保证单调):
+  → 同一音素多占一帧(右走)     ↘ 换到下一个音素(右下走)
+DP 累计每条路径的总分,回溯出总分最大的那条阶梯路径 = 最优对齐
+</code></pre>
+<p>训练时用当前模型算这张表、MAS 定对齐,再拿对齐去优化模型——迭代收敛。承自 Glow-TTS。</p>
+<h2>数字例子 · 3 音素对齐 8 帧</h2>
+<p>音素 [a, b, c],音频 8 帧。单调对齐 = 把 8 帧切成 3 段连续块:</p>
+<pre><code>一种候选:a→帧1-3   b→帧4-5   c→帧6-8     时长 [3,2,3] 和=8 ✓
+路径(阶梯,只右走/右下走):
+音素c            ■ ■ ■
+音素b        ■ ■
+音素a  ■ ■ ■
+      帧1 2 3 4 5 6 7 8
+DP 会在所有&quot;和=8 的单调切法&quot;里,挑总似然最高的那种切法
+</code></pre>
+<p>✓ 关键是<strong>只准右走(同音素续帧)和右下走(换下一音素)</strong>,所以路径必是不回头的阶梯——这就是"单调"。挑出的时长 [3,2,3] 之后还拿去训 <a href="../concepts/stochastic-duration-predictor.html">stochastic-duration-predictor</a>,让推理时不看音频也能预测节奏。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/vits.html">vits</a> · 用 MAS 在训练中定文本↔音频对齐(无需外部对齐器)</li>
+<li><a href="../concepts/stochastic-duration-predictor.html">stochastic-duration-predictor</a> · MAS 定出的时长,拿去训时长预测器</li>
+<li><a href="../concepts/conditional-vae.html">conditional-vae</a> · 对齐让文本先验能逐帧对上音频潜变量</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/vits.html"><span class="cat">paper</span>VITS · 把 VAE + 归一化流 + GAN 拧成一个端到端 TTS</a></li><li><a href="../concepts/stochastic-duration-predictor.html"><span class="cat">concept</span>随机时长预测器 · 给每个音素的时长一个&quot;分布&quot;,而不是一个定值</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/monotonic-alignment-search.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

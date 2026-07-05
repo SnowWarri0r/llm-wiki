@@ -25,6 +25,7 @@
 - [Interaction Models · Thinking Machines](wiki/papers/interaction-models-tml.md) — 把交互能力做进权重的 276B MoE 模型
 - [Fish Audio S2 Pro](wiki/papers/fish-speech-s2-pro.md) — Dual-AR + RVQ + GRPO 的开源 TTS
 - [ViiTorVoice · 低帧率语义码+并行填声](wiki/papers/viitorvoice.md) — 开源流式零样本 TTS 引擎(无独立论文,思路源自 DualCodec+OmniVoice): 三招各砍一刀延迟—①DualCodec 把 24kHz 压到 12.5 帧/秒,RVQ-1 语义(w2v-BERT 蒸馏,码本16384)+RVQ 2-8 声学残差; ②NAR 掩码并行填声(像完形填空,步数从200降到~8); ③首块流式首帧~60ms; 给参考音零样本克隆+两路CFG调情绪
+- [VITS · VAE+流+GAN 端到端 TTS](wiki/papers/vits.md) — 2021里程碑第一个好用的端到端并行TTS(ICML): 一个模型文本→波形,治两段式(声学模型→mel + vocoder)vocoder吃假mel失配; 条件VAE骨架(后验编码器→潜变量z→HiFi-GAN解码器,ELBO=重建−KL)+归一化流掰简单文本先验够到复杂音频后验+MAS动态规划找单调对齐(无外部对齐器)+随机时长预测器建模一对多节奏+HiFi-GAN对抗; MOS 4.43逼近真人4.46(两段未调3.77),合成×67实时
 - [RoPE · Rotary Position Embedding](wiki/papers/rope.md) — 不加位置向量，旋转 Q/K 让点积天然含相对位置；LLaMA / Mistral / Qwen 全在用
 - [Whisper](wiki/papers/whisper.md) — 68 万小时弱监督训 ASR，zero-shot 碾压精标模型；语音领域的 GPT 时刻
 - [Qwen3-ASR · 给 LLM 接个耳朵](wiki/papers/qwen3-asr.md) — 不从头训ASR: 预训练Qwen3当解码器+AuT音频编码器(8×下采样12.5Hz+动态窗口流式/离线)+projector; modality-projector生产级; prompt塞热词定制转写; RL用GSPO; 带口音英语完胜Whisper
@@ -249,6 +250,10 @@
 - [Speaker Embedding · 声纹嵌入](wiki/concepts/speaker-embedding.md) — 语音→定长"身份向量",抽"谁说的"; i-vector→x-vector→ECAPA代际; 余弦/PLDA打分判同异
 - [Statistics Pooling · 统计池化](wiki/concepts/statistics-pooling.md) — 沿时间求μ+σ把变长帧序列塌成定长向量; "变长→定长"核心一步,跟帧数无关
 - [TDNN · 时延网络](wiki/concepts/time-delay-neural-network.md) — 逐帧+膨胀上下文,本质dilated conv1d; 三层把感受野铺到15帧; x-vector帧级主干
+- [条件 VAE](wiki/concepts/conditional-vae.md) — 潜变量z:后验编码器从数据得z、解码器还原、先验从条件得z; ELBO=重建−KL; VITS骨架
+- [归一化流](wiki/concepts/normalizing-flow.md) — 一串可逆变换把简单高斯掰成复杂分布; 可逆→正向采样+反向精确算概率(变量替换+雅可比); VITS用它掰先验
+- [MAS · 单调对齐搜索](wiki/concepts/monotonic-alignment-search.md) — 动态规划在N×T表上找文本↔音频的单调阶梯对齐(只右走/右下走),无需外部对齐器; 承Glow-TTS
+- [随机时长预测器](wiki/concepts/stochastic-duration-predictor.md) — 给每音素时长一个分布(基于流)、采样出节奏,建模一对多; VITS比确定性DDP更自然
 
 ### 视觉
 - [Patch Embedding](wiki/concepts/patch-embedding.md) — 图切成 16×16 块, 每块拉平投影成 token, ViT 唯一的工程创新

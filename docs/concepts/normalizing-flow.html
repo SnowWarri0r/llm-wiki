@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>归一化流 · 用可逆变换把简单分布掰成复杂分布 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · normalizing-flow</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>归一化流 · 用可逆变换把简单分布掰成复杂分布</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>拿一串<strong>可逆</strong>的变换,把一个简单分布(高斯)一步步掰成任意复杂的分布;因为可逆,既能正向采样、又能反向精确算出任一点的概率(靠变量替换 + 雅可比行列式)。</p>
+<h2>直觉 · 为什么要"可逆"</h2>
+<p>生成建模常要一个既能采样、又能算准概率的分布。简单高斯两样都行但太死板;复杂分布表达力够但概率难算。归一化流的折中:<strong>从简单高斯出发,套一串可逆变换 f</strong>。</p>
+<ul>
+<li>正向:采个高斯噪声 ε,过 f 得到复杂样本 z=f(ε)。</li>
+<li>反向:给个 z,用 f⁻¹ 退回 ε,再用"变量替换公式"精确算出 z 的概率。</li>
+</ul>
+<p>可逆是关键——不可逆就退不回去、算不了概率。每层通常设计成好求逆、雅可比好算(如仿射耦合层)。</p>
+<h2>怎么做的 · 变量替换 + 雅可比</h2>
+<pre><code>z = f(ε),  ε ~ 简单高斯
+log p(z) = log p(ε)  −  log |det (∂f/∂ε)|
+            └─简单可算─┘   └─这层&quot;拉伸了多少&quot;的修正─┘
+堆很多层 f₁∘f₂∘…∘f_k → 简单高斯逐步变复杂;每层的 log|det| 累加
+</code></pre>
+<p>雅可比行列式 = 这个变换把空间"拉伸/压缩"了多少;概率要按拉伸量修正(拉开了密度就摊薄)。</p>
+<h2>数字例子 · 一维流的概率修正</h2>
+<p>最简单的可逆变换 z = f(ε) = 2ε + 1(拉伸 2 倍、平移 1):</p>
+<pre><code>ε ~ N(0,1)。取 ε=0.5 → z = 2·0.5 + 1 = 2.0
+导数 dz/dε = 2 → |雅可比| = 2
+p(z=2.0) = p(ε=0.5) / 2          # 拉伸 2 倍 → 密度摊薄成一半
+         = 0.352 / 2 = 0.176
+反向:给 z=2.0 → ε=(2.0−1)/2=0.5 精确退回 ✓
+</code></pre>
+<p>✓ 拉伸 2 倍把密度摊薄一半,这就是 log|det| 修正在做的事。真实归一化流把 2ε+1 换成很多层非线性可逆变换,就能把高斯掰成任意复杂形状,同时每一点概率都算得准。<a href="../papers/vits.html">vits</a> 就用它把"简单文本先验"掰复杂,去够音频后验。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/vits.html">vits</a> · 用归一化流提升先验表达力,缩小与音频后验的 KL</li>
+<li><a href="../concepts/conditional-vae.html">conditional-vae</a> · 流掰的就是 CVAE 的先验</li>
+<li><a href="../concepts/stochastic-duration-predictor.html">stochastic-duration-predictor</a> · VITS 里时长也用流(建模时长分布)</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · 同叫"流"但不同:flow matching 学连续速度场 ODE,不需逐层可逆/雅可比;归一化流是离散可逆层 + 精确似然</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/vits.html"><span class="cat">paper</span>VITS · 把 VAE + 归一化流 + GAN 拧成一个端到端 TTS</a></li><li><a href="../concepts/conditional-vae.html"><span class="cat">concept</span>条件 VAE · 学一个潜变量,把数据编进去再还原(带条件)</a></li><li><a href="../concepts/stochastic-duration-predictor.html"><span class="cat">concept</span>随机时长预测器 · 给每个音素的时长一个&quot;分布&quot;,而不是一个定值</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/normalizing-flow.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
