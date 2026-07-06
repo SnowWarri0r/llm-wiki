@@ -23,9 +23,9 @@ updated: 2026-06-29
 对付这两个毛病,要两条腿:
 ```
 影子清不掉  → 用带真实光影的成对数据,且 mask 故意不圈影子,
-              逼模型学到"物体↔效果"的关联   ([[video-frame-paired-supervision]])
+              逼模型学到"物体↔效果"的关联   (见 video-frame-paired-supervision)
 凭空补物体  → 把"要删的物体"也作为条件喂进去,
-              让模型明确"这块要清空"        ([[object-background-guidance]])
+              让模型明确"这块要清空"        (见 object-background-guidance)
 ```
 
 ## 链接
