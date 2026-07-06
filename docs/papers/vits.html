@@ -249,7 +249,7 @@ figure.play .vt-svg .grow { transform: scaleY(1); }
 
 <h2><span class="num">§ 04</span>MAS：文本和音频怎么对齐(单调 + 动态规划)</h2>
 
-<p>还有个硬问题:文本 N 个音素、音频 T 帧(T≫N),训练时没人告诉你"第 3 帧属于第几个音素"。<a href="../concepts/monotonic-alignment-search.html">MAS</a><a class="jr" href="#g-07">7</a> 用动态规划在一张 N×T 打分表上找<strong>使似然最大的单调对齐</strong>——每个音素占连续若干帧、依次铺满全部帧,只准"右走(同音素续帧)"或"右下走(换下一音素)",所以路径必是不回头的阶梯<a class="jr" href="#g-08">8</a>。不用外部对齐器(承自 Glow-TTS)。</p>
+<p>还有个硬问题:文本 N 个音素、音频 T 帧(T≫N),训练时没人告诉你"第 3 帧属于第几个音素"。<a href="../concepts/monotonic-alignment-search.html">MAS</a><a class="jr" href="#g-07">7</a> 用动态规划在一张 N×T 打分表上找<strong>使似然最大的单调对齐</strong>——每个音素占连续若干帧、依次铺满全部帧,只准"右走(同音素续帧)"或"右上走(换下一音素)",所以路径必是不回头的阶梯<a class="jr" href="#g-08">8</a>。不用外部对齐器(承自 Glow-TTS)。</p>
 
 <figure id="fig-mas">
   <figcaption><span>FIG 04 · 在 N×T 打分表上用 DP 找单调阶梯路径(3 音素对齐 8 帧)</span><span class="fnum">MONOTONIC ALIGN</span></figcaption>
@@ -286,7 +286,7 @@ figure.play .vt-svg .grow { transform: scaleY(1); }
     <!-- staircase path arrows -->
     <text class="vt-rev d3" x="560" y="90" text-anchor="start" font-size="9" font-weight="700" fill="#6f2a44">阶梯路径</text>
     <text class="vt-rev d3" x="560" y="108" text-anchor="start" font-size="8.5" fill="#7a6f5d">→ 右:同音素续帧</text>
-    <text class="vt-rev d3" x="560" y="124" text-anchor="start" font-size="8.5" fill="#7a6f5d">↘ 右下:换下一音素</text>
+    <text class="vt-rev d3" x="560" y="124" text-anchor="start" font-size="8.5" fill="#7a6f5d">↗ 右上:换下一音素</text>
     <text class="vt-rev d4" x="334" y="230" text-anchor="middle" font-size="10.5" font-weight="700" fill="#3a3128">DP 在所有"单调切法"里挑总似然最大的 → 时长 [3, 2, 3](和=8)</text>
   </svg>
 </figure>
@@ -361,7 +361,7 @@ figure.play .vt-svg .grow { transform: scaleY(1); }
     <li id="g-05"><span class="term"><a href="../concepts/normalizing-flow.html">归一化流</a></span> · 一串可逆变换把简单高斯掰成复杂分布;可逆 → 能正向采样、反向精确算概率(变量替换 + 雅可比)。</li>
     <li id="g-06"><span class="term">先验表达力</span> · 文本先验太简单够不着音频后验,套流把先验掰复杂,让 KL 不靠"两边将就"就能拉近。</li>
     <li id="g-07"><span class="term"><a href="../concepts/monotonic-alignment-search.html">MAS 单调对齐</a></span> · 动态规划在 N×T 打分表上找使似然最大的单调对齐;每音素占连续若干帧,不用外部对齐器(承 Glow-TTS)。</li>
-    <li id="g-08"><span class="term">单调 / 动态规划</span> · 说话从左到右 → 对齐只准右走(续帧)或右下走(换音素),路径是不回头的阶梯;DP 高效找最优。</li>
+    <li id="g-08"><span class="term">单调 / 动态规划</span> · 说话从左到右 → 对齐只准右走(续帧)或右上走(换音素,图里 a→b→c 自下而上),路径是不回头的阶梯;DP 高效找最优。</li>
     <li id="g-09"><span class="term"><a href="../concepts/stochastic-duration-predictor.html">随机时长预测器</a></span> · 基于流给每音素时长一个分布、采样出节奏,而非固定值;建模节奏的一对多。</li>
     <li id="g-10"><span class="term">一对多</span> · 同一文本可有多种自然说法(音高/节奏)。VITS 靠潜变量采样 + 随机时长把这份多样性还给语音。</li>
     <li id="g-11"><span class="term">对抗训练</span> · 借 HiFi-GAN 判别器(多周期)+ 特征匹配损失,逼解码器产出的波形逼真到判别器分不出真假。</li>
