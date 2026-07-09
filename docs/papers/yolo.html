@@ -230,20 +230,63 @@ figure.play .yl-svg .pop { transform: scale(1); }
   </svg>
 </figure>
 
-<h3>数字例子 · 大框小框的误差要区别对待</h3>
-<p>损失是误差平方和,但做了三处修<a class="jr" href="#g-07">7</a>:<code>λ_coord=5</code> 放大坐标损失(位置最该学准)、<code>λ_noobj=0.5</code> 压低"空格子"的置信度损失(7×7 里大多数格没物体,不压会淹没有物体的信号)、坐标里 <strong>w,h 取平方根再比</strong>(同样差 10 像素,大框该比小框宽容):</p>
+<h2><span class="num">§ 04</span>训练：一个多项损失 + "责任框"分工</h2>
+
+<p>YOLO 用一个<strong>误差平方和</strong>损失,一次性约束 7×7×30 的整块输出。难点不在公式,在<strong>该对谁算损失</strong>。规则:每个物体分给"中心所在的格子";那个格子的 2 个框里,<strong>和真值 <a href="../concepts/iou-intersection-over-union.html">IOU</a> 更高的那个当"责任框"</strong>,只有它吃坐标 + 物体置信度损失——这让同格两个框自然<strong>分工</strong>(一个专学高瘦、一个专学矮胖),不再抢同一种形状<a class="jr" href="#g-12">12</a>。</p>
+
+<figure id="fig-loss">
+  <figcaption><span>FIG 04 · 责任框(同格 IOU 高者)+ 损失拆 5 块及其权重</span><span class="fnum">TRAINING LOSS</span></figcaption>
+  <svg class="yl-svg" viewBox="0 0 720 272" xmlns="http://www.w3.org/2000/svg">
+    <!-- LEFT: responsible box selection -->
+    <text class="yl-rev d1" x="134" y="28" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#c85e12">同格 2 框,IOU 高者当责任框</text>
+    <rect class="yl-rev d1" x="48" y="48" width="172" height="140" fill="#eef0e6" stroke="#bfb398"/>
+    <rect class="yl-rev d2" x="74" y="76" width="104" height="84" fill="none" stroke="#4a6b3a" stroke-width="2"/>
+    <text class="yl-rev d2" x="126" y="70" text-anchor="middle" font-size="9" font-weight="700" fill="#2f5a2a">真值框</text>
+    <rect class="yl-rev d3" x="82" y="84" width="104" height="84" fill="none" stroke="#c85e12" stroke-width="2.6"/>
+    <rect class="yl-rev d3" x="120" y="126" width="74" height="52" fill="none" stroke="#7a6f5d" stroke-width="1.4" stroke-dasharray="4 3"/>
+    <g class="yl-rev d3" font-size="9" font-weight="700">
+      <rect x="56" y="200" width="11" height="11" rx="2" fill="#c85e12"/><text x="72" y="210" fill="#3a3128">框1 IOU 0.7 → 责任(吃坐标+置信度)</text>
+      <rect x="56" y="222" width="11" height="11" rx="2" fill="#7a6f5d"/><text x="72" y="232" fill="#3a3128">框2 IOU 0.3 → 只当"空框"(压置信度)</text>
+    </g>
+    <!-- divider -->
+    <line class="yl-rev d1" x1="340" y1="44" x2="340" y2="212" stroke="#bfb398" stroke-width="1" stroke-dasharray="4 4"/>
+    <!-- RIGHT: 5 loss terms -->
+    <text class="yl-rev d4" x="530" y="28" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#3a3128">损失 = 5 块相加(误差平方和)</text>
+    <g class="yl-rev d5" font-size="10">
+      <rect x="366" y="48" width="42" height="20" rx="3" fill="#f4dabb" stroke="#c85e12"/><text x="387" y="62" text-anchor="middle" font-size="9.5" font-weight="700" fill="#8a3f0c">×5</text><text x="418" y="62" text-anchor="start" fill="#3a3128">① 责任框坐标 x,y</text>
+      <rect x="366" y="76" width="42" height="20" rx="3" fill="#f4dabb" stroke="#c85e12"/><text x="387" y="90" text-anchor="middle" font-size="9.5" font-weight="700" fill="#8a3f0c">×5</text><text x="418" y="90" text-anchor="start" fill="#3a3128">② 责任框尺寸 √w,√h</text>
+      <rect x="366" y="104" width="42" height="20" rx="3" fill="#e8e0c8" stroke="#7a6f5d"/><text x="387" y="118" text-anchor="middle" font-size="9.5" font-weight="700" fill="#3a3128">×1</text><text x="418" y="118" text-anchor="start" fill="#3a3128">③ 责任框置信度(目标 = IOU)</text>
+      <rect x="366" y="132" width="42" height="20" rx="3" fill="#e8e0c8" stroke="#7a6f5d"/><text x="387" y="146" text-anchor="middle" font-size="9.5" font-weight="700" fill="#3a3128">×.5</text><text x="418" y="146" text-anchor="start" fill="#3a3128">④ 空框置信度(目标 = 0)· 海量</text>
+      <rect x="366" y="160" width="42" height="20" rx="3" fill="#e8e0c8" stroke="#7a6f5d"/><text x="387" y="174" text-anchor="middle" font-size="9.5" font-weight="700" fill="#3a3128">×1</text><text x="418" y="174" text-anchor="start" fill="#3a3128">⑤ 有物体格 · 20 类概率</text>
+    </g>
+    <text class="yl-rev d6" x="530" y="206" text-anchor="middle" font-size="9" fill="#7a6f5d">λ_coord=5 放大坐标 · λ_noobj=0.5 压海量空框(治正负失衡)</text>
+    <text class="yl-rev d6" x="360" y="262" text-anchor="middle" font-size="10.5" font-weight="700" fill="#3a3128">责任框专学"框哪";空框只被推低置信度 → 两框分工、正负不失衡</text>
+  </svg>
+</figure>
+
+<p>损失拆成 <strong>5 块相加</strong>(三处修都在里面<a class="jr" href="#g-07">7</a>):① 责任框坐标 (x,y)、② 责任框尺寸 (√w,√h)——①② 乘 <code>λ_coord=5</code> 放大;③ 责任框置信度(目标 = 该框与真值的 IOU);④ <strong>其余所有"空框"置信度</strong>(目标 0)乘 <code>λ_noobj=0.5</code> 压低;⑤ 含物体格子的 20 类概率。</p>
+<p><strong>为什么要这两个 λ</strong>:7×7=49 个格子里绝大多数<strong>没有物体</strong>,它们的置信度目标是 0。若不压,这海量"空框往 0 推"的梯度会<strong>淹没</strong>少数有物体格子的信号(正负样本严重失衡)——所以 λ_noobj=0.5 把它压小;而坐标最该学准,反过来 λ_coord=5 放大它。</p>
+
+<h3>数字例子 · w,h 取平方根:小框的等量误差罚更重</h3>
+<p>坐标损失里 w,h <strong>先取平方根再比</strong>,让"同样差 10 像素"在大框上没那么严重、在小框上更该修:</p>
 <pre class="eq">同样宽度差 10 像素:
 大框  w=100→110:  √100=10.0  √110=10.49   差 0.49
 小框  w=10 →20 :  √10 =3.16  √20 =4.47    差 1.31
 → 取 √ 后,小框的同等绝对误差被罚约 1.31/0.49 ≈ 2.7 倍
 含义:小框差一点更致命,√ 让损失自动更在意小框、放过大框的等量抖动</pre>
 
-<h2><span class="num">§ 04</span>推理去重：98 个框 → NMS → 干净结果</h2>
+<h3>训练流程 · 先分类预训练,再切检测</h3>
+<pre class="eq">1. 前 20 个卷积层 + 一个分类头,在 ImageNet 上按 224×224 预训练【分类】 → 学通用视觉特征
+2. 去掉分类头,加 4 卷积 + 2 全连接,输入放大到 448×448,在 VOC 上训【检测】~135 epochs
+为什么放大到 448:检测比分类更吃细节(小物体、精确边界),给更多像素</pre>
+<p>✓ 先在海量分类数据上把主干喂饱、再切到检测,是当时 CV 的通用打法——检测标注贵,借分类预训练的通用特征起步。</p>
+
+<h2><span class="num">§ 05</span>推理去重：98 个框 → NMS → 干净结果</h2>
 
 <p>7×7 网格 × 每格 2 框 = <strong>98 个候选框</strong>,同一个物体周围往往冒出好几个都还行的框。先按类专属分数阈值筛掉低分,再用 <a href="../concepts/non-max-suppression.html">非极大值抑制(NMS)</a><a class="jr" href="#g-06">6</a>:按分排序,留最高分那个,把和它 <a href="../concepts/iou-intersection-over-union.html">IOU</a> 超阈值(如 0.5)的重叠框删掉<a class="jr" href="#g-05">5</a>,重复到没框剩——一物一框。</p>
 
 <figure id="fig-nms">
-  <figcaption><span>FIG 04 · 一堆重叠框 → 按分排序 + 删 IOU&gt;0.5 → 一物一框</span><span class="fnum">NMS</span></figcaption>
+  <figcaption><span>FIG 05 · 一堆重叠框 → 按分排序 + 删 IOU&gt;0.5 → 一物一框</span><span class="fnum">NMS</span></figcaption>
   <svg class="yl-svg" viewBox="0 0 720 232" xmlns="http://www.w3.org/2000/svg">
     <defs><marker id="yl-n" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#c85e12"/></marker></defs>
     <!-- left: 3 cascading overlapping boxes (分数 chips 在下方图例) -->
@@ -272,12 +315,12 @@ figure.play .yl-svg .pop { transform: scale(1); }
   </svg>
 </figure>
 
-<h2><span class="num">§ 05</span>结果：速度换来的甜与苦</h2>
+<h2><span class="num">§ 06</span>结果：速度换来的甜与苦</h2>
 
 <p>主干是 24 卷积层 + 2 全连接(承 GoogLeNet,用 1×1 降维 + 3×3),检测输入 448×448<a class="jr" href="#g-11">11</a>。YOLO 用一点 <a href="../concepts/mean-average-precision.html">mAP</a><a class="jr" href="#g-10">10</a> 换来当时无人能及的速度,而且看全图让它<strong>背景误检更少、泛化更好</strong>(迁到艺术画都稳);代价是<strong>定位偏粗、一群小物体易漏</strong>(每格只 2 框 1 类)<a class="jr" href="#g-08">8</a>。</p>
 
 <figure id="fig-tradeoff">
-  <figcaption><span>FIG 05 · 速度 vs 精度:YOLO 站在实时区,R-CNN 慢但略准</span><span class="fnum">SPEED–ACCURACY</span></figcaption>
+  <figcaption><span>FIG 06 · 速度 vs 精度:YOLO 站在实时区,R-CNN 慢但略准</span><span class="fnum">SPEED–ACCURACY</span></figcaption>
   <svg class="yl-svg" viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg">
     <!-- axes -->
     <line class="yl-rev d1" x1="60" y1="210" x2="690" y2="210" stroke="#7a6f5d" stroke-width="1.2"/>
@@ -334,7 +377,8 @@ figure.play .yl-svg .pop { transform: scale(1); }
     <li id="g-08"><span class="term">强与弱</span> · 强:看全图 → 背景误检少、泛化好(迁艺术画稳)、实时。弱:定位偏粗、一群小物体易漏(每格仅 2 框 1 类)。</li>
     <li id="g-09"><span class="term">成绩</span> · VOC2007:YOLO 63.4% mAP @ 45 FPS;Fast YOLO 52.7% @ 155 FPS;对比 Faster R-CNN 73.2 但仅 7 FPS。</li>
     <li id="g-10"><span class="term"><a href="../concepts/mean-average-precision.html">mAP</a></span> · 每类 PR 曲线下面积(AP)对所有类求平均;命中判定靠 IOU≥0.5。检测通用总分。</li>
-    <li id="g-11"><span class="term">架构</span> · 24 卷积层 + 2 全连接(承 GoogLeNet,用 1×1 降维 + 3×3);Fast YOLO 9 卷积层;检测输入 448×448。</li>
+    <li id="g-11"><span class="term">架构 / 训练</span> · 24 卷积层 + 2 全连接(承 GoogLeNet,用 1×1 降维 + 3×3);先在 ImageNet 224² 预训练分类,再加层放大到 448² 训检测 ~135 epochs。</li>
+    <li id="g-12"><span class="term">责任框</span> · 物体归"中心所在格";该格 2 框里和真值 IOU 更高的当"责任框",只有它吃坐标+物体置信度损失 → 同格两框自然分工(高瘦/矮胖)。</li>
   </ol>
 </div>
 
@@ -346,7 +390,7 @@ figure.play .yl-svg .pop { transform: scale(1); }
 </div>
 <script>
 {
-  const figs = ['fig-oneshot','fig-grid','fig-cell','fig-nms','fig-tradeoff'];
+  const figs = ['fig-oneshot','fig-grid','fig-cell','fig-loss','fig-nms','fig-tradeoff'];
   figs.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
