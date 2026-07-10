@@ -9,7 +9,7 @@
 - [FFT · 快速傅里叶变换](wiki/papers/fft.md) — 信号处理/算法基础: 傅里叶=棱镜拆频率, FFT 用偶奇折半+单位根对称(蝴蝶)把 N² 砍成 N·logN; 接卷积定理 + 音频频谱(STFT)
 - [CNN · 卷积神经网络](wiki/papers/cnn.md) — 视觉骨架基础: 小核滑遍全图+权重共享, 把局部性/平移不变焊进结构; 卷积滑窗动画 + LeNet→ResNet→ViT 谱系
 - [Deep Residual Learning · ResNet](wiki/papers/resnet.md) — 残差连接的起源，把"网络越深越好"做成现实，也给两年后的 Transformer 留好 sublayer 模板
-- [YOLO · 看一眼就把框和类一起吐出来](wiki/papers/yolo.md) — CVPR2016 实时目标检测开山: 把"先提上千候选框再逐个分类"(R-CNN慢/只看局部)改成一个CNN一次前向直接回归; 7×7网格物体中心落哪格哪格负责,每格2框+20类→输出7×7×30; 置信度=Pr(物体)×IOU; 推理NMS去重; 看全图→背景误检少但定位粗、小物体易漏; 63.4%mAP@45FPS, Fast YOLO 52.7%@155FPS(vs Faster R-CNN 73.2但7FPS); 检测三件套IOU/NMS/mAP起点
+- [YOLO · 看一眼就把框和类一起吐出来](wiki/papers/yolo.md) — CVPR2016 YOLO v1:原始 R-CNN 逐框提特征,Fast R-CNN 共享整图卷积但仍等 Selective Search,Faster R-CNN 用 RPN 提候选;YOLO 一次前向输出 7×7×30。训练损失拆责任框中心/尺寸/置信度、空框置信度、类别五块;√w,h 让同样 1% 图宽误差对小框产生 7.20× 平方损失。VOC2007:63.4%mAP@45FPS;错误画像是 19.0% 定位 vs 4.75% 背景误检;与最佳 Fast R-CNN 组合 71.8→75.0(+3.2)。VOC2012 57.9,小物体仍弱;Picasso/People-Art 显示艺术画迁移优势但不外推为普遍域泛化。
 - [LSTM · 长短期记忆](wiki/papers/lstm.md) — Transformer 前的序列霸主: cell state 记忆传送带(加法更新)+三个门(遗忘/输入/输出)治住RNN梯度消失; 加法梯度高速路=ResNet残差同构; 被Attention取代
 - [Attention Is All You Need](wiki/papers/attention-is-all-you-need.md) — Transformer 始祖，整个 LLM 时代的奠基
 - [BERT](wiki/papers/bert.md) — 只要 Transformer encoder，用 MLM 学双向上下文，立住 pretrain → finetune 范式
