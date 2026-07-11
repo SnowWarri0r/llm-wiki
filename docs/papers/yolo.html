@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
+<script>document.documentElement.classList.add('js');</script>
 <meta charset="utf-8" />
 <title>YOLO · 看一眼就把框和类一起吐出来</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -49,7 +50,8 @@ figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-s
 figcaption .fnum { color: var(--accent); font-weight: 700; }
 .note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
 .note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
-table.spec { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+.spec-scroll { margin: 20px 0; overflow-x: auto; overscroll-behavior-inline: contain; }
+table.spec { width: 100%; min-width: 640px; border-collapse: collapse; margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
 table.spec td, table.spec th { border-bottom: 1px dashed var(--rule); padding: 7px 10px; text-align: left; vertical-align: top; }
 table.spec th { color: var(--accent); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
 table.spec td:first-child { color: var(--muted); }
@@ -65,18 +67,33 @@ table.spec tr.win td { background: var(--tangerine-soft); font-weight: 700; }
 .colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
 
 /* yl-specific */
+.yl-figure-scroll { overflow: visible; }
 .yl-svg { width: 100%; height: auto; display: block; font-family: 'JetBrains Mono', monospace; }
-.yl-rev { opacity: 0; transition: opacity 0.6s ease; }
-figure.play .yl-rev { opacity: 1; }
-figure.play .yl-rev.d1 { transition-delay: 0.12s; }
-figure.play .yl-rev.d2 { transition-delay: 0.40s; }
-figure.play .yl-rev.d3 { transition-delay: 0.68s; }
-figure.play .yl-rev.d4 { transition-delay: 0.96s; }
-figure.play .yl-rev.d5 { transition-delay: 1.24s; }
-figure.play .yl-rev.d6 { transition-delay: 1.52s; }
-.yl-svg .pop { transform: scale(0); transform-origin: center; transform-box: fill-box; transition: transform 0.5s cubic-bezier(.2,1.3,.4,1); }
-figure.play .yl-svg .pop { transform: scale(1); }
-@media (prefers-reduced-motion: reduce) { .yl-rev { opacity: 1; transition: none; } .yl-svg .pop { transform: none; transition: none; } }
+.yl-figure::after { display: none; }
+.yl-figure-scroll:focus-visible, .spec-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.yl-rev { opacity: 1; }
+.js .yl-rev { opacity: 0; transition: opacity 0.6s ease; }
+.js figure.play .yl-rev { opacity: 1; }
+.js figure.play .yl-rev.d1 { transition-delay: 0.12s; }
+.js figure.play .yl-rev.d2 { transition-delay: 0.40s; }
+.js figure.play .yl-rev.d3 { transition-delay: 0.68s; }
+.js figure.play .yl-rev.d4 { transition-delay: 0.96s; }
+.js figure.play .yl-rev.d5 { transition-delay: 1.24s; }
+.js figure.play .yl-rev.d6 { transition-delay: 1.52s; }
+.yl-svg .pop { transform: none; }
+.js .yl-svg .pop { transform: scale(0); transform-origin: center; transform-box: fill-box; transition: transform 0.5s cubic-bezier(.2,1.3,.4,1); }
+.js figure.play .yl-svg .pop { transform: scale(1); }
+@media (prefers-reduced-motion: reduce) { .js .yl-rev { opacity: 1; transition: none; } .js .yl-svg .pop { transform: none; transition: none; } }
+@media (max-width: 640px) {
+  .page { padding: 36px 12px 80px; }
+  figure { margin: 32px -4px; padding: 18px 8px 16px; }
+  figcaption { margin-bottom: 12px; }
+  .yl-figure-scroll, .spec-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
+  .yl-figure-scroll::-webkit-scrollbar, .spec-scroll::-webkit-scrollbar { height: 6px; }
+  .yl-figure-scroll::-webkit-scrollbar-thumb, .spec-scroll::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 999px; }
+  .yl-svg { width: 720px; min-width: 720px; max-width: none; }
+  .yl-figure::after { content: "↔ 横向滑动看完整图"; display: block; margin-top: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; text-align: right; }
+}
 </style>
 </head>
 <body>
@@ -110,8 +127,8 @@ figure.play .yl-svg .pop { transform: scale(1); }
 <section class="hero">
   <div class="issue">FIELD NOTES · 目标检测 · 单次回归</div>
   <h1 class="title">YOLO ·<br /><span class="em">看一眼,框和类一起吐出来。</span></h1>
-  <div class="byline">Redmon · Divvala · Girshick · Farhadi · You Only Look Once: Unified, Real-Time Object Detection · CVPR 2016 · arXiv 1506.02640</div>
-  <p class="dek">以前检测要"先提上千个候选框、再逐个分类"——慢,还只看局部。YOLO 把检测改成一次回归:一个网络一次前向,直接从整张图输出所有框 + 类别。7×7 网格各管一块,实时 45 FPS,还因为看全图而背景误检更少。</p>
+  <div class="byline">Redmon · Divvala · Girshick · Farhadi · You Only Look Once: Unified, Real-Time Object Detection · CVPR 2016 · arXiv v5 1506.02640</div>
+  <p class="dek">DPM 在整图滑窗;原始 R-CNN 提约 2000 个候选再逐框提特征。YOLO 直接把检测改成一次回归:一个网络从整张图输出框 + 类别。7×7 网格各管一块,实时 45 FPS,还因为看全图而背景误检更少。</p>
 </section>
 
 <div class="tldr">
@@ -121,54 +138,58 @@ figure.play .yl-svg .pop { transform: scale(1); }
 
 <h2><span class="num">§ 01</span>痛点：先提候选再逐个分类,太慢</h2>
 
-<p>YOLO 之前的检测器(R-CNN 家族)是<strong>多步流水线</strong><a class="jr" href="#g-01">1</a>:① 用某种方法提出上千个候选区域;② 把每个候选区域<strong>各自</strong>送进分类器判类别、微调框;③ 去重。慢就慢在<strong>逐个候选重复跑分类</strong>(上千次网络评估),一张图要几秒。而且分类器只看候选框里那<strong>一小块</strong>,看不到全图上下文 → 容易把背景纹理误当物体。想实时,得把这条流水线拍成一次前向。</p>
+<p>DPM 把分类器滑过整张图;原始 R-CNN 先用 Selective Search 提约 2000 个候选框,再逐框提 CNN 特征。Fast R-CNN 已把整图卷积共享起来,但仍要等 Selective Search;Faster R-CNN 再用 RPN 生成候选。YOLO 真正砍掉的不是某一个慢算子,而是“先提候选、再逐候选判断”的分段流水线。<a class="jr" href="#g-01">1</a> 同时,整图上下文也让 YOLO 更少把背景纹理误当物体。</p>
 
-<figure id="fig-oneshot">
-  <figcaption><span>FIG 01 · 两阶段(上千次逐候选分类)vs YOLO(一次前向看全图)</span><span class="fnum">ONE-SHOT</span></figcaption>
+<figure class="yl-figure" id="fig-oneshot">
+  <figcaption><span>FIG 01 · 原始 R-CNN 候选流水线 vs YOLO 一次前向</span><span class="fnum">ONE-SHOT</span></figcaption>
+  <div class="yl-figure-scroll" tabindex="0" role="region" aria-label="图表横向滚动区域">
   <svg class="yl-svg" viewBox="0 0 720 230" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <marker id="yl-a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#7a6f5d"/></marker>
       <marker id="yl-o" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#c85e12"/></marker>
     </defs>
     <!-- row 1: two-stage -->
-    <text class="yl-rev d1" x="40" y="38" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#9b2c2c">旧 · 两阶段(提议 → 逐个分类)</text>
+    <text class="yl-rev d1" x="40" y="38" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#9b2c2c">原始 R-CNN · ~2000 候选逐框提特征</text>
     <rect class="yl-rev d1" x="40" y="52" width="58" height="44" rx="4" fill="#eee7d2" stroke="#7a6f5d"/>
-    <text class="yl-rev d1" x="69" y="78" text-anchor="middle" font-size="10.5" fill="#3a3128">图</text>
+    <text class="yl-rev d1" x="69" y="78" text-anchor="middle" font-size="11" fill="#3a3128">图</text>
     <line class="yl-rev d2" x1="98" y1="74" x2="112" y2="74" stroke="#7a6f5d" stroke-width="1.4" marker-end="url(#yl-a)"/>
     <rect class="yl-rev d2" x="114" y="52" width="120" height="44" rx="4" fill="#efd6c8" stroke="#9b2c2c"/>
-    <text class="yl-rev d2" x="174" y="72" text-anchor="middle" font-size="9.5" font-weight="700" fill="#7a2020">提 ~2000 候选</text>
-    <text class="yl-rev d2" x="174" y="88" text-anchor="middle" font-size="8" fill="#7a6f5d">一堆小框</text>
+    <text class="yl-rev d2" x="174" y="72" text-anchor="middle" font-size="11" font-weight="700" fill="#7a2020">提 ~2000 候选</text>
+    <text class="yl-rev d2" x="174" y="88" text-anchor="middle" font-size="11" fill="#7a6f5d">一堆小框</text>
     <line class="yl-rev d3" x1="234" y1="74" x2="248" y2="74" stroke="#7a6f5d" stroke-width="1.4" marker-end="url(#yl-a)"/>
     <rect class="yl-rev d3" x="250" y="52" width="150" height="44" rx="4" fill="#efd6c8" stroke="#9b2c2c"/>
-    <text class="yl-rev d3" x="325" y="72" text-anchor="middle" font-size="9.5" font-weight="700" fill="#7a2020">逐个分类 ×~2000</text>
-    <text class="yl-rev d3" x="325" y="88" text-anchor="middle" font-size="8" fill="#7a6f5d">上千次网络评估</text>
+    <text class="yl-rev d3" x="325" y="72" text-anchor="middle" font-size="11" font-weight="700" fill="#7a2020">逐框提 CNN 特征</text>
+    <text class="yl-rev d3" x="325" y="88" text-anchor="middle" font-size="11" fill="#7a6f5d">再分类、回归框</text>
     <line class="yl-rev d3" x1="400" y1="74" x2="414" y2="74" stroke="#7a6f5d" stroke-width="1.4" marker-end="url(#yl-a)"/>
     <rect class="yl-rev d3" x="416" y="52" width="70" height="44" rx="4" fill="#eee7d2" stroke="#7a6f5d"/>
-    <text class="yl-rev d3" x="451" y="78" text-anchor="middle" font-size="9.5" fill="#3a3128">去重→框</text>
-    <text class="yl-rev d3" x="506" y="70" text-anchor="start" font-size="10.5" font-weight="700" fill="#9b2c2c">几秒/张</text>
-    <text class="yl-rev d3" x="506" y="86" text-anchor="start" font-size="8" fill="#7a6f5d">只看候选块(局部)</text>
+    <text class="yl-rev d3" x="451" y="78" text-anchor="middle" font-size="11" fill="#3a3128">去重→框</text>
+    <text class="yl-rev d3" x="506" y="70" text-anchor="start" font-size="11" font-weight="700" fill="#9b2c2c">几秒/张</text>
+    <text class="yl-rev d3" x="506" y="86" text-anchor="start" font-size="11" fill="#7a6f5d">只看候选块(局部)</text>
+    <text class="yl-rev d3" x="40" y="121" text-anchor="start" font-size="11" fill="#7a6f5d">Fast/Faster R-CNN 后来共享卷积、改进提议,但仍保留候选阶段</text>
     <!-- row 2: YOLO -->
-    <text class="yl-rev d4" x="40" y="150" font-family="Fraunces,serif" font-style="italic" font-size="12.5" font-weight="700" fill="#c85e12">YOLO · 一次前向看全图</text>
+    <text class="yl-rev d4" x="40" y="150" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#c85e12">YOLO · 一次前向看全图</text>
     <rect class="yl-rev d4" x="40" y="164" width="58" height="44" rx="4" fill="#eee7d2" stroke="#7a6f5d"/>
-    <text class="yl-rev d4" x="69" y="190" text-anchor="middle" font-size="10.5" fill="#3a3128">整张图</text>
+    <text class="yl-rev d4" x="69" y="190" text-anchor="middle" font-size="11" fill="#3a3128">整张图</text>
     <line class="yl-rev d5" x1="98" y1="186" x2="112" y2="186" stroke="#c85e12" stroke-width="1.6" marker-end="url(#yl-o)"/>
     <rect class="yl-rev d5" x="114" y="164" width="286" height="44" rx="4" fill="#f4dabb" stroke="#c85e12"/>
-    <text class="yl-rev d5" x="257" y="184" text-anchor="middle" font-size="10.5" font-weight="700" fill="#8a3f0c">一个 CNN · 一次前向 → 7×7×30 一起出</text>
-    <text class="yl-rev d5" x="257" y="200" text-anchor="middle" font-size="8" fill="#c85e12">所有框+类别同时回归</text>
+    <text class="yl-rev d5" x="257" y="184" text-anchor="middle" font-size="11" font-weight="700" fill="#8a3f0c">一个 CNN · 一次前向 → 7×7×30 一起出</text>
+    <text class="yl-rev d5" x="257" y="200" text-anchor="middle" font-size="11" fill="#8a3f0c">所有框+类别同时回归</text>
     <line class="yl-rev d6" x1="400" y1="186" x2="414" y2="186" stroke="#c85e12" stroke-width="1.6" marker-end="url(#yl-o)"/>
     <rect class="yl-rev d6" x="416" y="164" width="70" height="44" rx="4" fill="#eee7d2" stroke="#7a6f5d"/>
-    <text class="yl-rev d6" x="451" y="190" text-anchor="middle" font-size="9.5" fill="#3a3128">NMS→框</text>
-    <text class="yl-rev d6" x="506" y="182" text-anchor="start" font-size="10.5" font-weight="700" fill="#c85e12">45 FPS</text>
-    <text class="yl-rev d6" x="506" y="198" text-anchor="start" font-size="8" fill="#7a6f5d">看全图 → 背景误检少</text>
+    <text class="yl-rev d6" x="451" y="190" text-anchor="middle" font-size="11" fill="#3a3128">阈值+NMS→框</text>
+    <text class="yl-rev d6" x="506" y="182" text-anchor="start" font-size="11" font-weight="700" fill="#c85e12">45 FPS</text>
+    <text class="yl-rev d6" x="506" y="198" text-anchor="start" font-size="11" fill="#7a6f5d">看全图 → 背景误检少</text>
   </svg>
+  </div>
 </figure>
 
 <h2><span class="num">§ 02</span>核心：7×7 网格,物体中心落哪格、哪格负责</h2>
 
 <p>YOLO 把图切成 <strong>7×7 网格</strong><a class="jr" href="#g-02">2</a>。规则很简单:<strong>一个物体的中心落在哪个格子,就由那个格子负责预测它</strong>。这就把"检测"变成"每个格子对号入座"——不用提议候选,空间位置天然分工。每个格子预测 2 个框 + 20 类概率,7×7 个格子一次性并行出结果。</p>
 
-<figure id="fig-grid">
+<figure class="yl-figure" id="fig-grid">
   <figcaption><span>FIG 02 · 7×7 网格;狗的中心落在某格 → 该格负责预测这只狗</span><span class="fnum">GRID</span></figcaption>
+  <div class="yl-figure-scroll" tabindex="0" role="region" aria-label="图表横向滚动区域">
   <svg class="yl-svg" viewBox="0 0 720 324" xmlns="http://www.w3.org/2000/svg">
     <!-- image frame with 7x7 grid, left -->
     <g class="yl-rev d1" stroke="#bfb398" stroke-width="0.8">
@@ -180,27 +201,31 @@ figure.play .yl-svg .pop { transform: scale(1); }
     <rect class="yl-rev d3 pop" x="178" y="148" width="36" height="36" fill="#f4dabb" stroke="#c85e12" stroke-width="2"/>
     <!-- dog bbox -->
     <rect class="yl-rev d2" x="128" y="120" width="150" height="140" fill="none" stroke="#4a6b3a" stroke-width="2.2"/>
-    <text class="yl-rev d2" x="203" y="114" text-anchor="middle" font-size="9" font-weight="700" fill="#2f5a2a">真值框(狗)</text>
+    <text class="yl-rev d2" x="203" y="114" text-anchor="middle" font-size="11" font-weight="700" fill="#2f5a2a">真值框(狗)</text>
     <!-- center dot -->
     <circle class="yl-rev d3" cx="196" cy="166" r="4.5" fill="#c85e12"/>
-    <text class="yl-rev d4" x="196" y="312" text-anchor="middle" font-size="9" font-weight="700" fill="#c85e12">中心落在此格 → 此格负责</text>
+    <text class="yl-rev d4" x="196" y="312" text-anchor="middle" font-size="11" font-weight="700" fill="#c85e12">中心落在此格 → 此格负责</text>
     <!-- right: annotation -->
     <text class="yl-rev d5" x="360" y="70" text-anchor="start" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#c85e12">每格预测什么</text>
-    <text class="yl-rev d5" x="360" y="100" text-anchor="start" font-size="11" fill="#3a3128">· 2 个框(各 x,y,w,h,置信度)</text>
+    <text class="yl-rev d5" x="360" y="100" text-anchor="start" font-size="11" fill="#3a3128">· 2 框:x,y · 相对格子;w,h · 相对整图;各有置信度</text>
     <text class="yl-rev d5" x="360" y="124" text-anchor="start" font-size="11" fill="#3a3128">· 20 类概率 Pr(类|有物体)</text>
     <text class="yl-rev d6" x="360" y="160" text-anchor="start" font-size="11" font-weight="700" fill="#8a3f0c">每格 = 2×5 + 20 = 30 个数</text>
     <rect class="yl-rev d6" x="360" y="180" width="300" height="40" rx="4" fill="#f4dabb" stroke="#c85e12"/>
     <text class="yl-rev d6" x="510" y="204" text-anchor="middle" font-size="12" font-weight="700" fill="#8a3f0c">输出张量 = 7 × 7 × 30 = 1470</text>
-    <text class="yl-rev d6" x="360" y="242" text-anchor="start" font-size="8.5" fill="#7a6f5d">一次前向就出这 1470 个数,没有候选、没有重复分类</text>
+    <text class="yl-rev d6" x="360" y="242" text-anchor="start" font-size="11" fill="#7a6f5d">一次前向就出这 1470 个数,没有候选、没有重复分类</text>
   </svg>
+  </div>
 </figure>
+
+<p><code>x,y</code> 不是整图像素坐标,而是框中心相对当前格子的偏移;<code>w,h</code> 则按整张图宽高归一化。两个框各有自己的几何和置信度,但同一格只共享一套 20 类概率——这也是一格挤进多个不同类别小物体时容易漏的根源。</p>
 
 <h2><span class="num">§ 03</span>一个格子的 30 个数 + 置信度里塞了 IOU</h2>
 
-<p>拆开一个格子的 30 个数<a class="jr" href="#g-03">3</a>:前 10 个是 2 个框(各 x,y,w,h + 置信度),后 20 个是类别概率。妙在<strong>置信度的训练目标 = Pr(有物体) × <a href="../concepts/iou-intersection-over-union.html">IOU</a>(预测框, 真值框)</strong><a class="jr" href="#g-04">4</a>——让"这里有没有东西"和"框得准不准"共用一个信号。推理时,把类别概率乘上置信度,得到<strong>类专属分数 = Pr(类|物体) × Pr(物体) × IOU = Pr(类) × IOU</strong>,拿它排序 + NMS 去重。</p>
+<p>拆开一个格子的 30 个数<a class="jr" href="#g-03">3</a>:前 10 个是 2 个框(各 x,y,w,h + 置信度),后 20 个是共享的类别概率。训练时,框 A 与真值 IOU = 0.70,所以<strong>框 A 置信度目标 = 0.70</strong><a class="jr" href="#g-04">4</a>;这一格的 <code>Pr(狗 | 有物体) = 0.80</code>。推理时,把条件类概率乘上置信度,狗的类专属分数 = <strong>0.80 × 0.70 = 0.56</strong>。一般式仍是 <code>Pr(类|物体) × Pr(物体) × IOU = Pr(类) × IOU</code>,用它排序后再做 NMS。</p>
 
-<figure id="fig-cell">
+<figure class="yl-figure" id="fig-cell">
   <figcaption><span>FIG 03 · 一格 30 数 = 框1(5) + 框2(5) + 20 类;置信度 = Pr(物体)×IOU</span><span class="fnum">CELL OUTPUT</span></figcaption>
+  <div class="yl-figure-scroll" tabindex="0" role="region" aria-label="图表横向滚动区域">
   <svg class="yl-svg" viewBox="0 0 720 230" xmlns="http://www.w3.org/2000/svg">
     <!-- 30 slots -->
     <g class="yl-rev d1">
@@ -214,142 +239,174 @@ figure.play .yl-svg .pop { transform: scale(1); }
       </g>
     </g>
     <!-- group braces / labels -->
-    <text class="yl-rev d2" x="89" y="104" text-anchor="middle" font-size="9.5" font-weight="700" fill="#8a3f0c">框1 (5)</text>
-    <text class="yl-rev d2" x="191" y="104" text-anchor="middle" font-size="9.5" font-weight="700" fill="#8a3f0c">框2 (5)</text>
-    <text class="yl-rev d2" x="442" y="104" text-anchor="middle" font-size="9.5" font-weight="700" fill="#3a3128">20 类概率 Pr(类|物体)</text>
-    <text class="yl-rev d2" x="40" y="130" text-anchor="start" font-size="9" fill="#7a6f5d">每个框 5 个数:x · y · w · h · 置信度</text>
+    <text class="yl-rev d2" x="89" y="104" text-anchor="middle" font-size="11" font-weight="700" fill="#8a3f0c">框1 (5)</text>
+    <text class="yl-rev d2" x="191" y="104" text-anchor="middle" font-size="11" font-weight="700" fill="#8a3f0c">框2 (5)</text>
+    <text class="yl-rev d2" x="442" y="104" text-anchor="middle" font-size="11" font-weight="700" fill="#3a3128">20 类概率 Pr(类|物体)</text>
+    <text class="yl-rev d2" x="40" y="130" text-anchor="start" font-size="11" fill="#7a6f5d">每框:x,y · 相对格子;w,h · 相对整图;+置信度</text>
     <!-- confidence formula -->
     <rect class="yl-rev d3" x="40" y="150" width="300" height="30" rx="4" fill="#f4dabb" stroke="#c85e12"/>
     <text class="yl-rev d3" x="190" y="170" text-anchor="middle" font-size="11" font-weight="700" fill="#8a3f0c">置信度 = Pr(有物体) × IOU(预测,真值)</text>
-    <text class="yl-rev d4" x="40" y="200" text-anchor="start" font-size="9.5" fill="#3a3128">推理:类专属分数 = Pr(类|物体) × 置信度 = Pr(类) × IOU</text>
+    <text class="yl-rev d4" x="40" y="200" text-anchor="start" font-size="11" fill="#3a3128">推理:类专属分数 = Pr(类|物体) × 置信度 = Pr(类) × IOU</text>
     <!-- numeric -->
-    <rect class="yl-rev d5" x="380" y="150" width="300" height="52" rx="4" fill="#faf4e1" stroke="#bfb398"/>
-    <text class="yl-rev d5" x="530" y="168" text-anchor="middle" font-size="9" fill="#3a3128">例:Pr(物体)=1, IOU=0.7 → 置信度 0.7</text>
-    <text class="yl-rev d5" x="530" y="184" text-anchor="middle" font-size="9" fill="#3a3128">Pr(狗|物体)=0.8 → 分数 = 0.8×0.7 = 0.56</text>
-    <text class="yl-rev d5" x="530" y="197" text-anchor="middle" font-size="8" fill="#7a6f5d">框得越准(IOU高)分数越高 → 排序更靠前</text>
+    <rect class="yl-rev d5" x="360" y="146" width="330" height="64" rx="4" fill="#faf4e1" stroke="#bfb398"/>
+    <text class="yl-rev d5" x="525" y="164" text-anchor="middle" font-size="11" fill="#3a3128">框 A 与真值 IOU = 0.70 → 置信度目标 = 0.70</text>
+    <text class="yl-rev d5" x="525" y="182" text-anchor="middle" font-size="11" fill="#3a3128">Pr(狗 | 有物体) = 0.80</text>
+    <text class="yl-rev d5" x="525" y="200" text-anchor="middle" font-size="11" font-weight="700" fill="#8a3f0c">狗的类专属分数 = 0.80 × 0.70 = 0.56</text>
   </svg>
+  </div>
 </figure>
 
 <h2><span class="num">§ 04</span>训练：一个多项损失 + "责任框"分工</h2>
 
-<p>YOLO 用一个<strong>误差平方和</strong>损失,一次性约束 7×7×30 的整块输出。难点不在公式,在<strong>该对谁算损失</strong>。规则:每个物体分给"中心所在的格子";那个格子的 2 个框里,<strong>和真值 <a href="../concepts/iou-intersection-over-union.html">IOU</a> 更高的那个当"责任框"</strong>,只有它吃坐标 + 物体置信度损失——这让同格两个框自然<strong>分工</strong>(一个专学高瘦、一个专学矮胖),不再抢同一种形状<a class="jr" href="#g-12">12</a>。</p>
+<p>YOLO 用一个<strong>误差平方和</strong>损失,一次性约束 7×7×30 的整块输出。先把物体分给"中心所在的格子";再比较那格的两个框:框 A 与真值 IOU = 0.70,框 B 与真值 IOU = 0.30,所以<strong>框 A 成为责任框</strong><a class="jr" href="#g-12">12</a>。只有框 A 吃坐标和有物体置信度损失,其他框只压低置信度。责任按<strong>当前 IOU</strong>动态分配,两个预测器便会逐渐专门化。</p>
 
-<figure id="fig-loss">
+<figure class="yl-figure" id="fig-loss">
   <figcaption><span>FIG 04 · 责任框(同格 IOU 高者)+ 损失拆 5 块及其权重</span><span class="fnum">TRAINING LOSS</span></figcaption>
+  <div class="yl-figure-scroll" tabindex="0" role="region" aria-label="图表横向滚动区域">
   <svg class="yl-svg" viewBox="0 0 720 272" xmlns="http://www.w3.org/2000/svg">
     <!-- LEFT: responsible box selection -->
-    <text class="yl-rev d1" x="134" y="28" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#c85e12">同格 2 框,IOU 高者当责任框</text>
+    <text class="yl-rev d1" x="134" y="28" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#c85e12">同格 2 框,IOU 高者当责任框</text>
     <rect class="yl-rev d1" x="48" y="48" width="172" height="140" fill="#eef0e6" stroke="#bfb398"/>
     <rect class="yl-rev d2" x="74" y="76" width="104" height="84" fill="none" stroke="#4a6b3a" stroke-width="2"/>
-    <text class="yl-rev d2" x="126" y="70" text-anchor="middle" font-size="9" font-weight="700" fill="#2f5a2a">真值框</text>
+    <text class="yl-rev d2" x="126" y="70" text-anchor="middle" font-size="11" font-weight="700" fill="#2f5a2a">真值框</text>
     <rect class="yl-rev d3" x="82" y="84" width="104" height="84" fill="none" stroke="#c85e12" stroke-width="2.6"/>
     <rect class="yl-rev d3" x="120" y="126" width="74" height="52" fill="none" stroke="#7a6f5d" stroke-width="1.4" stroke-dasharray="4 3"/>
-    <g class="yl-rev d3" font-size="9" font-weight="700">
-      <rect x="56" y="200" width="11" height="11" rx="2" fill="#c85e12"/><text x="72" y="210" fill="#3a3128">框1 IOU 0.7 → 责任(吃坐标+置信度)</text>
-      <rect x="56" y="222" width="11" height="11" rx="2" fill="#7a6f5d"/><text x="72" y="232" fill="#3a3128">框2 IOU 0.3 → 只当"空框"(压置信度)</text>
+    <g class="yl-rev d3" font-size="11" font-weight="700">
+      <rect x="56" y="200" width="11" height="11" rx="2" fill="#c85e12"/><text x="72" y="210" fill="#3a3128">框 A · IOU 0.70 → 责任框</text>
+      <rect x="56" y="222" width="11" height="11" rx="2" fill="#7a6f5d"/><text x="72" y="232" fill="#3a3128">框 B · IOU 0.30 → 非责任框</text>
     </g>
     <!-- divider -->
     <line class="yl-rev d1" x1="340" y1="44" x2="340" y2="212" stroke="#bfb398" stroke-width="1" stroke-dasharray="4 4"/>
     <!-- RIGHT: 5 loss terms -->
-    <text class="yl-rev d4" x="530" y="28" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#3a3128">损失 = 5 块相加(误差平方和)</text>
-    <g class="yl-rev d5" font-size="10">
-      <rect x="366" y="48" width="42" height="20" rx="3" fill="#f4dabb" stroke="#c85e12"/><text x="387" y="62" text-anchor="middle" font-size="9.5" font-weight="700" fill="#8a3f0c">×5</text><text x="418" y="62" text-anchor="start" fill="#3a3128">① 责任框坐标 x,y</text>
-      <rect x="366" y="76" width="42" height="20" rx="3" fill="#f4dabb" stroke="#c85e12"/><text x="387" y="90" text-anchor="middle" font-size="9.5" font-weight="700" fill="#8a3f0c">×5</text><text x="418" y="90" text-anchor="start" fill="#3a3128">② 责任框尺寸 √w,√h</text>
-      <rect x="366" y="104" width="42" height="20" rx="3" fill="#e8e0c8" stroke="#7a6f5d"/><text x="387" y="118" text-anchor="middle" font-size="9.5" font-weight="700" fill="#3a3128">×1</text><text x="418" y="118" text-anchor="start" fill="#3a3128">③ 责任框置信度(目标 = IOU)</text>
-      <rect x="366" y="132" width="42" height="20" rx="3" fill="#e8e0c8" stroke="#7a6f5d"/><text x="387" y="146" text-anchor="middle" font-size="9.5" font-weight="700" fill="#3a3128">×.5</text><text x="418" y="146" text-anchor="start" fill="#3a3128">④ 空框置信度(目标 = 0)· 海量</text>
-      <rect x="366" y="160" width="42" height="20" rx="3" fill="#e8e0c8" stroke="#7a6f5d"/><text x="387" y="174" text-anchor="middle" font-size="9.5" font-weight="700" fill="#3a3128">×1</text><text x="418" y="174" text-anchor="start" fill="#3a3128">⑤ 有物体格 · 20 类概率</text>
+    <text class="yl-rev d4" x="530" y="28" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#3a3128">损失 = 5 块相加(误差平方和)</text>
+    <g class="yl-rev d5" font-size="11" fill="#3a3128">
+      <text x="360" y="62" text-anchor="start">① 责任框中心 x,y:× λcoord=5</text>
+      <text x="360" y="90" text-anchor="start">② 责任框尺寸 √w,√h:× λcoord=5</text>
+      <text x="360" y="118" text-anchor="start">③ 责任框置信度:目标 = 当前 IOU</text>
+      <text x="360" y="146" text-anchor="start">④ 非责任框与空格框置信度:目标 = 0,× λnoobj=0.5</text>
+      <text x="360" y="174" text-anchor="start">⑤ 有物体网格的一套 20 类条件概率</text>
     </g>
-    <text class="yl-rev d6" x="530" y="206" text-anchor="middle" font-size="9" fill="#7a6f5d">λ_coord=5 放大坐标 · λ_noobj=0.5 压海量空框(治正负失衡)</text>
-    <text class="yl-rev d6" x="360" y="262" text-anchor="middle" font-size="10.5" font-weight="700" fill="#3a3128">责任框专学"框哪";空框只被推低置信度 → 两框分工、正负不失衡</text>
+    <text class="yl-rev d6" x="530" y="206" text-anchor="middle" font-size="11" fill="#7a6f5d">λ_coord=5 放大坐标 · λ_noobj=0.5 压海量空框(治正负失衡)</text>
+    <text class="yl-rev d6" x="360" y="262" text-anchor="middle" font-size="11" font-weight="700" fill="#3a3128">责任框专学几何;非责任/空格框只被推低置信度</text>
   </svg>
+  </div>
 </figure>
 
-<p>损失拆成 <strong>5 块相加</strong>(三处修都在里面<a class="jr" href="#g-07">7</a>):① 责任框坐标 (x,y)、② 责任框尺寸 (√w,√h)——①② 乘 <code>λ_coord=5</code> 放大;③ 责任框置信度(目标 = 该框与真值的 IOU);④ <strong>其余所有"空框"置信度</strong>(目标 0)乘 <code>λ_noobj=0.5</code> 压低;⑤ 含物体格子的 20 类概率。</p>
+<pre class="eq">① 责任框中心 x,y:× λcoord=5
+② 责任框尺寸 √w,√h:× λcoord=5
+③ 责任框置信度:目标 = 当前 IOU
+④ 非责任框与空格框置信度:目标 = 0,× λnoobj=0.5
+⑤ 有物体网格的一套 20 类条件概率</pre>
+<p>这五块一起算误差平方和<a class="jr" href="#g-07">7</a>:好优化,但它不直接优化 mAP,对定位和分类误差的加权也不够理想。</p>
 <p><strong>为什么要这两个 λ</strong>:7×7=49 个格子里绝大多数<strong>没有物体</strong>,它们的置信度目标是 0。若不压,这海量"空框往 0 推"的梯度会<strong>淹没</strong>少数有物体格子的信号(正负样本严重失衡)——所以 λ_noobj=0.5 把它压小;而坐标最该学准,反过来 λ_coord=5 放大它。</p>
 
 <h3>数字例子 · w,h 取平方根:小框的等量误差罚更重</h3>
-<p>坐标损失里 w,h <strong>先取平方根再比</strong>,让"同样差 10 像素"在大框上没那么严重、在小框上更该修:</p>
-<pre class="eq">同样宽度差 10 像素:
-大框  w=100→110:  √100=10.0  √110=10.49   差 0.49
-小框  w=10 →20 :  √10 =3.16  √20 =4.47    差 1.31
-→ 取 √ 后,小框的同等绝对误差被罚约 1.31/0.49 ≈ 2.7 倍
-含义:小框差一点更致命,√ 让损失自动更在意小框、放过大框的等量抖动</pre>
+<p>w,h 都按整图归一化,再取平方根比残差。下面把同样的宽度偏差分别放进小框和大框:</p>
+<pre class="eq">同样相差整图宽度的 0.01:
+小框 0.01 → 0.02:√0.02 - √0.01 = 0.0414
+大框 0.10 → 0.11:√0.11 - √0.10 = 0.0154
+
+平方根残差比:0.0414 / 0.0154 ≈ 2.68
+真正进入损失的是残差平方:2.68² ≈ 7.20
+
+✓ 同样偏 1% 图宽,小框收到的尺寸损失约是大框的 7.2 倍。</pre>
 
 <h3>训练流程 · 先分类预训练,再切检测</h3>
 <pre class="eq">1. 前 20 个卷积层 + 一个分类头,在 ImageNet 上按 224×224 预训练【分类】 → 学通用视觉特征
 2. 去掉分类头,加 4 卷积 + 2 全连接,输入放大到 448×448,在 VOC 上训【检测】~135 epochs
 为什么放大到 448:检测比分类更吃细节(小物体、精确边界),给更多像素</pre>
 <p>✓ 先在海量分类数据上把主干喂饱、再切到检测,是当时 CV 的通用打法——检测标注贵,借分类预训练的通用特征起步。</p>
+<p>检测训练约 135 个 epoch;训练开头缓慢升到 <code>1e-2</code>,避免不稳定梯度让模型过早发散。论文没有给这段升温单独指定 epoch 数。</p>
+<div class="spec-scroll" tabindex="0" role="region" aria-label="训练配方表，可横向滚动">
+<table class="spec">
+  <thead><tr><th>项目</th><th>配方</th></tr></thead>
+  <tbody>
+    <tr><td>检测训练</td><td>约 135 epochs</td></tr>
+    <tr><td>Batch</td><td>64</td></tr>
+    <tr><td>Momentum</td><td>0.9</td></tr>
+    <tr><td>Weight decay</td><td>0.0005</td></tr>
+    <tr><td>Learning rate</td><td><code>1e-3</code> 缓慢升到 <code>1e-2</code>;之后 <code>1e-2</code> 训 75 epochs,<code>1e-3</code> 训 30,<code>1e-4</code> 训 30</td></tr>
+    <tr><td>正则化</td><td>第一层全连接后 dropout 0.5</td></tr>
+    <tr><td>数据增强</td><td>缩放/平移最多 20%;曝光/饱和度最多 1.5×</td></tr>
+  </tbody>
+</table>
+</div>
 
 <h2><span class="num">§ 05</span>推理去重：98 个框 → NMS → 干净结果</h2>
 
-<p>7×7 网格 × 每格 2 框 = <strong>98 个候选框</strong>,同一个物体周围往往冒出好几个都还行的框。先按类专属分数阈值筛掉低分,再用 <a href="../concepts/non-max-suppression.html">非极大值抑制(NMS)</a><a class="jr" href="#g-06">6</a>:按分排序,留最高分那个,把和它 <a href="../concepts/iou-intersection-over-union.html">IOU</a> 超阈值(如 0.5)的重叠框删掉<a class="jr" href="#g-05">5</a>,重复到没框剩——一物一框。</p>
+<p><code>7×7×2=98</code> 个候选框,同一个物体周围往往冒出好几个都还行的框。沿用前面那只狗:责任格的框 A 已算出狗分数 <strong>0.56</strong>,旁边两个高度重叠框的狗分数是 <strong>0.48</strong> 和 <strong>0.41</strong>。先按类专属分数阈值筛掉低分,再用 <a href="../concepts/non-max-suppression.html">非极大值抑制(NMS)</a><a class="jr" href="#g-06">6</a>:按分排序,留 0.56 的框 A,把和它 <a href="../concepts/iou-intersection-over-union.html">IOU</a> 超阈值的重叠框删掉<a class="jr" href="#g-05">5</a>,重复到没框剩——一物一框。下图手算例子用<strong>例如 0.5</strong>的 IOU 阈值走一遍去重;这是讲解用取值,不是论文固定的超参数。</p>
+<p>论文还给了一个容易漏掉的量化结果:YOLO 的网格本身已经减少重复框,NMS 不像在 R-CNN/DPM 里那么关键,但仍能增加约 2-3 mAP。</p>
 
-<figure id="fig-nms">
-  <figcaption><span>FIG 05 · 一堆重叠框 → 按分排序 + 删 IOU&gt;0.5 → 一物一框</span><span class="fnum">NMS</span></figcaption>
+<figure class="yl-figure" id="fig-nms">
+  <figcaption><span>FIG 05 · 同一只狗:0.56 领跑,删 IOU&gt;0.5 的低分重叠框</span><span class="fnum">NMS</span></figcaption>
+  <div class="yl-figure-scroll" tabindex="0" role="region" aria-label="图表横向滚动区域">
   <svg class="yl-svg" viewBox="0 0 720 232" xmlns="http://www.w3.org/2000/svg">
     <defs><marker id="yl-n" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#c85e12"/></marker></defs>
     <!-- left: 3 cascading overlapping boxes (分数 chips 在下方图例) -->
-    <text class="yl-rev d1" x="150" y="34" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#7a6f5d">筛完还剩一堆重叠框</text>
+    <text class="yl-rev d1" x="150" y="34" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#7a6f5d">筛完还剩一堆重叠框</text>
     <rect class="yl-rev d1" x="66" y="52" width="168" height="120" fill="#eef0e6" stroke="#bfb398"/>
     <rect class="yl-rev d2" x="82" y="66" width="112" height="76" fill="none" stroke="#cf9b9b" stroke-width="1.6"/>
     <rect class="yl-rev d2" x="96" y="80" width="112" height="76" fill="none" stroke="#b06a6a" stroke-width="2"/>
     <rect class="yl-rev d2" x="110" y="94" width="112" height="76" fill="none" stroke="#9b2c2c" stroke-width="2.8"/>
     <!-- 分数图例(色块→分数,不压框线) -->
-    <g class="yl-rev d2" font-size="9.5" font-weight="700">
-      <text x="66" y="196" text-anchor="start" font-size="8.5" font-weight="400" fill="#7a6f5d">框分数</text>
-      <rect x="112" y="187" width="12" height="12" rx="2" fill="#9b2c2c"/><text x="128" y="197" fill="#3a3128">0.9</text>
-      <rect x="158" y="187" width="12" height="12" rx="2" fill="#b06a6a"/><text x="174" y="197" fill="#3a3128">0.8</text>
-      <rect x="204" y="187" width="12" height="12" rx="2" fill="#cf9b9b"/><text x="220" y="197" fill="#3a3128">0.75</text>
+    <g class="yl-rev d2" font-size="11" font-weight="700">
+      <text x="66" y="196" text-anchor="start" font-size="11" font-weight="400" fill="#7a6f5d">框分数</text>
+      <rect x="112" y="187" width="12" height="12" rx="2" fill="#9b2c2c"/><text x="128" y="197" fill="#3a3128">0.56</text>
+      <rect x="158" y="187" width="12" height="12" rx="2" fill="#b06a6a"/><text x="174" y="197" fill="#3a3128">0.48</text>
+      <rect x="204" y="187" width="12" height="12" rx="2" fill="#cf9b9b"/><text x="220" y="197" fill="#3a3128">0.41</text>
     </g>
     <!-- arrow -->
     <line class="yl-rev d3" x1="256" y1="112" x2="326" y2="112" stroke="#c85e12" stroke-width="2" marker-end="url(#yl-n)"/>
-    <text class="yl-rev d3" x="291" y="103" text-anchor="middle" font-size="9" font-weight="700" fill="#8a3f0c">排序·留最高</text>
-    <text class="yl-rev d3" x="291" y="127" text-anchor="middle" font-size="8.5" fill="#7a6f5d">删 IOU&gt;0.5 的</text>
+    <text class="yl-rev d3" x="291" y="103" text-anchor="middle" font-size="11" font-weight="700" fill="#8a3f0c">排序·留最高</text>
+    <text class="yl-rev d3" x="291" y="127" text-anchor="middle" font-size="11" fill="#7a6f5d">例如删 IOU&gt;0.5 的</text>
     <!-- right: clean single box -->
-    <text class="yl-rev d4" x="560" y="34" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#c85e12">一物一框</text>
+    <text class="yl-rev d4" x="560" y="34" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#c85e12">一物一框</text>
     <rect class="yl-rev d4" x="476" y="52" width="168" height="120" fill="#eef0e6" stroke="#bfb398"/>
     <rect class="yl-rev d5" x="504" y="80" width="112" height="76" fill="none" stroke="#c85e12" stroke-width="2.8"/>
-    <text class="yl-rev d5" x="504" y="74" text-anchor="start" font-size="9.5" font-weight="700" fill="#c85e12">狗 0.9(留)</text>
-    <text class="yl-rev d6" x="360" y="220" text-anchor="middle" font-size="10.5" font-weight="700" fill="#3a3128">重叠(IOU 高)= 同一物体,只留分最高的 0.9;IOU 低 = 不同物体,都留</text>
+    <text class="yl-rev d5" x="504" y="74" text-anchor="start" font-size="11" font-weight="700" fill="#c85e12">狗 0.56(框 A,留)</text>
+    <text class="yl-rev d6" x="360" y="220" text-anchor="middle" font-size="11" font-weight="700" fill="#3a3128">重叠(IOU 高)= 同一只狗,留 0.56 的框 A,压掉 0.48 / 0.41;IOU 低则都留</text>
   </svg>
+  </div>
 </figure>
 
-<h2><span class="num">§ 06</span>结果：速度换来的甜与苦</h2>
+<h2><span class="num">§ 06</span>实验：快只是半个答案，关键是它错得不一样</h2>
 
-<p>主干是 24 卷积层 + 2 全连接(承 GoogLeNet,用 1×1 降维 + 3×3),检测输入 448×448<a class="jr" href="#g-11">11</a>。YOLO 用一点 <a href="../concepts/mean-average-precision.html">mAP</a><a class="jr" href="#g-10">10</a> 换来当时无人能及的速度,而且看全图让它<strong>背景误检更少、泛化更好</strong>(迁到艺术画都稳);代价是<strong>定位偏粗、一群小物体易漏</strong>(每格只 2 框 1 类)<a class="jr" href="#g-08">8</a>。</p>
+<p>先看速度—精度正面账:主干是 24 卷积层 + 2 全连接(承 GoogLeNet,用 1×1 降维 + 3×3),检测输入 448×448<a class="jr" href="#g-11">11</a>。YOLO 的 63.4 <a href="../concepts/mean-average-precision.html">mAP</a><a class="jr" href="#g-10">10</a> 不及当时最强检测器,但 45 FPS 跨过实时线;Fast YOLO 更冲到 155 FPS。真正有意思的还在后面:它和 Fast R-CNN 的错误结构不同,所以两者合起来比“再塞一个普通模型”更值钱。</p>
 
-<figure id="fig-tradeoff">
+<figure class="yl-figure" id="fig-tradeoff">
   <figcaption><span>FIG 06 · 速度 vs 精度:YOLO 站在实时区,R-CNN 慢但略准</span><span class="fnum">SPEED–ACCURACY</span></figcaption>
+  <div class="yl-figure-scroll" tabindex="0" role="region" aria-label="图表横向滚动区域">
   <svg class="yl-svg" viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg">
     <!-- axes -->
     <line class="yl-rev d1" x1="60" y1="210" x2="690" y2="210" stroke="#7a6f5d" stroke-width="1.2"/>
     <line class="yl-rev d1" x1="60" y1="210" x2="60" y2="40" stroke="#7a6f5d" stroke-width="1.2"/>
-    <text class="yl-rev d1" x="375" y="238" text-anchor="middle" font-size="10" fill="#7a6f5d">FPS(越右越快)→</text>
-    <text class="yl-rev d1" x="24" y="130" text-anchor="middle" font-size="10" fill="#7a6f5d" transform="rotate(-90 24 130)">mAP(越上越准)→</text>
-    <text class="yl-rev d1" x="56" y="224" text-anchor="end" font-size="8" fill="#7a6f5d">0</text>
+    <text class="yl-rev d1" x="375" y="238" text-anchor="middle" font-size="11" fill="#7a6f5d">FPS(越右越快)→</text>
+    <text class="yl-rev d1" x="24" y="130" text-anchor="middle" font-size="11" fill="#7a6f5d" transform="rotate(-90 24 130)">mAP(越上越准)→</text>
+    <text class="yl-rev d1" x="56" y="224" text-anchor="end" font-size="11" fill="#7a6f5d">0</text>
     <!-- real-time line at 30 FPS (x = 60 + 30/160*620 = 176) -->
     <line class="yl-rev d2" x1="176" y1="40" x2="176" y2="210" stroke="#c85e12" stroke-width="1.2" stroke-dasharray="4 3"/>
-    <text class="yl-rev d2" x="176" y="52" text-anchor="middle" font-size="8.5" font-weight="700" fill="#c85e12">≥30 FPS = 实时</text>
-    <text class="yl-rev d2" x="140" y="200" text-anchor="end" font-size="8" fill="#9b2c2c">←慢</text>
-    <text class="yl-rev d2" x="200" y="200" text-anchor="start" font-size="8" fill="#c85e12">实时→</text>
+    <text class="yl-rev d2" x="176" y="52" text-anchor="middle" font-size="11" font-weight="700" fill="#c85e12">≥30 FPS = 实时</text>
+    <text class="yl-rev d2" x="140" y="200" text-anchor="end" font-size="11" fill="#9b2c2c">←慢</text>
+    <text class="yl-rev d2" x="200" y="200" text-anchor="start" font-size="11" fill="#c85e12">实时→</text>
     <!-- points: x = 60 + fps/160*620 ; y = 210 - (mAP-50)/25*150 -->
     <!-- Fast R-CNN 0.5 fps, 70.0 -> x62 y90 -->
     <circle class="yl-rev d3 pop" cx="63" cy="90" r="6" fill="#9b2c2c"/>
-    <text class="yl-rev d3" x="70" y="86" text-anchor="start" font-size="8.5" fill="#9b2c2c">Fast R-CNN 70.0 / 0.5</text>
+    <text class="yl-rev d3" x="70" y="86" text-anchor="start" font-size="11" fill="#9b2c2c">Fast R-CNN 70.0 / 0.5</text>
     <!-- Faster R-CNN VGG16 7 fps 73.2 -> x87 y72 -->
     <circle class="yl-rev d3 pop" cx="87" cy="72" r="6" fill="#9b2c2c"/>
-    <text class="yl-rev d3" x="94" y="68" text-anchor="start" font-size="8.5" fill="#9b2c2c">Faster R-CNN 73.2 / 7</text>
+    <text class="yl-rev d3" x="94" y="68" text-anchor="start" font-size="11" fill="#9b2c2c">Faster R-CNN 73.2 / 7</text>
     <!-- YOLO 45 fps 63.4 -> x234 y130 -->
     <circle class="yl-rev d4 pop" cx="234" cy="130" r="7" fill="#c85e12"/>
-    <text class="yl-rev d4" x="244" y="127" text-anchor="start" font-size="10" font-weight="700" fill="#c85e12">YOLO 63.4 / 45</text>
+    <text class="yl-rev d4" x="244" y="127" text-anchor="start" font-size="11" font-weight="700" fill="#c85e12">YOLO 63.4 / 45</text>
     <!-- Fast YOLO 155 fps 52.7 -> x661 y194 -->
     <circle class="yl-rev d5 pop" cx="661" cy="194" r="7" fill="#c85e12"/>
-    <text class="yl-rev d5" x="655" y="182" text-anchor="end" font-size="10" font-weight="700" fill="#c85e12">Fast YOLO 52.7 / 155</text>
-    <text class="yl-rev d6" x="375" y="266" text-anchor="middle" font-size="10.5" font-weight="700" fill="#3a3128">R-CNN 略准但慢到不实时;YOLO 家族在实时区,背景误检少、定位误差多</text>
+    <text class="yl-rev d5" x="655" y="182" text-anchor="end" font-size="11" font-weight="700" fill="#c85e12">Fast YOLO 52.7 / 155</text>
+    <text class="yl-rev d6" x="375" y="266" text-anchor="middle" font-size="11" font-weight="700" fill="#3a3128">R-CNN 略准但慢到不实时;YOLO 家族在实时区,背景误检少、定位误差多</text>
   </svg>
+  </div>
 </figure>
 
+<div class="spec-scroll" tabindex="0" role="region" aria-label="速度与精度对比表，可横向滚动">
 <table class="spec">
   <tr><th>模型(VOC 2007)</th><th>mAP</th><th>FPS</th></tr>
   <tr><td>Fast R-CNN</td><td>70.0</td><td>0.5</td></tr>
@@ -357,24 +414,157 @@ figure.play .yl-svg .pop { transform: scale(1); }
   <tr class="win"><td>YOLO</td><td>63.4</td><td>45(实时)</td></tr>
   <tr><td>Fast YOLO</td><td>52.7</td><td>155</td></tr>
 </table>
+</div>
+
+<h3>错误画像 · 定位差，背景误检少</h3>
+
+<p>论文把 VOC 2007 每一类分数最高的 N 个检测拿出来,再在 20 类上平均。YOLO 的正确检测略少,定位错误却从 8.6% 跳到 19.0%;另一头,背景误检从 13.6% 压到 4.75%。这不是一句“精度低一点”能概括的:它把错从<strong>看错背景</strong>换成了<strong>看对物体但框偏了</strong><a class="jr" href="#g-08">8</a>。</p>
+
+<figure class="yl-figure" id="fig-errors">
+  <figcaption><span>FIG 07 · VOC 2007 各类 TOP-N 检测在 20 类上取平均；每行堆叠为 100%</span><span class="fnum">ERROR PROFILE</span></figcaption>
+  <div class="yl-figure-scroll" tabindex="0" role="region" aria-label="图表横向滚动区域">
+  <svg class="yl-svg" viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg">
+    <!-- shared legend -->
+    <g class="yl-rev d1" font-size="11" fill="#3a3128">
+      <rect x="70" y="12" width="12" height="12" rx="2" fill="#c85e12"/><text x="88" y="23">正确</text>
+      <rect x="150" y="12" width="12" height="12" rx="2" fill="#9b2c2c"/><text x="168" y="23">定位</text>
+      <rect x="230" y="12" width="12" height="12" rx="2" fill="#b8841c"/><text x="248" y="23">相似类</text>
+      <rect x="330" y="12" width="12" height="12" rx="2" fill="#1f3a5f"/><text x="348" y="23">其他</text>
+      <rect x="410" y="12" width="12" height="12" rx="2" fill="#4a6b3a"/><text x="428" y="23">背景</text>
+    </g>
+    <!-- Fast R-CNN: exact 600px total -->
+    <text class="yl-rev d1" x="70" y="50" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#3a3128">Fast R-CNN</text>
+    <g class="yl-rev d2">
+      <rect x="70" y="59" width="429.6" height="34" fill="#c85e12"/>
+      <rect x="499.6" y="59" width="51.6" height="34" fill="#9b2c2c"/>
+      <rect x="551.2" y="59" width="25.8" height="34" fill="#b8841c"/>
+      <rect x="577" y="59" width="11.4" height="34" fill="#1f3a5f"/>
+      <rect x="588.4" y="59" width="81.6" height="34" fill="#4a6b3a"/>
+      <text x="284.8" y="81" text-anchor="middle" font-size="11.5" font-weight="700" fill="#0f0c09">71.6%</text>
+      <text x="525.4" y="81" text-anchor="middle" font-size="11" font-weight="700" fill="#faf4e1">8.6%</text>
+      <text x="629.2" y="81" text-anchor="middle" font-size="11" font-weight="700" fill="#faf4e1">13.6%</text>
+    </g>
+    <!-- YOLO: exact 600px total -->
+    <text class="yl-rev d3" x="70" y="121" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#c85e12">YOLO</text>
+    <g class="yl-rev d4">
+      <rect x="70" y="130" width="393.0" height="34" fill="#c85e12"/>
+      <rect x="463" y="130" width="114.0" height="34" fill="#9b2c2c"/>
+      <rect x="577" y="130" width="40.5" height="34" fill="#b8841c"/>
+      <rect x="617.5" y="130" width="24.0" height="34" fill="#1f3a5f"/>
+      <rect x="641.5" y="130" width="28.5" height="34" fill="#4a6b3a"/>
+      <text x="266.5" y="152" text-anchor="middle" font-size="11.5" font-weight="700" fill="#0f0c09">65.5%</text>
+      <text x="520" y="152" text-anchor="middle" font-size="11.5" font-weight="700" fill="#faf4e1">19.0%</text>
+    </g>
+    <!-- narrow-segment values stay in a dedicated data strip -->
+    <g class="yl-rev d5" font-size="11" fill="#3a3128">
+      <text x="70" y="190">Fast R-CNN · 正确 71.6% · 定位 8.6% · 相似类 4.3% · 其他 1.9% · 背景 13.6%</text>
+      <text x="70" y="211">YOLO · 正确 65.5% · 定位 19.0% · 相似类 6.75% · 其他 4.0% · 背景 4.75%</text>
+    </g>
+    <!-- primary callouts -->
+    <g class="yl-rev d6">
+      <rect x="70" y="231" width="280" height="48" rx="4" fill="#efd6c8" stroke="#9b2c2c"/>
+      <text x="210" y="260" text-anchor="middle" font-size="11.5" font-weight="700" fill="#7a2020">YOLO 定位错误：19.0% vs 8.6%</text>
+      <rect x="370" y="231" width="300" height="48" rx="4" fill="#d8e6ce" stroke="#4a6b3a"/>
+      <text x="520" y="260" text-anchor="middle" font-size="11.5" font-weight="700" fill="#2f5a2a">YOLO 背景误检：4.75% vs 13.6%（约三分之一）</text>
+    </g>
+  </svg>
+  </div>
+</figure>
+
+<h3>模型互补 · 不是普通集成</h3>
+
+<p><strong>最佳 Fast R-CNN 单独为 71.8 mAP</strong>。在它旁边再加一个 Fast R-CNN 变体,最多只涨 0.6;加上单模成绩并不拔尖的 YOLO,组合却到 75.0,足足涨 3.2。</p>
+
+<div class="spec-scroll" tabindex="0" role="region" aria-label="模型互补对比表，可横向滚动">
+<table class="spec">
+  <tr><th>Added model</th><th>Added model mAP</th><th>Combined with best Fast R-CNN</th><th>Gain</th></tr>
+  <tr><td>Fast R-CNN (2007 data)</td><td>66.9</td><td>72.4</td><td>+0.6</td></tr>
+  <tr><td>Fast R-CNN (VGG-M)</td><td>59.2</td><td>72.4</td><td>+0.6</td></tr>
+  <tr><td>Fast R-CNN (CaffeNet)</td><td>57.1</td><td>72.1</td><td>+0.3</td></tr>
+  <tr class="win"><td>YOLO</td><td>63.4</td><td>75.0</td><td>+3.2</td></tr>
+</table>
+</div>
+
+<p>关键不在“又加了一个模型”,而在 YOLO 的取舍正好错开:背景误检少,定位误差多。Fast R-CNN 更擅长把框卡准,YOLO 则能压住它容易冒出来的背景假阳性,两套错误互相兜底。</p>
+
+<h3>VOC 2012 · 小物体短板坐实</h3>
+
+<p><strong>YOLO：57.9 mAP；Fast R-CNN：68.4 mAP；Fast R-CNN + YOLO：70.7 mAP（+2.3）</strong>。换到 VOC 2012,互补收益还在。分到具体类别看,bottle、sheep、tv/monitor 比表中邻近方法低 8-10 点,cat 和 train 反倒更强。这里不铺满 20 类榜单:这组差距的作用,是把<strong>成群小目标与细小目标容易漏</strong>的机制短板坐实。</p>
+
+<h3>跨域泛化 · 从照片迁到艺术画</h3>
+
+<p>两组艺术画实验的训练集不同:<strong>Picasso 用 VOC 2012 训练,People-Art 用 VOC 2010 训练</strong>,都是在自然照片上训好后直接迁移。YOLO 在 Picasso 上拿 53.3 AP,在 People-Art 上拿 45 AP,都明显高过 R-CNN;这支持“整图上下文比局部候选更不容易黏住照片纹理”的解释,但证据边界也很清楚。</p>
+
+<figure class="yl-figure" id="fig-art">
+  <figcaption><span>FIG 08 · VOC 2012 → Picasso;VOC 2010 → People-Art</span><span class="fnum">ARTWORK TRANSFER</span></figcaption>
+  <div class="yl-figure-scroll" tabindex="0" role="region" aria-label="图表横向滚动区域">
+  <svg class="yl-svg" viewBox="0 0 720 330" xmlns="http://www.w3.org/2000/svg">
+    <!-- shared 0-60 AP scale -->
+    <text class="yl-rev d1" x="38" y="52" text-anchor="middle" font-size="11.5" font-weight="700" fill="#7a6f5d">AP</text>
+    <g class="yl-rev d1" font-size="11" fill="#7a6f5d" stroke="#bfb398" stroke-width="1">
+      <line x1="70" y1="70" x2="650" y2="70" stroke-dasharray="4 4"/><text x="58" y="74" text-anchor="end" stroke="none">60</text>
+      <line x1="70" y1="130" x2="650" y2="130" stroke-dasharray="4 4"/><text x="58" y="134" text-anchor="end" stroke="none">40</text>
+      <line x1="70" y1="190" x2="650" y2="190" stroke-dasharray="4 4"/><text x="58" y="194" text-anchor="end" stroke="none">20</text>
+      <line x1="70" y1="250" x2="650" y2="250"/><text x="58" y="254" text-anchor="end" stroke="none">0</text>
+    </g>
+    <line class="yl-rev d1" x1="360" y1="48" x2="360" y2="270" stroke="#bfb398" stroke-width="1" stroke-dasharray="3 5"/>
+    <text class="yl-rev d1" x="205" y="39" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#3a3128">Picasso</text>
+    <text class="yl-rev d1" x="515" y="39" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#3a3128">People-Art</text>
+    <!-- Picasso: 53.3 / 10.4 / 37.8 -->
+    <g class="yl-rev d2">
+      <rect x="112" y="90.1" width="44" height="159.9" fill="#c85e12"/>
+      <text x="134" y="82" text-anchor="middle" font-size="11.5" font-weight="700" fill="#8a3f0c">53.3</text>
+      <rect x="183" y="218.8" width="44" height="31.2" fill="#9b2c2c"/>
+      <text x="205" y="210" text-anchor="middle" font-size="11.5" font-weight="700" fill="#7a2020">10.4</text>
+      <rect x="254" y="136.6" width="44" height="113.4" fill="#1f3a5f"/>
+      <text x="276" y="128" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1f3a5f">37.8</text>
+    </g>
+    <g class="yl-rev d3" font-size="11" text-anchor="middle" fill="#3a3128">
+      <text x="134" y="269">YOLO</text><text x="205" y="269">R-CNN</text><text x="276" y="269">DPM</text>
+    </g>
+    <!-- People-Art: 45 / 26 / 32 -->
+    <g class="yl-rev d4">
+      <rect x="422" y="115" width="44" height="135" fill="#c85e12"/>
+      <text x="444" y="107" text-anchor="middle" font-size="11.5" font-weight="700" fill="#8a3f0c">45</text>
+      <rect x="493" y="172" width="44" height="78" fill="#9b2c2c"/>
+      <text x="515" y="164" text-anchor="middle" font-size="11.5" font-weight="700" fill="#7a2020">26</text>
+      <rect x="564" y="154" width="44" height="96" fill="#1f3a5f"/>
+      <text x="586" y="146" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1f3a5f">32</text>
+    </g>
+    <g class="yl-rev d5" font-size="11" text-anchor="middle" fill="#3a3128">
+      <text x="444" y="269">YOLO</text><text x="515" y="269">R-CNN</text><text x="586" y="269">DPM</text>
+    </g>
+    <rect class="yl-rev d6" x="105" y="291" width="510" height="27" rx="4" fill="#f0e0a8" stroke="#b8841c"/>
+    <text class="yl-rev d6" x="360" y="309" text-anchor="middle" font-size="11.5" font-weight="700" fill="#6d4d0e">只说明这两个人体艺术数据集上的迁移结果，不外推成普遍域泛化保证</text>
+  </svg>
+  </div>
+</figure>
+
+<p>这张图只画量化 AP;定性艺术画示例不复制到本站,可到<a href="https://arxiv.org/abs/1506.02640v5">论文官方 arXiv v5</a>查看。作者还把 YOLO 接到摄像头,把取帧和显示也算进整条链路,验证它确实能实时运行。</p>
 
 <div class="note">
-  <span class="l">放进 wiki 这条线</span>
-  <p>YOLO 的品味是<strong>把"检测"重新表述成"回归"</strong>:不再"提议—验证"两步、上千次逐候选分类,而是让 <a href="../concepts/one-stage-detection.html">一个网络一次前向</a> 让每个网格对号入座。这种"把多步流水线拍成一次前向"的思路,和端到端 TTS(<a href="vits.html">VITS</a> 治两段失配)、并行解码(<a href="viitorvoice.html">ViiTorVoice</a> 的 NAR)是同一种品味。检测的三个通用零件——<a href="../concepts/iou-intersection-over-union.html">IOU</a>、<a href="../concepts/non-max-suppression.html">NMS</a>、<a href="../concepts/mean-average-precision.html">mAP</a>——从 YOLO 起会反复出现。速度换的精度差(尤其小物体),是后续 v2/v3… 一路补的功课。</p>
+  <span class="l">局限 · 从机制往回找</span>
+  <ul>
+    <li><strong>每格只有两个框和一套类别概率</strong> → 成群小目标容易漏。</li>
+    <li><strong>框形状从训练数据中学</strong> → 罕见长宽比和布局不稳。</li>
+    <li><strong>多次下采样</strong> → 定位特征偏粗。</li>
+    <li><strong>误差平方和不等于 mAP</strong> → 主要错误仍是定位。</li>
+  </ul>
+  <p>YOLO v1 留下的长久贡献,是把通用目标检测重新表述成<strong>一个联合训练的单一回归系统</strong>。</p>
 </div>
 
 <!-- glossary -->
 <div class="gloss">
   <h2>引用 / 术语表</h2>
   <ol>
-    <li id="g-01"><span class="term"><a href="../concepts/one-stage-detection.html">检测=单次回归</a></span> · 不提候选、不逐块重复分类;一个 CNN 一次前向直接从整图输出所有框+类别。对比两阶段(R-CNN)上千次逐候选评估。</li>
+    <li id="g-01"><span class="term"><a href="../concepts/one-stage-detection.html">检测=单次回归</a></span> · 不提候选、不逐块重复分类;一个 CNN 一次前向直接从整图输出所有框+类别。对比原始 R-CNN 约 2000 个候选逐框提特征。</li>
     <li id="g-02"><span class="term">7×7 网格 · 责任格</span> · 图切 S×S=7×7;物体中心落在哪格,哪格负责预测它。空间位置天然分工,替代候选提议。</li>
     <li id="g-03"><span class="term">7×7×30 输出</span> · 每格 B=2 框(各 x,y,w,h,置信度)+ C=20 类概率 = 2×5+20 = 30;整图 7×7×30 = 1470 个数一次出。</li>
     <li id="g-04"><span class="term">置信度 = Pr(物体)×<a href="../concepts/iou-intersection-over-union.html">IOU</a></span> · 框置信度既表达"有没有物体"又表达"框得准不准",共用一个训练信号。</li>
     <li id="g-05"><span class="term"><a href="../concepts/iou-intersection-over-union.html">IOU</a></span> · 两个框交集÷并集,∈[0,1];衡量框的重合度。训练目标、去重判定都用它。</li>
     <li id="g-06"><span class="term"><a href="../concepts/non-max-suppression.html">NMS 去重</a></span> · 98 个候选框按分排序,留最高、删和它 IOU&gt;阈值的重叠框,一物一框。</li>
     <li id="g-07"><span class="term">损失三修</span> · λ_coord=5 放大坐标损失;λ_noobj=0.5 压低空格置信度损失(治正负样本失衡);w,h 取 √ 后比(小框等量误差罚更重)。</li>
-    <li id="g-08"><span class="term">强与弱</span> · 强:看全图 → 背景误检少、泛化好(迁艺术画稳)、实时。弱:定位偏粗、一群小物体易漏(每格仅 2 框 1 类)。</li>
+    <li id="g-08"><span class="term">强与弱</span> · 强:看全图 → 背景误检少、两个人体艺术集迁移强、实时。弱:定位偏粗、一群小物体易漏(每格仅 2 框 1 套类别概率)。</li>
     <li id="g-09"><span class="term">成绩</span> · VOC2007:YOLO 63.4% mAP @ 45 FPS;Fast YOLO 52.7% @ 155 FPS;对比 Faster R-CNN 73.2 但仅 7 FPS。</li>
     <li id="g-10"><span class="term"><a href="../concepts/mean-average-precision.html">mAP</a></span> · 每类 PR 曲线下面积(AP)对所有类求平均;命中判定靠 IOU≥0.5。检测通用总分。</li>
     <li id="g-11"><span class="term">架构 / 训练</span> · 24 卷积层 + 2 全连接(承 GoogLeNet,用 1×1 降维 + 3×3);先在 ImageNet 224² 预训练分类,再加层放大到 448² 训检测 ~135 epochs。</li>
@@ -383,17 +573,19 @@ figure.play .yl-svg .pop { transform: scale(1); }
 </div>
 
 <div class="colophon">
-  <span>SOURCE · arXiv 1506.02640 · You Only Look Once: Unified, Real-Time Object Detection (Redmon, Divvala, Girshick, Farhadi · CVPR 2016)</span>
+  <span>SOURCE · arXiv v5 1506.02640 · You Only Look Once: Unified, Real-Time Object Detection (Redmon, Divvala, Girshick, Farhadi · CVPR 2016)</span>
   <span>INGESTED · 2026-07-09</span>
 </div>
 
 </div>
 <script>
 {
-  const figs = ['fig-oneshot','fig-grid','fig-cell','fig-loss','fig-nms','fig-tradeoff'];
+  const figs = ['fig-oneshot','fig-grid','fig-cell','fig-loss','fig-nms','fig-tradeoff','fig-errors','fig-art'];
+  const canObserve = 'IntersectionObserver' in window;
   figs.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
+    if (!canObserve) { el.classList.add('play'); return; }
     const obs = new IntersectionObserver(es => {
       es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
     }, { threshold: 0.15 });
