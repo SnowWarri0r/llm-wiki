@@ -308,6 +308,7 @@
 - [Imitation Learning](wiki/concepts/imitation-learning.md) — 行为克隆抄专家演示, 不试错不要 reward; 对照 RL; 软肋是误差累积(distribution shift)
 
 ### 共享基础设施
+- [读懂 2×2 矩阵](wiki/concepts/reading-2x2-matrices.md) — 两列=x/y基向量落到哪; 单位方块→两列张成的平行四边形, det=它的面积; 缩放(对角)/旋转(列正交等长)/错切(一列没动)一眼分辨; 任意矩阵=转→缩→转(SVD); 三面板手算图
 - [矩阵的秩 · rank](wiki/concepts/matrix-rank.md) — 一个变换"真正有几个独立旋钮"; 低秩=冗余可压(拆成两个瘦矩阵); LoRA/SVD/PCA/注意力瓶颈背后同一件事
 - [特征向量 / 特征值](wiki/concepts/eigenvector.md) — 被矩阵作用后"只缩放不转向"的方向 Wv=λv; 怎么手算(特征方程 det(W−λI)=0 全程); 特征分解 W=QΛQ⁻¹; SVD 的地基
 - [SVD · 奇异值分解](wiki/concepts/svd.md) — 接特征向量: 看 WᵀW 特征向量推广到任意矩阵; W=UΣVᵀ 入方向/拉伸/出方向(U≠V); σ=√特征值; 截断前r个=最佳低秩近似; PCA/压缩/LoRA 根
