@@ -9,6 +9,7 @@
 - [FFT · 快速傅里叶变换](wiki/papers/fft.md) — 信号处理/算法基础: 傅里叶=棱镜拆频率, FFT 用偶奇折半+单位根对称(蝴蝶)把 N² 砍成 N·logN; 接卷积定理 + 音频频谱(STFT)
 - [CNN · 卷积神经网络](wiki/papers/cnn.md) — 视觉骨架基础: 小核滑遍全图+权重共享, 把局部性/平移不变焊进结构; 卷积滑窗动画 + LeNet→ResNet→ViT 谱系
 - [Deep Residual Learning · ResNet](wiki/papers/resnet.md) — 残差连接的起源，把"网络越深越好"做成现实，也给两年后的 Transformer 留好 sublayer 模板
+- [YOLO · 看一眼就把框和类一起吐出来](wiki/papers/yolo.md) — CVPR2016 实时目标检测开山: 把"先提上千候选框再逐个分类"(R-CNN慢/只看局部)改成一个CNN一次前向直接回归; 7×7网格物体中心落哪格哪格负责,每格2框+20类→输出7×7×30; 置信度=Pr(物体)×IOU; 推理NMS去重; 看全图→背景误检少但定位粗、小物体易漏; 63.4%mAP@45FPS, Fast YOLO 52.7%@155FPS(vs Faster R-CNN 73.2但7FPS); 检测三件套IOU/NMS/mAP起点
 - [LSTM · 长短期记忆](wiki/papers/lstm.md) — Transformer 前的序列霸主: cell state 记忆传送带(加法更新)+三个门(遗忘/输入/输出)治住RNN梯度消失; 加法梯度高速路=ResNet残差同构; 被Attention取代
 - [Attention Is All You Need](wiki/papers/attention-is-all-you-need.md) — Transformer 始祖，整个 LLM 时代的奠基
 - [BERT](wiki/papers/bert.md) — 只要 Transformer encoder，用 MLM 学双向上下文，立住 pretrain → finetune 范式
@@ -262,6 +263,10 @@
 - [SAM 数据引擎 · Data Engine](wiki/concepts/sam-data-engine.md) — 模型帮标→数据训模型→模型更强的飞轮,三阶段(辅助手动→半自动→全自动)从零滚出11亿掩码; 前两阶段人推后面自转
 - [Inductive Bias](wiki/concepts/inductive-bias.md) — 模型架构里的"祖传家产", 数据少时是宝大数据时是包袱
 - [3D Gaussian Splatting](wiki/concepts/gaussian-splatting.md) — 场景=几百万个高斯椭球, splat投影+α混合实时渲染+任意新视角; vs NeRF快且可编辑; "高斯泼溅"LoRA是2D扩散借名模仿非真3D
+- [单阶段检测](wiki/concepts/one-stage-detection.md) — 一次前向直接回归所有框,不先提候选; vs两阶段(R-CNN上千次逐候选分类); 快+看全图,代价定位糙; YOLO开的路
+- [IOU · 交并比](wiki/concepts/iou-intersection-over-union.md) — 两个框重合度=交集÷并集∈[0,1]; 同时管住位置+大小+长宽比; 置信度目标/NMS去重/mAP命中判定都用它
+- [NMS · 非极大值抑制](wiki/concepts/non-max-suppression.md) — 一物多框去重: 按分排序留最高、删和它IOU>阈值的重叠框; 检测推理收尾标配
+- [mAP · 平均精度均值](wiki/concepts/mean-average-precision.md) — 检测总分: 每类PR曲线下面积(AP)再对类平均; 命中靠IOU≥0.5; 同时惩罚乱报(precision)和漏报(recall)
 
 ### 多模态
 - [Contrastive Learning](wiki/concepts/contrastive-learning.md) — 拉近正样本 + 推开负样本, in-batch negatives 白送 N²-N 个负例
