@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>读懂 2×2 矩阵 · 两列就是两个基向量落到哪 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · reading-2x2-matrices</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>读懂 2×2 矩阵 · 两列就是两个基向量落到哪</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>拿到任何 2×2 矩阵,把它竖着看成两列:第 1 列 = x 基向量 (1,0) 变换后落到的点、第 2 列 = y 基向量 (0,1) 落到的点。单位方块就变成这两列箭头张成的平行四边形,<code>det</code> = 这个平行四边形的面积(体积缩放倍数)。</p>
+<h2>直觉 · 一把钥匙:两列 = 基向量落点</h2>
+<p>矩阵乘一个基向量,就是"挑出对应那一列":</p>
+<pre><code>[[a,b],[c,d]] · (1,0) = (a, c)   ← 第1列 = x 基向量落点
+[[a,b],[c,d]] · (0,1) = (b, d)   ← 第2列 = y 基向量落点
+</code></pre>
+<p>所以<strong>你不用死记矩阵怎么算</strong>——把两列画成从原点出发的两个箭头,原来的单位方块就被这两个箭头"张"成一个平行四边形,一眼就看出这个矩阵把空间怎么拧了。缩放、旋转、错切,全从这一个视角读出来。</p>
+<figure style="margin:26px 0; padding:22px; background:#eef1f5; border:1px solid #aab4c4; border-radius:4px;">
+<svg viewBox="0 0 720 320" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:JetBrains Mono,monospace;">
+  <defs>
+    <marker id="m2x" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#9b2c2c"/></marker>
+    <marker id="m2y" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#1f4d3a"/></marker>
+  </defs>
+  <!-- ① 缩放 -->
+  <text class="reveal d1" x="138" y="30" text-anchor="middle" font-size="12.5" font-weight="700" fill="#3a3128">① 缩放(对角)</text>
+  <text class="reveal d1" x="138" y="48" text-anchor="middle" font-size="10.5" fill="#1f3a5f">[[2,0],[0,3]]</text>
+  <rect class="reveal d1" x="110" y="187" width="28" height="28" fill="none" stroke="#7a6f5d" stroke-width="1" stroke-dasharray="3 3"/>
+  <rect class="reveal d2" x="110" y="131" width="56" height="84" fill="#c8d4e2" fill-opacity="0.6" stroke="#1f3a5f" stroke-width="1.4"/>
+  <line class="reveal d2" x1="110" y1="215" x2="163" y2="215" stroke="#9b2c2c" stroke-width="2.4" marker-end="url(#m2x)"/>
+  <line class="reveal d2" x1="110" y1="215" x2="110" y2="134" stroke="#1f4d3a" stroke-width="2.4" marker-end="url(#m2y)"/>
+  <text class="reveal d2" x="138" y="255" text-anchor="middle" font-size="9.5" font-weight="700" fill="#3a3128">det=2·3=6 · 面积 ×6</text>
+  <!-- ② 旋转 -->
+  <text class="reveal d3" x="370" y="30" text-anchor="middle" font-size="12.5" font-weight="700" fill="#3a3128">② 旋转 45°</text>
+  <text class="reveal d3" x="370" y="48" text-anchor="middle" font-size="10.5" fill="#1f3a5f">[[.71,−.71],[.71,.71]]</text>
+  <rect class="reveal d3" x="370" y="177" width="28" height="28" fill="none" stroke="#7a6f5d" stroke-width="1" stroke-dasharray="3 3"/>
+  <polygon class="reveal d4" points="370,205 390,185 370,165 350,185" fill="#c8d4e2" fill-opacity="0.6" stroke="#1f3a5f" stroke-width="1.4"/>
+  <line class="reveal d4" x1="370" y1="205" x2="388" y2="187" stroke="#9b2c2c" stroke-width="2.4" marker-end="url(#m2x)"/>
+  <line class="reveal d4" x1="370" y1="205" x2="352" y2="187" stroke="#1f4d3a" stroke-width="2.4" marker-end="url(#m2y)"/>
+  <text class="reveal d4" x="370" y="255" text-anchor="middle" font-size="9.5" font-weight="700" fill="#3a3128">det=1 · 面积不变(转了)</text>
+  <!-- ③ 错切 -->
+  <text class="reveal d5" x="628" y="30" text-anchor="middle" font-size="12.5" font-weight="700" fill="#3a3128">③ 错切</text>
+  <text class="reveal d5" x="628" y="48" text-anchor="middle" font-size="10.5" fill="#1f3a5f">[[1,1],[0,1]]</text>
+  <rect class="reveal d5" x="600" y="187" width="28" height="28" fill="none" stroke="#7a6f5d" stroke-width="1" stroke-dasharray="3 3"/>
+  <polygon class="reveal d6" points="600,215 628,215 656,187 628,187" fill="#c8d4e2" fill-opacity="0.6" stroke="#1f3a5f" stroke-width="1.4"/>
+  <line class="reveal d6" x1="600" y1="215" x2="626" y2="215" stroke="#9b2c2c" stroke-width="2.4" marker-end="url(#m2x)"/>
+  <line class="reveal d6" x1="600" y1="215" x2="626" y2="189" stroke="#1f4d3a" stroke-width="2.4" marker-end="url(#m2y)"/>
+  <text class="reveal d6" x="628" y="255" text-anchor="middle" font-size="9.5" font-weight="700" fill="#3a3128">det=1 · 面积不变(歪了)</text>
+  <!-- 主线 + 图例 -->
+  <text class="reveal d7" x="360" y="280" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#3a3128">两列 = 基向量落点;单位方块 → 两列张成的平行四边形,det = 它的面积</text>
+  <line class="reveal d7" x1="96" y1="300" x2="116" y2="300" stroke="#9b2c2c" stroke-width="2.4"/>
+  <text class="reveal d7" x="122" y="304" text-anchor="start" font-size="10" fill="#7a6f5d">红 = x基(1,0)落点 = 第1列</text>
+  <line class="reveal d7" x1="360" y1="300" x2="380" y2="300" stroke="#1f4d3a" stroke-width="2.4"/>
+  <text class="reveal d7" x="386" y="304" text-anchor="start" font-size="10" fill="#7a6f5d">绿 = y基(0,1)落点 = 第2列</text>
+  <rect class="reveal d7" x="586" y="295" width="16" height="10" fill="none" stroke="#7a6f5d" stroke-width="1" stroke-dasharray="3 3"/>
+  <text class="reveal d7" x="608" y="304" text-anchor="start" font-size="10" fill="#7a6f5d">虚线 = 原单位方块</text>
+</svg>
+</figure>
+
+<h2>怎么做的 · 三种典型都从"看两列"读出来</h2>
+<ul>
+<li><strong>纯缩放</strong>(对角矩阵):两列还贴着坐标轴、只是变长短。<code>[[2,0],[0,3]]</code> = x 方向拉 2 倍、y 方向拉 3 倍。</li>
+<li><strong>纯旋转</strong>(两列都是单位长 + 互相垂直):<code>[[cosθ,−sinθ],[sinθ,cosθ]]</code>,x 基转到角度 θ、y 基跟着转,长度不变、夹角还是 90° → 只转不缩,面积不变。</li>
+<li><strong>错切</strong>(一列不动、另一列歪):<code>[[1,1],[0,1]]</code>,x 基没动、y 基向右歪,方块被推成平行四边形。底和高都没变 → 面积不变。</li>
+</ul>
+<h2>数字例子 · 代入基向量看落点</h2>
+<pre><code>缩放 [[2,0],[0,3]]:
+  (1,0) → (2,0)  x 轴拉 2 倍     (0,1) → (0,3)  y 轴拉 3 倍
+  det = 2·3 − 0·0 = 6            单位方块 → 2×3 矩形,面积 6
+
+旋转 90° [[0,−1],[1,0]]:
+  (1,0) → (0,1)  转到上方        (0,1) → (−1,0) 转到左方
+  两列都单位长且垂直 → 纯旋转    det = 0·0 − (−1)·1 = 1(面积不变)
+
+错切 [[1,1],[0,1]]:
+  (1,0) → (1,0)  没动            (0,1) → (1,1)  向右歪 1
+  四角 (0,0)(1,0)(0,1)(1,1) → (0,0)(1,0)(1,1)(2,1)
+  底 1、高 1 → 面积 = 1          det = 1·1 − 1·0 = 1
+</code></pre>
+<p>✓ 二阶行列式 <code>det[[a,b],[c,d]] = ad − bc</code>,几何上就是两列张成的平行四边形面积。</p>
+<h2>一眼分辨:看两列箭头</h2>
+<table>
+<thead>
+<tr>
+<th>观察两列</th>
+<th>结论</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>都贴坐标轴、只变长短</td>
+<td>纯缩放</td>
+</tr>
+<tr>
+<td>都是单位长 + 互相垂直</td>
+<td>纯旋转(不改大小)</td>
+</tr>
+<tr>
+<td>一列没动、另一列歪了</td>
+<td>错切</td>
+</tr>
+<tr>
+<td>列变长/变短</td>
+<td>有缩放成分</td>
+</tr>
+<tr>
+<td>两列夹角不再 90°</td>
+<td>有错切 / 旋转混进来</td>
+</tr>
+</tbody>
+</table>
+<p><code>det</code> 给两条信息:<strong>大小 = 面积放大倍数;符号 = 有没有翻面</strong>(正 = 保持朝向,负 = 镜像翻转)。</p>
+<h2>收口 · 任意矩阵 = 转 → 缩 → 转</h2>
+<p>再乱的 2×2 矩阵,都能拆成 <strong>旋转 → 沿轴缩放 → 再旋转</strong> 三步的复合(这就是 SVD)。所以"混合"的矩阵不用怕,无非"先转个角度、两个方向各拉伸一下、再转回来";而 <code>det</code> = 中间缩放两倍数之积(旋转 det=1 不贡献),永远只反映"面积缩放"这一件事。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/normalizing-flow.html">normalizing-flow</a> · 雅可比 det = 变换的局部体积缩放,正是这里的"两列面积"</li>
+<li><a href="../concepts/covariance-gaussian.html">covariance-gaussian</a> · 协方差矩阵的特征向量 = 数据云的主轴(2×2 的另一种读法)</li>
+<li><a href="../papers/vits.html">vits</a> · 归一化流靠 det 精确算概率,底层就是这套</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../concepts/covariance-gaussian.html"><span class="cat">concept</span>协方差 / 多元高斯 · 数据散成什么形状的椭圆</a></li><li><a href="../concepts/normalizing-flow.html"><span class="cat">concept</span>归一化流 · 用可逆变换把简单分布掰成复杂分布</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/reading-2x2-matrices.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

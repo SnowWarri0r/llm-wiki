@@ -879,3 +879,5 @@ skill 更新:
 ## [2026-07-03] expand | viitorvoice 加机制细节(嫌讲太粗): §02 加"RVQ 残差递推"——每码本咬上层残差,数字例 x=[.9,.4] 三层码字逼近到 0,8码本=1语义+7声学; §03 加"迭代到底怎么迭代"——置信度(softmax最高档)+余弦式定稿,4步25/50/75/100%示意,定稿按把握非从左到右+随机掩码训练/LLM初始化; §04 加"CFG外推公式"out=uncond+s·(cond−uncond)数字例(0.2+3·0.3=1.1)+两路s(情绪/nvv), 加克隆(prompt前缀条件,内容来自文本音色来自prompt)与流式(block切分,首块=60ms,低帧率帮忙)细节; glossary 12→15(g13残差递推/g14置信度余弦定稿/g15 CFG外推)
 
 ## [2026-07-06] fix+expand | vits 图修 + 概念补: ①fig-cvae KL 虚线原悬空 y=150 → 接到底部先验 z; ②MAS 图/正文/glossary/concept "右下↘"与图(a底c顶自下而上)不符 → 全改"右上↗"; ③代码块内 wikilink 渲染成裸<a>标签(stochastic-duration-predictor 的 [[normalizing-flow]] + object-effect-removal 两处)→ 纯文本; ④normalizing-flow 概念加二维 det=单位方块被抻成的面积手算(J=[[2,0],[0,3]]→面积6→密度÷6, shear det=1)
+
+## [2026-07-06] add | concept reading-2x2-matrices (读懂2×2矩阵): 一把钥匙=矩阵两列就是x/y基向量变换后落点(乘基向量=挑那列); 单位方块→两列张成平行四边形, det=面积=ad−bc; 三面板图(缩放对角[[2,0],[0,3]]面积×6 / 旋转45°列正交等长det=1 / 错切[[1,1],[0,1]]det=1歪不改面积)红=x列绿=y列虚线=原方块; 代入基向量手算(缩放/旋转90°/错切); 一眼分辨表; det符号=翻面; 任意矩阵=转→缩→转(SVD). 交叉链 normalizing-flow(雅可比det=局部体积)+covariance-gaussian; 复用为 det/雅可比 几何直觉底座
