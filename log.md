@@ -877,3 +877,5 @@ skill 更新:
 ## [2026-07-03] fix | viitorvoice fig-stream 误导: 原"首块流式"行比"等整段"行短→像流式整体更快完成; 实际总时长一样只是首声更早出. 对齐两行右边缘到同一 finish 线(x590)+加"两者约同时生成完"共享虚线; caption 改"总时长一样,差别在第一声何时出来"
 
 ## [2026-07-03] expand | viitorvoice 加机制细节(嫌讲太粗): §02 加"RVQ 残差递推"——每码本咬上层残差,数字例 x=[.9,.4] 三层码字逼近到 0,8码本=1语义+7声学; §03 加"迭代到底怎么迭代"——置信度(softmax最高档)+余弦式定稿,4步25/50/75/100%示意,定稿按把握非从左到右+随机掩码训练/LLM初始化; §04 加"CFG外推公式"out=uncond+s·(cond−uncond)数字例(0.2+3·0.3=1.1)+两路s(情绪/nvv), 加克隆(prompt前缀条件,内容来自文本音色来自prompt)与流式(block切分,首块=60ms,低帧率帮忙)细节; glossary 12→15(g13残差递推/g14置信度余弦定稿/g15 CFG外推)
+
+## [2026-07-06] fix+expand | vits 图修 + 概念补: ①fig-cvae KL 虚线原悬空 y=150 → 接到底部先验 z; ②MAS 图/正文/glossary/concept "右下↘"与图(a底c顶自下而上)不符 → 全改"右上↗"; ③代码块内 wikilink 渲染成裸<a>标签(stochastic-duration-predictor 的 [[normalizing-flow]] + object-effect-removal 两处)→ 纯文本; ④normalizing-flow 概念加二维 det=单位方块被抻成的面积手算(J=[[2,0],[0,3]]→面积6→密度÷6, shear det=1)
