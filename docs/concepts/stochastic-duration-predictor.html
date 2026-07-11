@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>随机时长预测器 · 给每个音素的时长一个&quot;分布&quot;,而不是一个定值 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · stochastic-duration-predictor</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>随机时长预测器 · 给每个音素的时长一个&quot;分布&quot;,而不是一个定值</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>同一句话可以说得快或慢、这个字拖长那个字带过——节奏是一对多的。与其给每个音素预测一个固定帧数,VITS 用一个<strong>基于流的时长预测器</strong>输出时长的<strong>分布</strong>,推理时采样出不同节奏,更自然、有变化。</p>
+<h2>直觉 · 为什么确定性时长不够</h2>
+<p><a href="../concepts/monotonic-alignment-search.html">monotonic-alignment-search</a> 在训练时定出了每个音素占几帧(比如 [3,2,3])。推理时没有音频,得靠模型预测时长。最简单是<strong>确定性</strong>预测:每个音素输出一个数(第一个音素=3 帧)。问题:同一句永远同一个节奏,机械、没有人说话的自然起伏。</p>
+<p>真实语音是<strong>一对多</strong>的:同样的字,这次拖 3 帧、下次 5 帧都合理。所以时长该是个<strong>分布</strong>,不是定值。从分布里采样,就能同一句话生成不同的、都自然的节奏。</p>
+<h2>怎么做的 · 用流建模时长分布</h2>
+<pre><code>确定性:  音素 → 一个数(3 帧)            每次都一样,死板
+随机(VITS): 音素 → 一个时长【分布】        用&lt;a href=&quot;../concepts/normalizing-flow.html&quot;&gt;normalizing-flow&lt;/a&gt;把简单噪声
+           推理时从分布采样 → 3? 4? 5?      掰成贴合真实时长的复杂分布
+</code></pre>
+<p>用归一化流是因为时长分布不规则,流能把简单高斯掰成贴合数据的形状,还能精确训练(算似然)。这也是 VITS(随机时长,MOS 4.43)比 VITS-DDP(确定性时长,4.39)更自然的原因之一。</p>
+<h2>数字例子 · 定值 vs 采样</h2>
+<p>某音素,MAS 训练中见过的时长分布集中在 4-6 帧:</p>
+<pre><code>确定性预测器:  永远输出 5 帧      → 10 次合成,节奏完全一样
+随机预测器:    从分布采样
+   第1次: 4 帧   第2次: 6 帧   第3次: 5 帧   第4次: 4 帧 …
+   → 同一句话,10 种略不同的自然节奏(有的赶、有的舒缓)
+</code></pre>
+<p>✓ 一对多的本质:输入(文本)固定,输出(节奏)有合理的多样性。把时长从"一个数"升级成"一个分布 + 采样",就把这份多样性还给了语音。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/vits.html">vits</a> · 用随机时长预测器建模节奏的一对多</li>
+<li><a href="../concepts/monotonic-alignment-search.html">monotonic-alignment-search</a> · 提供训练用的真实时长标签</li>
+<li><a href="../concepts/normalizing-flow.html">normalizing-flow</a> · 时长分布就用流来建模</li>
+<li><a href="../concepts/conditional-vae.html">conditional-vae</a> · 同属 VITS 对"一对多"的处理(潜变量也贡献多样性)</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/vits.html"><span class="cat">paper</span>VITS · 把 VAE + 归一化流 + GAN 拧成一个端到端 TTS</a></li><li><a href="../concepts/monotonic-alignment-search.html"><span class="cat">concept</span>MAS · 动态规划找文本↔音频的单调对齐</a></li><li><a href="../concepts/normalizing-flow.html"><span class="cat">concept</span>归一化流 · 用可逆变换把简单分布掰成复杂分布</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/stochastic-duration-predictor.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
