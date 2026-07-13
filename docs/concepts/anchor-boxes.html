@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Anchor boxes · 先给框一个形状起点，再预测怎么改 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · anchor-boxes</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Anchor boxes · 先给框一个形状起点，再预测怎么改</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>不让网络从零猜完整框；先在每个位置摆几种预设宽高，再回归中心和尺寸的相对变化。</p>
+<h2>直觉</h2>
+<p>直接报一个框，像让人凭空写出房子的经纬度和长宽。Anchor 先在地图每个格子上摆几块不同形状的模板：高瘦、扁宽、近方形。网络只回答“用哪块模板、往哪挪、放大多少”。</p>
+<p>这降低了回归难度，也把一个位置能提出的框从少数几个扩到多个形状。代价是候选数暴涨、正负样本更不平衡，而且模板选得差时，网络得先费力把它拧成目标形状。</p>
+<h2>怎么做的</h2>
+<p>YOLOv2 在 13×13 的每个格子预测 5 个 anchor。对一个 anchor：</p>
+<pre><code class="language-text">中心: b_x = sigmoid(t_x) + c_x
+      b_y = sigmoid(t_y) + c_y
+尺寸: b_w = p_w × exp(t_w)
+      b_h = p_h × exp(t_h)
+</code></pre>
+<p>(c_x,c_y) 是格子位置，(p_w,p_h) 是 anchor 宽高。中心的 sigmoid 把结果限制在当前格；尺寸的指数把网络输出解释成相对 anchor 的倍数。</p>
+<h2>数字例子</h2>
+<p>取横向格子起点 c_x=3，网络输出 t_x=0：</p>
+<pre><code class="language-text">sigmoid(0) = 0.5
+b_x = 3 + 0.5 = 3.5
+</code></pre>
+<p>中心一定在当前格 [3,4] 内。</p>
+<p>再取 anchor 宽 p_w=2，希望预测宽度 b_w=3：</p>
+<pre><code class="language-text">需要放大倍数 = 3 / 2 = 1.5
+t_w = ln(1.5) ≈ 0.405
+b_w = 2 × exp(0.405) = 2 × 1.5 = 3
+</code></pre>
+<p>✓ 反算 ln(b_w/p_w)=ln(3/2)=0.405，正好回到网络输出。</p>
+<h2>跟直接回归的对比</h2>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>网络学什么</th>
+<th>优点</th>
+<th>代价</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>YOLO v1</td>
+<td>直接报框</td>
+<td>输出少、结构直</td>
+<td>定位起点自由，召回低</td>
+</tr>
+<tr>
+<td>YOLOv2 anchor</td>
+<td>报相对模板的变化</td>
+<td>候选多、召回高</td>
+<td>模板和匹配规则很关键</td>
+</tr>
+</tbody>
+</table>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/yolov2-yolo9000.html">yolov2-yolo9000</a> · 把 98 个自由框改成 13×13×5 个 anchor</li>
+<li><a href="../concepts/dimension-clustering.html">dimension-clustering</a> · 不手选模板，从训练框中聚类宽高</li>
+<li><a href="../concepts/iou-intersection-over-union.html">iou-intersection-over-union</a> · 训练时匹配 anchor 与真值框</li>
+<li><a href="../concepts/one-stage-detection.html">one-stage-detection</a> · 一阶段检测的密集候选形式</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/yolov2-yolo9000.html"><span class="cat">paper</span>YOLOv2 / YOLO9000 · 给 YOLO v1 逐项校准</a></li><li><a href="../concepts/dimension-clustering.html"><span class="cat">concept</span>维度聚类 · 用数据挑 anchor 形状</a></li><li><a href="../concepts/hierarchical-classification.html"><span class="cat">concept</span>层级分类 · 沿标签树逐层乘概率</a></li><li><a href="../concepts/one-stage-detection.html"><span class="cat">concept</span>单阶段检测 · 一次前向直接出框,不先提候选</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/anchor-boxes.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>多尺度训练 · 一套权重适配多档输入 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · multi-scale-training</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>多尺度训练 · 一套权重适配多档输入</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>训练时不断切换输入分辨率，让同一个全卷积检测器在部署时能按速度预算换挡。</p>
+<h2>直觉</h2>
+<p>固定 416 训练的模型像只练一种配速：换成低分辨率，虽然能跑，未必稳。多尺度训练每隔一会儿就换跑道，让网络习惯“画面粗一点要快、画面细一点要准”。</p>
+<p>它不是图像金字塔推理：一次推理仍只选一个尺寸。也不是训练多套权重：尺寸变，权重不变。</p>
+<h2>怎么做的</h2>
+<p>YOLOv2 总下采样倍数是 32，所以训练尺寸必须是 32 的倍数：</p>
+<pre><code class="language-text">每 10 个 batch:
+  size ← random choice {320, 352, 384, ..., 608}
+  resize network input to size × size
+  继续训练同一套权重
+</code></pre>
+<p>全卷积结构没有固定长度的全连接层，因此能在训练中直接改空间尺寸。</p>
+<h2>数字例子</h2>
+<p>同一个目标原本在 416×416 图上宽 52 像素，占图宽：</p>
+<pre><code class="language-text">52 / 416 = 0.125
+</code></pre>
+<p>若换到 320×320，保持相同比例后宽度约为：</p>
+<pre><code class="language-text">320 × 0.125 = 40 像素
+</code></pre>
+<p>换到 608×608：</p>
+<pre><code class="language-text">608 × 0.125 = 76 像素
+</code></pre>
+<p>✓ 归一化宽度始终是 0.125，但卷积看到的纹理细节从 40 像素涨到 76 像素。训练时反复经历这些档位，部署时才能平滑换挡。</p>
+<h2>速度—精度取舍</h2>
+<p>论文用同一套权重测试：</p>
+<table>
+<thead>
+<tr>
+<th>尺寸</th>
+<th style="text-align: right;">VOC2007 mAP</th>
+<th style="text-align: right;">FPS</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>288</td>
+<td style="text-align: right;">69.0</td>
+<td style="text-align: right;">91</td>
+</tr>
+<tr>
+<td>416</td>
+<td style="text-align: right;">76.8</td>
+<td style="text-align: right;">67</td>
+</tr>
+<tr>
+<td>544</td>
+<td style="text-align: right;">78.6</td>
+<td style="text-align: right;">40</td>
+</tr>
+</tbody>
+</table>
+<p>训练档位是 320–608；288 是额外低分辨率测试点，不能误写成训练集合的一部分。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/yolov2-yolo9000.html">yolov2-yolo9000</a> · 每 10 batch 在多档尺寸间切换</li>
+<li><a href="../concepts/one-stage-detection.html">one-stage-detection</a> · 全卷积密集预测让尺寸可变</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/yolov2-yolo9000.html"><span class="cat">paper</span>YOLOv2 / YOLO9000 · 给 YOLO v1 逐项校准</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/multi-scale-training.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
