@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Color-Legend Mask · 颜色图例掩码 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · color-legend-mask</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Color-Legend Mask · 颜色图例掩码</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>文字先声明“哪个区域对应哪个 RGB”，生成图再用这些颜色铺满像素；文字负责语义与实例身份，图像负责精细边界。</p>
+<h2>为什么需要两部分</h2>
+<p>单张彩色 mask 有空间信息，却不知道 <code>(18,210,90)</code> 代表道路、行人还是第 7 个杯子；纯文字能命名对象，却不擅长列出几十万个像素。混合输出把两种优势拼起来：</p>
+<pre><code class="language-text">图例：&lt;p&gt;road&lt;color&gt;(20,190,240)&lt;/color&gt;&lt;/p&gt;
+      &lt;p&gt;person-1&lt;color&gt;(245,80,120)&lt;/color&gt;&lt;/p&gt;
+图像：道路像素涂 (20,190,240)，人物像素涂 (245,80,120)
+</code></pre>
+<p>解码器建立 <code>RGB → label/instance</code> 字典，再对每个像素查表。黑色保留给背景。</p>
+<h2>200 个颜色怎么拉开</h2>
+<p>SenseNova-Vision 在 RGB 立方体里用 greedy farthest-point sampling 选 200 个 anchor。设已经选中的颜色集合为 <code>S</code>，候选颜色 <code>c</code> 到集合的安全距离为：</p>
+<pre><code class="language-text">d(c,S) = min ||c-s||₂,  s∈S
+c_next = argmax d(c,S)
+</code></pre>
+<p><code>||·||₂</code> 是 RGB 三维欧氏距离；先看候选离最近旧颜色有多远，再挑这个“最近距离”最大的候选。</p>
+<p>数字例：已有红 <code>R=(255,0,0)</code>、绿 <code>G=(0,255,0)</code>，比较蓝 <code>B=(0,0,255)</code> 与黄 <code>Y=(255,255,0)</code>：</p>
+<pre><code class="language-text">d(B,R)=√(255²+0²+(-255)²)=360.6
+d(B,G)=360.6                 → d(B,S)=360.6
+
+d(Y,R)=255
+d(Y,G)=255                   → d(Y,S)=255
+</code></pre>
+<p>因此先选蓝，不选黄；它离当前调色板的最近成员更远，更不容易混色。</p>
+<h2>最脆弱的链条</h2>
+<p>多区域输出是自回归链：<strong>先生成实例列表和颜色，再生成 mask</strong>。如果文字多报了一个实例、漏了颜色槽，图像通道会忠实执行错误协议。论文附录里，人工修正实例列表后 mask 明显更聚焦，这说明混合输出具有可编辑性，也暴露了文本错误向图像传播的瓶颈。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/decodable-vision-representation.html">decodable-vision-representation</a> · 可逆协议的总框架</li>
+<li><a href="../concepts/promptable-segmentation.html">promptable-segmentation</a> · 点、框、文字等提示如何指定目标区域</li>
+<li><a href="../papers/sensenova-vision.html">sensenova-vision</a> · 该协议用于 panoptic、semantic 与 GCG 分割</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/sensenova-vision.html"><span class="cat">paper</span>SenseNova-Vision · 把整个视觉工具箱接进同一个生成接口</a></li><li><a href="../concepts/decodable-vision-representation.html"><span class="cat">concept</span>Decodable Vision Representation · 可解码视觉表示</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/color-legend-mask.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 ---
 name: cross-entropy
 type: concept
-sources: [gpt-2, dino, diffusion-opd, yolov3]
+sources: [gpt-2, dino, diffusion-opd, yolov3, sensenova-vision]
 updated: 2026-07-13
 ---
 
@@ -83,3 +83,4 @@ updated: 2026-07-13
 - [[grpo]] · 在交叉熵基础上加 reward 加权 + KL 约束
 - [[rl-for-llm-people]] · KL 散度跟交叉熵的关系在这条线里
 - [[diffusion-opd]] · 同协方差高斯的 KL 退化成均值差的 MSE
+- [[sensenova-vision]] · 框、OCR、关键点与相机参数作为文本 token，用 next-token 交叉熵训练

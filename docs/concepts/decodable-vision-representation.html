@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Decodable Vision Representation · 可解码视觉表示 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · decodable-vision-representation</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Decodable Vision Representation · 可解码视觉表示</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把视觉标注编码成模型容易生成的文本或图像，同时保留一条确定的逆变换，使生成结果还能还原成 benchmark 要的框、点、深度、法线或 3D 坐标。</p>
+<h2>为什么“能生成”还不够</h2>
+<p>模型画出一张“看着像深度图”的灰度图，不等于能算 AbsRel；写一句“人在左边”，也不等于能算检测 F1。评测要求机器可读，所以编码必须同时满足：</p>
+<ol>
+<li>模型原生通道能学；</li>
+<li>输出格式有明确边界；</li>
+<li>数值能按确定规则还原；</li>
+<li>格式出错时解析器能识别，而不是默默猜。</li>
+</ol>
+<h2>数字例子 · 框坐标往返</h2>
+<p>图像宽 <code>W=640</code>、高 <code>H=480</code>，像素框为 <code>[64,96,448,384]</code>。按宽高分别归一化：</p>
+<pre><code class="language-text">x0' = x0 / W = 64 / 640  = 0.100
+y0' = y0 / H = 96 / 480  = 0.200
+x1' = x1 / W = 448 / 640 = 0.700
+y1' = y1 / H = 384 / 480 = 0.800
+
+文本 = &lt;p&gt;person&lt;/p&gt;&lt;bbox&gt;[0.100,0.200,0.700,0.800]&lt;/bbox&gt;
+</code></pre>
+<p>其中 <code>x0,y0</code> 是左上角，<code>x1,y1</code> 是右下角；<code>W,H</code> 是输入图像像素尺寸；带撇号的是 <code>[0,1]</code> 归一化坐标。解码时反乘宽高，正好回到 <code>[64,96,448,384]</code>。三位小数意味着 640 宽图上的横向量化间隔约为 <code>0.001×640=0.64 px</code>。</p>
+<h2>图像编码也是协议</h2>
+<ul>
+<li>深度：有效 metric depth 先转 inverse depth，再归一化成灰度；近处更亮、远处更暗。</li>
+<li>法线：单位向量 <code>(nx,ny,nz)</code> 的三个分量映射到 RGB 三通道。</li>
+<li>二值 mask：固定前景色与背景色。</li>
+<li>point map：归一化 XYZ 分别写入 RGB。</li>
+</ul>
+<p>论文没有公开深度归一化的完整端点公式，所以不能把任意 min-max 公式冒充官方实现。只看“逆深度”这一步的直觉例：三个像素深度 <code>d=[1,2,4]m</code>，逆深度 <code>1/d=[1,0.5,0.25]m⁻¹</code>；若仅为演示而在这三个值内做 min-max，灰度会是 <code>[255,85,0]</code>。这说明为什么近处更亮，但真实数据的归一化边界必须以转换脚本为准。</p>
+<h2>失败边界</h2>
+<p>可解码不等于无损：坐标有量化误差，生成文本可能漏标签，生成图像可能出现边缘模糊或颜色漂移。协议把错误变得<strong>可定位、可度量</strong>，并没有消灭错误。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/unified-multimodal-generation.html">unified-multimodal-generation</a> · 三种输出通道的上层范式</li>
+<li><a href="../concepts/color-legend-mask.html">color-legend-mask</a> · 文本图例和像素颜色如何组成混合协议</li>
+<li><a href="../concepts/camera-pose-tokenization.html">camera-pose-tokenization</a> · 连续相机参数如何离散化再精确解码</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/sensenova-vision.html"><span class="cat">paper</span>SenseNova-Vision · 把整个视觉工具箱接进同一个生成接口</a></li><li><a href="../concepts/camera-pose-tokenization.html"><span class="cat">concept</span>Camera Pose Tokenization · 相机位姿 Token 化</a></li><li><a href="../concepts/color-legend-mask.html"><span class="cat">concept</span>Color-Legend Mask · 颜色图例掩码</a></li><li><a href="../concepts/unified-multimodal-generation.html"><span class="cat">concept</span>Unified Multimodal Generation · 统一多模态生成</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/decodable-vision-representation.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

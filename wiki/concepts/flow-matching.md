@@ -1,8 +1,8 @@
 ---
 name: flow-matching
 type: concept
-sources: [interaction-models-tml, ideogram-4, stable-diffusion-3-5, krea-2, omnieraser, diffusionnft]
-updated: 2026-06-04
+sources: [interaction-models-tml, ideogram-4, stable-diffusion-3-5, krea-2, omnieraser, diffusionnft, sensenova-vision]
+updated: 2026-07-13
 ---
 
 # Flow Matching · 流匹配
@@ -50,3 +50,4 @@ updated: 2026-06-04
 - [[audio-tokenization-rvq-vs-flow]] · 横向对比
 - [[early-fusion]] · flow head 接在主 transformer 后
 - [[stable-diffusion-3-5]] · 整流流(直线少步)就是 flow-matching 在文生图的落地
+- [[sensenova-vision]] · mask、深度、法线与 point map 都作为 VAE latent 用 rectified-flow 目标训练
