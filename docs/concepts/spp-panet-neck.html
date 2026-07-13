@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>SPP + PAN · 先把视野拉宽，再让高低层双向汇合 · Concept</title>
+<title>SPP + PAN · 同一位置看四档范围，再让高低层双向汇合 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,41 +34,76 @@
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>SPP + PAN · 先把视野拉宽，再让高低层双向汇合</h1>
+  <h1>SPP + PAN · 同一位置看四档范围，再让高低层双向汇合</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>SPP 扩大最深层视野，PAN 让语义与位置在特征金字塔里来回流动。</p>
-<h2>直觉</h2>
-<p>最深层知道“这是什么”，浅层知道“边缘在哪”。只做自顶向下融合，语义能送到细网格，但细位置回不到深层。YOLOv4 先用 SPP 让深层同时看近处与远处，再用 PAN 补一条自底向上的回程路。</p>
-<h2>怎么做的</h2>
-<pre><code class="language-text">最深层 13×13
-  → 原特征直通 + 5/9/13 三档 max-pool 并排拼接（SPP）
-  → 上采样 13→26→52，拼接浅层特征
-  → 下采样 52→26→13，再向深层回传（PAN）
-  → 52/26/13 三个检测头
+<p>YOLOv4 的 SPP 不把 13×13 变小，而是在每个位置并排收集原点、5×5、9×9、13×13 四档上下文；PAN 再让深层语义向细网格下发、细位置向粗网格回流。</p>
+<h2>SPP 先解决什么</h2>
+<p>最深层特征语义强，但单个位置仍可能只看到目标的一部分。SPP 的想法不是再降采样，而是让<strong>同一个输出位置</strong>同时回答四个问题：</p>
+<pre><code class="language-text">原特征：这个位置自己激活多强？
+5×5 max：附近一小圈有没有更强响应？
+9×9 max：中等范围里有没有更强响应？
+13×13 max：最宽的 13×13 邻域里有没有更强响应？
 </code></pre>
-<p>三个 SPP 池化的 stride 都是 1，并配 padding，所以感受野变大，空间尺寸不变。直通支路常被画成“1×1”视野，但它并没有实际执行一次 1×1 最大池化。YOLOv4 的 modified PAN 用 concat 代替 shortcut 相加，先保留两路通道，再让后续卷积混合。</p>
-<h2>数字例子</h2>
-<p>官方结构进入 SPP 前是 <code>13×13×512</code>。一路保留原特征，另外三路分别做 5×5、9×9、13×13 池化：</p>
-<pre><code class="language-text">每一路输出 = 13×13×512
-concat 后通道 = 4×512 = 2,048
-输出尺寸 = 13×13×2,048
+<p>用一条 13 格的玩具特征行看中心位置。原始值为：</p>
+<pre><code class="language-text">位置       0 1 2 3 4 5 6 7 8 9 10 11 12
+激活       9 1 2 3 4 5 4 5 6 8  2  1  0
+                        ↑ 当前中心
+
+直通支路   只看位置 6                       → 4
+5格窗口    看位置 4..8:  [4,5,4,5,6]        → 6
+9格窗口    看位置 2..10: [2,3,4,5,4,5,6,8,2] → 8
+13格窗口   看位置 0..12: [9,...,4,...,0]     → 9
 </code></pre>
-<p>✓ 空间仍是 13×13，但每个位置同时带四档上下文。后续 1×1 卷积再压缩通道，避免 2,048 通道一路拖到底。</p>
+<p>真实 YOLOv4 用的是直通、5、9、13 四档二维窗口。这个一维例子只为了把“窗口越大，看得越远”算清楚；13×13 窗口放在 13×13 特征图中心时覆盖全图，靠近边缘时一部分窗口落在 padding 上。</p>
+<h2>为什么 5/9/13 都不会把 13×13 缩小</h2>
+<p>三路 max pooling 都使用 <code>stride=1</code>，并对奇数窗口补 <code>p=(k−1)/2</code> 的 padding：</p>
+<pre><code class="language-text">H_out = floor((H + 2p − k) / s) + 1
+
+k=5,  p=2: floor((13+4−5)/1)+1   = 13
+k=9,  p=4: floor((13+8−9)/1)+1   = 13
+k=13, p=6: floor((13+12−13)/1)+1 = 13
+</code></pre>
+<p>其中 <code>H</code> 是输入高度，<code>k</code> 是池化核，<code>p</code> 是单侧 padding，<code>s</code> 是 stride。宽度同理，所以每路输出都还是 13×13。</p>
+<p>注意，直通支路只是原特征，不是真的做了一次 1×1 max pooling。把它写成“1×1 视野”只能帮助对齐四档概念，不能当成实现步骤。</p>
+<h2>四路如何合并</h2>
+<p>进入 SPP 前的张量是 <code>13×13×512</code>。max pooling 按通道独立处理，不改变通道数：</p>
+<pre><code class="language-text">原特征直通      13×13×512
+5×5 max pool    13×13×512
+9×9 max pool    13×13×512
+13×13 max pool  13×13×512
+                 ────────── concat channels
+输出             13×13×2,048
+</code></pre>
+<p>concat 沿通道维拼接，因此空间位置仍一一对应，只是每个位置从 512 个数扩成 2,048 个数。紧接着的 1×1 卷积再跨通道混合并压回 512；这样既保留四档证据，又不让 2,048 通道一路拖到检测头。</p>
+<p>官方 <code>yolov4.cfg</code> 写法看似是连续三段 maxpool，中间的 <code>route</code> 实际会切回同一个 SPP 输入，所以语义上仍是三个并行分支，不是 5→9→13 串行池化。</p>
+<h2>PAN 再解决什么</h2>
+<p>SPP 只作用在最深的 13×13 层，仍需要把三种分辨率融合：</p>
+<pre><code class="language-text">自顶向下：13 → 26 → 52   深层“是什么”送给细网格
+自底向上：52 → 26 → 13   浅层“在哪里”送回粗网格
+</code></pre>
+<p>YOLOv4 把原 PAN 的 shortcut 相加改成 concat。相加要求两路在同一通道位置立即合成一个数；concat 先把两路并排保留，再让后续卷积学习怎么混，表达更自由，代价是中间通道与计算更多。</p>
+<h2>最容易混淆的三点</h2>
+<ol>
+<li><strong>SPP 不是四次下采样</strong>：stride 是 1，13×13 始终不变。</li>
+<li><strong>大核不是在创造新像素</strong>：它只把更远位置的最大激活搬到当前位置的上下文描述里。</li>
+<li><strong>SPP 与 PAN 分工不同</strong>：SPP 在一个尺度内扩视野；PAN 在 13/26/52 三个尺度间传信息。</li>
+</ol>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/yolov4.html">yolov4</a> · neck 使用 SPP + modified PAN</li>
-<li><a href="../concepts/multi-scale-detection.html">multi-scale-detection</a> · 三个检测层消费融合后的特征</li>
-<li><a href="../concepts/pooling.html">pooling</a> · SPP 用多档最大池化扩视野</li>
-<li><a href="../concepts/receptive-field.html">receptive-field</a> · SPP 直接解决的空间覆盖问题</li>
+<li><a href="../concepts/pooling.html">pooling</a> · max pooling 的窗口、stride、padding 完整手算</li>
+<li><a href="../papers/yolov4.html">yolov4</a> · SPP、modified PAN 与实验结果</li>
+<li><a href="../concepts/multi-scale-detection.html">multi-scale-detection</a> · 13/26/52 三个检测层分别消费什么</li>
+<li><a href="../concepts/receptive-field.html">receptive-field</a> · “看得更远”的严格含义</li>
+<li><a href="../concepts/spatial-vs-pointwise-attention.html">spatial-vs-pointwise-attention</a> · YOLOv4 同一节里另一处容易误读的 SAM 修改</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 2 处</span>
-  <ul><li><a href="../papers/yolov4.html"><span class="cat">paper</span>YOLOv4 · 把实时检测器改装成一台完整赛车</a></li><li><a href="../concepts/bag-of-freebies-specials.html"><span class="cat">concept</span>Bag of Freebies / Specials · 训练账和推理账分开算</a></li></ul>
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/yolov4.html"><span class="cat">paper</span>YOLOv4 · 把实时检测器改装成一台完整赛车</a></li><li><a href="../concepts/bag-of-freebies-specials.html"><span class="cat">concept</span>Bag of Freebies / Specials · 训练账和推理账分开算</a></li><li><a href="../concepts/pooling.html"><span class="cat">concept</span>Pooling · 池化 · 用一个窗口汇总邻域</a></li><li><a href="../concepts/spatial-vs-pointwise-attention.html"><span class="cat">concept</span>Spatial-wise vs Point-wise Attention · 一张共享地图 vs 每个元素自己的门</a></li></ul>
 </div>
 
 <div class="colophon">
