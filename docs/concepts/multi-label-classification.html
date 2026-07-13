@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>多标签分类 · 一个框可以同时叫“女人”和“人” · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · multi-label-classification</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>多标签分类 · 一个框可以同时叫“女人”和“人”</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>每个类别独立做 sigmoid，不再用 softmax 强迫所有类别互斥。</p>
+<h2>直觉</h2>
+<p>Softmax 像单选题，所有类别争夺总和为 1 的概率；多标签分类像一排独立开关，每个标签单独回答“是或不是”。当标签会重叠时，“Woman”和“Person”都应该能打开。</p>
+<h2>怎么做的</h2>
+<p>对每个类别 logit <code>z_k</code> 独立计算：</p>
+<pre><code class="language-text">p_k = sigmoid(z_k)
+loss_k = -[y_k·ln(p_k) + (1-y_k)·ln(1-p_k)]
+总分类损失 = 所有类别 loss_k 相加
+</code></pre>
+<p><code>y_k</code> 可以同时有多个 1，因此类别间不需要归一化到总和 1。</p>
+<h2>数字例子</h2>
+<p>一个框的 logit 是 Person=2.2、Woman=1.4、Dog=-2.0：</p>
+<pre><code class="language-text">独立 sigmoid:
+Person = 0.900
+Woman  = 0.802
+Dog    = 0.119
+→ Person 与 Woman 可以同时高分
+
+若硬做 softmax:
+exp值约为 9.025、4.055、0.135，总和 13.215
+概率约为 0.683、0.307、0.010
+→ Woman 会被 Person 抢走概率
+</code></pre>
+<p>目标若是 <code>[1,1,0]</code>，二元交叉熵约为：</p>
+<pre><code class="language-text">-ln(0.900) - ln(0.802) - ln(1-0.119)
+≈ 0.105 + 0.221 + 0.127
+= 0.453
+</code></pre>
+<p>✓ 两个正标签都被奖励，Dog 低分也被奖励，没有“只能选一个”的冲突。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/yolov3.html">yolov3</a> · 检测头从 softmax 改成独立 logistic 分类器</li>
+<li><a href="../concepts/cross-entropy.html">cross-entropy</a> · 二元交叉熵的损失直觉</li>
+<li><a href="../concepts/hierarchical-classification.html">hierarchical-classification</a> · YOLO9000 用标签树解决层级类别，路线不同</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/yolov3.html"><span class="cat">paper</span>YOLOv3 · 一张图铺三层探测网</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/multi-label-classification.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

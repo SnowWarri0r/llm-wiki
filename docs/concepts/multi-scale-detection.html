@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>多尺度检测 · 同一张图铺粗中细三层探测网 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · multi-scale-detection</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>多尺度检测 · 同一张图铺粗中细三层探测网</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>一次前向在多张不同分辨率的特征图上直接出框，让小、中、大物体各用合适的网格。</p>
+<h2>直觉</h2>
+<p>只用 13×13 网格，像拿粗方格纸描所有东西：大汽车还行，小路牌可能只占半格。多尺度检测同时铺三张方格纸：粗网格看全局，细网格抠位置，中间层接住两头之间的物体。</p>
+<p>它和多尺度训练不是一回事：多尺度训练是不同 batch 换输入尺寸；多尺度检测是<strong>同一次前向</strong>同时在多层输出。</p>
+<h2>怎么做的</h2>
+<p>YOLOv3 对 416×416 输入使用三层：</p>
+<pre><code class="language-text">深层 13×13，stride 32，分配大 anchor
+  ↑ 上采样2倍 + 拼接骨干26×26特征
+中层 26×26，stride 16，分配中 anchor
+  ↑ 上采样2倍 + 拼接骨干52×52特征
+浅层 52×52，stride 8，分配小 anchor
+</code></pre>
+<p>上采样后的深层特征带强语义，骨干较早的同尺寸特征带位置细节；拼起来再卷积，三层各自输出预测。</p>
+<h2>数字例子</h2>
+<p>COCO 有 80 类，每个尺度每格预测 3 个 anchor：</p>
+<pre><code class="language-text">每个 anchor = 4坐标 + 1物体性 + 80类 = 85个数
+每层通道 = 3 × 85 = 255
+
+13×13层候选 = 13×13×3 = 507
+26×26层候选 = 26×26×3 = 2,028
+52×52层候选 = 52×52×3 = 8,112
+总候选 = 507 + 2,028 + 8,112 = 10,647
+</code></pre>
+<p>✓ 三层都输出 255 通道，但空间位置数量不同；相加正好得到一次前向的 10,647 个候选框。</p>
+<h2>跟多尺度训练的对比</h2>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>变的是什么</th>
+<th style="text-align: right;">一次前向有几个检测层</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>多尺度训练</td>
+<td>输入可能是 320、416、608 等</td>
+<td style="text-align: right;">可以仍只有 1 层</td>
+</tr>
+<tr>
+<td>多尺度检测</td>
+<td>同时使用粗中细特征图</td>
+<td style="text-align: right;">YOLOv3 有 3 层</td>
+</tr>
+</tbody>
+</table>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/yolov3.html">yolov3</a> · 用三尺度检测把 small AP 从 5.0 推到 18.3</li>
+<li><a href="../concepts/multi-scale-training.html">multi-scale-training</a> · 同一权重适配多种输入尺寸</li>
+<li><a href="../concepts/anchor-boxes.html">anchor-boxes</a> · 三层各分到 3 个 anchor</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/yolov3.html"><span class="cat">paper</span>YOLOv3 · 一张图铺三层探测网</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/multi-scale-detection.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

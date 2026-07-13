@@ -1,7 +1,7 @@
 ---
 name: anchor-boxes
 type: concept
-sources: [yolov2-yolo9000]
+sources: [yolov2-yolo9000, yolov3]
 updated: 2026-07-13
 ---
 

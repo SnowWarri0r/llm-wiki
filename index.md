@@ -11,6 +11,7 @@
 - [Deep Residual Learning · ResNet](wiki/papers/resnet.md) — 残差连接的起源，把"网络越深越好"做成现实，也给两年后的 Transformer 留好 sublayer 模板
 - [YOLO · 看一眼就把框和类一起吐出来](wiki/papers/yolo.md) — CVPR2016 YOLO v1:原始 R-CNN 逐框提特征,Fast R-CNN 共享整图卷积但仍等 Selective Search,Faster R-CNN 用 RPN 提候选;YOLO 一次前向输出 7×7×30。训练损失拆责任框中心/尺寸/置信度、空框置信度、类别五块;√w,h 让同样 1% 图宽误差对小框产生 7.20× 平方损失。VOC2007:63.4%mAP@45FPS;错误画像是 19.0% 定位 vs 4.75% 背景误检;与最佳 Fast R-CNN 组合 71.8→75.0(+3.2)。VOC2012 57.9,小物体仍弱;Picasso/People-Art 显示艺术画迁移优势但不外推为普遍域泛化。
 - [YOLOv2 / YOLO9000 · 给 YOLO v1 逐项校准](wiki/papers/yolov2-yolo9000.md) — CVPR2017:BatchNorm+高分辨率预训练+anchor+IOU维度聚类+sigmoid位置限位+passthrough+多尺度训练,消融63.4→78.6;同一权重416为76.8mAP@67FPS、544为78.6@40FPS。Darknet-19仅5.58B运算;WordTree把COCO框监督与ImageNet分类合成9418类。边界:COCO AP@[.5:.95]21.6/小目标AP5.0;156个无框监督类16.0mAP,动物迁移好但服饰类可到0。
+- [YOLOv3 · 一张图铺三层探测网](wiki/papers/yolov3.md) — 2018技术报告:沿用v2框公式,把9个COCO anchor分给13×13/26×26/52×52三层,一次前向10,647候选;用60×120行人框贯穿anchor→检测层→格子→四数解码。Darknet-53残差骨干Top-5 93.8且78FPS;类别改独立sigmoid多标签;COCO AP 33.0/AP50 57.9/small AP 18.3。严格定位仍弱,并完整记录线性中心/focal loss/双阈值等失败尝试。
 - [LSTM · 长短期记忆](wiki/papers/lstm.md) — Transformer 前的序列霸主: cell state 记忆传送带(加法更新)+三个门(遗忘/输入/输出)治住RNN梯度消失; 加法梯度高速路=ResNet残差同构; 被Attention取代
 - [Attention Is All You Need](wiki/papers/attention-is-all-you-need.md) — Transformer 始祖，整个 LLM 时代的奠基
 - [BERT](wiki/papers/bert.md) — 只要 Transformer encoder，用 MLM 学双向上下文，立住 pretrain → finetune 范式
@@ -267,6 +268,10 @@
 - [单阶段检测](wiki/concepts/one-stage-detection.md) — 一次前向直接回归所有框,不先提候选; vs两阶段(R-CNN上千次逐候选分类); 快+看全图,代价定位糙; YOLO开的路
 - [Anchor Boxes · 预设框](wiki/concepts/anchor-boxes.md) — 每个位置先摆宽高模板,网络只预测中心与尺寸的相对变化;YOLOv2用sigmoid把中心限在本格
 - [维度聚类](wiki/concepts/dimension-clustering.md) — 用1−IOU而非欧氏距离做框宽高k-means;相同相对形状误差不因大框被多罚
+- [多尺度检测](wiki/concepts/multi-scale-detection.md) — 一次前向在13×13/26×26/52×52三张特征图直接出框;粗网格管大目标、细网格管小目标;和多尺度训练不是一回事
+- [Darknet-53](wiki/concepts/darknet-53.md) — 1×1/3×3卷积+1/2/8/8/4残差块;接近ResNet-152精度但速度约2.1×
+- [多标签分类](wiki/concepts/multi-label-classification.md) — 每类独立sigmoid+BCE,同一框可同时是Woman和Person;对照softmax强制互斥
+- [Anchor真值分配](wiki/concepts/anchor-truth-assignment.md) — 全局最佳anchor负责框和类;其他高IOU候选忽略,低IOU才当背景,避免监督打架
 - [多尺度训练](wiki/concepts/multi-scale-training.md) — 每10 batch在320–608间切输入尺寸;同一权重部署时按速度/精度换挡
 - [层级分类 · WordTree](wiki/concepts/hierarchical-classification.md) — 每层兄弟类做softmax,叶子概率沿路径相乘;让狗与细品种标签共存并合并检测/分类数据
 - [IOU · 交并比](wiki/concepts/iou-intersection-over-union.md) — 两个框重合度=交集÷并集∈[0,1]; 同时管住位置+大小+长宽比; 置信度目标/NMS去重/mAP命中判定都用它

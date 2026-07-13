@@ -1,7 +1,7 @@
 ---
 name: one-stage-detection
 type: concept
-sources: [yolo, yolov2-yolo9000]
+sources: [yolo, yolov2-yolo9000, yolov3]
 updated: 2026-07-13
 ---
 
