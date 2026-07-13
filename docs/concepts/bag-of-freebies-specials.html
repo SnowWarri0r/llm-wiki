@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Bag of Freebies / Specials · 训练账和推理账分开算 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · bag-of-freebies-specials</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Bag of Freebies / Specials · 训练账和推理账分开算</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>Freebies 只加训练成本；Specials 用少量推理成本换精度。</p>
+<h2>直觉</h2>
+<p>改检测器像改赛车。训练增强和损失函数是调校：赛前多花时间，比赛时车没多装零件。SPP、注意力、PAN 这类模块是真装上车：每次推理都要跑，但只要精度收益值回那点延迟，也值得。</p>
+<p>“免费”只针对部署账单，不代表训练不用算力，也不保证每个技巧都有收益。</p>
+<h2>怎么做的</h2>
+<pre><code class="language-text">先问：这项改动会不会改变推理计算图？
+
+不会 → Bag of Freebies
+  数据增强、标签、损失、学习率、正样本分配
+
+会，但增量不大且精度提升明显 → Bag of Specials
+  感受野模块、特征融合、注意力、后处理
+</code></pre>
+<p>YOLOv4 把 Mosaic、SAT、CIoU、标签平滑、DropBlock 放进 Freebies；把 Mish、SPP、SAM、PAN、DIoU-NMS 放进 Specials。</p>
+<h2>数字例子</h2>
+<p>假设基线每张图推理 10ms，训练 100 小时：</p>
+<pre><code class="language-text">加 Mosaic：训练变 120 小时，推理仍 10ms
+→ 训练多 20%，部署延迟 +0ms，属于 Freebie
+
+加一个 neck 模块：训练 125 小时，推理变 10.5ms
+→ 部署延迟 +0.5ms；若 AP 收益值得，属于 Special
+</code></pre>
+<p>✓ 分类看的是推理图有没有变，不是训练有没有付钱。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/yolov4.html">yolov4</a> · 用这套分类法筛选完整检测配方</li>
+<li><a href="../concepts/mosaic-augmentation.html">mosaic-augmentation</a> · 典型 Freebie</li>
+<li><a href="../concepts/spp-panet-neck.html">spp-panet-neck</a> · 典型 Special</li>
+<li><a href="../concepts/complete-iou-loss.html">complete-iou-loss</a> · 换损失，不增加推理图</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/yolov4.html"><span class="cat">paper</span>YOLOv4 · 把实时检测器改装成一台完整赛车</a></li><li><a href="../concepts/complete-iou-loss.html"><span class="cat">concept</span>CIoU Loss · 重叠、中心、长宽比三笔账一起算</a></li><li><a href="../concepts/mosaic-augmentation.html"><span class="cat">concept</span>Mosaic · 四张训练图拼成一张画布</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/bag-of-freebies-specials.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

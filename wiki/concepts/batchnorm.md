@@ -1,8 +1,8 @@
 ---
 name: batchnorm
 type: concept
-sources: [resnet]
-updated: 2026-05-21
+sources: [resnet, yolov4]
+updated: 2026-07-13
 ---
 
 # Batch Normalization · BN

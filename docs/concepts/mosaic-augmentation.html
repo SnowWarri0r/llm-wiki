@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Mosaic · 四张训练图拼成一张画布 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · mosaic-augmentation</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Mosaic · 四张训练图拼成一张画布</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>随机缩放、裁剪四张图，再拼成一个带四组标注的训练样本。</p>
+<h2>直觉</h2>
+<p>普通增强仍是一张图配一种背景。Mosaic 一次把四个场景挤进画布：物体离开惯常背景，大小也因缩放变化。模型更难靠“路面旁边多半有车”这种背景捷径混过去，小物体还会更常出现。</p>
+<h2>怎么做的</h2>
+<pre><code class="language-text">
+1. 随机取 4 张训练图
+2. 分别缩放、裁剪
+3. 随机选拼接十字，把四张图贴进四个象限
+4. 对每个框做同样的缩放和平移
+5. 把越界框裁到画布内，丢掉无效小框
+</code></pre>
+<p>YOLOv4 还指出，一张 Mosaic 在各层同时混入四张图的激活，能让小 mini-batch 的 BN 统计看到更多上下文。</p>
+<h2>数字例子</h2>
+<p>先用规整的 640×640 画布：四张 320×320 图各占一格。右上图中的框原坐标是 <code>[80,40,240,280]</code>：</p>
+<pre><code class="language-text">右上象限的平移 = (+320, 0)
+
+x1' = 80+320 = 400
+y1' = 40
+x2' = 240+320 = 560
+y2' = 280
+
+新框 = [400,40,560,280]
+宽高仍是 160×240
+</code></pre>
+<p>✓ 图像往右搬 320 像素，框也精确往右搬 320，大小不变。真实 Mosaic 再叠加随机缩放与裁剪，同一套几何变换必须同步作用到标注。</p>
+<h2>跟 MixUp / CutMix 的对比</h2>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th style="text-align: right;">混几张图</th>
+<th>像素怎么混</th>
+<th>框怎么处理</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MixUp</td>
+<td style="text-align: right;">2</td>
+<td>整图按权重叠加</td>
+<td>两图标签按权重保留</td>
+</tr>
+<tr>
+<td>CutMix</td>
+<td style="text-align: right;">2</td>
+<td>一块区域贴到另一图</td>
+<td>按贴入区域调整标签</td>
+</tr>
+<tr>
+<td>Mosaic</td>
+<td style="text-align: right;">4</td>
+<td>四图缩放裁剪后拼接</td>
+<td>四组框做几何变换</td>
+</tr>
+</tbody>
+</table>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/yolov4.html">yolov4</a> · 把 Mosaic 纳入 backbone 与 detector 的 Freebies</li>
+<li><a href="../concepts/bag-of-freebies-specials.html">bag-of-freebies-specials</a> · Mosaic 不改变推理图</li>
+<li><a href="../concepts/batchnorm.html">batchnorm</a> · 论文用四图激活解释小 batch 下的收益</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/yolov4.html"><span class="cat">paper</span>YOLOv4 · 把实时检测器改装成一台完整赛车</a></li><li><a href="../concepts/bag-of-freebies-specials.html"><span class="cat">concept</span>Bag of Freebies / Specials · 训练账和推理账分开算</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/mosaic-augmentation.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
