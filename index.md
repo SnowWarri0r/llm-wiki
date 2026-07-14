@@ -64,6 +64,7 @@
 - [HiDream-O1-Image · 像素级统一 Transformer](wiki/papers/hidream-o1.md) — 文生图反向操作: 无VAE像素空间扩散 + 文本编码器收进主干(Qwen3-VL) + 混合注意力 + O1推理agent先想后画; 8B 超更大模型
 - [Qwen-Image-2.0 · 生成与编辑统一](wiki/papers/qwen-image-2.md) — 20B MMDiT: 生成vs编辑=条件里塞不塞原图latent(Concat), 同backbone, 没点名天然照抄; frozen Qwen3-VL条件编码器 + VAE升16×(f16c64) + MSRoPE + DMD蒸馏4-NFE; 中文文字渲染 + 1K token直出信息图; LMArena中文#1
 - [SenseNova-Vision · 把整个视觉工具箱接进同一个生成接口](wiki/papers/sensenova-vision.md) — Bagel-7B-MoT不加task head:框/OCR/关键点/pose写文本,mask/depth/normal/point map生成图像,panoptic/GCG用颜色图例+mask混合输出;SN-VC-50M覆盖四大视觉族。结构化任务最强,稠密几何接近专家,分割/多视图仍有专用模型差距;640×480框、inverse-depth、RGB调色板、1.25m pose完整往返手算,并拆论文50K与当前repo 200K差异。
+- [MeshFlow · 不再逐 token 拼网格，一次并行长出全部顶点和边](wiki/papers/meshflow.md) — CVPR2026 Highlight：把坐标、外法线和连续边嵌入压进MeshVAE，再用Rectified Flow DiT并行生成；四顶点数值例完整走过阈值连边→三环成面→法线定朝向，TokenMerge演示8→2 token。Toys4K CD/HD 2.33/4.23，单物体约1.2s；同时拆清摘要18×与主表2.2×两个计时口径，以及阈值方向、DiT规模、补洞默认值三处论文—代码差异。
 - [PiD · 像素扩散解码器](wiki/papers/pid-pixel-diffusion.md) — NVIDIA 把 latent→像素的确定性 VAE 解码器换成条件像素扩散: 解码从"忠实还原"升级成"生成式补细节+顺手超分4×/8×"; sigma-aware adapter 吃半成品 latent 让 latent 扩散早停 + DMD2 蒸 4 步 + 通吃 VAE/语义 latent; 512²→2048² 1秒内
 - [DiffusionNFT · 扩散 RL 搬回前向过程](wiki/papers/diffusionnft.md) — 扩散在线RL(ICLR2026,SD3.5-M基座): 似然算不出没法直接GRPO,FlowGRPO把反向采样切多步MDP但锁死一阶SDE/偏离前向/CFG两模型; 洞察=前向加噪唯一、反向去噪无数→把RL搬到前向flow matching上; 奖励r切正负分布(π⁺∝r·π_old/π⁻∝(1−r)π_old),正负速度之差Δ=强化引导(CFG=它的离线版); 单模型隐式装正负(v±=(1∓β)v_old±βv_θ对称夹v_old),RL揉进监督损失L=E[r‖v⁺−v‖²+(1−r)‖v⁻−v‖²]; 免似然/任意solver/只存干净图; GenEval~1k步逼0.98比FlowGRPO快3–25×,CFG-free还超CFG
 - [RAE-DiT · 表征自编码器当 latent](wiki/papers/rae-dit.md) — 别单训没语义的VAE压缩器, 拿冻结SigLIP-2/DINOv2当编码器(高维语义latent)只训解码器, 扩散在"看懂图"的空间里跑; 收敛快4×/VAE 64epoch崩RAE稳到256/越scale越赢; 唯一不能省=维度相关噪声调度(α=√(m/n))
@@ -267,6 +268,10 @@
 - [SAM 数据引擎 · Data Engine](wiki/concepts/sam-data-engine.md) — 模型帮标→数据训模型→模型更强的飞轮,三阶段(辅助手动→半自动→全自动)从零滚出11亿掩码; 前两阶段人推后面自转
 - [Inductive Bias](wiki/concepts/inductive-bias.md) — 模型架构里的"祖传家产", 数据少时是宝大数据时是包袱
 - [3D Gaussian Splatting](wiki/concepts/gaussian-splatting.md) — 场景=几百万个高斯椭球, splat投影+α混合实时渲染+任意新视角; vs NeRF快且可编辑; "高斯泼溅"LoRA是2D扩散借名模仿非真3D
+- [连续 Mesh 连接表示](wiki/concepts/continuous-mesh-connectivity.md) — 不直接生成面索引；每顶点带连续边嵌入，两两分数过阈值连边，三边环恢复三角面，顶点法线决定正反朝向
+- [Mesh TokenMerge / TokenSplit](wiki/concepts/mesh-token-merge.md) — 把token轴塞进通道轴再反向摊开；8个标量token→2个query完整手算，解释为什么它比空白Q-Former query更容易重建拓扑
+- [体素化 3D RoPE 条件](wiki/concepts/voxel-rope-conditioning.md) — 点云先落粗体素格再写进3D RoPE，抹平训练顶点与推理采样点的密度差；4³玩具格与32³真实设置分开算
+- [Mesh 几何质量指标](wiki/concepts/mesh-quality-metrics.md) — Chamfer看平均最近距离、Hausdorff看最坏点；三点集合完整手算，并说明几何距离为0也可能翻面或接错边
 - [单阶段检测](wiki/concepts/one-stage-detection.md) — 一次前向直接回归所有框,不先提候选; vs两阶段(R-CNN上千次逐候选分类); 快+看全图,代价定位糙; YOLO开的路
 - [Anchor Boxes · 预设框](wiki/concepts/anchor-boxes.md) — 每个位置先摆宽高模板,网络只预测中心与尺寸的相对变化;YOLOv2用sigmoid把中心限在本格
 - [维度聚类](wiki/concepts/dimension-clustering.md) — 用1−IOU而非欧氏距离做框宽高k-means;相同相对形状误差不因大框被多罚

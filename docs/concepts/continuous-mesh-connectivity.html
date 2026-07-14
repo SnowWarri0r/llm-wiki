@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>连续 Mesh 连接表示 · 不直接预测面，给每个顶点一枚“连边磁铁” · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · continuous-mesh-connectivity</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>连续 Mesh 连接表示 · 不直接预测面，给每个顶点一枚“连边磁铁”</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>每个顶点除了坐标和法线，再带一个连续向量；两枚向量的连接分数过线就连边，三条边围成一圈就恢复三角面。</p>
+<h2>为什么不直接生成面</h2>
+<p>顶点坐标是连续数，能平滑加噪、去噪。面却是三个整数索引，例如 <code>(1,2,3)</code>；索引从 2 跳到 3，不存在“跳了一半”的中间状态。扩散模型要处理这种离散拓扑很别扭。</p>
+<p>MeshFlow 把离散问题往连续空间挪：顶点 <code>i</code> 带边嵌入 <code>h_i</code>，两顶点先算连续连接分数，再过阈值得到 0/1 边。扩散模型只负责生成连续的 <code>h</code>；最后一步才切回离散图。</p>
+<h2>数字例子 · 四个顶点恢复两个三角面</h2>
+<p>拿一张正方形薄片：</p>
+<pre><code class="language-text">v4 (0,1) —— v3 (1,1)
+ |          / |
+ |        /   |
+ |      /     |
+v1 (0,0) —— v2 (1,0)
+</code></pre>
+<p>目标有两个三角面 <code>(1,2,3)</code> 和 <code>(1,3,4)</code>，因此应有五条边：</p>
+<pre><code class="language-text">E = {12, 13, 14, 23, 34}
+唯一不该连的是 24
+</code></pre>
+<p>为了把阈值算清，先用普通二维嵌入做玩具版：</p>
+<pre><code class="language-text">h1=( 0,0)   h2=(1,0)
+h3=( 0,1)   h4=(-1,0)
+阈值 τ=1.42，距离不超过 τ 就连边
+
+d12=1.000  ✓     d13=1.000  ✓     d14=1.000  ✓
+d23=1.414  ✓     d34=1.414  ✓     d24=2.000  ✗
+</code></pre>
+<p>接着找“三条边都在”的三元组：</p>
+<pre><code class="language-text">(1,2,3): 12、23、13 都在 → 收下这个面
+(1,3,4): 13、34、14 都在 → 收下这个面
+(1,2,4): 缺 24              → 不是面
+(2,3,4): 缺 24              → 不是面
+</code></pre>
+<p>✓ 自检：恢复出的面正好是原来的两张，内部对角线 <code>13</code> 被两张面共用。</p>
+<p>真实 MeshFlow 用的不是上述欧氏距离，而是 SpaceMesh 的 signed spacetime score。论文主文式 (2) 写 <code>d≤τ</code> 连边；但边损失、补充算法和官方代码提交 <code>55f56f6</code> 都使用 <code>d&gt;τ</code>。因此读实现时，应把 <code>d</code> 当“越大越像边”的连接分数，别按主文那句普通距离理解。</p>
+<h2>法线为什么也要预测</h2>
+<p>边只能告诉你哪三个顶点围成面，不能告诉你这个面朝里还是朝外。MeshFlow 再预测每个顶点的外法线。三个顶点法线取平均，与几何叉乘得到的面法线比较：点积为负，就交换面里的两个顶点，把朝向翻过来。</p>
+<p>上例全部顶点法线都取 <code>(0,0,1)</code>。面 <code>(1,2,3)</code> 的两条边是 <code>(1,0,0)</code> 与 <code>(1,1,0)</code>，叉乘得到 <code>(0,0,1)</code>，与平均法线同向，不用翻面。</p>
+<h2>边界</h2>
+<ul>
+<li>只找三边环，因此天然只生成三角面。</li>
+<li>若几条错误边恰好组成三环，会凭空长出面。</li>
+<li>小洞要靠边界环检测和三角化补丁修；生成质量不够时，拓扑后处理仍跑不掉。</li>
+</ul>
+<h2>代码出处</h2>
+<ul>
+<li>官方实现：<code>meshflow/models/meshflow_vae.py</code> 的 <code>compute_spacetime_distances()</code> 与 <code>extract_mesh()</code>。</li>
+<li>三环找面与法线翻面：<code>meshflow/utils/mesh.py</code> 的 <code>extract_mesh_from_verts_normals_edges()</code>。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/meshflow.html">meshflow</a> · 用这套表示把 mesh 拿给 MeshVAE 和 DiT。</li>
+<li><a href="../concepts/contrastive-learning.html">contrastive-learning</a> · 正边与负边的嵌入用对比损失拉开。</li>
+<li><a href="../concepts/mesh-quality-metrics.html">mesh-quality-metrics</a> · 几何距离不等于拓扑正确。</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/meshflow.html"><span class="cat">paper</span>MeshFlow · 不再逐 token 拼网格，一次并行长出全部顶点和边</a></li><li><a href="../concepts/mesh-quality-metrics.html"><span class="cat">concept</span>Mesh 质量指标 · CD 看平均偏差，HD 盯最坏一点，拓扑还得另查</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/continuous-mesh-connectivity.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
