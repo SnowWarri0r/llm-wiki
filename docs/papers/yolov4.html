@@ -157,9 +157,9 @@ figure{margin:36px 0 54px;padding:25px;border:2px solid var(--ink);background:va
 
 <div class="note"><span class="label">实现版本提醒</span>论文 Fig. 5 明确画了 modified SAM，官方 <code>sam_layer.c</code> 也支持逐元素相乘；但官方仓库 <code>master@59596d7</code> 的标准 <code>yolov4.cfg</code> 没有 <code>[sam]</code>，SAM 只出现在实验配置里。因此，照论文画结构图和照默认 cfg 复现，不一定得到同一张网络图。</div>
 
-<h2><span class="num">§ 03 / Training freebies</span>四图拼接与自我攻击：训练难一点，部署不背债</h2>
+<h2><span class="num">§ 03 / Training freebies</span>四图拼贴与自对抗：训练难一点，部署不背债</h2>
 <h3>Mosaic：四张图拼成一张训练样本</h3>
-<p><a class="jr term-hit" href="#g-07">Mosaic</a>先把四张图分别缩放、裁剪，再拼到同一张画布上。这样，同类物体会被塞进不同背景；物体缩小后，小目标也更常出现。图像怎么缩放、平移、裁剪，标注框就必须跟着做一模一样的坐标变换。</p>
+<p><a class="jr term-hit" href="#g-07">Mosaic</a> 就像<strong>把四张照片剪贴成一张拼贴画</strong>当训练样本：先把四张图分别缩放、裁剪，再拼到同一张画布上。好处有三——同类物体被塞进不同背景（学得更泛化）、物体缩小后小目标更常出现、一张图一次就带来四张图的画面统计（帮小 batch 的 BN 稳一点）。图像怎么缩放、平移、裁剪，标注框就得跟着做一模一样的坐标变换（见下图）。</p>
 
 <figure id="fig-mosaic" class="reveal"><figcaption><span>Fig 07 · 四张 320 图拼成 640 画布</span><span>BOX COORDINATES MOVE WITH PIXELS</span></figcaption>
   <div class="mosaic rev"><div class="tile">A<div class="bbox"></div><small>TL · +0,+0</small></div><div class="tile">B<div class="bbox"></div><small>TR · +320,+0</small></div><div class="tile">C<div class="bbox"></div><small>BL · +0,+320</small></div><div class="tile">D<div class="bbox"></div><small>BR · +320,+320</small></div></div>
@@ -167,12 +167,15 @@ figure{margin:36px 0 54px;padding:25px;border:2px solid var(--ink);background:va
   <p class="fig-note">真实 Mosaic 会随机移动拼接十字，也会随机缩放和裁剪。框越过画布就截断，缩得太小或已经无效就丢掉。论文还认为，一张 Mosaic 同时带来四张图的激活统计，能缓解小 <a class="jr term-hit" href="#g-22">mini-batch</a> 下 <a href="#g-09" class="jr term-hit">BN</a> 统计不稳的问题。</p>
 </figure>
 
-<h3>SAT：按模型自己的弱点现场出题</h3>
-<p><a class="jr term-hit" href="#g-08">Self-Adversarial Training（SAT）</a>不是拿对抗图做安全测试，而是让模型现场给自己出难题。第一段冻结模型，只改输入图像，把原本看得见的目标藏起来；第二段固定这张难图，再更新模型，把目标重新找回来。</p>
+<h3>SAT：自己跟自己"左右互搏"（自对抗）</h3>
+<p>先把名字掰正：<a class="jr term-hit" href="#g-08">SAT</a> 全称 Self-<strong>Adversarial</strong> Training，是"自<strong>对抗</strong>"——<u>不是</u>外面来的黑客攻击，而是模型冲着自己的弱点造一张难图。可以想成一个人<strong>左右互搏</strong>，一回合分两个身份：</p>
+<p>① <strong>先当出题人</strong>：把网络权重<u>冻住不动</u>，只顺着梯度<strong>反向去改输入图片</strong>，专门把图里那个本来认得出的目标"抹淡、伪装"掉，做成一张专坑当前自己的难题——这就是"对抗样本"（针对自己弱点造出来的图，不是真把物体删了）。<br>
+② <strong>再当答题人</strong>：固定这张难图，<u>正常更新权重</u>，逼自己把被藏起来的目标重新找回来。</p>
+<p>一出一答，模型就练得对"目标不明显"的情况更抗造。它只是训练时的花招，导出的推理网络不多任何一层，所以仍算 Freebie。</p>
 
-<figure id="fig-sat" class="reveal"><figcaption><span>Fig 08 · 一次 SAT 的两段动作</span><span>ATTACK INPUT → TRAIN NETWORK</span></figcaption>
-  <div class="sat"><div class="phase rev"><h4>01 / SELF ATTACK</h4><div class="image-sim attack"><div class="object"></div></div><p>权重冻结；梯度走向输入像素，让当前模型更难认出目标。</p></div><div class="sat-arr rev d2">→</div><div class="phase train rev d3"><h4>02 / NORMAL TRAIN</h4><div class="image-sim"><div class="object"></div></div><p>难图固定；正常更新权重，逼模型补上刚暴露的薄弱点。</p></div></div>
-  <p class="fig-note">SAT 会让训练变慢，但导出的推理网络没有多任何一层，所以仍属于 Freebie。</p>
+<figure id="fig-sat" class="reveal"><figcaption><span>Fig 08 · 一次 SAT 的两段动作</span><span>ADVERSARIAL PERTURB → TRAIN</span></figcaption>
+  <div class="sat"><div class="phase rev"><h4>01 / 出题人 · 自对抗扰动</h4><div class="image-sim attack"><div class="object"></div></div><p>权重冻住；梯度反向改<strong>输入像素</strong>，把目标伪装到当前模型更难认出。</p></div><div class="sat-arr rev d2">→</div><div class="phase train rev d3"><h4>02 / 答题人 · 正常训练</h4><div class="image-sim"><div class="object"></div></div><p>难图固定；正常更新<strong>权重</strong>，逼模型补上刚暴露的薄弱点。</p></div></div>
+  <p class="fig-note">"对抗"指模型对着自己造难题，不是安全意义上的攻击。SAT 会让训练变慢，但导出的推理网络没多一层，所以仍属于 Freebie。</p>
 </figure>
 
 <h2><span class="num">§ 04 / Assignment & coordinates</span>边界位置更好学，一个真值也能交给多个预设框</h2>
