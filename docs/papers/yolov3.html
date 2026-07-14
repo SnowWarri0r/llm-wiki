@@ -154,7 +154,8 @@ figcaption .tag{color:var(--signal);text-align:right}
 <div class="note"><span class="label">先抓主线</span>v3 的核心不是“加了两个上采样层”，而是把<strong>物体大小、anchor 大小、特征层分辨率</strong>绑成一次分工。</div>
 
 <h2><span class="num">§ 02 / Three detection heads</span>三层各管一档，总共 10,647 个候选</h2>
-<p>以 416×416 输入为例，三层的 stride<a class="jr" href="#g-02">2</a> 分别是 32、16、8。stride=8 表示特征图横向走一格，对应原图走 8 像素。9 个 COCO anchor<a class="jr" href="#g-04">4</a> 按大小排序，每层分 3 个；论文坦白说“9 个、3 层、每层 3 个”是经验选择，并非搜索出的最优解。</p>
+<p>想象给同一张图<strong>铺三张粗细不同的方格纸</strong>：粗的（13×13）一格管一大片，专抓大物体；细的（52×52）格子密密麻麻，专抓小物体；中间一张（26×26）管中号。像备了三种网眼的渔网，大鱼小鱼都不容易漏。</p>
+<p>量化一下：以 416×416 输入为例，三层的 <a class="jr" href="#g-02">stride</a>（特征图走一格对应原图走几像素）分别是 32、16、8——stride 越小，格子越密、看得越细。9 个 COCO <a class="jr" href="#g-04">anchor</a> 按大小排序，每层分 3 个；论文坦白说"9 个、3 层、每层 3 个"是经验选择，并非搜索出的最优解。</p>
 
 <figure id="fig-scales" class="reveal">
   <figcaption><span>Fig 02 · 粗中细三层的真实 anchor 与候选数</span><span class="tag">416 INPUT / 3 ANCHORS EACH</span></figcaption>
@@ -212,7 +213,8 @@ figcaption .tag{color:var(--signal);text-align:right}
 </figure>
 
 <h2><span class="num">§ 05 / Backbone</span>Darknet-53：把残差接进 YOLO</h2>
-<p><a href="../concepts/darknet-53.html">Darknet-53</a> 把 Darknet-19 的规整 1×1/3×3 卷积和 ResNet 的残差捷径<a class="jr" href="#g-09">9</a>揉在一起。五个 stage 的残差块重复数是 1、2、8、8、4，共 23 个 block；每块两层卷积，捷径让输入与梯度可以跨过主路。</p>
+<p>网络堆得越深，本该越聪明，可实际会"学不动"——梯度一路往前传，到浅层就快没了。<strong>残差连接（<a class="jr" href="#g-09">residual</a>）就是给每个模块留一条"抄近路"的旁路</strong>：让输入直接加到输出上，信息和梯度都能跨过这一段，不至于在深层走丢。有了这条捷径，网络才敢往深里堆。</p>
+<p><a href="../concepts/darknet-53.html">Darknet-53</a> 就是把这种旁路装进 YOLO 骨干：沿用 Darknet-19 规整的 1×1/3×3 卷积，再叠上 ResNet 的残差捷径。五个 stage 的残差块重复数是 1、2、8、8、4，共 23 个 block；每块两层卷积，捷径让输入与梯度跨过主路。</p>
 
 <figure id="fig-backbone" class="reveal">
   <figcaption><span>Fig 06 · 1 / 2 / 8 / 8 / 4 个残差块逐级堆深</span><span class="tag">DARKNET-53</span></figcaption>
