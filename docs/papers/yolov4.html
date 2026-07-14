@@ -31,6 +31,7 @@ figure{margin:36px 0 54px;padding:25px;border:2px solid var(--ink);background:va
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.rev,.part,.unit,.bar-fill,.range:before{transition:none!important}.rev{opacity:1;transform:none}.part,.unit{opacity:1;transform:none}.bar-fill{width:var(--w)}.range:before{transform:scaleX(1)}}
 .pan-lane{grid-template-rows:auto 1fr auto 1fr auto 1fr}
 .sam-card.pointwise{border-color:var(--green);background:var(--green-soft)}.sam-card.pointwise h4{color:var(--green)}.pointwise .sam-verdict span{background:#fff}.pointwise .sam-verdict b{color:var(--green)}
+.term-hit{display:inline!important;margin:0!important;padding:0 2px!important;border:0!important;border-bottom:1px dashed var(--yellow)!important;background:transparent!important;color:var(--blue2)!important;font:inherit!important;font-weight:700!important;letter-spacing:0!important;vertical-align:baseline!important;text-transform:none!important;text-decoration:none!important}.vocab{margin:-36px 0 72px}.vocab-head{display:flex;justify-content:space-between;gap:18px;align-items:end;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--ink)}.vocab-head b{font:900 28px "Barlow Condensed","Noto Sans SC",sans-serif}.vocab-head span{font:700 9px "Space Mono",monospace;color:var(--muted)}.vocab-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}a.jr.vocab-card{display:block;margin:0;padding:14px 15px;min-height:116px;border:1px solid var(--rule);background:#fff;color:var(--ink);font:400 12px/1.55 "Noto Sans SC",sans-serif;letter-spacing:0;vertical-align:baseline;text-decoration:none;text-transform:none}a.jr.vocab-card:hover{border-color:var(--blue);box-shadow:3px 3px 0 var(--blue-soft)}.vocab-card code{display:inline-block;margin-bottom:9px;padding:3px 6px;background:var(--night);border:0;color:#fff;font:700 8px "Space Mono",monospace}.vocab-card b{display:block;margin-bottom:4px;color:var(--blue);font-size:15px}.vocab-card span{color:var(--ink2)}@media(max-width:820px){.vocab-grid{grid-template-columns:1fr 1fr}}@media(max-width:540px){.vocab{margin-top:-18px}.vocab-grid{grid-template-columns:1fr}.vocab-head{align-items:start;flex-direction:column}}
 </style>
 </head>
 <body>
@@ -58,7 +59,7 @@ figure{margin:36px 0 54px;padding:25px;border:2px solid var(--ink);background:va
 <header class="mast"><span>Connectionism / detector workshop</span><span>Technical report · 2020 · Bochkovskiy / Wang / Liao</span></header>
 
 <section class="hero">
-  <div><div class="eyebrow">YOLO / GENERATION 04 · COMPONENT TEST</div><h1>YOLO<span>THE TUNED BUILD</span></h1><p class="dek">v3 已经有三层检测头；v4 像改赛车一样重搭骨干、neck、训练增强和框损失。重点不是零件多，而是每一件都要过速度与精度两道验车线。</p><div class="byline">CSPDarknet53 · SPP/PAN · YOLOv3 HEAD<br>arXiv 2004.10934</div></div>
+  <div><div class="eyebrow">YOLO / GENERATION 04 · COMPONENT TEST</div><h1>YOLO<span>THE TUNED BUILD</span></h1><p class="dek">YOLOv3 已经有三层检测头；YOLOv4 像改赛车一样，重新搭主干、特征融合层、训练增强和框损失。不是零件越多越好，速度和精度两项都得过关。</p><div class="byline">CSPDarknet53 · SPP/PAN · YOLOv3 HEAD<br>arXiv 2004.10934</div></div>
   <div class="bench" aria-label="YOLOv4 检测器改装工位">
     <div class="bench-title">TRAINING PARTS RACK / NO INFERENCE COST</div>
     <div class="train-rack"><span class="part">MOSAIC</span><span class="part">SAT</span><span class="part">CIOU</span><span class="part">DROPBLOCK</span><span class="part">LABEL SMOOTH</span><span class="part">MULTI-ANCHOR</span></div>
@@ -68,10 +69,25 @@ figure{margin:36px 0 54px;padding:25px;border:2px solid var(--ink);background:va
   </div>
 </section>
 
-<div class="tldr"><div class="label">TL;DR / BUILD SHEET</div><p>YOLOv4 没换掉 YOLOv3 的 anchor 三尺度 head，而是用 CSPDarknet53 重做 backbone<a class="jr" href="#g-01">1</a>，用 SPP/PAN 重做 neck<a class="jr" href="#g-02">2</a>，再把训练期 Freebies 与推理期 Specials 分开筛选。COCO 608 输入达到 43.5 AP / 65.7 AP50 / 47.3 AP75；V100 表中是 62 FPS。</p></div>
+<div class="tldr"><div class="label">TL;DR / BUILD SHEET</div><p>YOLOv4 沿用 YOLOv3 基于 <a class="jr term-hit" href="#g-19">anchor</a> 的三尺度<a class="jr term-hit" href="#g-15">检测头</a>，用 CSPDarknet53 换掉<a class="jr term-hit" href="#g-01">主干网络</a>，再用 SPP/PAN 重搭<a class="jr term-hit" href="#g-02">特征融合层</a>。训练期技巧和部署时仍要执行的模块分开筛选。608 输入时达到 43.5 <a class="jr term-hit" href="#g-20">AP</a>；论文报告在 V100 上可达到 62 <a class="jr term-hit" href="#g-21">FPS</a>。</p></div>
+
+<section class="vocab" aria-labelledby="vocab-title"><div class="vocab-head"><b id="vocab-title">先把这页最常见的 12 个词钉住</b><span>点击任意卡片，右侧直接弹出解释</span></div><div class="vocab-grid">
+  <a class="jr vocab-card" href="#g-01"><code>BACKBONE</code><b>主干网络</b><span>把图片变成多层特征，不负责最后报框。</span></a>
+  <a class="jr vocab-card" href="#g-02"><code>NECK</code><b>特征融合层</b><span>把深层语义和浅层位置线索汇到一起。</span></a>
+  <a class="jr vocab-card" href="#g-15"><code>HEAD</code><b>检测头</b><span>把融合后的特征翻译成框、置信度和类别。</span></a>
+  <a class="jr vocab-card" href="#g-16"><code>FEATURE MAP / CHANNEL</code><b>特征图与通道</b><span>一摞响应网格；每个通道偏向识别一种模式。</span></a>
+  <a class="jr vocab-card" href="#g-17"><code>STRIDE / PADDING</code><b>步长与补边</b><span>一个管窗口每次走几格，一个管边缘补几圈。</span></a>
+  <a class="jr vocab-card" href="#g-18"><code>CONCAT / SHORTCUT</code><b>拼接与相加</b><span>拼接先保留两路；相加当场合成一路。</span></a>
+  <a class="jr vocab-card" href="#g-19"><code>ANCHOR</code><b>预设框</b><span>每个位置先摆几种宽高模板，网络只学怎么校准。</span></a>
+  <a class="jr vocab-card" href="#g-20"><code>AP / AP50 / AP75</code><b>检测精度</b><span>既罚误报也罚漏报；数字后的 50/75 是命中门槛。</span></a>
+  <a class="jr vocab-card" href="#g-21"><code>FPS / BFLOPS</code><b>实测速度与理论运算量</b><span>一个是真跑多少帧，一个是大约算了多少次。</span></a>
+  <a class="jr vocab-card" href="#g-22"><code>BATCH / MINI-BATCH</code><b>一批数据怎么拆</b><span>总 batch 是一次更新合计用多少张图，mini-batch 是每次实际放进显存多少张图。</span></a>
+  <a class="jr vocab-card" href="#g-23"><code>LOGIT / SIGMOID</code><b>原始分数与 0～1 映射</b><span>网络先吐任意实数，再用 sigmoid 压成概率或格内偏移。</span></a>
+  <a class="jr vocab-card" href="#g-24"><code>IOU / NMS</code><b>框重叠与去重</b><span>IOU 衡量两个框有多重合；NMS 用它删掉重复框。</span></a>
+</div></section>
 
 <h2><span class="num">§ 01 / The accounting rule</span>先问一招记哪本账，再问要不要装</h2>
-<p>YOLOv4 面对的不是“没技巧可用”，而是技巧多到容易乱装。论文把候选分成两袋：Bag of Freebies<a class="jr" href="#g-03">3</a>只改变训练；Bag of Specials<a class="jr" href="#g-04">4</a>会进入推理图，但只允许付少量速度成本。这个分类把“精度涨了”拆成更实用的问题：训练贵了多少？部署慢了多少？GPU 真跑多快？</p>
+<p>YOLOv4 不缺候选技巧，真正难的是该留谁。论文先分两本账：<a class="jr term-hit" href="#g-03">Bag of Freebies</a> 只在训练时花钱；<a class="jr term-hit" href="#g-04">Bag of Specials</a> 部署后还要执行，因此真会拖慢推理。这样一来，“精度涨了”还不算回答完：训练多花了多少？上线后慢了多少？GPU 实测能跑多快？</p>
 
 <figure id="fig-taxonomy" class="reveal"><figcaption><span>Fig 01 · 两袋技巧，两本成本账</span><span>TRAIN ONLY vs DEPLOYED</span></figcaption>
   <div class="ledger"><div class="lane rev"><h4>BAG OF FREEBIES</h4><div class="lane-cost">只改训练数据 / 目标 / 策略</div><div class="chips"><span class="chip">MOSAIC</span><span class="chip">SAT</span><span class="chip">CIoU</span><span class="chip">DROPBLOCK</span><span class="chip">LABEL SMOOTH</span></div><div class="costline"><span>INFERENCE COST</span><b>+0</b></div></div><div class="lane special rev d2"><h4>BAG OF SPECIALS</h4><div class="lane-cost">模块与后处理真正装进推理</div><div class="chips"><span class="chip">MISH</span><span class="chip">SPP</span><span class="chip">SAM</span><span class="chip">PAN</span><span class="chip">NMS</span></div><div class="costline"><span>INFERENCE COST</span><b>+ small</b></div></div></div>
@@ -79,30 +95,31 @@ figure{margin:36px 0 54px;padding:25px;border:2px solid var(--ink);background:va
 </figure>
 
 <h3>论文 §3.4 的完整装车单</h3>
-<div class="recipe"><b>BACKBONE<br>FREEBIES</b><span>CutMix、Mosaic、DropBlock、标签平滑</span></div>
-<div class="recipe bos"><b>BACKBONE<br>SPECIALS</b><span>Mish、CSP、MiWRC；MiWRC 让多个输入残差分支带着可学习权重汇入当前层。</span></div>
-<div class="recipe"><b>DETECTOR<br>FREEBIES</b><span>CIoU、CmBN、DropBlock、Mosaic、SAT、消除网格敏感、多 anchor 正样本、余弦退火、遗传搜索超参数、随机训练尺寸</span></div>
-<div class="recipe bos"><b>DETECTOR<br>SPECIALS</b><span>Mish、SPP、SAM、PAN、DIoU-NMS</span></div>
-<p class="note"><span class="label">别被近似名字绕住</span>CIoU 是训练时回归框的损失；DIoU-NMS 是推理时去掉重复框的后处理。Mish 和 Mosaic 又分别跨越了 backbone / detector 的清单，所以不能只记“两袋各有什么”，还要记它在哪一段生效。</p>
+<div class="recipe"><b>BACKBONE<br>FREEBIES</b><span><a class="jr term-hit" href="#g-27">CutMix</a>、<a class="jr term-hit" href="#g-07">Mosaic</a>、<a class="jr term-hit" href="#g-27">DropBlock</a>、<a class="jr term-hit" href="#g-27">标签平滑</a></span></div>
+<div class="recipe bos"><b>BACKBONE<br>SPECIALS</b><span><a class="jr term-hit" href="#g-28">Mish</a>、<a class="jr term-hit" href="#g-05">CSP</a>、<a class="jr term-hit" href="#g-29">MiWRC</a></span></div>
+<div class="recipe"><b>DETECTOR<br>FREEBIES</b><span><a class="jr term-hit" href="#g-11">CIoU</a>、<a class="jr term-hit" href="#g-09">CmBN</a>、<a class="jr term-hit" href="#g-27">DropBlock</a>、<a class="jr term-hit" href="#g-07">Mosaic</a>、<a class="jr term-hit" href="#g-08">SAT</a>、<a class="jr term-hit" href="#g-10">消除网格敏感</a>、<a class="jr term-hit" href="#g-19">多 anchor 正样本</a>、<a class="jr term-hit" href="#g-26">余弦退火与超参数搜索</a>、<a href="../concepts/multi-scale-training.html">随机训练尺寸</a></span></div>
+<div class="recipe bos"><b>DETECTOR<br>SPECIALS</b><span><a class="jr term-hit" href="#g-28">Mish</a>、<a class="jr term-hit" href="#g-13">SPP</a>、<a class="jr term-hit" href="#g-14">SAM</a>、<a class="jr term-hit" href="#g-02">PAN</a>、<a class="jr term-hit" href="#g-24">DIoU-NMS</a></span></div>
+<p class="note"><span class="label">名字接近，干的活不一样</span>CIoU 是训练时用来校准框的损失；DIoU-NMS 是推理结束后删除重复框的规则。Mish 同时用在主干和检测器，Mosaic 也同时服务于分类预训练和检测训练。与其死背“两袋里各有什么”，不如先问：它在哪个阶段执行？部署后还在不在？</p>
 
-<h2><span class="num">§ 02 / Architecture</span>Backbone、neck、head：只换前两段</h2>
-<p>现代检测器可以拆成三段：backbone 从像素抽特征；neck 汇合不同层级；head 把特征变成框和类别。v4 的最终装车单是 CSPDarknet53 → SPP + modified PAN → YOLOv3 head。它仍是<a href="../concepts/one-stage-detection.html">一阶段检测</a>，也仍在三张特征图直接出框。</p>
+<h2><span class="num">§ 02 / Architecture</span>主干、融合层、检测头：YOLOv4 主要改前两段</h2>
+<p>目标检测器可以拆成三段：<a class="jr term-hit" href="#g-01">主干网络（backbone）</a>把像素变成多层特征；<a class="jr term-hit" href="#g-02">特征融合层（neck）</a>把不同深度、不同尺寸的特征汇在一起；<a class="jr term-hit" href="#g-15">检测头（head）</a>再把它们变成框、置信度和类别。YOLOv4 的组合是 CSPDarknet53 → SPP + modified PAN → YOLOv3 head。它仍是<a href="../concepts/one-stage-detection.html">一阶段检测</a>：一遍前向，就在 52×52、26×26、13×13 三张<a class="jr term-hit" href="#g-16">特征图</a>上直接预测框。</p>
 
 <figure id="fig-architecture" class="reveal"><figcaption><span>Fig 02 · YOLOv4 的三段装车单</span><span>BACKBONE → NECK → HEAD</span></figcaption>
   <div class="arch"><div class="arch-block rev"><b>CSPDarknet53</b><span>29 × 3×3 CONV<br>725×725 RECEPTIVE FIELD<a class="jr" href="#g-06">6</a><br>27.6M PARAMS</span></div><div class="arch-arr rev d2">→</div><div class="arch-block neck rev d3"><b>SPP + PAN</b><span>WIDEN CONTEXT<br>TOP-DOWN + BOTTOM-UP<br>CONCAT FUSION</span></div><div class="arch-arr rev d4">→</div><div class="arch-block head rev d5"><b>YOLOv3 HEAD</b><span>ANCHOR BASED<br>THREE OUTPUT SCALES</span><div class="heads"><i>52</i><i>26</i><i>13</i></div></div></div>
-  <p class="fig-note">论文强调生产吞吐，而不只看 BFLOPs。512 输入时 CSPDarknet53 52 BFLOPs / 66 FPS，CSPResNeXt50 31 BFLOPs / 62 FPS：运算更少的一方反而更慢。</p>
+  <p class="fig-note">论文看重真实 GPU 吞吐，不只看<a class="jr term-hit" href="#g-21">理论运算量</a>。512 输入时，CSPDarknet53 是 52 BFLOPs / 66 FPS；CSPResNeXt50 只有 31 BFLOPs，却只跑到 62 FPS。账面运算少，不等于机器上一定快。</p>
 </figure>
 
 <h3>CSP：只让一部分通道反复深加工</h3>
-<p>Cross-stage partial connection<a class="jr" href="#g-05">5</a>把一个 stage 分成加工支路和旁路。它不是把一半特征丢掉，而是让两路在末尾重新 concat，减少全部通道反复走同一串残差块产生的重复梯度。</p>
+<p><a class="jr term-hit" href="#g-05">CSP（Cross-Stage Partial）</a>先把一个 stage——也就是一组保持同样分辨率的网络层——分成两路。一路穿过残差块反复加工，另一路走短路，最后再<a class="jr term-hit" href="#g-18">拼接</a>回来。它不是丢掉一半特征，而是避免所有<a class="jr term-hit" href="#g-16">通道</a>都重复跑完整条加工线；两路梯度也不用挤在同一条路径里。</p>
 
 <figure id="fig-csp" class="reveal"><figcaption><span>Fig 03 · 四个通道走一遍 CSP</span><span>SPLIT / PROCESS / MERGE</span></figcaption>
   <div class="csp"><div class="tensor rev">INPUT<br>[1,2,3,4]</div><div class="split rev d2">⇢</div><div class="branches"><div class="branch rev d2">PROCESS<br>[1,2] + [+.5,-.5]<br>= [1.5,1.5]</div><div class="branch bypass rev d3">BYPASS<br>[3,4] 原样直达</div></div><div class="split rev d4">⇢</div><div class="csp-out rev d5">CONCAT<br>[1.5,1.5,3,4]<b>¼ SUM = 2.5</b></div></div>
-  <p class="fig-note">这里只拿一个像素位置手算；真实网络在整张特征图上分通道。两支都进入输出，深加工只落在其中一支。</p>
+  <p class="fig-note">这里只拿一个空间位置的四个通道手算。真实网络会在整张特征图上做同样的分流；两路都保留，只有一路反复经过残差块。</p>
 </figure>
 
-<h3>SPP：池化窗口变大，13×13 不变</h3>
-<p>Pooling<a class="jr" href="#g-13">13</a>的核心是在 <code>k×k</code> 窗口内汇总，不等于必然下采样。YOLOv4 让 5×5、9×9、13×13 三个 max-pool 分支从同一份 <code>13×13×512</code> 输入取值；它们都是 <code>stride=1</code>，padding 分别为 2、4、6。输出公式 <code>Hout=floor((H+2p−k)/s)+1</code> 中，<code>H</code> 是输入高度、<code>p</code> 是单侧 padding、<code>k</code> 是窗口、<code>s</code> 是 stride。以 5×5 为例：<code>(13+2×2−5)/1+1=13</code>，所以不是“四次缩图”。</p>
+<h3>SPP：窗口看得更远，但特征图仍是 13×13</h3>
+<p><a class="jr term-hit" href="#g-13">池化（pooling）</a>做的事很简单：拿一个 <code>k×k</code> 窗口，在里面取最大值或平均值。特征图会不会缩小，要看<a class="jr term-hit" href="#g-17">步长和补边</a>，不能看到 pooling 就默认它会下采样。YOLOv4 让 5×5、9×9、13×13 三个最大池化分支都读取同一份 <code>13×13×512</code> 输入。它们的步长都是 1，补边分别是 2、4、6。</p>
+<p>输出高度按 <code>Hout=floor((H+2p−k)/s)+1</code> 计算：<code>H</code> 是输入高度，<code>k</code> 是窗口大小，<code>p</code> 是单侧补边，<code>s</code> 是步长。5×5 分支代入后是 <code>(13+2×2−5)/1+1=13</code>；9×9 和 13×13 也都是 13。因此这四路不是连续把图越缩越小，而是在同一批空间位置上收集四档上下文。</p>
 
 <figure id="fig-pooling" class="reveal"><figcaption><span>Fig 04 · 同一中心位置，窗口越大看得越远</span><span>MAX POOL / STRIDE 1 / SAME SIZE</span></figcaption>
   <div class="pool-rows">
@@ -113,122 +130,142 @@ figure{margin:36px 0 54px;padding:25px;border:2px solid var(--ink);background:va
   </div>
   <div class="pool-equation rev d3">k=5, p=2, s=1 → Hout=floor((13+4−5)/1)+1=<b>13</b> · k=9/13 同理仍为 13</div>
   <div class="spp-stack"><div class="spp-branch rev">RAW<span>13×13×512<br>原特征直通</span></div><div class="spp-branch rev d2">5×5<span>13×13×512<br>近邻最大值</span></div><div class="spp-branch rev d3">9×9<span>13×13×512<br>中程最大值</span></div><div class="spp-branch rev d4">13×13<span>13×13×512<br>最宽邻域最大值</span></div></div>
-  <div class="coord rev d4">沿 channel concat：4 × 512 = 2,048 → 13×13×2,048 → 1×1 conv 压回 512</div>
-  <p class="fig-note">上面的 13 格一维行只演示中心位置怎样换窗口；真实网络对二维窗口、每个通道、每个空间位置都做同样操作。13×13 窗口在中心覆盖全图，靠边时一部分落在 padding；直通支路没有真的执行 1×1 pooling。</p>
+  <div class="coord rev d4">沿通道拼接：4 × 512 = 2,048 → 13×13×2,048 → 1×1 卷积压回 512</div>
+  <p class="fig-note">上面的 13 格一维行只演示：中心位置不动，窗口扩大以后，最大值如何从 4 变成 6、8、9。真实网络用二维窗口，并在每个通道、每个位置重复这一步。13×13 窗口放在中心时覆盖整张特征图；靠近边缘时，一部分窗口落在补边上。RAW 支路只是原特征直通，没有真的做 1×1 池化。</p>
 </figure>
 
-<h3>PAN：一个尺度内看宽以后，再跨尺度往返</h3>
-<p>SPP 只在 13×13 层扩视野；PAN 才负责三个尺度之间的信息流。13→26→52 把深层“是什么”下发给细网格，52→26→13 把浅层“在哪里”送回粗网格。v4 把原 PAN 的 shortcut 相加改成 concat：相加立刻把两路同通道合成一个数；concat 先保留两路，再让后续卷积学习怎么混。</p>
+<h3>PAN：SPP 管“看多远”，PAN 管“三层怎么互通”</h3>
+<p>SPP 只在 13×13 这一层扩大视野；PAN 才负责 13×13、26×26、52×52 三层之间传消息。13→26→52 把深层的类别语义送到细网格，52→26→13 再把浅层的精确位置送回粗网格。YOLOv4 还把原 PAN 的<a class="jr term-hit" href="#g-18">相加（shortcut）改成拼接（concat）</a>：相加会立刻把两路同通道压成一个数；拼接则先完整保留两路，再让后续卷积决定怎么混。</p>
 
 <figure id="fig-pan" class="reveal"><figcaption><span>Fig 05 · SPP 与 PAN 分工：尺度内扩视野，尺度间双向融合</span><span>TOP-DOWN / BOTTOM-UP / CONCAT</span></figcaption>
   <div class="pan-diagram"><div class="pan-lane rev"><h4>SEMANTIC DOWN</h4><div class="pan-node">13×13<em>深层语义强</em></div><div class="pan-step">↓ UPSAMPLE + CONCAT</div><div class="pan-node">26×26<em>语义送到中层</em></div><div class="pan-step">↓ UPSAMPLE + CONCAT</div><div class="pan-node">52×52<em>细网格也知道是什么</em></div></div><div class="pan-join rev d3"><div><b>CONCAT ≠ ADD</b>两路先并排保留<br>卷积再决定如何混</div></div><div class="pan-lane rev d2"><h4>POSITION BACK</h4><div class="pan-node">52×52<em>浅层位置细</em></div><div class="pan-step">↓ STRIDE-2 CONV + CONCAT</div><div class="pan-node">26×26<em>位置送回中层</em></div><div class="pan-step">↓ STRIDE-2 CONV + CONCAT</div><div class="pan-node">13×13<em>粗网格补到位置线索</em></div></div></div>
-  <p class="fig-note">左、右两列分别画信息流顺序，不代表它们在空间上并排。SPP 与 PAN 常被连写成一个 neck，但解决的是两个不同问题。</p>
+  <p class="fig-note">左、右两列表示两次传递的先后顺序，不是说两条网络真的左右并排。SPP 和 PAN 常一起写成 “SPP/PAN neck”，但分工不同：一个扩大同一层的视野，一个连通三种分辨率。</p>
 </figure>
 
-<h3>SAM：spatial-wise → point-wise，细的是“权重粒度”</h3>
-<p>设输入 <code>F∈R^(C×H×W)</code>，其中 <code>C</code> 是通道数，<code>H,W</code> 是空间尺寸。原 spatial-wise SAM<a class="jr" href="#g-14">14</a>沿通道做 average/max pooling，再生成一张 <code>1×H×W</code> 权重图：<code>Y[c,h,w]=F[c,h,w]×A_sp[h,w]</code>。同一位置所有通道必须共用一个门。YOLOv4 改成 <code>A_pt=sigmoid(conv1×1(F))∈R^(C×H×W)</code>，再算 <code>Y[c,h,w]=F[c,h,w]×A_pt[c,h,w]</code>；同一位置的不同通道终于能用不同权重。</p>
+<h3>SAM：从“一个位置共用一扇门”改成“每个元素各有一扇门”</h3>
+<p>先看直觉。原来的 <a class="jr term-hit" href="#g-14">spatial-wise attention</a> 给每个空间位置一个权重；同一位置上的所有通道共用它。YOLOv4 改成 point-wise attention 后，每个通道、每个位置都有自己的权重。同一个位置上，“轮廓”通道可以保留，“纹理”通道可以压低。</p>
+<p>再看公式。<code>F∈R^(C×H×W)</code> 是输入特征，<code>C</code> 是<a class="jr term-hit" href="#g-16">通道数</a>，<code>H,W</code> 是空间尺寸；<code>A</code> 是 0～1 的门控权重，<code>Y</code> 是加权后的输出。原版先沿通道做平均池化和最大池化，得到一张 <code>1×H×W</code> 门控图：<code>Y[c,h,w]=F[c,h,w]×A_sp[h,w]</code>。改版则生成 <code>C×H×W</code> 门控：<code>Y[c,h,w]=F[c,h,w]×A_pt[c,h,w]</code>。差别就落在最后一个下标 <code>c</code>：改版能区分同一位置上的不同通道。</p>
 
 <figure id="fig-sam" class="reveal"><figcaption><span>Fig 06 · 一张共享空间门 vs 每个元素自己的门</span><span>SPATIAL-WISE → POINT-WISE</span></figcaption>
   <div class="sam-compare">
     <div class="sam-card rev"><h4>SPATIAL-WISE</h4><div class="sam-shape">avg/max over channels → A_sp: 1×H×W</div><div class="gate-layout"><div class="channel-pair"><div class="matrix-wrap"><label>F₁</label><div class="matrix"><i>2</i><i>4</i><i>1</i><i>3</i></div></div><div class="matrix-wrap"><label>F₂</label><div class="matrix"><i>8</i><i>2</i><i>6</i><i>4</i></div></div></div><div class="sam-times">×</div><div class="shared-gate matrix-wrap"><label>两通道共享 A_sp</label><div class="matrix"><i>.25</i><i>.80</i><i>.50</i><i>.10</i></div></div></div><div class="sam-proof">左上角：2×.25=<b>.5</b><br>左上角：8×.25=<b>2.0</b></div><div class="sam-verdict"><span><b>H×W 个门</b>回答“哪里重要”</span><span><b>同位置同权重</b>不能区分通道</span></div></div>
     <div class="sam-card pointwise rev d2"><h4>POINT-WISE / YOLOv4</h4><div class="sam-shape">1×1 conv + sigmoid → A_pt: C×H×W</div><div class="gate-layout"><div class="channel-pair"><div class="matrix-wrap"><label>F₁</label><div class="matrix"><i>2</i><i>4</i><i>1</i><i>3</i></div></div><div class="matrix-wrap"><label>F₂</label><div class="matrix"><i>8</i><i>2</i><i>6</i><i>4</i></div></div></div><div class="sam-times">×</div><div class="gate-pair"><div class="matrix-wrap"><label>A₁</label><div class="matrix"><i>.25</i><i>.80</i><i>.50</i><i>.10</i></div></div><div class="matrix-wrap"><label>A₂</label><div class="matrix"><i>.75</i><i>.20</i><i>.90</i><i>.60</i></div></div></div></div><div class="sam-proof">左上角：2×.25=<b>.5</b><br>左上角：8×.75=<b>6.0</b></div><div class="sam-verdict"><span><b>C×H×W 个门</b>位置和通道都可区分</span><span><b>同位置不同权重</b>表达更细、计算更贵</span></div></div>
   </div>
-  <p class="fig-note">point 指张量里的单个元素 (c,h,w)，不是只指二维坐标 (h,w)。Table 5 的 42.4→42.7 AP 是“加 SAM”的组合差值，不是两种 SAM 的严格一对一消融。</p>
+  <p class="fig-note">这里的 point 指张量中的单个元素 (c,h,w)，不是只指二维坐标 (h,w)。论文表 5 的 42.4→42.7 AP 只能说明“这个组合加上 SAM 后高了 0.3 AP”；论文没有把 spatial-wise 和 point-wise 两种 SAM 单独摆在同一组实验里比较。</p>
 </figure>
 
-<div class="note"><span class="label">实现版本提醒</span>论文 Fig. 5 明确画出 modified SAM，官方 <code>sam_layer.c</code> 也逐元素相乘；但当前官方仓库 <code>master@59596d7</code> 的标准 <code>yolov4.cfg</code> 没有 <code>[sam]</code>。SAM 出现在实验配置中，论文方法清单与某个默认 cfg 不能混成同一件事。</div>
+<div class="note"><span class="label">实现版本提醒</span>论文 Fig. 5 明确画了 modified SAM，官方 <code>sam_layer.c</code> 也支持逐元素相乘；但官方仓库 <code>master@59596d7</code> 的标准 <code>yolov4.cfg</code> 没有 <code>[sam]</code>，SAM 只出现在实验配置里。因此，照论文画结构图和照默认 cfg 复现，不一定得到同一张网络图。</div>
 
 <h2><span class="num">§ 03 / Training freebies</span>四图拼接与自我攻击：训练难一点，部署不背债</h2>
-<h3>Mosaic：一张样本混进四种背景</h3>
-<p>Mosaic<a class="jr" href="#g-07">7</a>把四张图缩放、裁剪后拼成一张。它让物体脱离惯常背景，缩放也会增加小目标出现频率。标注框必须跟着做同样的缩放、平移、裁剪。</p>
+<h3>Mosaic：四张图拼成一张训练样本</h3>
+<p><a class="jr term-hit" href="#g-07">Mosaic</a>先把四张图分别缩放、裁剪，再拼到同一张画布上。这样，同类物体会被塞进不同背景；物体缩小后，小目标也更常出现。图像怎么缩放、平移、裁剪，标注框就必须跟着做一模一样的坐标变换。</p>
 
 <figure id="fig-mosaic" class="reveal"><figcaption><span>Fig 07 · 四张 320 图拼成 640 画布</span><span>BOX COORDINATES MOVE WITH PIXELS</span></figcaption>
   <div class="mosaic rev"><div class="tile">A<div class="bbox"></div><small>TL · +0,+0</small></div><div class="tile">B<div class="bbox"></div><small>TR · +320,+0</small></div><div class="tile">C<div class="bbox"></div><small>BL · +0,+320</small></div><div class="tile">D<div class="bbox"></div><small>BR · +320,+320</small></div></div>
-  <div class="coord rev d2">右上框 [80,40,240,280] + x偏移320 → [400,40,560,280] · 宽高仍是160×240</div>
-  <p class="fig-note">真实 Mosaic 的十字位置、缩放和裁剪都随机；越界框要截断，无效小框要丢掉。论文还用“四张图的激活统计”解释它为何能缓解小 mini-batch 下的 BN<a href="#g-09" class="jr">9</a>。</p>
+  <div class="coord rev d2">框格式 [左,上,右,下]：右上框 [80,40,240,280] 的左右坐标各加320 → [400,40,560,280] · 宽高仍是160×240</div>
+  <p class="fig-note">真实 Mosaic 会随机移动拼接十字，也会随机缩放和裁剪。框越过画布就截断，缩得太小或已经无效就丢掉。论文还认为，一张 Mosaic 同时带来四张图的激活统计，能缓解小 <a class="jr term-hit" href="#g-22">mini-batch</a> 下 <a href="#g-09" class="jr term-hit">BN</a> 统计不稳的问题。</p>
 </figure>
 
 <h3>SAT：按模型自己的弱点现场出题</h3>
-<p>Self-Adversarial Training<a class="jr" href="#g-08">8</a>不是拿对抗图去做安全测试，而是把攻击阶段直接塞进训练：第一段不更新权重，只改输入，让目标变难看见；第二段固定这张难图，正常更新模型把目标找回来。</p>
+<p><a class="jr term-hit" href="#g-08">Self-Adversarial Training（SAT）</a>不是拿对抗图做安全测试，而是让模型现场给自己出难题。第一段冻结模型，只改输入图像，把原本看得见的目标藏起来；第二段固定这张难图，再更新模型，把目标重新找回来。</p>
 
 <figure id="fig-sat" class="reveal"><figcaption><span>Fig 08 · 一次 SAT 的两段动作</span><span>ATTACK INPUT → TRAIN NETWORK</span></figcaption>
   <div class="sat"><div class="phase rev"><h4>01 / SELF ATTACK</h4><div class="image-sim attack"><div class="object"></div></div><p>权重冻结；梯度走向输入像素，让当前模型更难认出目标。</p></div><div class="sat-arr rev d2">→</div><div class="phase train rev d3"><h4>02 / NORMAL TRAIN</h4><div class="image-sim"><div class="object"></div></div><p>难图固定；正常更新权重，逼模型补上刚暴露的薄弱点。</p></div></div>
-  <p class="fig-note">SAT 多付训练时间，但推理计算图完全不变，所以仍属于 Freebie。</p>
+  <p class="fig-note">SAT 会让训练变慢，但导出的推理网络没有多任何一层，所以仍属于 Freebie。</p>
 </figure>
 
-<h2><span class="num">§ 04 / Assignment & coordinates</span>边界更好学，一个真值也能多派几名负责者</h2>
-<h3>消除网格敏感：0.99 不再要求巨大 logit</h3>
-<p>YOLOv3 的格内偏移是 <code>sigmoid(t_x)</code>。越靠近 0 或 1，logit 越极端、梯度越小，这就是论文说的 grid sensitivity<a class="jr" href="#g-10">10</a>。公开实现改成 <code>s·sigmoid(t_x)-0.5(s-1)</code>，把可预测范围稍微撑出格子。</p>
+<h2><span class="num">§ 04 / Assignment & coordinates</span>边界位置更好学，一个真值也能交给多个预设框</h2>
+<h3>消除网格敏感：想预测 0.99，不必再把原始分数推得很大</h3>
+<p>YOLOv3 先让网络输出任意实数 <code>t_x</code>，再用 <a class="jr term-hit" href="#g-23">sigmoid</a> 把它压到 0～1，作为目标中心在格子里的偏移。问题是：越靠近 0 或 1，所需的原始分数（logit）越大，梯度却越小，这就是<a class="jr term-hit" href="#g-10">网格敏感</a>。公开实现改成 <code>s·sigmoid(t_x)-0.5(s-1)</code>：<code>t_x</code> 仍是网络原始输出，<code>s</code> 是把范围向两边撑开的缩放系数；<code>s=1</code> 就退回 YOLOv3，图中用 <code>s=1.2</code>。</p>
 
 <figure id="fig-grid" class="reveal"><figcaption><span>Fig 09 · 同一个格内位置 0.99</span><span>LOGIT 4.595 → 2.293</span></figcaption>
   <div class="grid-compare"><div class="grid-card rev"><h4>YOLOv3 / RANGE (0,1)</h4><div class="range"><i class="point"></i></div><div class="grid-math">sigmoid(t)=0.99<br><b>t = 4.595</b><br>靠边时 sigmoid 已接近饱和</div></div><div class="grid-card v4 rev d2"><h4>YOLOv4 / s=1.2</h4><div class="range"><i class="point"></i></div><div class="grid-math">1.2·sigmoid(t)-0.1=0.99<br>sigmoid(t)=0.90833<br><b>t = 2.293</b></div></div></div>
-  <p class="fig-note">范围从 (0,1) 扩到 (-0.1,1.1)。不是取消格子，而是让中心靠近或轻微跨过格界时不必把 logit 推到极端。</p>
+  <p class="fig-note">范围从 (0,1) 扩到 (-0.1,1.1)。网格还在，只是目标中心靠近、甚至略微跨过格子边界时，不再需要把原始分数推到极端。</p>
 </figure>
 
-<h3>多 anchor 正样本：阈值以上都可以学</h3>
-<p>v3 默认只奖励形状 IOU 最好的一个 anchor。v4 仍保留最佳者，同时让其他形状 IOU 超过阈值的 anchor 也学习。遗传搜索给出的阈值是 0.213；这改变的是正样本覆盖，不是推理候选数。</p>
+<h3>一个真值可以交给多个 anchor 学</h3>
+<p>YOLOv3 默认只让形状 <a class="jr term-hit" href="#g-24">IOU</a> 最高的那个<a class="jr term-hit" href="#g-19">预设框（anchor）</a>负责学习。YOLOv4 仍保留最佳者，但其他 anchor 只要超过阈值，也能一起当正样本。遗传搜索给出的阈值是 0.213。它会让训练时多出几个负责者，却不会增加推理时生成的候选框数量。</p>
 
 <figure id="fig-anchors" class="reveal"><figcaption><span>Fig 10 · 60×120 真值对九个公开 anchor</span><span>IOU THRESHOLD = 0.213</span></figcaption>
   <div class="anchor-grid"><div class="anchor-shape rev" style="--w:12px;--h:16px">12×16<br>.027</div><div class="anchor-shape rev" style="--w:19px;--h:36px">19×36<br>.095</div><div class="anchor-shape rev" style="--w:40px;--h:28px">40×28<br>.156</div><div class="anchor-shape pos rev d2" style="--w:36px;--h:75px">36×75<b>.375 POS</b></div><div class="anchor-shape pos rev d2" style="--w:52px;--h:38px">76×55<b>.408 POS</b></div><div class="anchor-shape pos best rev d3" style="--w:45px;--h:92px">72×146<b>.685 BEST</b></div><div class="anchor-shape pos rev d3" style="--w:52px;--h:40px">142×110<b>.407 POS</b></div><div class="anchor-shape rev" style="--w:48px;--h:61px">192×243<br>.154</div><div class="anchor-shape rev" style="--w:52px;--h:45px">459×401<br>.039</div></div>
-  <p class="fig-note">四个 anchor 超过 0.213，其中 72×146 最佳。阈值低会增加正样本，也会改变正负平衡，不能脱离训练配方单独乱调。</p>
+  <p class="fig-note">四个 anchor 超过 0.213，其中 72×146 最匹配。阈值越低，负责学习的正样本越多，正负比例也会跟着变；不能只顾着多派正样本，不看训练是否稳定。</p>
 </figure>
 
 <h2><span class="num">§ 05 / Box loss</span>CIoU：覆盖、中心、形状一张账单</h2>
-<p>普通坐标误差把 x/y/w/h 分开罚；IOU 又只看重叠。CIoU<a class="jr" href="#g-11">11</a>把框的三种肉眼错误合起来：<code>1-IoU</code> 管盖住多少，中心距离管整体偏移，长宽比项管形状。</p>
+<p>普通坐标误差分别处罚 x、y、w、h；<a class="jr term-hit" href="#g-24">IOU</a> 又只看两框重叠多少。<a class="jr term-hit" href="#g-11">CIoU</a> 把三种一眼能看出的错误放进同一张账单：<code>1-IoU</code> 管覆盖不足，中心距离管整框偏到哪，长宽比项管框是不是太扁或太高。</p>
 <div class="formula">L_CIoU = 1-IoU + ρ²(b,b_gt)/c² + αv
 v = 4/π² · [atan(w_gt/h_gt)-atan(w/h)]²
 α = v / (1-IoU+v)</div>
-<p><code>b,b_gt</code> 是两框中心；<code>ρ²</code> 是中心距离平方；<code>c²</code> 是最小外接框对角线平方；<code>w,h</code> 与 <code>w_gt,h_gt</code> 是预测和真值宽高；<code>v</code> 衡量长宽比差；<code>α</code> 根据当前重叠情况调节形状项。</p>
+<p><code>b,b_gt</code> 是预测框和真值框的中心；<code>ρ²</code> 是两中心距离的平方；<code>c²</code> 是能同时包住两框的最小外接框，其对角线长度平方；<code>w,h</code> 是预测框宽高，<code>w_gt,h_gt</code> 是真值框宽高；<code>atan(w/h)</code> 把长宽比变成角度，两个角度相差越大，<code>v</code> 越大；<code>α</code> 决定这一笔形状误差现在该占多大权重。</p>
 
 <figure id="fig-ciou" class="reveal"><figcaption><span>Fig 11 · 一个同时偏心又变形的预测框</span><span>TRUTH 4×2 / PRED 2×4</span></figcaption>
   <div class="ciou"><div class="box-scene rev"><svg viewBox="0 0 320 260" role="img" aria-label="真值框与预测框的中心、外接框"><rect x="40" y="30" width="240" height="200" fill="#f8f2df" stroke="#b9ad93" stroke-dasharray="5 5"/><rect x="40" y="80" width="200" height="100" fill="#ccdaf0" fill-opacity=".7" stroke="#1952a0" stroke-width="4"/><rect x="140" y="30" width="100" height="200" fill="#efd1c7" fill-opacity=".65" stroke="#b7472f" stroke-width="4"/><circle cx="140" cy="130" r="6" fill="#1952a0"/><circle cx="190" cy="130" r="6" fill="#b7472f"/><line x1="140" y1="130" x2="190" y2="130" stroke="#dfa918" stroke-width="5"/><text x="50" y="72" font-size="13" font-family="Space Mono" fill="#1952a0">truth 4×2</text><text x="150" y="50" font-size="13" font-family="Space Mono" fill="#b7472f">pred 2×4</text><text x="146" y="122" font-size="11" font-family="Space Mono" fill="#8b690d">ρ=1</text></svg></div><div class="ciou-ledger"><div class="term-card rev"><b>0.66667</b><span>覆盖项<br>1 − 4/12</span></div><div class="term-card rev d2"><b>0.03125</b><span>中心项<br>ρ²/c² = 1/32</span></div><div class="term-card rev d3"><b>0.03375</b><span>形状项<br>αv</span></div><div class="ciou-total rev d4">TOTAL CIoU LOSS <b>0.73167</b></div></div></div>
   <p class="fig-note">三笔账都非零：没盖好、中心向右偏 1、长宽比从 2 变成 0.5。只用 1−IOU，只能看见第一笔 0.66667。</p>
 </figure>
 
-<h2><span class="num">§ 06 / Training record</span>论文默认、遗传搜索、当前 cfg，不是同一套数</h2>
-<p>ImageNet backbone 筛选先训练 8,000,000 step：总 batch 128、mini-batch 32，初始学习率 0.1，poly 衰减，warm-up 1,000 step，momentum 0.9，weight decay 0.005。BoS 对照沿用同一预算；BoF 对照额外增加 50% step，所以分类表里的提升并非完全等训练时长。</p>
-<p>论文 COCO 默认实验：500,500 step，初始学习率 0.01，在 400k / 450k 各乘 0.1；momentum 0.9，weight decay 0.0005；总 batch 64，单卡 mini-batch 4 或 8，并做多尺度训练。Cross mini-Batch Normalization<a class="jr" href="#g-09">9</a>只在同一个 batch 的多个 mini-batch 之间汇总统计，不需要跨 GPU 同步。</p>
-<p>遗传搜索另得到：学习率 0.00261、momentum 0.949、anchor IOU 阈值 0.213、框损失归一系数 0.07。当前 GitHub <code>master</code> 的 <code>yolov4.cfg</code> 又写学习率 0.0013、subdivisions 8、Mosaic、CIoU。论文最终配方列 DIoU-NMS，当前 cfg 却是 <code>greedynms</code>。复现时必须钉住具体配置与 commit，模型名本身不是可执行规范。</p>
+<h2><span class="num">§ 06 / Training record</span>论文设置、搜索结果、当前 cfg：三组数字别揉在一起</h2>
+<p>先把训练词汇对齐：一个 <a class="jr term-hit" href="#g-22">step</a> 是更新一次权重；总 batch 是这次更新合计用了多少张图；mini-batch 是每次真正塞进显存多少张图。<a class="jr term-hit" href="#g-26">学习率、warm-up、momentum、weight decay</a>则分别控制每步走多远、开局怎么慢慢提速、历史梯度保留多少、权重收缩多强。</p>
+<p>ImageNet 主干筛选训练了 8,000,000 step：总 batch 128、mini-batch 32，初始学习率 0.1，<a class="jr term-hit" href="#g-26">poly 衰减</a>，warm-up 1,000 step，momentum 0.9，weight decay 0.005。BoS 对照沿用这套训练量；BoF 对照多训练了 50%。因此分类表里的 BoF 提升，不是“训练时长完全相同，只多装一个技巧”的纯对照。</p>
+<p>论文的 COCO 默认实验训练 500,500 step：初始学习率 0.01，在 400k 和 450k step 各缩小 10 倍；momentum 0.9，weight decay 0.0005；总 batch 64，单卡 mini-batch 4 或 8，并做<a href="../concepts/multi-scale-training.html">多尺度训练</a>。<a class="jr term-hit" href="#g-09">Cross mini-Batch Normalization（CmBN）</a>只汇总同一个 batch 内几个 mini-batch 的统计量，不要求多张 GPU 互相同步。</p>
+<p><a class="jr term-hit" href="#g-26">遗传搜索</a>又找到另一组数：学习率 0.00261、momentum 0.949、anchor IOU 阈值 0.213、框损失归一系数 0.07。当前 GitHub <code>master</code> 的 <code>yolov4.cfg</code> 则写着学习率 0.0013、<a class="jr term-hit" href="#g-22">subdivisions 8</a>、Mosaic、CIoU。论文最终配方列的是 <a class="jr term-hit" href="#g-24">DIoU-NMS</a>，当前 cfg 用的却是 <a class="jr term-hit" href="#g-24"><code>greedynms</code></a>。想复现结果，只记“YOLOv4”四个字不够，代码 commit 和 cfg 都要一起保存。</p>
 
-<h2><span class="num">§ 07 / Ablation</span>最重要的负结果：热门组件装上也会掉点</h2>
-<p>分类实验先说明 BoF + Mish 能把 CSPDarknet53 从 Top-1 77.2 / Top-5 93.6 推到 78.7 / 94.8。但更高分类精度不自动等于更好检测：CSPResNeXt50 的分类预训练变强，检测反而从 42.4 轻微掉到 42.3；CSPDarknet53 才从 42.4 升到 43.0。</p>
+<h2><span class="num">§ 07 / Ablation</span>消融实验：热门组件装上去，也可能掉点</h2>
+<p><a class="jr term-hit" href="#g-25">消融实验</a>就是一次只换一个零件，看看成绩怎么变。分类实验里，BoF + Mish 把 CSPDarknet53 从 <a class="jr term-hit" href="#g-31">Top-1 77.2 / Top-5 93.6</a> 提到 78.7 / 94.8；但分类更准，不保证检测也更准。CSPResNeXt50 的分类预训练变强后，检测反而从 42.4 AP 掉到 42.3；CSPDarknet53 才从 42.4 升到 43.0。</p>
 
 <figure id="fig-ablation" class="reveal"><figcaption><span>Fig 12 · BoS 不是越堆越强</span><span>COCO AP / 512 INPUT</span></figcaption>
   <div class="ablation"><div class="bar-row rev"><span>PANet + SPP</span><div class="bar-track"><div class="bar-fill" style="--w:84.8%"></div></div><span class="bar-val">42.4</span></div><div class="bar-row bad rev d2"><span>+ RFB</span><div class="bar-track"><div class="bar-fill" style="--w:83.6%"></div></div><span class="bar-val">41.8</span></div><div class="bar-row best rev d3"><span>+ SAM</span><div class="bar-track"><div class="bar-fill" style="--w:85.4%"></div></div><span class="bar-val">42.7</span></div><div class="bar-row bad rev d4"><span>+ SAM + Gaussian YOLO</span><div class="bar-track"><div class="bar-fill" style="--w:83.2%"></div></div><span class="bar-val">41.6</span></div><div class="bar-row bad rev d5"><span>+ ASFF + RFB</span><div class="bar-track"><div class="bar-fill" style="--w:82.2%"></div></div><span class="bar-val">41.1</span></div></div>
-  <div class="ablation-note"><div class="mini-result"><b>+1.6 AP</b>MSE 基线 38.0 → CIoU 单项设置行 39.6</div><div class="mini-result"><b>+0.3 AP</b>SPP/PAN 42.4 → +SAM 42.7</div><div class="mini-result"><b>−1.3 AP</b>+ASFF+RFB 降到 41.1</div></div>
-  <p class="fig-note">Table 4 前半段有单项设置，后半段则会同时勾选多个 BoF；可以比较表中两行，但不能把整张表每个差值都当成独立贡献再相加。</p>
+  <div class="ablation-note"><div class="mini-result"><b>+1.6 AP</b><a class="jr term-hit" href="#g-32">MSE</a> 基线 38.0 → CIoU 单项设置行 39.6</div><div class="mini-result"><b>+0.3 AP</b>SPP/PAN 42.4 → +SAM 42.7</div><div class="mini-result"><b>−1.3 AP</b>+ASFF+RFB 降到 41.1</div></div>
+  <p class="fig-note">图中的 <a class="jr term-hit" href="#g-30">RFB、ASFF 和 Gaussian YOLO</a> 都是候选模块。论文表 4 前半段有单项对照，后半段却会同时打开多个训练技巧。两行之间可以比较，但不能把整张表的行间差全部当成独立收益，再一项项相加。</p>
 </figure>
 
-<p>mini-batch 结论也要窄读：带 BoF/BoS 的 CSPDarknet53 在 mini-batch 4 与 8 时是 41.6 vs 41.7 AP，只差 0.1；另一套不带这些策略的 CSPResNeXt50 是 37.1 vs 38.4，差 1.3。它说明这套配方在该实验里更稳，不等于 batch size 永远无所谓。</p>
+<p>mini-batch 实验只能得出一个有限结论：带 BoF/BoS 的 CSPDarknet53 在 mini-batch 4 和 8 时是 41.6 vs 41.7 AP，只差 0.1；另一套不带这些策略的 CSPResNeXt50 是 37.1 vs 38.4，差 1.3。也就是说，这套配方在这组实验里对小 mini-batch 更稳；不能外推成“batch size 永远无所谓”。</p>
 
-<h2><span class="num">§ 08 / Results & limits</span>严格定位和小目标一起补上，但功劳没法逐件拆清</h2>
-<p>YOLOv4-608 在 COCO test-dev 得到 43.5 AP / 65.7 AP50 / 47.3 AP75 / 26.7 small AP。论文按 Maxwell、Pascal、Volta 分开列 FPS，避免把不同 GPU 混成一张绝对榜；它的结论更适合读成 Pareto 前沿<a class="jr" href="#g-12">12</a>——同样精度谁更快、同样速度谁更准。</p>
+<h2><span class="num">§ 08 / Results & limits</span>高门槛定位和小目标都变好，但提升没法逐件分账</h2>
+<p>YOLOv4-608 在 COCO test-dev 得到 43.5 <a class="jr term-hit" href="#g-20">AP</a> / 65.7 AP50 / 47.3 AP75 / 26.7 small AP。AP50 把 IOU≥0.50 算命中，AP75 要求 IOU≥0.75，因此更考验框得准不准。论文还把 Maxwell、Pascal、Volta 三代 GPU 的 <a class="jr term-hit" href="#g-21">FPS</a> 分开列，避免硬凑一张绝对榜。更稳妥的读法是看<a class="jr term-hit" href="#g-12">速度—精度前沿</a>：精度差不多时谁更快，速度差不多时谁更准。</p>
 
 <figure id="fig-results" class="reveal"><figcaption><span>Fig 13 · v3→v4 与 V100 三档部署</span><span>COCO TEST-DEV</span></figcaption>
   <div class="table-wrap"><table><thead><tr><th>模型</th><th>输入</th><th>GPU</th><th>FPS</th><th>AP</th><th>AP50</th><th>AP75</th><th>AP-small</th></tr></thead><tbody><tr><td>YOLOv3</td><td>608</td><td>Maxwell</td><td>20</td><td>33.0</td><td>57.9</td><td>34.4</td><td>18.3</td></tr><tr><td class="focus">YOLOv4</td><td class="focus">608</td><td class="focus">Maxwell</td><td class="focus">23</td><td class="focus">43.5</td><td class="focus">65.7</td><td class="focus">47.3</td><td class="focus">26.7</td></tr><tr><td>YOLOv4</td><td>608</td><td>Volta</td><td>62</td><td>43.5</td><td>65.7</td><td>47.3</td><td>26.7</td></tr><tr><td>EfficientDet-D2</td><td>768</td><td>Volta</td><td>41.7</td><td>43.0</td><td>62.3</td><td>46.2</td><td>22.5</td></tr></tbody></table></div>
   <div class="speed-cards"><div class="speed rev"><b>416</b><span>41.2 AP · 96 FPS / V100</span></div><div class="speed rev d2"><b>512</b><span>43.0 AP · 83 FPS / V100</span></div><div class="speed rev d3"><b>608</b><span>43.5 AP · 62 FPS / V100</span></div></div>
-  <p class="fig-note">512→608 只增加 0.5 AP，却少 21 FPS。v4-608 与 EfficientDet-D2 精度接近、速度约 1.49×，但输入尺寸不同，不能把差距全记给某一个结构。</p>
+  <p class="fig-note">输入从 512 拉到 608，只多 0.5 AP，却少 21 FPS。YOLOv4-608 与 EfficientDet-D2 精度接近，表中速度约为 1.49 倍；但两者输入尺寸不同，不能把速度差全归功于某一个模块。</p>
 </figure>
 
-<div class="limits"><div class="limit"><b>没有错误类型画像</b>论文没有按类别拆定位、分类、背景误检，只能从 AP50/AP75 与尺寸分桶读总体表现。</div><div class="limit"><b>消融不是完整因果账</b>许多实验跨骨干、输入尺寸或同时改多项，无法给每个组件精确分功。</div><div class="limit"><b>仍有 anchor 与 NMS</b>正样本阈值、anchor 形状和推理去重都要维护，后续 YOLOX 会转向 anchor-free。</div><div class="limit"><b>配置必须版本化</b>论文清单与当前仓库 cfg 已有差异；复现“YOLOv4”必须同时保存代码和配置版本。</div></div>
+<div class="limits"><div class="limit"><b>没有详细错误分类</b>论文没有分别统计定位错、类别错和背景误报；只能从 AP50/AP75 与大中小目标分数看总体变化。</div><div class="limit"><b>消融没有把每项功劳完全拆开</b>不少实验同时换了骨干、输入尺寸或多个技巧，没法给每个模块分出一笔精确收益。</div><div class="limit"><b>仍要维护 anchor 与 NMS</b>训练要选 anchor 形状和正样本阈值，推理还要用 <a class="jr term-hit" href="#g-24">NMS</a> 去重；后来的 YOLOX 才转向 anchor-free。</div><div class="limit"><b>代码和配置必须一起存</b>论文清单与当前仓库 cfg 已经有差异。想复现“YOLOv4”，模型名、代码 commit、cfg 缺一不可。</div></div>
 
-<div class="note"><span class="label">一句话带走</span>YOLOv4 的真正遗产不是一长串缩写，而是一套工程筛选法：先拆 backbone / neck / head，再把训练账与推理账分开，最后用真实 GPU 和完整消融决定哪些零件留下。</div>
+<div class="note"><span class="label">一句话带走</span>YOLOv4 留下的不是一长串缩写，而是一套实用的选件方法：先把检测器拆成主干、融合层和检测头；再把训练成本与部署成本分开算；最后看真实 GPU 速度和消融结果，决定哪些零件值得留下。</div>
 
 <div class="gloss"><h2>引用 / 术语表</h2><ol>
-  <li id="g-01"><span class="term">Backbone</span> · 从输入图像提取多层特征的主干；YOLOv4 使用 <a href="../concepts/cross-stage-partial-network.html">CSPDarknet53</a>。</li>
-  <li id="g-02"><span class="term">Neck</span> · 位于骨干与检测头之间，汇合不同尺度特征；见 <a href="../concepts/spp-panet-neck.html">SPP + PAN</a>。</li>
-  <li id="g-03"><span class="term">Bag of Freebies</span> · 增加训练成本但不改变推理图的技巧，见<a href="../concepts/bag-of-freebies-specials.html">两类成本账</a>。</li>
-  <li id="g-04"><span class="term">Bag of Specials</span> · 付少量推理成本换精度的模块或后处理。</li>
-  <li id="g-05"><span class="term">CSP</span> · Cross-Stage Partial；部分特征深加工，部分走旁路，末尾拼接。</li>
-  <li id="g-06"><span class="term">Receptive field</span> · 一个特征位置能看见的输入范围；见<a href="../concepts/receptive-field.html">感受野</a>。</li>
-  <li id="g-07"><span class="term">Mosaic</span> · 四图缩放裁剪后拼成一张训练画布，见<a href="../concepts/mosaic-augmentation.html">Mosaic 增强</a>。</li>
-  <li id="g-08"><span class="term">SAT</span> · Self-Adversarial Training；先改输入藏目标，再用难图正常训练。</li>
-  <li id="g-09"><span class="term">CmBN</span> · Cross mini-Batch Normalization；只在单个 batch 内跨 mini-batch 汇总统计。</li>
-  <li id="g-10"><span class="term">Grid sensitivity</span> · sigmoid 靠近格子边界时需要极端 logit、梯度又变小的问题。</li>
-  <li id="g-11"><span class="term">CIoU</span> · 同时计入重叠、中心距离和长宽比的框损失，见<a href="../concepts/complete-iou-loss.html">完整手算</a>。</li>
-  <li id="g-12"><span class="term">Pareto frontier</span> · 无法在不牺牲速度的前提下继续提精度，或不牺牲精度继续提速度的一组最优折中点。</li>
-  <li id="g-13"><span class="term">Pooling</span> · 在滑动窗口内取最大值或平均值；stride 与 padding 决定是否缩小输出，见<a href="../concepts/pooling.html">完整手算</a>。</li>
-  <li id="g-14"><span class="term">Spatial / point-wise attention</span> · 前者每个空间位置一张共享门，后者每个 (channel, h, w) 元素各有门，见<a href="../concepts/spatial-vs-pointwise-attention.html">双通道手算</a>。</li>
+  <li id="g-01"><span class="term">Backbone · 主干网络</span> · 图片先过这里，逐层变成特征图。它负责提取边缘、纹理、部件和语义，不负责最后报框；YOLOv4 用的是 <a href="../concepts/cross-stage-partial-network.html">CSPDarknet53</a>。</li>
+  <li id="g-02"><span class="term">Neck · 特征融合层</span> · 主干和检测头之间的中转站。它把浅层清楚的位置信息与深层强的类别语义对齐、合并；YOLOv4 用 <a href="../concepts/spp-panet-neck.html">SPP + PAN</a>。</li>
+  <li id="g-03"><span class="term">Bag of Freebies · 训练期技巧</span> · 只在训练时多花算力，导出的推理网络不多一层。“免费”只指部署延迟，不是训练不要钱；见<a href="../concepts/bag-of-freebies-specials.html">两类成本账</a>。</li>
+  <li id="g-04"><span class="term">Bag of Specials · 推理期组件</span> · 部署后仍要执行的模块或后处理。它们通常能换来精度，但 FPS 也会真受影响。</li>
+  <li id="g-05"><span class="term">CSP · 分流再合流</span> · 把通道分两路：一路反复加工，一路走短路，末尾再拼回来。不是砍掉一半特征，而是避免所有通道重复跑完整条加工线。</li>
+  <li id="g-06"><span class="term">Receptive field · 感受野</span> · 一个输出格往回追，最多能参考原图多大区域。感受野大，说明它能借更远的上下文判断；不等于当前卷积核本身很大。见<a href="../concepts/receptive-field.html">完整解释</a>。</li>
+  <li id="g-07"><span class="term">Mosaic · 四图拼接</span> · 把四张图随机缩放、裁剪后拼成一个训练样本，框坐标跟着变；既混背景，也让小目标更常出现。见<a href="../concepts/mosaic-augmentation.html">坐标例子</a>。</li>
+  <li id="g-08"><span class="term">SAT · 自对抗训练</span> · 先冻结权重、修改输入，把模型本来认得出的目标藏起来；再固定难图、更新权重，把目标重新找回。它是训练增强，不是部署时的安全攻击。</li>
+  <li id="g-09"><span class="term">CmBN · 跨小批次归一化</span> · 普通 <a href="../concepts/batchnorm.html">BN</a> 要估计每个通道的均值和方差；mini-batch 太小时容易估不准。CmBN 会汇总同一个总 batch 内几个 mini-batch 的统计量，但不跨 GPU。</li>
+  <li id="g-10"><span class="term">Grid sensitivity · 网格边界难学</span> · sigmoid 越靠近 0 或 1 越平。目标中心若贴着格子边缘，网络就得输出很大的原始分数，梯度反而更小，学起来费劲。</li>
+  <li id="g-11"><span class="term">CIoU · 三项框损失</span> · 同时检查覆盖够不够、中心偏多远、长宽比像不像。它不是只看重叠；见<a href="../concepts/complete-iou-loss.html">从 4×2 真值框手算到 0.73167</a>。</li>
+  <li id="g-12"><span class="term">Pareto frontier · 速度—精度前沿</span> · 一组各有所长、无法直接淘汰任何一个的方案：若想比其中一个更准，就得牺牲速度；若想更快，就得牺牲精度。读检测榜时应沿这条前沿比较，而不是只找单项第一。</li>
+  <li id="g-13"><span class="term">Pooling · 池化</span> · 用窗口汇总邻域：最大池化取最强响应，平均池化取平均水平。会不会缩图取决于步长和补边；见<a href="../concepts/pooling.html">3×3 滑窗与 SPP 手算</a>。</li>
+  <li id="g-14"><span class="term">Spatial-wise / point-wise attention</span> · spatial-wise 每个空间位置只有一个门，所有通道共用；point-wise 则给每个 (通道, 高, 宽) 元素单独一扇门。见<a href="../concepts/spatial-vs-pointwise-attention.html">双通道 2×2 手算</a>。</li>
+  <li id="g-15"><span class="term">Head · 检测头</span> · 检测器的输出层。它把融合后的特征翻译成候选框位置、是否有物体以及类别分数；YOLOv4 沿用 YOLOv3 的三尺度检测头。</li>
+  <li id="g-16"><span class="term">Feature map / channel · 特征图与通道</span> · 特征图不是原图，而是一摞响应网格。每个通道可以理解成一种模式探测器：有的对竖边敏感，有的对纹理或部件敏感。见<a href="../concepts/convolution.html">卷积如何生成特征图</a>。</li>
+  <li id="g-17"><span class="term">Stride / padding · 步长与补边</span> · stride 决定窗口每次移动几格；padding 在边缘外补值。步长大通常会缩图，合适的补边能保持宽高；见<a href="../concepts/convolution.html">卷积</a>与<a href="../concepts/pooling.html">池化</a>。</li>
+  <li id="g-18"><span class="term">Concat / shortcut · 拼接与相加</span> · concat 沿通道把两路并排保留，通道数会变多；shortcut/add 把两路同位置直接相加，通道数不变。前者更自由，后者更省。</li>
+  <li id="g-19"><span class="term">Anchor · 预设框</span> · 每个网格位置先摆几种常见宽高模板，网络不用凭空生成框，只预测中心和尺寸该怎样校准。见<a href="../concepts/anchor-boxes.html">YOLOv2 的完整解码例子</a>。</li>
+  <li id="g-20"><span class="term">AP / AP50 / AP75 · 检测精度</span> · AP 同时惩罚误报和漏报。AP50 把 IOU≥0.50 算命中，AP75 要求 IOU≥0.75，后者更考验框得准不准；COCO AP 还会平均多个 IOU 门槛。AP-small 只统计面积较小的目标。见<a href="../concepts/mean-average-precision.html">完整计算</a>。</li>
+  <li id="g-21"><span class="term">FPS / BFLOPs · 实测速度与理论运算量</span> · FPS 是机器一秒实际处理多少帧；BFLOPs 是一次前向大约做多少十亿次浮点运算。算得少可能仍跑得慢，因为显存访问、并行度和算子实现也会卡速度。</li>
+  <li id="g-22"><span class="term">Batch / mini-batch / subdivisions</span> · 总 batch 是更新一次权重合计用了多少张图；mini-batch 是每次真正塞进显存多少张；subdivisions 表示要把总 batch 拆成多少小份再累积梯度。</li>
+  <li id="g-23"><span class="term">Logit / sigmoid · 原始分数与压缩函数</span> · 网络先输出可正可负、没有范围限制的原始分数 logit；sigmoid 再把它压到 0～1。越贴近 0 或 1，曲线越平，梯度越小。</li>
+  <li id="g-24"><span class="term">IOU / NMS · 框重叠与去重</span> · <a href="../concepts/iou-intersection-over-union.html">IOU</a> 是交集面积÷并集面积，用来量两个框有多重合；<a href="../concepts/non-max-suppression.html">NMS</a> 保留高分框，再删除和它过度重叠的重复框。greedynms 用 IOU 判断该不该删；DIoU-NMS 还把两框中心距离算进去。</li>
+  <li id="g-25"><span class="term">Ablation · 消融实验</span> · 从完整方案里一次拿掉或换掉一个零件，其他条件尽量不动，再看分数变化。若一次改了多项，就不能把差值全算到某一个模块头上。</li>
+  <li id="g-26"><span class="term">训练旋钮与搜索</span> · 学习率管每步走多远；warm-up 让开局从小步慢慢提速；momentum 累积一部分历史梯度；weight decay 持续把权重往小处拉。poly 和余弦退火是两种逐步降低学习率的曲线；遗传搜索则保留表现较好的超参数组合，再做随机变异，反复筛选。</li>
+  <li id="g-27"><span class="term">CutMix / DropBlock / 标签平滑</span> · 三种训练期正则化：CutMix 把一张图的矩形区域换成另一张图，并按面积混合标签；DropBlock 连片遮住特征图，逼模型别只依赖一个局部；标签平滑不把正确类写死成 100%，避免模型过度自信。</li>
+  <li id="g-28"><span class="term">Mish · 激活函数</span> · 卷积先算出任意实数，Mish 再做一层平滑的非线性变换，让网络不只是多层线性运算的叠加。它和 ReLU 干的是同类工作，但负数一侧不会直接全部截成 0。</li>
+  <li id="g-29"><span class="term">MiWRC · 多输入加权残差连接</span> · 普通残差连接把一路旧特征加回当前层；MiWRC 允许多路旧特征一起汇入，并给每一路学习一个权重。网络可以自己决定更信哪条旧路径。</li>
+  <li id="g-30"><span class="term">RFB / ASFF / Gaussian YOLO · 消融候选</span> · RFB 用多种卷积窗口和膨胀率扩大感受野；ASFF 学习不同尺度特征该各占多大权重；Gaussian YOLO 让框坐标同时预测不确定性。它们在这页的作用是说明“候选听起来合理，组合后仍可能掉分”。</li>
+  <li id="g-31"><span class="term">Top-1 / Top-5 · 分类命中率</span> · Top-1 只看模型得分最高的类别是否正确；Top-5 只要正确答案落在得分最高的五类里就算命中。它们评的是分类，不是检测 AP。</li>
+  <li id="g-32"><span class="term">MSE · 均方误差</span> · 预测值与真值先相减、再平方、最后取平均。它能逐项罚坐标差，却不像 CIoU 那样直接判断两个框是否盖住同一块区域、中心是否对齐、形状是否相似。</li>
 </ol></div>
 
 <footer class="colophon"><span>Sources / <a href="https://arxiv.org/abs/2004.10934">论文</a> · <a href="https://github.com/AlexeyAB/darknet/blob/master/cfg/yolov4.cfg">标准配置</a> · <a href="https://github.com/AlexeyAB/darknet/blob/master/src/sam_layer.c">SAM 实现</a> · <a href="https://github.com/AlexeyAB/darknet/blob/master/src/yolo_layer.c">坐标与分配实现</a></span><span>Figures / 重画 · 数字取论文 Tables 1–10</span></footer>

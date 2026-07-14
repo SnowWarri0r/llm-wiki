@@ -12,7 +12,7 @@
 - [YOLO · 看一眼就把框和类一起吐出来](wiki/papers/yolo.md) — CVPR2016 YOLO v1:原始 R-CNN 逐框提特征,Fast R-CNN 共享整图卷积但仍等 Selective Search,Faster R-CNN 用 RPN 提候选;YOLO 一次前向输出 7×7×30。训练损失拆责任框中心/尺寸/置信度、空框置信度、类别五块;√w,h 让同样 1% 图宽误差对小框产生 7.20× 平方损失。VOC2007:63.4%mAP@45FPS;错误画像是 19.0% 定位 vs 4.75% 背景误检;与最佳 Fast R-CNN 组合 71.8→75.0(+3.2)。VOC2012 57.9,小物体仍弱;Picasso/People-Art 显示艺术画迁移优势但不外推为普遍域泛化。
 - [YOLOv2 / YOLO9000 · 给 YOLO v1 逐项校准](wiki/papers/yolov2-yolo9000.md) — CVPR2017:BatchNorm+高分辨率预训练+anchor+IOU维度聚类+sigmoid位置限位+passthrough+多尺度训练,消融63.4→78.6;同一权重416为76.8mAP@67FPS、544为78.6@40FPS。Darknet-19仅5.58B运算;WordTree把COCO框监督与ImageNet分类合成9418类。边界:COCO AP@[.5:.95]21.6/小目标AP5.0;156个无框监督类16.0mAP,动物迁移好但服饰类可到0。
 - [YOLOv3 · 一张图铺三层探测网](wiki/papers/yolov3.md) — 2018技术报告:沿用v2框公式,把9个COCO anchor分给13×13/26×26/52×52三层,一次前向10,647候选;用60×120行人框贯穿anchor→检测层→格子→四数解码。Darknet-53残差骨干Top-5 93.8且78FPS;类别改独立sigmoid多标签;COCO AP 33.0/AP50 57.9/small AP 18.3。严格定位仍弱,并完整记录线性中心/focal loss/双阈值等失败尝试。
-- [YOLOv4 · 把实时检测器改装成一台完整赛车](wiki/papers/yolov4.md) — 2020技术报告:CSPDarknet53→SPP/PAN→YOLOv3 head;SPP用stride-1的5/9/13池化扩视野但不缩13×13,SAM从一张H×W共享空间门改成C×H×W逐元素门;另有Mosaic、SAT、scale_x_y、多anchor正样本与CIoU手算。完整保留负消融、COCO结果及论文SAM/DIoU-NMS与当前标准cfg差异。
+- [YOLOv4 · 把实时检测器改装成一台完整赛车](wiki/papers/yolov4.md) — 2020技术报告：CSPDarknet53做主干，SPP/PAN做特征融合，沿用YOLOv3三尺度检测头。SPP用5/9/13三档池化扩大视野但不缩小13×13特征图；SAM从“同一位置全通道共用一个权重”改成“每个通道、每个位置单独一个权重”。另含Mosaic、SAT、多anchor正样本、CIoU完整手算、负消融和论文与当前cfg差异。
 - [LSTM · 长短期记忆](wiki/papers/lstm.md) — Transformer 前的序列霸主: cell state 记忆传送带(加法更新)+三个门(遗忘/输入/输出)治住RNN梯度消失; 加法梯度高速路=ResNet残差同构; 被Attention取代
 - [Attention Is All You Need](wiki/papers/attention-is-all-you-need.md) — Transformer 始祖，整个 LLM 时代的奠基
 - [BERT](wiki/papers/bert.md) — 只要 Transformer encoder，用 MLM 学双向上下文，立住 pretrain → finetune 范式
@@ -287,7 +287,7 @@
 - [层级分类 · WordTree](wiki/concepts/hierarchical-classification.md) — 每层兄弟类做softmax,叶子概率沿路径相乘;让狗与细品种标签共存并合并检测/分类数据
 - [IOU · 交并比](wiki/concepts/iou-intersection-over-union.md) — 两个框重合度=交集÷并集∈[0,1]; 同时管住位置+大小+长宽比; 置信度目标/NMS去重/mAP命中判定都用它
 - [NMS · 非极大值抑制](wiki/concepts/non-max-suppression.md) — 一物多框去重: 按分排序留最高、删和它IOU>阈值的重叠框; 检测推理收尾标配
-- [mAP · 平均精度均值](wiki/concepts/mean-average-precision.md) — 检测总分: 每类PR曲线下面积(AP)再对类平均; 命中靠IOU≥0.5; 同时惩罚乱报(precision)和漏报(recall)
+- [AP / mAP · 检测精度](wiki/concepts/mean-average-precision.md) — AP是某类的精确率—召回率曲线面积,mAP再跨类别平均;用3个真值、4个预测从TP/FP一路算到AP50=0.833,并拆清COCO AP/AP50/AP75三个口径
 
 ### 多模态
 - [统一多模态生成](wiki/concepts/unified-multimodal-generation.md) — 不为每个视觉任务接head;稀疏答案走文本、稠密答案走图像、语义+像素走混合输出,任务由instruction指定

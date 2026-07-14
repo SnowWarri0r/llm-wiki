@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>mAP · 检测的通用分数(每类的 PR 曲线面积再平均) · Concept</title>
+<title>AP / mAP · 检测器既不能乱报，也不能漏报 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,40 +34,84 @@
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>mAP · 检测的通用分数(每类的 PR 曲线面积再平均)</h1>
+  <h1>AP / mAP · 检测器既不能乱报，也不能漏报</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>目标检测的总分:对每个类别画一条"准确率 vs 召回率"曲线、取曲线下面积(AP),再对所有类别求平均(mAP)。判一个预测算不算命中,靠 <a href="../concepts/iou-intersection-over-union.html">iou-intersection-over-union</a> ≥ 阈值(常用 0.5)。</p>
-<h2>直觉 · 为什么不能只看"对了几个"</h2>
-<p>检测既怕<strong>乱报</strong>(把背景当物体 → 准确率 precision 低),又怕<strong>漏报</strong>(真物体没框出来 → 召回率 recall 低)。只看一个不行:全都不报,precision 满分但 recall=0;疯狂乱报,recall 高但 precision 稀烂。得同时看两者怎么权衡——这就是<strong>PR 曲线</strong>:把预测按置信度从高到低走,边走边记 precision 和 recall,画出一条线。曲线越往右上鼓(高准 + 高召回),检测越好,<strong>曲线下面积(AP)</strong>就越大。</p>
-<h2>怎么做的 · 命中判定 → PR 曲线 → AP → 平均</h2>
-<pre><code>
-1. 每个预测框:和真值 IOU ≥ 0.5 且类别对 → 命中(TP),否则误报(FP);漏掉的真值 = FN
-2. 按置信度从高到低扫,累计算 precision=TP/(TP+FP)、recall=TP/(TP+FN)
-3. 画 PR 曲线,取曲线下面积 = 该类的 AP(平均精度)
-4. 所有类别的 AP 求平均 = mAP
+<p>AP 是某个类别的“精确率—召回率”曲线面积；mAP 再把所有类别的 AP 求平均。COCO 常说的 AP 还会平均多个 IOU 命中门槛，因此比只看 AP50 严得多。</p>
+<h2>为什么“框对了几个”不够</h2>
+<p>检测器会给每个框一个置信度。阈值设高，只留下最有把握的框，通常误报少但容易漏；阈值设低，找回更多真物体，也会混进更多背景框。</p>
+<p>所以要同时看两件事：</p>
+<ul>
+<li><strong>Precision，精确率</strong>：报出来的框里，有多少是真的？<code>TP / (TP + FP)</code>。</li>
+<li><strong>Recall，召回率</strong>：所有真物体里，找回了多少？<code>TP / (TP + FN)</code>。</li>
+</ul>
+<p>其中 <code>TP</code> 是正确命中，<code>FP</code> 是误报，<code>FN</code> 是漏掉的真值。把置信度阈值从高往低扫，会得到一串 precision / recall 点；连起来就是 PR 曲线，曲线下面积就是 AP。</p>
+<h2>第一步：一个框怎样才算命中</h2>
+<p>预测框必须同时满足：</p>
+<ol>
+<li>类别正确。</li>
+<li>与某个尚未匹配的真值框达到指定 [[iou-intersection-over-union|IOU]] 门槛。</li>
+</ol>
+<p>例如 AP50 使用 IOU≥0.50；AP75 使用 IOU≥0.75。第二个门槛更严：框大致盖住物体可能过 AP50，却过不了 AP75。</p>
+<p>同一个真值只能匹配一次。后面再来一个高度重叠的重复框，会算误报，所以评测前通常先做 [[non-max-suppression|NMS]] 去重。</p>
+<h2>数字例子 · 从四个预测算到 AP=0.833</h2>
+<p>只看“狗”这一类。数据里共有 3 只狗，模型按置信度从高到低给出 4 个框。固定 IOU 门槛为 0.50，逐个判断结果是：</p>
+<pre><code class="language-text">预测顺序：  1    2    3    4
+结果：      ✓    ✗    ✓    ✓
+            TP   FP   TP   TP
 </code></pre>
-<p>YOLO 论文里 63.4% 就是 PASCAL VOC 20 类的 mAP(IOU 阈值 0.5)。<a href="../papers/yolov2-yolo9000.html">yolov2-yolo9000</a> 还同时报告 COCO AP@[.5:.95];它会平均多个 IOU 门槛,比只看 AP50 严得多,两组数字不能直接混比。</p>
-<h2>数字例子 · 一条小 PR 曲线取 AP</h2>
-<p>某类 5 个预测,按置信度排序,命中/误报为 [✓ ✓ ✗ ✓ ✗],共 4 个真值:</p>
-<pre><code>第1个 ✓: TP=1 P=1/1=1.00 R=1/4=0.25
-第2个 ✓: TP=2 P=2/2=1.00 R=2/4=0.50
-第3个 ✗: TP=2 P=2/3=0.67 R=2/4=0.50
-第4个 ✓: TP=3 P=3/4=0.75 R=3/4=0.75
-第5个 ✗: TP=3 P=3/5=0.60 R=3/4=0.75
-AP ≈ 在各召回水平上取&quot;往右能达到的最高 precision&quot;再平均
-   ≈ (1.00 + 1.00 + 0.75) / …  → 这一类的 AP;20 类平均 = mAP
+<p>每加入一个预测，就重算一次 precision 和 recall：</p>
+<pre><code class="language-text">第 1 个 ✓：TP=1, FP=0
+Precision = 1/(1+0) = 1.000
+Recall    = 1/3       = 0.333
+
+第 2 个 ✗：TP=1, FP=1
+Precision = 1/(1+1) = 0.500
+Recall    = 1/3       = 0.333
+
+第 3 个 ✓：TP=2, FP=1
+Precision = 2/(2+1) = 0.667
+Recall    = 2/3       = 0.667
+
+第 4 个 ✓：TP=3, FP=1
+Precision = 3/(3+1) = 0.750
+Recall    = 3/3       = 1.000
 </code></pre>
-<p>✓ 直觉:排在前面的预测越"又准又能覆盖真值",PR 曲线越贴右上、AP 越高。mAP 把 20 个类的这种表现汇成一个数,好横向比不同检测器(如 YOLO 63.4 vs Faster R-CNN 73.2)。</p>
+<p>第二个框是误报，只拉低 precision，没有找回新真值，所以 recall 仍是 0.333。</p>
+<p>计算 AP 时，会先做 precision envelope：在每个 recall 位置，取“从这里往右还能达到的最高 precision”。这样可以消掉局部锯齿。三个真正让 recall 上升的位置变成：</p>
+<pre><code class="language-text">Recall 区间       最佳 Precision    面积
+0     → 1/3       1.000             1/3 × 1.000 = 0.333
+1/3   → 2/3       0.750             1/3 × 0.750 = 0.250
+2/3   → 1         0.750             1/3 × 0.750 = 0.250
+
+AP50 = 0.333 + 0.250 + 0.250 = 0.833
+</code></pre>
+<p>✓ 自检：三个 recall 区间宽度相加正好是 1；每段高度都在 0～1，因此总面积 0.833 也必然在 0～1。</p>
+<p>真实 COCO 代码会在 101 个 recall 位置取样；上面用阶梯面积，是为了把“曲线下面积”拿笔算清楚。</p>
+<h2>AP、mAP、AP50、AP75 到底差在哪</h2>
+<ul>
+<li><strong>某类 AP50</strong>：固定 IOU=0.50，算这个类别的 PR 曲线面积。</li>
+<li><strong>mAP50</strong>：所有类别的 AP50 再平均。早期 VOC 常报这个口径。</li>
+<li><strong>AP75</strong>：把命中门槛提高到 IOU=0.75，更看重定位是否贴合。</li>
+<li><strong>COCO AP</strong>：分别在 IOU=0.50、0.55、…、0.95 十个门槛下算 AP，再跨门槛、跨类别平均。通常直接简称 AP 或 AP@[.5:.95]。</li>
+</ul>
+<p>因此，YOLOv4 的 <code>43.5 AP / 65.7 AP50 / 47.3 AP75</code> 不是三个重复分数：65.7 是宽松门槛，47.3 是较严门槛，43.5 还把更严格的 0.80～0.95 一起算进去了。</p>
+<h2>最容易误读的三点</h2>
+<ol>
+<li><strong>AP 不是单个阈值下的精确率</strong>：它扫过整条置信度排序，兼顾误报和漏报。</li>
+<li><strong>AP50 与 COCO AP 不能直接横比</strong>：一个只用 0.50 门槛，一个平均 0.50～0.95。</li>
+<li><strong>mAP 的 m 是类别平均</strong>：COCO 论文表格常把 mAP 简写成 AP；它不是只算某一个类。</li>
+</ol>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/yolo.html">yolo</a> · 报的 63.4%/52.7% 就是 VOC mAP@0.5</li>
-<li><a href="../papers/yolov2-yolo9000.html">yolov2-yolo9000</a> · 同时展示 VOC mAP@0.5 与 COCO AP@[.5:.95] 的口径差</li>
-<li><a href="../concepts/iou-intersection-over-union.html">iou-intersection-over-union</a> · 判一个预测算不算命中的门槛</li>
-<li><a href="../concepts/non-max-suppression.html">non-max-suppression</a> · 先去重再算 mAP,否则重复框刷 FP</li>
-<li><a href="../concepts/one-stage-detection.html">one-stage-detection</a> · 用 mAP 横比单/两阶段的精度差</li>
+<li><a href="../concepts/iou-intersection-over-union.html">iou-intersection-over-union</a> · 预测框是否命中的重叠门槛</li>
+<li><a href="../concepts/non-max-suppression.html">non-max-suppression</a> · 评测前先删重复框，否则重复预测会算误报</li>
+<li><a href="../papers/yolo.html">yolo</a> · VOC mAP@0.5 的早期口径</li>
+<li><a href="../papers/yolov2-yolo9000.html">yolov2-yolo9000</a> · VOC mAP 与 COCO AP 的口径差</li>
+<li><a href="../papers/yolov3.html">yolov3</a> · COCO AP、AP50、AP75 与小目标分数</li>
+<li><a href="../papers/yolov4.html">yolov4</a> · 43.5 AP / 65.7 AP50 / 47.3 AP75 如何读</li>
 </ul>
 </article>
 

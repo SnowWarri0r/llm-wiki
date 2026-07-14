@@ -1,8 +1,8 @@
 ---
 name: convolution
 type: concept
-sources: [cnn, resnet, fft]
-updated: 2026-06-12
+sources: [cnn, elt, fft, resnet, yolo, yolov2-yolo9000, yolov3, yolov4]
+updated: 2026-07-14
 ---
 
 # Convolution · 卷积 · 一把小尺子滑过整张图
