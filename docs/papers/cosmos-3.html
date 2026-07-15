@@ -2,84 +2,55 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Cosmos 3 · 一个模型理解、生成、行动世界 · 个人 wiki</title>
+<title>Cosmos 3 · 把看懂、想象、行动装进一个世界模型 · 个人 wiki</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
-  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
-  --brick: #9b2c2c; --brick-soft: #efd6c8;
-  --ochre: #b8841c; --ochre-soft: #f0e0a8;
-  --moss: #4a6b3a; --moss-soft: #d8e6ce;
-  --deep: #1f3a5f; --deep-soft: #c8d4e2;
-  --accent: var(--deep); --accent-soft: var(--deep-soft);
+  --paper:#f0e9d6; --paper-2:#e8e0c8; --paper-3:#faf4e1; --card:#f7f1de;
+  --ink:#181410; --ink-2:#3a3128; --muted:#7a6f5d; --rule:#bfb398;
+  --brick:#9b2c2c; --brick-soft:#efd6c8; --ochre:#b8841c; --ochre-soft:#f0e0a8;
+  --moss:#4a6b3a; --moss-soft:#d8e6ce; --deep:#1f3a5f; --deep-soft:#c8d4e2;
+  --accent:var(--deep); --accent-soft:var(--deep-soft);
 }
-* { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
-body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
-body::before {
-  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
-  mix-blend-mode: multiply; opacity: 0.5;
-}
-.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
-.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
-.masthead .l { font-weight: 700; }
-.masthead .r { color: var(--muted); }
-.hero { margin-bottom: 64px; }
-.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
-.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
-h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(50px, 8vw, 88px); line-height: 0.94; letter-spacing: -0.035em; margin: 0 0 12px; }
-h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
-.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
-.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
-.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
-.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
-h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 38px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
-h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
-h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; letter-spacing: -0.01em; }
-p { margin: 12px 0; }
-strong { font-weight: 700; color: var(--ink); }
-code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
-a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
-pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
-table.spec { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
-table.spec td, table.spec th { border-bottom: 1px dashed var(--rule); padding: 7px 10px; text-align: left; vertical-align: top; }
-table.spec th { color: var(--accent); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
-table.spec td:first-child { color: var(--muted); }
-.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--ochre-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--ochre); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
-.jr:hover { background: var(--ochre); color: var(--paper); }
-figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
-figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
-figcaption .fnum { color: var(--accent); font-weight: 700; }
-.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
-.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
-.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
-.gloss h2 { font-size: 26px; margin-top: 0; }
-.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
-.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
-.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
-.gloss li:target { background: var(--accent-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
-@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--accent-soft); } }
-.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
-.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
-
-/* co-specific */
-.co-svg { width: 100%; height: auto; display: block; font-family: 'JetBrains Mono', monospace; }
-.co-rev { opacity: 0; transition: opacity 0.6s ease; }
-figure.play .co-rev { opacity: 1; }
-figure.play .co-rev.d1 { transition-delay: 0.15s; }
-figure.play .co-rev.d2 { transition-delay: 0.40s; }
-figure.play .co-rev.d3 { transition-delay: 0.65s; }
-figure.play .co-rev.d4 { transition-delay: 0.90s; }
-figure.play .co-rev.d5 { transition-delay: 1.15s; }
-figure.play .co-rev.d6 { transition-delay: 1.40s; }
-.co-svg .grow { transform: scaleX(0); transform-origin: left center; transition: transform 1.1s ease; }
-figure.play .co-svg .grow { transform: scaleX(1); }
-@media (prefers-reduced-motion: reduce) { .co-rev { opacity: 1; transition: none; } .co-svg .grow { transform: scaleX(1); transition: none; } }
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);scroll-behavior:smooth}
+body{font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:18px;line-height:1.75;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");mix-blend-mode:multiply;opacity:.5}
+.page{max-width:980px;margin:0 auto;padding:56px 32px 120px}
+.masthead{border-top:4px double var(--ink);border-bottom:1px solid var(--rule);padding:14px 0;display:flex;justify-content:space-between;align-items:baseline;font:11px 'JetBrains Mono',monospace;letter-spacing:2px;text-transform:uppercase;color:var(--ink-2);margin-bottom:48px}.masthead .r{color:var(--muted)}
+.hero{margin-bottom:54px}.issue{font:700 11px 'JetBrains Mono',monospace;letter-spacing:3px;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:12px;margin-bottom:18px}.issue::after{content:"";height:1px;background:var(--rule);flex:1}
+h1{font-family:'Fraunces','Noto Serif SC',serif;font-variation-settings:"opsz" 144,"SOFT" 30,"WONK" 1;font-size:clamp(54px,8.5vw,92px);line-height:.94;letter-spacing:-.04em;margin:0 0 16px}h1 .em{color:var(--accent);font-style:italic;font-variation-settings:"opsz" 144,"SOFT" 100,"WONK" 1}
+.byline{font:12px 'JetBrains Mono',monospace;letter-spacing:1.4px;color:var(--muted)}.dek{font-family:'Fraunces','Noto Serif SC',serif;font-size:clamp(20px,2.3vw,27px);line-height:1.45;font-style:italic;color:var(--ink-2);max-width:800px}
+.tldr{background:var(--card);border:1px solid var(--rule);border-left:4px solid var(--accent);padding:22px 26px;margin:30px 0}.label{display:block;font:700 10px 'JetBrains Mono',monospace;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:5px}
+.toc{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule);margin:34px 0 66px}.toc a{background:var(--paper-3);padding:11px 14px;text-decoration:none;color:var(--ink-2);font:11px 'JetBrains Mono',monospace}.toc a:hover{background:var(--accent-soft);color:var(--accent)}
+h2{font-family:'Fraunces','Noto Serif SC',serif;font-variation-settings:"opsz" 96,"SOFT" 30,"WONK" 1;font-size:38px;line-height:1.2;letter-spacing:-.02em;margin:80px 0 20px;display:flex;gap:18px;align-items:baseline}h2 .num{min-width:55px;color:var(--accent);font:700 11px 'JetBrains Mono',monospace;letter-spacing:3px}h3{font-family:'Fraunces','Noto Serif SC',serif;font-size:23px;margin:34px 0 10px}
+p{margin:12px 0}strong{font-weight:700}a{color:var(--accent);text-underline-offset:3px}code{font: .86em 'JetBrains Mono',monospace;background:var(--paper-3);border:1px solid var(--rule);padding:1px 5px;border-radius:2px}
+.jr{font:10px 'JetBrains Mono',monospace;vertical-align:super;background:var(--ochre-soft);color:var(--ink-2);padding:1px 5px;border:1px solid var(--ochre);text-decoration:none!important;margin:0 2px;border-radius:2px;cursor:pointer}.jr:hover{background:var(--ochre);color:var(--paper)}
+.note{background:var(--paper-3);border-left:3px solid var(--accent);padding:14px 18px;margin:18px 0;font-size:16px;color:var(--ink-2)}.note .label{margin:0}.warn{border-left-color:var(--brick)}.warn .label{color:var(--brick)}
+figure{margin:42px 0;padding:28px;background:var(--card);border:1px solid var(--rule)}figcaption{font:11px 'JetBrains Mono',monospace;letter-spacing:1.3px;color:var(--muted);text-transform:uppercase;margin-bottom:22px;padding-bottom:12px;border-bottom:1px dashed var(--rule);display:flex;justify-content:space-between;gap:20px}figcaption .fnum{color:var(--accent);font-weight:700}
+.reveal{opacity:0;transform:translateY(10px);transition:opacity .55s ease,transform .55s ease}.play .reveal{opacity:1;transform:none}.d2{transition-delay:.14s}.d3{transition-delay:.28s}.d4{transition-delay:.42s}.d5{transition-delay:.56s}.d6{transition-delay:.70s}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.panel{background:var(--paper-3);border:1px solid var(--rule);padding:18px}.panel h4{font:700 12px 'JetBrains Mono',monospace;letter-spacing:1px;margin:0 0 9px;color:var(--accent)}.panel p{font-size:15px;line-height:1.55;margin:4px 0}
+.pipeline{display:flex;align-items:stretch;gap:8px}.pipe-card{flex:1;min-width:0;background:white;border:1px solid var(--rule);padding:15px 11px;text-align:center}.pipe-card b{display:block;font:700 12px 'JetBrains Mono',monospace;color:var(--accent);margin-bottom:5px}.pipe-card span{font-size:14px;line-height:1.4;display:block}.arrow{align-self:center;color:var(--ochre);font:700 22px 'JetBrains Mono',monospace}
+.unified{margin-top:18px;background:var(--deep);color:var(--paper-3);padding:18px;text-align:center;font:700 13px 'JetBrains Mono',monospace;letter-spacing:.6px}.unified small{display:block;color:var(--deep-soft);font-weight:400;margin-top:5px}
+.modality{display:grid;grid-template-columns:112px 1fr 105px;align-items:center;gap:12px;padding:12px 0;border-bottom:1px dashed var(--rule)}.modality:last-child{border-bottom:0}.modality .name{font:700 12px 'JetBrains Mono',monospace;color:var(--accent)}.modality .how{font-size:15px;line-height:1.5}.modality .rate{font:700 11px 'JetBrains Mono',monospace;text-align:right;color:var(--moss)}
+.tokenline{display:flex;gap:5px;flex-wrap:wrap;margin:10px 0}.tok{padding:8px 10px;border:1px solid var(--rule);font:11px 'JetBrains Mono',monospace;background:white}.tok.ar{background:var(--deep-soft);border-color:var(--deep)}.tok.clean{background:var(--moss-soft);border-color:var(--moss)}.tok.noisy{background:var(--ochre-soft);border-color:var(--ochre)}.legend{display:flex;gap:14px;flex-wrap:wrap;font:10px 'JetBrains Mono',monospace;color:var(--muted);margin-top:16px}.legend i{width:11px;height:11px;display:inline-block;margin-right:5px;vertical-align:-1px}
+.tower-wrap{display:grid;grid-template-columns:1fr 1fr;gap:14px}.tower{padding:20px;border:2px solid}.tower.reason{border-color:var(--deep);background:var(--deep-soft)}.tower.gen{border-color:var(--ochre);background:var(--ochre-soft)}.tower .t{font:700 15px 'JetBrains Mono',monospace}.tower ul{font-size:15px;line-height:1.55;margin:10px 0 0;padding-left:20px}.meet{grid-column:1/-1;text-align:center;padding:13px;background:var(--ink);color:var(--paper-3);font:11px 'JetBrains Mono',monospace;letter-spacing:.8px}
+.matrix{border-collapse:collapse;margin:0 auto;font:11px 'JetBrains Mono',monospace}.matrix th,.matrix td{width:48px;height:38px;text-align:center;border:2px solid var(--card)}.matrix th{color:var(--muted);font-weight:500}.matrix .yes{background:var(--moss-soft);color:var(--moss);font-weight:700}.matrix .no{background:var(--brick-soft);color:var(--brick)}.matrix .gen{background:var(--ochre-soft);color:#72500b;font-weight:700}.matrix-note{font-size:14px;line-height:1.5;margin-top:12px}
+.mathbox{background:#121f32;color:#f7f1de;padding:22px;font:13px/1.8 'JetBrains Mono',monospace;overflow-x:auto}.mathbox .blue{color:#a9c8ef}.mathbox .gold{color:#f4ce70}.mathbox .green{color:#a7d18f}.mathbox .dim{color:#9aa8ba}.check{margin-top:12px;color:var(--moss);font:700 12px 'JetBrains Mono',monospace}
+.fps-row{display:grid;grid-template-columns:68px 1fr 100px;align-items:center;gap:12px;margin:15px 0}.fps-row .fps{font:700 12px 'JetBrains Mono',monospace;color:var(--accent)}.ticks{display:flex;justify-content:space-between;position:relative;padding-top:13px}.ticks::before{content:"";position:absolute;left:0;right:0;top:8px;border-top:2px solid var(--rule)}.ticks span{position:relative;background:var(--card);font:11px 'JetBrains Mono',monospace}.ticks span::before{content:"";position:absolute;left:50%;top:-8px;height:7px;border-left:2px solid var(--ochre)}.fps-row .step{font:11px 'JetBrains Mono',monospace;color:var(--muted);text-align:right}
+.bars{display:grid;gap:11px}.barrow{display:grid;grid-template-columns:120px 1fr 92px;gap:10px;align-items:center;font:11px 'JetBrains Mono',monospace}.bartrack{height:18px;background:var(--paper-2);position:relative}.barfill{height:100%;width:0;background:var(--accent);transition:width 1s ease}.play .barfill{width:var(--w)}.barrow:nth-child(2) .barfill{background:var(--ochre)}.barrow:nth-child(3) .barfill{background:var(--moss)}
+.filter-flow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:22px}.filter-step{padding:13px 9px;text-align:center;background:white;border:1px solid var(--rule);font:11px 'JetBrains Mono',monospace}.filter-step b{display:block;color:var(--accent);margin-bottom:4px}.filter-step.final{background:var(--moss-soft);border-color:var(--moss)}
+.train{display:grid;grid-template-columns:38px 1fr;column-gap:14px}.train .n{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:white;font:700 11px 'JetBrains Mono',monospace}.train .stage{border-left:2px solid var(--rule);padding:0 0 26px 18px;margin-left:-31px;padding-left:48px}.train .stage:last-child{border-left-color:transparent}.train .stage b{font:700 12px 'JetBrains Mono',monospace;color:var(--accent);display:block}.train .stage p{font-size:15px;line-height:1.55;margin:5px 0}.forks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}.fork{background:var(--accent-soft);border:1px solid var(--accent);padding:8px;text-align:center;font:10px 'JetBrains Mono',monospace}
+.table-wrap{overflow-x:auto}table.data{width:100%;border-collapse:collapse;font:12px 'JetBrains Mono',monospace;min-width:700px}table.data th,table.data td{padding:10px 9px;border-bottom:1px solid var(--rule);text-align:right}table.data th:first-child,table.data td:first-child{text-align:left}table.data th{color:var(--accent);font-size:10px;letter-spacing:.7px}table.data tr.win{background:var(--deep-soft)}table.data .up{color:var(--moss);font-weight:700}.scope{font:10px 'JetBrains Mono',monospace;color:var(--muted);margin-top:12px}
+.ablations{display:grid;grid-template-columns:1fr 1fr;gap:12px}.ab{background:white;border:1px solid var(--rule);padding:16px}.ab .title{font:700 11px 'JetBrains Mono',monospace;color:var(--accent)}.ab .delta{font:700 22px 'Fraunces',serif;color:var(--moss);margin:7px 0}.ab .trade{color:var(--brick)}.ab p{font-size:14px;line-height:1.5;margin:4px 0}
+.limits{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.limit{padding:16px;background:var(--brick-soft);border:1px solid #c99880}.limit b{display:block;font:700 11px 'JetBrains Mono',monospace;color:var(--brick);margin-bottom:6px}.limit span{font-size:15px;line-height:1.5;display:block}
+.gloss{margin-top:72px;padding-top:32px;border-top:2px solid var(--rule)}.gloss h2{font-size:28px;margin-top:0}.gloss ol{padding:0;list-style:none;counter-reset:g}.gloss li{counter-increment:g;padding:14px 0 14px 50px;position:relative;border-bottom:1px dashed var(--rule);font-size:16px}.gloss li::before{content:counter(g,decimal-leading-zero);position:absolute;left:0;top:15px;font:700 11px 'JetBrains Mono',monospace;color:var(--accent)}.gloss .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic}.gloss li:target{background:var(--ochre-soft)}
+.colophon{margin-top:80px;padding-top:18px;border-top:1px solid var(--rule);font:11px 'JetBrains Mono',monospace;color:var(--muted);letter-spacing:1px;display:flex;justify-content:space-between;gap:20px}
+@media(max-width:720px){.page{padding:38px 18px 90px}.toc{grid-template-columns:1fr 1fr}.grid2,.grid3,.tower-wrap,.ablations,.limits{grid-template-columns:1fr}.pipeline{display:grid;grid-template-columns:1fr}.arrow{transform:rotate(90deg);justify-self:center}.modality{grid-template-columns:88px 1fr}.modality .rate{grid-column:2;text-align:left}.filter-flow,.forks{grid-template-columns:1fr 1fr}.barrow{grid-template-columns:92px 1fr 70px}figure{padding:18px}.meet{grid-column:1}.colophon{display:block}}
+@media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}.barfill{width:var(--w)}}
 </style>
 </head>
 <body>
@@ -104,283 +75,302 @@ figure.play .co-svg .grow { transform: scaleX(1); }
 </div>
 <!-- wiki-nav:end -->
 <div class="page">
-
-<div class="masthead">
-  <span class="l">Connectionism · Personal Wiki</span>
-  <span class="r">Paper · NVIDIA · 2026</span>
-</div>
+<div class="masthead"><span>Connectionism · Personal Wiki</span><span class="r">NVIDIA · 2026</span></div>
 
 <section class="hero">
-  <div class="issue">FIELD NOTES · 世界模型 / Physical AI</div>
-  <h1 class="title">理解、生成<br /><span class="em">行动 · 一个模型</span></h1>
-  <div class="byline">NVIDIA · Cosmos 3 Technical Report · 2026-06 · GTC Taipei</div>
-  <p class="dek">以前要拼 VLM + 视频生成 + 世界模拟 + 动作模型四个模型。Cosmos 3 用 MoT 把它们装进一个，统一处理语言/图像/视频/音频/动作五模态。</p>
+  <div class="issue">Field Notes · Omnimodal World Model</div>
+  <h1>看懂、想象<br><span class="em">然后动手</span></h1>
+  <div class="byline">Cosmos 3 · Omnimodal World Models for Physical AI · 139-page Technical Report</div>
+  <p class="dek">真正的统一，不是把五种输入都塞进一个框。它得让“推理下一句话”和“生成下一段世界”在同一个模型里各干各的，又能互相通气。</p>
 </section>
 
 <div class="tldr">
   <span class="label">TL;DR</span>
-  <p>给 <a class="jr" href="#g-02">Physical AI</a>（机器人/自驾）做基础模型，要同时会"理解世界"和"生成/模拟世界、产出动作"。以前这是四个割裂模型（VLM 看懂 + 视频生成 + <a class="jr" href="#g-03">世界模型</a>模拟 + VLA 出动作）。Cosmos 3 用 <a class="jr" href="#g-01">Mixture-of-Transformers</a> 把它们合一：每个 transformer 层带<strong>两套权重</strong>——reasoner 塔处理自回归（AR）token（理解，因果注意力），generator 塔处理扩散 token（生成，双向注意力）；两塔都从 <a href="qwen3-vl-report.html">Qwen3-VL</a> 初始化，在<a class="jr" href="#g-05">同一次联合注意力</a>里相遇对齐。靠重排 token 就能切换<a class="jr" href="#g-06">语言/文生图/文生视频+音频/图生视频/视频 transfer/动作</a>等模式，一套权重 subsume 了一堆专用模型。三档 <a class="jr" href="#g-07">Edge 4B / Nano 16B / Super 64B</a>，被评为最强开源文生图 + 图生视频（Artificial Analysis）和最强策略模型（RoboArena）。</p>
+  <p>Cosmos 3 给<a class="jr" href="#g-01">物理世界里的 AI</a>做底座：同一个 checkpoint 里放一座负责理解的 Reasoner 和一座负责生成的 Generator。语言走<a class="jr" href="#g-04">自回归</a>，图像、视频、音频和动作走<a class="jr" href="#g-05">去噪生成</a>。两座塔参数分开，注意力却能交换信息。它统一的是模型架构、token 接口和训练起点；并没有把多步生成变成一次前向，也没有让一个未经专项训练的 checkpoint 包揽所有榜单。</p>
 </div>
 
-<h2><span class="num">§ 01</span>以前要拼一串模型，现在一个</h2>
-<p>让家用机器人"晚饭后收拾餐桌"，按老范式它得缝合一串模型：VLM 找碗+规划、VLA/世界-动作模型<a class="jr" href="#g-10">10</a>出动作、世界模型模拟评估未来会怎样。四个割裂模型拼在一起，既笨重又难一致。Cosmos 3 的主张：<strong>理解和生成本就耦合</strong>——要决定动作就得先想象后果（生成），判断后果好不好（理解）——所以该用一个模型把它们统一。</p>
+<nav class="toc" aria-label="文章目录">
+  <a href="#s1">01 · 为什么要统一</a><a href="#s2">02 · 全貌</a><a href="#s3">03 · 五种入口</a>
+  <a href="#s4">04 · 任务怎么排</a><a href="#s5">05 · 两座塔</a><a href="#s6">06 · 谁能看谁</a>
+  <a href="#s7">07 · 去噪手算</a><a href="#s8">08 · 真实时间</a><a href="#s9">09 · 数据</a>
+  <a href="#s10">10 · 训练</a><a href="#s11">11 · 结果</a><a href="#s12">12 · 消融与局限</a>
+</nav>
 
-<figure id="fig-subsume">
-  <figcaption><span>Fig 01 · 四个拼接模型 → 一个 omnimodal 模型</span><span class="fnum">UNIFY</span></figcaption>
-  <svg class="co-svg" viewBox="0 0 720 300" role="img" aria-label="以前拼接四模型 vs Cosmos 3 一个模型">
-    <!-- left: stitched -->
-    <text class="co-rev d1" x="160" y="34" text-anchor="middle" font-size="13" font-weight="700" fill="#9b2c2c">以前 · 拼一串</text>
-    <g class="co-rev d1">
-      <rect x="60" y="50" width="200" height="34" rx="4" fill="#faf4e1" stroke="#bfb398"/><text x="160" y="72" text-anchor="middle" font-size="11" fill="#181410">VLM · 看懂场景+规划</text>
-      <rect x="60" y="96" width="200" height="34" rx="4" fill="#faf4e1" stroke="#bfb398"/><text x="160" y="118" text-anchor="middle" font-size="11" fill="#181410">视频生成 · 画未来</text>
-      <rect x="60" y="142" width="200" height="34" rx="4" fill="#faf4e1" stroke="#bfb398"/><text x="160" y="164" text-anchor="middle" font-size="11" fill="#181410">世界模型 · 模拟评估</text>
-      <rect x="60" y="188" width="200" height="34" rx="4" fill="#faf4e1" stroke="#bfb398"/><text x="160" y="210" text-anchor="middle" font-size="11" fill="#181410">VLA · 出动作</text>
-    </g>
-    <g class="co-rev d2" stroke="#9b2c2c" stroke-width="1" stroke-dasharray="3 2" fill="none">
-      <path d="M260 67 C 300 67, 300 113, 260 113"/><path d="M260 113 C 300 113, 300 159, 260 159"/><path d="M260 159 C 300 159, 300 205, 260 205"/>
-    </g>
-    <text class="co-rev d2" x="160" y="244" text-anchor="middle" font-size="9.5" fill="#9b2c2c">四套权重缝合 · 笨重 · 难一致</text>
+<h2 id="s1"><span class="num">§ 01</span>机器人收桌子，为什么要串三套脑子</h2>
+<p>假设机器人接到一句话：“把杯子放进托盘。”它先要看懂桌面，认出杯子和托盘；再想象机械臂往哪走才不会碰倒水壶；最后输出一串动作。旧做法往往把这三步交给不同模型：VLM 看懂，<a class="jr" href="#g-02">世界模型</a>画未来，策略模型出动作。</p>
+<p>问题不只在部署麻烦。三个模型用三套内部表示，信息每过一道接口就会缩水。VLM 说“杯子在左边”，世界模型却不知道“左边”对应哪个像素和哪条机械臂轨迹；策略模型又未必知道它的动作会把画面改成什么样。</p>
 
-    <!-- divider -->
-    <line class="co-rev d3" x1="360" y1="44" x2="360" y2="252" stroke="#bfb398" stroke-width="1" stroke-dasharray="4 4"/>
-
-    <!-- right: one model -->
-    <text class="co-rev d3" x="540" y="34" text-anchor="middle" font-size="13" font-weight="700" fill="#1f3a5f">Cosmos 3 · 一个模型</text>
-    <rect class="co-rev d4" x="450" y="96" width="180" height="80" rx="6" fill="#1f3a5f"/>
-    <text class="co-rev d4" x="540" y="130" text-anchor="middle" font-size="14" font-weight="700" fill="#f7f1de">Cosmos 3</text>
-    <text class="co-rev d4" x="540" y="150" text-anchor="middle" font-size="9" fill="#c8d4e2">MoT · 单模型</text>
-    <!-- modality chips in/out -->
-    <g class="co-rev d5" font-size="9" fill="#3a3128">
-      <rect x="400" y="66" width="240" height="16" rx="8" fill="#d8e6ce" stroke="#4a6b3a"/><text x="520" y="78" text-anchor="middle">语言 · 图像 · 视频 · 音频 · 动作（进）</text>
-      <rect x="400" y="190" width="240" height="16" rx="8" fill="#f0e0a8" stroke="#b8841c"/><text x="520" y="202" text-anchor="middle">语言 · 图像 · 视频 · 音频 · 动作（出）</text>
-    </g>
-    <line class="co-rev d5" x1="520" y1="82" x2="520" y2="94" stroke="#3a3128" stroke-width="1.2"/><polygon class="co-rev d5" points="520,94 516,86 524,86" fill="#3a3128"/>
-    <line class="co-rev d5" x1="520" y1="176" x2="520" y2="188" stroke="#3a3128" stroke-width="1.2"/><polygon class="co-rev d5" points="520,188 516,180 524,180" fill="#3a3128"/>
-    <text class="co-rev d6" x="540" y="244" text-anchor="middle" font-size="9.5" fill="#1f3a5f">一套权重 · 理解+生成+动作 单次前向</text>
-  </svg>
+<figure id="fig-01">
+  <figcaption><span>Fig 01 · 同一个任务，旧方案在三套模型间倒手</span><span class="fnum">HAND-OFF → SHARED MODEL</span></figcaption>
+  <div class="pipeline">
+    <div class="pipe-card reveal"><b>VLM</b><span>看见杯子<br>理解指令</span></div><div class="arrow reveal d2">→</div>
+    <div class="pipe-card reveal d2"><b>WORLD MODEL</b><span>想象机械臂<br>移动后的画面</span></div><div class="arrow reveal d3">→</div>
+    <div class="pipe-card reveal d3"><b>POLICY</b><span>输出关节和<br>夹爪动作</span></div>
+  </div>
+  <div class="unified reveal d5">COSMOS 3 · 同一个 checkpoint 处理理解、未来视频与动作<small>统一接口，不等于所有任务只跑一次前向</small></div>
 </figure>
 
-<h2><span class="num">§ 02</span>MoT：每层两套权重，一塔推理、一塔生成</h2>
-<p>核心是 <a class="jr" href="#g-01">Mixture-of-Transformers</a>。一个 transformer 层同时干"理解"（语言/推理，要因果注意力）和"生成"（高保真视频，要双向注意力）会打架——两种工作模式对权重要求不同。MoT 干脆<strong>给每种模式配一套完整权重（"塔"）</strong>：AR token 走 reasoner 塔，扩散 token 走 generator 塔<a class="jr" href="#g-04">4</a>。两塔都从 Qwen3-VL 初始化，继承语言+视觉底子再学生成。</p>
+<div class="note"><span class="label">先把“统一”说准</span>Cosmos 3 不是把所有能力揉成一套权重。恰恰相反，它用两套完整参数隔开理解与生成，再让两边通过联合注意力交换信息。</div>
 
-<figure id="fig-mot">
-  <figcaption><span>Fig 02 · 一层两塔 · AR 走推理塔,扩散走生成塔</span><span class="fnum">MIXTURE-OF-TRANSFORMERS</span></figcaption>
-  <svg class="co-svg" viewBox="0 0 720 300" role="img" aria-label="MoT 双塔结构">
-    <!-- input sequence -->
-    <text class="co-rev d1" x="60" y="40" text-anchor="start" font-size="10" fill="#7a6f5d">一条 token 序列</text>
-    <g class="co-rev d1">
-      <rect x="60" y="48" width="150" height="26" rx="3" fill="#c8d4e2" stroke="#1f3a5f"/><text x="135" y="65" text-anchor="middle" font-size="10" fill="#181410">AR 子序列（语言/理解）</text>
-      <rect x="214" y="48" width="180" height="26" rx="3" fill="#f0e0a8" stroke="#b8841c"/><text x="304" y="65" text-anchor="middle" font-size="10" fill="#181410">扩散子序列（要生成的图/视频/动作）</text>
-    </g>
-    <!-- route arrows -->
-    <line class="co-rev d2" x1="135" y1="74" x2="135" y2="104" stroke="#1f3a5f" stroke-width="1.3"/><polygon class="co-rev d2" points="135,104 131,96 139,96" fill="#1f3a5f"/>
-    <line class="co-rev d2" x1="304" y1="74" x2="304" y2="104" stroke="#b8841c" stroke-width="1.3"/><polygon class="co-rev d2" points="304,104 300,96 308,96" fill="#b8841c"/>
-    <!-- one decoder layer with two towers -->
-    <rect class="co-rev d2" x="48" y="108" width="372" height="96" rx="6" fill="none" stroke="#bfb398" stroke-dasharray="4 3"/>
-    <text class="co-rev d2" x="234" y="124" text-anchor="middle" font-size="9" fill="#7a6f5d">一个 decoder 层</text>
-    <rect class="co-rev d3" x="64" y="130" width="142" height="64" rx="5" fill="#c8d4e2" stroke="#1f3a5f" stroke-width="1.4"/>
-    <text class="co-rev d3" x="135" y="152" text-anchor="middle" font-size="12" font-weight="700" fill="#1f3a5f">reasoner 塔</text>
-    <text class="co-rev d3" x="135" y="169" text-anchor="middle" font-size="9" fill="#3a3128">独立权重 · 因果</text>
-    <text class="co-rev d3" x="135" y="183" text-anchor="middle" font-size="9" fill="#3a3128">理解/推理</text>
-    <rect class="co-rev d4" x="234" y="130" width="170" height="64" rx="5" fill="#f0e0a8" stroke="#b8841c" stroke-width="1.4"/>
-    <text class="co-rev d4" x="319" y="152" text-anchor="middle" font-size="12" font-weight="700" fill="#b8841c">generator 塔</text>
-    <text class="co-rev d4" x="319" y="169" text-anchor="middle" font-size="9" fill="#3a3128">独立权重 · 双向</text>
-    <text class="co-rev d4" x="319" y="183" text-anchor="middle" font-size="9" fill="#3a3128">扩散生成</text>
-    <text class="co-rev d4" x="234" y="224" text-anchor="middle" font-size="9.5" fill="#7a6f5d">两塔在同一次"联合注意力"里相遇对齐（见 Fig 03）· 都从 Qwen3-VL 初始化</text>
+<h2 id="s2"><span class="num">§ 02</span>先看全貌：五个入口，两座塔，很多出口</h2>
+<p>整条链可以压成三步。第一步，各模态用自己的编码器变成<a class="jr" href="#g-06">token 或 latent token</a>；第二步，把条件和目标排进同一条序列；第三步，Reasoner 或 Generator 处理自己负责的 token。这个“双塔”结构就是<a class="jr" href="#g-03">Mixture-of-Transformers</a>。</p>
 
-    <!-- contrast legend right -->
-    <rect class="co-rev d5" x="446" y="108" width="252" height="124" rx="4" fill="#faf4e1" stroke="#bfb398"/>
-    <text class="co-rev d5" x="460" y="130" text-anchor="start" font-size="11" font-weight="700" fill="#1f3a5f">别跟这俩搞混</text>
-    <text class="co-rev d6" x="460" y="154" text-anchor="start" font-size="10" fill="#3a3128">MoE：FFN 养多专家、按 token 路由、</text>
-    <text class="co-rev d6" x="460" y="168" text-anchor="start" font-size="10" fill="#3a3128">　共享注意力 → 为<tspan font-weight="700" fill="#9b2c2c">省算力</tspan></text>
-    <text class="co-rev d6" x="460" y="190" text-anchor="start" font-size="10" fill="#3a3128">MoT：整条 transformer 分两塔、按</text>
-    <text class="co-rev d6" x="460" y="204" text-anchor="start" font-size="10" fill="#3a3128">　模态/任务路由 → 为<tspan font-weight="700" fill="#1f3a5f">消解冲突</tspan></text>
-    <text class="co-rev d6" x="460" y="224" text-anchor="start" font-size="9" fill="#7a6f5d">总参 2×底座,但每 token 只过一塔</text>
-  </svg>
+<figure id="fig-02">
+  <figcaption><span>Fig 02 · Cosmos 3 不是一锅炖，而是共享总线</span><span class="fnum">ENCODE → PACK → ROUTE</span></figcaption>
+  <div class="grid3">
+    <div class="panel reveal"><h4>① 各走各的入口</h4><p>文本 tokenizer、理解 ViT、视频 VAE、音频 VAE、动作投影。</p></div>
+    <div class="panel reveal d2"><h4>② 排进一条序列</h4><p>先放 AR 条件，再放干净条件和带噪目标。</p></div>
+    <div class="panel reveal d3"><h4>③ 按 token 类型分流</h4><p>AR token 走 Reasoner；带噪目标走 Generator。</p></div>
+  </div>
+  <div class="tower-wrap" style="margin-top:14px">
+    <div class="tower reason reveal d4"><div class="t">REASONER · 看懂 / 说出来</div><ul><li>语言与视觉理解</li><li>因果注意力</li><li>逐 token 生成文本</li></ul></div>
+    <div class="tower gen reveal d5"><div class="t">GENERATOR · 画出来 / 做动作</div><ul><li>图像、视频、音频、动作</li><li>双向注意力</li><li>多步迭代去噪</li></ul></div>
+    <div class="meet reveal d6">联合注意力是两座塔共用的会议桌，不是共用一套权重</div>
+  </div>
 </figure>
 
-<h3>数字例子 · 两塔的账:总参 2×,每 token 只花 1× 单塔</h3>
-<p>"两套权重"听着像要双倍算力,其实不是——每个 token 只过它该过的那一塔。拿 Super(底座 dense 32B)算一笔:</p>
-<pre class="eq">每塔 ≈ 32B(=稠密底座)，两塔 → 总参 ≈ 64B
-一条序列：N 个 AR token + M 个扩散 token
-  AR token  → 只过 reasoner 塔(32B)，generator 塔不激活
-  扩散 token → 只过 generator 塔(32B)，reasoner 塔不激活
-每个 token 的算力 ≈ 32B（单塔），不是 64B
+<h2 id="s3"><span class="num">§ 03</span>五种模态，先各自翻译成 token</h2>
+<p>“五模态统一”最容易写成口号。真正落到模型里，每种数据的入口并不一样。图片拿来理解和拿来生成，甚至走的是两条不同的路。</p>
 
-对照：拿一个 64B dense 模型同时干理解+生成 → 每 token 都吃 64B
-→ MoT 拿到 2× 容量(两套专用权重)，却只花 1× 单塔的每-token 算力</pre>
-<p>✓ 自检:显存得装下两塔(64B),但<strong>算力(FLOPs/token)≈ 单塔</strong>。这跟 <a href="../concepts/moe.html">MoE</a> 的"总参大、激活小"是同一个味道,区别只在<strong>怎么分</strong>:MoE 按 FFN 专家、每 token 路由到几个专家、共享注意力(为省算力);MoT 按整条 transformer 通路分两塔、按模态/任务路由、共用一次联合注意力(为消解"理解要因果、生成要双向"的冲突)。一个为效率,一个为统一,别混。</p>
-
-<h2><span class="num">§ 03</span>联合注意力：推理保因果，生成看全部</h2>
-<p>两塔权重虽分开，却在<strong>同一次注意力</strong>里相遇<a class="jr" href="#g-05">5</a>，这是统一的关键。规则两条：AR token 只<strong>因果</strong>看 AR（保住像 LLM 那样的文本生成）；扩散 token 用<strong>全双向</strong>注意力看 <code>[AR; 扩散]</code> 的全部（能看到文字 prompt + 所有条件和生成 token，保持时空一致）。而且 AR <strong>永不被扩散 token 更新</strong>——条件通路的因果完整性不破。</p>
-
-<figure id="fig-attn">
-  <figcaption><span>Fig 03 · 谁能看见谁:AR 因果 / 扩散双向</span><span class="fnum">DUAL-STREAM JOINT ATTENTION</span></figcaption>
-  <svg class="co-svg" viewBox="0 0 720 360" role="img" aria-label="dual-stream 联合注意力可见性矩阵">
-    <text class="co-rev d1" x="270" y="34" text-anchor="middle" font-size="12" font-weight="700" fill="#1f3a5f">可见性矩阵（行=query token，列=被看的 key）</text>
-    <g id="co-attncells"></g>
-    <text class="co-rev d2" x="44" y="200" text-anchor="middle" font-size="9.5" fill="#7a6f5d" transform="rotate(-90 44 200)">query token →</text>
-    <text class="co-rev d2" x="270" y="346" text-anchor="middle" font-size="9.5" fill="#7a6f5d">key token →（前 4 = AR，后 6 = 扩散）</text>
-    <!-- legend right -->
-    <rect class="co-rev d6" x="540" y="70" width="160" height="120" rx="4" fill="#faf4e1" stroke="#bfb398"/>
-    <rect class="co-rev d6" x="552" y="86" width="13" height="13" fill="#1f3a5f"/><text class="co-rev d6" x="571" y="97" font-size="9" fill="#3a3128" text-anchor="start">看 AR key</text>
-    <rect class="co-rev d6" x="552" y="106" width="13" height="13" fill="#b8841c"/><text class="co-rev d6" x="571" y="117" font-size="9" fill="#3a3128" text-anchor="start">看 扩散 key</text>
-    <rect class="co-rev d6" x="552" y="126" width="13" height="13" fill="#e8e0c8" stroke="#bfb398"/><text class="co-rev d6" x="571" y="137" font-size="9" fill="#3a3128" text-anchor="start">看不到</text>
-    <text class="co-rev d6" x="552" y="160" font-size="9" fill="#3a3128" text-anchor="start">AR 行:只因果看 AR</text>
-    <text class="co-rev d6" x="552" y="174" font-size="9" fill="#3a3128" text-anchor="start">扩散 行:双向看全部</text>
-    <text class="co-rev d6" x="552" y="186" font-size="9" fill="#9b2c2c" text-anchor="start">右上角空=AR 不看扩散</text>
-  </svg>
+<figure id="fig-03">
+  <figcaption><span>Fig 03 · 五种入口各干什么</span><span class="fnum">MODALITY ADAPTERS</span></figcaption>
+  <div class="modality reveal"><div class="name">语言</div><div class="how">普通文本 tokenizer。得到离散词元，放进 AR 子序列。</div><div class="rate">逐词元</div></div>
+  <div class="modality reveal d2"><div class="name">图像 / 理解</div><div class="how"><a class="jr" href="#g-07">ViT</a> 先切成 16×16 patch，再把相邻 2×2 token 合并。</div><div class="rate">看语义</div></div>
+  <div class="modality reveal d3"><div class="name">视频 / 生成</div><div class="how">冻结的 Wan2.2 视频 <a class="jr" href="#g-08">VAE</a>。时间压缩 4 倍，空间最终约压缩 32×32。</div><div class="rate">latent</div></div>
+  <div class="modality reveal d4"><div class="name">音频</div><div class="how">冻结的 Audio VAE 把 48 kHz 双声道波形压成连续 latent。</div><div class="rate">25 token/s</div></div>
+  <div class="modality reveal d5"><div class="name">动作</div><div class="how">不同设备先过各自的线性投影，变成统一宽度的<a class="jr" href="#g-09">动作 token</a>。</div><div class="rate">10D–57D</div></div>
 </figure>
 
-<h2><span class="num">§ 04</span>一套权重，重排 token 就换任务</h2>
-<p>所有模式都是同一条序列 <code>[AR 前缀 | 扩散目标]</code> 的不同摆法<a class="jr" href="#g-06">6</a>：只给 AR、不激活扩散 → 就是个 VLM；AR 放文字、扩散放噪声图 → 文生图；扩散里先放干净的条件帧再放噪声目标 → 图生视频；条件换成边缘/深度控制图 → 视频 transfer；目标换成动作 token → 策略。一套权重 subsume 了一堆专用模型（这就是 omnimodal<a class="jr" href="#g-09">9</a>）。</p>
+<h3>动作为什么不能共用一个固定 tokenizer</h3>
+<p>不同机器人的控制面板根本不一样。单臂机器人一步动作是 10 个数：3 个平移、6 个旋转表示、1 个夹爪状态；双臂是 20 维；人形机器人是 29 维；第一视角人体动作最多 57 维。Cosmos 3 给每类设备配一对输入/输出投影：进模型前统一到相同隐藏宽度，出模型后再还原成原设备需要的维数。</p>
+<div class="note"><span class="label">为什么这么做</span>统一的是 Transformer 中间的“语言”，不是强迫所有机器人使用同一种控制协议。这样换设备时主要替换入口、出口和后训练数据，不必重造主干。</div>
 
-<figure id="fig-modes">
-  <figcaption><span>Fig 04 · 同一序列的不同摆法 = 不同任务</span><span class="fnum">GENERATION MODES</span></figcaption>
-  <svg class="co-svg" viewBox="0 0 720 320" role="img" aria-label="不同生成模式的 token 排列">
-    <!-- legend -->
-    <g class="co-rev d1" font-size="9" fill="#3a3128">
-      <rect x="60" y="24" width="12" height="12" fill="#c8d4e2" stroke="#1f3a5f"/><text x="78" y="34" text-anchor="start">AR（文字/状态，因果）</text>
-      <rect x="240" y="24" width="12" height="12" fill="#d8e6ce" stroke="#4a6b3a"/><text x="258" y="34" text-anchor="start">干净条件（图/视频/控制图）</text>
-      <rect x="470" y="24" width="12" height="12" fill="#f0e0a8" stroke="#b8841c"/><text x="488" y="34" text-anchor="start">噪声目标（要生成）</text>
-    </g>
-    <!-- rows: each mode -->
-    <g font-size="10" font-weight="700" fill="#181410" text-anchor="end">
-      <text class="co-rev d2" x="150" y="68">语言 (=VLM)</text>
-      <text class="co-rev d2" x="150" y="104">文生图</text>
-      <text class="co-rev d3" x="150" y="140">文生视频+音频</text>
-      <text class="co-rev d3" x="150" y="176">图生视频</text>
-      <text class="co-rev d4" x="150" y="212">视频 transfer</text>
-      <text class="co-rev d4" x="150" y="248">动作（策略）</text>
-    </g>
-    <!-- strips -->
-    <g class="co-rev d2"><rect x="164" y="56" width="160" height="18" rx="2" fill="#c8d4e2" stroke="#1f3a5f"/><text x="244" y="69" text-anchor="middle" font-size="9" fill="#181410">文字…（不激活扩散）</text></g>
+<h2 id="s4"><span class="num">§ 04</span>同一条序列，换个摆法就换任务</h2>
+<p>Cosmos 3 先放 AR 子序列，再放扩散子序列。扩散部分内部又遵守一条规矩：干净条件在前，带噪目标在后。任务的差别，本质上是哪些 token 已知、哪些 token 要去噪。</p>
 
-    <g class="co-rev d2"><rect x="164" y="92" width="120" height="18" rx="2" fill="#c8d4e2" stroke="#1f3a5f"/><rect x="286" y="92" width="120" height="18" rx="2" fill="#f0e0a8" stroke="#b8841c"/><text x="224" y="105" text-anchor="middle" font-size="9" fill="#181410">文字</text><text x="346" y="105" text-anchor="middle" font-size="9" fill="#181410">~图</text></g>
-
-    <g class="co-rev d3"><rect x="164" y="128" width="110" height="18" rx="2" fill="#c8d4e2" stroke="#1f3a5f"/><rect x="276" y="128" width="160" height="18" rx="2" fill="#f0e0a8" stroke="#b8841c"/><rect x="438" y="128" width="56" height="18" rx="2" fill="#f0e0a8" stroke="#b8841c"/><text x="219" y="141" text-anchor="middle" font-size="9" fill="#181410">文字</text><text x="356" y="141" text-anchor="middle" font-size="9" fill="#181410">~视频帧</text><text x="466" y="141" text-anchor="middle" font-size="9" fill="#181410">~音频</text></g>
-
-    <g class="co-rev d3"><rect x="164" y="164" width="90" height="18" rx="2" fill="#c8d4e2" stroke="#1f3a5f"/><rect x="256" y="164" width="70" height="18" rx="2" fill="#d8e6ce" stroke="#4a6b3a"/><rect x="328" y="164" width="150" height="18" rx="2" fill="#f0e0a8" stroke="#b8841c"/><text x="209" y="177" text-anchor="middle" font-size="9" fill="#181410">文字</text><text x="291" y="177" text-anchor="middle" font-size="9" fill="#181410">图(净)</text><text x="403" y="177" text-anchor="middle" font-size="9" fill="#181410">~视频</text></g>
-
-    <g class="co-rev d4"><rect x="164" y="200" width="90" height="18" rx="2" fill="#c8d4e2" stroke="#1f3a5f"/><rect x="256" y="200" width="100" height="18" rx="2" fill="#d8e6ce" stroke="#4a6b3a"/><rect x="358" y="200" width="140" height="18" rx="2" fill="#f0e0a8" stroke="#b8841c"/><text x="209" y="213" text-anchor="middle" font-size="9" fill="#181410">文字</text><text x="306" y="213" text-anchor="middle" font-size="9" fill="#181410">边缘/深度(净)</text><text x="428" y="213" text-anchor="middle" font-size="9" fill="#181410">~RGB视频</text></g>
-
-    <g class="co-rev d4"><rect x="164" y="236" width="120" height="18" rx="2" fill="#c8d4e2" stroke="#1f3a5f"/><rect x="286" y="236" width="120" height="18" rx="2" fill="#f0e0a8" stroke="#b8841c"/><text x="224" y="249" text-anchor="middle" font-size="9" fill="#181410">文字/状态</text><text x="346" y="249" text-anchor="middle" font-size="9" fill="#181410">~动作</text></g>
-
-    <text class="co-rev d6" x="360" y="292" text-anchor="middle" font-size="11" fill="#7a6f5d">同一个模型 · 换 token 摆法就从 VLM 变成视频生成 / 世界模拟 / 策略</text>
-  </svg>
+<figure id="fig-04">
+  <figcaption><span>Fig 04 · 用“杯子放进托盘”贯穿三种动作任务</span><span class="fnum">CLEAN CONDITION + NOISY TARGET</span></figcaption>
+  <div class="panel reveal">
+    <h4>前向动力学 · 已知动作，猜未来画面</h4>
+    <div class="tokenline"><span class="tok ar">指令</span><span class="tok clean">当前视频</span><span class="tok clean">动作：右移 2cm</span><span class="tok noisy">噪声未来视频</span></div>
+  </div>
+  <div class="panel reveal d2" style="margin-top:10px">
+    <h4>逆动力学 · 已知前后画面，反推动作</h4>
+    <div class="tokenline"><span class="tok ar">指令</span><span class="tok clean">当前视频</span><span class="tok clean">下一帧视频</span><span class="tok noisy">噪声动作</span></div>
+  </div>
+  <div class="panel reveal d3" style="margin-top:10px">
+    <h4>策略 · 未来画面和动作一起猜</h4>
+    <div class="tokenline"><span class="tok ar">把杯子放进托盘</span><span class="tok clean">当前视频</span><span class="tok noisy">噪声未来视频</span><span class="tok noisy">噪声动作</span></div>
+  </div>
+  <div class="legend"><span><i style="background:var(--deep-soft)"></i>AR 条件</span><span><i style="background:var(--moss-soft)"></i>干净条件</span><span><i style="background:var(--ochre-soft)"></i>要去噪的目标</span></div>
 </figure>
 
-<p>这里最该单说的是<strong>动作</strong>:Cosmos 3 把它当成<strong>一等模态</strong>对待,专门设了一类 <strong>action token</strong><a class="jr" href="#g-11">11</a>,跟语言/图/视频/音频一样先过一个模态专用 encoder 投进统一表示空间。推理时,语言走自回归逐 token 预测,<strong>其它模态(含动作)都靠迭代去噪生成</strong>——所以"出动作"和"出视频"在机制上是同一套生成,这正是它能既当世界模拟器又当机器人策略的根。前向动力学(给状态+动作→预测下一帧)、逆动力学(给两帧→反推动作)、策略(给目标→出动作)都只是 token 怎么摆的不同。</p>
+<p>文生图和图生视频也没有另起炉灶：文生图是“文字 + 噪声图”；图生视频是“文字 + 干净首帧 + 噪声后续帧”。这才是 token 排列真正改进的地方——不是凭空创造新能力，而是把很多任务改写成同一个训练接口。</p>
 
-<h2><span class="num">§ 05</span>结果与规模</h2>
-<p>后训练版同时拿下三个"最强开源/最强"：Artificial Analysis 评的<strong>最强开源文生图 + 图生视频</strong>，RoboArena 评的<strong>最强策略模型</strong><a class="jr" href="#g-08">8</a>——理解、生成、动作三头都打到 SOTA。三档规模 Edge 4B / Nano 16B / Super 64B，注意总参≈<strong>2× 稠密底座</strong>（因为每层两塔），但每个 token 只过一塔，激活量≈单塔。</p>
+<h2 id="s5"><span class="num">§ 05</span>MoT：为什么非得分成两座塔</h2>
+<p>理解和生成对 Transformer 的要求相反。写下一句话时，当前位置不能偷看未来；去噪一张图时，左上角却应该知道右下角有什么，不然整张图很难协调。MoT 的做法很干脆：每层的归一化、注意力投影和 MLP 都准备两套，AR token 和扩散 token 各走一套。</p>
 
-<figure id="fig-results">
-  <figcaption><span>Fig 05 · 三头 SOTA + 三档规模</span><span class="fnum">RESULTS · VARIANTS</span></figcaption>
-  <svg class="co-svg" viewBox="0 0 720 280" role="img" aria-label="Cosmos 3 结果与模型规模">
-    <!-- left: 3 best badges -->
-    <text class="co-rev d1" x="40" y="40" text-anchor="start" font-size="12" font-weight="700" fill="#1f3a5f">同时拿下</text>
-    <g class="co-rev d2"><rect x="40" y="52" width="300" height="40" rx="4" fill="#d8e6ce" stroke="#4a6b3a"/><text x="56" y="70" text-anchor="start" font-size="11" font-weight="700" fill="#181410">最强开源 · 文生图</text><text x="56" y="85" text-anchor="start" font-size="9" fill="#7a6f5d">Artificial Analysis</text></g>
-    <g class="co-rev d3"><rect x="40" y="100" width="300" height="40" rx="4" fill="#d8e6ce" stroke="#4a6b3a"/><text x="56" y="118" text-anchor="start" font-size="11" font-weight="700" fill="#181410">最强开源 · 图生视频</text><text x="56" y="133" text-anchor="start" font-size="9" fill="#7a6f5d">Artificial Analysis</text></g>
-    <g class="co-rev d4"><rect x="40" y="148" width="300" height="40" rx="4" fill="#f0e0a8" stroke="#b8841c"/><text x="56" y="166" text-anchor="start" font-size="11" font-weight="700" fill="#181410">最强 · 策略模型</text><text x="56" y="181" text-anchor="start" font-size="9" fill="#7a6f5d">RoboArena</text></g>
-    <text class="co-rev d4" x="40" y="212" text-anchor="start" font-size="9.5" fill="#7a6f5d">理解 + 生成 + 动作 三头同时 SOTA</text>
-
-    <!-- right: variant bars (total params), 1px=2B -->
-    <text class="co-rev d5" x="400" y="40" text-anchor="start" font-size="12" font-weight="700" fill="#1f3a5f">三档规模（总参 = 2× 稠密底座）</text>
-    <text class="co-rev d5" x="400" y="74" text-anchor="start" font-size="10" fill="#3a3128">Edge</text>
-    <rect class="co-rev d5 grow" x="470" y="64" width="24" height="16" rx="2" fill="#7a6f5d"/><text class="co-rev d5" x="500" y="77" text-anchor="start" font-size="10" fill="#3a3128">4B（底座 2B）</text>
-    <text class="co-rev d5" x="400" y="110" text-anchor="start" font-size="10" fill="#3a3128">Nano</text>
-    <rect class="co-rev d6 grow" x="470" y="100" width="96" height="16" rx="2" fill="#4a6b3a"/><text class="co-rev d6" x="572" y="113" text-anchor="start" font-size="10" fill="#3a3128">16B（底座 8B）</text>
-    <text class="co-rev d6" x="400" y="146" text-anchor="start" font-size="10" fill="#3a3128">Super</text>
-    <rect class="co-rev d6 grow" x="470" y="136" width="200" height="16" rx="2" fill="#1f3a5f"/><text class="co-rev d6" x="470" y="170" text-anchor="start" font-size="10" fill="#f7f1de" transform="translate(8,-22)">64B（底座 32B）</text>
-    <text class="co-rev d6" x="400" y="196" text-anchor="start" font-size="9.5" fill="#7a6f5d">两塔各 adapt 一个 Qwen3-VL；每 token 只过一塔，激活≈单塔</text>
-  </svg>
+<figure id="fig-05">
+  <figcaption><span>Fig 05 · 两套参数换来任务隔离</span><span class="fnum">CAPACITY ≠ ACTIVE COMPUTE</span></figcaption>
+  <div class="tower-wrap">
+    <div class="tower reason reveal"><div class="t">REASONER TOWER</div><ul><li>独立 LayerNorm</li><li>独立 Q / K / V / O</li><li>独立 MLP</li><li>处理 AR token</li></ul></div>
+    <div class="tower gen reveal d2"><div class="t">GENERATOR TOWER</div><ul><li>独立 LayerNorm</li><li>独立 Q / K / V / O</li><li>独立 MLP</li><li>处理扩散 token</li></ul></div>
+    <div class="meet reveal d3">Super：32B Reasoner + 32B Generator ≈ 64B 总参数；一个 token 只经过其中一塔</div>
+  </div>
 </figure>
 
-<table class="spec">
-  <tr><th>变体</th><th>总参 / 稠密底座</th><th>说明</th></tr>
-  <tr><td>Cosmos3-Edge</td><td>4B / 2B</td><td>端侧;底座 28 层·hidden 2048·16 头(8 KV)·头维 128·FFN 9216,Qwen3-1.7B 式(去 QK-Norm、ReLU² FFN);稍后发布</td></tr>
-  <tr><td>Cosmos3-Nano</td><td>16B / 8B</td><td>底座 Qwen3-VL 8B;本次发布</td></tr>
-  <tr><td>Cosmos3-Super</td><td>64B / 32B</td><td>底座 Qwen3-VL 32B;最强档,本次发布</td></tr>
-</table>
-<p>总参 = 2× 稠密底座(两塔),但每 token 只过一塔、激活≈单塔(见 §02 数字例子)。三档跨度从端侧机器人到数据中心。</p>
+<h3>把账算清：64B 总参数，不代表每个 token 都跑 64B</h3>
+<div class="mathbox"><span class="blue">Reasoner</span> ≈ 32B　+　<span class="gold">Generator</span> ≈ 32B　→　总参数 ≈ <span class="green">64B</span>
 
-<div class="note">
-  <span class="l">放进 wiki 这条线</span>
-  <p>Cosmos 3 是 <a href="../concepts/world-foundation-model.html">世界基础模型</a> 这条线给 <a href="../concepts/physical-ai.html">Physical AI</a> 做的集大成。它的发动机 <a href="../concepts/mixture-of-transformers.html">MoT</a> 是 <a href="../concepts/unified-transformer.html">unified-transformer</a>（一条序列、混合注意力同时理解+生成）的升级——把权重拆成两塔，跟 <a href="../concepts/moe.html">MoE</a>（FFN 专家、为省算力）是两回事。generator 塔就是 <a href="stable-diffusion-3-5.html">DiT</a> + 扩散一族；两塔都从 <a href="qwen3-vl-report.html">Qwen3-VL</a> 初始化。跟 <a href="lumine.html">Lumine</a> 同属具身，但 Lumine 纯 AR 学策略、Cosmos 3 把生成交给扩散塔。一句话：<strong>理解要因果、生成要双向，硬塞一套权重会打架——那就给每种工作模式一套完整权重(塔)，但共用一次联合注意力让它们对齐；于是一个模型把 VLM、视频生成、世界模拟、动作策略全收了。</strong></p>
+100 个 AR token　→ 只过 32B Reasoner
+400 个扩散 token → 只过 32B Generator
+
+所以：每个 token 激活的主干容量约为 32B，不是 64B。
+但是：部署仍要保存两塔权重，权重显存不会凭空减半。</div>
+<p class="check">✓ 容量翻倍和每 token 计算不翻倍可以同时成立；显存代价仍在。</p>
+
+<div class="warn note"><span class="label">初始化也要说准</span>Nano/Super 的 Reasoner 分别从 Qwen3-VL-8B/32B 出发，Edge 使用 NVIDIA 自己预训练的模型。先把 Reasoner 训练好，再把它的权重复制给 Generator 做初始化。不是“两塔同时从 Qwen3-VL 开始训练”。</div>
+
+<h2 id="s6"><span class="num">§ 06</span>联合注意力：两边能交流，但不是谁都能看谁</h2>
+<p>两塔参数分开后，还需要一张“会议桌”。Cosmos 3 的<a class="jr" href="#g-10">联合注意力</a>把两边产生的 key/value 拼起来，但对 query 设不同权限。这就是<a class="jr" href="#g-11">因果注意力和双向注意力</a>同时存在的办法。</p>
+
+<figure id="fig-06">
+  <figcaption><span>Fig 06 · 四个小 token 的可见范围</span><span class="fnum">QUERY ROW → KEY COLUMN</span></figcaption>
+  <div class="grid2">
+    <div class="panel reveal">
+      <h4>Reasoner query · 不能偷看未来或扩散区</h4>
+      <table class="matrix" aria-label="Reasoner causal attention matrix">
+        <tr><th></th><th>A1</th><th>A2</th><th>D1</th><th>D2</th></tr>
+        <tr><th>A1</th><td class="yes">✓</td><td class="no">×</td><td class="no">×</td><td class="no">×</td></tr>
+        <tr><th>A2</th><td class="yes">✓</td><td class="yes">✓</td><td class="no">×</td><td class="no">×</td></tr>
+      </table>
+      <p class="matrix-note">A2 能看 A1 和自己；A1 不能看还没生成的 A2。两行都看不到 D1、D2。</p>
+    </div>
+    <div class="panel reveal d2">
+      <h4>Generator query · 看完整条件和整块生成区</h4>
+      <table class="matrix" aria-label="Generator bidirectional attention matrix">
+        <tr><th></th><th>A1</th><th>A2</th><th>D1</th><th>D2</th></tr>
+        <tr><th>D1</th><td class="gen">✓</td><td class="gen">✓</td><td class="gen">✓</td><td class="gen">✓</td></tr>
+        <tr><th>D2</th><td class="gen">✓</td><td class="gen">✓</td><td class="gen">✓</td><td class="gen">✓</td></tr>
+      </table>
+      <p class="matrix-note">D1、D2 都能看全部文字条件，也能互相协调；适合让整张图、整段视频一起成形。</p>
+    </div>
+  </div>
+</figure>
+
+<p>最关键的不对称是：Generator 能读 Reasoner，Reasoner 不会被尚未去噪完成的 Generator 反向更新。这样生成端拿得到语义，语言端又不会被一团噪声带偏。</p>
+
+<h2 id="s7"><span class="num">§ 07</span>Generator 到底学什么：拿一个数手算</h2>
+<p>论文用 rectified flow。先别管名字，它做的事很朴素：在干净数据和高斯噪声之间连一条直线，训练模型在这条线上的任意位置指出方向。</p>
+<p>设干净 latent 为 <code>x₀</code>，随机噪声为 <code>ε</code>，噪声比例为 <code>σ</code>：</p>
+
+<figure id="fig-07">
+  <figcaption><span>Fig 07 · 从干净值 2 走向噪声 −1</span><span class="fnum">RECTIFIED FLOW · NUMERIC</span></figcaption>
+  <div class="mathbox reveal"><span class="dim">给定：</span>x₀ = <span class="green">2</span>，ε = <span class="gold">−1</span>，σ = <span class="blue">0.25</span>
+
+xσ = σ×ε + (1−σ)×x₀
+   = 0.25×(−1) + 0.75×2
+   = −0.25 + 1.50
+   = <span class="green">1.25</span>
+
+目标速度 v* = ε − x₀ = −1 − 2 = <span class="gold">−3</span></div>
+  <div class="grid3" style="margin-top:14px">
+    <div class="panel reveal d2"><h4>训练输入</h4><p>带噪位置 1.25、噪声比例 0.25、文字或画面条件。</p></div>
+    <div class="panel reveal d3"><h4>训练目标</h4><p>预测直线速度 −3。噪声减干净值，所以方向朝噪声端。</p></div>
+    <div class="panel reveal d4"><h4>推理</h4><p>从噪声端出发，反着积分，多步走回干净数据端。</p></div>
+  </div>
+</figure>
+
+<p class="check">✓ 自检：从 x₀=2 沿速度 −3 走完整个单位时间，2+(−3)=−1，正好到 ε。</p>
+<p>训练时，每次随机抽一个噪声位置就能监督；推理时仍要重复预测速度、更新 latent。所谓“统一生成”没有取消多步去噪。</p>
+
+<h2 id="s8"><span class="num">§ 08</span>帧编号不够，模型得知道真实过去了多久</h2>
+<p>两个视频都有 5 个 latent 帧，不代表它们经历了相同时间。16 FPS 的相邻帧比 30 FPS 隔得更久。Cosmos 3 用三维<a class="jr" href="#g-12">MRoPE</a>编码时间、高度、宽度，再按真实<a class="jr" href="#g-13">FPS / token 速率</a>缩放时间轴。</p>
+<p>视频 VAE 每 4 帧压成一个时间 token。基础视频是 24 FPS，因此基础 token 速率是 <code>24÷4=6 token/s</code>。目标视频每秒有多少 latent token，就用下面的比例算相邻位置间隔：</p>
+
+<figure id="fig-08">
+  <figcaption><span>Fig 08 · 同样五个 token，不同 FPS 的时间跨度不同</span><span class="fnum">Δt = TPSbase / TPS</span></figcaption>
+  <div class="fps-row reveal"><div class="fps">24 FPS</div><div class="ticks"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span></div><div class="step">Δt = 1.0</div></div>
+  <div class="fps-row reveal d2"><div class="fps">16 FPS</div><div class="ticks"><span>0</span><span>1.5</span><span>3</span><span>4.5</span><span>6</span></div><div class="step">Δt = 1.5</div></div>
+  <div class="fps-row reveal d3"><div class="fps">30 FPS</div><div class="ticks"><span>0</span><span>0.8</span><span>1.6</span><span>2.4</span><span>3.2</span></div><div class="step">Δt = 0.8</div></div>
+  <div class="note reveal d4"><span class="label">读图</span>16 FPS 的五个 token 横跨更长真实时间，所以位置编号拉得更开；30 FPS 更密，编号间隔更小。</div>
+</figure>
+
+<p>这不是装饰性技巧。无 FPS 控制时综合分为 8.51；只把 FPS 写进文字提示是 9.28；只改 MRoPE 时间轴是 9.63；两者一起用达到 9.81。位置编码比一句文字提示更直接地控制运动节奏。</p>
+
+<h2 id="s9"><span class="num">§ 09</span>数据：不只要多，还得知道哪里该严</h2>
+<p>Reasoner 的预训练集共有 22,002,013 个样本，SFT 有 2,171,673 个。论文没有把数据清洗写成一句“高质量筛选”，而是把去重、打分和阈值都交代了。</p>
+
+<figure id="fig-09">
+  <figcaption><span>Fig 09 · Reasoner 预训练数据组成</span><span class="fnum">22,002,013 SAMPLES</span></figcaption>
+  <div class="bars">
+    <div class="barrow reveal"><span>图像－文本</span><div class="bartrack"><div class="barfill" style="--w:85.5%"></div></div><span>18,814,952</span></div>
+    <div class="barrow reveal d2"><span>纯文本</span><div class="bartrack"><div class="barfill" style="--w:9.9%"></div></div><span>2,170,762</span></div>
+    <div class="barrow reveal d3"><span>视频－文本</span><div class="bartrack"><div class="barfill" style="--w:4.6%"></div></div><span>1,016,299</span></div>
+  </div>
+  <div class="filter-flow">
+    <div class="filter-step reveal d2"><b>原始混合</b>多来源样本</div>
+    <div class="filter-step reveal d3"><b>语义去重</b>删 4.23% 近重复</div>
+    <div class="filter-step reveal d4"><b>AI JUDGE</b>忠实 / 完整 / 正确</div>
+    <div class="filter-step final reveal d5"><b>按阶段留数据</b>预训练 78% · SFT 46%</div>
+  </div>
+</figure>
+
+<h3>为什么预训练放宽，SFT 反而更严</h3>
+<p>AI judge 给忠实、完整、正确三项各打 1–5 分。预训练阈值设为 2，保留约 78%：这时模型需要广覆盖，不能为了“全是满分样本”把 OCR、空间定位等长尾能力砍没。<a class="jr" href="#g-14">监督微调</a>阈值设为 5，只保留约 46%：SFT 会直接塑造模型怎么回答，错一条监督比少一条更糟。</p>
+<p>Generator 还要吃图像、视频、音频、动作和控制视频。视频覆盖 256p、480p、720p；最长分别为 400、400、300 帧。不同分辨率和长度的样本被拼进固定 74,000-token 上下文，尽量少把算力浪费在 padding 上。</p>
+
+<h2 id="s10"><span class="num">§ 10</span>训练不是一起开跑，而是一棒接一棒</h2>
+<p>“两塔统一训练”很容易让人误以为模型从头到尾一次训完。实际流程更像接力：先把理解练扎实，再把这套世界知识交给生成塔，最后才加入动作和专项后训练。</p>
+
+<figure id="fig-10">
+  <figcaption><span>Fig 10 · 从 Reasoner 到专项模型的完整训练接力</span><span class="fnum">PRETRAIN → MID-TRAIN → POST-TRAIN</span></figcaption>
+  <div class="train">
+    <div class="n reveal">1</div><div class="stage reveal"><b>Reasoner 多模态预训练</b><p>Nano/Super 从 Qwen3-VL-8B/32B 出发；图文、视频文本和纯文本训练两轮。所有组件从一开始就联合更新，没有单独冻结投影器做对齐阶段。</p></div>
+    <div class="n reveal d2">2</div><div class="stage reveal d2"><b>Physical AI SFT</b><p>8200 步，全局 batch 512。每 4 份 SFT 数据混 1 份高质量预训练数据，避免专项训练把通用能力冲掉。</p></div>
+    <div class="n reveal d3">3</div><div class="stage reveal d3"><b>复制权重，初始化 Generator</b><p>把已经学会理解世界的 Reasoner 权重复制过去，再改用 rectified flow 学生成。Generator 不是从随机塔或另一套独立 Qwen 权重直接开练。</p></div>
+    <div class="n reveal d4">4</div><div class="stage reveal d4"><b>Generator 预训练</b><p>先联合训练图像、视频和音频，覆盖文生图、文生视频、图生视频和视频续写。</p></div>
+    <div class="n reveal d5">5</div><div class="stage reveal d5"><b><a class="jr" href="#g-15">Mid-training / post-training</a></b><p>再加入动作和视频 transfer，最后分成专项分支。榜单冠军往往来自这些后训练版本。</p><div class="forks"><div class="fork">文生图</div><div class="fork">图 / 视频生成</div><div class="fork">机器人策略</div></div></div>
+  </div>
+</figure>
+
+<div class="warn note"><span class="label">最容易夸大的地方</span>“一个模型支持很多任务”是真的；“同一个未经专项训练的 checkpoint 同时拿下所有第一”不是真的。论文表格里的星号明确标出后训练版本。</div>
+
+<h2 id="s11"><span class="num">§ 11</span>实验别只看“第一”，先看测了什么</h2>
+<p>Cosmos 3 的实验跨度很大，不能用一个分数概括。下面挑四组能回答不同问题的结果：能不能生成更符合物理世界的视频，能不能学出动作，动作预训练能不能帮助新设备，以及统一后有没有打赢专项基线。</p>
+
+<figure id="fig-11">
+  <figcaption><span>Fig 11 · 四组代表性结果</span><span class="fnum">REAL SCORES · NOT BADGES</span></figcaption>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>问题 / 指标</th><th>Cosmos 3</th><th>对照</th><th>怎么读</th></tr></thead>
+      <tbody>
+        <tr class="win"><td>PAIBench-G · 文生视频 overall ↑</td><td class="up">Super 80.0</td><td>Wan2.2-A14B 78.0</td><td>质量与 Physical AI 领域正确性各占一半</td></tr>
+        <tr><td>Physics-IQ · 图生视频 ↑</td><td class="up">43.8 / 重排后 48.9</td><td>Sora 2：42.3 / 46.4</td><td>看生成后续是否符合真实物理结果</td></tr>
+        <tr class="win"><td>RoboLab · specific 指令成功率 ↑</td><td class="up">39.7%</td><td>π0.5：28.1%</td><td>120 个任务，每任务 10 次 rollout</td></tr>
+        <tr><td>LIBERO-10 · 500 步适配成功率 ↑</td><td class="up">MT-init 24.6%</td><td>PT-init 0.0%</td><td>动作 mid-training 是否加快换机器人后的适配</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="scope">补充：2000 步后 LIBERO-10 为 97.4% vs 95.2%，说明 mid-training 的主要价值是“更快进入状态”，不只是最终上限。</p>
+</figure>
+
+<h3>这些分数仍然有评测边界</h3>
+<p>PAIBench-G 的 overall 是 <code>0.5×Quality + 0.5×Domain</code>。Domain 由 VLM judge 判断，论文还注明公开榜单的部分 I2V 分数无法复现，因此内部统一换成 Qwen2.5-VL-72B 重算。Physics-IQ 更聚焦物理，但 best-of-N 结果还叠加了额外生成和重排成本。分数能支持比较，不能当成现实世界可靠性的直接证明。</p>
+
+<h2 id="s12"><span class="num">§ 12</span>消融最诚实：统一有收益，也有账单</h2>
+<p><a class="jr" href="#g-16">消融实验</a>不是看谁赢，而是只改一个零件，确认提升到底从哪来。Cosmos 3 最值得看的四组如下。</p>
+
+<figure id="fig-12">
+  <figcaption><span>Fig 12 · 四组消融回答四个具体问题</span><span class="fnum">WHAT ACTUALLY HELPED?</span></figcaption>
+  <div class="ablations">
+    <div class="ab reveal"><div class="title">Reasoner 真能帮 Generator？</div><div class="delta">73.7 → 75.7</div><p>T2V domain 分上升 2.0；机器人一项 66.5→71.3。画质分基本不变，收益主要在物理语义。</p></div>
+    <div class="ab reveal d2"><div class="title">FPS 控制该写文字还是改位置？</div><div class="delta">8.51 → 9.81</div><p>文字控制 9.28，MRoPE 9.63，两者一起最好。时间位置比文字提示更直接。</p></div>
+    <div class="ab reveal d3"><div class="title">加入音频会拖累视频？</div><div class="delta">79.1 / 82.2</div><p>联合音频后 T2V/I2V overall 分别从 78.6/81.7 小幅升高，没有发现视频退化。</p></div>
+    <div class="ab reveal d4"><div class="title">三种动作模式一起训？</div><div class="delta">MSE ↓72%</div><p>逆动力学更准，策略覆盖率 74.1%→77.3%；但 <span class="trade">FD PSNR 27.13→26.22</span>，并非全面白捡。</p></div>
+  </div>
+</figure>
+
+<h3>最后把边界摊开</h3>
+<div class="limits">
+  <div class="limit"><b>权重显存没有省</b><span>每 token 只走一塔，但部署仍要装下两塔。报告没有给单流统一模型的严格端到端延迟对照。</span></div>
+  <div class="limit"><b>生成仍是多步</b><span>图像、视频、音频和动作都要迭代去噪。“统一模型”不等于“一次 forward 完成所有输出”。</span></div>
+  <div class="limit"><b>冠军来自专项后训练</b><span>文生图和机器人策略的最佳结果使用 post-trained 变体，不能全算到通用 checkpoint 头上。</span></div>
+  <div class="limit"><b>离可靠机器人还远</b><span>RoboLab specific 指令成功率 39.7% 已领先，但也意味着多数复杂 rollout 仍会失败。</span></div>
 </div>
+
+<div class="note" style="margin-top:24px"><span class="label">一句话带走</span>Cosmos 3 最值得记住的，不是“五模态第一”。真正的主线是：把任务都改写成“干净条件 + 带噪目标”，再用两座参数独立、注意力相通的 Transformer 分别处理理解与生成。</div>
 
 <div class="gloss">
-  <h2>引用 / 术语表</h2>
+  <h2>术语表 · 点正文角标可随时查看</h2>
   <ol>
-    <li id="g-01"><span class="term"><a href="../concepts/mixture-of-transformers.html">Mixture-of-Transformers · MoT</a></span> · 每层两套权重（塔）：reasoner 塔处理 AR（理解，因果）、generator 塔处理扩散（生成，双向），token 按模态/任务路由，但共用一次联合注意力。</li>
-    <li id="g-02"><span class="term"><a href="../concepts/physical-ai.html">Physical AI · 具身智能</a></span> · 在真实物理世界感知-推理-行动的 AI（机器人/自驾），动作后果不可逆，理解与生成天生耦合，主要靠仿真/合成数据训练。</li>
-    <li id="g-03"><span class="term"><a href="../concepts/world-foundation-model.html">世界基础模型 · WFM</a></span> · 学"世界接下来会怎么变"的大模型，给当前+动作能模拟未来，当 Physical AI 的训练场/合成数据工厂/策略评估器。</li>
-    <li id="g-04"><span class="term">reasoner 塔 / generator 塔</span> · MoT 一层里的两套独立权重；前者跑自回归理解、后者跑扩散生成；都从 Qwen3-VL 初始化。</li>
-    <li id="g-05"><span class="term">dual-stream 联合注意力</span> · AR token 只因果看 AR（保文本生成）；扩散 token 双向看 [AR;扩散] 全部（看得到 prompt + 所有 token）；AR 永不被扩散更新。</li>
-    <li id="g-06"><span class="term">生成模式 / token 排列</span> · 同一序列 [AR 前缀 | 扩散目标] 的不同摆法：纯 AR=VLM、文字+噪声图=文生图、加干净条件帧=图生视频、控制图=transfer、动作 token=策略。</li>
-    <li id="g-07"><span class="term">Edge / Nano / Super</span> · 三档：4B（底座 2B）/ 16B（底座 8B，Qwen3-VL 8B）/ 64B（底座 32B，Qwen3-VL 32B）。总参≈2×底座（两塔），激活≈单塔。</li>
-    <li id="g-08"><span class="term">三头 SOTA</span> · 最强开源文生图 + 图生视频（Artificial Analysis）、最强策略模型（RoboArena）——理解/生成/动作三头同时打到顶。</li>
-    <li id="g-09"><span class="term">omnimodal</span> · 五模态（语言/图像/视频/音频/动作）统一处理+生成；subsume 了 VLM、视频生成、世界模拟、世界-动作模型。</li>
-    <li id="g-10"><span class="term">VLA / 世界-动作模型</span> · 出动作的模型（Vision-Language-Action / World-Action Model）；Cosmos 3 把动作当一种可生成模态，跟视频平起平坐。</li>
-    <li id="g-11"><span class="term">action token · 动作一等模态</span> · 动作设专门一类 token，先过模态专用 encoder 进统一空间，推理时跟图/视频/音频一样靠<strong>迭代去噪</strong>生成(语言才走自回归)。前向/逆动力学/策略只是 token 摆法不同。</li>
+    <li id="g-01"><span class="term">Physical AI · 物理 AI</span> · 在真实世界感知、推理和行动的系统，例如机器人、自驾和智能空间。动作会改变环境，错误也可能造成真实后果。</li>
+    <li id="g-02"><span class="term">World model · 世界模型</span> · 给定当前状态和动作，预测接下来会发生什么。它可以生成未来画面，也可以用来评估动作后果。</li>
+    <li id="g-03"><span class="term">Mixture-of-Transformers · MoT</span> · 为不同 token 类型准备完整的 Transformer 参数路径。Cosmos 3 里是 Reasoner 和 Generator 两塔，不是 MoE 的 FFN 专家路由。</li>
+    <li id="g-04"><span class="term">Autoregressive · 自回归</span> · 一步接一步预测下一个 token。当前位置只能看前文，适合语言生成。</li>
+    <li id="g-05"><span class="term">Rectified flow / 去噪生成</span> · 在数据与噪声之间连直线路径，让模型学习沿途速度；推理时从噪声出发，多步走回数据。</li>
+    <li id="g-06"><span class="term">Token / latent token</span> · Transformer 处理的基本单元。文本 token 是离散编号；视频、音频等通常先压缩成连续 latent，再当作 token。</li>
+    <li id="g-07"><span class="term">ViT</span> · 把图片切成小块，再用 Transformer 理解这些块之间的关系。Cosmos 3 用它做视觉理解入口。</li>
+    <li id="g-08"><span class="term">VAE</span> · 把像素或波形压进更小的连续 latent 空间，也能再解码回来。Generator 在 latent 空间去噪，比直接生成像素省得多。</li>
+    <li id="g-09"><span class="term">Action token · 动作 token</span> · 平移、旋转、夹爪等连续控制量先投影到 Transformer 隐藏空间；生成后再投影回设备动作维数。</li>
+    <li id="g-10"><span class="term">Joint attention · 联合注意力</span> · 两塔各算自己的 query/key/value，再按权限让 Generator 读取 Reasoner 的条件信息。</li>
+    <li id="g-11"><span class="term">因果 / 双向注意力</span> · 因果注意力不能看未来；双向注意力能同时看整块 token。语言用前者，扩散生成用后者。</li>
+    <li id="g-12"><span class="term">3D MRoPE</span> · 把旋转位置编码拆到时间、高度、宽度三个轴。语言令三轴位置相同，视频使用真实的三维位置。</li>
+    <li id="g-13"><span class="term">FPS / TPS</span> · FPS 是每秒原始帧数；TPS 是视频经过 VAE 时间压缩后，每秒剩多少 latent token。</li>
+    <li id="g-14"><span class="term">SFT · 监督微调</span> · 用高质量“输入－标准答案”继续训练，让基础模型学会目标任务和回答方式。</li>
+    <li id="g-15"><span class="term">Mid-training / post-training</span> · Mid-training 在大规模预训练后加入新模态和新能力；post-training 用更窄、更精的数据做专项强化。</li>
+    <li id="g-16"><span class="term">Ablation · 消融实验</span> · 只拿掉或替换一个组件，其余条件尽量不变，用来判断提升到底是不是这个组件带来的。</li>
   </ol>
 </div>
 
-<div class="colophon">
-  <span>SOURCE · NVIDIA · Cosmos 3: Omnimodal World Models for Physical AI · 2026-06 · OpenMDW-1.1</span>
-  <span>INGESTED · 2026-06-24</span>
+<div class="colophon"><span>Source · <a href="https://research.nvidia.com/labs/cosmos-lab/cosmos3/">NVIDIA Cosmos 3 project</a> / <a href="https://arxiv.org/abs/2606.02800">technical report</a></span><span>Upstream · <a href="https://github.com/nvidia/cosmos">nvidia/cosmos</a></span></div>
 </div>
 
-</div>
 <script>
-{
-  // Fig 03 · dual-stream joint attention grid
-  const ns = "http://www.w3.org/2000/svg";
-  const g = document.getElementById('co-attncells');
-  if (g) {
-    const N = 10, nAR = 4, cell = 26, ox = 90, oy = 56;
-    for (let r = 0; r < N; r++) {        // query token r
-      for (let c = 0; c < N; c++) {      // key token c
-        let fill = null;
-        if (r < nAR) {                   // AR query: causal within AR only
-          if (c <= r) fill = '#1f3a5f';
-        } else {                         // DM query: full over [AR; DM]
-          fill = (c < nAR) ? '#1f3a5f' : '#b8841c';
-        }
-        const x = ox + c * cell, y = oy + r * cell;
-        const rect = document.createElementNS(ns, 'rect');
-        rect.setAttribute('x', x); rect.setAttribute('y', y);
-        rect.setAttribute('width', cell - 2); rect.setAttribute('height', cell - 2);
-        rect.setAttribute('rx', 2);
-        if (fill) { rect.setAttribute('fill', fill); }
-        else { rect.setAttribute('fill', '#e8e0c8'); rect.setAttribute('stroke', '#cdbf9e'); rect.setAttribute('stroke-width', '0.5'); rect.setAttribute('opacity', '0.5'); }
-        rect.setAttribute('class', 'co-rev d3');
-        g.appendChild(rect);
-      }
-    }
-    // divider between AR and DM (after col nAR, and after row nAR)
-    const dx = ox + nAR * cell - 1, dy = oy + nAR * cell - 1;
-    for (const ln of [
-      ['M'+dx+' '+oy+' V '+(oy+N*cell)],
-      ['M'+ox+' '+dy+' H '+(ox+N*cell)],
-    ]) {
-      const p = document.createElementNS(ns, 'path');
-      p.setAttribute('d', ln[0]); p.setAttribute('stroke', '#3a3128'); p.setAttribute('stroke-width', '1'); p.setAttribute('stroke-dasharray', '3 2'); p.setAttribute('fill', 'none');
-      p.setAttribute('class', 'co-rev d4'); g.appendChild(p);
-    }
-  }
-
-  const figs = ['fig-subsume','fig-mot','fig-attn','fig-modes','fig-results'];
-  figs.forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const obs = new IntersectionObserver(es => {
-      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
-    }, { threshold: 0.12 });
-    obs.observe(el);
-  });
-}
+document.querySelectorAll('figure').forEach((fig)=>{
+  const obs=new IntersectionObserver((entries)=>{entries.forEach((entry)=>{if(entry.isIntersecting){fig.classList.add('play');obs.disconnect();}})},{threshold:.18});
+  obs.observe(fig);
+});
 </script>
 <!-- gloss-popover:start -->
 <style>
