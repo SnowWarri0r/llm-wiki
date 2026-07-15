@@ -405,21 +405,21 @@ B 在帧2的累计分是 4+2=6；走到帧3：继续 B 得 6+4=<span class="dim"
 
 <h2 id="s6"><span class="num">§ 06</span>随机时长：随机到底从哪来</h2>
 
-<p>推理时没有真实录音，MAS 无从搜索，因此模型必须只看文字，决定每个音素占多少帧。时长 <code>d</code><a class="jr" href="#g-08">8</a> 不是一句话的总时长，而是<strong>逐音素的整数序列</strong>：<code>d=[2,4,3]</code> 表示三个音素分别占 2、4、3 帧。普通预测器对同一句话永远给一个答案；VITS 的随机时长预测器<a class="jr" href="#g-11">11</a>学的是条件分布 <code>pθ(d|c_text)</code>——这句话通常有哪些节奏、各有多常见。</p>
+<p>推理时没有真实录音，MAS 无从搜索，因此模型必须只看文字，决定每个音素占多少帧。时长 <code>d</code><a class="jr" href="#g-08">8</a> 不是一句话的总时长，而是<strong>逐音素的整数序列</strong>：<code>d=[2,4,3]</code> 表示三个音素分别占 2、4、3 帧。普通预测器只会猜一组数；VITS 的随机时长预测器<a class="jr" href="#g-11">11</a>则会学习一整套可能性：文字不变时，可能出现哪些时长组合，每种组合有多大概率。</p>
 
-<div class="note"><span class="l">先拆掉最容易误会的一点</span>训练时的 <code>u、ν</code> 是为了让离散整数能交给连续 Flow 学；它们不是推理时直接拿来“随机改时长”的骰子。推理阶段真正重新掷的是另一份高斯噪声。</div>
+<div class="note"><span class="l">先分清两次抽样</span>训练时生成 <code>u、ν</code>，是为了把整数时长换成 Flow 能处理的连续数。推理时不会拿它们直接修改时长；真正决定这次说快还是说慢的，是新抽到的高斯噪声。</div>
 
 <figure id="fig-sdp-core">
-  <figcaption><span>FIG 07 · 训练辅助随机与推理采样随机，是两条不同路线</span><span class="fnum">TWO SOURCES OF NOISE</span></figcaption>
+  <figcaption><span>FIG 07 · 训练时处理整数，推理时采样节奏：两次抽样不是一回事</span><span class="fnum">TWO SOURCES OF NOISE</span></figcaption>
   <div class="sdp-lanes">
     <div class="sdp-lane train-lane">
       <b>训练 · 已知正确时长 d</b>
-      <p>辅助后验 <code>qφ</code> 同时看文字和 MAS 答案，采出 <code>u、ν</code>，把整数标签改造成 Flow 能算密度的连续二通道表示。</p>
+      <p><code>qφ</code> 同时看文字和 MAS 答案，再采出 <code>u、ν</code>。整数时长由此变成两行连续数，Flow 才能计算它的概率。</p>
       <div class="pipe">d=[2,4,3]<br>u=[.2,.6,.1] → d−u=[1.8,3.4,2.9]<br>ν=[.5,−.7,.2] → 与 d−u 拼接</div>
     </div>
     <div class="sdp-lane infer-lane">
       <b>推理 · 没有正确时长 d</b>
-      <p><code>qφ</code> 整个下班。固定同一份文本条件，采高斯噪声 <code>e</code>，让主 Flow 反向运行，最后把连续时长取整。</p>
+      <p>推理时不再使用 <code>qφ</code>。文本保持不变，重新抽一份高斯噪声 <code>e</code>，再把时长 Flow 倒着走，最后将连续时长取整。</p>
       <div class="pipe">e∼N(0,I) → inverse Flow → log w<br>→ exp → w → ceil(w) → 整数帧数</div>
     </div>
   </div>
@@ -428,15 +428,15 @@ B 在帧2的累计分是 4+2=6；走到帧3：继续 B 得 6+4=<span class="dim"
   <div class="sdp-steps">
     <div class="sdp-step"><b>真实答案</b><strong>d=[2,4,3]</strong><span>MAS 数出的逐音素帧数</span></div>
     <div class="sdp-step why"><b>去量化</b><strong>u=[.2,.6,.1]</strong><span>每项都在 [0,1)，不跨整数区间</span></div>
-    <div class="sdp-step"><b>连续时长</b><strong>[1.8,3.4,2.9]</strong><span>d−u 把整数点摊成小区间</span></div>
-    <div class="sdp-step why"><b>增广坐标</b><strong>ν=[.5,−.7,.2]</strong><span>给标量多添一条塑形轴</span></div>
+    <div class="sdp-step"><b>连续时长</b><strong>[1.8,3.4,2.9]</strong><span>d−u 把整数点摊成连续区间</span></div>
+    <div class="sdp-step why"><b>多加一维</b><strong>ν=[.5,−.7,.2]</strong><span>每个音素由 1 个数变成 2 个数</span></div>
     <div class="sdp-step latent"><b>自检</b><strong>ceil(d−u)=d</strong><span>[1.8,3.4,2.9] 仍还原成 [2,4,3]</span></div>
   </div>
 
-  <p>去量化变量 <code>u</code><a class="jr" href="#g-09">9</a> 与 <code>d</code> 同形状，每项限制在 <code>[0,1)</code>；所以 <code>d−u</code> 虽然连续，向上取整仍能找回原标签。增广变量 <code>ν</code><a class="jr" href="#g-10">10</a> 也与 <code>d</code> 同形状，但它最后不会被当作时长输出，只是借给可逆 Flow 的辅助坐标轴。</p>
+  <p>去量化变量 <code>u</code><a class="jr" href="#g-09">9</a> 与 <code>d</code> 同形状，每项限制在 <code>[0,1)</code>；所以 <code>d−u</code> 虽然变成了小数，向上取整后仍是原标签。增广变量 <code>ν</code><a class="jr" href="#g-10">10</a> 也与 <code>d</code> 同形状。它只帮 Flow 表示更复杂的分布，最后不会作为时长输出。</p>
 
   <h3>公式路线图：目标 → 难点 → 下界 → 损失</h3>
-  <p>目标是让主 Flow 只看文本时，也愿意给真实时长 <code>d</code> 高概率，即提高 <code>log pθ(d|c_text)</code>。难点是精确计算它要把所有可能的 <code>u、ν</code> 都积分一遍。训练便用一个容易采样的辅助后验 <code>qφ</code> 提议几组 <code>u、ν</code>，计算可训练的下界：</p>
+  <p>我们真正想算的是 <code>log pθ(d|c_text)</code>：只给文字时，模型认为真实时长 <code>d</code> 出现的概率有多大。精确计算它，需要把 <code>u、ν</code> 的所有可能取值都积分进去，实际训练时太贵。VITS 便用 <code>qφ</code> 抽几组 <code>u、ν</code>，改算下面这个下界：</p>
 
   <div class="math-dark"><span class="green">想要但难直接算：</span> log p<sub>θ</sub>(d | c<sub>text</sub>)<br><br>
   log p<sub>θ</sub>(d | c<sub>text</sub>) ≥ E<sub>qφ(u,ν|d,c<sub>text</sub>)</sub> [<br>
@@ -446,11 +446,11 @@ B 在帧2的累计分是 4+2=6；走到帧3：继续 B 得 6+4=<span class="dim"
 
   <div class="formula-key">
     <div><b>d / c_text</b><br>MAS 给出的真实时长 / 文本编码条件</div>
-    <div><b>θ / pθ</b><br>主 Flow 参数 / 主 Flow 给连续表示打出的密度</div>
-    <div><b>φ / qφ</b><br>训练辅助后验参数 / 根据 d 和文本提出 u、ν</div>
+    <div><b>θ / pθ</b><br>时长 Flow 的参数 / 计算 [d−u,ν] 在当前模型下的概率密度</div>
+    <div><b>φ / qφ</b><br>训练专用采样器的参数 / 已知文本和正确时长后，采样 u、ν</div>
     <div><b>E_q</b><br>从 q 多采几次，把括号里的分数取平均</div>
-    <div><b>第一项 log p</b><br>奖励主 Flow 给真实时长附近的连续表示高密度</div>
-    <div><b>第二项 −log q</b><br>校正样本由 q 挑选造成的偏差，不能冒充 p 的能力</div>
+    <div><b>第一项 log p</b><br>[d−u,ν] 在时长 Flow 看来有多常见，越大越好</div>
+    <div><b>第二项 −log q</b><br>u、ν 是 q 有针对性抽出的，因此要扣掉这层采样偏差</div>
   </div>
 
   <div class="calc-check"><strong>拿一个样本手算下界</strong><pre>假设 pθ(d−u,ν|c)=0.20，qφ(u,ν|d,c)=0.50
@@ -458,9 +458,9 @@ B 在帧2的累计分是 4+2=6；走到帧3：继续 B 得 6+4=<span class="dim"
           = −1.609 − (−.693) = −.916
 L_dur     = −分数 = .916
 
-暂时固定 q=.50；若主 Flow 把 p 提高到 .40：
+先固定 q=.50，只看 p 的变化；若训练后 p 升到 .40：
 新分数 = log .40 − log .50 = −.223
-新损失 = .223  ✓  .916 → .223，主 Flow 更认可真实时长</pre></div>
+新损失 = .223  ✓  .916 → .223，模型给这份数据的概率更高</pre></div>
 
   <h3>推理路线：真正让每次时长不同的是高斯噪声</h3>
   <div class="math-dark"><span class="gold">噪声 A</span> → log w=[.59,.92,.69]<br>
@@ -469,9 +469,9 @@ L_dur     = −分数 = .916
   <span class="gold">噪声 B</span> → log w=[.80,1.31,.92]<br>
   → exp → w≈[2.23,3.71,2.51]<br>
   → ceil(w)=<span class="green">[3,4,3]</span><br><br>
-  <span class="dim">同一文本条件不变，只换高斯噪声，才得到另一套节奏。数字是为解释代码路径而设的可手算示例。</span></div>
+  <span class="dim">文字不变，只换一份高斯噪声，最后的时长就可能不同。这里的数字只用于走通计算。</span></div>
 
-  <p>官方实现先由 SDP 输出 <code>log w</code>，再执行 <code>w=exp(log w)×length_scale</code> 和 <code>ceil(w)</code>。<code>noise_scale_w</code> 调采样变化幅度，<code>length_scale</code> 则整体拉长或压短时长。文本条件在 SDP 入口做 stop-gradient：时长模块能学自己的参数，却不能拖着文本编码器来迁就自己。</p>
+  <p>官方实现先让 SDP 输出 <code>log w</code>，再计算 <code>w=exp(log w)×length_scale</code>，最后执行 <code>ceil(w)</code>。<code>noise_scale_w</code> 控制每次采样能偏离多远，<code>length_scale</code> 则把整句话统一拉长或缩短。SDP 接收文本表示时还会做 stop-gradient：时长损失只更新时长预测器，不继续传回文本编码器。</p>
 </figure>
 
 <figure id="fig-sdp">
@@ -480,7 +480,7 @@ L_dur     = −分数 = .916
     <!-- divider -->
     <line class="vt-rev d1" x1="360" y1="40" x2="360" y2="196" stroke="#bfb398" stroke-width="1" stroke-dasharray="4 4"/>
     <!-- LEFT deterministic -->
-    <text class="vt-rev d1" x="175" y="30" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#9b2c2c">确定性 · 每次都给定值</text>
+    <text class="vt-rev d1" x="175" y="30" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#9b2c2c">确定性 · 每次都是同一个数</text>
     <text class="vt-rev d2" x="60" y="70" text-anchor="start" font-size="9" fill="#3a3128">音素 → 永远输出 5 帧</text>
     <line class="vt-rev d2" x1="60" y1="170" x2="330" y2="170" stroke="#7a6f5d" stroke-width="1"/>
     <g class="vt-rev d2" fill="#c98a8a">
@@ -503,16 +503,16 @@ L_dur     = −分数 = .916
 
 <h2 id="s7"><span class="num">§ 07</span>GAN：先把 G、D 和三条损失认清</h2>
 
-<p>mel L1 会奖励整体声学轮廓，但多种高频细节平均后仍可能得到相近 mel，听起来却发糊。VITS 因此增加一组会挑波形毛病的判别器。下面的括号只是<strong>把输入送进网络</strong>，不用预先知道 GAN 的符号习惯。</p>
+<p>只用 mel L1，不同的高频细节很容易被平均掉，声音听起来会发闷。VITS 因此加入一组判别器，专门从波形里挑错。先把式子里的对象认清：<code>G(z)</code>、<code>D(y)</code> 中的括号，只表示<strong>把输入送进网络</strong>。</p>
 
 <div class="gan-roles">
   <div class="gan-role"><b>z</b><span>后验编码器从真实语音得到的潜变量，是生成波形所需的声音信息。</span></div>
   <div class="gan-role"><b>G 与 G(z)</b><span><code>G</code> 是生成器，也就是波形解码器；<code>G(z)</code> 是它造出的假波形。</span></div>
-  <div class="gan-role"><b>y</b><span>数据集中的真实波形，是这一轮训练的标准答案。</span></div>
+  <div class="gan-role"><b>y</b><span>数据集中的真实波形，用来和生成波形作比较。</span></div>
   <div class="gan-role"><b>D 与 D(x)</b><span><code>D</code> 是判别器；<code>D(x)</code> 是它看完波形 <code>x</code> 后给出的局部得分。</span></div>
 </div>
 
-<p>VITS 使用多周期判别器<a class="jr" href="#g-12">12</a>：<code>D</code> 实际是六个子判别器的集合，输出的也是局部得分图，并非严格的真假概率。为了看懂公式，先把所有输出压成一个分数：least-squares GAN 让判别器把真声推向 <code>1</code>、假声推向 <code>0</code>；生成器则想让自己的假声也被打成 <code>1</code>。</p>
+<p>VITS 使用多周期判别器<a class="jr" href="#g-12">12</a>：<code>D</code> 实际包含六个子判别器，输出的是一张局部得分图，并非严格的真假概率。先把这些输出简化成一个分数来看：训练判别器时，真声的目标分数是 <code>1</code>，假声是 <code>0</code>；训练生成器时，假声的目标也改成 <code>1</code>。</p>
 
 <figure id="fig-period">
   <figcaption><span>FIG 09 · period=3：把同相位采样点排成列，周期破绽更显眼</span><span class="fnum">MULTI-PERIOD D</span></figcaption>
@@ -524,29 +524,29 @@ L_dur     = −分数 = .916
   </div>
   <div class="math-dark"><span class="cyan">练判别器：</span> L<sub>adv</sub>(D) = E[(D(y)−1)² + D(G(z))²]<br>
 <span class="gold">练生成器：</span> L<sub>adv</sub>(G) = E[(D(G(z))−1)²]<br><br>
-<span class="dim">E 表示对 batch、局部得分与多个子判别器做平均或求和。两条式子不会在同一步更新同一组参数。</span></div>
+<span class="dim">E 表示把 batch 里的样本和局部得分取平均；六个子判别器的损失再加起来。两条式子更新的网络不同。</span></div>
   <p style="font-size:14px">判别周期是 [1,2,3,5,7,11]。period=1 直接看原始波形，其余周期专门抓嗓音重复结构中的破绽。</p>
 </figure>
 
 <h3>为什么同一个假声分数，一会儿要去 0，一会儿要去 1</h3>
 
 <div class="gan-rounds">
-  <div class="gan-round d-round"><b>第一回合 · 只更新 D</b><p>假设 <code>D(y)=0.8</code>、<code>D(G(z))=0.3</code>：</p><p><code>L_adv(D)=(.8−1)²+.3²=.04+.09=.13</code></p><p>第一项催真声分数靠近 1；第二项催假声分数靠近 0。此时 <code>G(z)</code> 会 detach，不更新 G。</p></div>
+  <div class="gan-round d-round"><b>第一回合 · 只更新 D</b><p>假设 <code>D(y)=0.8</code>、<code>D(G(z))=0.3</code>：</p><p><code>L_adv(D)=(.8−1)²+.3²=.04+.09=.13</code></p><p>第一项让真声分数靠近 1；第二项让假声分数靠近 0。此时 <code>G(z)</code> 会 detach，不更新 G。</p></div>
   <div class="gan-round g-round"><b>第二回合 · 固定 D，只更新 G</b><p>仍从假声分数 <code>0.3</code> 出发：</p><p><code>L_adv(G)=(.3−1)²=.49</code></p><p>若 G 改进后让固定的 D 打出 <code>0.7</code>，损失便降成 <code>(.7−1)²=.09</code>。</p></div>
 </div>
 
-<p>这不是目标打架，而是裁判和选手轮流训练：第一回合让 <code>D</code> 更会分真假，第二回合让 <code>G</code> 更会制造能骗过当前裁判的细节。下一批数据再从头较量。</p>
+<p>这两个目标并不冲突，因为每一步更新的网络不同：先练 <code>D</code> 分辨真假，再固定 <code>D</code> 训练 <code>G</code>。两个步骤交替进行。</p>
 
 <h3>第三条损失：别只盯裁判最后报的一个分数</h3>
 
-<p>最终真假分数太粗，所以生成器还要承担<strong>特征匹配损失</strong><a class="jr" href="#g-13">13</a>：</p>
+<p>最后的真假分数太粗，所以训练生成器时还会加一项<strong>特征匹配损失</strong><a class="jr" href="#g-13">13</a>：</p>
 
 <div class="math-dark">L<sub>fm</sub>(G) = E[ Σ<sub>l=1..T</sub> (1/N<sub>l</sub>) · ||D<sub>l</sub>(y)−D<sub>l</sub>(G(z))||<sub>1</sub> ]</div>
 
 <div class="formula-key">
   <div><b>l / T</b><br>判别器第几层 / 一共比较多少层</div>
-  <div><b>D_l(x)</b><br>波形 x 经过判别器第 l 层后的中间特征图，不是一个新判别器</div>
-  <div><b>N_l</b><br>该层特征元素个数；除以它得到层内平均差，避免大图天然占便宜</div>
+  <div><b>D_l(x)</b><br>波形 x 经过判别器第 l 层后的中间特征图，不是新的判别器</div>
+  <div><b>N_l</b><br>该层有多少个特征值；除以它后比较平均误差，避免元素多的层占得太重</div>
   <div><b>||a−b||₁</b><br>对应元素的绝对差全部相加</div>
 </div>
 
@@ -558,7 +558,7 @@ L_dur     = −分数 = .916
 
 L_fm(G) = .5 + .3 = .8</pre></div>
 
-<p>它要求生成器不光骗过最终裁判，还要让裁判逐层看到的周期、局部纹理和波形形状接近真声。训练 <code>G</code> 时，对抗损失和特征匹配一起使用；训练 <code>D</code> 时不使用特征匹配。</p>
+<p>这项损失要求生成波形不只拿到一个高分，还要让判别器每一层提取到的周期、纹理和局部形状都接近真声。它只用来训练 <code>G</code>，不参与 <code>D</code> 的更新。</p>
 
 <div class="note"><span class="l">官方训练顺序</span><code>① G(z).detach() → L_adv(D) → 只更新 D</code><br><code>② 重新算 G(z) → L_adv(G)+L_fm(G)+其他生成侧损失 → 更新 G 与生成侧模块</code></div>
 
@@ -661,11 +661,11 @@ L_fm(G) = .5 + .3 = .8</pre></div>
     <li id="g-06"><span class="term">体积保持</span> · 变换的雅可比行列式绝对值为 1；VITS 的先验耦合层不输出 scale。</li>
     <li id="g-07"><span class="term"><a href="../concepts/monotonic-alignment-search.html">MAS</a></span> · 用动态规划找最高似然的单调音素—帧路径，无需外部逐帧标注。</li>
     <li id="g-08"><span class="term">时长 d</span> · 一个音素占的声学帧数。训练由 MAS 数出来，推理由时长预测器生成。</li>
-    <li id="g-09"><span class="term">去量化 u</span> · 训练辅助后验产生的 [0,1) 连续变量；d−u 把整数摊开，但向上取整仍能无损还原 d。它不是推理阶段直接改时长的噪声。</li>
-    <li id="g-10"><span class="term">增广变量 ν</span> · 训练时借给标量时长的一条辅助坐标轴，让二维可逆 Flow 比一维 Flow 更有塑形空间；最终不会当作时长输出。</li>
+    <li id="g-09"><span class="term">去量化 u</span> · 训练时采样的 [0,1) 小数。d−u 会把整数时长摊成连续区间，但向上取整后仍能还原 d。推理时不会拿 u 直接修改时长。</li>
+    <li id="g-10"><span class="term">增广变量 ν</span> · 给每个时长多配一个数，让一维数据变成二维，Flow 因而能表示更复杂的分布。ν 最后不会作为时长输出。</li>
     <li id="g-11"><span class="term"><a href="../concepts/stochastic-duration-predictor.html">随机时长预测器</a></span> · 学“同一文本可能有哪些时长组合”。推理时重采高斯噪声，经逆向 Flow、exp 与 ceil 得到另一套整数时长。</li>
     <li id="g-12"><span class="term">多周期判别器</span> · 按多个周期折叠一维波形，让卷积容易发现嗓音重复结构中的破绽。</li>
-    <li id="g-13"><span class="term">特征匹配</span> · 比较真假波形在判别器各中间层的平均绝对差，让生成器对齐周期、纹理与局部形状，而不只追一个最终真假分数。</li>
+    <li id="g-13"><span class="term">特征匹配</span> · 比较真假波形经过判别器各层后有多大差别。这样生成器不仅要拿到高分，还得把周期、纹理和局部形状做得像真声。</li>
     <li id="g-14"><span class="term">线性谱 vs mel 谱</span> · 线性谱保留均匀频率分辨率；mel 按听觉压缩高频。后验读线性谱，重建比 80 维 mel。</li>
     <li id="g-15"><span class="term">非自回归</span> · 不逐帧串行生成；已知时长后，整段 latent 与波形可并行处理。</li>
     <li id="g-16"><span class="term">MOS</span> · 听众自然度评分的平均值；需要同时看置信区间，接近不等于证明完全无差。</li>
