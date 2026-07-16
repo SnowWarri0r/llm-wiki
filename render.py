@@ -662,6 +662,8 @@ def make_card(e) -> str:
     stext = entry_search_text(e)
     pills = [f'<span class="pill dom dom-{html.escape(d)}">{html.escape(d)}</span>' for d in doms]
     pills.append(f'<span class="pill">{e.meta.get("type", e.category[:-1] if e.category.endswith("s") else e.category)}</span>')
+    if e.meta.get("_chapters"):
+        pills.append(f'<span class="pill">{e.meta["_chapters"]} 章</span>')
     if "updated" in e.meta:
         pills.append(f'<span class="pill">updated {html.escape(str(e.meta["updated"]))}</span>')
     if "ingested" in e.meta:
@@ -786,6 +788,20 @@ COLOPHON = ('<div class="colophon">\n'
 
 def render_category_page(cat: str, items: list) -> str:
     items = sorted(items, key=entry_date, reverse=True)
+    book_note = ""
+    if cat == "books":
+        # 书架视图：只把"书"当卡片，章节收进各自书页的目录里。
+        chap_count: dict = {}
+        for e in items:
+            if e.meta.get("type") == "chapter":
+                b = e.meta.get("book")
+                chap_count[b] = chap_count.get(b, 0) + 1
+        overviews = [e for e in items if e.meta.get("type") == "book"]
+        for e in overviews:
+            e.meta["_chapters"] = chap_count.get(e.slug, 0)
+        n_chapters = sum(chap_count.values())
+        items = overviews
+        book_note = f"{len(items)} 本书 · {n_chapters} 章精讲"
     cards = "\n".join(make_card(e) for e in items)
     dom_count: dict = {}
     for e in items:
@@ -799,11 +815,11 @@ def render_category_page(cat: str, items: list) -> str:
     label = CATEGORY_LABELS[cat]
     return (
         _doc_head(f"个人 wiki · {label}", LIST_CSS)
-        + _masthead(f"{label} · {len(items)} 条目")
+        + _masthead(f"{label} · {book_note or str(len(items)) + ' 条目'}")
         + '\n<section class="hero">\n'
           '  <div class="issue"><a href="index.html" style="color:var(--brick);text-decoration:none;">← index</a> · 按时间倒序</div>\n'
           f'  <h1 class="title">{html.escape(label)}</h1>\n'
-          f'  <p class="dek">共 {len(items)} 条，最新在上。</p>\n</section>\n'
+          f'  <p class="dek">{html.escape(book_note) + "，每本点进书页看章节目录。" if book_note else "共 " + str(len(items)) + " 条，最新在上。"}</p>\n</section>\n'
         + '\n<div class="search">\n'
           '  <input id="q" type="search" placeholder="搜索 标题 / 概念 / 术语…" autocomplete="off" spellcheck="false" />\n'
           f'  <div class="chips">{chips_html}</div>\n</div>\n'
@@ -823,14 +839,25 @@ def render_index(entries: list) -> str:
         its = by_cat[cat]
         if not its:
             continue
+        count = len(its)
+        desc = CATEGORY_DESC.get(cat, "")
+        if cat == "books":
+            # 书按"本"计数，章节数放进描述，别把 N 本书显示成 N 条
+            count = sum(1 for e in its if e.meta.get("type") == "book")
+            n_chap = sum(1 for e in its if e.meta.get("type") == "chapter")
+            desc = f"{count} 本书 · {n_chap} 章精讲"
         cards.append(
             f'<a class="catcard" href="{cat}.html">'
-            f'<span class="n">{len(its)}</span>'
+            f'<span class="n">{count}</span>'
             f'<span class="lbl">{html.escape(CATEGORY_LABELS[cat])}</span>'
-            f'<span class="d">{html.escape(CATEGORY_DESC.get(cat, ""))}</span></a>'
+            f'<span class="d">{html.escape(desc)}</span></a>'
         )
     cards_html = "\n".join(cards)
-    recent = sorted(entries, key=entry_date, reverse=True)[:14]
+    # "最近更新"里书只显示书本身，不让一本书的几十章刷屏
+    recent = sorted(
+        [e for e in entries if e.meta.get("type") != "chapter"],
+        key=entry_date, reverse=True,
+    )[:14]
     rows = []
     for e in recent:
         href = f"{e.category}/{e.slug}.html" if e.bespoke_path else f"{e.category}.html"
