@@ -8,70 +8,124 @@ authors: Krea AI · 2026
 year: 2026
 ---
 
-# Krea 2 · 不追一种"标准好看",撑开整个审美空间
+# Krea 2 · 先保住视觉世界，再教模型怎么走
 
-Krea 2 是 Krea AI 2026-06-23 放出的文生图模型技术报告(K2 Raw + K2 Turbo 开放权重)。论点跟主流反着来:现在的图像模型技术都很强了,可它们**收敛到了一小撮默认审美**——一看就是"AI 味"那种锐利、油润、讨喜的样子。Krea 的主张是图像生成应该是**探索性的媒介**:既要表达力广(能横跨很多种审美),又要可控(创作者能在里面导航),而不是把所有 prompt 都优化成同一张"精致默认图"。
+Krea 2 是 Krea AI 发布的 12B 文生图 DiT。它最值得学的不是某个孤立的注意力改造，而是一条贯穿数据、训练和产品接口的主线：**预训练先保住尽可能宽的视觉分布，后训练再教模型沿着用户意图在这个分布里移动。**
 
 ## 一句话
-**主流模型都在卷"单一默认审美"并卷到饱和;Krea 2 反过来——数据上拒绝按美学分过滤、拒绝 AI 合成图,训练上用六段流水线(预训→中训→SFT→偏好优化→多奖励 RL→蒸馏)把审美空间撑宽,还自创 STPO(稳住 DPO 的偏好优化)和 prompt 级 rubric 奖励,目标是"多样且可控",不是"一种好看"。**
 
-## 它要解决的痛点
-- **模型审美收敛**:技术指标都满了,但顶尖模型画出来越来越像同一种风格(高饱和、强对比、糖水感)。创作者要的是"能探索很多种审美",不是"一种最讨喜的"。
-- **数据过滤反而注入偏见**:业界常用美学打分(aesthetic score)和画质评估(IQA)模型筛数据,Krea 认为这套**隐式地把模型口味锁死**——把"不讨喜但真实"的图全删了,模型就再也学不到那部分分布。
-- **AI 合成图污染分布**:很多管线拿 AI 生成图扩充训练集。Krea 发现哪怕掺一点点,模型质量就被**封顶**了——合成图"更好学",模型会偷懒往那边塌。
-- **偏好优化会跑偏**:直接用 DPO 做偏好对齐时,模型可能把"赢的样本"和"输的样本"概率**一起压低**(只要差距拉大 loss 就降),结果整体质量下滑。
+Krea 2 把“更好看”拆成三个不同问题：预训练负责铺地图（广覆盖、不过度按美学筛选、预训练不使用 AI 生成图），SFT / PO / RL 负责装方向盘（审美、提示遵循、文字和结构），prompt expander 与 style reference 负责让用户说得清方向，TDM 最后把长去噪路线压成 Turbo 的 8 步推理。
 
-## 核心贡献
-1. **数据策展哲学的反转**:[[generative-data-curation]] —— **不**按美学分过滤,只删重复/打错 caption/有害偏见/过于复杂不适合低分辨率建模的;并**全程 0 AI 合成图**。核心信条:"只要 caption 准确描述了图,哪怕这张图本身不讨喜,也对训练有用"。
-2. **六段训练流水线**:预训(256→512→1024 渐进)→ 中训(自上而下按域策展,~500 万维基概念覆盖)→ SFT(小而精的人工审美集 + 模型合并)→ 偏好优化 PO → 多奖励 RL → 时间步蒸馏。每段各司其职,见图。
-3. **STPO —— 稳住的偏好优化**:[[direct-preference-optimization]] —— 报告自创的 DPO 变体(报告未给全称),加一个辅助损失 + 改 DPO 公式,专治"win/lose 概率一起掉"的策略发散。PO 分两步:先大规模合成偏好对(类 delta learning,保证多数对里至少有一个 on-policy 样本)初调,再用**纯人工标注**(自家熟悉模型脾性的人)校准。
-4. **多奖励 GRPO 式 RL + prompt 级 rubric 奖励**:[[grpo]] —— 四个奖励模型(通用美学 / 提示遵循 / 文字渲染 / 瑕疵与结构)一起推;rubric 奖励借鉴 [[rubric-based-evaluation]],把每个 prompt **拆成可验证的要求逐条判**,而不是让判官给一个笼统总分。整个 RL 阶段**不用 CFG**(保持 rollout 与训练分布一致,推理时再开)。
-5. **TDM 时间步蒸馏 + 双发布**:[[trajectory-distribution-matching]] —— 对比了 DMD/DMD2/Decoupled DMD/piFlow/APT,最后选 TDM(好调、超参少)。发布 **K2 Raw**(未蒸馏基座,给做微调/后训练研究的)和 **K2 Turbo**(引导+时间步双蒸馏,少步快出图)。
-6. **Prompt Expansion(防多样性塌缩)**:短用户输入扩成富 caption 的前置模型。SFT(从长 caption 反造用户 caption + 合成 thinking trace) + RL(GDPO 多奖励:图级 + prompt 级可验证 + 安全闸)。关键:expander 会塌成一种高奖励 house style,靠 **DINOv3 组内多样性奖励**(全程保活)压住;RL prompt 混硬例,挑"难但不绝望"的。
-7. **Style Reference(压内容泄漏)**:文字 + 一/多张参考图导风格,要多风格平滑混合 + 强度连续可调。难题是 style/content 边界模糊导致**内容泄漏**(参考图主体钻进结果)。做法:**新自监督训练** style 模块 + 偏好优化对齐。
-8. **罕见地摊开系统工程**:Kueue 调度 + Virtual Kubelet 外溢推理 + Packerman 把 dev 塞坏节点;observability 反直觉结论(InfiniBand fabric 是头号崩溃源 / GPU 利用率会骗人改看张量核 / <128 卡稳翻倍更崩 / 大规模无 run 跑过 24h);Weka 换 Ceph;krablet(PG 分片,208TB 元数据,FOR UPDATE SKIP LOCKED 把 DAG 当 DB 队列)。
-9. **未来路线**:MoE / native 2K-4K(稀疏注意力) / NVFP4 预训 / Muon;**MOPD**(多教师 on-policy 蒸馏:各域专家→密集监督蒸进一个学生,各域不打架 + 团队可并行);架构统一(VAE+DiT+文本编码+expander 合一,让研究像 LLM 那样并行)。
+## 先纠正四个容易读错的点
 
-## 架构速览
-- **主干**:多模态扩散 Transformer [[mmdit]] / [[diffusion-transformer]],用 [[flow-matching]] 训。
-- **注意力**:分组查询注意力 GQA + 门控 sigmoid 注意力;[[qk-rmsnorm]](QKNorm)+ 零中心 RMSNorm。
-- **MLP**:[[swiglu]] 4× 扩展。
-- **文本编码器**:[[qwen3-vl]](Qwen3-VL)多层特征聚合(受 Unifusion 启发)。
-- **自编码器**:Qwen-Image VAE + FLUX 2 VAE 做 latent。
-- **位置编码**:3D 轴向 [[rotary-position-embedding]](3D axial RoPE)。
-- **训练加速**:首个 256px epoch 用 iREPA 加速收敛后撤掉;低/中分辨率 8-bit 训练(提速 15-20%);LR 用 warmup-stable-decay + PMA(参数合并近似,效果接近 [[ema]] 但省显存)。
+1. **“0 AI 图”只限定预训练图像混合。** 报告随后明确使用合成偏好对、合成用户 caption 和合成 thinking trace；这不矛盾，因为它们属于后训练或 prompt-expander 训练。
+2. **Krea 不是完全不用美学过滤。** 高分辨率阶段仍会用画质与美学分删掉极差样本，只是不按分数过采样“更美”的图。
+3. **STPO 的完整公式没有公开。** 报告只披露它修改了 DPO 目标并加入辅助损失；可以准确解释 DPO 为什么会让 winner / loser 的似然一起下降，但不能把某个猜测的正则项写成 STPO 原式。
+4. **两个 VAE 不是串起来用。** 早期放大实验采用 Qwen Image VAE，较大的模型后来采用 FLUX 2 VAE；报告的汇总表把二者都列为最终实践，不代表一次前向要过两个 VAE。
 
-## 关键概念
-- [[generative-data-curation]] · 反美学分过滤 + 0 AI 数据:数据哲学是这报告的灵魂
-- [[siglip-semantic-dedup]] · 数据去重:删"语义重复"而非字节相同
-- [[hierarchical-kmeans-curation]] · 中训自上而下:FAISS 层级 k-means + VLM 逐簇审查
-- [[pagerank-entity-coverage]] · 维基 PageRank 取 top 90% ≈500 万实体校验覆盖
-- [[direct-preference-optimization]] · DPO 与 Krea 的 STPO 变体(治"win/lose 一起掉",含 DPOP 式修法)
-- [[prompt-expansion]] · 短输入扩富 caption;GDPO 多奖励 + 防多样性塌缩
-- [[dinov3-diversity-reward]] · 组内多样性奖励:防 prompt expander 塌成一种 house style
-- [[style-reference]] · 只迁风格不泄漏内容:自监督 + 偏好优化
-- [[trajectory-distribution-matching]] · TDM 少步蒸馏(K2 Turbo 的来源)
-- [[grpo]] · 多奖励 GRPO 式 RL 的底座(四个奖励 + rubric)
-- [[rubric-based-evaluation]] · prompt 级 rubric 奖励:把 prompt 拆成可验证项逐条判
-- [[mmdit]] / [[diffusion-transformer]] · 主干;[[flow-matching]] 训练目标
-- [[progressive-resolution-training]] · 256→512→1024 渐进训练
-- [[guidance-distillation]] / [[dmd-distillation]] · 蒸馏家族对照(K2 Turbo 同时做引导+时间步蒸馏)
+## 核心主线：铺地图 → 装方向盘 → 压路线
 
-## 我的批注 / 疑问
-- 最值得记的不是某个 trick,而是**整篇的逆向品味**:别人都在"把图变得更讨喜",Krea 在"别把不讨喜的图删掉"。这跟 [[qwen-image-bench]] 是一体两面——一个说"对齐饱和后差异在真实感和创意",一个说"想要多样就别在数据端先把多样性筛没了"。
-- **0 AI 数据**这条很硬核也很反潮流。逻辑是合成图"更好学"→ 模型会塌向它 → 给质量封了个顶。这等于说:用模型自己的输出喂模型,是在给后代近亲繁殖。
-- STPO 的动机讲得很实在:DPO 只看"赢减输"的差,模型可以**两个都压低、只要差距变大**就降 loss——结果赢的样本概率也掉了,等于"为了拉开差距把好的也练差了"。加辅助损失顶住赢样本的绝对概率,是对症的。
-- **RL 不开 CFG** 这点容易被忽略但很关键:rollout(采样生成图)和训练如果一个开 CFG 一个不开,两者分布就错位,RL 信号会脏。代价是推理时再补 CFG。
-- 待查:STPO 的辅助损失具体长什么样(报告只说"加了一个");四个奖励之间怎么加权;参数量始终没公开。
-- 工程侧有意思的两条:把数仓自己写了个 PostgreSQL 系(krablet,无锁队列每秒数万次竞争 UPSERT);"张量核利用率"是判断训练是否稳的最可靠信号,且 GPU 翻倍带来的不稳定性远超预期(分布式训练的隐性税)。
+- **铺地图：数据与预训练。** 不用单一审美打分器裁掉分布尾部；OCR + 元数据 + captioner 生成信息密集的长配文；256→512→1024 渐进训练。
+- **补地图：中训。** 层级 k-means 保住长尾视觉概念，SigLIP 语义去重，用 Wikipedia PageRank 和全文检索检查约 500 万个可表示实体的覆盖。
+- **装方向盘：SFT / PO / RL。** SFT 用小而精的审美数据定调；PO 用合成偏好对初调、纯人工偏好校准；RL 用美学、提示遵循、文字渲染、瑕疵结构四类奖励继续优化。
+- **翻译用户意图。** Prompt expander 把短而模糊的用户输入变成长 caption；style-reference 模块让参考图提供风格而尽量不泄漏主体内容。
+- **压缩路线。** TDM 不只匹配最终干净图的分布，还在多个时间步做分布匹配；发布 Raw 基座与 8 步 Turbo。
 
-## 跟 wiki 里其他 paper 的关系
-- [[qwen-image-bench]] · 一体两面:它量"创造性",Krea 2 在生产端保住创造性的来源(数据多样)
-- [[flux-1]] / [[stable-diffusion-3-5]] / [[qwen-image-2]] / [[ideogram-4]] · 同代文生图;同走 [[mmdit]]+[[flow-matching]],但 Krea 2 的差异化在数据哲学和 PO/RL 后训练
-- [[rae-dit]] / [[dit]] · 主干谱系上游
-- [[ppo]] / [[grpo]] / [[rlhf]] · RL 后训练的方法族
+## 架构：12B 单流 DiT，设计重点是稳定、效率、简单
 
-## 历史定位
-- 2023-24 **SD / SDXL / 早期 DiT** · 把文生图做到"能用",卷技术指标
-- 2024-25 **FLUX / SD3.5 / Ideogram / Qwen-Image** · MMDiT + flow matching 成主流,画质对齐双双拉满
-- 2026 **Krea 2(本篇)** · 在指标饱和后转向"审美多样性 + 可控性",用数据哲学(反过滤、0 合成)+ PO/RL 后训练(STPO + 多奖励 rubric)做差异化;Artificial Analysis 文生图榜前十、独立实验室第二
+- 单流 Transformer：文字 token 与图像 token 共用注意力和 MLP 权重；混合流略好，但最终为简单性选单流。
+- GQA 降低计算与通信成本，gated sigmoid attention 主要改善训练稳定性。
+- SwiGLU 4×；zero-centered RMSNorm + QKNorm；3D axial RoPE。
+- 时间步调制从每块一套 MLP 简化成轻量 bias。传统调制 MLP 可占总参数 20–30%，这里把容量还给主干。
+- Qwen3-VL 作为单一文本编码器；跨层聚合让模型自己挑粗粒度到细粒度文字特征，并加轻量双向层削弱自回归表征偏置。
+- DC-AE 压缩率高但重建误差给细节设上限；早期采用 Qwen Image VAE，较大模型后采用 FLUX 2 VAE。
+
+## Rectified flow 到底在学什么
+
+报告说 Krea 2 用标准 rectified-flow loss 和 `v` 参数化。按常见约定：
+
+\[
+x_t=(1-t)x_0+t\varepsilon,\qquad v^*=\varepsilon-x_0,
+\]
+
+\[
+\mathcal L_{\mathrm{RF}}=\mathbb E_{x_0,\varepsilon,t}\left[\lVert v_\theta(x_t,t,c)-v^*\rVert_2^2\right].
+\]
+
+`x₀` 是真实图像 latent，`ε` 是噪声，`t∈[0,1]` 是当前位置，`xₜ` 是两者之间的点，`c` 是文字条件，`v*` 是从图指向噪声的恒定速度，`vθ` 是模型预测。训练不是让模型一次画完，而是让它在任意中间位置都知道该往哪里走；推理时从噪声反向积分回图像。
+
+标量例：`x₀=2, ε=-1, t=.25`，则 `xₜ=.75×2+.25×(-1)=1.25`，目标速度 `v*=-3`。若模型预测 `-2.6`，这一样本损失是 `(-2.6+3)²=.16`。梯度会把预测往 `-3` 拉近。
+
+## 训练流水线
+
+1. **预训练**：256→512→1024；第一轮 256px 用 iREPA，256/512 用 8-bit 训练获得 15–20% 加速，1024 起回 bf16。
+2. **中训**：在 SFT 前补高分辨率、领域覆盖和文字渲染等能力；报告认为这是最后一个适合增加基础能力的阶段。
+3. **SFT**：用少量人工精选的高审美图修正早期 checkpoint 的高饱和与纹理问题；领域模型合并成通用模型。
+4. **PO**：先用大规模合成偏好对初调，再用熟悉模型特性的内部人工偏好校准；多数偏好对至少含一个 on-policy 样本。
+5. **RL**：多奖励 GRPO-style 方法；最终美学奖励采用高效的 pointwise Bradley–Terry reward model。
+6. **可选蒸馏**：同时做 guidance distillation 与 timestep distillation，得到少步 Turbo。
+
+## DPO 为什么会“两个都降”
+
+标准 DPO 只关心策略相对参考模型时，winner 与 loser 的**差距**是否变大：
+
+\[
+\mathcal L_{\mathrm{DPO}}=-\log\sigma\!\left(\beta[(\log p_\theta(y_w|c)-\log p_\theta(y_l|c))-(\log p_{\rm ref}(y_w|c)-\log p_{\rm ref}(y_l|c))]\right).
+\]
+
+`c` 是 prompt，`y_w/y_l` 是偏好图与落选图，`pθ` 是正在训练的模型，`p_ref` 是冻结参考模型，`β` 控制偏好信号强度。若参考差距为 0，一次“好更新”可让 log-likelihood 从 `(-2,-2)` 变为 `(-1.5,-3)`，差距为 1.5；另一次“偷懒更新”变成 `(-2.5,-4.5)`，虽然 winner 也降了，差距却达到 2。DPO 会更喜欢后者。Krea 观察到这种漂移会在后续阶段表现成高频伪影，于是提出 STPO。**但报告没有给 STPO 全式，因此只能确认其目标是减少这种 divergence，不能确认辅助项具体怎样约束 winner。**
+
+## 多奖励 RL：奖励决定方向，prompt 池决定算力花在哪
+
+- 四个裁判：通用美学、提示遵循、文字渲染、瑕疵与结构。
+- 美学 reward model 比过 pointwise Bradley–Terry 与 pairwise VLM judge，最终采用前者；它高效、无候选位置偏差，适合大量 rollout 打分。
+- Prompt-specific rubric 把“红衣女孩、两只猫、雨夜”等要求拆开逐项核验，避免一个笼统总分掩盖局部失败。
+- Prompt 池优先选择“难但并非无解”且组内分数有方差的样本；太容易、总失败、或同组全一样都没有多少学习信号。
+- RL 的 rollout 和训练都不开 CFG，避免分布错位并节省计算；推理时 CFG 仍可作为控制旋钮。
+
+用四张图的总奖励 `R=[.35,.55,.75,.35]` 举例，均值 `.50`，总体标准差约 `.166`，组内标准化 advantage 约为 `[-.90,.30,1.51,-.90]`。第三张得到最强正向更新，第一和第四张被压低。这里的数字只是说明 GRPO-style 的组内相对信号；Krea 没公开四类奖励的权重与完整策略损失。
+
+## Prompt Expansion 与 Style Reference
+
+Prompt expander 解决的是“训练时看长 caption，用户却只写短句”的条件分布错位。SFT 数据由长 caption 反向生成短、口语、故意省细节的用户输入，并配合合成 thinking trace；RL 再直接通过最终出图优化。其最大风险是学成一种安全的 house style，所以 Krea 用 DINOv3 嵌入衡量同组图像多样性，而且实验发现该奖励一旦衰减得太小，模型很快又会塌缩。
+
+Style Reference 解决文字难以说明的视觉意图：支持多参考图、权重混合与连续强度。核心难题是“风格”和“内容”没有天然边界，参考图里的主体很容易泄漏到结果中。报告只披露采用新的自监督训练再接偏好优化，**没有公开自监督任务、模块结构和损失公式**。
+
+## TDM 与两套权重
+
+普通 DMD 让少步学生生成干净图，再加噪并匹配干净图分布；TDM 把这种分布匹配铺到多个时间步，约束整条去噪轨迹，而不只约束终点。Krea 选择它是因为无数据、超参数少、容易调，并支持灵活的多步蒸馏。
+
+- **Krea 2 Raw**：12B、未蒸馏、适合 LoRA / 微调 / 后训练；官方示例用 52 步、CFG 3.5、约 1K。
+- **Krea 2 Turbo**：蒸馏 checkpoint；官方推荐 8 步、CFG 0、`mu=1.15`，支持约 1K–2K。LoRA 先在 Raw 上训练，再挂到 Turbo 推理。
+- 权重使用 Krea 2 Community License；推理代码仓库是 Apache-2.0。两者不要混成“模型是 Apache-2.0”。
+
+## 报告没有告诉我们的事
+
+- STPO 全称、完整公式、辅助损失和消融数据。
+- 四个 RL 奖励的权重、GRPO-style 的完整目标与训练超参数。
+- Style Reference 的具体结构、自监督配对方式与损失。
+- 数据规模的精确组成、训练 FLOPs、GPU 总量与主结果的完整可复现实验表。
+- “审美多样性更宽”的定量指标和系统对照。报告给了产品论点与大量工程经验，但不是一份完整公开实验的学术论文。
+
+## Future Work：下一代要解决的四笔债
+
+1. **继续扩规模。** 引入 MoE、稀疏注意力下的原生 2K–4K、NVFP4 预训练和 Muon；团队也直接承认当前模型仍然 undertrained，更长训练可能继续带来收益。
+2. **MOPD。** 不同团队先训领域专家，再用 multi-teacher on-policy dense supervision 把它们蒸进同一个学生，避免某个领域进步导致另一个领域回退。报告称已用内部专家验证 OPD / MOPD 有效，但没有公开方法细节和结果。
+3. **架构统一。** 当前生产链由 VAE、DiT、文本编码器、prompt expander，以及可选的 style reference / upscaler 拼成；未来想合成一个统一模型，把研究资源集中在同一主干上。
+4. **原生理解多种输入协议。** 用户会写自然语言、tags、JSON、bounding box、指令、视觉规范和 Markdown。Prompt expansion 只能缓解一部分，底座最终应直接理解这些格式；能力方向还包括稳健编辑、图像参考和原生 2K/4K。
+
+## 我的判断
+
+Krea 2 最有价值的地方，是把“多样性”当成需要从数据源头一直保护到产品接口的系统属性：预训练不过早压缩分布，后训练却又不可避免地加入审美偏置，因此 prompt expander 的多样性奖励、STPO 的防漂移和 style reference 的内容隔离，实际上都在偿还“对齐会收窄分布”这笔债。
+
+它的不足也很明确：最关键的 STPO、style reference 和奖励组合都没有给出足够细节，架构与数据部分披露得远比核心后训练机制完整。所以阅读时最好把它当成**一份很有诚意的系统报告与研究路线图**，而不是已经能够逐项复现的论文。
+
+## 相关概念
+
+[[generative-data-curation]] · [[siglip-semantic-dedup]] · [[hierarchical-kmeans-curation]] · [[pagerank-entity-coverage]] · [[progressive-resolution-training]] · [[flow-matching]] · [[mmdit]] · [[direct-preference-optimization]] · [[grpo]] · [[rubric-based-evaluation]] · [[prompt-expansion]] · [[dinov3-diversity-reward]] · [[style-reference]] · [[trajectory-distribution-matching]] · [[guidance-distillation]]
+
+## 官方来源
+
+- 技术报告：https://www.krea.ai/blog/krea-2-technical-report
+- 模型权重与 model card：https://huggingface.co/krea/Krea-2-Raw
+- 官方推理代码与 Raw / Turbo 参数：https://github.com/krea-ai/krea-2
