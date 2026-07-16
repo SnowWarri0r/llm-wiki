@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>模型服务栈 · PyTorch、TensorRT、vLLM 和 vLLM-Omni 各管什么 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · model-serving-stack</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>模型服务栈 · PyTorch、TensorRT、vLLM 和 vLLM-Omni 各管什么</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>模型服务不是换一个“更快框架”就结束：运行时、请求调度、跨卡并行、缓存和解码各管一层。</p>
+<h2>把名字放回各自位置</h2>
+<ul>
+<li><strong>PyTorch</strong>：最接近训练代码的参考运行时，方便改模型、查数值。</li>
+<li><strong>TensorRT</strong>：为 NVIDIA GPU 做图优化、算子选择与低精度执行，更偏稳定部署。</li>
+<li><strong>vLLM</strong>：先以大语言模型服务见长，核心工作包括请求批处理、显存管理和高吞吐调度。</li>
+<li><strong>vLLM-Omni</strong>：把调度扩到扩散与多模态模型，加入 Cache-DiT、CFG parallel、VAE patch parallel 等生成路径。</li>
+<li><strong>CPU offload</strong>：暂时不用的权重或状态挪到 CPU 内存，省 GPU 显存，但会增加 PCIe 搬运。</li>
+<li><strong>FP8</strong>：用 8 位浮点表示部分权重或激活，省显存和带宽；必须验证质量是否可接受。</li>
+</ul>
+<h2>数字例子</h2>
+<p>一次 50 步 CFG 视频生成，普通做法每步各跑一次有条件和无条件 denoiser：</p>
+<pre><code class="language-text">Generator 前向次数 = 50 × 2 = 100 次
+Reasoner 条件编码若每步重算 = 50 次
+把 Reasoner 输出缓存后 = 1 次
+</code></pre>
+<p>CFG parallel 用两张 GPU 同时算两路，可以缩短每步等待时间，但总前向次数仍是 100，算力没有凭空消失。Cache-DiT 则尝试复用相邻去噪步里变化不大的中间结果，收益取决于缓存命中与误差容忍。</p>
+<h2>latency 和 throughput</h2>
+<p>单请求延迟问“这一个视频多久出”；吞吐问“整个集群每小时出多少视频”。增大 batch 常能提高吞吐，却可能让单个请求排队更久。部署调优必须先说清目标。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/cosmos-3.html">cosmos-3</a> · Reasoner / Generator 分层服务、CFG parallel 与 vLLM-Omni</li>
+<li><a href="../concepts/gpu-kernels-and-compilation.html">gpu-kernels-and-compilation</a> · CUDA Graph、编译和底层 kernel</li>
+<li><a href="../concepts/distributed-training-parallelism.html">distributed-training-parallelism</a> · HSDP / CP 在推理中也能复用</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/cosmos-3.html"><span class="cat">paper</span>Cosmos 3 · 把“看懂、想象、行动”塞进同一个世界模型</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/model-serving-stack.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

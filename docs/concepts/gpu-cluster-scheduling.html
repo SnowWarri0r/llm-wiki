@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>GPU 集群调度 · 为什么 128 卡任务不能先给 120 卡 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · gpu-cluster-scheduling</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>GPU 集群调度 · 为什么 128 卡任务不能先给 120 卡</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>分布式训练要整组资源一起到位；只启动一半，已经拿到卡的进程也只能空等。</p>
+<h2>Kubernetes、Kueue 和 gang scheduling 各管哪一层</h2>
+<ul>
+<li><strong>Kubernetes scheduler</strong> 决定单个 Pod 放到哪台节点。</li>
+<li><strong>Kueue</strong> 先看队列、优先级和配额，决定整个 Workload 有没有资格入场。</li>
+<li><strong>Gang scheduling</strong> 要求同一任务需要的 Pod 成组启动；凑不齐就都不启动。</li>
+</ul>
+<h2>数字例子</h2>
+<p>一个训练任务有 16 个 Pod，每个 Pod 要 8 张 GPU，总共 128 张：</p>
+<pre><code class="language-text">集群只剩 120 张卡 = 只能放 15 个 Pod
+没有 gang scheduling：15 个 Pod 已占 120 卡，却一直等第 16 个
+有 gang scheduling：16 个都先排队，等 128 卡齐了再一起启动
+</code></pre>
+<p>后者看似让任务晚一点开跑，却避免 120 张卡在等待中白烧。</p>
+<h2>Virtual Kubelet 和 HPA</h2>
+<p>Virtual Kubelet 把外部算力伪装成 Kubernetes 节点：上层仍提交普通 Pod，它把规格翻译给外部供应商。HPA 根据负载增减 Pod。Krea 的适配层不自己重试失败实例，而是把 Pod 标成失败，让 Kubernetes / HPA 沿原有控制逻辑补一个新的。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/krea-2.html">krea-2</a> · Kueue、配额借还、推理外溢与 Virtual Kubelet</li>
+<li><a href="../concepts/training-checkpointing-and-recovery.html">training-checkpointing-and-recovery</a> · 调度解决“资源何时到位”，checkpoint 解决“任务坏了丢多少”</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/krea-2.html"><span class="cat">paper</span>Krea 2 · 先保住视觉多样性，再提高生成可控性</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/gpu-cluster-scheduling.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

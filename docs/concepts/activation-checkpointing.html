@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Activation Checkpointing · 少存中间结果，反向时重新算 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · activation-checkpointing</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Activation Checkpointing · 少存中间结果，反向时重新算</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>前向时少记几份“草稿纸”，反向传播需要时再重算；省的是显存，花的是计算。</p>
+<h2>它为什么存在</h2>
+<p>训练不只存模型权重。反向传播还要用每层的中间激活；视频 token 很多时，激活往往比参数更占显存。Activation checkpointing 会挑少数边界激活保存，边界之间的结果先丢掉，反向经过这一段时再跑一次前向。</p>
+<h2>数字例子</h2>
+<p>假设 A、B、C、D 四个 block，每个 block 的中间激活占 2 GB：</p>
+<pre><code class="language-text">全部保存：A + B + C + D = 8 GB，反向时直接读取
+
+只保存 A 和 D：2 + 2 = 4 GB
+反向要用 B、C 时：从 A 再跑一遍 B、C
+
+省下激活显存：8 - 4 = 4 GB
+代价：B、C 的前向计算多做一次
+</code></pre>
+<p>自检：重算得到的 B、C 必须与原前向一致，否则梯度会变。因此随机数、dropout 和算子确定性也要正确处理。</p>
+<h2>selective 和 full 有什么区别</h2>
+<ul>
+<li><strong>Selective Activation Checkpointing</strong> 只重算最占显存、重算又相对便宜的部分。</li>
+<li><strong>Full checkpointing</strong> 把整段都重算，显存省得更多，额外 FLOPs 也更多。</li>
+</ul>
+<p>Cosmos 3 报告中，选择性方案约增加 13% 开销；整层重算约增加 33% FLOPs。Krea 2 则按分辨率调整：低分辨率只挑昂贵 block，高分辨率才更激进地重算。</p>
+<h2>别跟模型 checkpoint 混淆</h2>
+<p>Activation checkpoint 在 GPU 内存里做“丢掉再重算”，只活在当前训练步；模型 checkpoint 是把权重、优化器状态和训练进度写到持久存储，用来崩溃恢复。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/krea-2.html">krea-2</a> · 随分辨率调整重算范围</li>
+<li><a href="../papers/cosmos-3.html">cosmos-3</a> · 选择性重算与完整重算的开销对比</li>
+<li><a href="../concepts/training-checkpointing-and-recovery.html">training-checkpointing-and-recovery</a> · 写盘存档是另一件事</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/cosmos-3.html"><span class="cat">paper</span>Cosmos 3 · 把“看懂、想象、行动”塞进同一个世界模型</a></li><li><a href="../papers/krea-2.html"><span class="cat">paper</span>Krea 2 · 先保住视觉多样性，再提高生成可控性</a></li><li><a href="../concepts/distributed-training-parallelism.html"><span class="cat">concept</span>分布式训练并行 · 模型、数据和长序列分别怎么切</a></li><li><a href="../concepts/training-checkpointing-and-recovery.html"><span class="cat">concept</span>训练 Checkpoint 与恢复 · 大训练默认会崩，关键是少丢进度</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/activation-checkpointing.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

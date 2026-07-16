@@ -352,6 +352,14 @@
 - [Imitation Learning](wiki/concepts/imitation-learning.md) — 行为克隆抄专家演示, 不试错不要 reward; 对照 RL; 软肋是误差累积(distribution shift)
 
 ### 共享基础设施
+- [分布式训练并行](wiki/concepts/distributed-training-parallelism.md) — FSDP2/HSDP切模型状态、TP切单层矩阵、CP/Ulysses切长序列；4卡数字例把三种切法和通信代价分开
+- [Activation Checkpointing](wiki/concepts/activation-checkpointing.md) — 少存中间激活、反向时重算；与写盘恢复 checkpoint 彻底分开
+- [GPU Kernel 与编译](wiki/concepts/gpu-kernels-and-compilation.md) — kernel启动、torch.compile融合、CUDA Graph重放、AOT预编译；cuDNN/Flash/Flex/NATTEN各在什么位置
+- [训练 Checkpoint 与恢复](wiki/concepts/training-checkpointing-and-recovery.md) — 权重+优化器+数据游标怎样存；异步保存、MTBF/MTTR与存档间隔的进度账
+- [大规模数据管线](wiki/concepts/large-scale-data-pipelines.md) — 媒体/元数据/执行三层；Lance/Parquet/PostgreSQL/Ray、租约心跳、SKIP LOCKED与原子提交
+- [GPU 集群调度](wiki/concepts/gpu-cluster-scheduling.md) — Kueue整组准入、Kubernetes放Pod、Virtual Kubelet外溢；128卡任务为什么不能先开120卡
+- [GPU 互联与集合通信](wiki/concepts/gpu-interconnects-and-collectives.md) — PCIe/NVLink/InfiniBand是路，NCCL是通信库，all-gather/reduce-scatter是搬法
+- [模型服务栈](wiki/concepts/model-serving-stack.md) — PyTorch/TensorRT/vLLM/vLLM-Omni分层；CFG parallel、Cache-DiT、CPU offload和FP8分别解决什么
 - [读懂 2×2 矩阵](wiki/concepts/reading-2x2-matrices.md) — 两列=x/y基向量落到哪; 单位方块→两列张成的平行四边形, det=它的面积; 缩放(对角)/旋转(列正交等长)/错切(一列没动)一眼分辨; 任意矩阵=转→缩→转(SVD); 三面板手算图
 - [矩阵的秩 · rank](wiki/concepts/matrix-rank.md) — 一个变换"真正有几个独立旋钮"; 低秩=冗余可压(拆成两个瘦矩阵); LoRA/SVD/PCA/注意力瓶颈背后同一件事
 - [特征向量 / 特征值](wiki/concepts/eigenvector.md) — 被矩阵作用后"只缩放不转向"的方向 Wv=λv; 怎么手算(特征方程 det(W−λI)=0 全程); 特征分解 W=QΛQ⁻¹; SVD 的地基

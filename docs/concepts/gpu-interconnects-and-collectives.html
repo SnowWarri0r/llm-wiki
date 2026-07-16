@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>GPU 互联与集合通信 · 多卡训练为什么常卡在“搬”而不是“算” · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · gpu-interconnects-and-collectives</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>GPU 互联与集合通信 · 多卡训练为什么常卡在“搬”而不是“算”</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>NVLink、PCIe、InfiniBand 是路；NCCL 是组织车队的通信库；all-gather、reduce-scatter 是具体搬法。</p>
+<h2>四个名字别混</h2>
+<ul>
+<li><strong>PCIe</strong>：CPU、GPU 和设备间的通用总线，覆盖广，GPU 间带宽通常低于 NVLink。</li>
+<li><strong>NVLink</strong>：同机或特定机柜内的高速 GPU 互联。</li>
+<li><strong>InfiniBand</strong>：跨服务器的低延迟高速网络；整片交换网络称 fabric。</li>
+<li><strong>NCCL</strong>：NVIDIA 的 GPU 集合通信库，会在可用的 NVLink、PCIe、InfiniBand 上执行 all-reduce 等操作。</li>
+</ul>
+<p>IPoIB 是“让普通 IP 流量跑在 InfiniBand 上”。存储也走这条路时，可能和 GPU 集合通信争同一张网络。</p>
+<h2>数字例子</h2>
+<p>4 张 GPU 各持有一份参数：</p>
+<pre><code class="language-text">GPU0:[A]  GPU1:[B]  GPU2:[C]  GPU3:[D]
+
+all-gather 后，每张卡都有 [A,B,C,D]
+
+若每张卡各算一份梯度 g0,g1,g2,g3：
+all-reduce 后，每张卡都拿到 g0+g1+g2+g3
+
+reduce-scatter 则把总和后的结果再切四份，
+每张卡只保留自己负责的 1/4。
+</code></pre>
+<p>模型层数越多，FSDP 每层触发 all-gather / reduce-scatter 的次数越多。Krea 2 偏好“更宽、层数更少”，其中一个系统理由就是减少通信轮次和 NCCL 出错机会。</p>
+<h2>指标怎么看</h2>
+<p>PCIe replay、NVLink CRC / recovery、InfiniBand 端口错误都在回答“链路有没有重传或纠错”。GPU_UTIL 变成 0% 往往只是通信已经卡死后的结果，不是根因。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/krea-2.html">krea-2</a> · NCCL、PCIe、NVLink、InfiniBand 与 IPoIB 故障经验</li>
+<li><a href="../papers/cosmos-3.html">cosmos-3</a> · HSDP / CP 的通信底座</li>
+<li><a href="../concepts/distributed-training-parallelism.html">distributed-training-parallelism</a> · 为什么训练会产生这些集合通信</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/cosmos-3.html"><span class="cat">paper</span>Cosmos 3 · 把“看懂、想象、行动”塞进同一个世界模型</a></li><li><a href="../papers/krea-2.html"><span class="cat">paper</span>Krea 2 · 先保住视觉多样性，再提高生成可控性</a></li><li><a href="../concepts/distributed-training-parallelism.html"><span class="cat">concept</span>分布式训练并行 · 模型、数据和长序列分别怎么切</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/gpu-interconnects-and-collectives.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

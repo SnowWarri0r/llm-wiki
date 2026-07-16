@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>训练 Checkpoint 与恢复 · 大训练默认会崩，关键是少丢进度 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · training-checkpointing-and-recovery</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>训练 Checkpoint 与恢复 · 大训练默认会崩，关键是少丢进度</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>长训练不赌“永不失败”，而是让存档足够频繁、写盘不挡训练、重启后能接着跑。</p>
+<h2>一份可恢复存档里有什么</h2>
+<p>只存模型权重通常不够。要无缝接着训练，还需要优化器状态、学习率进度、随机数状态、数据游标和分布式切分信息。缺了数据游标，恢复后可能重复或跳过一批数据；缺了优化器状态，AdamW 的动量会清零。</p>
+<h2>数字例子</h2>
+<p>假设训练平均 12 小时遇到一次故障：</p>
+<pre><code class="language-text">每 2 小时存一次：故障平均发生在区间中点，平均丢约 1 小时
+每 30 分钟存一次：平均丢约 15 分钟
+
+若每次同步存档暂停 30 秒：
+24 小时内存 48 次，暂停共 48 × 30 秒 = 24 分钟
+</code></pre>
+<p>所以并非越频繁越好：要在“写盘开销”和“故障后重算”之间找平衡。异步 checkpoint 让训练继续跑，后台慢慢写盘，可以降低前台暂停；但它需要额外内存暂存快照，还要保证写出的各个分片属于同一个训练步。</p>
+<h2>MTBF 与 MTTR</h2>
+<ul>
+<li><strong>MTBF</strong>：平均多久坏一次，越长越好。</li>
+<li><strong>MTTR</strong>：坏了以后平均多久恢复，越短越好。</li>
+</ul>
+<p>Krea 2 强调频繁 checkpoint 和快速启动；Cosmos 3 报告异步保存平均约需 Nano 72 秒、Super 167 秒，端到端额外开销约 4% / 9%。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/krea-2.html">krea-2</a> · 频繁存档、快速恢复与集群故障经验</li>
+<li><a href="../papers/cosmos-3.html">cosmos-3</a> · 异步 checkpoint 与保存计划缓存</li>
+<li><a href="../concepts/activation-checkpointing.html">activation-checkpointing</a> · 名字相似，但它是在单步训练中用重算换显存</li>
+<li><a href="../concepts/large-scale-data-pipelines.html">large-scale-data-pipelines</a> · 数据处理任务也需要可恢复进度</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 5 处</span>
+  <ul><li><a href="../papers/cosmos-3.html"><span class="cat">paper</span>Cosmos 3 · 把“看懂、想象、行动”塞进同一个世界模型</a></li><li><a href="../papers/krea-2.html"><span class="cat">paper</span>Krea 2 · 先保住视觉多样性，再提高生成可控性</a></li><li><a href="../concepts/activation-checkpointing.html"><span class="cat">concept</span>Activation Checkpointing · 少存中间结果，反向时重新算</a></li><li><a href="../concepts/gpu-cluster-scheduling.html"><span class="cat">concept</span>GPU 集群调度 · 为什么 128 卡任务不能先给 120 卡</a></li><li><a href="../concepts/large-scale-data-pipelines.html"><span class="cat">concept</span>大规模数据管线 · 素材、元数据和任务进度怎么不打架</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/training-checkpointing-and-recovery.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
