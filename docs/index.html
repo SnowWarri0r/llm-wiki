@@ -31,7 +31,7 @@
 <div class="page">
 <div class="masthead">
   <span class="l">Connectionism · Personal Wiki</span>
-  <span class="r">索引 · 331 条目</span>
+  <span class="r">索引 · 332 条目</span>
 </div>
 
 <section class="hero">
@@ -45,13 +45,16 @@
 <a class="catcard" href="papers.html"><span class="n">68</span><span class="lbl">精读页 · Deep Dives</span><span class="d">手工打磨的论文 / 源码精读页</span></a>
 <a class="catcard" href="books.html"><span class="n">2</span><span class="lbl">Books · 书籍精讲</span><span class="d">2 本书 · 32 章精讲</span></a>
 <a class="catcard" href="topics.html"><span class="n">4</span><span class="lbl">Topics · 综合</span><span class="d">跨多个源的横向综合</span></a>
-<a class="catcard" href="concepts.html"><span class="n">223</span><span class="lbl">Concepts · 概念</span><span class="d">跨论文复用的概念颗粒</span></a>
+<a class="catcard" href="concepts.html"><span class="n">224</span><span class="lbl">Concepts · 概念</span><span class="d">跨论文复用的概念颗粒</span></a>
 <a class="catcard" href="threads.html"><span class="n">2</span><span class="lbl">Threads · 思考</span><span class="d">个人思考线 / 开放问题</span></a>
 </div>
 
 <h2><span class="num">§ 02</span>最近更新 · Recent</h2>
 <div class="timeline">
 <a class="tl-row" href="concepts/flash-attention.html"><span class="tl-date">2026-07-17</span><span class="tl-cat">concept</span><span class="tl-title">FlashAttention · 快的不是少算，而是少把中间结果写回显存</span><span class="tl-hook">普通注意力常拆成三次 GPU 计算：先算分数矩阵，再做 softmax，最后乘 `V`。三次计算之间，前一步的结果要先写回 HBM，后一步再读出来。最占地方的恰好是两个 `N × N` 中间矩阵。</span></a>
+<a class="tl-row" href="concepts/generalized-causal-attention.html"><span class="tl-date">2026-07-17</span><span class="tl-cat">concept</span><span class="tl-title">Generalized Causal Attention · 一条多模态序列里，精确规定谁能看谁</span><span class="tl-hook">普通语言模型只允许后面的 token 看前面的 token；Bagel 把这条规则扩展到文字、输入图和待生成图：文字仍按顺序读，同一张图内部可以双向互看，后续内容可以读取已经完成的条件，但不能偷看尚未生成的答案。</span></a>
+<a class="tl-row" href="concepts/mixture-of-transformers.html"><span class="tl-date">2026-07-17</span><span class="tl-cat">concept</span><span class="tl-title">Mixture-of-Transformers · MoT · 按 token 类型分开的两套 Transformer 权重</span><span class="tl-hook">每个 Transformer 层有两套完整权重；token 按类型只走其中一套，但两类 token 仍在同一条序列里互相注意。</span></a>
+<a class="tl-row" href="concepts/unified-multimodal-generation.html"><span class="tl-date">2026-07-17</span><span class="tl-cat">concept</span><span class="tl-title">Unified Multimodal Generation · 统一多模态生成</span><span class="tl-hook">不再给检测、分割、深度和 3D 各接一颗专用 head，而是把答案翻译成底座本来就会生成的**文本、图像或文本+图像**，再按确定协议还原成框、mask、深度或 3D 坐标。</span></a>
 <a class="tl-row" href="books/trading-in-the-zone.html"><span class="tl-date">2026-07-16</span><span class="tl-cat">book</span><span class="tl-title">Trading in the Zone · 交易心理分析</span><span class="tl-hook">交易输赢不是分析题，是心理题——**再准的分析也解决不了&quot;看得懂却做不到&quot;，真正的门槛是学会在&quot;下一步不确定&quot;的处境里，不害怕、不轻率地按概率一次次执行**。</span></a>
 <a class="tl-row" href="concepts/activation-checkpointing.html"><span class="tl-date">2026-07-16</span><span class="tl-cat">concept</span><span class="tl-title">Activation Checkpointing · 少存中间结果，反向时重新算</span><span class="tl-hook">前向时少记几份“草稿纸”，反向传播需要时再重算；省的是显存，花的是计算。</span></a>
 <a class="tl-row" href="concepts/distributed-training-parallelism.html"><span class="tl-date">2026-07-16</span><span class="tl-cat">concept</span><span class="tl-title">分布式训练并行 · 模型、数据和长序列分别怎么切</span><span class="tl-hook">显存不够时不要只说“多加几张卡”：参数、矩阵乘和 token 是三种不同的东西，要用三种切法。</span></a>
@@ -62,9 +65,6 @@
 <a class="tl-row" href="concepts/model-serving-stack.html"><span class="tl-date">2026-07-16</span><span class="tl-cat">concept</span><span class="tl-title">模型服务栈 · PyTorch、TensorRT、vLLM 和 vLLM-Omni 各管什么</span><span class="tl-hook">模型服务不是换一个“更快框架”就结束：运行时、请求调度、跨卡并行、缓存和解码各管一层。</span></a>
 <a class="tl-row" href="concepts/training-checkpointing-and-recovery.html"><span class="tl-date">2026-07-16</span><span class="tl-cat">concept</span><span class="tl-title">训练 Checkpoint 与恢复 · 大训练默认会崩，关键是少丢进度</span><span class="tl-hook">长训练不赌“永不失败”，而是让存档足够频繁、写盘不挡训练、重启后能接着跑。</span></a>
 <a class="tl-row" href="papers/meshflow.html"><span class="tl-date">2026-07-14</span><span class="tl-cat">paper</span><span class="tl-title">MeshFlow · 把&quot;谁连谁&quot;改写成连续数,整张网格一次并行长出来</span><span class="tl-hook">生成 3D 网格最难的不是&quot;顶点摆哪儿&quot;,而是&quot;哪两个顶点该连一条边&quot;——前者是连续坐标、后者是离散开关。MeshFlow 给每个顶点挂一枚连续的&quot;连边磁铁&quot;,让扩散模型只生成连续量,最后一步才把磁铁的吸力切成 0/1 的边;再配上 VAE 压缩,整张网格一次并行生成,不用一根一根边地吐。</span></a>
-<a class="tl-row" href="concepts/continuous-mesh-connectivity.html"><span class="tl-date">2026-07-14</span><span class="tl-cat">concept</span><span class="tl-title">连续 Mesh 连接表示 · 不直接预测面，给每个顶点一枚“连边磁铁”</span><span class="tl-hook">每个顶点除了坐标和法线，再带一个连续向量；两枚向量的连接分数过线就连边，三条边围成一圈就恢复三角面。</span></a>
-<a class="tl-row" href="concepts/convolution.html"><span class="tl-date">2026-07-14</span><span class="tl-cat">concept</span><span class="tl-title">Convolution · 卷积 · 一把小尺子滑过整张图</span><span class="tl-hook">拿一个小窗口（卷积核）滑过整张图，每停一处就把窗口盖住的像素跟核**逐元素相乘再求和**得到一个数 —— 滑遍全图得到一张新图（feature map）。</span></a>
-<a class="tl-row" href="concepts/mean-average-precision.html"><span class="tl-date">2026-07-14</span><span class="tl-cat">concept</span><span class="tl-title">AP / mAP · 检测器既不能乱报，也不能漏报</span><span class="tl-hook">AP 是某个类别的“精确率—召回率”曲线面积；mAP 再把所有类别的 AP 求平均。COCO 常说的 AP 还会平均多个 IOU 命中门槛，因此比只看 AP50 严得多。</span></a>
 </div>
 <div class="colophon">
   Renderer / <code>render.py</code> · Pattern / <a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f" target="_blank">Karpathy LLM Wiki</a> · Source / <a href="https://github.com/SnowWarri0r/llm-wiki" target="_blank">github.com/SnowWarri0r/llm-wiki</a>

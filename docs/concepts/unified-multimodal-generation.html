@@ -39,7 +39,7 @@
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>不再给检测、分割、深度和 3D 各接一颗专用 head，而是先把答案翻译成模型本来就会生成的<strong>文本、图像或文本+图像</strong>，再用自然语言说明这次要走哪条输出通道。</p>
+<p>不再给检测、分割、深度和 3D 各接一颗专用 head，而是把答案翻译成底座本来就会生成的<strong>文本、图像或文本+图像</strong>，再按确定协议还原成框、mask、深度或 3D 坐标。</p>
 <h2>直觉</h2>
 <p>传统通用视觉模型常像一排专用插座：检测 head 吐框，分割 head 吐 mask，深度 head 吐连续值。共享 backbone 不等于共享输出接口；新增任务往往还要新增解码器、损失和后处理。</p>
 <p>统一多模态生成换了问题：既然统一多模态模型已经能读图、写字、生成图，就把视觉标注变成这两种原生语言。</p>
@@ -60,7 +60,7 @@
 请求 C：给道路和行人分别上色
 输出 C：&lt;p&gt;road&lt;color&gt;(20,190,240)&lt;/color&gt;&lt;/p&gt; + 彩色 mask 图
 </code></pre>
-<p>三条请求共享同一套参数。A 用 next-token 交叉熵训练；B、C 的图像部分进 VAE latent，用 flow matching 目标训练。最终仍要按约定把 A 解回像素框、把 B 解回深度、把 C 的颜色解回类别 mask。</p>
+<p>三条请求复用同一个 Bagel 模型，但“同一个模型”不等于“所有 token 走完全相同的权重”。A 的文字 token 走 MoT 的理解专家，用 next-token 交叉熵训练；B、C 的图像 latent token 走生成专家，用 flow matching 训练。两路 token 位于同一条多模态序列中，可以互相读取上下文。最终仍要按约定把 A 解回像素框、把 B 解回深度、把 C 的颜色解回类别 mask。</p>
 <h2>它统一了什么，没统一什么</h2>
 <table>
 <thead>
@@ -71,8 +71,8 @@
 </thead>
 <tbody>
 <tr>
-<td>模型参数与调用入口</td>
-<td>各 benchmark 的指标</td>
+<td>一个模型与调用入口</td>
+<td>底座内部的模态专家权重</td>
 </tr>
 <tr>
 <td>文本/图像生成训练通道</td>
@@ -94,12 +94,14 @@
 <li><a href="../concepts/decodable-vision-representation.html">decodable-vision-representation</a> · 标注怎样翻成可生成、又能还原的答案</li>
 <li><a href="../concepts/cross-entropy.html">cross-entropy</a> · 文本输出的训练目标</li>
 <li><a href="../concepts/flow-matching.html">flow-matching</a> · 图像 latent 输出的训练目标</li>
+<li><a href="../concepts/mixture-of-transformers.html">mixture-of-transformers</a> · 为什么同一模型内部仍有理解与生成两套权重</li>
+<li><a href="../concepts/generalized-causal-attention.html">generalized-causal-attention</a> · 文本、输入图和待生成图之间到底谁能看谁</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 2 处</span>
-  <ul><li><a href="../papers/sensenova-vision.html"><span class="cat">paper</span>SenseNova-Vision · 把整个视觉工具箱接进同一个生成接口</a></li><li><a href="../concepts/decodable-vision-representation.html"><span class="cat">concept</span>Decodable Vision Representation · 可解码视觉表示</a></li></ul>
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/sensenova-vision.html"><span class="cat">paper</span>SenseNova-Vision · 不接任务专用头，怎样让一个模型同时写框、画深度、生成 mask</a></li><li><a href="../concepts/decodable-vision-representation.html"><span class="cat">concept</span>Decodable Vision Representation · 可解码视觉表示</a></li><li><a href="../concepts/generalized-causal-attention.html"><span class="cat">concept</span>Generalized Causal Attention · 一条多模态序列里，精确规定谁能看谁</a></li></ul>
 </div>
 
 <div class="colophon">

@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Generalized Causal Attention · 一条多模态序列里，精确规定谁能看谁 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · generalized-causal-attention</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Generalized Causal Attention · 一条多模态序列里，精确规定谁能看谁</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>普通语言模型只允许后面的 token 看前面的 token；Bagel 把这条规则扩展到文字、输入图和待生成图：文字仍按顺序读，同一张图内部可以双向互看，后续内容可以读取已经完成的条件，但不能偷看尚未生成的答案。</p>
+<h2>为什么不能全都互相看</h2>
+<p>设训练序列是：</p>
+<pre><code class="language-text">[用户文字] [输入图] [回答文字] [要生成的图]
+</code></pre>
+<p>训练时“要生成的图”对应的干净答案已经在数据里。如果后面的文字或下一张图能够直接读取这份答案，模型就会在训练时作弊；推理时没有答案可偷看，结果会崩。反过来，同一张图的 patch 又不是一句从左到右的话，限制成严格因果注意力没有必要，图内 patch 可以双向交换信息。</p>
+<p>所以 Bagel 使用分块规则：</p>
+<table>
+<thead>
+<tr>
+<th>query 来自</th>
+<th>可以读取</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>文字 token</td>
+<td>当前位置之前的文字与已经给定的条件</td>
+</tr>
+<tr>
+<td>输入图的语义 token</td>
+<td>先前内容 + 同一张输入图的全部语义 token</td>
+</tr>
+<tr>
+<td>待生成图的带噪 VAE token</td>
+<td>先前条件 + 同一张图的全部带噪 VAE token</td>
+</tr>
+<tr>
+<td>后续内容</td>
+<td>已完成图像的干净 VAE / 语义 token，但不能读取训练时的带噪答案块</td>
+</tr>
+</tbody>
+</table>
+<h2>为什么同一张图会出现三份表示</h2>
+<p>Bagel 对一张图可能同时保留三类 token，它们分工不同：</p>
+<ul>
+<li><strong>SigLIP2 / ViT token</strong>：强调“图里是什么”，供理解和条件对齐；</li>
+<li><strong>干净 VAE token</strong>：表示已经完成的图像，供后续内容继续引用；</li>
+<li><strong>带噪 VAE token</strong>：当前正在被流匹配还原的变量，只服务于这次图像生成。</li>
+</ul>
+<p>训练时带噪 VAE token 有回归目标，但不能成为后续 token 的捷径。推理完成一张图后，模型把它解码并换成干净表示，再继续生成后面的文字或图像。</p>
+<h2>和 MoT 的关系</h2>
+<p>两者回答的是不同问题：</p>
+<ul>
+<li><a href="../concepts/mixture-of-transformers.html">mixture-of-transformers</a> 决定“这个 token 使用哪套 Transformer 权重”；</li>
+<li>generalized causal attention 决定“这个 token 在注意力里允许读取哪些位置”。</li>
+</ul>
+<p>一个 token 可以走生成专家，同时读取理解专家产生的文字 key/value。<strong>专家不同，不妨碍共享上下文；共享上下文，也不代表共享权重。</strong></p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/sensenova-vision.html">sensenova-vision</a> · 直接复用 Bagel 的注意力与双专家底座</li>
+<li><a href="../concepts/mixture-of-transformers.html">mixture-of-transformers</a> · 理解专家与生成专家如何分工</li>
+<li><a href="../concepts/unified-multimodal-generation.html">unified-multimodal-generation</a> · 为什么这种底座能承载文本、图像和混合输出</li>
+</ul>
+<h2>来源</h2>
+<ul>
+<li>Bagel: <em>Emerging Properties in Unified Multimodal Pretraining</em>, arXiv:2505.14683v3，§2.2 Generalized Causal Attention。</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/sensenova-vision.html"><span class="cat">paper</span>SenseNova-Vision · 不接任务专用头，怎样让一个模型同时写框、画深度、生成 mask</a></li><li><a href="../concepts/unified-multimodal-generation.html"><span class="cat">concept</span>Unified Multimodal Generation · 统一多模态生成</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/generalized-causal-attention.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
