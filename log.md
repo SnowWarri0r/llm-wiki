@@ -957,3 +957,8 @@ skill 更新:
 ## [2026-07-16] ingest | Trading in the Zone《交易心理分析》(Mark Douglas / 张轶译) — 第二本 book，全 137 页逐章精读后拆成 1 概览 + 11 章精讲(titz-ch01..11)；提炼五个基本事实、七个持续一致性原则、赌场概率模型、三组交易者、四种交易恐惧；关键例子小孩和狗/大豆甩单/免费送钱/圣诞老人能量守恒/跑步5英里原则/大峡谷独木桥/20笔赌场练习；叠工程视角(过程指标vs结果指标、认知=文档信念=权重、大数定律)；版权原书只在 raw/ 留指针不入库
 
 ## [2026-07-16] expand | Krea 2 + Cosmos 3 基础设施概念层 — 两篇 Infra 不再堆框架名，正文先按数据管线/训练切分/GPU执行/互联通信/集群调度/故障恢复/服务部署分层，再补8个共享 concept：distributed-training-parallelism 用4卡例拆 FSDP2-HSDP/TP/CP-Ulysses，activation-checkpointing 用4层8GB→4GB说明重算换显存，gpu-kernels-and-compilation 手算3 kernel 54μs→融合38μs，training-checkpointing-and-recovery 算存档间隔与平均丢进度，large-scale-data-pipelines 对照 SILA-Lance-Ray 与 krablet-PostgreSQL-SKIP LOCKED，gpu-cluster-scheduling 算128卡 gang scheduling，gpu-interconnects-and-collectives 拆 PCIe/NVLink/InfiniBand/NCCL，model-serving-stack 拆 PyTorch/TensorRT/vLLM-Omni/Cache-DiT；Krea glossary 24→28，Cosmos glossary 25→29，所有新词条直链 concept
+## [2026-07-17] concept | flash-attention（重写 IO 因果链）
+
+- 补清“大矩阵为什么来回搬”：三个 kernel 分开执行，中间结果必须写回 HBM 才能交接。
+- 纠正“切块自然省 IO”的误解：真正组合是分块 + kernel 融合 + 在线 softmax；小块在片上完成 softmax 与加权 V 后立即丢弃。
+- 加入 4×4 搬运账本、N=8000 的 512 MB 量级例子，以及带 V 的在线 softmax 全流程手算；同时说明输入/输出块重读、反向重算和浮点舍入差异。

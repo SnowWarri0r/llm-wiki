@@ -43,6 +43,11 @@
 </div>
 <div id="nores" class="nores" hidden>没有匹配的条目 — 换个词试试</div>
 <div class="entries">
+<div class="entry concept" data-domains="ML" data-s="flashattention · 快的不是少算，而是少把中间结果写回显存 普通注意力常拆成三次 gpu 计算：先算分数矩阵，再做 softmax，最后乘 `v`。三次计算之间，前一步的结果要先写回 hbm，后一步再读出来。最占地方的恰好是两个 `n × n` 中间矩阵。 flash-attention concept ml 一句话 为什么大矩阵非得来回搬？ 算一笔最小的 io 账 为什么切块以后片上放得下？ softmax 明明要看完整一行，为什么能一块块算？ 数字例子 · 不保存权重，也能直接得到最终输出 为什么“多算一点”反而更快？ 它到底有没有改变注意力结果？ 跟 sparse attention 的区别 代码出处 / 来源 链接 三笔账不要混在一起 先一次看全，算出标准答案 再分两块算，中间不保存 4 个 softmax 权重">
+  <h3><a href="concepts/flash-attention.html">FlashAttention · 快的不是少算，而是少把中间结果写回显存</a></h3>
+  <p class="hook">普通注意力常拆成三次 GPU 计算：先算分数矩阵，再做 softmax，最后乘 `V`。三次计算之间，前一步的结果要先写回 HBM，后一步再读出来。最占地方的恰好是两个 `N × N` 中间矩阵。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-07-17</span><span class="pill ready">auto HTML ✓</span></div>
+</div>
 <div class="entry concept" data-domains="ML" data-s="activation checkpointing · 少存中间结果，反向时重新算 前向时少记几份“草稿纸”，反向传播需要时再重算；省的是显存，花的是计算。 activation-checkpointing concept ml 一句话 它为什么存在 数字例子 selective 和 full 有什么区别 别跟模型 checkpoint 混淆 链接">
   <h3><a href="concepts/activation-checkpointing.html">Activation Checkpointing · 少存中间结果，反向时重新算</a></h3>
   <p class="hook">前向时少记几份“草稿纸”，反向传播需要时再重算；省的是显存，花的是计算。</p>
@@ -507,11 +512,6 @@
   <h3><a href="concepts/zero-shot-transfer.html">Zero-Shot Transfer · 不 finetune 直接用 prompt 触发任务</a></h3>
   <p class="hook">预训练完的 LM &lt;strong&gt;不改一个参数&lt;/strong&gt;，直接在 prompt 里写任务格式，让模型续写出答案。</p>
   <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-06-23</span><span class="pill ready">auto HTML ✓</span></div>
-</div>
-<div class="entry concept" data-domains="ML" data-s="flashattention · 注意力的&quot;省搬运&quot;算法（精确，非近似） 标准注意力把 n×n 的大分数矩阵吐进慢显存(hbm)再读回来,**卡在内存搬运上**。flashattention 把 q/k/v **切成小块、只在快内存(sram)里一块块算**,靠**在线 softmax** 拼出和一次算全**一模一样**的结果——大矩阵从不落地。结果:2~4× 快、显存从 o(n²) 降到 o(n),且**输出逐位相同**。 flash-attention concept ml 一句话 直觉 · 瓶颈不是算力，是来回搬大矩阵 三个招 数字例子 · 在线 softmax 拼出和一次算一样 跟 sparse-attention 的区别(别混) 代码出处 / 来源 链接">
-  <h3><a href="concepts/flash-attention.html">FlashAttention · 注意力的&quot;省搬运&quot;算法（精确，非近似）</a></h3>
-  <p class="hook">标准注意力把 N×N 的大分数矩阵吐进慢显存(HBM)再读回来,**卡在内存搬运上**。FlashAttention 把 Q/K/V **切成小块、只在快内存(SRAM)里一块块算**,靠**在线 softmax** 拼出和一次算全**一模一样**的结果——大矩阵从不落地。结果:2~4× 快、显存从 O(N²) 降到 O(N),且**输出逐位相同**。</p>
-  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">concept</span><span class="pill">updated 2026-06-22</span><span class="pill ready">auto HTML ✓</span></div>
 </div>
 <div class="entry concept" data-domains="ML" data-s="mfcc · 梅尔频率倒谱系数 深度学习之前最标准的语音特征：log-mel 频谱再做一步 dct，取前 ~13 个系数，抓住频谱的&quot;大形状&quot;（音色）。 mfcc concept ml 一句话 直觉 怎么做的 数字例子 为什么当年多走这步（不直接用 log-mel） 跟 log-mel 的对比 / 时代注脚 链接">
   <h3><a href="concepts/mfcc.html">MFCC · 梅尔频率倒谱系数</a></h3>
