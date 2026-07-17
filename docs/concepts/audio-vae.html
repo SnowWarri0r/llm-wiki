@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Audio VAE · 把波形压成适合生成模型处理的声音 latent · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · audio-vae</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Audio VAE · 把波形压成适合生成模型处理的声音 latent</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>先把密集波形变成时频图，再压成低帧率 latent；生成完成后由 decoder 和 vocoder 还原声音。</p>
+<h2>直觉</h2>
+<p>16kHz 双声道音频每秒有 32,000 个采样值，直接让 Transformer 对每个采样点做 attention 太贵。音频 VAE 先用 mel-spectrogram 把“每个瞬间有哪些频率”整理出来，再把它压成每秒几十个高维 token。</p>
+<p>它替代的是 raw waveform 级生成。代价是 VAE/vocoder 可能丢掉细微相位与高频细节，latent 设计也会给最终音质设上限。</p>
+<h2>怎么做的</h2>
+<pre><code class="language-text">训练/编码：stereo waveform 16kHz
+          → 左右声道各自 mel-spectrogram
+          → 沿 channel 拼接
+          → causal VAE encoder
+          → temporal latent tokens
+
+解码：latent → VAE decoder → stereo mel → vocoder → stereo waveform 24kHz
+</code></pre>
+<p>“causal”表示每个时间 latent 只依赖当前与过去输入，便于流式和按时间处理。vocoder 负责把频谱变成可播放波形，不预测场景语义。</p>
+<h2>数字例子</h2>
+<p>LTX-2 报告给出约 25 token/s、每 token 128 维：</p>
+<pre><code class="language-text">4 秒  → 4×25 = 100 token → 100×128 = 12,800 latent 标量
+20 秒 → 20×25 = 500 token → 500×128 = 64,000 latent 标量
+</code></pre>
+<p>当前实现把每个时间位置写成 <code>[8 channels,16 frequency slots]</code>，<code>8×16=128</code>。这说明 latent 形状，不等于 128 个互相独立的声学量。</p>
+<h2>跟 codec token 的对比</h2>
+<p>VQ/RVQ codec 通常把声音变成离散码本索引；LTX-2 的 audio VAE 输出连续向量，适合 flow/diffusion 直接预测速度。连续 latent 不需要选离散类别，但解码质量仍取决于 autoencoder。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/ltx-2.html">ltx-2</a> · 立体声音频 latent 与 HiFi-GAN vocoder</li>
+<li><a href="../concepts/log-mel-spectrogram.html">log-mel-spectrogram</a> · 波形到时频图</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · 在连续 audio latent 上学习速度场</li>
+<li><a href="../concepts/rvq-codec.html">rvq-codec</a> · 离散声音 token 的对照路线</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/ltx-2.html"><span class="cat">paper</span>LTX-2 · 让声音和画面在同一段去噪过程中彼此校正</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/audio-vae.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

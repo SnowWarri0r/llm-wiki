@@ -1,8 +1,8 @@
 ---
 name: log-mel-spectrogram
 type: concept
-sources: [dmel, interaction-models-tml, whisper, fft, qwen3-asr]
-updated: 2026-06-14
+sources: [dmel, interaction-models-tml, whisper, fft, qwen3-asr, ltx-2]
+updated: 2026-07-17
 ---
 
 # Log-Mel Spectrogram · Fbank · 对数 Mel 频谱图

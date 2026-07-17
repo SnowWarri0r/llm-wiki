@@ -1,8 +1,8 @@
 ---
 name: cross-attention
 type: concept
-sources: [attention-is-all-you-need]
-updated: 2026-05-22
+sources: [attention-is-all-you-need, ltx-2]
+updated: 2026-07-17
 ---
 
 # Cross-Attention · 交叉注意力

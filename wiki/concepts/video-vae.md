@@ -1,8 +1,8 @@
 ---
 name: video-vae
 type: concept
-sources: [mrt]
-updated: 2026-06-15
+sources: [mrt, ltx-2]
+updated: 2026-07-17
 ---
 
 # Video VAE · Wan-VAE · VAE 的视频版

@@ -962,3 +962,10 @@ skill 更新:
 - 补清“大矩阵为什么来回搬”：三个 kernel 分开执行，中间结果必须写回 HBM 才能交接。
 - 纠正“切块自然省 IO”的误解：真正组合是分块 + kernel 融合 + 在线 softmax；小块在片上完成 softmax 与加权 V 后立即丢弃。
 - 加入 4×4 搬运账本、N=8000 的 512 MB 量级例子，以及带 V 的在线 softmax 全流程手算；同时说明输入/输出块重读、反向重算和浮点舍入差异。
+
+## [2026-07-17] ingest | ltx-2（Lightricks · arXiv 2601.03233v1）
+
+- 完整覆盖 joint T2AV 动机、14B/5B 不对称双流、48 层四工序、双向 A/V cross-attention、3D/1D temporal RoPE、cross-modality AdaLN、Gemma 全层特征、thinking registers、音频/视频 causal VAE、flow matching、modality-CFG、1080p 多尺度重叠 tiles、训练数据、实验、局限与社会影响。
+- 12 张 bespoke 图与 18 条可点击术语；用 0.40s 碰撞 attention、三层特征拼接、25 token/s、CFG 三分支、tile overlap、H100 22.30/1.22=18.28× 贯穿手算。
+- 证据审计：内部质量人评未公开样本数/胜率/置信区间，训练规模与优化配置缺失；速度表不是同架构单变量消融；保留正文 14B+5B 与结论 13B+3B 的冲突。
+- 官方实现核对 commit `9377758131b1ffde4b7f766804590a6617bf2ab9`：两向 cross-attn 读取同一份 pre-AV 快照，本流 timestep 负责 scale/shift、对方 sigma 负责 gate，thinking tokens 实为替换 padding 的 learnable registers。

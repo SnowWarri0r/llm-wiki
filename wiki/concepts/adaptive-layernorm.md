@@ -1,8 +1,8 @@
 ---
 name: adaptive-layernorm
 type: concept
-sources: [dit]
-updated: 2026-06-24
+sources: [dit, ltx-2]
+updated: 2026-07-17
 ---
 
 # Adaptive LayerNorm · AdaLN / AdaLN-Zero · 自适应层归一化

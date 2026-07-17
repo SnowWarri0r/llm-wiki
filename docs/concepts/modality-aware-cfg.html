@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Modality-Aware CFG · 把“听 prompt”和“跟另一模态同步”分开加力 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · modality-aware-cfg</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Modality-Aware CFG · 把“听 prompt”和“跟另一模态同步”分开加力</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>分别测出文本与另一模态改变了预测多少，再用两个 scale 独立放大。</p>
+<h2>直觉</h2>
+<p>音视频生成有两种不同的“听话”：画面/声音要符合文字，同时声音与画面还要彼此同步。只用一个 CFG scale，会把两种控制绑在一起。Modality-CFG 多算一个去掉另一模态的分支，将两条差值方向拆开。</p>
+<p>它不是新的训练损失，而是推理时组合多次模型预测的方法；控制更细，但需要更多前向计算。</p>
+<h2>怎么做的</h2>
+<p>[
+\widehat M=M(x,c,m)
++s_{text}[M(x,c,m)-M(x,\varnothing,m)]
++s_{cross}[M(x,c,m)-M(x,c,\varnothing)]
+]</p>
+<ul>
+<li><code>x</code>：当前模态的 noisy latent；</li>
+<li><code>c</code>：文本条件；</li>
+<li><code>m</code>：另一模态条件；</li>
+<li><code>∅</code>：有意拿掉对应条件；</li>
+<li><code>s_text</code>：文本 guidance scale；</li>
+<li><code>s_cross</code>：跨模态 guidance scale。</li>
+</ul>
+<p>第一条差值只改变文本是否存在，近似抽出“文本造成的预测变化”；第二条只改变另一模态是否存在，近似抽出“音视频互相影响的变化”。这不是严格因果效应，因为神经网络是非线性的，两个条件之间仍可能交互。</p>
+<h2>数字例子</h2>
+<pre><code class="language-text">full = M(x,c,m) = 2.0
+no_text = M(x,∅,m) = 1.5   → text direction = 0.5
+no_cross = M(x,c,∅) = 1.2  → cross direction = 0.8
+
+视频 scale (3,3)：2 + 3×.5 + 3×.8 = 5.9
+音频 scale (7,3)：2 + 7×.5 + 3×.8 = 7.9
+</code></pre>
+<p>自检：若两个 scale 都为 0，结果退回完整条件预测 <code>2.0</code>。若拿掉另一模态不改变输出，即 <code>full=no_cross</code>，跨模态项自动为 0。</p>
+<h2>跟标准 CFG 对比</h2>
+<p>标准 CFG 常写成 <code>uncond + s(cond-uncond)</code>，从无条件预测出发；LTX-2 论文公式从完整条件预测出发，再加两条增量。相同 scale 下，两者数值并不相同，不能直接把经验参数照搬。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/ltx-2.html">ltx-2</a> · 视频用 (3,3)，音频用 (7,3)</li>
+<li><a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a> · 单条件前身</li>
+<li><a href="../concepts/audiovisual-cross-attention.html">audiovisual-cross-attention</a> · <code>m</code> 进入当前流的结构通道</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/ltx-2.html"><span class="cat">paper</span>LTX-2 · 让声音和画面在同一段去噪过程中彼此校正</a></li><li><a href="../concepts/classifier-free-guidance.html"><span class="cat">concept</span>Classifier-Free Guidance · CFG</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/modality-aware-cfg.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
