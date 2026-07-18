@@ -30,6 +30,7 @@
 - [Fish Audio S2 Pro](wiki/papers/fish-speech-s2-pro.md) — Dual-AR + RVQ + GRPO 的开源 TTS
 - [ViiTorVoice · 低帧率语义码+并行填声](wiki/papers/viitorvoice.md) — 开源流式零样本 TTS 引擎(无独立论文,思路源自 DualCodec+OmniVoice): 三招各砍一刀延迟—①DualCodec 把 24kHz 压到 12.5 帧/秒,RVQ-1 语义(w2v-BERT 蒸馏,码本16384)+RVQ 2-8 声学残差; ②NAR 掩码并行填声(像完形填空,步数从200降到~8); ③首块流式首帧~60ms; 给参考音零样本克隆+两路CFG调情绪
 - [VITS · 文本进去，波形出来](wiki/papers/vits.md) — 把两段式 TTS 的固定 mel 交接收回一套联合训练：条件 VAE 用 z 装下文字没写出的声音，Flow 接通文本先验与音频后验，MAS 从整句配对中找音素—帧路径，随机时长用去量化 u 与增广 ν 建模多种节奏，HiFi-GAN 多周期判别器补波形细节；LJ MOS 4.43 vs 真人4.46，×67.12实时，并完整覆盖损失、配方、VCTK、消融、声音转换和局限
+- [LTX-2 · 让声音和画面在同一段去噪中彼此校正](wiki/papers/ltx-2.md) — 开源联合音视频生成：两套 causal VAE 保留模态差异，14B 视频流与 5B 音频流在 48 层中用双向 cross-attention 沿共同时间轴交换；Gemma 全层特征+双向 connector+thinking registers 加强文本条件，modality-CFG 分开调文字遵循和音视频同步，0.5MP base→latent 放大→重叠 tiles 生成 1080p。H100 每步 1.22s vs Wan2.2 22.30s 约18×，但内部质量人评缺少样本数/胜率/置信区间，训练规模与配方也未公开；正文 14B+5B 与结论 13B+3B 矛盾留档。
 - [RoPE · Rotary Position Embedding](wiki/papers/rope.md) — 不加位置向量，旋转 Q/K 让点积天然含相对位置；LLaMA / Mistral / Qwen 全在用
 - [Whisper](wiki/papers/whisper.md) — 68 万小时弱监督训 ASR，zero-shot 碾压精标模型；语音领域的 GPT 时刻
 - [Qwen3-ASR · 给 LLM 接个耳朵](wiki/papers/qwen3-asr.md) — 不从头训ASR: 预训练Qwen3当解码器+AuT音频编码器(8×下采样12.5Hz+动态窗口流式/离线)+projector; modality-projector生产级; prompt塞热词定制转写; RL用GSPO; 带口音英语完胜Whisper
@@ -211,13 +212,17 @@
 - [扩散RL的似然墙](wiki/concepts/diffusion-rl-likelihood-barrier.md) — 扩散似然算不出没法照搬GRPO;FlowGRPO绕法=把反向去噪切多步MDP(每步高斯可算),代价三坑(锁solver/偏离前向/CFG两模型)
 - [并行 Transformer 块](wiki/concepts/parallel-transformer-block.md) — attention和MLP不接力: 读同一份归一化输入各算各的再加回主干; 省一次LN+两路第一个矩阵乘拼成一个大GEMM(3072→21504)一次算,快~15%; 代价=MLP看不到同层注意力但摞深了不亏; GPT-J/PaLM/ViT-22B/FLUX单流块
 - [MMDiT](wiki/concepts/mmdit.md) — 双流多模态扩散 Transformer: 文字图像同序列共享注意力、各用各的权重; SD3/FLUX/Qwen-Image 主干
+- [不对称双流 Transformer](wiki/concepts/asymmetric-dual-stream-transformer.md) — 音频/视频各走专用流，层数对齐、宽度不同，每层交换；统一生成但不抹平模态差异
+- [音视频双向交叉注意力](wiki/concepts/audiovisual-cross-attention.md) — video query 查 audio K/V，audio query 也查 video K/V，只用共同时间 RoPE 对齐事件
 - [像素扩散解码器](wiki/concepts/pixel-diffusion-decoder.md) — 把 latent→像素的确定性 VAE 解码器换成条件扩散; "复印机→插画师", 边解码边补细节+超分; latent 与全像素扩散两路线的缝合
 - [表征自编码器 RAE](wiki/concepts/representation-autoencoder.md) — 冻结SigLIP-2/DINOv2当编码器(高维语义latent)+只训解码器; 扩散在"看懂图"的概念坐标里跑, 比VAE快/抗过拟合; PiD换解码端、RAE换编码端
 - [引导蒸馏](wiki/concepts/guidance-distillation.md) — 把 CFG 的每步两遍前向蒸成一遍(引导强度当输入); FLUX dev 这么训; 与步数蒸馏正交
 - [Classifier-Free Guidance](wiki/concepts/classifier-free-guidance.md) — 条件/无条件两支放大差值逼模型听话；Ideogram 的非对称变体
+- [Modality-Aware CFG](wiki/concepts/modality-aware-cfg.md) — 分别拿掉文本与另一模态，拆出两条 guidance 方向，用两个 scale 独立调提示遵循和跨模态同步
 - [结构化 Caption 条件](wiki/concepts/structured-caption-conditioning.md) — 不喂一句话喂 JSON，把位置/颜色/文字显式做进训练
 - [KL-VAE](wiki/concepts/kl-vae.md) — 把图压成 latent 的地基；扩散在压缩空间画画省 48 倍计算
 - [Video VAE · Wan-VAE](wiki/concepts/video-vae.md) — VAE视频版: 3D因果卷积空间+时间一起压((1+T)→1+T/4)、只看过去帧、特征缓存做无限长1080P; MRT 用它编 region latent
+- [多尺度重叠分块推理](wiki/concepts/multi-scale-tiled-inference.md) — 低分辨率先定全局，latent 放大后沿空间/时间切重叠块精修，融合换峰值显存
 - [Pixel-Space Diffusion](wiki/concepts/pixel-space-diffusion.md) — 不要 VAE，直接在原始像素上扩散；patch embedding 替掉 VAE 压缩、去掉 latent 瓶颈
 - [图像质量指标 PSNR/SSIM](wiki/concepts/image-quality-metrics.md) — 重建像不像两把尺子: PSNR逐像素误差(dB)/SSIM局部结构(0-1); PSNR平移即崩→故有LPIPS
 - [拆细则打分 · Rubric-Based Eval](wiki/concepts/rubric-based-evaluation.md) — 别给"好不好"打一个总分,拆成一堆可逐项判定的小问题各打0/1/2再聚合; 可复现+能定位差在哪条; Qwen-Image-Bench拆到56条
@@ -255,6 +260,7 @@
 
 ### 音频 tokenization
 - [Log-Mel Spectrogram](wiki/concepts/log-mel-spectrogram.md) — 音频特征基础
+- [Audio VAE](wiki/concepts/audio-vae.md) — stereo waveform→双声道mel→约25 token/s连续latent，VAE decoder+vocoder还原24kHz波形
 - [MFCC · 梅尔频率倒谱系数](wiki/concepts/mfcc.md) — log-mel 再做一步 DCT 拆"形状基"取前~13系数=音色; 去相关+降维, GMM/i-vector/x-vector 时代标配; 现代深度模型跳过DCT直接喂log-mel
 - [Bin Quantization](wiki/concepts/bin-quantization.md) — dMel 的核心，等距分箱量化
 - [dMel](wiki/concepts/dmel.md) — log-mel 直接 bin quantize（避开 codec）
@@ -308,6 +314,7 @@
 
 ### 多模态
 - [统一多模态生成](wiki/concepts/unified-multimodal-generation.md) — 不为每个视觉任务接head;稀疏答案走文本、稠密答案走图像、语义+像素走混合输出,任务由instruction指定
+- [Thinking Tokens / Registers](wiki/concepts/thinking-tokens.md) — 把 padding 槽换成全双向 connector 可读写的上下文寄存器；不是自然语言思维链
 - [Contrastive Learning](wiki/concepts/contrastive-learning.md) — 拉近正样本 + 推开负样本, in-batch negatives 白送 N²-N 个负例
 - [Zero-Shot Image Classification](wiki/concepts/zero-shot-image-classification.md) — 分类变成"哪句话最配这张图", 类别由文本定义
 - [Dual-Tower Architecture](wiki/concepts/dual-tower-architecture.md) — 两个独立 encoder + 末端点积; 推理可缓存, 适合检索

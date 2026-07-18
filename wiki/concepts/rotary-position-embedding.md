@@ -1,8 +1,8 @@
 ---
 name: rotary-position-embedding
 type: concept
-sources: [rope, krea-2, meshflow]
-updated: 2026-05-25
+sources: [rope, krea-2, meshflow, ltx-2]
+updated: 2026-07-17
 ---
 
 # Rotary Position Embedding · RoPE · 旋转位置编码

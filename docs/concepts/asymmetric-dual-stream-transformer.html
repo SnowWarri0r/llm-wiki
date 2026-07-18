@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Asymmetric Dual-Stream Transformer · 不对称双流 Transformer · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · asymmetric-dual-stream-transformer</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Asymmetric Dual-Stream Transformer · 不对称双流 Transformer</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>音频和视频各走一条专用流水线，层数对齐、宽度不同，再在每层交换信息。</p>
+<h2>直觉</h2>
+<p>视频要处理画面中的 <code>x、y、时间</code>，音频主要处理时间；让两边用同宽网络，像给声音处理也配一整套二维画布，算力未必花在需要的地方。完全拆成两个模型又会回到“先生成一个、再补另一个”的单向管线。</p>
+<p>不对称双流取中间路线：</p>
+<ul>
+<li><strong>分开</strong>：VAE、self-attention、FFN 和通道宽度都按模态定制；</li>
+<li><strong>对齐</strong>：两条流有相同层数，可以在每一层的相近抽象深度交换；</li>
+<li><strong>互通</strong>：用双向 cross-attention 让音频改视频、视频也改音频。</li>
+</ul>
+<p>它替代的是“完全共享一条流”和“两个独立模型串联”这两个极端。</p>
+<h2>怎么做的</h2>
+<pre><code class="language-text">layer 1: video self/text ─┐  ┌─ audio self/text
+                          ↔  双向 cross-attention
+layer 2: video self/text ─┤  ├─ audio self/text
+                          ↔
+...                       │  │
+layer 48                  └──┘
+</code></pre>
+<p>LTX-2 的论文主线是 14B 视频流 + 5B 音频流。两边不是共享权重；“shared depth”是层数和交换位置对齐，不是同一参数矩阵被调用两次。</p>
+<h2>数字例子</h2>
+<p>总参数 19B 中：</p>
+<pre><code class="language-text">video = 14B，占 14/19 ≈ 73.7%
+audio =  5B，占  5/19 ≈ 26.3%
+video/audio 容量比 = 14/5 = 2.8
+</code></pre>
+<p>这只是参数分配，不等于视频计算量恰好是音频 2.8 倍；token 数、注意力形状和实现 kernel 也影响 FLOPs 与速度。</p>
+<h2>跟其它路线对比</h2>
+<table>
+<thead>
+<tr>
+<th>路线</th>
+<th>好处</th>
+<th>主要问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>单一共享流</td>
+<td>交互直接、结构统一</td>
+<td>容量和位置编码难兼顾模态差异</td>
+</tr>
+<tr>
+<td>两个模型串联</td>
+<td>可复用现成 T2V/V2A</td>
+<td>后生成者只能服从先生成者</td>
+</tr>
+<tr>
+<td>对称双流</td>
+<td>双向联合、实现规整</td>
+<td>可能给简单模态过度分配容量</td>
+</tr>
+<tr>
+<td><strong>不对称双流</strong></td>
+<td>双向联合且容量按需分配</td>
+<td>参数更多、跨流同步和部署更复杂</td>
+</tr>
+</tbody>
+</table>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/ltx-2.html">ltx-2</a> · 14B/5B 双流实例</li>
+<li><a href="../concepts/audiovisual-cross-attention.html">audiovisual-cross-attention</a> · 两条流逐层通信的接口</li>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · 每条流的生成骨架</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/ltx-2.html"><span class="cat">paper</span>LTX-2 · 让声音和画面在同一段去噪过程中彼此校正</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/asymmetric-dual-stream-transformer.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

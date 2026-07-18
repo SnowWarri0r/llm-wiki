@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Thinking Tokens · 用 padding 槽换来的可学习上下文寄存器 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · thinking-tokens</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Thinking Tokens · 用 padding 槽换来的可学习上下文寄存器</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把原本浪费的 padding 位置换成可学习 token，让它们在双向注意力里收集整句信息。</p>
+<h2>直觉</h2>
+<p>批处理文本常补到固定长度，短 prompt 后面的大量 PAD 通常被 mask 掉，不参与计算。LTX-2 将这些位置替换成可学习 registers，并取消它们的 mask。正文 token 可以把信息写进去，后续 DiT 再把这些额外 token 当作文本条件读取。</p>
+<p>它像给一句话附上几张模型自己填写的隐藏便签，但便签不是自然语言，也不会展示推理步骤。“thinking”是作者命名，不应等同于 chain-of-thought 或 reasoning。</p>
+<h2>怎么做的</h2>
+<pre><code class="language-text">固定长度 8，prompt 占 5：
+原输入  [t1][t2][t3][t4][t5][PAD][PAD][PAD]
+替换后  [t1][t2][t3][t4][t5][R1 ][R2 ][R3 ]
+
+→ 全双向 connector：8 个位置互相注意
+→ 输出正文 token + 已写入上下文的 R1/R2/R3
+→ 作为 DiT 的 text cross-attention 条件
+</code></pre>
+<p>当前官方实现会重复一组 learnable registers 以填满序列，并将 attention mask 变为全可见。视频、音频各有独立 connector，因此可以把同一句 prompt 整理成不同条件表征。</p>
+<h2>数字例子</h2>
+<p>假设双向 connector 的某个 register 对 5 个正文 token 的 attention 权重是：</p>
+<pre><code class="language-text">[0.10, 0.15, 0.45, 0.20, 0.10]，和 = 1
+token 的“碰撞相关度” = [0, 0, 1, .5, 0]
+register 聚合值 = .10×0 + .15×0 + .45×1 + .20×.5 + .10×0 = .55
+</code></pre>
+<p>register 因而得到一份全句摘要信号。真实表示是高维多头向量，例子只演示“可学习槽如何通过 attention 聚合”。</p>
+<h2>跟特殊 token 的对比</h2>
+<table>
+<thead>
+<tr>
+<th>token</th>
+<th>位置</th>
+<th>主要用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[CLS]</code></td>
+<td>通常固定 1 个开头位</td>
+<td>汇总序列用于分类</td>
+</tr>
+<tr>
+<td>padding</td>
+<td>补齐长度，通常被 mask</td>
+<td>不承载信息</td>
+</tr>
+<tr>
+<td>thinking/register</td>
+<td>替换 padding，可被读写</td>
+<td>提供多个额外上下文槽</td>
+</tr>
+</tbody>
+</table>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/ltx-2.html">ltx-2</a> · text connector 使用该机制</li>
+<li><a href="../concepts/cross-attention.html">cross-attention</a> · DiT 从这些条件 token 读取信息</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/ltx-2.html"><span class="cat">paper</span>LTX-2 · 让声音和画面在同一段去噪过程中彼此校正</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/thinking-tokens.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
