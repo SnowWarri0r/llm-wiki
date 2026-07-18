@@ -435,8 +435,29 @@ B 在帧2的累计分是 4+2=6；走到帧3：继续 B 得 6+4=<span class="dim"
 
   <p>去量化变量 <code>u</code><a class="jr" href="#g-09">9</a> 与 <code>d</code> 同形状，每项限制在 <code>[0,1)</code>；所以 <code>d−u</code> 虽然变成了小数，向上取整后仍是原标签。增广变量 <code>ν</code><a class="jr" href="#g-10">10</a> 也与 <code>d</code> 同形状。它只帮 Flow 表示更复杂的分布，最后不会作为时长输出。</p>
 
+  <h3>先学会读 qφ(u,ν | d,c_text)，再看公式</h3>
+  <p>不用先会“联合条件分布”这个名词。把竖线 <code>|</code><a class="jr" href="#g-19">19</a> 直接读成“<strong>已知</strong>”：竖线右边是抽样前已经知道的信息，左边是这次要抽出的东西。</p>
+
+  <div class="math-dark"><span class="cyan">q<sub>φ</sub>(</span> u,ν <span class="gold">|</span> d,c<sub>text</sub> <span class="cyan">)</span><br>
+ 　　　　　<span class="green">要抽什么</span>　<span class="gold">已知</span>　<span class="green">已经给了什么</span><br><br>
+  <span class="dim">整句读作：已经知道 d 和 c_text 时，u、ν 会怎样取值。</span></div>
+
+  <div class="formula-key">
+    <div><b>qφ</b><br>参数为 φ 的训练专用采样器；φ 是网络权重，不是要抽的变量</div>
+    <div><b>u,ν · 竖线左边</b><br>本次要一起抽出的两个辅助变量；逗号不是乘号</div>
+    <div><b>| · 竖线</b><br>读成“已知”或“在……条件下”，不是除号</div>
+    <div><b>d,c_text · 竖线右边</b><br>已经给定的正确时长和文本表示；两项都会送进 qφ</div>
+  </div>
+
+  <div class="calc-check"><strong>把符号换成一次真实操作</strong><pre>先固定：d=[2,4,3]，c_text=enc("你好")
+再从 qφ(u,ν | d,c_text) 抽一次：
+u=[.2,.6,.1]，ν=[.5,−.7,.2]
+
+意思是“把右边交给 qφ，让它生成左边”，
+不是把 u、ν、d、c_text 四项相乘。</pre></div>
+
   <h3>公式路线图：目标 → 难点 → 下界 → 损失</h3>
-  <p>我们真正想算的是 <code>log pθ(d|c_text)</code>：只给文字时，模型认为真实时长 <code>d</code> 出现的概率有多大。精确计算它，需要把 <code>u、ν</code> 的所有可能取值都积分进去，实际训练时太贵。VITS 便用 <code>qφ</code> 抽几组 <code>u、ν</code>，改算下面这个下界：</p>
+  <p>我们真正想算的是 <code>log pθ(d|c_text)</code>。读法与上面一样：固定竖线右边的文本表示 <code>c_text</code>，看左边的真实时长 <code>d</code> 有多大可能出现。<code>pθ</code> 只看文本，训练和推理都用；<code>qφ</code> 能看文本和正确时长，只负责训练时抽 <code>u、ν</code>。精确计算 <code>pθ</code>，需要把 <code>u、ν</code> 的所有可能取值都积分进去，实际训练时太贵。VITS 便用 <code>qφ</code> 抽几组，改算下面这个下界：</p>
 
   <div class="math-dark"><span class="green">想要但难直接算：</span> log p<sub>θ</sub>(d | c<sub>text</sub>)<br><br>
   log p<sub>θ</sub>(d | c<sub>text</sub>) ≥ E<sub>qφ(u,ν|d,c<sub>text</sub>)</sub> [<br>
@@ -448,10 +469,21 @@ B 在帧2的累计分是 4+2=6；走到帧3：继续 B 得 6+4=<span class="dim"
     <div><b>d / c_text</b><br>MAS 给出的真实时长 / 文本编码条件</div>
     <div><b>θ / pθ</b><br>时长 Flow 的参数 / 计算 [d−u,ν] 在当前模型下的概率密度</div>
     <div><b>φ / qφ</b><br>训练专用采样器的参数 / 已知文本和正确时长后，采样 u、ν</div>
-    <div><b>E_q</b><br>从 q 多采几次，把括号里的分数取平均</div>
+    <div><b>E_q</b><br>固定 d、c_text，从 q 抽几组 u、ν；每组代入括号打分，再求平均</div>
     <div><b>第一项 log p</b><br>[d−u,ν] 在时长 Flow 看来有多常见，越大越好</div>
     <div><b>第二项 −log q</b><br>u、ν 是 q 有针对性抽出的，因此要扣掉这层采样偏差</div>
   </div>
+
+  <div class="calc-check"><strong>E 下面的 q 到底让你做什么</strong><pre>固定同一个 d、c_text，从 qφ 抽两组 u、ν：
+第 1 组代入方括号 → 分数 −.8
+第 2 组代入方括号 → 分数 −1.0
+
+E_q[分数] ≈ (−.8 + −1.0) / 2 = −.9
+L_dur = −(−.9) = .9
+
+操作顺序：抽样 → 每份打分 → 求平均 → 取负号当损失</pre></div>
+
+  <p>同一个 <code>qφ(u,ν|d,c_text)</code> 还会给抽到的这组 <code>u、ν</code> 计算概率密度。因为 <code>u、ν</code> 是连续数，严格说这里是“密度”，不是某个小数点取值的离散概率。</p>
 
   <div class="calc-check"><strong>拿一个样本手算下界</strong><pre>假设 pθ(d−u,ν|c)=0.20，qφ(u,ν|d,c)=0.50
 单次分数 = log .20 − log .50
@@ -671,6 +703,7 @@ L_fm(G) = .5 + .3 = .8</pre></div>
     <li id="g-16"><span class="term">MOS</span> · 听众自然度评分的平均值；需要同时看置信区间，接近不等于证明完全无差。</li>
     <li id="g-17"><span class="term">CMOS</span> · 成对比较相对偏好，0 表示无偏好；负值表示相对真人略逊。</li>
     <li id="g-18"><span class="term"><a href="../concepts/flow-matching.html">Flow Matching 对比</a></span> · 都叫 Flow，但 VITS 用离散可逆层和精确似然；Flow Matching 学连续时间速度场。</li>
+    <li id="g-19"><span class="term">条件符号 |</span> · 把 <code>q(a,b|c,d)</code> 读成“已经知道 c、d 时，a、b 会怎样取值”。竖线左边是要描述或抽取的量，右边是已经给定的条件；逗号是在列清单，不是乘号。</li>
   </ol>
 </div>
 
