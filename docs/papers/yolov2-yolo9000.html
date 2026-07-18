@@ -233,7 +233,8 @@ svg text{font-family:"IBM Plex Mono",monospace}
 <div class="note"><span class="label">先别急着看 mAP</span>Anchor 版本从 69.5 mAP 降到 69.2，却把 recall 从 81% 拉到 88%<a class="jr" href="#g-02">2</a>。多报候选让误报机会变多，但也把漏掉的物体捞回来；后续校准才有东西可修。</div>
 
 <h2><span class="num">§ 02 / Priors</span>Anchor 不是答案，合适的 anchor 才是</h2>
-<p>“Anchor 怎么选”其实问了两件事：<strong>训练前，全数据集选出哪 5 种模板；训练时，这个真值框交给 5 种模板里的哪一个</strong>。前者做一次聚类，后者对每个真值框做一次匹配。把这两步分开，后面的公式才有来处。</p>
+<p class="note"><span class="label">先说 anchor 是个啥</span>与其让网络凭空猜"这个框该多大"，不如<strong>预先准备几种常见的框尺寸，像买衣服的 S/M/L/XL</strong>——网络只要说"这个物体最接近 L 号，再稍微改一点"。这几种预设尺码就叫 anchor（预设框 / 锚框）。v1 让网络硬猜框的绝对大小，起点太自由才容易偏；v2 先递给它几个好用的起点。</p>
+<p>那"哪几个尺码好用"？这其实问了两件事：<strong>训练前，从全数据集挑出哪 5 种尺码当模板；训练时，眼前这个真值框该归到 5 种里的哪一个名下</strong>。前者做一次聚类（量体裁衣，统计最常见的身材），后者对每个物体做一次匹配（挑最贴合的那档）。把这两步分开，后面的公式才有来处。</p>
 
 <div class="anchor-pipeline">
   <div class="pipe-step"><b>① 收集真值宽高</b><span>读取训练集所有标注框的 (w,h)，统一单位；忽略原中心位置，把框都移到同一点。</span></div>
@@ -293,7 +294,8 @@ svg text{font-family:"IBM Plex Mono",monospace}
 <div class="note"><span class="label">真实值 vs 手算值</span>上图的 5 个小整数专门用于手算。官方 VOC 配置的真实 anchor 是 (1.3221,1.73145)、(3.19275,4.00944)、(5.05587,8.09892)、(9.47112,4.84053)、(11.2364,10.0071)，单位同样是网格。聚类决定“全局有哪 5 种模板”；匹配决定“当前物体由其中哪一种负责”。下节的 <code>(p_w,p_h)</code> 就是刚胜出的 <strong>(2,2)</strong>。</div>
 
 <h2><span class="num">§ 03 / Coordinates</span>中心加护栏，宽高用倍数</h2>
-<p>现在格子 <code>(3,4)</code> 和 anchor <code>(2,2)</code> 都有了，网络只需学习“中心在格内的小数位置”和“相对 2×2 放缩多少”。先别急着代公式，下面把每个符号逐一对上。</p>
+<p class="note"><span class="label">换成大白话</span>网络不报框的绝对坐标，只报两件小事：<strong>① 物体在负责格子里偏左偏右、偏上偏下多少（0~1 的小数）；② 比起选中的尺码，要放大还是缩小几倍</strong>。就像描述一个人："站在第 4 列第 5 行那格、格子里靠右一点、身材比 L 码再宽 1.5 倍"——位置说小数、尺寸说倍数。</p>
+<p>现在格子 <code>(3,4)</code> 和 anchor <code>(2,2)</code> 都有了，网络只需学"中心在格内的小数位置"和"相对 2×2 放缩多少"。先别急着代公式，下面把每个符号逐一对上。</p>
 
 <table class="symbol-table">
   <thead><tr><th>符号</th><th>它到底是什么</th><th>本例</th></tr></thead>
@@ -332,7 +334,8 @@ svg text{font-family:"IBM Plex Mono",monospace}
 
 <h2><span class="num">§ 04 / Detail &amp; Scale</span>细节搬回来，输入尺寸现场换挡</h2>
 <h3>Passthrough：空间折进通道</h3>
-<p>13×13 深层特征适合大物体，小物体的边缘早被下采样压平。YOLOv2 不在 26×26 上另开检测头，而是把相邻 2×2 位置折进四组通道：<code>26×26×512 → 13×13×2048</code>，元素总数仍是 346,112，再与深层特征拼起来。</p>
+<p>打个比方：深层的 13×13 特征像一张<strong>缩得很小的地图</strong>，大地标还看得清，小巷子早糊了；而 26×26 那层还留着小巷子的细节。YOLOv2 不重画一张检测图，而是<strong>把 26×26 这张细图按 2×2 一块块折叠、塞进 13×13 的更多"夹层"（通道）里</strong>——细节没丢，只是换了个存法。</p>
+<p>具体地：<code>26×26×512 → 13×13×2048</code>，元素总数仍是 346,112（只是把空间上的格子挪进了通道），再与深层特征拼起来一起预测。</p>
 
 <figure id="fig-pass" class="reveal">
   <figcaption><span>Fig 04 · 2×2 空间邻域折成四组通道</span><span class="tag">PASSTHROUGH</span></figcaption>
@@ -364,7 +367,8 @@ svg text{font-family:"IBM Plex Mono",monospace}
 </figure>
 
 <h3>多尺度训练：同一模型，五档部署</h3>
-<p>全卷积结构没有固定长度的全连接层，输入空间可以改。训练时每 10 个 batch 从 320 到 608 的 32 倍数里随机选尺寸<a class="jr" href="#g-05">5</a>；测试表还额外测了 288。下图五列是<strong>同一套权重</strong>，不是五个模型。</p>
+<p>同一套权重能吃不同大小的输入，就像<strong>同一个人换戴不同倍数的眼镜</strong>：输入图大（高倍镜）看得细但慢，输入图小（低倍镜）糊一点但快。之所以能换，是因为全卷积结构没有"固定长度"的全连接层卡住输入尺寸。</p>
+<p>训练时每 10 个 batch 从 320 到 608 的 32 倍数里随机选一档尺寸<a class="jr" href="#g-05">5</a>，模型就练出了适应多种清晰度的本事；测试表还额外测了 288。下图五列是<strong>同一套权重</strong>，不是五个模型。</p>
 
 <figure id="fig-scale" class="reveal">
   <figcaption><span>Fig 05 · 输入越大，细节越多；帧率同步下滑</span><span class="tag">ONE MODEL / FIVE GEARS</span></figcaption>
@@ -379,7 +383,8 @@ svg text{font-family:"IBM Plex Mono",monospace}
 </figure>
 
 <h2><span class="num">§ 05 / Faster</span>Darknet-19：别让 3×3 总在宽通道上硬算</h2>
-<p>VGG-16 的卷积部分每张 224×224 图要 30.69B 次运算；YOLO v1 自定义骨干是 8.52B；Darknet-19<a class="jr" href="#g-06">6</a> 只要 <strong>5.58B</strong>。它用 19 个卷积层和 5 个池化层，主要靠 3×3 提特征，中间插 1×1 压通道，末尾用全局平均池化分类。</p>
+<p>骨干网络就是"把图看懂"的那部分身子（提边缘、纹理、部件），不负责最后报框。v2 换上更省力的骨干：同样看一张 224×224 的图，<strong>VGG-16 要算 306 亿次、YOLO v1 的老骨干 85 亿次、Darknet-19<a class="jr" href="#g-06">6</a> 只要 56 亿次</strong>，精度还几乎没掉。</p>
+<p>省力的窍门：多用小的 3×3 卷积提特征，中间插 1×1 卷积先把通道压窄再算（别让 3×3 老在很宽的通道上硬算），末尾用全局平均池化出分类。整体 19 个卷积层 + 5 个池化层。</p>
 
 <div class="metric-grid">
   <div class="metric"><b>5.58B</b><span>Darknet-19 operations / 224px</span></div>
@@ -393,7 +398,8 @@ svg text{font-family:"IBM Plex Mono",monospace}
 <div class="note"><span class="label">125 怎么来的</span>VOC 每格 5 个框；每框有 4 个坐标、1 个物体性和 20 个类别，所以最终卷积通道是 <strong>5×(4+1+20)=125</strong>。YOLOv2 把类别预测也放到每个 anchor 上，不再让整格的框共享一组类别。</div>
 
 <h2><span class="num">§ 06 / Stronger</span>WordTree：粗类和细类不再抢一个 softmax</h2>
-<p>“狗”和“诺福克梗”可以同时为真，扁平 softmax 却把所有类别当成互斥选项。WordTree 把 WordNet 图裁成一棵树，每个分叉只在兄弟节点间做 softmax；叶子绝对概率等于从根走到叶子的条件概率连乘<a class="jr" href="#g-07">7</a>。</p>
+<p>普通 softmax 逼所有类别的概率加起来正好 = 1，像一道<strong>单选题</strong>：一旦"狗"给了高分，留给"诺福克梗"的分就被挤没了。可这俩本该同时成立——诺福克梗<u>就是</u>一种狗。</p>
+<p>WordTree 的办法：把类别按"动物 → 哺乳类 → 狗 → 诺福克梗"排成一棵<strong>家谱树</strong>，<strong>每一层只在亲兄弟之间做单选</strong>（狗还是猫？梗还是别的犬种？），父子之间用乘法串起来。这样粗类和细类各在自己那层选，不再抢同一个总和。技术上：把 WordNet 图裁成一棵树，每个分叉只在兄弟节点间做 softmax；某个叶子的绝对概率 = 从根一路走到它的条件概率连乘<a class="jr" href="#g-07">7</a>。</p>
 
 <figure id="fig-tree" class="reveal">
   <figcaption><span>Fig 06 · 逐层走到“狗”，再乘框的物体性</span><span class="tag">WORDTREE / PATH PRODUCT</span></figcaption>
