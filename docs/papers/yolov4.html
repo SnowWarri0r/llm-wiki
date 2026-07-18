@@ -110,7 +110,8 @@ figure{margin:36px 0 54px;padding:25px;border:2px solid var(--ink);background:va
 </figure>
 
 <h3>CSP：只让一部分通道反复深加工</h3>
-<p><a class="jr term-hit" href="#g-05">CSP（Cross-Stage Partial）</a>先把一个 stage——也就是一组保持同样分辨率的网络层——分成两路。一路穿过残差块反复加工，另一路走短路，最后再<a class="jr term-hit" href="#g-18">拼接</a>回来。它不是丢掉一半特征，而是避免所有<a class="jr term-hit" href="#g-16">通道</a>都重复跑完整条加工线；两路梯度也不用挤在同一条路径里。</p>
+<p>像工厂流水线：<strong>只让一半零件进返工车间反复打磨，另一半原样直送打包区</strong>，最后两批合流。省下的正是"全部零件都返工"的冤枉功——精度不怎么掉，算力却省一截。</p>
+<p><a class="jr term-hit" href="#g-05">CSP（Cross-Stage Partial）</a>就是这么干：先把一个 stage（一组保持同样分辨率的网络层）分成两路，一路穿过残差块反复加工，另一路走短路，最后再<a class="jr term-hit" href="#g-18">拼接</a>回来。它不是丢掉一半特征，而是避免所有<a class="jr term-hit" href="#g-16">通道</a>都重复跑完整条加工线；两路梯度也不用挤在同一条路径里。</p>
 
 <figure id="fig-csp" class="reveal"><figcaption><span>Fig 03 · 四个通道走一遍 CSP</span><span>SPLIT / PROCESS / MERGE</span></figcaption>
   <div class="csp"><div class="tensor rev">INPUT<br>[1,2,3,4]</div><div class="split rev d2">⇢</div><div class="branches"><div class="branch rev d2">PROCESS<br>[1,2] + [+.5,-.5]<br>= [1.5,1.5]</div><div class="branch bypass rev d3">BYPASS<br>[3,4] 原样直达</div></div><div class="split rev d4">⇢</div><div class="csp-out rev d5">CONCAT<br>[1.5,1.5,3,4]<b>¼ SUM = 2.5</b></div></div>
