@@ -977,3 +977,7 @@ skill 更新:
 ## [2026-07-17] visual+content | ltx-2 Fig 05 重画 AdaLN 与 gate 数据流
 
 - 删除会换行成两排的孤立 `→ × →`，补上原图漏掉的 Cross-Attention：先分别算交换内容 `C` 与逐通道写回系数 `G`，再明确展示 `h′V = hV + G × C`；手机端改为纵向卡片。
+
+## [2026-07-17] visual+content | ltx-2 Fig 07 重画 register 双向可见关系
+
+- 删除无法表达连接关系的双椭圆装饰线；分开展示 5 个正文 token 与 3 个由 padding 改成的可学习 register，再用单一双向连接说明两组互相可见，并注明一次 attention 中同时更新。
