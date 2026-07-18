@@ -1,7 +1,7 @@
 ---
 name: rotary-position-embedding
 type: concept
-sources: [rope, krea-2]
+sources: [rope, krea-2, meshflow]
 updated: 2026-05-25
 ---
 

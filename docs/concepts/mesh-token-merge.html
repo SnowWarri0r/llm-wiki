@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Mesh TokenMerge / TokenSplit · 把 token 数塞进通道，再反向摊开 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · mesh-token-merge</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Mesh TokenMerge / TokenSplit · 把 token 数塞进通道，再反向摊开</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>先把相邻的 <code>r</code> 个顶点 token 拼成一个宽 token，再用线性层压回隐藏维；解码时把通道反向拆回 <code>r</code> 个 token。</p>
+<h2>为什么不直接放几个可学习 query</h2>
+<p>VAE 想把 <code>N</code> 个顶点 token 压成更短的 <code>n</code> 个 latent。常见做法是放 <code>n</code> 个随机初始化 query，让它们 cross-attention 全部输入；也可以用最远点采样挑 <code>n</code> 个代表点。</p>
+<p>问题是，这两种 query 起步时都没有完整原 token 的内容。MeshFlow 先做一次纯重排，把真实输入塞进 query，再让 query 回看全部顶点。query 不是空白工位，而是已经抱着一捆原料上桌。</p>
+<h2>数字例子 · 8 个 token 压成 2 个</h2>
+<p>为了能手算，先让每个 token 只有一个通道：</p>
+<pre><code class="language-text">X = [1, 2, 3, 4, 5, 6, 7, 8]     shape = 8×1
+压缩倍率 r = 4
+</code></pre>
+<p>TokenMerge 只重排，不丢数：</p>
+<pre><code class="language-text">row 1: [1,2,3,4]
+row 2: [5,6,7,8]                    shape = 2×4
+</code></pre>
+<p>接一层学出来的线性映射。假设这层权重刚好是平均 <code>W=[0.25,0.25,0.25,0.25]</code>：</p>
+<pre><code class="language-text">q1 = 0.25×(1+2+3+4) = 2.5
+q2 = 0.25×(5+6+7+8) = 6.5
+</code></pre>
+<p>于是 8 个 token 先变成 2 个 query。真实模型不是算平均，而是学习 <code>4D→D</code> 的矩阵；随后 2 个 query 还会 cross-attention 原始 8 个 token，把被压扁的细节重新捞回来。</p>
+<p>TokenSplit 反过来。假设两个 latent 各有 4 个通道：</p>
+<pre><code class="language-text">z row 1 = [10,20,30,40]
+z row 2 = [50,60,70,80]                shape = 2×4
+按通道拆开 → [10,20,30,40,50,60,70,80] shape = 8×1
+</code></pre>
+<p>再用共享线性层把每个 1 通道小 token 扩到目标隐藏维。✓ 自检：拆前后都是 8 个标量，第一步只是把“token 轴”与“通道轴”互换；真正的信息取舍发生在线性层与后续注意力里。</p>
+<h2>真实代码的形状</h2>
+<p>编码器把 <code>[B,N,D]</code> reshape 成 <code>[B,N/r,rD]</code>，再做 <code>Linear(rD,D)</code>；解码器把 <code>[B,n,D]</code> reshape 成 <code>[B,N,D/r]</code>，再做 <code>Linear(D/r,D)</code>。这就是它像 PixelShuffle 的地方：不靠池化挑点，而是搬运维度。</p>
+<h2>消融告诉了什么</h2>
+<p>论文表 3 的边 F1×100：</p>
+<pre><code class="language-text">Q-Former query     49.47
+FPS query          60.18
+TokenMerge query   99.78
+</code></pre>
+<p>这个差距说明 query 的起点对 MeshVAE 很关键。不过表里没有控制更多训练预算，也没有报告方差；能下的结论是“这套训练设置里 TokenMerge 明显更稳”，不是“所有 mesh VAE 都必须这样压”。</p>
+<h2>代码出处</h2>
+<ul>
+<li><code>meshflow/models/meshflow_vae.py</code>：<code>Encoder._get_init_query()</code> 与 <code>Decoder._get_init_query()</code>。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/meshflow.html">meshflow</a> · MeshVAE 的压缩与解压核心。</li>
+<li><a href="../concepts/kl-vae.html">kl-vae</a> · TokenMerge 决定压缩形状，KL 负责让 latent 分布规整。</li>
+<li><a href="../concepts/patch-embedding.html">patch-embedding</a> · 都在 token 轴和通道轴之间搬信息，但 patch embedding 面向规则图像网格。</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/meshflow.html"><span class="cat">paper</span>MeshFlow · 不再逐 token 拼网格，一次并行长出全部顶点和边</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/mesh-token-merge.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

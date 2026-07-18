@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Voxel + 3D RoPE 条件 · 先把点云位置磨粗，再写进注意力 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · voxel-rope-conditioning</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Voxel + 3D RoPE 条件 · 先把点云位置磨粗，再写进注意力</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把点云坐标落进粗体素格，同格点共用一个三维位置编号，再用 3D RoPE 旋转 Q/K。</p>
+<h2>它在修什么差距</h2>
+<p>训练时有真值 mesh 顶点，推理时只有从表面均匀采样的点云。两者都描述同一形状，点的分布却不同：美术师会在锐边和复杂部位多放顶点；均匀采样只按表面积撒点。直接把精确 XYZ 写进 RoPE，模型可能记住“顶点怎么排”，到推理就换了口音。</p>
+<p>体素化先把坐标磨粗。只要落进同一个小方格，就给同一位置编号。模型更难追究采样细节，只能抓住大致空间结构。</p>
+<h2>数字例子 · 一个点落到哪个格子</h2>
+<p>真实模型用 <code>[-1,1]³</code> 和 <code>32³</code> 网格。为了手算，先用每轴 4 格：</p>
+<pre><code class="language-text">点 p = (0.2, -0.7, 0.9)
+resolution = 4
+
+索引 = floor((p+1)/2 × 4)
+x: floor(1.2/2×4) = floor(2.4) = 2
+y: floor(0.3/2×4) = floor(0.6) = 0
+z: floor(1.9/2×4) = floor(3.8) = 3
+
+voxel index = (2,0,3)
+</code></pre>
+<p>每格宽 <code>2/4=0.5</code>，格子中心为：</p>
+<pre><code class="language-text">center = -1 + (index+0.5)×0.5
+       = (0.25, -0.75, 0.75)
+</code></pre>
+<p>✓ 自检：原点与中心三轴差值是 <code>0.05,0.05,0.15</code>，都没超过半格宽 <code>0.25</code>。</p>
+<p>换成真实 32 格后，每格宽 <code>2/32=0.0625</code>。分辨率太低会把不同局部揉在一起；太高又重新暴露训练顶点与推理采样点的分布差。论文选择每轴 32 格，但没有公开分辨率消融数字。</p>
+<h2>3D RoPE 怎样用这三个数</h2>
+<p>普通 RoPE 用一维 token 位置旋转 Q/K。发布代码把每个 attention head 的维度分成三份，分别由 x、y、z 的体素索引控制旋转。同一格里的点拿到同一组三轴旋转；相邻格子的相对位移会反映到注意力点积里。</p>
+<p>它不是把点云编码成另一串条件 token，而是直接改变 noisy mesh token 在 self-attention 里的位置关系。因此不用额外 2,048 个 shape token 做 cross-attention，收敛也更快。</p>
+<h2>代码出处</h2>
+<ul>
+<li><code>meshflow/models/meshflow_dit.py</code>：<code>voxelize_pc()</code> 与 <code>RotaryPositionalEmbeddings(ndim=3)</code>。</li>
+<li><code>meshflow/pipelines/meshflow_pipeline.py</code>：<code>sample_surface_points()</code> → <code>get_rope_cond()</code>。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/meshflow.html">meshflow</a> · 点云条件进入 DiT 的最终方案。</li>
+<li><a href="../concepts/rotary-position-embedding.html">rotary-position-embedding</a> · 一维 RoPE 的基础直觉。</li>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · 3D RoPE 实际调制的去噪骨架。</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/meshflow.html"><span class="cat">paper</span>MeshFlow · 不再逐 token 拼网格，一次并行长出全部顶点和边</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/voxel-rope-conditioning.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
