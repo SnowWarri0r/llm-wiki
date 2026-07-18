@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>CSP · 特征分两路，别让所有通道重复深加工 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · cross-stage-partial-network</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>CSP · 特征分两路，别让所有通道重复深加工</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>一部分特征过残差块，一部分走旁路，末尾再拼接融合。</p>
+<h2>直觉</h2>
+<p>普通残差 stage 让整份特征反复经过同一串块，很多通道会传播相似的梯度。CSP 像把一批原料分成两车：一车进加工厂，一车保留直达通道，出厂口再合流。网络仍能拿到原始信息，但不必让全部通道重复走重活。</p>
+<h2>怎么做的</h2>
+<pre><code class="language-text">输入特征 x
+  ├─ 加工支路 → residual blocks → a'
+  └─ 旁路 --------------------→ b
+concat(a', b) → 1×1 卷积融合 → 输出
+</code></pre>
+<p>YOLOv4 把这套 cross-stage partial 结构接到 Darknet-53 的残差 stage 上，得到 CSPDarknet53。</p>
+<h2>数字例子</h2>
+<p>取一个位置的 4 通道特征：</p>
+<pre><code class="language-text">x = [1,2,3,4]
+加工支路 a=[1,2]，旁路 b=[3,4]
+
+残差块学到修正 [+0.5,-0.5]
+a' = [1.5,1.5]
+
+concat(a',b) = [1.5,1.5,3,4]
+1×1 融合权重都取 0.25
+输出 = 0.25×(1.5+1.5+3+4)=2.5
+</code></pre>
+<p>✓ 两路都进了输出，但深加工只落在一部分特征上。</p>
+<p>论文 512 输入的硬件表里，CSPDarknet53 是 52 BFLOPs / 66 FPS，CSPResNeXt50 是 31 BFLOPs / 62 FPS。运算更多的一方反而更快，说明规整数据流和 GPU 利用率不能只看 BFLOPs 猜。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/yolov4.html">yolov4</a> · 使用 CSPDarknet53 作为骨干</li>
+<li><a href="../concepts/darknet-53.html">darknet-53</a> · 被 CSP 改造的上游骨干</li>
+<li><a href="../concepts/residual-connection.html">residual-connection</a> · 加工支路里的基础块</li>
+<li><a href="../concepts/receptive-field.html">receptive-field</a> · 检测骨干还要覆盖更大的空间范围</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/yolov4.html"><span class="cat">paper</span>YOLOv4 · 把实时检测器改装成一台完整赛车</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/cross-stage-partial-network.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
