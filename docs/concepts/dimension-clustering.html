@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>维度聚类 · 用数据挑 anchor 形状 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · dimension-clustering</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>维度聚类 · 用数据挑 anchor 形状</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把训练集真值框的宽高做 k-means，但距离不用欧氏距离，而用 1−IOU。</p>
+<h2>直觉</h2>
+<p>Anchor 像鞋楦。手工准备几双“常见鞋码”能用，但数据里到底是细长框多、扁宽框多，最好让训练集自己说。</p>
+<p>普通欧氏距离会偏爱小框：同样是宽高都差 20%，大框的绝对差会大十倍。检测真正关心的是两个形状叠起来像不像，因此 YOLOv2 用 IOU 把绝对尺度的影响压掉。</p>
+<h2>怎么做的</h2>
+<p>先把所有真值框移到同一个中心，只保留宽 w、高 h。k-means 的距离是：</p>
+<pre><code class="language-text">distance(box, centroid) = 1 - IOU(box, centroid)
+</code></pre>
+<p>IOU 越高，距离越近。论文在 VOC 上选 k=5，认为召回和输出复杂度比较平衡。</p>
+<h2>数字例子</h2>
+<p>比较两组“都大 20%”的框。</p>
+<p>小框 A=1×2，候选 A'=1.2×2.4，中心对齐：</p>
+<pre><code class="language-text">交集 = 1 × 2 = 2
+并集 = 2 + 2.88 - 2 = 2.88
+IOU = 2 / 2.88 = 0.694
+距离 = 1 - 0.694 = 0.306
+
+欧氏宽高距离 = sqrt(0.2² + 0.4²) = 0.447
+</code></pre>
+<p>大框 B=10×20，候选 B'=12×24，仍然都大 20%：</p>
+<pre><code class="language-text">交集 = 10 × 20 = 200
+并集 = 200 + 288 - 200 = 288
+IOU = 200 / 288 = 0.694
+距离 = 1 - 0.694 = 0.306
+
+欧氏宽高距离 = sqrt(2² + 4²) = 4.472
+</code></pre>
+<p>✓ 两组相对形状误差完全一样，IOU 距离都为 0.306；欧氏距离却把大框罚成小框的 10 倍。这正是换距离函数的原因。</p>
+<h2>论文里的真实数字</h2>
+<table>
+<thead>
+<tr>
+<th>先验生成方式</th>
+<th style="text-align: right;">数量</th>
+<th style="text-align: right;">VOC 平均最近 IOU</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>普通平方误差聚类</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">58.7</td>
+</tr>
+<tr>
+<td>IOU 聚类</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">61.0</td>
+</tr>
+<tr>
+<td>Faster R-CNN 手选 anchor</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: right;">60.9</td>
+</tr>
+<tr>
+<td>IOU 聚类</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: right;">67.2</td>
+</tr>
+</tbody>
+</table>
+<p>5 个数据驱动先验已经追平 9 个手选先验；但这是“未调整先验与真值的平均 IOU”，不是最终检测 mAP。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/yolov2-yolo9000.html">yolov2-yolo9000</a> · 首次把 anchor 宽高变成数据驱动聚类</li>
+<li><a href="../concepts/anchor-boxes.html">anchor-boxes</a> · 聚类输出就是每格使用的初始框形状</li>
+<li><a href="../concepts/iou-intersection-over-union.html">iou-intersection-over-union</a> · 同时当框质量与聚类距离</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/yolov2-yolo9000.html"><span class="cat">paper</span>YOLOv2 / YOLO9000 · 给 YOLO v1 逐项校准</a></li><li><a href="../concepts/anchor-boxes.html"><span class="cat">concept</span>Anchor boxes · 先给框一个形状起点，再预测怎么改</a></li><li><a href="../concepts/iou-intersection-over-union.html"><span class="cat">concept</span>IOU · 两个框重叠多少(交集 ÷ 并集)</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/dimension-clustering.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

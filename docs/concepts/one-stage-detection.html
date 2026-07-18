@@ -47,7 +47,7 @@
 <pre><code>两阶段:  图 →[提~2000候选]→ 每个候选各跑分类+回归 →[去重]→ 框   (慢,看局部)
 单阶段:  图 →[一个CNN一次前向]→ 所有位置的框+类别一起出 →[NMS去重]→ 框  (快,看全图)
 </code></pre>
-<p>单阶段靠"<strong>空间分工</strong>"避免重复:把图划成网格 / 铺满预设位置,每个位置只负责它那一块,一次性并行预测。<a href="../papers/yolo.html">yolo</a> 用 7×7 网格,每格负责中心落在自己格里的物体。</p>
+<p>单阶段靠"<strong>空间分工</strong>"避免重复:把图划成网格 / 铺满预设位置,每个位置只负责它那一块,一次性并行预测。<a href="../papers/yolo.html">yolo</a> 用 7×7 网格,每格负责中心落在自己格里的物体。<a href="../papers/yolov2-yolo9000.html">yolov2-yolo9000</a> 再把每格两个自由框改成 5 个 <a href="../concepts/anchor-boxes.html">anchor-boxes</a>,候选更多、召回更高,仍然只跑一次网络。</p>
 <h2>数字例子 · 前向次数差多少</h2>
 <pre><code>两阶段:  1 次提候选 + ~2000 次逐候选分类 ≈ 上千次网络评估 → 一张图几秒
 单阶段:  1 次前向,输出 7×7×30 = 1470 个数(含所有框和类别)→ 一张图 ~22ms(45 FPS)
@@ -56,6 +56,7 @@
 <h2>链接</h2>
 <ul>
 <li><a href="../papers/yolo.html">yolo</a> · 单阶段检测的开山之作,7×7 网格一次回归</li>
+<li><a href="../papers/yolov2-yolo9000.html">yolov2-yolo9000</a> · 用密集 anchor 提高召回,仍保留一次前向</li>
 <li><a href="../concepts/iou-intersection-over-union.html">iou-intersection-over-union</a> · 判"框得准不准"的度量,训练/去重都用</li>
 <li><a href="../concepts/non-max-suppression.html">non-max-suppression</a> · 单阶段也会出一堆重叠框,靠它去重</li>
 <li><a href="../concepts/mean-average-precision.html">mean-average-precision</a> · 比较两条路线精度用的通用指标</li>
@@ -63,8 +64,8 @@
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 4 处</span>
-  <ul><li><a href="../papers/yolo.html"><span class="cat">paper</span>YOLO · 看一眼就把框和类一起吐出来</a></li><li><a href="../concepts/iou-intersection-over-union.html"><span class="cat">concept</span>IOU · 两个框重叠多少(交集 ÷ 并集)</a></li><li><a href="../concepts/mean-average-precision.html"><span class="cat">concept</span>mAP · 检测的通用分数(每类的 PR 曲线面积再平均)</a></li><li><a href="../concepts/non-max-suppression.html"><span class="cat">concept</span>NMS · 一堆重叠框里,只留最有把握的那个</a></li></ul>
+  <span class="label">引用此页的内容 · 7 处</span>
+  <ul><li><a href="../papers/yolo.html"><span class="cat">paper</span>YOLO · 看一眼就把框和类一起吐出来</a></li><li><a href="../papers/yolov2-yolo9000.html"><span class="cat">paper</span>YOLOv2 / YOLO9000 · 给 YOLO v1 逐项校准</a></li><li><a href="../concepts/anchor-boxes.html"><span class="cat">concept</span>Anchor boxes · 先给框一个形状起点，再预测怎么改</a></li><li><a href="../concepts/iou-intersection-over-union.html"><span class="cat">concept</span>IOU · 两个框重叠多少(交集 ÷ 并集)</a></li><li><a href="../concepts/mean-average-precision.html"><span class="cat">concept</span>mAP · 检测的通用分数(每类的 PR 曲线面积再平均)</a></li><li><a href="../concepts/multi-scale-training.html"><span class="cat">concept</span>多尺度训练 · 一套权重适配多档输入</a></li><li><a href="../concepts/non-max-suppression.html"><span class="cat">concept</span>NMS · 一堆重叠框里,只留最有把握的那个</a></li></ul>
 </div>
 
 <div class="colophon">

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>层级分类 · 沿标签树逐层乘概率 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · hierarchical-classification</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>层级分类 · 沿标签树逐层乘概率</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>不把所有类别塞进一个互斥 softmax；每层只在兄弟类之间选择，叶子概率由根到叶一路相乘。</p>
+<h2>直觉</h2>
+<p>“狗”和“诺福克梗”不是竞争关系，后者本来就是前者的一种。扁平分类却会让两个标签抢同一个概率池。</p>
+<p>标签树把问题拆开：先问动物还是交通工具，再问哺乳类还是鸟，最后问狗还是猫。不确定细品种时，模型还能停在“狗”，而不是在几百个叶子里硬猜一个。</p>
+<h2>怎么做的</h2>
+<p>每组兄弟节点各自做 softmax，所以同组条件概率之和为 1。某个叶子的绝对概率，是路径上每段条件概率的乘积。</p>
+<p>检测时还要乘预测框的物体性：</p>
+<pre><code class="language-text">class confidence
+= P(object) × P(动物 | 实体)
+            × P(哺乳类 | 动物)
+            × P(狗 | 哺乳类)
+</code></pre>
+<h2>数字例子</h2>
+<p>取下面三层条件概率：</p>
+<pre><code class="language-text">P(动物 | 实体) = 0.80, P(交通工具 | 实体) = 0.20
+P(哺乳类 | 动物) = 0.75, P(鸟 | 动物) = 0.25
+P(狗 | 哺乳类) = 0.90, P(猫 | 哺乳类) = 0.10
+</code></pre>
+<p>每组兄弟都归一化：</p>
+<pre><code class="language-text">0.80 + 0.20 = 1
+0.75 + 0.25 = 1
+0.90 + 0.10 = 1
+</code></pre>
+<p>狗的路径概率：</p>
+<pre><code class="language-text">P(狗) = 0.80 × 0.75 × 0.90 = 0.54
+</code></pre>
+<p>若框的物体性 P(object)=0.60：</p>
+<pre><code class="language-text">狗的最终检测分数 = 0.60 × 0.54 = 0.324
+</code></pre>
+<p>✓ 反算 0.54/0.90=0.60，正好等于到哺乳类的路径 0.80×0.75。</p>
+<h2>联合训练为什么需要它</h2>
+<p>COCO 可能只标“狗”，ImageNet 却标“诺福克梗”。有标签“狗”的样本只更新到狗这一层，不碰下面品种；有细类标签的样本则把整条路径一起更新。这样两个数据集能共享语义，而不会互相把正确标签当负类。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/yolov2-yolo9000.html">yolov2-yolo9000</a> · WordTree 用 9418 个节点合并 COCO 与 ImageNet</li>
+<li><a href="../concepts/anchor-boxes.html">anchor-boxes</a> · 检测框给出物体性，标签树给出类别路径</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/yolov2-yolo9000.html"><span class="cat">paper</span>YOLOv2 / YOLO9000 · 给 YOLO v1 逐项校准</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/hierarchical-classification.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
