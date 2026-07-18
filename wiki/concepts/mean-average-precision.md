@@ -1,8 +1,8 @@
 ---
 name: mean-average-precision
 type: concept
-sources: [yolo]
-updated: 2026-07-09
+sources: [yolo, yolov2-yolo9000]
+updated: 2026-07-13
 ---
 
 # mAP · 检测的通用分数(每类的 PR 曲线面积再平均)
@@ -20,7 +20,7 @@ updated: 2026-07-09
 3. 画 PR 曲线,取曲线下面积 = 该类的 AP(平均精度)
 4. 所有类别的 AP 求平均 = mAP
 ```
-YOLO 论文里 63.4% 就是 PASCAL VOC 20 类的 mAP(IOU 阈值 0.5)。
+YOLO 论文里 63.4% 就是 PASCAL VOC 20 类的 mAP(IOU 阈值 0.5)。[[yolov2-yolo9000]] 还同时报告 COCO AP@[.5:.95];它会平均多个 IOU 门槛,比只看 AP50 严得多,两组数字不能直接混比。
 
 ## 数字例子 · 一条小 PR 曲线取 AP
 某类 5 个预测,按置信度排序,命中/误报为 [✓ ✓ ✗ ✓ ✗],共 4 个真值:
@@ -37,6 +37,7 @@ AP ≈ 在各召回水平上取"往右能达到的最高 precision"再平均
 
 ## 链接
 - [[yolo]] · 报的 63.4%/52.7% 就是 VOC mAP@0.5
+- [[yolov2-yolo9000]] · 同时展示 VOC mAP@0.5 与 COCO AP@[.5:.95] 的口径差
 - [[iou-intersection-over-union]] · 判一个预测算不算命中的门槛
 - [[non-max-suppression]] · 先去重再算 mAP,否则重复框刷 FP
 - [[one-stage-detection]] · 用 mAP 横比单/两阶段的精度差

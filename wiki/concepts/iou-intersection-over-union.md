@@ -1,8 +1,8 @@
 ---
 name: iou-intersection-over-union
 type: concept
-sources: [yolo]
-updated: 2026-07-09
+sources: [yolo, yolov2-yolo9000]
+updated: 2026-07-13
 ---
 
 # IOU · 两个框重叠多少(交集 ÷ 并集)
@@ -19,7 +19,7 @@ updated: 2026-07-09
 并集 = 两个框覆盖的总面积 = 面积A + 面积B − 交集
 IOU = 交集 / 并集        （∈ [0,1]）
 ```
-用处两处:① 训练时,[[yolo]] 的框置信度目标 = Pr(有物体) × IOU(预测框, 真值框),让网络学"框得越准置信度越高";② 推理去重时,[[non-max-suppression]] 把和高分框 IOU 超阈值(如 0.5)的其它框删掉。
+用处不止两处:① 训练时,[[yolo]] 的框置信度目标 = Pr(有物体) × IOU(预测框, 真值框),让网络学"框得越准置信度越高";② 推理去重时,[[non-max-suppression]] 把和高分框 IOU 超阈值(如 0.5)的其它框删掉;③ [[yolov2-yolo9000]] 的 [[dimension-clustering]] 用 `1-IOU` 当框形状距离,避免普通欧氏距离偏向小框。
 
 ## 数字例子 · 手算一次
 两个 2×2 的框,一个在 [0,2]×[0,2],一个在 [1,3]×[1,3](右上偏移 1):
@@ -33,6 +33,7 @@ IOU = 1 / 7 ≈ 0.14        → 重叠很少,框得不准
 
 ## 链接
 - [[yolo]] · 置信度 = Pr(物体)×IOU,把"有没有"和"准不准"揉进一个信号
+- [[yolov2-yolo9000]] · 用 1−IOU 聚类 anchor 宽高
 - [[non-max-suppression]] · 按 IOU 阈值删重叠框
 - [[mean-average-precision]] · 判一个预测算不算命中,靠 IOU ≥ 阈值(如 0.5)
 - [[one-stage-detection]] · 检测通用度量,两条路线都用
