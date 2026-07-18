@@ -903,3 +903,5 @@ skill 更新:
 ## [2026-07-13] expand+fix | yolov4 重做 SPP pooling + SAM: 池化从“默认缩图”改成kernel/stride/padding三参数模型,3×3 pad1滑窗逐格手算,13×13代入5/9/13三档均保持尺寸; SPP用13格同心窗口演示中心值4→max6/8/9,四路13×13×512 concat→2048再1×1压缩,PAN拆成独立双向图; spatial-wise明确为1×H×W共享门,point-wise明确为C×H×W逐元素门,双通道2×2算出同一左上角8×.25=2 vs 8×.75=6; 新增concept spatial-vs-pointwise-attention,重写pooling/spp-panet-neck; 标注论文Fig5/实验cfg含modified SAM但官方master@59596d7标准yolov4.cfg无[sam],Table5 +0.3 AP不是两种SAM严格消融; bespoke 11→13图
 
 ## [2026-07-13] fix | yolov4 Fig06 point-wise 卡片消失: 新卡片误用通用类名.point,撞上grid sensitivity图的绝对定位竖线样式(width10/height44/position absolute); 改为独立.pointwise类,恢复SAM左右两栏完整对照
+
+## [2026-07-14] polish+expand | yolov4 全页中文与术语可达性审校: hero/TLDR/架构/SPP-PAN/SAM/Mosaic/SAT/anchor/训练配方/消融/结果与局限逐段去翻译腔和中英夹句; 新增12张可点击术语速查卡,正文术语改为直接点击弹解释,glossary 14→32并补主干/融合层/检测头/特征图与通道/步长与补边/拼接与相加/anchor/AP/FPS-BFLOPs/batch/logit-sigmoid/IOU-NMS/消融/训练旋钮及次要消融候选; 重写原先算到省略号的mAP概念页,3真值4预测从TP/FP→P/R→precision envelope→AP50=0.833,拆清COCO AP/AP50/AP75; convolution补yolov4 source
