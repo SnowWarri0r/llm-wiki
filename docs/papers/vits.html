@@ -456,43 +456,88 @@ u=[.2,.6,.1]，ν=[.5,−.7,.2]
 意思是“把右边交给 qφ，让它生成左边”，
 不是把 u、ν、d、c_text 四项相乘。</pre></div>
 
-  <h3>公式路线图：目标 → 难点 → 下界 → 损失</h3>
-  <p>我们真正想算的是 <code>log pθ(d|c_text)</code>。读法与上面一样：固定竖线右边的文本表示 <code>c_text</code>，看左边的真实时长 <code>d</code> 有多大可能出现。<code>pθ</code> 只看文本，训练和推理都用；<code>qφ</code> 能看文本和正确时长，只负责训练时抽 <code>u、ν</code>。精确计算 <code>pθ</code>，需要把 <code>u、ν</code> 的所有可能取值都积分进去，实际训练时太贵。VITS 便用 <code>qφ</code> 抽几组，改算下面这个下界：</p>
+  <h3>公式路线图：先拼回整数概率，再谈下界</h3>
+  <p>我们真正想算的是 <code>log pθ(d|c_text)</code>。<code>pθ</code> 只看文本，训练和推理都用；<code>qφ</code> 能看文本和正确时长，只负责训练时抽 <code>u、ν</code>。</p>
 
-  <div class="math-dark"><span class="green">想要但难直接算：</span> log p<sub>θ</sub>(d | c<sub>text</sub>)<br><br>
-  log p<sub>θ</sub>(d | c<sub>text</sub>) ≥ E<sub>qφ(u,ν|d,c<sub>text</sub>)</sub> [<br>
+  <h3>① pθ(d−u,ν|c_text) 从哪来</h3>
+  <p>先只看一个音素，并令正确时长 <code>d=2</code>。Flow 不能直接给整数点 2 算概率，它处理的是连续数。所有满足 <code>1&lt;w≤2</code> 的连续时长，向上取整后都是 2；而区间里的任何 <code>w</code> 都能写成 <code>w=2−u</code>，其中 <code>0≤u&lt;1</code>。</p>
+
+  <div class="calc-check"><strong>同一个整数 d=2，有无数个连续代表</strong><pre>u=.2 → w=2−.2=1.8 → ceil(1.8)=2
+u=.7 → w=2−.7=1.3 → ceil(1.3)=2
+
+d−u 不是新标签；它是在整数 d 对应的区间里，
+选出的一个连续位置。</pre></div>
+
+  <p><code>ν</code> 也是连续辅助变量，最终不会输出。要得到整数 <code>d</code> 的总概率，就得把所有 <code>u</code> 对应的连续位置、以及所有 <code>ν</code> 全部加起来。连续变量的“全部加起来”写成积分：</p>
+
+  <div class="math-dark"><span class="green">标量 d=2：</span><br>
+  p<sub>θ</sub>(d=2|c<sub>text</sub>)<br>
+  = ∫<sub>u=0..1</sub> ∫<sub>ν=−∞..∞</sub> <span class="cyan">p<sub>θ</sub>(2−u,ν|c<sub>text</sub>)</span> dν du<br><br>
+  <span class="green">向量 d=[2,4,3] 同理：</span><br>
+  p<sub>θ</sub>(d|c<sub>text</sub>) = ∫∫ <span class="cyan">p<sub>θ</sub>(d−u,ν|c<sub>text</sub>)</span> du dν</div>
+
+  <p>所以 <code>pθ(d−u,ν|c_text)</code> 不是凭空加进去的。它是 Flow 给某一个连续代表 <code>[d−u,ν]</code> 算出的密度；把所有代表的密度积分起来，才是整数时长 <code>d</code> 的概率。</p>
+
+  <h3>② 为什么要除以 qφ</h3>
+  <p>上面的积分维度很高，无法枚举所有 <code>u、ν</code>。VITS 便让 <code>qφ</code> 挑几组值得计算的样本。但 <code>qφ</code> 不是均匀抽样：某些区域抽得多，某些区域抽得少。直接平均 <code>pθ</code>，抽得多的区域就会被重复多算。</p>
+
+  <div class="math-dark"><span class="dim">先简写 p=pθ(d−u,ν|c_text)，q=qφ(u,ν|d,c_text)</span><br><br>
+  ∫∫ p du dν<br>
+  = ∫∫ q · (p/q) du dν　<span class="dim">← q×p/q 仍是 p</span><br>
+  = E<sub>q</sub>[p/q]　　　　　<span class="dim">← 按 q 抽样，再平均 p/q</span></div>
+
+  <p>这里前后<strong>严格相等</strong>。<code>q</code> 把一个区域抽得越频繁，该区域每次样本就要除以越大的 <code>q</code>，把重复抽样造成的偏重抵消掉。这叫重要性采样校正<a class="jr" href="#g-20">20</a>。</p>
+
+  <div class="math-dark">p<sub>θ</sub>(d|c<sub>text</sub>)<br>
+  = E<sub>qφ(u,ν|d,c<sub>text</sub>)</sub> [<br>
+  &nbsp;&nbsp;p<sub>θ</sub>(d−u,ν|c<sub>text</sub>) / q<sub>φ</sub>(u,ν|d,c<sub>text</sub>)<br>
+  ]</div>
+
+  <h3>③ 为什么除以 q 最后写成 −log q</h3>
+  <p>现在对等式两边取 <code>log</code>。难点是 <code>log</code> 仍套在平均值外面。对数函数向下弯，所以“先平均再取 log”不会小于“先取 log 再平均”。这叫 Jensen 不等式<a class="jr" href="#g-21">21</a>，也是整段推导里<strong>唯一产生 ≥ 的地方</strong>：</p>
+
+  <div class="math-dark">log p<sub>θ</sub>(d|c<sub>text</sub>)<br>
+  = log E<sub>q</sub>[p/q]<br>
+  ≥ E<sub>q</sub>[log(p/q)]<br>
+  = E<sub>q</sub>[<span class="cyan">log p</span> − <span class="gold">log q</span>]<br><br>
+  <span class="dim">最后一步只用了：log(p/q)=log p−log q</span></div>
+
+  <p>因此，<code>−log qφ(...)</code> 不是额外添加的惩罚项。完整来路是：用 <code>q</code> 抽样时必须用 <code>p/q</code> 校正；<code>p/q</code> 放进 <code>log</code>，便自然变成 <code>log p−log q</code>。</p>
+
+  <h3>把三步合起来，才是论文公式</h3>
+  <div class="math-dark">log p<sub>θ</sub>(d | c<sub>text</sub>) ≥ E<sub>qφ(u,ν|d,c<sub>text</sub>)</sub> [<br>
   &nbsp;&nbsp;<span class="cyan">log p<sub>θ</sub>(d−u,ν | c<sub>text</sub>)</span><br>
   &nbsp;&nbsp;− <span class="gold">log q<sub>φ</sub>(u,ν | d,c<sub>text</sub>)</span><br>
   ]<br><br><span class="dim">L<sub>dur</sub> = −右侧下界；最大化下界，等价于最小化 L<sub>dur</sub>。</span></div>
 
   <div class="formula-key">
     <div><b>d / c_text</b><br>MAS 给出的真实时长 / 文本编码条件</div>
-    <div><b>θ / pθ</b><br>时长 Flow 的参数 / 计算 [d−u,ν] 在当前模型下的概率密度</div>
+    <div><b>θ / pθ</b><br>时长 Flow 的参数 / 计算 [d−u,ν] 的概率密度</div>
     <div><b>φ / qφ</b><br>训练专用采样器的参数 / 已知文本和正确时长后，采样 u、ν</div>
-    <div><b>E_q</b><br>固定 d、c_text，从 q 抽几组 u、ν；每组代入括号打分，再求平均</div>
-    <div><b>第一项 log p</b><br>[d−u,ν] 在时长 Flow 看来有多常见，越大越好</div>
-    <div><b>第二项 −log q</b><br>u、ν 是 q 有针对性抽出的，因此要扣掉这层采样偏差</div>
+    <div><b>E_q</b><br>从 q 抽几组 u、ν；每组计算 log(p/q)，再求平均</div>
+    <div><b>第一项 log p</b><br>[d−u,ν] 在时长 Flow 看来有多常见</div>
+    <div><b>第二项 −log q</b><br>校正 q 的抽样频率；来自 log(p/q)=log p−log q</div>
   </div>
 
-  <div class="calc-check"><strong>E 下面的 q 到底让你做什么</strong><pre>固定同一个 d、c_text，从 qφ 抽两组 u、ν：
-第 1 组代入方括号 → 分数 −.8
-第 2 组代入方括号 → 分数 −1.0
+  <div class="calc-check"><strong>用 A、B 两个区域验算：为什么要除以 q</strong><pre>区    p贡献    q抽中    p/q
+A     .12      .75     .16
+B     .08      .25     .32
 
-E_q[分数] ≈ (−.8 + −1.0) / 2 = −.9
-L_dur = −(−.9) = .9
+直接相加：pθ(d|c)=.12+.08=.20
 
-操作顺序：抽样 → 每份打分 → 求平均 → 取负号当损失</pre></div>
+按 q 抽样并校正：
+E_q[p/q] = .75×.16 + .25×.32
+         = .12 + .08 = .20  ✓</pre></div>
 
-  <p>同一个 <code>qφ(u,ν|d,c_text)</code> 还会给抽到的这组 <code>u、ν</code> 计算概率密度。因为 <code>u、ν</code> 是连续数，严格说这里是“密度”，不是某个小数点取值的离散概率。</p>
+  <div class="calc-check"><strong>再验算 ≥：只有 Jensen 这一步是不等式</strong><pre>左边 = log .20 = −1.609
 
-  <div class="calc-check"><strong>拿一个样本手算下界</strong><pre>假设 pθ(d−u,ν|c)=0.20，qφ(u,ν|d,c)=0.50
-单次分数 = log .20 − log .50
-          = −1.609 − (−.693) = −.916
-L_dur     = −分数 = .916
+右边 = .75×log .16 + .25×log .32
+     = .75×(−1.833) + .25×(−1.139)
+     = −1.659
 
-先固定 q=.50，只看 p 的变化；若训练后 p 升到 .40：
-新分数 = log .40 − log .50 = −.223
-新损失 = .223  ✓  .916 → .223，模型给这份数据的概率更高</pre></div>
+−1.609 ≥ −1.659  ✓ 下界没有超过左边</pre></div>
+
+  <p>如果 <code>q</code> 学得更准，把 A、B 的抽样率改成 <code>.12/.20=.60</code> 和 <code>.08/.20=.40</code>，那么两边的 <code>p/q</code> 都等于 <code>.20</code>，下界正好等于 <code>log .20=−1.609</code>。这也解释了为什么 <code>qφ</code> 需要训练：它越能找准哪些 <code>u、ν</code> 真正重要，下界就越紧。论文最后取下界的负数作为 <code>L_dur</code>，继续沿用“损失越小越好”的训练方式。</p>
 
   <h3>推理路线：真正让每次时长不同的是高斯噪声</h3>
   <div class="math-dark"><span class="gold">噪声 A</span> → log w=[.59,.92,.69]<br>
@@ -704,6 +749,8 @@ L_fm(G) = .5 + .3 = .8</pre></div>
     <li id="g-17"><span class="term">CMOS</span> · 成对比较相对偏好，0 表示无偏好；负值表示相对真人略逊。</li>
     <li id="g-18"><span class="term"><a href="../concepts/flow-matching.html">Flow Matching 对比</a></span> · 都叫 Flow，但 VITS 用离散可逆层和精确似然；Flow Matching 学连续时间速度场。</li>
     <li id="g-19"><span class="term">条件符号 |</span> · 把 <code>q(a,b|c,d)</code> 读成“已经知道 c、d 时，a、b 会怎样取值”。竖线左边是要描述或抽取的量，右边是已经给定的条件；逗号是在列清单，不是乘号。</li>
+    <li id="g-20"><span class="term">重要性采样校正</span> · 不按均匀方式抽样时，用 <code>p/q</code> 抵消 q 的抽样偏重：q 抽得越频繁，每份样本就除得越小，因此 <code>E_q[p/q]</code> 仍等于对 p 的完整积分。</li>
+    <li id="g-21"><span class="term">Jensen 不等式</span> · 对数函数向下弯，所以 <code>log E[r] ≥ E[log r]</code>。VITS 把 <code>r=p/q</code> 代进去，才从严格相等变成可训练的下界。</li>
   </ol>
 </div>
 
