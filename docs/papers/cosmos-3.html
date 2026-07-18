@@ -330,15 +330,40 @@ xσ = σ×ε + (1−σ)×x₀
     <div class="reveal d5"><b>需要重新学：模态接口与去噪行为</b>VAE、Audio、Action latent 先投影到统一隐藏维；生成训练再修改复制来的 QKV、MLP 和 Norm。</div>
   </div>
 
-  <div class="mathbox"><span class="dim">沿用 §07：x₀=2，ε=−1，σ=.25 → xσ=1.25，目标速度 v*=−3</span><br><br>
-用一个标量 w=2 代替真实模型的几百亿参数：<br>
-初始预测　v̂ = w·xσ = 2×1.25 = <span class="blue">2.5</span><br>
-初始损失　L = (2.5−(−3))² = <span class="gold">30.25</span><br><br>
-梯度　dL/dw = 2·(2.5−(−3))·1.25 = 13.75<br>
-若学习率=.1：w_new = 2−.1×13.75 = <span class="green">.625</span><br>
-新预测　.625×1.25 = .78125<br>
-新损失　(.78125−(−3))² ≈ <span class="green">14.30</span><br><br>
-<span class="dim">一步后仍不会去噪，但新目标已把旧参数往正确方向推：30.25 → 14.30。真实训练会对所有参数重复很多步。</span></div>
+  <div class="mathbox"><span class="dim">沿用 §07：x₀=2，ε=−1，σ=.25 → xσ=1.25，正确速度 v*=−3</span><br>
+<span class="dim">这是一个只有参数 w 的玩具模型，不是 Cosmos 3 的真实网络；它只演示新损失怎样修改复制来的旧参数。</span><br><br>
+
+<span class="gold">① 先定义模型：它到底预测什么</span><br>
+v̂(w) = w·xσ<br>
+<span class="dim">w：唯一要学习的参数　·　xσ：当前带噪输入　·　v̂：模型预测的速度</span><br><br>
+
+<span class="gold">② 再定义损失：怎样算“预测错了多少”</span><br>
+L(w) = (v̂(w)−v*)²<br>
+　　 = (w·xσ−v*)²<br>
+<span class="dim">v*：正确速度。这里只有一个数，所以平方误差不用再求平均。</span><br><br>
+
+<span class="gold">③ 链式法则：损失 → 误差 → 参数</span><br>
+先记误差　e = w·xσ−v*　，于是 L=e²<br>
+dL/dw = (dL/de)·(de/dw)<br>
+　　　 = 2e·xσ<br>
+　　　 = 2(w·xσ−v*)·xσ<br>
+<span class="dim">2e 来自 e² 的导数；xσ 来自 w·xσ−v* 对 w 的导数。</span><br><br>
+
+<span class="gold">④ 现在才代数字：w=2，xσ=1.25，v*=−3</span><br>
+初始预测　v̂ = 2×1.25 = <span class="blue">2.5</span><br>
+初始损失　L = (2.5−(−3))² = 5.5² = <span class="gold">30.25</span><br>
+梯度　　　dL/dw = 2×5.5×1.25 = <span class="blue">13.75</span><br><br>
+
+<span class="gold">⑤ 梯度下降：朝梯度反方向走</span><br>
+w_new = w−η·dL/dw　　<span class="dim">η 是学习率</span><br>
+若 η=.1：w_new = 2−.1×13.75 = <span class="green">.625</span><br>
+新预测　v̂_new = .625×1.25 = .78125<br>
+新损失　L_new = (.78125−(−3))² ≈ <span class="green">14.30</span><br><br>
+
+<span class="gold">⑥ 自检方向</span><br>
+这条样本的最佳参数：w_best = v*/xσ = −3/1.25 = <span class="green">−2.4</span><br>
+第一次更新：2 → .625，确实朝 −2.4 移动；损失：30.25 → 14.30。<br>
+<span class="dim">一步后仍不会去噪。真实训练会用大量样本反复更新 QKV、MLP、Norm 与模态投影。</span></div>
 </figure>
 
 <p>QKV 参数本身并没有写着“只能预测下一个词”。Transformer block 一直只是在重组隐藏向量、提取关系。任务由<strong>输入、attention mask、输出头和损失</strong>共同决定。视频与音频 latent 通过线性层进入同一个隐藏维度；动作的输入、输出投影则由随机初始化开始联合训练。复制 Reasoner 的价值，是不用从零重学“机械臂、杯子、托盘分别是什么，以及它们怎样关联”；但去噪方向仍要靠 Flow 训练重新学<a class="jr" href="#g-18">18</a>。</p>
