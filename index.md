@@ -29,7 +29,7 @@
 - [Interaction Models · Thinking Machines](wiki/papers/interaction-models-tml.md) — 把交互能力做进权重的 276B MoE 模型
 - [Fish Audio S2 Pro](wiki/papers/fish-speech-s2-pro.md) — Dual-AR + RVQ + GRPO 的开源 TTS
 - [ViiTorVoice · 低帧率语义码+并行填声](wiki/papers/viitorvoice.md) — 开源流式零样本 TTS 引擎(无独立论文,思路源自 DualCodec+OmniVoice): 三招各砍一刀延迟—①DualCodec 把 24kHz 压到 12.5 帧/秒,RVQ-1 语义(w2v-BERT 蒸馏,码本16384)+RVQ 2-8 声学残差; ②NAR 掩码并行填声(像完形填空,步数从200降到~8); ③首块流式首帧~60ms; 给参考音零样本克隆+两路CFG调情绪
-- [VITS · VAE+流+GAN 端到端 TTS](wiki/papers/vits.md) — 2021里程碑第一个好用的端到端并行TTS(ICML): 一个模型文本→波形,治两段式(声学模型→mel + vocoder)vocoder吃假mel失配; 条件VAE骨架(后验编码器→潜变量z→HiFi-GAN解码器,ELBO=重建−KL)+归一化流掰简单文本先验够到复杂音频后验+MAS动态规划找单调对齐(无外部对齐器)+随机时长预测器建模一对多节奏+HiFi-GAN对抗; MOS 4.43逼近真人4.46(两段未调3.77),合成×67实时
+- [VITS · 文本进去，波形出来](wiki/papers/vits.md) — 把两段式 TTS 的固定 mel 交接收回一套联合训练：条件 VAE 用 z 装下文字没写出的声音，Flow 接通文本先验与音频后验，MAS 从整句配对中找音素—帧路径，随机时长用去量化 u 与增广 ν 建模多种节奏，HiFi-GAN 多周期判别器补波形细节；LJ MOS 4.43 vs 真人4.46，×67.12实时，并完整覆盖损失、配方、VCTK、消融、声音转换和局限
 - [RoPE · Rotary Position Embedding](wiki/papers/rope.md) — 不加位置向量，旋转 Q/K 让点积天然含相对位置；LLaMA / Mistral / Qwen 全在用
 - [Whisper](wiki/papers/whisper.md) — 68 万小时弱监督训 ASR，zero-shot 碾压精标模型；语音领域的 GPT 时刻
 - [Qwen3-ASR · 给 LLM 接个耳朵](wiki/papers/qwen3-asr.md) — 不从头训ASR: 预训练Qwen3当解码器+AuT音频编码器(8×下采样12.5Hz+动态窗口流式/离线)+projector; modality-projector生产级; prompt塞热词定制转写; RL用GSPO; 带口音英语完胜Whisper
