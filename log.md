@@ -981,3 +981,8 @@ skill 更新:
 ## [2026-07-17] visual+content | ltx-2 Fig 07 重画 register 双向可见关系
 
 - 删除无法表达连接关系的双椭圆装饰线；分开展示 5 个正文 token 与 3 个由 padding 改成的可学习 register，再用单一双向连接说明两组互相可见，并注明一次 attention 中同时更新。
+
+## [2026-07-17] content+visual | ltx-2 补完整模型总览并重写 1080p 推理
+
+- Fig 02 改为纯文本生成全路径：prompt 文本管线、两块随机 latent、一次 48-block 双流前向、外层 solver 循环、两套解码器与最终同步音视频；明确训练时才走 VAE encoder。
+- §11 / Fig 10 改成 `0.5MP base → latent upscale → T/H/W 重叠分块精修 → latent 融合 → VAE decode` 四步，补 2.07MP÷0.5MP≈4.1× 的显存直觉、10/14 融合成 11 的手算，以及精修阶段音频执行路径未公开的边界。
