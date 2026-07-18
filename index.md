@@ -12,7 +12,7 @@
 - [YOLO · 看一眼就把框和类一起吐出来](wiki/papers/yolo.md) — CVPR2016 YOLO v1:原始 R-CNN 逐框提特征,Fast R-CNN 共享整图卷积但仍等 Selective Search,Faster R-CNN 用 RPN 提候选;YOLO 一次前向输出 7×7×30。训练损失拆责任框中心/尺寸/置信度、空框置信度、类别五块;√w,h 让同样 1% 图宽误差对小框产生 7.20× 平方损失。VOC2007:63.4%mAP@45FPS;错误画像是 19.0% 定位 vs 4.75% 背景误检;与最佳 Fast R-CNN 组合 71.8→75.0(+3.2)。VOC2012 57.9,小物体仍弱;Picasso/People-Art 显示艺术画迁移优势但不外推为普遍域泛化。
 - [YOLOv2 / YOLO9000 · 给 YOLO v1 逐项校准](wiki/papers/yolov2-yolo9000.md) — CVPR2017:BatchNorm+高分辨率预训练+anchor+IOU维度聚类+sigmoid位置限位+passthrough+多尺度训练,消融63.4→78.6;同一权重416为76.8mAP@67FPS、544为78.6@40FPS。Darknet-19仅5.58B运算;WordTree把COCO框监督与ImageNet分类合成9418类。边界:COCO AP@[.5:.95]21.6/小目标AP5.0;156个无框监督类16.0mAP,动物迁移好但服饰类可到0。
 - [YOLOv3 · 一张图铺三层探测网](wiki/papers/yolov3.md) — 2018技术报告:沿用v2框公式,把9个COCO anchor分给13×13/26×26/52×52三层,一次前向10,647候选;用60×120行人框贯穿anchor→检测层→格子→四数解码。Darknet-53残差骨干Top-5 93.8且78FPS;类别改独立sigmoid多标签;COCO AP 33.0/AP50 57.9/small AP 18.3。严格定位仍弱,并完整记录线性中心/focal loss/双阈值等失败尝试。
-- [YOLOv4 · 把实时检测器改装成一台完整赛车](wiki/papers/yolov4.md) — 2020技术报告:CSPDarknet53→SPP/PAN→YOLOv3 head,用BoF/BoS分开训练与推理账单;Mosaic四图拼接、SAT自我攻击、scale_x_y缓解格界饱和、多anchor正样本、CIoU三项手算。完整消融保留RFB/ASFF/Gaussian YOLO等掉点结果;COCO 608为43.5 AP/65.7 AP50/47.3 AP75/26.7 small AP,V100 62FPS;论文配方与当前cfg差异单独标注。
+- [YOLOv4 · 把实时检测器改装成一台完整赛车](wiki/papers/yolov4.md) — 2020技术报告:CSPDarknet53→SPP/PAN→YOLOv3 head;SPP用stride-1的5/9/13池化扩视野但不缩13×13,SAM从一张H×W共享空间门改成C×H×W逐元素门;另有Mosaic、SAT、scale_x_y、多anchor正样本与CIoU手算。完整保留负消融、COCO结果及论文SAM/DIoU-NMS与当前标准cfg差异。
 - [LSTM · 长短期记忆](wiki/papers/lstm.md) — Transformer 前的序列霸主: cell state 记忆传送带(加法更新)+三个门(遗忘/输入/输出)治住RNN梯度消失; 加法梯度高速路=ResNet残差同构; 被Attention取代
 - [Attention Is All You Need](wiki/papers/attention-is-all-you-need.md) — Transformer 始祖，整个 LLM 时代的奠基
 - [BERT](wiki/papers/bert.md) — 只要 Transformer encoder，用 MLM 学双向上下文，立住 pretrain → finetune 范式
@@ -152,7 +152,7 @@
 
 ### CNN 基础
 - [Convolution](wiki/concepts/convolution.md) — 小核滑遍全图、逐元素相乘求和；局部连接+权重共享，省参数又平移不变
-- [Pooling](wiki/concepts/pooling.md) — 小窗取 max/avg 下采样：降计算、扩感受野、带一点平移鲁棒
+- [Pooling](wiki/concepts/pooling.md) — 窗口内取max/avg,是否缩图由kernel/stride/padding共同决定;3×3滑窗手算+YOLOv4的stride-1池化为何保持13×13
 - [Receptive Field](wiki/concepts/receptive-field.md) — 一个输出能看到原图多大一片；堆卷积线性长、下采样指数级扩
 
 ### ResNet 系
@@ -276,7 +276,8 @@
 - [Anchor真值分配](wiki/concepts/anchor-truth-assignment.md) — 全局最佳anchor负责框和类;其他高IOU候选忽略,低IOU才当背景,避免监督打架
 - [Bag of Freebies / Specials](wiki/concepts/bag-of-freebies-specials.md) — Freebies只增加训练成本不改变推理图;Specials付少量部署延迟换精度,改检测器先分账再选件
 - [CSP · Cross-Stage Partial](wiki/concepts/cross-stage-partial-network.md) — 特征分加工支路和旁路,末尾concat融合;减少全部通道重复深加工,组成CSPDarknet53
-- [SPP + PAN Neck](wiki/concepts/spp-panet-neck.md) — SPP用1/5/9/13池化扩深层视野,PAN让语义13→26→52下发、位置52→26→13回流
+- [SPP + PAN Neck](wiki/concepts/spp-panet-neck.md) — SPP让同一位置并排看原点/5/9/13四档范围且13×13不变,四路512→concat 2048;PAN再让语义下发、位置回流
+- [Spatial-wise vs Point-wise Attention](wiki/concepts/spatial-vs-pointwise-attention.md) — 原SAM每个(h,w)一个权重且全通道共享;YOLOv4改为每个(c,h,w)各自门控,用2通道2×2数值完整对照
 - [Mosaic · 四图拼接增强](wiki/concepts/mosaic-augmentation.md) — 四张图随机缩放裁剪后拼成一个训练样本,框坐标同步变换;混上下文并增加小目标
 - [CIoU Loss](wiki/concepts/complete-iou-loss.md) — 1−IOU管覆盖、中心距离管偏移、长宽比项管形状;用4×2真值与2×4偏心预测完整算到0.73167
 - [可解码视觉表示](wiki/concepts/decodable-vision-representation.md) — 把框/深度/法线/点图编码成模型能生成、benchmark能确定还原的文本或图像;640×480框完整往返
