@@ -950,4 +950,6 @@ skill 更新:
 
 ## [2026-07-16] fix | krea-2 L2 范数上下标对齐 — 符号表原写 ‖z‖²₂，与公式渲染的 ‖z‖₂² 顺序不一致；统一成“下标 ₂ 表示 L2 范数、上标 ² 表示再平方”，补 ‖[0.4,−0.2]‖₂²=0.4²+(−0.2)²=0.20 的同形公式，说明平方会消掉范数里的平方根
 
+## [2026-07-16] expand | krea-2 技术报告覆盖补全 — 逐节对照官方报告补齐横向细节：数据补FAISS层级聚类/VLM+人工复核、Wikipedia PageRank前90%+Wikidata与分阶段阈值；架构展开GQA/MLA、三种图文流、time token由256px可用到512/1024失效、partial RoPE零样本先赢后输、五类VAE/Qwen3-VL跨层聚合/RMSNorm/Muon稳定条件；训练补256 tensorwise→512 rowwise→1024 bf16、iREPA/TREAD、shifted logit-normal timeshift、WSD/PMA和中训/SFT合并边界；Prompt Expansion补SFT数据分布、GDPO三层奖励、真实失败桶与hard-case采样；系统补FSDP2+TP/async-TP、activation checkpoint、可精确重放数据链、Kueue整组调度、Virtual Kubelet、坏节点分流、7类硬件指标、WEKA边界、208TB krablet与SKIP LOCKED队列；术语表17→24，md同步
+
 ## [2026-07-16] ingest | Trading in the Zone《交易心理分析》(Mark Douglas / 张轶译) — 第二本 book，全 137 页逐章精读后拆成 1 概览 + 11 章精讲(titz-ch01..11)；提炼五个基本事实、七个持续一致性原则、赌场概率模型、三组交易者、四种交易恐惧；关键例子小孩和狗/大豆甩单/免费送钱/圣诞老人能量守恒/跑步5英里原则/大峡谷独木桥/20笔赌场练习；叠工程视角(过程指标vs结果指标、认知=文档信念=权重、大数定律)；版权原书只在 raw/ 留指针不入库
