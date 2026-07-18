@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="description" content="SenseNova-Vision 完整精读：文本、图像与混合输出协议，50M 语料，联合训练，多视图几何，实验与误差链。" />
+<title>SenseNova-Vision · 统一视觉路由台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#f0e9d6;--paper-2:#e8e0c8;--paper-3:#faf4e1;--paper-card:#f7f1de;--ink:#181410;--ink-2:#3a3128;--muted:#7a6f5d;--rule:#bfb398;--violet:#5b3fd1;--violet-soft:#dcd5fa;--cyan:#007f91;--cyan-soft:#c9e7e7;--amber:#c37a0d;--amber-soft:#f0d9a9;--pink:#c23d6f;--pink-soft:#f0cbd9;--green:#3a755a;--green-soft:#d3e3d8;--night:#14152a;--accent:var(--violet)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:400 17px/1.78 "Noto Sans SC",sans-serif;-webkit-font-smoothing:antialiased}body:before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:radial-gradient(rgba(91,63,209,.12) .7px,transparent .8px);background-size:18px 18px}.page{max-width:1080px;margin:auto;padding:42px 34px 110px}.mast{display:flex;justify-content:space-between;gap:18px;padding:11px 0;border-top:4px solid var(--ink);border-bottom:1px solid var(--ink);font:700 10px/1.5 "IBM Plex Mono",monospace;letter-spacing:.13em;text-transform:uppercase}.hero{display:grid;grid-template-columns:.9fr 1.1fr;gap:48px;align-items:center;padding:58px 0 45px}.eyebrow,.label{font:700 10px/1.4 "IBM Plex Mono",monospace;letter-spacing:.15em;text-transform:uppercase;color:var(--violet)}h1{margin:20px 0 24px;font:400 clamp(56px,8vw,94px)/.85 "Archivo Black","Noto Sans SC",sans-serif;letter-spacing:-.05em}h1 span{display:block;color:var(--violet)}.dek{font-size:19px;line-height:1.65;color:var(--ink-2)}.byline{margin-top:20px;font:600 10px/1.7 "IBM Plex Mono",monospace;color:var(--muted)}
+.router{position:relative;min-height:500px;padding:30px 26px;background:var(--night);color:#eef1ff;border-radius:2px;box-shadow:12px 12px 0 var(--violet);overflow:hidden}.router:before{content:"MULTIMODAL ROUTING CONSOLE";display:block;padding-bottom:15px;border-bottom:1px solid #393b69;font:600 9px "IBM Plex Mono",monospace;letter-spacing:.16em;color:#a4a7d5}.input-card{margin:24px 0 20px;padding:15px;border:1px solid #5d6092;background:#1d1f3e}.input-card b,.port b{display:block;font:700 10px "IBM Plex Mono",monospace;letter-spacing:.08em}.screen{height:106px;margin-top:11px;position:relative;background:linear-gradient(145deg,#24335b,#4b2a66);overflow:hidden}.screen:before{content:"";position:absolute;width:88px;height:72px;left:24px;bottom:0;background:#176d76;clip-path:polygon(0 65%,25% 38%,42% 50%,70% 8%,100% 100%,0 100%)}.screen:after{content:"INPUT IMAGE + INSTRUCTION";position:absolute;right:12px;top:10px;width:90px;text-align:right;font:600 8px/1.4 "IBM Plex Mono",monospace;color:#f1c66e}.bus{position:relative;height:40px}.bus:before{content:"";position:absolute;left:50%;top:0;width:2px;height:21px;background:var(--amber)}.bus:after{content:"";position:absolute;left:16%;right:16%;top:20px;height:2px;background:var(--amber)}.pulse{position:absolute;left:50%;top:-4px;width:8px;height:8px;border-radius:50%;background:#fff3a0;box-shadow:0 0 12px #fff3a0;animation:pulse 2.6s ease-in-out infinite}.ports{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.port{min-height:130px;padding:13px 10px;border:1px solid #4d5081;background:#1d1f3e;opacity:0;transform:translateY(10px);transition:.6s ease}.loaded .port{opacity:1;transform:none}.port:nth-child(2){transition-delay:.15s}.port:nth-child(3){transition-delay:.3s}.port small{display:block;margin-top:12px;font:500 8px/1.55 "IBM Plex Mono",monospace;color:#b5b8df}.port.text{border-top:5px solid #8e75ff}.port.image{border-top:5px solid #25c7d8}.port.mixed{border-top:5px solid #ef9d38}.bitline{display:flex;gap:3px;margin-top:17px}.bitline i{display:block;height:16px;flex:1;background:#6d5cd0}.port.image .bitline i{background:#1c8999}.port.mixed .bitline i:nth-child(odd){background:#d27f19}.port.mixed .bitline i:nth-child(even){background:#b94371}.router-note{position:absolute;right:18px;bottom:14px;font:500 8px "IBM Plex Mono",monospace;color:#777bac}
+@keyframes pulse{0%{transform:translateY(0);opacity:.2}35%{opacity:1}100%{transform:translateY(38px);opacity:0}}
+.tldr{display:grid;grid-template-columns:160px 1fr;margin:25px 0 75px;border:2px solid var(--ink);background:var(--violet-soft)}.tldr .label{display:grid;place-items:center;padding:22px;background:var(--violet);color:#fff;font-size:12px}.tldr p{margin:0;padding:24px 28px;font-weight:600}h2{margin:84px 0 22px;padding-top:12px;border-top:5px solid var(--ink);font:400 37px/1.18 "Archivo Black","Noto Sans SC",sans-serif;letter-spacing:-.025em}h2 .num{display:block;margin-bottom:8px;font:700 10px "IBM Plex Mono",monospace;letter-spacing:.15em;color:var(--violet);text-transform:uppercase}h3{margin:40px 0 12px;font:900 23px/1.3 "Noto Sans SC",sans-serif;color:#33248c}p{margin:13px 0}a{color:var(--violet);text-decoration-thickness:1px;text-underline-offset:3px}a:focus-visible{outline:3px solid var(--amber);outline-offset:3px}code{padding:2px 5px;border:1px solid var(--rule);background:#fff7df;font:700 .84em "IBM Plex Mono",monospace}.jr{display:inline-block;margin:0 2px;padding:0 5px;border:1px solid var(--amber);background:var(--amber-soft);color:var(--ink);font:700 9px "IBM Plex Mono",monospace;vertical-align:super;text-decoration:none}.formula{margin:18px 0;padding:18px 20px;background:var(--night);color:#eef1ff;overflow:auto;font:600 12px/1.8 "IBM Plex Mono",monospace;white-space:pre-wrap}.note{margin:25px 0;padding:18px 20px;border-left:6px solid var(--violet);background:var(--paper-card);font-size:15px;color:var(--ink-2)}.note .label{display:block;margin-bottom:6px}.warn{border-left-color:var(--pink)}
+figure{margin:38px 0 55px;padding:25px;border:2px solid var(--ink);background:var(--paper-card);box-shadow:7px 7px 0 var(--paper-2)}figcaption{display:flex;justify-content:space-between;gap:16px;padding-bottom:13px;margin-bottom:23px;border-bottom:1px dashed var(--rule);font:700 10px/1.5 "IBM Plex Mono",monospace;letter-spacing:.09em;text-transform:uppercase}figcaption span:first-child{color:var(--violet)}.fig-note{margin:18px 0 0;padding-top:14px;border-top:1px dashed var(--rule);font-size:14px;color:var(--muted)}.reveal .rev{opacity:0;transform:translateY(9px);transition:.55s ease}.reveal.play .rev{opacity:1;transform:none}.d2{transition-delay:.12s!important}.d3{transition-delay:.24s!important}.d4{transition-delay:.36s!important}.d5{transition-delay:.48s!important}
+.zoo{display:grid;grid-template-columns:1fr 70px 1fr;align-items:center;gap:15px}.heads{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.head{padding:12px;background:#fff;border:1px solid var(--rule);font:700 10px/1.45 "IBM Plex Mono",monospace}.head i{display:block;width:11px;height:11px;margin-bottom:8px;border-radius:50%;background:var(--pink)}.swap{text-align:center;font:900 30px "Archivo Black",sans-serif;color:var(--violet)}.onebus{padding:22px;background:var(--night);color:#fff}.onebus b{display:block;font:700 14px "IBM Plex Mono",monospace}.onebus .lanes{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:17px}.onebus .lanes span{padding:8px 4px;text-align:center;background:#352f7d;font:700 8px "IBM Plex Mono",monospace}.onebus .lanes span:nth-child(2){background:#0b7d8c}.onebus .lanes span:nth-child(3){background:#a96513}
+.route-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.route-card{padding:17px;border:2px solid var(--violet);background:#fff}.route-card:nth-child(2){border-color:var(--cyan)}.route-card:nth-child(3){border-color:var(--amber)}.route-card h4{margin:0 0 7px;font:900 16px "Noto Sans SC",sans-serif}.route-card b{font:700 28px "Archivo Black",sans-serif;color:var(--violet)}.route-card:nth-child(2) b{color:var(--cyan)}.route-card:nth-child(3) b{color:var(--amber)}.route-card p{font-size:13px;line-height:1.55;color:var(--muted)}
+.bbox-demo{display:grid;grid-template-columns:1.05fr .95fr;gap:24px}.canvas{position:relative;aspect-ratio:4/3;background:linear-gradient(150deg,#d9e0dc,#9eaca5);border:1px solid var(--ink);overflow:hidden}.canvas:before{content:"PERSON";position:absolute;left:10%;top:20%;width:60%;height:60%;border:4px solid var(--pink);background:rgba(194,61,111,.08);font:700 10px "IBM Plex Mono",monospace;color:var(--pink)}.canvas .axis{position:absolute;right:8px;bottom:7px;font:600 9px "IBM Plex Mono",monospace}.calc{display:grid;align-content:center;gap:7px}.calc-row{display:grid;grid-template-columns:40px 1fr;gap:10px;padding:8px 10px;border-bottom:1px solid var(--rule);font:600 11px "IBM Plex Mono",monospace}.calc-row b{color:var(--violet)}.roundtrip{margin-top:12px;padding:12px;background:var(--green-soft);font:700 11px/1.6 "IBM Plex Mono",monospace;color:#234c39}
+.dense-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.dense-card{padding:12px;border:1px solid var(--rule);background:#fff}.mini-map{height:96px;margin-bottom:10px}.depth-map{background:linear-gradient(90deg,#fff,#555,#050505)}.normal-map{background:conic-gradient(from 30deg,#e7668f,#52c5c1,#6574da,#e7668f)}.mask-map{background:linear-gradient(135deg,#111 0 35%,#f3f0a1 35% 68%,#111 68%)}.point-map{background:linear-gradient(140deg,#2755d8,#34c8b3 48%,#e88444)}.dense-card b{font:800 13px "Noto Sans SC",sans-serif}.dense-card small{display:block;margin-top:5px;font:600 8px/1.5 "IBM Plex Mono",monospace;color:var(--muted)}.toy-depth{display:flex;gap:8px;margin-top:18px}.depth-val{flex:1;padding:11px;text-align:center;border:1px solid var(--rule);font:700 10px "IBM Plex Mono",monospace}.depth-val:nth-child(1){background:#fff}.depth-val:nth-child(2){background:#aaa}.depth-val:nth-child(3){background:#222;color:#fff}
+.legend-flow{display:grid;grid-template-columns:1fr 35px 1fr;align-items:center;gap:15px}.legend{padding:16px;background:var(--night);color:#fff;font:600 10px/2 "IBM Plex Mono",monospace}.swatch{display:inline-block;width:13px;height:13px;margin-right:7px;vertical-align:-2px}.mask-scene{height:200px;position:relative;background:#050505;overflow:hidden}.mask-scene .road{position:absolute;left:0;right:0;bottom:0;height:58%;background:rgb(20,190,240);clip-path:polygon(35% 0,65% 0,100% 100%,0 100%)}.mask-scene .person{position:absolute;left:28%;top:22%;width:18%;height:48%;border-radius:48% 48% 18% 18%;background:rgb(245,80,120)}.farthest{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:18px}.color-chip{padding:13px 6px;text-align:center;border:1px solid var(--ink);font:700 9px "IBM Plex Mono",monospace}.color-chip:nth-child(1){background:#f33}.color-chip:nth-child(2){background:#3c3}.color-chip:nth-child(3){background:#44f;color:#fff;outline:4px solid var(--amber)}.color-chip:nth-child(4){background:#ff0}.arrow{font:900 22px "Archivo Black",sans-serif;color:var(--amber);text-align:center}
+.views{display:grid;grid-template-columns:1fr 1fr;gap:18px}.view-stack{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}.view{height:110px;background:linear-gradient(145deg,#1f3562,#55a295);border:3px solid #fff;transform:rotate(-2deg)}.view:nth-child(2){transform:translateY(10px) rotate(1deg)}.view:nth-child(3){transform:rotate(3deg)}.geom-flow{padding:15px;background:var(--night);color:#fff;font:600 9px/1.8 "IBM Plex Mono",monospace}.geom-flow b{color:#67e2dd}.pose-ledger{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:6px}.pose-step{padding:11px;border:1px solid var(--rule);background:#fff;font:600 9px/1.55 "IBM Plex Mono",monospace}.pose-step b{display:block;color:var(--violet);font-size:14px}
+.corpus{display:grid;gap:11px}.corpus-row{display:grid;grid-template-columns:175px 1fr 70px;gap:12px;align-items:center;font:600 10px "IBM Plex Mono",monospace}.rail{height:28px;background:var(--paper-2);overflow:hidden}.fill{height:100%;width:var(--w);background:var(--violet);transform-origin:left;transform:scaleX(0);transition:1s ease}.play .fill{transform:scaleX(1)}.corpus-row:nth-child(2) .fill{background:var(--cyan)}.corpus-row:nth-child(3) .fill{background:var(--amber)}.corpus-row:nth-child(4) .fill{background:var(--pink)}.release-note{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:20px}.release-note div{padding:12px;border:1px solid var(--rule);background:#fff;font-size:12px}.release-note b{display:block;font:700 18px "Archivo Black",sans-serif;color:var(--violet)}
+.loss-lanes{display:grid;grid-template-columns:1fr 80px 1fr;gap:14px;align-items:center}.lane{padding:18px;background:#fff;border:2px solid var(--violet)}.lane.image{border-color:var(--cyan)}.lane h4{margin:0 0 12px;font:900 16px "Noto Sans SC",sans-serif}.lane .formula{margin:0;font-size:10px}.merge{text-align:center;font:900 28px "Archivo Black",sans-serif;color:var(--amber)}.recipe{margin-top:22px}.recipe table,.bench-table{width:100%;border-collapse:collapse;font-size:13px}.recipe th,.recipe td,.bench-table th,.bench-table td{padding:10px 9px;border-bottom:1px solid var(--rule);text-align:left}.recipe th,.bench-table th{font:700 9px "IBM Plex Mono",monospace;letter-spacing:.08em;color:var(--violet);text-transform:uppercase}.recipe td:nth-child(n+2){font-family:"IBM Plex Mono",monospace;font-size:11px}.recipe .diff{background:var(--pink-soft)}
+.scoreboards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.score{padding:16px;border:1px solid var(--ink);background:#fff}.score h4{margin:0 0 12px;font:900 18px "Noto Sans SC",sans-serif}.score .verdict{display:inline-block;padding:3px 7px;margin-bottom:10px;background:var(--violet-soft);font:700 9px "IBM Plex Mono",monospace;color:#382a92}.score:nth-child(2) .verdict{background:var(--cyan-soft);color:#075761}.score:nth-child(3) .verdict{background:var(--amber-soft);color:#774600}.score:nth-child(4) .verdict{background:var(--pink-soft);color:#7c2445}.metric{display:grid;grid-template-columns:1fr auto;gap:8px;padding:6px 0;border-bottom:1px dashed var(--rule);font-size:12px}.metric b{font-family:"IBM Plex Mono",monospace}.trade{margin-top:18px;padding:15px;background:var(--night);color:#fff;display:grid;grid-template-columns:1fr 1fr;gap:12px}.trade div{padding:10px;border:1px solid #41446e}.trade b{display:block;font:700 25px "Archivo Black",sans-serif}.down b{color:#f07ea6}.up b{color:#6addc5}
+.converge{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;align-items:end;min-height:220px}.stage{height:var(--h);padding:9px 7px;background:var(--violet);color:#fff;display:flex;flex-direction:column;justify-content:space-between;font:700 8px/1.4 "IBM Plex Mono",monospace;transform-origin:bottom;transform:scaleY(0);transition:.8s ease}.play .stage{transform:scaleY(1)}.stage:nth-child(2){background:#5b6bc3}.stage:nth-child(3){background:var(--cyan)}.stage:nth-child(4){background:var(--amber)}.stage:nth-child(5){background:var(--pink)}.stage b{font-size:13px}.converge-axis{margin-top:9px;text-align:right;font:600 9px "IBM Plex Mono",monospace;color:var(--muted)}
+.chain{display:grid;grid-template-columns:1fr 40px 1fr 40px 1fr;align-items:center}.chain-card{min-height:165px;padding:15px;border:1px solid var(--ink);background:#fff}.chain-card h4{margin:0 0 10px;font:900 15px "Noto Sans SC",sans-serif}.chain-card code{display:block;margin:6px 0;font-size:9px}.chain-arrow{text-align:center;font:900 22px "Archivo Black",sans-serif;color:var(--pink)}.repair{margin-top:15px;padding:14px;background:var(--green-soft);font:700 11px/1.6 "IBM Plex Mono",monospace}.limits{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.limit{padding:16px;border-top:4px solid var(--pink);background:#fff;font-size:13px}.limit b{display:block;margin-bottom:6px;font:900 14px "Noto Sans SC",sans-serif}
+.gloss{margin-top:75px;padding-top:28px;border-top:5px solid var(--ink)}.gloss h2{margin-top:0;border:0;padding:0;font-size:28px}.gloss ol{list-style:none;padding:0;counter-reset:g}.gloss li{counter-increment:g;position:relative;padding:13px 0 13px 48px;border-bottom:1px dashed var(--rule);font-size:14px}.gloss li:before{content:counter(g,decimal-leading-zero);position:absolute;left:0;top:14px;font:700 10px "IBM Plex Mono",monospace;color:var(--violet)}.term{font-weight:900}.colophon{display:flex;justify-content:space-between;gap:18px;margin-top:45px;padding-top:18px;border-top:1px solid var(--ink);font:600 9px/1.7 "IBM Plex Mono",monospace;color:var(--muted)}
+@media(max-width:820px){.page{padding:30px 20px 80px}.hero{grid-template-columns:1fr}.router{min-height:auto}.tldr{grid-template-columns:1fr}.zoo,.bbox-demo,.views,.loss-lanes{grid-template-columns:1fr}.swap,.merge{transform:rotate(90deg)}.route-grid,.dense-grid,.scoreboards{grid-template-columns:1fr 1fr}.legend-flow{grid-template-columns:1fr}.legend-flow>.arrow{transform:rotate(90deg)}.pose-ledger{grid-template-columns:1fr 1fr}.chain{grid-template-columns:1fr}.chain-arrow{transform:rotate(90deg)}.corpus-row{grid-template-columns:110px 1fr 55px}.colophon{display:block}}
+@media(max-width:560px){body{font-size:16px}.ports,.route-grid,.dense-grid,.scoreboards,.limits,.release-note{grid-template-columns:1fr}.pose-ledger{grid-template-columns:1fr}.converge{grid-template-columns:1fr;align-items:stretch}.stage{height:auto!important;min-height:72px;transform:translateX(-10px)}.play .stage{transform:none}.farthest{grid-template-columns:1fr 1fr}.trade{grid-template-columns:1fr}.mast{display:block}.mast span{display:block}.router{box-shadow:7px 7px 0 var(--violet)}figure{padding:18px}.corpus-row{grid-template-columns:1fr}.rail{height:21px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}.rev,.fill,.stage{opacity:1!important;transform:none!important}}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · sensenova-vision</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+<div class="mast"><span>FIELD NOTES / GENERATIVE COMPUTER VISION</span><span>ARXIV 2607.06560 · 07 JUL 2026</span></div>
+
+<header class="hero">
+  <div><div class="eyebrow">Vision as Unified Multimodal Generation</div><h1>整个视觉<br><span>接一条总线</span></h1><p class="dek">检测写文本，深度画灰度图，分割先写颜色图例再画 mask，多视图 3D 同时生成 point map 与相机 token。SenseNova-Vision 改的不是某颗 head，而是整个视觉工具箱的输入输出协议。</p><div class="byline">XIAOYANG HAN ET AL. · SENSENOVA-VISION · 7B MOT</div></div>
+  <div class="router" aria-label="统一多模态路由台"><div class="input-card"><b>01 / REQUEST</b><div class="screen"></div></div><div class="bus"><i class="pulse"></i></div><div class="ports"><div class="port text"><b>TEXT PORT</b><div class="bitline"><i></i><i></i><i></i><i></i></div><small>boxes · OCR<br>keypoints · camera</small></div><div class="port image"><b>IMAGE PORT</b><div class="bitline"><i></i><i></i><i></i><i></i></div><small>depth · normal<br>mask · point map</small></div><div class="port mixed"><b>MIXED PORT</b><div class="bitline"><i></i><i></i><i></i><i></i></div><small>legend + mask<br>pose + point map</small></div></div><div class="router-note">NO TASK-SPECIFIC HEADS</div></div>
+</header>
+
+<div class="tldr"><div class="label">一句话</div><p>自然语言说明任务与解码规则；稀疏符号答案写成文本，像素对齐答案生成图像，语义与像素并存时输出文字图例+彩色 mask。一个 Bagel-7B-MoT 因此覆盖四大视觉族，不新增任务专用预测头。</p></div>
+
+<h2><span class="num">§ 01 / Reframing</span>统一的不是 backbone，是答案出口</h2>
+<p>以往的 generalist vision 常共享特征抽取器，却仍给检测、分割、深度、pose 各接一颗 head。新任务进来，结构、损失、解码器和后处理都要再设计。SenseNova-Vision<a class="jr" href="#g-01">1</a>把问题倒过来：统一多模态模型已经会写文本、生成图像，能否把所有视觉标注翻译成这两种原生输出？</p>
+
+<figure id="fig-interface" class="reveal"><figcaption><span>Fig 01 · 专家插座排 → 单条生成总线</span><span>WHAT CHANGED</span></figcaption><div class="zoo"><div class="heads"><div class="head rev"><i></i>DETECTION HEAD<br>boxes + scores</div><div class="head rev d2"><i></i>SEGMENT HEAD<br>mask logits</div><div class="head rev d3"><i></i>DEPTH HEAD<br>continuous field</div><div class="head rev d4"><i></i>POSE HEAD<br>camera params</div></div><div class="swap rev d3">→</div><div class="onebus rev d4"><b>ONE UMM / SHARED PARAMETERS</b><div class="lanes"><span>TEXT</span><span>IMAGE</span><span>MIXED</span></div><p style="font-size:12px;color:#bec2eb">instruction 决定任务；decoding convention 决定怎样还原。</p></div></div><p class="fig-note">统一的是模型参数、调用入口和生成空间；各 benchmark 的指标与编码规则并没有消失。新增任务首先要回答“答案能否变成可生成、可解码的表示”。</p></figure>
+
+<p>这条路线接在四类前人工作之后：Pix2Seq / Unified-IO 把任务序列化，但稠密图很别扭；SAM、Depth Anything、VGGT 在单一任务族里很强，却没有共同输出空间；Marigold、DICEPTION 把稠密感知变成图像生成，却难写 OCR、框与相机参数；LISA、X-SAM 等 MLLM 能理解语言，稠密结果仍经专用 decoder。SenseNova 的差异是把<strong>符号、像素与混合答案同时放回 UMM 原生空间</strong>。</p>
+
+<h2><span class="num">§ 02 / Routing rule</span>答案稀疏就写，答案稠密就画</h2>
+<p>三条输出通道的选择依据不是任务名字，而是答案的数据形态。结构化文本<a class="jr" href="#g-02">2</a>适合长度可变的记录；VAE 图像 latent<a class="jr" href="#g-03">3</a>适合每个像素都有值的场；两者都需要时就按固定顺序混合。</p>
+
+<figure id="fig-routing" class="reveal"><figcaption><span>Fig 02 · 同一模型的三条原生输出通道</span><span>ROUTE BY OUTPUT SHAPE</span></figcaption><div class="route-grid"><div class="route-card rev"><b>TEXT</b><h4>稀疏 / 符号化</h4><p>类别、bbox、point、OCR、keypoint、camera pose。语言能枚举变长记录。</p></div><div class="route-card rev d2"><b>IMAGE</b><h4>稠密 / 像素对齐</h4><p>binary mask、depth、normal、point map。图像网格天然保存空间布局。</p></div><div class="route-card rev d3"><b>MIXED</b><h4>语义 + 像素</h4><p>panoptic、GCG、pose+point map。文本定义图例或元数据，图像保存边界。</p></div></div><p class="fig-note">任务由自然语言 instruction 指定，输出 marker 再声明 schema。统一接口不等于把三种答案硬压成同一种 token。</p></figure>
+
+<h3>文本 marker 只是边界，不是新 head</h3>
+<p><code>&lt;p&gt;</code> 划出类别、指代表达或 OCR 文本；<code>&lt;bbox&gt;</code>、<code>&lt;point&gt;</code>、<code>&lt;kpt&gt;</code>、<code>&lt;polygon&gt;</code> 分隔不同坐标字段。生成后由 parser 恢复成 benchmark 记录。检测、GUI、OCR 与关键点共享 text generation，却靠 instruction 和 schema 分开。</p>
+
+<h2><span class="num">§ 03 / Decodable text</span>640×480 的框，完整走一遍编码与解码</h2>
+<p>“能写出来”不够，输出还得确定地还原。可解码表示<a class="jr" href="#g-04">4</a>是这篇论文真正的工程轴心。设图像宽 <code>W=640</code>、高 <code>H=480</code>，人物框像素坐标为 <code>[64,96,448,384]</code>。</p>
+<div class="formula">b_norm = [x₀/W, y₀/H, x₁/W, y₁/H]
+       = [64/640, 96/480, 448/640, 384/480]
+       = [0.100, 0.200, 0.700, 0.800]</div>
+<p><code>x₀,y₀</code> 是左上角，<code>x₁,y₁</code> 是右下角；横坐标除以宽，纵坐标除以高，让不同分辨率共享 `[0,1]` 空间。论文保留三位小数。解码时分别乘回宽高，正好得到原框。</p>
+
+<figure id="fig-bbox" class="reveal"><figcaption><span>Fig 03 · 像素框 ↔ 归一化文本</span><span>ROUND TRIP VERIFIED</span></figcaption><div class="bbox-demo"><div class="canvas rev"><span class="axis">640 × 480</span></div><div class="calc"><div class="calc-row rev"><b>x₀′</b><span>64 / 640 = 0.100</span></div><div class="calc-row rev d2"><b>y₀′</b><span>96 / 480 = 0.200</span></div><div class="calc-row rev d3"><b>x₁′</b><span>448 / 640 = 0.700</span></div><div class="calc-row rev d4"><b>y₁′</b><span>384 / 480 = 0.800</span></div><div class="roundtrip rev d5">&lt;p&gt;person&lt;/p&gt;<br>&lt;bbox&gt;[.100,.200,.700,.800]&lt;/bbox&gt;<br>× [640,480,640,480] → 原像素框</div></div></div><p class="fig-note">三位小数在 640 宽图上的横向量化间隔约 0.64px。若模型写成 0.701，右边界会解成 448.64px：生成误差被协议变成可测的坐标误差。</p></figure>
+
+<h2><span class="num">§ 04 / Dense encodings</span>深度、法线、mask、3D 点都变成“另一张图”</h2>
+<p>稠密任务<a class="jr" href="#g-05">5</a>的输出与输入共用像素网格，因此 image generation 是自然接口：depth 写灰度，surface normal 的 XYZ 写 RGB，single-target segmentation 写固定前景/背景色，point map 的归一化 XYZ 也写 RGB。</p>
+
+<figure id="fig-dense" class="reveal"><figcaption><span>Fig 04 · 四种稠密信号借用 RGB 画布</span><span>DETERMINISTIC VISUAL ENCODING</span></figcaption><div class="dense-grid"><div class="dense-card rev"><div class="mini-map depth-map"></div><b>DEPTH</b><small>metric → inverse depth<br>→ normalized gray</small></div><div class="dense-card rev d2"><div class="mini-map normal-map"></div><b>NORMAL</b><small>(nₓ,nᵧ,n_z)<br>→ R,G,B</small></div><div class="dense-card rev d3"><div class="mini-map mask-map"></div><b>BINARY MASK</b><small>fixed foreground<br>+ background colors</small></div><div class="dense-card rev d4"><div class="mini-map point-map"></div><b>POINT MAP</b><small>normalized X,Y,Z<br>→ R,G,B</small></div></div><div class="toy-depth"><div class="depth-val rev">d=1m<br>1/d=1.00<br>gray=255</div><div class="depth-val rev d2">d=2m<br>1/d=.50<br>gray=85</div><div class="depth-val rev d3">d=4m<br>1/d=.25<br>gray=0</div></div><p class="fig-note">灰度 255/85/0 只是在这三个 toy 值内做 min-max，用来解释“近亮远暗”；论文没有公开完整归一化端点，真实复现必须使用发布的转换规则，不能把这个玩具公式当官方实现。</p></figure>
+
+<p>逆深度<a class="jr" href="#g-06">6</a>为什么合理？`1m→2m` 的 `1/d` 差 0.5，`2m→4m` 只差 0.25，更多动态范围留给近处结构。但“图像形式”也带来生成误差：边缘可能模糊、RGB 可能漂移，必须解码后再按 AbsRel、角度误差或 IoU 评价。</p>
+
+<h2><span class="num">§ 05 / Mixed response</span>颜色图例负责“是谁”，mask 负责“在哪里”</h2>
+<p>多区域分割不能只吐一张彩色图：RGB 本身不知道对应 road、person 还是 instance-7。模型先用 <code>&lt;color&gt;</code> 绑定语义和颜色，再渲染 mask，这就是颜色图例掩码<a class="jr" href="#g-07">7</a>。</p>
+
+<figure id="fig-legend" class="reveal"><figcaption><span>Fig 05 · 文字图例 + 彩色像素 = 可解码分割</span><span>SEMANTICS BINDS TO RGB</span></figcaption><div class="legend-flow"><div class="legend rev"><span class="swatch" style="background:rgb(20,190,240)"></span>&lt;p&gt;road &lt;color&gt;(20,190,240)<br><span class="swatch" style="background:rgb(245,80,120)"></span>&lt;p&gt;person-1 &lt;color&gt;(245,80,120)<br><span class="swatch" style="background:#000;border:1px solid #777"></span>background = black</div><div class="arrow rev d2">→</div><div class="mask-scene rev d3"><i class="road"></i><i class="person"></i></div></div><div class="farthest"><div class="color-chip rev">RED<br>seed</div><div class="color-chip rev d2">GREEN<br>seed</div><div class="color-chip rev d3">BLUE<br>min distance 360.6<br>SELECT</div><div class="color-chip rev d4">YELLOW<br>min distance 255</div></div><p class="fig-note">200 个颜色 anchor 用 greedy farthest-point sampling：每次选“离已有颜色中最近者仍最远”的候选。蓝离红、绿都 360.6，黄只离最近者 255，所以先选蓝；黑色专留背景。</p></figure>
+
+<div class="formula">d(c,S) = minₛ∈S ||c-s||₂
+c_next = argmax_c d(c,S)</div>
+<p><code>S</code> 是已选颜色集合；<code>c</code> 是候选 RGB；欧氏距离同时考虑三个通道。颜色拉开减少实例混淆，但生成器仍可能写错颜色或把边界画糊。</p>
+
+<h2><span class="num">§ 06 / Multi-view geometry</span>点图走图像，相机走 token</h2>
+<p>多视图样本最多随机取 10 个 view。第一帧当参考坐标系；每个像素先由 depth 与内参恢复相机坐标 3D 点，再经外参变到 frame-0。全序列共享中心化与尺度归一化，无效深度沿相机光线推到单位立方体 skybox<a class="jr" href="#g-08">8</a>，最终 XYZ 作为 point-map RGB。</p>
+
+<figure id="fig-geometry" class="reveal"><figcaption><span>Fig 06 · 多视图两条输出：point map + camera tokens</span><span>REFERENCE = FRAME 0</span></figcaption><div class="views"><div class="view-stack"><div class="view rev"></div><div class="view rev d2"></div><div class="view rev d3"></div></div><div class="geom-flow rev d2">pixel + depth + K<br>→ camera-frame XYZ<br>→ camera-to-world<br>→ <b>frame-0 coordinates</b><br>→ center / scale normalize<br>→ RGB point maps</div><div class="pose-ledger"><div class="pose-step rev"><b>q</b>(0,0,0,1)<br>×1000</div><div class="pose-step rev d2"><b>u</b>(.6,0,.8)<br>×1000</div><div class="pose-step rev d3"><b>scale</b>1.25m<br>=125cm</div><div class="pose-step rev d4"><b>t</b>u×125/100<br>=(.75,0,1)m</div></div></div><p class="fig-note">2,001 个数值 token 覆盖 &lt;-1000&gt;…&lt;1000&gt;，另有 8 个结构 token。当前官方 parser 将 offset 整数除 1000，再乘 scale/100 还原米制平移。</p></figure>
+
+<p>完整记录是 <code>&lt;frame&gt;&lt;quat&gt;...&lt;/quat&gt;&lt;offset&gt;...&lt;/offset&gt;&lt;scale&gt;...&lt;/scale&gt;&lt;/frame&gt;</code>。相机位姿 token 化<a class="jr" href="#g-09">9</a>把连续几何塞进语言解码器，代价是格式、单位方向和旋转合法性都可能在自回归生成中出错。</p>
+
+<h2><span class="num">§ 07 / Corpus</span>SN-VC-50M：50M 条协议化监督，不是 50M 张独立原图</h2>
+<p>SN-VC 是完整可复现 corpus：公共标注能直接转换的部分给 source list、prompt、规则与样例；额外生成或整理的子集作为 SN-VC-50M 发布。重叠 benchmark 保留官方 split，并排除评测图与标注。</p>
+
+<figure id="fig-corpus" class="reveal"><figcaption><span>Fig 07 · 50M 发布子集的四条数据轨</span><span>73 DATASET-TASK ENTRIES · 10 TASK TYPES</span></figcaption><div class="corpus"><div class="corpus-row"><span>STRUCTURED</span><div class="rail"><div class="fill" style="--w:37.8%"></div></div><b>18.9M</b></div><div class="corpus-row"><span>DENSE GEOMETRY</span><div class="rail"><div class="fill" style="--w:34.6%"></div></div><b>17.3M</b></div><div class="corpus-row"><span>MULTI-VIEW</span><div class="rail"><div class="fill" style="--w:25%"></div></div><b>12.5M</b></div><div class="corpus-row"><span>SEGMENTATION</span><div class="rail"><div class="fill" style="--w:2.6%"></div></div><b>1.3M</b></div></div><div class="release-note"><div class="rev"><b>50.0M</b>四项精确相加</div><div class="rev d2"><b>PATHS</b>不重复分发公共 RGB</div><div class="rev d3"><b>MIXED</b>真值 + 伪标签 + 策展</div></div><p class="fig-note">同一张图做不同任务会成为独立样本，因为 instruction 与 target 不同。MoGe-2 补 depth/normal，LingBot-Depth 补稀疏多视图 depth；因此“50M”不等于全部独立原图或全部人工真值。</p></figure>
+
+<h2><span class="num">§ 08 / Joint training</span>文字算交叉熵，图像 latent 学速度场</h2>
+<p>模型从 Bagel-7B-MoT SFT。SN-VC 与 VQA、text-to-image、image-to-image 混采，后者是 capability-preserving mixture<a class="jr" href="#g-10">10</a>，用来减轻视觉专训对通用理解和生成的侵蚀。VAE visual encoder 冻结，其他模块与 connector 更新；SigLIP2 输入上限在论文中提到 980。</p>
+
+<figure id="fig-training" class="reveal"><figcaption><span>Fig 08 · 同一优化步骤里的两种监督</span><span>CE + RECTIFIED FLOW</span></figcaption><div class="loss-lanes"><div class="lane rev"><h4>TEXT TARGET</h4><div class="formula">L_text = -Σ log p(y_t | y_&lt;t, cond)
+p(correct): .2 → .8
+loss: 1.609 → .223</div></div><div class="merge rev d2">+</div><div class="lane image rev d3"><h4>IMAGE LATENT</h4><div class="formula">xτ=(1-τ)x₀+τε
+v*=ε-x₀
+L_img=||vθ-v*||²
+x₀=2, ε=-1, τ=.25
+xτ=1.25, v*=-3</div></div></div><div class="recipe"><table><thead><tr><th>项目</th><th>论文 v1</th><th>repo beea1f7</th></tr></thead><tbody><tr class="diff"><td>steps</td><td>50K</td><td>200K</td></tr><tr><td>warm-up / EMA</td><td>500 / .995</td><td>500 / .995</td></tr><tr><td>learning rate</td><td>2.5e-5</td><td>2.5e-5</td></tr><tr><td>weight decay</td><td>0</td><td>0</td></tr><tr><td>dropout T / ViT / VAE</td><td>.05 / .1 / .1</td><td>.05 / .1 / .1</td></tr><tr><td>loss weights</td><td>未报告</td><td>CE .25 / MSE 1.0</td></tr></tbody></table></div><p class="fig-note">当前源码的 flow target 是 <code>noise - clean_latent</code>。学习率由官方 PDF 第 9 页确认；真正的版本差异是训练步数等配置，20 万步不能倒写成论文实验设置。</p></figure>
+
+<p>联合目标可写成 <code>L=λ_text·L_text+λ_image·L_image</code>。论文没有报告两个权重；当前脚本才设 CE 0.25、MSE 默认 1.0。交叉熵<a class="jr" href="#g-11">11</a>与 rectified flow<a class="jr" href="#g-12">12</a>共享参数，却仍是两种不同目标。</p>
+
+<h2><span class="num">§ 09 / Experiments</span>强项、平手和专家差距要同时放在桌上</h2>
+<p>论文覆盖四大任务族，不能把不同 benchmark 的 F1、mIoU、AbsRel、角度误差和 pose AUC 平均成一个“总分”。更可靠的读法是分别看每个任务族的相对位置。</p>
+
+<figure id="fig-benchmarks" class="reveal"><figcaption><span>Fig 09 · 四块成绩单，不做虚假的统一总分</span><span>REPRESENTATIVE METRICS</span></figcaption><div class="scoreboards"><div class="score rev"><span class="verdict">BROAD LEAD</span><h4>结构化视觉</h4><div class="metric"><span>COCO-Common</span><b>56.6</b></div><div class="metric"><span>LVIS</span><b>54.8</b></div><div class="metric"><span>Dense200</span><b>66.8</b></div><div class="metric"><span>ScreenSpot-V2</span><b>85.9 · 非第一</b></div></div><div class="score rev d2"><span class="verdict">CLOSE TO SPECIALIST</span><h4>稠密几何</h4><div class="metric"><span>NYUv2 depth AbsRel↓</span><b>4.0 vs 3.5</b></div><div class="metric"><span>DIODE depth AbsRel↓</span><b>20.6 vs 23.0</b></div><div class="metric"><span>ScanNet normal mean↓</span><b>12.8 = 12.8</b></div></div><div class="score rev d3"><span class="verdict">MIXED TRADE-OFF</span><h4>分割 vs X-SAM</h4><div class="metric"><span>panoptic PQ</span><b>48.8 vs 54.7</b></div><div class="metric"><span>ReasonSeg val</span><b>63.2 vs 56.6</b></div><div class="metric"><span>interactive box</span><b>73.9 vs 70.0</b></div></div><div class="score rev d4"><span class="verdict">GAP REMAINS</span><h4>多视图几何</h4><div class="metric"><span>7Scenes F1</span><b>87.9 vs 90.5</b></div><div class="metric"><span>Re10K pose AUC</span><b>77.3 vs 89.6</b></div><div class="metric"><span>CO3Dv2 pose AUC</span><b>80.1 vs 91.8</b></div></div></div><div class="trade"><div class="down rev"><b>83.3 → 79.0</b>MMVP understanding · −4.3</div><div class="up rev d2"><b>0.82 → 0.85</b>GenEval T2I · +0.03</div></div><p class="fig-note">结构化任务最强；稠密几何进入专家区间；分割有 reasoning/box 优势但 generic/referring 多项落后；多视图 pose 的专家差距明显。能力保持也不是零代价：理解下降，生成略升。</p></figure>
+
+<div class="note warn"><span class="label">协议警告</span>Vision Banana 的 ReasonSeg 使用 Gemini 辅助；其 depth 是 absolute-depth protocol，而 SenseNova 使用 affine-invariant。论文已标成 reference-only，不能拿这些格子直接判胜负。</div>
+
+<h2><span class="num">§ 10 / Convergence</span>先学像图像编辑的，再学长列表与跨视图几何</h2>
+<p>论文把每项指标除以最终 step 的值，只比较相对收敛进度。depth / normal 最快；普通 detection / generic segmentation 居中；multi-view reconstruction、referring segmentation 与 camera pose 更慢；dense detection 最慢。</p>
+
+<figure id="fig-convergence" class="reveal"><figcaption><span>Fig 10 · 相对收敛速度的分阶段顺序</span><span>ILLUSTRATIVE ORDER · NOT ABSOLUTE SCORE</span></figcaption><div class="converge"><div class="stage" style="--h:95%"><b>FAST</b>depth<br>normal</div><div class="stage" style="--h:80%"><b>MID+</b>common<br>detection</div><div class="stage" style="--h:68%"><b>MID</b>generic seg<br>reconstruction</div><div class="stage" style="--h:53%"><b>SLOW</b>referring seg<br>camera pose</div><div class="stage" style="--h:38%"><b>SLOWEST</b>dense<br>detection</div></div><div class="converge-axis">← 更早接近最终值 · 更晚 →</div><p class="fig-note">作者解释：空间对齐、预训练相似性、语言指代、新 pose token、跨 view 对齐和长对象列表的难度不同。这是收敛曲线支持的解释，不是逐因素因果消融。</p></figure>
+
+<h2><span class="num">§ 11 / Composition & errors</span>组合能力是真的，误差串联也是真的</h2>
+<p>最有趣的探针没有新增训练协议：把 referring segmentation 的 <code>&lt;p&gt;</code> 与 structured task 的文本坐标 <code>&lt;point&gt;</code> 拼起来，模型能从 <code>&lt;p&gt;&lt;point&gt;[.372,.641]&lt;/point&gt;&lt;/p&gt;</code> 直接生成 binary mask。它说明分散任务学到的坐标、指代和 mask 能重新组合，但只有定性案例，没有成功率 benchmark。</p>
+
+<figure id="fig-errors" class="reveal"><figcaption><span>Fig 11 · 混合输出的误差链与可编辑中间层</span><span>PLAN ERROR → RENDER ERROR</span></figcaption><div class="chain"><div class="chain-card rev"><h4>01 / INSTRUCTION</h4><p>“列出每辆车，为每个实例分配颜色，再生成 mask。”</p></div><div class="chain-arrow rev d2">→</div><div class="chain-card rev d3"><h4>02 / STRUCTURED PLAN</h4><code>car-1 → red</code><code>car-2 → cyan</code><code class="bad">car-3 → missing</code><p>多报、漏报或颜色槽不足。</p></div><div class="chain-arrow rev d4">→</div><div class="chain-card rev d5"><h4>03 / VISUAL RENDER</h4><p>mask 合并实例、带入非目标区域，或 RGB 与要求不一致。</p></div></div><div class="repair rev d5">MANUAL REPAIR / 补足实例列表与颜色槽 → mask 更聚焦、实例分离改善</div><p class="fig-note">附录明确展示：修正生成 caption / instance list 后，mask 会改善。可编辑中间计划是优点，同时证明文本错误会沿自回归链传播到图像。</p></figure>
+
+<p>其他探针也保留失败：十六进制颜色大体跟随但 RGB 与边界不总精确；透明、反射、视觉错觉会让 depth/normal 跟外观线索走；不同 CFG 会把组合输出偏向 depth-like、normal-like 或 segmentation-like。论文将这些称为 qualitative and imperfect 是恰当的。</p>
+
+<h2><span class="num">§ 12 / What remains</span>“统一接口”还不是“专家已被消灭”</h2>
+<div class="limits"><div class="limit"><b>缺核心架构消融</b>没有同数据下专用 head vs 原生生成通道的对照，无法把全部收益归因于统一形式。</div><div class="limit"><b>缺 mixture 因果账</b>VQA、T2I、I2I 各自对保能力和视觉任务的贡献没拆开。</div><div class="limit"><b>伪标签上限未分离</b>MoGe-2 与 LingBot-Depth 参与造数据，教师覆盖面与学生上限没有系统隔离。</div><div class="limit"><b>生成成本没进主表</b>长文本列表与 flow sampling 的 latency / memory 没与一次前向专用 head 对齐比较。</div><div class="limit"><b>组合任务仍是定性</b>能成功不等于稳定；缺样本量、失败率、校准性与统一 benchmark。</div><div class="limit"><b>专用先验仍有价值</b>SAM/Mask2Former 与 DepthAnything3 在多项 mask / geometry 指标保持优势。</div></div>
+
+<div class="note"><span class="label">一句话带走</span>SenseNova-Vision 的遗产不是“一个模型刷完所有榜”，而是把任务设计从“接哪颗 head”改成“答案能否变成文本、图像或混合响应，并确定地解码回来”。它换来统一训练与跨任务组合，也把格式错误、生成延迟、颜色漂移和专用几何先验缺失变成下一阶段的硬问题。</div>
+
+<div class="gloss"><h2>引用 / 术语表</h2><ol>
+  <li id="g-01"><span class="term">Unified multimodal generation</span> · 用同一 UMM 的文本与图像生成空间表达不同视觉任务，见<a href="../concepts/unified-multimodal-generation.html">概念页</a>。</li>
+  <li id="g-02"><span class="term">Structured text target</span> · 用 marker 分隔 label、bbox、point、OCR、keypoint 等可解析字段。</li>
+  <li id="g-03"><span class="term">VAE latent</span> · 图像经冻结 VAE encoder 压缩后的连续表示；mask、depth、normal、point map 都在这里学习生成。</li>
+  <li id="g-04"><span class="term">Decodable representation</span> · 生成结果能经确定逆变换恢复成 benchmark 记录，见<a href="../concepts/decodable-vision-representation.html">可解码视觉表示</a>。</li>
+  <li id="g-05"><span class="term">Dense prediction</span> · 每个像素都要预测值的任务，如深度、法线、分割与 point map。</li>
+  <li id="g-06"><span class="term">Inverse depth</span> · 深度取倒数 `1/d`，让近处占更多数值动态范围；论文再将其归一化成灰度。</li>
+  <li id="g-07"><span class="term">Color-legend mask</span> · 文本声明 region↔RGB，图像按颜色铺 mask，见<a href="../concepts/color-legend-mask.html">颜色图例掩码</a>。</li>
+  <li id="g-08"><span class="term">Skybox invalid mapping</span> · 把无效深度点沿相机射线推到归一化单位立方体远端，避免另开 mask 训练分支。</li>
+  <li id="g-09"><span class="term">Camera-pose tokenization</span> · 四元数、方向和厘米尺度离散成专用 token，见<a href="../concepts/camera-pose-tokenization.html">完整数值例</a>。</li>
+  <li id="g-10"><span class="term">Capability-preserving mixture</span> · 视觉任务 SFT 时混入 VQA、T2I、I2I，减轻基础理解与生成能力退化。</li>
+  <li id="g-11"><span class="term">Cross-entropy</span> · 文本 next-token 目标，正确 token 概率越高 loss 越低，见<a href="../concepts/cross-entropy.html">交叉熵</a>。</li>
+  <li id="g-12"><span class="term">Rectified flow</span> · 在数据 latent 与噪声的直线路径上回归速度，见<a href="../concepts/flow-matching.html">flow matching</a>。</li>
+</ol></div>
+
+<footer class="colophon"><span>Sources / <a href="https://arxiv.org/html/2607.06560v1">论文全文</a> · <a href="https://github.com/OpenSenseNova/SenseNova-Vision">官方代码</a></span><span>Code audit / official master@beea1f7 · Figures redrawn</span></footer>
+</div>
+<script>(function(){document.documentElement.classList.add('loaded');var items=document.querySelectorAll('.reveal');if(!('IntersectionObserver' in window)){items.forEach(function(x){x.classList.add('play')});return}var ob=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('play');ob.unobserve(e.target)}})},{threshold:.15});items.forEach(function(x){ob.observe(x)})})();</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6);}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  var items={};
+  document.querySelectorAll('.gloss ol li[id^="g-"]').forEach(function(li){items[li.id]=li.innerHTML;});
+  if(!Object.keys(items).length)return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!items[id])return;
+      e.preventDefault();
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+items[id];
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+</body>
+</html>
