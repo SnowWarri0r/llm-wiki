@@ -911,3 +911,7 @@ skill 更新:
 ## [2026-07-14] rewrite | meshflow 说人话 — origin/main 已有 codex 的密版(errata 堆砌像代码审查),按 wiki 直觉先行风格全面重写 wiki/papers/meshflow.md(连续坐标vs离散开关=连边磁铁核心比喻),bespoke HTML 保留 codex 图与设计但把整段 §09 source-audit 压成一条紧凑"复现坑" note 并改标题 Limits;index 行改成直觉先行框架。yolov2/3/4/sensenova + 各概念页维持 codex 版(reset 到 origin 后仅叠加 meshflow 改写,不动其余)
 
 ## [2026-07-15] rewrite | cosmos-3 完整论文讲解 — 原页5节只覆盖部分架构且有“一套权重/单次前向/两塔都从Qwen初始化”三处误导，重写为12节12图：机器人收桌子贯穿旧管线→五模态入口→任务token排列→MoT双塔账→联合注意力矩阵→rectified-flow数字手算→MRoPE FPS时间轴→2200万Reasoner数据与两级过滤→Reasoner/SFT/Generator/mid/post训练接力→PAIBench/Physics-IQ/RoboLab/LIBERO真实结果→Reasoner/FPS/音频/动作四组消融→权重显存/多步去噪/专项后训练/成功率边界；HTML 16词条全可达，md同步扩写
+
+## [2026-07-15] rewrite | vits 深度打磨 — 修正“端到端=没有任何中间量/没有失配”和“CMOS≈完全听不出差”两处过度表述，改成训练/推理双路线贯穿的12节语音工作台；新增五模块岗位图、完整变量定义与KL数字例、Flow正逆方向和30万步消融边界、MAS 3×5动态规划手算、SDP d=4→d−u=3.7→[3.7,0.8]去量化/增广/变分下界、多周期判别器折叠、五项损失工位、数据预处理与训练配方、LJ/VCTK/速度、消融与多样性、声音转换及六项局限；术语表扩到18项，md同步重写
+
+## [2026-07-15] fix | cosmos-3 Fig10 时间线 — 原实现把竖线画成每个 stage 的负 margin 左边框，线偏离圆心且后绘制在编号圆点之上；改为 train 容器单一 ::before 背景线，精确对齐圆心，编号圆点提高层级遮住线，移除窄屏易错位的负 margin
