@@ -100,6 +100,18 @@
   - [Ch19 · All Together Now](wiki/books/pom-ch19-all-together-now.md) — 全书 12 条原则速查清单
   - [Ch20 · Confessions](wiki/books/pom-ch20-confessions.md) — Housel 自己的方案：简单到无聊
   - [Postscript · 美国消费者心理简史](wiki/books/pom-postscript-us-consumer-history.md) — 75 年经济史，预期脱节于现实的根源
+- [Trading in the Zone · 交易心理分析 · Mark Douglas](wiki/books/trading-in-the-zone.md) — 交易是心理题不是分析题；像赌场一样用概率思考
+  - [Ch01 · The Road to Success](wiki/books/titz-ch01-road-to-success.md) — 基本面→技术→心理三级跳；难的是接受风险
+  - [Ch02 · The Lure & Dangers](wiki/books/titz-ch02-lure-and-dangers.md) — 交易给你近乎无限的自由，自由正是那个诅咒
+  - [Ch03 · Taking Responsibility](wiki/books/titz-ch03-taking-responsibility.md) — 市场不欠你；停止责怪市场是赢家态度的基石
+  - [Ch04 · Consistency: A State of Mind](wiki/books/titz-ch04-consistency-state-of-mind.md) — 无法"努力"变得持续一致；认知≠信念
+  - [Ch05 · The Dynamics of Perception](wiki/books/titz-ch05-dynamics-of-perception.md) — 你只看得见学过的东西；小孩被狗咬一次，从此每只狗都可怕
+  - [Ch06 · The Market's Perspective](wiki/books/titz-ch06-markets-perspective.md) — 市场任何时刻能做任何事，一个交易者就能让它发生
+  - [Ch07 · Thinking in Probabilities](wiki/books/titz-ch07-thinking-in-probabilities.md) — 像赌场：随机的单笔，确定的大数；五个基本事实
+  - [Ch08 · Working with Your Beliefs](wiki/books/titz-ch08-working-with-beliefs.md) — 目标不是赚钱，是掌握技术；赚钱是副产品
+  - [Ch09 · The Nature of Beliefs](wiki/books/titz-ch09-nature-of-beliefs.md) — 信念是"被组织的能量"，替你过滤了整个世界（免费送钱）
+  - [Ch10 · Impact of Beliefs on Trading](wiki/books/titz-ch10-impact-of-beliefs.md) — 信念不能删除只能转移；自毁信念是隐形玻璃天花板
+  - [Ch11 · Thinking Like a Trader](wiki/books/titz-ch11-thinking-like-a-trader.md) — 机械→主观→直觉；七原则 + 20 笔赌场练习
 
 ## Topics · 综合
 
