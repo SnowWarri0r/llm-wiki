@@ -917,3 +917,5 @@ skill 更新:
 ## [2026-07-15] fix | cosmos-3 Fig10 时间线 — 原实现把竖线画成每个 stage 的负 margin 左边框，线偏离圆心且后绘制在编号圆点之上；改为 train 容器单一 ::before 背景线，精确对齐圆心，编号圆点提高层级遮住线，移除窄屏易错位的负 margin
 
 ## [2026-07-15] expand | cosmos-3 Reasoner→Generator 权重迁移 — 补 Fig10B 拆清复制的是 LayerNorm/QKV/O/MLP 参数，不复制运行时 softmax(QKᵀ)；Reasoner 的文本/ViT+因果mask+词表头+CE 对照 Generator 的带噪latent+双向mask+速度头+masked MSE；沿用 xσ=1.25/v*=−3 手算玩具权重 w=2 一步梯度更新，loss 30.25→14.30，坐实“复制只是初始化，Flow 训练才把它改造成去噪器”；补 VAE/audio/action 投影边界和附录 E.1 只证明条件侧 Reasoner 更好、未直接消融复制初始化的证据边界；glossary 16→18
+
+## [2026-07-15] fix+expand | cosmos-3 Fig10B 梯度公式补全 — 原版直接写 dL/dw=13.75，没先定义玩具模型和损失；补 v̂(w)=w·xσ、L(w)=(v̂−v*)²=(w·xσ−v*)²，先记 e 再按链式法则拆 dL/dw=(dL/de)(de/dw)=2e·xσ，逐项解释 2e 与 xσ 从哪来；补 SGD 更新 w_new=w−ηdL/dw、η 定义和 w_best=v*/xσ=−2.4 自检，完整走 w:2→.625、loss:30.25→14.30，并明确单标量只是优化演示而非真实架构
