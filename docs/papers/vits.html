@@ -495,24 +495,75 @@ u=.7 → w=2−.7=1.3 → ceil(1.3)=2
 d−u 不是新标签；它是在整数 d 对应的区间里，
 选出的一个连续位置。</pre></div>
 
-  <p><code>ν</code> 也是连续辅助变量，最终不会输出。要得到整数 <code>d</code> 的总概率，就得把所有 <code>u</code> 对应的连续位置、以及所有 <code>ν</code> 全部加起来。连续变量的“全部加起来”写成积分：</p>
+  <p><code>ν</code> 也是连续辅助变量，最终不会输出。要得到整数 <code>d</code> 的总概率，就得把所有 <code>u</code> 对应的连续位置、以及所有 <code>ν</code> 全部加起来。这里其实做了两步，不能只扔出最后一行：先把连续时长 <code>w</code> 换成 <code>u=d−w</code>，再把二维区域里的密度全部加起来。</p>
 
   <div class="math-board">
-    <div class="math-label">Step 1 · 把连续密度加回整数概率</div>
-    <div class="tex">\begin{aligned}
+    <div class="math-label">Step 1A · w 换成 u：上下限为什么变成 0 到 1</div>
+    <div class="tex tex-desktop">\begin{aligned}
+g(w,\nu)&\equiv p_\theta\!\left(w,\nu\mid c_{\mathrm{text}}\right) \\[3pt]
 p_\theta\!\left(d=2\mid c_{\mathrm{text}}\right)
-&=\int_0^1\!\int_{-\infty}^{\infty}
-\color{#91d0dc}{p_\theta\!\left(2-u,\nu\mid c_{\mathrm{text}}\right)}
-\,d\nu\,du \\[6pt]
-p_\theta\!\left(d\mid c_{\mathrm{text}}\right)
-&=\iint
-\color{#91d0dc}{p_\theta\!\left(d-u,\nu\mid c_{\mathrm{text}}\right)}
-\,du\,d\nu
+&=\int_{1}^{2}\!\int_{-\infty}^{\infty}g(w,\nu)\,d\nu\,dw \\[3pt]
+u&=2-w,\qquad dw=-du,\qquad w:1\to2\Rightarrow u:1\to0 \\[3pt]
+&=\int_{1}^{0}\!\int_{-\infty}^{\infty}g(2-u,\nu)\,d\nu\,(-du) \\[3pt]
+&=\int_{0}^{1}\!\int_{-\infty}^{\infty}
+\color{#91d0dc}{p_\theta\!\left(2-u,\nu\mid c_{\mathrm{text}}\right)}\,d\nu\,du
 \end{aligned}</div>
-    <div class="math-caption"><strong>青色部分</strong>是 Flow 给一个连续代表算出的密度；积分符号表示把所有代表全部加回来。</div>
+    <div class="tex tex-mobile">\begin{aligned}
+P_2&\equiv p_\theta\!\left(d=2\mid c_{\mathrm{text}}\right) \\
+g(w,\nu)&\equiv p_\theta\!\left(w,\nu\mid c_{\mathrm{text}}\right) \\[3pt]
+P_2&=\int_1^2\!\int_{\mathbb R}g(w,\nu)\,d\nu\,dw \\[3pt]
+u&=2-w,\quad dw=-du \\
+w:1\to2&\Rightarrow u:1\to0 \\[3pt]
+P_2&=\int_1^0\!\int_{\mathbb R}g(2-u,\nu)\,d\nu\,(-du) \\
+&=\int_0^1\!\int_{\mathbb R}g(2-u,\nu)\,d\nu\,du
+\end{aligned}</div>
+    <div class="math-caption"><strong>负号没有消失：</strong><code>w</code> 从 1 走到 2 时，<code>u</code> 反而从 1 走到 0；把反向上下限调回 0→1，正好再贡献一个负号，两者抵消。因为 <code>|dw/du|=1</code>，这里没有额外缩放系数。</div>
   </div>
 
-  <p>所以 <code>pθ(d−u,ν|c_text)</code> 不是凭空加进去的。它是 Flow 给某一个连续代表 <code>[d−u,ν]</code> 算出的密度；把所有代表的密度积分起来，才是整数时长 <code>d</code> 的概率。</p>
+  <p>内层积分先固定一个 <code>u</code>，把这一列所有 <code>ν</code> 加完；外层积分再把 <code>u∈[0,1)</code> 的所有列加完。也可以反过来先加 <code>u</code>、再加 <code>ν</code>，因为两次覆盖的都是同一个笛卡尔积区域 <code>[0,1)×ℝ</code>，而概率密度处处非负。非负量怎么分行、分列求和，总和都一样；连续版本叫 Tonelli 定理。</p>
+
+  <div class="math-board">
+    <div class="math-label">Step 1B · 为什么可以交换两层积分</div>
+    <div class="tex tex-desktop">\begin{aligned}
+f(u,\nu)&\equiv p_\theta\!\left(2-u,\nu\mid c_{\mathrm{text}}\right)\ge0 \\[3pt]
+M&=\int_0^1\!\left[\int_{-\infty}^{\infty}f(u,\nu)\,d\nu\right]du
+\qquad\text{先加 }\nu\text{，再加 }u \\[3pt]
+&=\int_{-\infty}^{\infty}\!\left[\int_0^1 f(u,\nu)\,du\right]d\nu
+\qquad\text{先加 }u\text{，再加 }\nu
+\end{aligned}</div>
+    <div class="tex tex-mobile">\begin{aligned}
+f(u,\nu)&\equiv p_\theta\!\left(2-u,\nu\mid c_{\mathrm{text}}\right)\ge0 \\[3pt]
+M&=\int_0^1\!\left[\int_{\mathbb R}f(u,\nu)\,d\nu\right]du \\
+&=\int_{\mathbb R}\!\left[\int_0^1 f(u,\nu)\,du\right]d\nu
+\end{aligned}</div>
+    <div class="math-keyline"><span class="eq">积分区域没变 · 都是 [0,1) × ℝ</span><span class="corr">f ≥ 0 · 不会出现正负无穷互相抵消</span></div>
+  </div>
+
+  <div class="calc-check"><strong>把区域粗分成四格，先按行加还是先按列加都一样</strong><pre>每格写的是这格的概率质量：
+             ν&lt;0   ν≥0
+u&lt;.5          .04   .06
+u≥.5          .03   .07
+
+先固定 u、加 ν：(.04+.06)+(.03+.07)=.20
+先固定 ν、加 u：(.04+.03)+(.06+.07)=.20  ✓</pre></div>
+
+  <p>对向量时长 <code>d∈ℕᵀ</code> 也是同一件事，只是积分区域变成 <code>[0,1)ᵀ×ℝᵀ</code>。为了不再暗中交换顺序，后面统一写成：</p>
+
+  <div class="math-board">
+    <div class="math-label">Step 1C · 向量时长的完整写法</div>
+    <div class="tex tex-desktop">p_\theta\!\left(d\mid c_{\mathrm{text}}\right)
+=\int_{[0,1)^T}\!\int_{\mathbb R^T}
+\color{#91d0dc}{p_\theta\!\left(d-u,\nu\mid c_{\mathrm{text}}\right)}
+\,d\nu\,du</div>
+    <div class="tex tex-mobile">\begin{aligned}
+P_d&\equiv p_\theta\!\left(d\mid c_{\mathrm{text}}\right) \\
+h(u,\nu)&\equiv p_\theta\!\left(d-u,\nu\mid c_{\mathrm{text}}\right) \\[3pt]
+P_d&=\int_{[0,1)^T}\!\int_{\mathbb R^T}h(u,\nu)\,d\nu\,du
+\end{aligned}</div>
+    <div class="math-caption"><strong>青色部分</strong>是 Flow 给一个连续代表 <code>[d−u,ν]</code> 算出的密度；两层积分把所有连续代表的密度加回整数时长 <code>d</code> 的概率。</div>
+  </div>
+
+  <p>所以 <code>pθ(d−u,ν|c_text)</code> 不是凭空加进去的。它来自变量替换 <code>w=d−u</code>；两层积分则是在同一个区域内把所有 <code>[d−u,ν]</code> 的概率密度加起来。</p>
 
   <h3>② 为什么要除以 qφ</h3>
   <p>上面的积分维度很高，无法枚举所有 <code>u、ν</code>。VITS 便让 <code>qφ</code> 挑几组值得计算的样本。但 <code>qφ</code> 不是均匀抽样：某些区域抽得多，某些区域抽得少。直接平均 <code>pθ</code>，抽得多的区域就会被重复多算。</p>
@@ -520,8 +571,8 @@ p_\theta\!\left(d\mid c_{\mathrm{text}}\right)
   <div class="math-board">
     <div class="math-label">Step 2 · 乘除同一个 q，积分没有改变</div>
     <div class="tex">\begin{aligned}
-\iint p\,du\,d\nu
-&=\iint \color{#91d0dc}{q}\,\color{#f1cb70}{\frac{p}{q}}\,du\,d\nu \\
+\iint p\,d\nu\,du
+&=\iint \color{#91d0dc}{q}\,\color{#f1cb70}{\frac{p}{q}}\,d\nu\,du \\
 &=\mathbb E_{\color{#91d0dc}{q}}\!\left[\color{#f1cb70}{\frac{p}{q}}\right]
 \end{aligned}</div>
     <div class="math-keyline"><span class="eq">q × p/q = p · 前后严格相等</span><span class="corr">p/q · 抵消 q 的抽样偏重</span></div>
