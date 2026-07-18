@@ -147,7 +147,7 @@
 ### Transformer 骨架
 - [Self-Attention](wiki/concepts/self-attention.md) — Q·Kᵀ/√dₖ 然后 softmax 加权 V
 - [Multi-Head Attention](wiki/concepts/multi-head-attention.md) — 多个 head 学不同关系模式
-- [FlashAttention](wiki/concepts/flash-attention.md) — 注意力慢在搬N×N大矩阵进HBM(memory-bound); 切块进SRAM+在线softmax拼出一样结果, 大矩阵不落地; 2-4×快/显存O(N); 精确非近似(vs sparse)
+- [FlashAttention](wiki/concepts/flash-attention.md) — 普通注意力的三个 kernel 要靠 HBM 交接 S/P 两张 N×N 中间矩阵；分块本身不省 IO，关键是分块+融合+在线 softmax，让分数小块在片上算完即丢，完整 S/P 不再落入 HBM
 - [R-SWA · 参考滑窗注意力](wiki/concepts/reference-sliding-window-attention.md) — 每token只看「全部前缀(视觉+prompt,全局)+最近n个输出(滑窗)」, KV cache恒定L_m+n不随T涨; 视觉token不参与状态转移所以图不糊; Unlimited-OCR用它一口气抄几十页
 - [Cross-Attention](wiki/concepts/cross-attention.md) — decoder 用自己的 Q 去查 encoder 的 K/V
 - [Positional Encoding](wiki/concepts/positional-encoding.md) — 给无顺序的 attention 加位置
