@@ -64,14 +64,19 @@ figure{margin:38px 0 55px;padding:25px;border:2px solid var(--ink);background:va
 <div class="tldr"><div class="label">一句话</div><p>自然语言说明任务与解码规则；稀疏符号答案写成文本，像素对齐答案生成图像，语义与像素并存时输出文字图例+彩色 mask。一个 Bagel-7B-MoT 因此覆盖四大视觉族，不新增任务专用预测头。</p></div>
 
 <h2><span class="num">§ 01 / Reframing</span>统一的不是 backbone，是答案出口</h2>
-<p>以往的 generalist vision 常共享特征抽取器，却仍给检测、分割、深度、pose 各接一颗 head。新任务进来，结构、损失、解码器和后处理都要再设计。SenseNova-Vision<a class="jr" href="#g-01">1</a>把问题倒过来：统一多模态模型已经会写文本、生成图像，能否把所有视觉标注翻译成这两种原生输出？</p>
+<p>先说清楚"<strong>head（输出头）</strong>"是啥。一个视觉大模型通常有一个公用的"身子"（特征抽取器，负责把图看懂），但检测、分割、深度、姿态这些任务后面各接一条专门的"尾巴"——把看懂的东西翻译成"框""mask""深度图"。这些尾巴就叫 head，<strong>每种任务一条</strong>，结构、损失、解码、后处理全得单独设计；新加一个任务，就得再焊一条尾巴。</p>
+<p>SenseNova-Vision<a class="jr" href="#g-01">1</a> 把这事倒过来想：一个<a class="jr" href="#g-01">统一多模态模型</a>本来就已经会干两件事——<strong>写文本</strong>和<strong>生成图像</strong>。那能不能把所有视觉任务的答案，都翻译成这两种它天生就会的输出？检测框？"写"成一串文字坐标。深度图？"画"成一张灰度图。这样<strong>一条尾巴都不用加</strong>，全靠模型原有的"嘴"（文本）和"画笔"（图像）。统一的不是把网络主干换掉，而是把<u>答案的出口</u>从"各接一颗 head"改成"要么写、要么画"。</p>
 
 <figure id="fig-interface" class="reveal"><figcaption><span>Fig 01 · 专家插座排 → 单条生成总线</span><span>WHAT CHANGED</span></figcaption><div class="zoo"><div class="heads"><div class="head rev"><i></i>DETECTION HEAD<br>boxes + scores</div><div class="head rev d2"><i></i>SEGMENT HEAD<br>mask logits</div><div class="head rev d3"><i></i>DEPTH HEAD<br>continuous field</div><div class="head rev d4"><i></i>POSE HEAD<br>camera params</div></div><div class="swap rev d3">→</div><div class="onebus rev d4"><b>ONE UMM / SHARED PARAMETERS</b><div class="lanes"><span>TEXT</span><span>IMAGE</span><span>MIXED</span></div><p style="font-size:12px;color:#bec2eb">instruction 决定任务；decoding convention 决定怎样还原。</p></div></div><p class="fig-note">统一的是模型参数、调用入口和生成空间；各 benchmark 的指标与编码规则并没有消失。新增任务首先要回答“答案能否变成可生成、可解码的表示”。</p></figure>
 
 <p>这条路线接在四类前人工作之后：Pix2Seq / Unified-IO 把任务序列化，但稠密图很别扭；SAM、Depth Anything、VGGT 在单一任务族里很强，却没有共同输出空间；Marigold、DICEPTION 把稠密感知变成图像生成，却难写 OCR、框与相机参数；LISA、X-SAM 等 MLLM 能理解语言，稠密结果仍经专用 decoder。SenseNova 的差异是把<strong>符号、像素与混合答案同时放回 UMM 原生空间</strong>。</p>
 
 <h2><span class="num">§ 02 / Routing rule</span>答案稀疏就写，答案稠密就画</h2>
-<p>三条输出通道的选择依据不是任务名字，而是答案的数据形态。结构化文本<a class="jr" href="#g-02">2</a>适合长度可变的记录；VAE 图像 latent<a class="jr" href="#g-03">3</a>适合每个像素都有值的场；两者都需要时就按固定顺序混合。</p>
+<p>怎么决定一个任务该"写"还是该"画"？看<strong>答案长什么样</strong>，不看任务叫什么名字：</p>
+<p>· <strong>答案稀疏</strong>（几个数、几个词就说完）——比如"图里有一个人，框在这里 [坐标]"。这种变长的小记录，用<a class="jr" href="#g-02">结构化文本</a>写最省事，像列清单。<br>
+· <strong>答案稠密</strong>（图里<u>每一个</u>像素都得有个值）——比如深度图，几十万个像素每个都要一个"多远"。这种用图像画最自然，因为图像本来就是一格一格的像素，天生对齐空间位置。<br>
+· <strong>两者都要</strong>（既要说"是谁"、又要精确到像素）——就先写文本、再画图，按固定顺序拼起来。</p>
+<p class="note"><span class="label">"VAE latent" 先记这一点</span>模型画图不是一个像素一个像素地涂，而是先在一张<u>压缩过的小画布</u>（<a class="jr" href="#g-03">VAE latent</a>）上画，再由 VAE 解码器把小画布"解压"成完整大图。所以下文说"生成图像"，实际动作是"在 latent 这张小画布上生成"。mask、深度、法线、点图都在这块画布上学着画。</p>
 
 <figure id="fig-routing" class="reveal"><figcaption><span>Fig 02 · 同一模型的三条原生输出通道</span><span>ROUTE BY OUTPUT SHAPE</span></figcaption><div class="route-grid"><div class="route-card rev"><b>TEXT</b><h4>稀疏 / 符号化</h4><p>类别、bbox、point、OCR、keypoint、camera pose。语言能枚举变长记录。</p></div><div class="route-card rev d2"><b>IMAGE</b><h4>稠密 / 像素对齐</h4><p>binary mask、depth、normal、point map。图像网格天然保存空间布局。</p></div><div class="route-card rev d3"><b>MIXED</b><h4>语义 + 像素</h4><p>panoptic、GCG、pose+point map。文本定义图例或元数据，图像保存边界。</p></div></div><p class="fig-note">任务由自然语言 instruction 指定，输出 marker 再声明 schema。统一接口不等于把三种答案硬压成同一种 token。</p></figure>
 
@@ -88,7 +93,12 @@ figure{margin:38px 0 55px;padding:25px;border:2px solid var(--ink);background:va
 <figure id="fig-bbox" class="reveal"><figcaption><span>Fig 03 · 像素框 ↔ 归一化文本</span><span>ROUND TRIP VERIFIED</span></figcaption><div class="bbox-demo"><div class="canvas rev"><span class="axis">640 × 480</span></div><div class="calc"><div class="calc-row rev"><b>x₀′</b><span>64 / 640 = 0.100</span></div><div class="calc-row rev d2"><b>y₀′</b><span>96 / 480 = 0.200</span></div><div class="calc-row rev d3"><b>x₁′</b><span>448 / 640 = 0.700</span></div><div class="calc-row rev d4"><b>y₁′</b><span>384 / 480 = 0.800</span></div><div class="roundtrip rev d5">&lt;p&gt;person&lt;/p&gt;<br>&lt;bbox&gt;[.100,.200,.700,.800]&lt;/bbox&gt;<br>× [640,480,640,480] → 原像素框</div></div></div><p class="fig-note">三位小数在 640 宽图上的横向量化间隔约 0.64px。若模型写成 0.701，右边界会解成 448.64px：生成误差被协议变成可测的坐标误差。</p></figure>
 
 <h2><span class="num">§ 04 / Dense encodings</span>深度、法线、mask、3D 点都变成“另一张图”</h2>
-<p>稠密任务<a class="jr" href="#g-05">5</a>的输出与输入共用像素网格，因此 image generation 是自然接口：depth 写灰度，surface normal 的 XYZ 写 RGB，single-target segmentation 写固定前景/背景色，point map 的归一化 XYZ 也写 RGB。</p>
+<p><a class="jr" href="#g-05">稠密任务</a>的答案和输入图一样大、一样按像素排布，所以"画一张图"是最自然的出口。套路就一句话：<strong>一个像素上的量，只要不超过 3 个数，就能当颜色画出来</strong>——因为一个像素的颜色本来就是 3 个数 (R,G,B)。</p>
+<p>· <strong>深度</strong>：每个像素 1 个数（多远）→ 存成灰度（0–255，一个通道就够）。<br>
+· <strong>法线</strong>：每个像素是一支"朝向"箭头，3 个数 <code>(nₓ,nᵧ,n_z)</code>，每个落在 −1~1 → 线性搬到 0~255 分别塞进 R、G、B（例如 <code>nₓ=0 → 128</code>）。所以法线图看着五颜六色，其实每种颜色就是那一点的朝向。<br>
+· <strong>分割 mask</strong>：前景涂固定色、背景涂固定色，画成一张双色图。<br>
+· <strong>point map</strong>：每个像素存它在 3D 空间里的坐标 <code>(X,Y,Z)</code>，3 个数 → 同样塞进 RGB。<br>
+表面是四种任务，在这套协议里全成了"画一张 RGB 图"，模型的画笔一套通用。</p>
 
 <figure id="fig-dense" class="reveal"><figcaption><span>Fig 04 · 四种稠密信号借用 RGB 画布</span><span>DETERMINISTIC VISUAL ENCODING</span></figcaption><div class="dense-grid"><div class="dense-card rev"><div class="mini-map depth-map"></div><b>DEPTH</b><small>metric → inverse depth<br>→ normalized gray</small></div><div class="dense-card rev d2"><div class="mini-map normal-map"></div><b>NORMAL</b><small>(nₓ,nᵧ,n_z)<br>→ R,G,B</small></div><div class="dense-card rev d3"><div class="mini-map mask-map"></div><b>BINARY MASK</b><small>fixed foreground<br>+ background colors</small></div><div class="dense-card rev d4"><div class="mini-map point-map"></div><b>POINT MAP</b><small>normalized X,Y,Z<br>→ R,G,B</small></div></div><div class="toy-depth"><div class="depth-val rev">d=1m<br>1/d=1.00<br>gray=255</div><div class="depth-val rev d2">d=2m<br>1/d=.50<br>gray=85</div><div class="depth-val rev d3">d=4m<br>1/d=.25<br>gray=0</div></div><p class="fig-note">灰度 255/85/0 只是在这三个 toy 值内做 min-max，用来解释“近亮远暗”；论文没有公开完整归一化端点，真实复现必须使用发布的转换规则，不能把这个玩具公式当官方实现。</p></figure>
 
@@ -99,16 +109,30 @@ figure{margin:38px 0 55px;padding:25px;border:2px solid var(--ink);background:va
 
 <figure id="fig-legend" class="reveal"><figcaption><span>Fig 05 · 文字图例 + 彩色像素 = 可解码分割</span><span>SEMANTICS BINDS TO RGB</span></figcaption><div class="legend-flow"><div class="legend rev"><span class="swatch" style="background:rgb(20,190,240)"></span>&lt;p&gt;road &lt;color&gt;(20,190,240)<br><span class="swatch" style="background:rgb(245,80,120)"></span>&lt;p&gt;person-1 &lt;color&gt;(245,80,120)<br><span class="swatch" style="background:#000;border:1px solid #777"></span>background = black</div><div class="arrow rev d2">→</div><div class="mask-scene rev d3"><i class="road"></i><i class="person"></i></div></div><div class="farthest"><div class="color-chip rev">RED<br>seed</div><div class="color-chip rev d2">GREEN<br>seed</div><div class="color-chip rev d3">BLUE<br>min distance 360.6<br>SELECT</div><div class="color-chip rev d4">YELLOW<br>min distance 255</div></div><p class="fig-note">200 个颜色 anchor 用 greedy farthest-point sampling：每次选“离已有颜色中最近者仍最远”的候选。蓝离红、绿都 360.6，黄只离最近者 255，所以先选蓝；黑色专留背景。</p></figure>
 
-<div class="formula">d(c,S) = minₛ∈S ||c-s||₂
-c_next = argmax_c d(c,S)</div>
-<p><code>S</code> 是已选颜色集合；<code>c</code> 是候选 RGB；欧氏距离同时考虑三个通道。颜色拉开减少实例混淆，但生成器仍可能写错颜色或把边界画糊。</p>
+<div class="formula">d(c,S) = minₛ∈S ||c-s||₂     <b>候选 c 到"已选集合里最近那个"的距离</b>
+c_next = argmax_c d(c,S)       <b>挑一个"最近邻都还很远"的候选</b></div>
+<p><code>S</code> 是已经选好的颜色集合；<code>c</code> 是候选 RGB。规则就是每次挑"离现有颜色最远"的，让颜色两两拉开、不容易看混。距离是普通三通道欧氏距离，拿数字走一遍：已选红 <code>(255,0,0)</code>、绿 <code>(0,255,0)</code>，</p>
+<div class="formula">蓝 (0,0,255)：到红 = √(255²+0+255²)=√130050 ≈ <b>360.6</b>，到绿也 360.6 → 最近邻距离 360.6
+黄 (255,255,0)：到红 = √(0+255²+0)=<b>255</b>，到绿 = 255           → 最近邻距离 255
+360.6 &gt; 255 → 蓝"离得更开"，先选蓝</div>
+<p>颜色拉开能减少实例混淆，但生成器仍可能写错颜色、或把边界画糊——所以最终还得解码后按 IoU 之类的指标核对。</p>
 
 <h2><span class="num">§ 06 / Multi-view geometry</span>点图走图像，相机走 token</h2>
-<p>多视图样本最多随机取 10 个 view。第一帧当参考坐标系；每个像素先由 depth 与内参恢复相机坐标 3D 点，再经外参变到 frame-0。全序列共享中心化与尺度归一化，无效深度沿相机光线推到单位立方体 skybox<a class="jr" href="#g-08">8</a>，最终 XYZ 作为 point-map RGB。</p>
+<p>这节最容易懵，先把几个词拆开：</p>
+<p>· <strong>多视图（multi-view）</strong>：同一个场景从好几个角度各拍一张（最多取 10 张），目标是从这些 2D 照片反推出 3D。<br>
+· <strong>参考坐标系</strong>：3D 位置总得有个"原点"当基准。这里干脆拿<u>第一帧</u>当基准，后面所有帧的 3D 点都换算到"以第一张照片为原点"的坐标里，大家才对得齐。<br>
+· <strong>内参（intrinsics）</strong>：描述这台相机"镜头"的几个数（焦距、画面中心）。有了它 + 某个像素的深度，就能把"屏幕上第 (u,v) 个像素、距离 d 米"反算成"相机眼前的一个 3D 点"。<br>
+· <strong>外参（extrinsics）</strong>：这台相机本身摆在哪、朝哪（旋转 + 平移）。用它把"相机眼前的 3D 点"搬到"以第一帧为原点"的统一坐标里。<br>
+· <strong>point map（点图）</strong>：一张和照片一样大的图，但每个像素存的不是颜色，是那个点的 3D 坐标 <code>(X,Y,Z)</code>——把 3D 结果又画回一张 RGB 图（承接 §04 的"3 个数当颜色"），交给模型的画笔生成。</p>
+<p>串起来就是：<strong>像素 + 深度 + 内参 → 相机眼前的 3D 点 → 外参搬到第一帧坐标 → 全序列一起做中心化和缩放</strong>（归一化进一个单位立方体，好让不同场景尺度可比）→ 每个点的 XYZ 当 RGB 画成 point map。深度无效的像素（比如天空，没法定位）就沿相机视线推到立方体最远的壁上（<a class="jr" href="#g-08">skybox</a>），省得为它们单开一条处理分支。</p>
 
 <figure id="fig-geometry" class="reveal"><figcaption><span>Fig 06 · 多视图两条输出：point map + camera tokens</span><span>REFERENCE = FRAME 0</span></figcaption><div class="views"><div class="view-stack"><div class="view rev"></div><div class="view rev d2"></div><div class="view rev d3"></div></div><div class="geom-flow rev d2">pixel + depth + K<br>→ camera-frame XYZ<br>→ camera-to-world<br>→ <b>frame-0 coordinates</b><br>→ center / scale normalize<br>→ RGB point maps</div><div class="pose-ledger"><div class="pose-step rev"><b>q</b>(0,0,0,1)<br>×1000</div><div class="pose-step rev d2"><b>u</b>(.6,0,.8)<br>×1000</div><div class="pose-step rev d3"><b>scale</b>1.25m<br>=125cm</div><div class="pose-step rev d4"><b>t</b>u×125/100<br>=(.75,0,1)m</div></div></div><p class="fig-note">2,001 个数值 token 覆盖 &lt;-1000&gt;…&lt;1000&gt;，另有 8 个结构 token。当前官方 parser 将 offset 整数除 1000，再乘 scale/100 还原米制平移。</p></figure>
 
-<p>完整记录是 <code>&lt;frame&gt;&lt;quat&gt;...&lt;/quat&gt;&lt;offset&gt;...&lt;/offset&gt;&lt;scale&gt;...&lt;/scale&gt;&lt;/frame&gt;</code>。相机位姿 token 化<a class="jr" href="#g-09">9</a>把连续几何塞进语言解码器，代价是格式、单位方向和旋转合法性都可能在自回归生成中出错。</p>
+<p>point map 是一路输出；另一路是<strong>相机自己的位姿</strong>（它在哪、朝哪）。位姿很稀疏，所以用文本 token 写：</p>
+<p>· <strong>朝向</strong>用<u>四元数（quaternion）</u>——4 个数表示一个 3D 旋转的紧凑写法，比三个欧拉角稳（不会"万向锁"卡死）。<code>(0,0,0,1)</code> 就是"没转"。<br>
+· <strong>位置</strong>拆成"方向 + 距离"：单位方向 <code>u=(.6,0,.8)</code> 再乘尺度 <code>1.25m</code>，得平移 <code>t=(.75,0,1)</code> 米（图里 pose ledger 那四格算的就是这个）。<br>
+· 这些小数怎么变 token？<strong>乘 1000 取整</strong>，落进 <code>&lt;-1000&gt;…&lt;1000&gt;</code> 这 2001 个数值 token 里；解码时再除 1000、乘尺度还原成米。</p>
+<p>完整记录是 <code>&lt;frame&gt;&lt;quat&gt;...&lt;/quat&gt;&lt;offset&gt;...&lt;/offset&gt;&lt;scale&gt;...&lt;/scale&gt;&lt;/frame&gt;</code>。<a class="jr" href="#g-09">相机位姿 token 化</a>的好处是相机几何也能用同一张"嘴"写出来；代价是格式、方向单位、旋转合不合法，都可能在自回归生成里写错。</p>
 
 <h2><span class="num">§ 07 / Corpus</span>SN-VC-50M：50M 条协议化监督，不是 50M 张独立原图</h2>
 <p>SN-VC 是完整可复现 corpus：公共标注能直接转换的部分给 source list、prompt、规则与样例；额外生成或整理的子集作为 SN-VC-50M 发布。重叠 benchmark 保留官方 split，并排除评测图与标注。</p>
@@ -116,6 +140,7 @@ c_next = argmax_c d(c,S)</div>
 <figure id="fig-corpus" class="reveal"><figcaption><span>Fig 07 · 50M 发布子集的四条数据轨</span><span>73 DATASET-TASK ENTRIES · 10 TASK TYPES</span></figcaption><div class="corpus"><div class="corpus-row"><span>STRUCTURED</span><div class="rail"><div class="fill" style="--w:37.8%"></div></div><b>18.9M</b></div><div class="corpus-row"><span>DENSE GEOMETRY</span><div class="rail"><div class="fill" style="--w:34.6%"></div></div><b>17.3M</b></div><div class="corpus-row"><span>MULTI-VIEW</span><div class="rail"><div class="fill" style="--w:25%"></div></div><b>12.5M</b></div><div class="corpus-row"><span>SEGMENTATION</span><div class="rail"><div class="fill" style="--w:2.6%"></div></div><b>1.3M</b></div></div><div class="release-note"><div class="rev"><b>50.0M</b>四项精确相加</div><div class="rev d2"><b>PATHS</b>不重复分发公共 RGB</div><div class="rev d3"><b>MIXED</b>真值 + 伪标签 + 策展</div></div><p class="fig-note">同一张图做不同任务会成为独立样本，因为 instruction 与 target 不同。MoGe-2 补 depth/normal，LingBot-Depth 补稀疏多视图 depth；因此“50M”不等于全部独立原图或全部人工真值。</p></figure>
 
 <h2><span class="num">§ 08 / Joint training</span>文字算交叉熵，图像 latent 学速度场</h2>
+<p>一个模型要同时练好两张"嘴"，就得两套 loss 一起上：写文本用<a class="jr" href="#g-11">交叉熵</a>（预测下一个词，写对了 loss 低）；画图用 <a class="jr" href="#g-12">rectified flow</a>（在"噪声 → 目标图"的直线上，学"该往哪个方向、多快地走"，即速度场，走到头就是要画的 latent）。两套目标共享同一套参数，只是各算各的 loss，加权相加。</p>
 <p>模型从 Bagel-7B-MoT SFT。SN-VC 与 VQA、text-to-image、image-to-image 混采，后者是 capability-preserving mixture<a class="jr" href="#g-10">10</a>，用来减轻视觉专训对通用理解和生成的侵蚀。VAE visual encoder 冻结，其他模块与 connector 更新；SigLIP2 输入上限在论文中提到 980。</p>
 
 <figure id="fig-training" class="reveal"><figcaption><span>Fig 08 · 同一优化步骤里的两种监督</span><span>CE + RECTIFIED FLOW</span></figcaption><div class="loss-lanes"><div class="lane rev"><h4>TEXT TARGET</h4><div class="formula">L_text = -Σ log p(y_t | y_&lt;t, cond)
