@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Multi-Scale, Multi-Tile Inference · 先定全局，再重叠分块精修 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · multi-scale-tiled-inference</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Multi-Scale, Multi-Tile Inference · 先定全局，再重叠分块精修</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>低分辨率一次看全局，高分辨率只看重叠小块，融合后再解码。</p>
+<h2>直觉</h2>
+<p>1080p 视频 latent 一次放进模型，峰值显存会随空间、时间 token 快速增长。直接把画面切块虽省显存，但每块不知道邻居画了什么，边缘容易出现接缝。</p>
+<p>解决办法是先在低分辨率生成完整故事板，确保构图、运动和音视频时间关系一致；再放大 latent，并用重叠块只补局部高频细节。重叠区域像两块拼图多留一圈缓冲，最后做加权平均。</p>
+<h2>怎么做的</h2>
+<pre><code class="language-text">约 0.5MP base latent
+→ latent upscaler（增加空间分辨率）
+→ 沿 x/y/time 切 overlapping tiles
+→ 同一个 foundation model 分别 refine
+→ overlap 内按窗函数加权融合
+→ Video VAE decode 到 1080p
+</code></pre>
+<p>它主要降低峰值显存，不减少必须生成的总细节；重叠部分还会重复计算。</p>
+<h2>数字例子</h2>
+<p>一维玩具 latent 长 8，tile 长 5、overlap 2：</p>
+<pre><code class="language-text">tile A 覆盖位置 0..4，预测 overlap(3,4) = [10, 12]
+tile B 覆盖位置 3..7，预测 overlap(3,4) = [14, 10]
+
+若位置3权重 A/B=.75/.25：.75×10 + .25×14 = 11
+若位置4权重 A/B=.25/.75：.25×12 + .75×10 = 10.5
+</code></pre>
+<p>输出从 A 平滑过渡到 B；硬切会在边界直接从 12 跳到 14 或 10。真实系统会同时沿空间和时间切块，blend window 也更平滑。</p>
+<h2>跟整图推理对比</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th style="text-align: right;">峰值显存</th>
+<th style="text-align: right;">全局上下文</th>
+<th style="text-align: right;">额外计算</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>整图高分辨率</td>
+<td style="text-align: right;">高</td>
+<td style="text-align: right;">完整</td>
+<td style="text-align: right;">无重叠重复</td>
+</tr>
+<tr>
+<td>独立无重叠 tiles</td>
+<td style="text-align: right;">低</td>
+<td style="text-align: right;">弱</td>
+<td style="text-align: right;">较少但易接缝</td>
+</tr>
+<tr>
+<td><strong>低清全局 + 重叠精修</strong></td>
+<td style="text-align: right;">较低</td>
+<td style="text-align: right;">base 阶段保留</td>
+<td style="text-align: right;">overlap 重复计算</td>
+</tr>
+</tbody>
+</table>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/ltx-2.html">ltx-2</a> · 1080p 推理策略</li>
+<li><a href="../concepts/video-vae.html">video-vae</a> · 切分和融合发生在 video latent 空间</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/ltx-2.html"><span class="cat">paper</span>LTX-2 · 让声音和画面在同一段去噪过程中彼此校正</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/multi-scale-tiled-inference.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

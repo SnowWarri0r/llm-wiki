@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>LTX-2 · 让声音和画面在同一段去噪中彼此校正 · 个人 wiki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet">
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+:root{--paper:#f4efe3;--paper2:#e9e1cf;--card:#fffaf0;--ink:#151922;--ink2:#37404c;--muted:#746f66;--line:#bdb4a3;--night:#101c2d;--night2:#182a40;--video:#e35239;--video-soft:#f8d8cd;--audio:#128aa0;--audio-soft:#caebed;--sync:#e5a426;--sync-soft:#f5e3ad;--ok:#3d775d;--bad:#a33b48}
+*{box-sizing:border-box}html,body{margin:0;background:var(--paper);color:var(--ink);scroll-behavior:smooth}body{font-family:'Newsreader','Noto Serif SC',serif;font-size:18px;line-height:1.75;-webkit-font-smoothing:antialiased}body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:99;opacity:.4;background-image:linear-gradient(rgba(24,42,64,.028) 1px,transparent 1px),linear-gradient(90deg,rgba(24,42,64,.028) 1px,transparent 1px);background-size:28px 28px}.page{width:min(1100px,calc(100% - 52px));margin:auto;padding:52px 0 110px}.reading{max-width:880px;margin:auto}.mast{display:flex;justify-content:space-between;border-top:5px solid var(--night);border-bottom:1px solid var(--line);padding:12px 0;margin-bottom:54px;font:600 10px/1.5 'JetBrains Mono',monospace;letter-spacing:2px;text-transform:uppercase}.hero{position:relative;padding:0 0 48px;border-bottom:1px solid var(--line)}.eyebrow{color:var(--audio);font:700 11px/1.5 'JetBrains Mono',monospace;letter-spacing:2.5px}.hero h1{margin:17px 0 18px;font:700 clamp(45px,7vw,82px)/.98 'Fraunces','Noto Serif SC',serif;letter-spacing:-.04em}.hero h1 em{color:var(--video);font-weight:500}.dek{max-width:800px;color:var(--ink2);font:300 italic clamp(20px,2.3vw,28px)/1.48 'Fraunces','Noto Serif SC',serif}.rail{display:grid;grid-template-columns:14fr 5fr;margin-top:32px;height:74px;border:1px solid var(--night);background:var(--night);gap:1px}.rail>div{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;color:white}.rail .v{background:var(--video)}.rail .a{background:var(--audio)}.rail b{font:700 25px/1 'JetBrains Mono',monospace}.rail span{font:600 10px/1.4 'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:1px}.thesis{margin:34px 0 50px;padding:24px 28px;background:var(--night);color:#eef4f7;border-left:7px solid var(--sync)}.thesis b{color:#ffd56d}.thesis p{margin:0;font-size:20px}.toc{display:grid;grid-template-columns:repeat(3,1fr);margin:48px 0;border:1px solid var(--line)}.toc a{padding:15px 16px;min-height:86px;color:var(--ink);text-decoration:none;background:rgba(255,250,240,.58);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}.toc a:nth-child(3n){border-right:0}.toc a:nth-last-child(-n+3){border-bottom:0}.toc b{display:block;color:var(--audio);font:700 10px/1.4 'JetBrains Mono',monospace}.toc span{display:block;margin-top:6px;font-size:14px;line-height:1.42}h2{margin:86px 0 17px;padding-top:16px;border-top:2px solid var(--night);font:700 clamp(29px,4vw,43px)/1.16 'Fraunces','Noto Serif SC',serif;letter-spacing:-.02em}h2 .sec{display:block;margin-bottom:10px;color:var(--video);font:700 10px/1.4 'JetBrains Mono',monospace;letter-spacing:2px;text-transform:uppercase}h3{margin:31px 0 9px;font:700 22px/1.35 'Fraunces','Noto Serif SC',serif}.lead{font-size:21px;color:var(--ink2)}p{margin:12px 0}strong{font-weight:700}.jr{display:inline-block;margin:0 2px;padding:0 5px;background:var(--sync-soft);border:1px solid #c68c16;border-radius:3px;color:#503800;text-decoration:none;font:700 9px/1.55 'JetBrains Mono',monospace;vertical-align:super}.note{margin:20px 0;padding:15px 18px;background:var(--card);border-left:4px solid var(--audio);color:var(--ink2);font-size:15px}.note b{display:block;margin-bottom:3px;color:var(--audio);font:700 9px/1.4 'JetBrains Mono',monospace;letter-spacing:1.5px;text-transform:uppercase}.warn{border-left-color:var(--bad)}.warn b{color:var(--bad)}.figure{margin:30px 0;padding:25px;background:var(--card);border:1px solid var(--line);box-shadow:6px 6px 0 var(--paper2);overflow:hidden}.figcap{display:flex;justify-content:space-between;gap:20px;margin-bottom:21px;padding-bottom:12px;border-bottom:1px dashed var(--line);color:var(--muted);font:600 10px/1.45 'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:1px}.figcap b{color:var(--audio)}.tag{display:inline-block;padding:3px 7px;border-radius:2px;font:700 9px/1.4 'JetBrains Mono',monospace;text-transform:uppercase}.tag.v{background:var(--video-soft);color:#7a2718}.tag.a{background:var(--audio-soft);color:#075b68}.tag.s{background:var(--sync-soft);color:#6d4b05}.math{margin:20px 0;padding:21px 24px;background:var(--night);color:white;border-left:6px solid var(--sync);overflow:auto}.math .tex{min-height:34px;color:white}.katex-display{margin:.5em 0;text-align:left;overflow-x:auto;overflow-y:hidden}.katex-display>.katex{text-align:left}.symbols{display:grid;grid-template-columns:115px 1fr;gap:6px 12px;margin-top:15px;padding-top:14px;border-top:1px solid #42536a;font-size:13px}.symbols b{color:#72d2df;font-family:'JetBrains Mono',monospace}.symbols span{color:#d0dae3}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.three{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.panel{padding:18px;border:1px solid var(--line);background:#fff}.panel h3{margin:0 0 8px;font-size:18px}.panel p{margin:0;color:var(--muted);font-size:14px;line-height:1.55}.panel.v{border-top:6px solid var(--video)}.panel.a{border-top:6px solid var(--audio)}.panel.s{border-top:6px solid var(--sync)}
+/* figures */
+.pipeline{display:grid;grid-template-columns:1fr 60px 1fr;align-items:stretch}.pipe-side{display:grid;gap:8px}.box{padding:12px 14px;border:1px solid var(--line);background:white;text-align:center}.box b{display:block;font-size:15px}.box span{display:block;color:var(--muted);font-size:12px}.pipe-side.v .box{border-left:5px solid var(--video)}.pipe-side.a .box{border-left:5px solid var(--audio)}.bridge{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--sync);font:700 20px/1 'JetBrains Mono',monospace}.bridge small{writing-mode:vertical-rl;color:var(--muted);font-size:9px;letter-spacing:1px}.blockflow{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line)}.op{position:relative;padding:17px 12px;min-height:116px;background:#fff;border-right:1px solid var(--line)}.op:last-child{border-right:0}.op:not(:last-child):after{content:'→';position:absolute;right:-12px;top:45px;z-index:2;width:23px;height:23px;border-radius:50%;background:var(--night);color:var(--sync);text-align:center;font:700 14px/23px 'JetBrains Mono',monospace}.op b{display:block;font-size:15px}.op span{display:block;margin-top:8px;color:var(--muted);font-size:12px;line-height:1.45}.op:nth-child(3){background:linear-gradient(135deg,var(--video-soft),var(--audio-soft))}.timeline{position:relative;margin:35px 20px 20px;height:160px;border-bottom:2px solid var(--night)}.tick{position:absolute;bottom:-9px;width:16px;height:16px;border-radius:50%;background:var(--audio);transform:translateX(-8px)}.tick:before{content:attr(data-t);position:absolute;bottom:-29px;left:50%;transform:translateX(-50%);font:600 9px 'JetBrains Mono',monospace;color:var(--muted)}.impact{position:absolute;left:50%;top:5px;bottom:0;border-left:2px dashed var(--video)}.impact b{position:absolute;left:9px;top:0;white-space:nowrap;color:var(--video);font-size:14px}.weight{position:absolute;bottom:15px;width:42px;background:var(--audio-soft);border-top:5px solid var(--audio);text-align:center;padding-top:5px;font:700 10px 'JetBrains Mono',monospace;transform:translateX(-21px)}.w1{left:25%;height:30px}.w2{left:50%;height:105px}.w3{left:75%;height:30px}.gateflow{display:grid;grid-template-columns:1fr 62px 1fr;align-items:center}.gate-side{padding:18px;background:#fff;border:1px solid var(--line)}.gate-side b{display:block}.gate-side span{display:block;color:var(--muted);font-size:13px}.gate-middle{text-align:center;color:var(--sync);font:700 25px 'JetBrains Mono',monospace}.meter{height:10px;margin-top:13px;background:#e6e1d8}.meter i{display:block;height:100%;background:var(--ok)}.features{display:grid;grid-template-columns:1fr 44px 1.25fr 44px 1fr;align-items:center}.arr{text-align:center;color:var(--video);font:700 20px 'JetBrains Mono',monospace}.layers{display:grid;gap:4px}.layers i{display:block;height:17px;background:var(--audio-soft);border:1px solid #70b8c2}.concat{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}.concat i{height:52px;background:var(--sync-soft);border:1px solid #d0a844}.outvec{display:grid;grid-template-columns:1fr 1fr;gap:4px}.outvec i{height:52px;background:var(--video-soft);border:1px solid #d98270}.shape{margin-top:8px;text-align:center;color:var(--muted);font:600 9px 'JetBrains Mono',monospace}.tokens{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;margin:15px 0}.tok{padding:15px 4px;text-align:center;background:#fff;border:1px solid var(--line);font:600 10px 'JetBrains Mono',monospace}.tok.r{background:var(--sync-soft);border-color:#c68c16}.allattn{height:46px;position:relative;margin:8px 5px}.allattn:before,.allattn:after{content:"";position:absolute;left:5%;right:5%;height:22px;border:1px solid var(--audio);border-radius:50%}.allattn:before{top:0}.allattn:after{bottom:0;border-color:var(--video)}.codec{display:grid;grid-template-columns:repeat(6,1fr);border:1px solid var(--line)}.codec>div{position:relative;padding:16px 9px;min-height:112px;text-align:center;background:#fff;border-right:1px solid var(--line)}.codec>div:last-child{border-right:0}.codec>div:not(:last-child):after{content:'›';position:absolute;right:-8px;top:40px;z-index:2;color:var(--sync);font:700 22px 'JetBrains Mono',monospace}.codec b{display:block;font-size:13px}.codec span{display:block;margin-top:7px;color:var(--muted);font-size:11px;line-height:1.4}.cfg{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.branch{padding:17px;border:1px solid var(--line);background:#fff}.branch b{display:block;font:700 11px 'JetBrains Mono',monospace}.branch strong{display:block;margin:10px 0;font:700 26px 'JetBrains Mono',monospace}.branch span{font-size:12px;color:var(--muted)}.sum{margin-top:12px;padding:16px;background:var(--night);color:white;font:600 13px/1.7 'JetBrains Mono',monospace}.tiles{display:grid;grid-template-columns:1fr 46px 1fr 46px 1.2fr;align-items:center}.frame{aspect-ratio:16/9;border:2px solid var(--night);background:linear-gradient(135deg,var(--audio-soft),var(--video-soft));position:relative}.frame.base:before{content:'0.5MP';position:absolute;inset:0;display:grid;place-items:center;font:700 17px 'JetBrains Mono',monospace}.frame.up:before{content:'latent ↑';position:absolute;inset:0;display:grid;place-items:center;font:700 17px 'JetBrains Mono',monospace}.tilegrid{display:grid;grid-template-columns:1fr 1fr;gap:0}.tilegrid i{aspect-ratio:16/9;border:2px solid rgba(227,82,57,.75);margin:-1px;background:rgba(18,138,160,.13)}.tilegrid i:nth-child(2),.tilegrid i:nth-child(4){transform:translateX(-9px)}.evidence{border:1px solid var(--line)}.evrow{display:grid;grid-template-columns:150px 1fr 110px;border-bottom:1px solid var(--line);background:#fff}.evrow:last-child{border-bottom:0}.evrow>*{padding:13px 14px}.evrow b{font:700 11px/1.5 'JetBrains Mono',monospace}.evrow span{border-left:1px solid var(--line);font-size:14px}.evrow .level{font:700 10px 'JetBrains Mono',monospace;text-transform:uppercase}.level.h{color:var(--ok)}.level.m{color:#956a07}.level.l{color:var(--bad)}.speed{display:grid;grid-template-columns:1fr 1fr;gap:10px}.speedcard{padding:18px;background:white;border:1px solid var(--line)}.bar{height:23px;margin:12px 0;background:var(--video)}.speedcard.fast .bar{width:5.47%;min-width:14px;background:var(--audio)}.speedcard b{font:700 24px 'JetBrains Mono',monospace}.speedcard span{display:block;color:var(--muted);font-size:13px}.disclose{display:grid;grid-template-columns:1fr 1fr;gap:12px}.disclose>div{padding:20px;background:#fff;border:1px solid var(--line)}.disclose .yes{border-top:6px solid var(--ok)}.disclose .no{border-top:6px solid var(--bad)}.disclose h3{margin:0 0 10px}.disclose ul{margin:0;padding-left:18px;color:var(--ink2);font-size:14px}.disclose li{margin:6px 0}.limits{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.lim{padding:16px;background:white;border:1px solid var(--line);border-top:5px solid var(--bad)}.lim b{display:block;font-size:15px}.lim span{display:block;margin-top:7px;color:var(--muted);font-size:12px;line-height:1.5}.gloss{margin-top:80px;padding-top:30px;border-top:3px solid var(--night)}.gloss h2{margin:0 0 17px;border:0;padding:0}.gloss ol{list-style:none;padding:0;counter-reset:g}.gloss li{position:relative;counter-increment:g;padding:13px 0 13px 49px;border-bottom:1px dashed var(--line);font-size:15px}.gloss li:before{content:counter(g,decimal-leading-zero);position:absolute;left:0;top:14px;color:var(--video);font:700 10px 'JetBrains Mono',monospace}.gloss li:target{background:var(--sync-soft)}.term{font-weight:700}.sources{margin-top:56px;padding:24px;background:var(--night);color:#d8e1e8}.sources a{color:#75d7e5}.sources h3{margin-top:0;color:white}.colophon{display:flex;justify-content:space-between;margin-top:46px;padding-top:15px;border-top:1px solid var(--line);color:var(--muted);font:600 9px 'JetBrains Mono',monospace}
+@media(max-width:780px){.page{width:min(100% - 28px,1100px);padding-top:30px}.mast span:last-child{display:none}.rail{grid-template-columns:1fr 1fr}.toc{grid-template-columns:1fr 1fr}.toc a:nth-child(3n){border-right:1px solid var(--line)}.toc a:nth-child(2n){border-right:0}.toc a:nth-last-child(-n+3){border-bottom:1px solid var(--line)}.toc a:nth-last-child(-n+2){border-bottom:0}.two,.three,.disclose,.limits,.speed{grid-template-columns:1fr}.pipeline,.gateflow,.features,.tiles{grid-template-columns:1fr}.bridge,.gate-middle,.arr{height:42px;display:grid;place-items:center}.bridge small{writing-mode:horizontal-tb}.blockflow,.codec{grid-template-columns:1fr 1fr}.op:nth-child(2),.codec>div:nth-child(2),.codec>div:nth-child(4){border-right:0}.op:nth-child(-n+2),.codec>div:nth-child(-n+4){border-bottom:1px solid var(--line)}.op:not(:last-child):after,.codec>div:not(:last-child):after{display:none}.cfg{grid-template-columns:1fr}.evrow{grid-template-columns:1fr}.evrow span{border-left:0;border-top:1px solid var(--line)}.symbols{grid-template-columns:1fr}.figcap{display:block}.figcap b{display:block;margin-top:5px}.colophon{display:block}.colophon span{display:block;margin-top:5px}}
+</style>
+<style>
+code{overflow-wrap:anywhere;word-break:break-word}
+@media(max-width:780px){.timeline{margin-left:4px;margin-right:4px}.impact b{white-space:normal;width:120px}}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · ltx-2</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page"><div class="reading">
+<div class="mast"><span>FIELD NOTES · AUDIO × VIDEO</span><span>ARXIV 2601.03233 · 2026</span></div>
+<header class="hero">
+  <div class="eyebrow">LTX-2 · EFFICIENT JOINT AUDIO-VISUAL FOUNDATION MODEL</div>
+  <h1>让声音和画面<br>在同一段去噪中<br><em>彼此校正</em></h1>
+  <p class="dek">不是先拍完默片再补声音。视频和音频保留各自擅长的表示方式，却在 48 层里沿共同时间轴不断交换线索。</p>
+  <div class="rail"><div class="v"><b>14B</b><span>video stream<br>x · y · time</span></div><div class="a"><b>5B</b><span>audio stream<br>time</span></div></div>
+</header>
+<section class="thesis"><p><b>先记住一句：</b>视频流负责空间和运动，音频流负责声音与节奏；双向交叉注意力让两边在事件发生的时刻互相改答案。统一的是生成过程，不是把两个模态压成同一种 token。</p></section>
+
+<nav class="toc">
+  <a href="#s1"><b>01 / 痛点</b><span>为什么先视频后配音天然少一条反馈路</span></a>
+  <a href="#s2"><b>02 / 总图</b><span>两套 VAE、两条流、一个共同时间轴</span></a>
+  <a href="#s3"><b>03 / Block</b><span>每层依次做哪四件事</span></a>
+  <a href="#s4"><b>04 / 对齐</b><span>cross-attention 与 1D temporal RoPE</span></a>
+  <a href="#s5"><b>05 / AdaLN</b><span>自己的进度调制，对方的进度开门</span></a>
+  <a href="#s6"><b>06 / 文本</b><span>为什么读 Gemma 所有层</span></a>
+  <a href="#s7"><b>07 / Registers</b><span>thinking tokens 不是思维链</span></a>
+  <a href="#s8"><b>08 / Latent</b><span>视频与立体声音频如何压缩</span></a>
+  <a href="#s9"><b>09 / Flow</b><span>训练时两条速度场学什么</span></a>
+  <a href="#s10"><b>10 / CFG</b><span>文本与跨模态同步分开加力</span></a>
+  <a href="#s11"><b>11 / 1080p</b><span>低清定全局、重叠分块精修</span></a>
+  <a href="#s12"><b>12 / 证据</b><span>速度很硬，质量评测披露很薄</span></a>
+  <a href="#s13"><b>13 / 边界</b><span>训练缺口、失败方式与数字矛盾</span></a>
+  <a href="#gloss"><b>14 / 术语</b><span>正文所有关键名词点开即看</span></a>
+  <a href="#sources"><b>15 / 来源</b><span>论文与官方代码版本</span></a>
+</nav>
+
+<h2 id="s1"><span class="sec">01 · WHY JOINT</span>先视频后配音，究竟少了什么</h2>
+<p class="lead">`T2V → V2A` 只能让声音服从已经定稿的画面；`T2A → A2V` 只能让画面服从已经定稿的声音。问题不是第二个模型不够强，而是第一步一旦交卷，另一模态再也改不回去。</p>
+<div class="figure" id="fig-01"><div class="figcap"><span>Fig 01 · 串行生成与联合生成</span><b>ONE-WAY vs TWO-WAY</b></div>
+  <div class="two">
+    <div class="panel v"><h3>串行：先交卷，再补另一科</h3><p>视频先定嘴型和碰撞时刻 → 音频只能追；或音频先定节奏 → 画面只能追。反馈箭头断掉。</p></div>
+    <div class="panel s"><h3>联合：两份草稿反复对齐</h3><p>台词修嘴型，人物位置修音源，碰撞画面修 Foley<a class="jr" href="#g-17">17</a> 时刻，房间材质修混响；两边还在去噪，都能改。</p></div>
+  </div>
+</div>
+<p>同一个事件通常同时产生视觉和声音。LTX-2 想建模的是文本条件下的联合分布，而不是把两个条件分布串起来<a class="jr" href="#g-01">01</a>。不过“架构允许双向依赖”不等于论文已经用互信息或似然证明它完美学到了真实联合分布。</p>
+
+<h2 id="s2"><span class="sec">02 · THE WHOLE MACHINE</span>分开表示，联合生成</h2>
+<p>视频和音频没有硬塞进共享 VAE：视频需要 `(x,y,time)`，音频主要沿时间展开。两套 VAE<a class="jr" href="#g-02">02</a> 各自压缩，再进入 14B / 5B 的 DiT<a class="jr" href="#g-03">03</a> 流。</p>
+<div class="figure" id="fig-02"><div class="figcap"><span>Fig 02 · 端到端数据流</span><b>DECOUPLED LATENTS · INTEGRATED DENOISING</b></div>
+  <div class="pipeline">
+    <div class="pipe-side v"><div class="box"><b>raw frames</b><span>RGB · space × time</span></div><div class="box"><b>causal Video VAE</b><span>空间 32× · 时间约 8×</span></div><div class="box"><b>14B video stream</b><span>3D RoPE · 48 blocks</span></div><div class="box"><b>Video VAE decoder</b><span>输出视频帧</span></div></div>
+    <div class="bridge"><span>↔</span><small>每层交换</small><span>↔</span></div>
+    <div class="pipe-side a"><div class="box"><b>stereo waveform</b><span>16 kHz input</span></div><div class="box"><b>mel + Audio VAE</b><span>约 25 token/s</span></div><div class="box"><b>5B audio stream</b><span>1D RoPE · 48 blocks</span></div><div class="box"><b>VAE + vocoder</b><span>24 kHz stereo</span></div></div>
+  </div>
+</div>
+<p>“shared depth”只表示层数和交换位置对齐，不是共享参数。容量比 `14:5=2.8:1`，约 73.7% 参数给视频、26.3% 给音频；参数占比不等于 FLOPs 占比，因为 token 数和 attention 形状也不同。</p>
+
+<h2 id="s3"><span class="sec">03 · ONE DUAL-STREAM BLOCK</span>一层里，先各自思考，再交换答案</h2>
+<div class="figure" id="fig-03"><div class="figcap"><span>Fig 03 · 每个 block 的四道工序</span><b>SELF → TEXT → A/V → FFN</b></div>
+  <div class="blockflow"><div class="op"><b>① Self-Attention</b><span>视频内部建空间与运动；音频内部建语音、音乐、环境声的连续性。</span></div><div class="op"><b>② Text Cross-Attn</b><span>两条流分别读取为自己整理过的 prompt 条件。</span></div><div class="op"><b>③ A ↔ V Cross-Attn</b><span>沿共同时间轴双向取信息，是同步发生的位置。</span></div><div class="op"><b>④ FFN</b><span>每个 token 在通道维做非线性变换，再进下一层。</span></div></div>
+</div>
+<p>RMSNorm<a class="jr" href="#g-04">04</a> 穿插在各子层之前稳定尺度。当前官方实现还先保存交换前的 `video/audio` 快照：A→V 与 V→A 都读取同一份旧状态，第二个方向不会偷看到第一个方向刚写回的结果。这让一层内的双向交换保持对称。</p>
+<div class="note"><b>论文 vs 实现</b>论文正文没有列 block 数；当前官方 `ltx-core` README 与代码给出 48 层。本文把它标为实现补充，而不是伪装成论文表格里的公开训练配置。</div>
+
+<h2 id="s4"><span class="sec">04 · TEMPORAL ALIGNMENT</span>画面中的撞击，怎么查到同一刻的声音</h2>
+<p>视频 query 读取音频 K/V，就是 A→V；音频 query 读取视频 K/V，就是 V→A<a class="jr" href="#g-05">05</a>。</p>
+<div class="math"><div class="tex" data-display="true">A_{V\leftarrow A}=\operatorname{softmax}\!\left(\frac{Q_VK_A^\top}{\sqrt d}\right)V_A</div><div class="symbols"><b>Q_V</b><span>视频 token 提出的查询：我现在需要什么声音线索？</span><b>K_A</b><span>音频 token 的索引，用来与 query 比较。</span><b>V_A</b><span>匹配后真正取回的音频内容。</span><b>d</b><span>Q/K 的共同通道宽度；除以 √d 防止点积过大、softmax 过早饱和。</span></div></div>
+<div class="figure" id="fig-04"><div class="figcap"><span>Fig 04 · 同一时刻获得最高权重</span><b>TOY NUMBERS · NOT PAPER METRICS</b></div>
+  <div class="timeline"><i class="impact"><b>0.40s · 杯子碰桌面</b></i><i class="tick" style="left:25%" data-t="0.36s"></i><i class="tick" style="left:50%" data-t="0.40s"></i><i class="tick" style="left:75%" data-t="0.44s"></i><div class="weight w1">.107</div><div class="weight w2">.787</div><div class="weight w3">.107</div></div>
+  <p><code>softmax([1,3,1])≈[.107,.787,.107]</code>。若三个音频 value 的碰撞强度为 `[.2,1,.1]`，加权输出约 `.819`。这只演示一次 attention 的算术。</p>
+</div>
+<p>视频 self-attention 使用 3D RoPE<a class="jr" href="#g-06">06</a> 编码 `(x,y,time)`，音频 self-attention 使用 1D 时间 RoPE；跨模态时只保留时间。原因很朴素：声音没有画面里的 `x,y`。跨模态位置编码只负责“是不是同一刻”，该看嘴、车还是手仍由内容相似度决定。</p>
+
+<h2 id="s5"><span class="sec">05 · CROSS-MODALITY ADALN</span>自己的进度调制，对方的进度开门</h2>
+<p>联合生成时两条流可能噪声程度不同。V2A 甚至可以让给定视频保持干净 `σ_video=0`，只去噪音频。交叉注意力必须知道：谁现在更可靠<a class="jr" href="#g-07">07</a>。</p>
+<div class="math"><div class="tex" data-display="true">h'_V=h_V+g(\sigma_A)\odot\operatorname{CrossAttn}\!\left(\operatorname{AdaLN}(h_V;\sigma_V),\operatorname{AdaLN}(h_A;\sigma_A)\right)</div><div class="symbols"><b>h_V,h_A</b><span>交换前的两条隐藏状态。</span><b>σ_V, σ_A</b><span>视频与音频当前噪声级别。</span><b>AdaLN</b><span>用本流 σ 算 scale/shift，先把自己整理到适合交换的尺度。</span><b>g(σ_A)</b><span>由对方噪声进度算出的写回门；⊙ 是逐通道相乘。</span></div></div>
+<div class="figure" id="fig-05"><div class="figcap"><span>Fig 05 · 两道控制不是同一件事</span><b>MODULATE SELF · GATE OTHER</b></div>
+  <div class="gateflow"><div class="gate-side"><span class="tag v">本流 σ</span><b>AdaLN 整理 Q / K / V</b><span>“我当前的特征该以什么尺度参与交换？”</span><div class="meter"><i style="width:82%"></i></div></div><div class="gate-middle">→ × →</div><div class="gate-side"><span class="tag a">对方 σ</span><b>Gate 控制写回量</b><span>“对方这轮的话有多可信，应加回多少？”</span><div class="meter"><i style="width:46%;background:var(--audio)"></i></div></div></div>
+</div>
+<p>论文第 5 页先把 scale/shift 概括成由“另一模态隐藏状态”条件化，3.1.2 随后却写本流 timestep 调制、另一流 timestep 控门。当前开源实现与后者一致，所以这里按可核对的代码解释，并保留文字矛盾。</p>
+
+<h2 id="s6"><span class="sec">06 · DEEP TEXT CONDITIONING</span>为什么不能只拿 Gemma 最后一层</h2>
+<p>冻结的 Gemma 3-12B<a class="jr" href="#g-08">08</a> 会产出所有 decoder 层的隐藏状态。论文的出发点是：较早层可能保留更多字词与音素线索，较深层偏向复杂语义；准确语音两者都需要。</p>
+<div class="math"><div class="tex" data-display="true">H\in\mathbb{R}^{B\times T\times D\times L}\;\longrightarrow\;\widetilde H\in\mathbb{R}^{B\times T\times(DL)}\;\xrightarrow{\;W\;}\;C\in\mathbb{R}^{B\times T\times D_{target}}</div><div class="symbols"><b>B</b><span>batch 大小。</span><b>T</b><span>文本 token 数。</span><b>D</b><span>Gemma 每层隐藏宽度。</span><b>L</b><span>抽取的层数。</span><b>W</b><span>把所有层拼接后的高维特征压回目标维度的可学习矩阵。</span></div></div>
+<div class="figure" id="fig-06"><div class="figcap"><span>Fig 06 · 多层特征先拼接，再投影</span><b>[B,T,D,L] → [B,T,D×L] → TARGET</b></div>
+  <div class="features"><div><div class="layers"><i></i><i style="width:83%"></i><i style="width:66%"></i></div><div class="shape">3 LAYERS × 2 DIMS</div></div><div class="arr">→</div><div><div class="concat"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="shape">[1,0,0,2,3,1]</div></div><div class="arr">W</div><div><div class="outvec"><i></i><i></i></div><div class="shape">TOY OUTPUT [4,3]</div></div></div>
+</div>
+<p>玩具例中三层 2 维向量 `[1,0]、[0,2]、[3,1]` 拼成 6 维；若手写 W 只把第 1/5 维加到输出 1、把第 2/4/6 维加到输出 2，就得 `[4,3]`。真实 W 是稠密浮点矩阵。W 在短暂初始阶段与 LTX-2 一起用 diffusion MSE 训练，Gemma 始终冻结，随后 W 也冻结；论文没有给这个阶段的步数和学习率。</p>
+
+<h2 id="s7"><span class="sec">07 · THINKING TOKENS</span>名字像“思考”，代码里其实是可写寄存器</h2>
+<p>Gemma 是 causal decoder，原始 token 只能看左边。后接的 text connector<a class="jr" href="#g-09">09</a> 使用全双向 attention 重新混合整句；视频与音频各有一个 connector。padding 槽不再浪费，而由 learnable registers<a class="jr" href="#g-10">10</a> 替换。</p>
+<div class="figure" id="fig-07"><div class="figcap"><span>Fig 07 · padding 变成可读写的上下文槽</span><b>NOT CHAIN-OF-THOUGHT</b></div>
+  <div class="tokens"><div class="tok">猫</div><div class="tok">跳上</div><div class="tok">桌子</div><div class="tok">杯子</div><div class="tok">碎裂</div><div class="tok r">R1</div><div class="tok r">R2</div><div class="tok r">R3</div></div><div class="allattn"></div><p style="text-align:center"><b>全双向 connector：</b>正文 token 与 R1/R2/R3 全部互相可见</p>
+</div>
+<p>它们不是词，不会输出可读推理步骤。假设某个 register 对五个正文 token 的权重为 `[.10,.15,.45,.20,.10]`，正文的“碰撞相关度”为 `[0,0,1,.5,0]`，聚合值就是 `.45×1+.20×.5=.55`。这说明它能收集全句信号，不证明它学会了 reasoning。论文也没有 thinking-token 独立消融。</p>
+
+<h2 id="s8"><span class="sec">08 · MODALITY-SPECIFIC LATENTS</span>视频压空间与时间，音频压时频结构</h2>
+<h3>视频：让 DiT 不必面对每个像素</h3>
+<p>当前官方实现给出的 causal Video VAE<a class="jr" href="#g-11">11</a> 形状是 `[B,3,F,H,W]→[B,128,F',H/32,W/32]`，`F'=1+(F-1)/8`。33 帧 512² 视频从 8,650,752 个像素位置变成 `5×16×16=1,280` 个 latent 位置，每个位置 128 维。6758× 是位置数缩减，不是文件压缩率。</p>
+<h3>音频：先 mel，再压到约 25 token/s</h3>
+<div class="figure" id="fig-08"><div class="figcap"><span>Fig 08 · 立体声音频编解码链</span><b>16 kHz ANALYSIS → 24 kHz SYNTHESIS</b></div>
+  <div class="codec"><div><b>stereo wave</b><span>输入重采样到 16 kHz</span></div><div><b>2× mel</b><span>左右声道各算时频图</span></div><div><b>Audio VAE</b><span>约 25 token/s<br>128 维</span></div><div><b>Flow DiT</b><span>在连续 latent 上生成</span></div><div><b>VAE decode</b><span>还原双声道 mel</span></div><div><b>HiFi-GAN</b><span>24 kHz stereo waveform</span></div></div>
+</div>
+<p>这里的 mel-spectrogram<a class="jr" href="#g-18">18</a> 是沿时间展示各频带能量的时频图。4 秒约 100 个音频 token，20 秒约 500 个。vocoder<a class="jr" href="#g-12">12</a> 只负责把频谱合成为相位连续、可播放的波形，不是又一轮语义去噪。当前代码形状 `[B,8,T/4,16]` 也解释了 128 维来自 `8×16`。</p>
+
+<h2 id="s9"><span class="sec">09 · FLOW MATCHING</span>两条流训练时，究竟在预测什么<a class="jr" href="#g-16">16</a></h2>
+<div class="math"><div class="tex" data-display="true">x_\sigma=(1-\sigma)x_0+\sigma\epsilon,\qquad v^*=\epsilon-x_0,\qquad \mathcal L=\lVert v_\theta(x_\sigma,\sigma,c)-v^*\rVert_2^2</div><div class="symbols"><b>x₀</b><span>VAE 编码后的干净视频或音频 latent。</span><b>ε</b><span>与 latent 同形状的随机噪声。</span><b>σ</b><span>0 到 1 的插值位置；0 靠近数据，1 靠近噪声。</span><b>xσ</b><span>模型训练时看到的带噪 latent。</span><b>v*</b><span>直线路径的真实速度。由 dxσ/dσ 求导得到 ε−x₀。</span><b>vθ</b><span>双流 DiT 预测的速度。</span><b>‖·‖²₂</b><span>每一维误差先平方，再全部求和。</span></div></div>
+<p>补充材料只明确“video/audio latents 用 flow-matching velocity loss”。它没有披露两项如何加权、σ 如何采样、optimizer、batch 或训练步数。推理时从两条噪声 latent 出发，用 Euler 等求解器反向积分，最后各自由 VAE 解码。</p>
+
+<h2 id="s10"><span class="sec">10 · MODALITY-CFG</span>“符合文字”和“彼此同步”可以分开调</h2>
+<p>论文原式用 `t` 表示 text，容易和 diffusion timestep 混淆；这里改成 `c`。`m` 表示另一模态<a class="jr" href="#g-13">13</a>。</p>
+<div class="math"><div class="tex" data-display="true">\widehat M=M(x,c,m)+s_{text}[M(x,c,m)-M(x,\varnothing,m)]+s_{cross}[M(x,c,m)-M(x,c,\varnothing)]</div><div class="symbols"><b>M(x,c,m)</b><span>文本与另一模态都给全的预测。</span><b>M(x,∅,m)</b><span>拿掉文本，用差值测文本造成的变化。</span><b>M(x,c,∅)</b><span>拿掉另一模态，用差值测跨模态造成的变化。</span><b>s_text</b><span>放大文本方向。</span><b>s_cross</b><span>放大音视频互相对齐的方向。</span></div></div>
+<div class="figure" id="fig-09"><div class="figcap"><span>Fig 09 · 三次预测拆出两条 guidance 方向</span><b>FULL · NO TEXT · NO CROSS</b></div>
+  <div class="cfg"><div class="branch"><b>FULL</b><strong>2.0</strong><span>text ✓ · other modality ✓</span></div><div class="branch"><b>NO TEXT</b><strong>1.5</strong><span>text ∅ · other modality ✓<br>差值 = .5</span></div><div class="branch"><b>NO CROSS</b><strong>1.2</strong><span>text ✓ · other modality ∅<br>差值 = .8</span></div></div><div class="sum">VIDEO (3,3): 2 + 3×.5 + 3×.8 = 5.9<br>AUDIO (7,3): 2 + 7×.5 + 3×.8 = 7.9</div>
+</div>
+<p>这份公式从<strong>完整条件输出</strong>出发，再加两条差值；标准 CFG<a class="jr" href="#g-14">14</a> 常从无条件输出出发，二者不能只看名称就互换 scale。论文没有给参数 sweep，因此音频 text scale=7 只是本报告配方，不是普适最佳值。</p>
+
+<h2 id="s11"><span class="sec">11 · FULL-HD WITHOUT FULL-FRAME VRAM</span>先看完整故事，再分块补皮肤纹理</h2>
+<div class="figure" id="fig-10"><div class="figcap"><span>Fig 10 · 多尺度、多 tile 推理</span><b>GLOBAL FIRST · LOCAL DETAIL SECOND</b></div>
+  <div class="tiles"><div><div class="frame base"></div><div class="shape">构图 · 运动 · A/V 同步</div></div><div class="arr">→</div><div><div class="frame up"></div><div class="shape">只提高空间分辨率</div></div><div class="arr">→</div><div><div class="frame tilegrid"><i></i><i></i><i></i><i></i></div><div class="shape">空间 + 时间重叠精修，再融合</div></div></div>
+</div>
+<p>重叠让边界拥有上下文，blend window<a class="jr" href="#g-15">15</a> 让相邻块平滑过渡。一维玩具例：A/B 两块在重叠位置预测 10 和 14，权重 `.75/.25`，融合为 `11`，而不是硬选一边。它降低峰值显存，却不会让总计算免费消失；重叠区会重复算，远距离一致性也可能下降。</p>
+
+<h2 id="s12"><span class="sec">12 · EXPERIMENTS & EVIDENCE</span>速度数字很硬，质量结论证据偏薄</h2>
+<div class="figure" id="fig-11"><div class="figcap"><span>Fig 11 · 单张 H100 每个 diffusion step</span><b>121 FRAMES · 720P · EULER 1 STEP · CFG=1</b></div>
+  <div class="speed"><div class="speedcard"><b>22.30 s</b><div class="bar"></div><span>Wan 2.2-14B · video only</span></div><div class="speedcard fast"><b>1.22 s</b><div class="bar"></div><span>LTX-2 19B · audio + video</span></div></div><p><code>22.30 ÷ 1.22 = 18.28×</code>，约 18× 的算术成立。但两者 VAE、token 数、Transformer 和 kernel 都不同，这不是“只改双流”的单变量消融。</p>
+</div>
+<div class="evidence"><div class="evrow"><b>主张</b><span>报告给出的证据</span><span class="level">证据强度</span></div><div class="evrow"><b>每步约 18×</b><span>公开 Table 1，硬件、帧数、分辨率、solver 与 CFG 均给出；仍不是同架构对照。</span><span class="level h">较强</span></div><div class="evrow"><b>视频公开榜前列</b><span>称 2025-11-06 Artificial Analysis I2V #3、T2V #4；未列分数，榜单会变化。</span><span class="level m">中等</span></div><div class="evrow"><b>优于 Ovi、可比闭源</b><span>内部人评没有 prompt、样本数、参与者、胜率、置信区间或原始表。</span><span class="level l">较弱</span></div><div class="evrow"><b>thinking tokens 有效</b><span>没有独立消融，无法与全层特征、双向 connector 拆开归因。</span><span class="level l">未证明</span></div></div>
+
+<h2 id="s13"><span class="sec">13 · DISCLOSURE, LIMITS, CONTRADICTIONS</span>这是一份架构报告，不是一份完整复现说明</h2>
+<div class="disclose"><div class="yes"><h3>明确公开</h3><ul><li>14B video + 5B audio 的方法主线</li><li>两套 causal VAE 与 A↔V cross-attention</li><li>Gemma 全层特征、thinking registers</li><li>音频 25 token/s、128 维、24kHz stereo</li><li>modality-CFG 公式与最终 scale</li><li>H100 每步速度表</li></ul></div><div class="no"><h3>没有公开</h3><ul><li>数据规模、时长、语言与领域分布</li><li>去重、版权、安全过滤阈值</li><li>optimizer、LR、batch、训练步数</li><li>video/audio loss 权重与 σ 分布</li><li>训练 GPU、时间、成本、恢复策略</li><li>tile 大小、overlap、upscaler 训练和消融</li></ul></div></div>
+<div class="figure" id="fig-12"><div class="figcap"><span>Fig 12 · 论文自己承认的失败方式</span><b>MODEL BOUNDARIES</b></div><div class="limits"><div class="lim"><b>低资源语言/方言</b><span>语音准确度和嘴型同步都可能下降。</span></div><div class="lim"><b>多说话人</b><span>可能把台词分配给错误人物。</span></div><div class="lim"><b>&gt; 约 20 秒</b><span>时间漂移、同步下降、场景多样性降低。</span></div><div class="lim"><b>没有显式 reasoning</b><span>长叙事和事实性依赖上游 LLM 写出的 prompt。</span></div><div class="lim"><b>合成媒体滥用</b><span>逼真人物与语音需要来源披露、溯源和安全策略。</span></div><div class="lim"><b>数据偏差跨模态放大</b><span>人物、口音、语言和声音环境都会继承训练偏差。</span></div></div></div>
+<div class="note warn"><b>报告内部数字冲突</b>摘要、3.1、Table 1 和当前官方 README 都是 <strong>14B + 5B = 19B</strong>；结论却写 <strong>13B + 3B</strong>。本文采用前者，因为多处正文与开源实现共同支持它，同时保留冲突。</div>
+<p>最后的判断：LTX-2 最有价值的设计原则是<strong>统一生成不等于抹平模态差异</strong>。视频与音频使用各自合适的 latent、容量和位置编码，只把真正共同的时间关系做成高频通信接口。速度优势有实数支撑；质量 SOTA、thinking token 收益与可复现训练配方，则需要更多公开证据。</p>
+
+<section class="gloss" id="gloss"><h2><span class="sec">14 · GLOSSARY</span>点过的术语，在这里展开</h2><ol>
+<li id="g-01"><span class="term">联合分布</span>：一次描述视频与音频共同出现的概率关系。它允许两边同时受同一个事件约束，而不是先固定一个再条件生成另一个。</li>
+<li id="g-02"><span class="term">VAE</span>：把高维原始信号压成连续 latent，并能再解码回来。这里视频和音频各用一套。</li>
+<li id="g-03"><span class="term">DiT</span>：在 latent 上运行的 Diffusion Transformer；LTX-2 用它预测 flow velocity。</li>
+<li id="g-04"><span class="term">RMSNorm</span>：用向量平方均值的平方根统一尺度，不减均值；用来稳定深层网络的激活。</li>
+<li id="g-05"><span class="term">Cross-Attention</span>：query 来自一组 token，key/value 来自另一组；因此能用视频问题检索音频，反之亦然。</li>
+<li id="g-06"><span class="term">RoPE</span>：按位置旋转 Q/K，使点积自然带上相对位置。3D 表示 x/y/time，1D 只表示时间。</li>
+<li id="g-07"><span class="term">Cross-modality AdaLN</span>：用本流噪声进度调制交换前的特征，再用对方噪声进度控制交叉信息写回量。</li>
+<li id="g-08"><span class="term">Gemma 3-12B</span>：冻结的 decoder-only 多语言 LLM；LTX-2 读取它所有层的隐藏状态作为文本特征来源。</li>
+<li id="g-09"><span class="term">Text Connector</span>：Gemma 后面的双向 Transformer，重新混合整句，并分别产出视频/音频条件。</li>
+<li id="g-10"><span class="term">Thinking Tokens / Registers</span>：替换 padding 的可学习隐藏槽，可聚合上下文；不是自然语言思维链。</li>
+<li id="g-11"><span class="term">Causal Video VAE</span>：压缩空间与时间，且每个时间位置只依赖现在和过去，便于流式处理。</li>
+<li id="g-12"><span class="term">Vocoder</span>：把 mel-spectrogram 合成为可播放波形的神经网络；不负责理解 prompt。</li>
+<li id="g-13"><span class="term">Modality-CFG</span>：分别拿掉文本、拿掉另一模态，抽出两条预测差值，再用两个 scale 放大。</li>
+<li id="g-14"><span class="term">Standard CFG</span>：常写作 uncond + s(cond−uncond)，放大条件相对无条件造成的预测变化。</li>
+<li id="g-15"><span class="term">Blend Window</span>：重叠 tile 中随位置变化的融合权重，让一块逐渐淡出、邻块逐渐淡入，避免接缝。</li>
+<li id="g-16"><span class="term">Flow Matching</span>：构造数据到噪声的路径，让网络回归路径速度；推理时从噪声反向积分到数据。</li>
+<li id="g-17"><span class="term">Foley</span>：与画面动作同步的拟音，如脚步、衣物摩擦、杯子碰桌面。</li>
+<li id="g-18"><span class="term">Mel-Spectrogram</span>：按时间展示各频带能量的图，频率轴按人耳感知尺度压缩。</li>
+</ol></section>
+
+<section class="sources" id="sources"><h3>来源与版本</h3><ol><li><a href="https://arxiv.org/abs/2601.03233">LTX-2 论文</a> · arXiv v1 · 2026-01-06</li><li><a href="https://github.com/Lightricks/LTX-2">LTX-2 官方仓库</a> · 本页核对 commit <code>9377758131b1ffde4b7f766804590a6617bf2ab9</code> · 2026-07-08</li></ol><p>论文事实、当前代码补充和教学用玩具数字在正文中分别标明；页面不把后续版本的功能倒灌为 2026-01 v1 论文结论。</p></section>
+<div class="colophon"><span>LTX-2 · PAPER WALKTHROUGH · 2026-07-17</span><span>PERSONAL WIKI · EVIDENCE-AWARE NOTES</span></div>
+</div></main>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('.tex').forEach(function(el){try{katex.render(el.textContent,el,{displayMode:el.dataset.display==='true',throwOnError:false,strict:false})}catch(e){}});
+  document.querySelectorAll('.figure').forEach(function(el){var o=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){el.animate([{opacity:.55,transform:'translateY(14px)'},{opacity:1,transform:'translateY(0)'}],{duration:500,easing:'ease-out',fill:'both'});o.disconnect()}})},{threshold:.12});o.observe(el)});
+});
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  var items={};
+  document.querySelectorAll('.gloss ol li[id^="g-"]').forEach(function(li){items[li.id]=li.innerHTML;});
+  if(!Object.keys(items).length)return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!items[id])return;
+      e.preventDefault();
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+items[id];
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+</body></html>
