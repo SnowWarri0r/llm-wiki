@@ -72,7 +72,8 @@ figure{margin:38px 0 55px;padding:25px;border:2px solid var(--ink);background:va
 </div>
 
 <h2><span class="num">§ 01 / The representation problem</span>连续坐标好生成，离散连接关系才是硬骨头</h2>
-<p>三角 mesh 由顶点表和面表组成。顶点 <code>(0.31,-0.42,0.08)</code> 是连续数，可以平滑加噪；面 <code>(17,42,91)</code> 却是三个整数索引，从 42 改成 43 没有“改一半”的中间状态。传统路线要么先生成<a class="jr term-hit" href="#g-03">隐式表面</a>再抽网格，要么把坐标和面全切成离散 token，交给<a class="jr term-hit" href="#g-02">自回归模型</a>逐个吐。MeshFlow 的输入也不强制是<a class="jr term-hit" href="#g-16">封闭流形</a>。</p>
+<p>一张三角 mesh 就存成两张表。<strong>顶点表</strong>每行是一个点的 xyz 坐标：第 0 行 <code>(0.31,-0.42,0.08)</code>、第 1 行 <code>(0.55,0.10,-0.20)</code>……<strong>面表</strong>每行三个整数，但这三个数<u>不是坐标，是顶点表的行号</u>——像三个"门牌号"。所以面 <code>(17,42,91)</code> 读作"把顶点表里第 17、42、91 号这三个点连成一个三角形"。</p>
+<p>难点就在这两张表脾气相反：顶点坐标是连续数，加一点噪声、去一点噪声都平滑，<a class="jr term-hit" href="#g-02">扩散/flow 模型</a>最擅长这个；可面表里的门牌号 <code>42</code> 改成 <code>43</code> 立刻指向了完全不同的另一个点，没有"改一半"的中间态——它是离散开关，不是连续量。传统路线要么先生成<a class="jr term-hit" href="#g-03">隐式表面</a>再抽网格，要么把坐标和门牌号全切成离散 token 交给<a class="jr term-hit" href="#g-02">自回归模型</a>一个一个吐。MeshFlow 换招：<strong>把"谁连谁"也改写成连续数</strong>，让模型全程只在连续空间里玩，最后一步才切成 0/1 的边。它对输入也不挑，不强制是<a class="jr term-hit" href="#g-16">封闭流形</a>。</p>
 
 <figure id="fig-routes" class="reveal"><figcaption><span>Fig 01 · 三条 mesh 生成路线</span><span>WHERE DOES TOPOLOGY LIVE?</span></figcaption><div class="routes">
   <div class="route rev"><h4>IMPLICIT</h4><div class="pipe">SDF / occupancy<br>→ Marching Cubes<br>→ dense triangles</div><b>先有表面，后抽网格</b><small>形状连续，但锐边、稀疏拓扑和可编辑性不一定保住。</small></div>
@@ -81,23 +82,57 @@ figure{margin:38px 0 55px;padding:25px;border:2px solid var(--ink);background:va
 </div><p class="fig-note">“美术资产 mesh”强调稀疏、锐边和可编辑拓扑。它与只求表面看起来相似的重建目标不是一回事。</p></figure>
 
 <h2><span class="num">§ 02 / Continuous topology</span>把“有没有边”变成两枚连续向量的匹配分数</h2>
-<p>顶点 <code>i</code> 不只带坐标 <code>v_i</code>，还带外法线 <code>n_i</code> 和<a class="jr term-hit" href="#g-04">边嵌入</a> <code>h_i</code>。模型先生成连续的 <code>h</code>，解码末尾才把任意两顶点的连接分数切成 0/1。下面用普通二维距离做玩具例子；真实实现用的是“越大越像边”的 signed spacetime score。</p>
+<p>顶点 <code>i</code> 除了坐标 <code>v_i</code>，还随身带两样东西：外法线 <code>n_i</code>（待会儿管朝向）和一枚<a class="jr term-hit" href="#g-04">边嵌入</a> <code>h_i</code>。<strong>边嵌入就是一串数字</strong>——把它想成模型给每个顶点发的一张"交友名片"，名片上写什么是<u>学出来的</u>，不是 xyz 坐标。要不要在 <code>i</code>、<code>j</code> 之间连一条边，只看两张名片合不合得来。</p>
+<p>怎么算"合不合得来"？把 <code>h_i</code> 和 <code>h_j</code> <strong>逐位相乘、再全部加起来</strong>——这一步叫<a class="jr term-hit" href="#g-17">内积</a>，结果是一个数。数越大，说明两张名片在这个学出来的空间里越"同向、越投缘"，越该连边；过阈值 <code>τ</code> 就连，不过就不连：</p>
+<div class="formula">h_i = (0.8,  0.5, −0.2)      两张"名片"（学出来的边嵌入）
+h_j = (0.9,  0.3, −0.1)
+<b>该连的一对：</b>
+score(i,j) = 0.8·0.9 + 0.5·0.3 + (−0.2)·(−0.1)
+           = 0.72 + 0.15 + 0.02 = <b>0.89</b>  &gt; τ=0.6  → 连边 ✓
 
-<figure id="fig-connect" class="reveal"><figcaption><span>Fig 02 · 四个顶点手算出五条边</span><span>τ = 1.42 / TOY EUCLIDEAN DISTANCE</span></figcaption><div class="edge-lab">
-  <div class="topology rev"><svg viewBox="0 0 420 330" role="img" aria-label="正方形四个顶点恢复两张三角面"><polygon points="70,270 350,270 350,55" fill="#cfdee3"/><polygon points="70,270 350,55 70,55" fill="#cfe0d8"/><g stroke="#173f5f" stroke-width="5"><line x1="70" y1="270" x2="350" y2="270"/><line x1="350" y1="270" x2="350" y2="55"/><line x1="350" y1="55" x2="70" y2="55"/><line x1="70" y1="55" x2="70" y2="270"/><line x1="70" y1="270" x2="350" y2="55"/></g><line x1="350" y1="270" x2="70" y2="55" stroke="#c65d31" stroke-width="3" stroke-dasharray="8 7"/><g fill="#f8f3e5" stroke="#c65d31" stroke-width="5"><circle cx="70" cy="270" r="11"/><circle cx="350" cy="270" r="11"/><circle cx="350" cy="55" r="11"/><circle cx="70" cy="55" r="11"/></g><g font-family="IBM Plex Mono" font-weight="700" font-size="13"><text x="43" y="300">h1=(0,0)</text><text x="305" y="300">h2=(1,0)</text><text x="304" y="40">h3=(0,1)</text><text x="28" y="40">h4=(-1,0)</text></g></svg></div>
-  <div class="rev d2"><div class="score-list"><div class="score"><span>d12</span><i style="--w:50%"></i><strong>1.000</strong></div><div class="score"><span>d13</span><i style="--w:50%"></i><strong>1.000</strong></div><div class="score"><span>d14</span><i style="--w:50%"></i><strong>1.000</strong></div><div class="score"><span>d23</span><i style="--w:71%"></i><strong>1.414</strong></div><div class="score"><span>d34</span><i style="--w:71%"></i><strong>1.414</strong></div><div class="score no"><span>d24</span><i style="--w:100%"></i><strong>2.000</strong></div></div><div class="face-ledger"><span><b>12+23+13</b><br>→ face (1,2,3)</span><span><b>13+34+14</b><br>→ face (1,3,4)</span></div></div>
-</div><p class="fig-note">玩具规则是距离 ≤1.42 便连边，唯一被拒绝的是 24。真实代码正好相反：连接分数 &gt;τ 才连边，因为它的分数不是普通欧氏距离。</p></figure>
+h_k = (−0.6, 0.1,  0.7)
+<b>不该连的一对：</b>
+score(i,k) = 0.8·(−0.6) + 0.5·0.1 + (−0.2)·0.7
+           = −0.48 + 0.05 − 0.14 = <b>−0.57</b> &lt; 0.6  → 不连 ✗</div>
+<p>凭什么"投缘=该连"这条规矩成立？因为训练时的<strong>边对比损失</strong>就在<u>逼着</u>模型把真边那对名片的内积推高、把非边那对推低（见 §03 的五笔损失）。练完之后，模型已经把该连的顶点在名片空间里摆得彼此同向、不该连的摆得彼此背离——<strong>这个"名片空间"是模型自己雕出来的</strong>，不是几何位置。这就是为什么离散的"连/不连"能被一串连续数字表达出来。</p>
+<p class="note"><span class="label">代码里的小拐弯</span>真实实现把上面的内积做了个"有正有负"的变体（承 SpaceMesh 血统，代码里叫 signed spacetime score：名片的一部分维度算加、一部分算减）。直觉完全一样——<strong>一个可学的相似度分数，过线连边</strong>；只是这个分数不是普通欧氏距离，所以判据是 <code>score &gt; τ</code>（越大越像边），不是"距离越小越连"。这点在论文正文和代码里写反过，见 §09。</p>
 
-<p>边只决定哪三个点成面，不决定面朝里还是朝外。<a class="jr term-hit" href="#g-05">顶点外法线</a>在这里充当朝向裁判：几何叉乘得到的面法线若与三顶点平均法线反向，就交换两个顶点。这个步骤不改变形状，却避免正反面颠倒。</p>
+<figure id="fig-connect" class="reveal"><figcaption><span>Fig 02 · 六对名片两两算内积，长出五条边</span><span>τ = 0.6 / TOY INNER-PRODUCT SCORE</span></figcaption><div class="edge-lab">
+  <div class="topology rev"><svg viewBox="0 0 420 330" role="img" aria-label="正方形四个顶点恢复两张三角面"><polygon points="70,270 350,270 350,55" fill="#cfdee3"/><polygon points="70,270 350,55 70,55" fill="#cfe0d8"/><g stroke="#173f5f" stroke-width="5"><line x1="70" y1="270" x2="350" y2="270"/><line x1="350" y1="270" x2="350" y2="55"/><line x1="350" y1="55" x2="70" y2="55"/><line x1="70" y1="55" x2="70" y2="270"/><line x1="70" y1="270" x2="350" y2="55"/></g><line x1="350" y1="270" x2="70" y2="55" stroke="#c65d31" stroke-width="3" stroke-dasharray="8 7"/><g fill="#f8f3e5" stroke="#c65d31" stroke-width="5"><circle cx="70" cy="270" r="11"/><circle cx="350" cy="270" r="11"/><circle cx="350" cy="55" r="11"/><circle cx="70" cy="55" r="11"/></g><g font-family="IBM Plex Mono" font-weight="700" font-size="12.5"><text x="26" y="300">h1=(.8,.6)</text><text x="298" y="300">h2=(1,.1)</text><text x="298" y="42">h3=(.6,.8)</text><text x="20" y="42">h4=(.1,1)</text></g></svg></div>
+  <div class="rev d2"><div class="score-list"><div class="score"><span>s12</span><i style="--w:86%"></i><strong>0.86</strong></div><div class="score"><span>s13</span><i style="--w:96%"></i><strong>0.96</strong></div><div class="score"><span>s14</span><i style="--w:68%"></i><strong>0.68</strong></div><div class="score"><span>s23</span><i style="--w:68%"></i><strong>0.68</strong></div><div class="score"><span>s34</span><i style="--w:86%"></i><strong>0.86</strong></div><div class="score no"><span>s24</span><i style="--w:20%"></i><strong>0.20</strong></div></div><div class="face-ledger"><span><b>12+23+13</b><br>→ face (1,2,3)</span><span><b>13+34+14</b><br>→ face (1,3,4)</span></div></div>
+</div><p class="fig-note">六对名片两两算内积，过 τ=0.6 的连边。落榜的只有对角线 24（分数 0.20：它俩名片一个偏 x、一个偏 y，不投缘）。<strong>注意另一条对角线 13 分数 0.96 反而最高</strong>——因为它正是这个三角化的切分边。连不连由学出来的名片决定，不由顶点在图上离得近不近决定。</p></figure>
+
+<h3>法线：同一个三角形有正反两面，谁来定？</h3>
+<p>连边只决定"哪三个点围成一个三角形"，但同一个三角形有<strong>正反两面</strong>——从外面看和从里面看，渲染出来的明暗完全相反。定正反的是<a class="jr term-hit" href="#g-05">顶点外法线</a> <code>n_i</code>：每个顶点自己预测一支"朝外的箭头"，指向物体表面的外侧。</p>
+<p>给定三角形 <code>(i,j,k)</code>，拿它的两条边做<strong>叉乘</strong>（cross product）能得到一支垂直于这个三角形的箭头——它的"几何法线"。但叉乘方向取决于你按 <code>i→j→k</code> 还是 <code>i→k→j</code> 绕，两个顺序算出的箭头正好相反。到底哪个才朝外？拿它和三个顶点自己预测的外法线<u>平均一比</u>：同向说明绕对了；反向（内积为负）就把 <code>j</code>、<code>k</code> 调个位——绕序一反，叉乘的箭头就翻到另一面，正反面就摆正了。</p>
+<div class="formula">三角形  a=(0,0,0)  b=(1,0,0)  c=(0,1,0)
+边1 = b−a = (1,0,0)      边2 = c−a = (0,1,0)
+几何法线 = 边1 × 边2 = (0,0, <b>+1</b>)          ← 指向 +z
+
+若三个顶点预测的外法线平均朝 −z：
+   (0,0,+1)·(0,0,−1) = <b>−1 &lt; 0</b>  → 绕反了 → 交换 b,c
+交换后 边1 = c−a、边2 = b−a：
+   新几何法线 = (0,0, <b>−1</b>)                 ← 翻到 −z，和预测一致 ✓</div>
+<p>整个过程<strong>一个坐标都不改</strong>，只动"三个顶点写下来的先后顺序"，形状纹丝不动，只是把可能翻过来的那些面正过来。</p>
 
 <h2><span class="num">§ 03 / MeshVAE</span>TokenMerge 先缩短序列，再让短 query 回看全部顶点</h2>
-<p><a class="jr term-hit" href="#g-06">MeshVAE</a>是有损压缩器。编码端把坐标、法线、邻居坐标做 Fourier 编码，形成 <code>[B,N,D]</code>。<a class="jr term-hit" href="#g-07">TokenMerge</a>把连续四个 token 的通道拼在一起：<code>[B,N,D] → [B,N/4,4D] → Linear(4D,D)</code>。短 query 随后用<a class="jr term-hit" href="#g-08">交叉注意力</a>回看全部 N 个输入，所以“压短”不是立刻丢掉另外四分之三顶点。</p>
+<p>逐个顶点跑 <a class="jr term-hit" href="#g-11">DiT</a> 太贵，先用 <a class="jr term-hit" href="#g-06">MeshVAE</a> 把顶点序列压短。先认几个字母：<code>B</code>=一批几个 mesh，<code>N</code>=一个 mesh 有几个顶点，<code>D</code>=每个顶点用多长的向量描述。所以 <code>[B,N,D]</code> 就是"<code>B</code> 个 mesh、每个 <code>N</code> 个顶点、每个顶点一条长 <code>D</code> 的向量"。编码端先把坐标、法线、邻居坐标做 Fourier 编码拼成这条长 <code>D</code> 的向量。</p>
+<p><a class="jr term-hit" href="#g-07">TokenMerge</a> 干的事一句话：<strong>把"顶点很多"换成"每个顶点的向量更长"，总信息量不搬走</strong>。做法是把连续 4 个顶点<u>首尾拼接</u>成一条 4 倍长的向量，再用一层 Linear 压回原长：</p>
+<div class="formula">假设 4 个顶点，每个用长度 2 的向量（D=2）：
+   顶点1 = [1, 2]   顶点2 = [3, 4]   顶点3 = [5, 6]   顶点4 = [7, 8]
+
+① 拼接（token 轴 → 通道轴）：4 条向量首尾接成 1 条长 8 的向量
+   [1,2, 3,4, 5,6, 7,8]      ← 4 个 token 变 1 个，<b>一个数都没丢</b>
+② Linear(8 → 2)：学一组权重，把这 8 个数搅拌压回长度 2
+   → [q₁, q₂]                 ← 这就是 1 枚"短 query"</div>
+<p>关键全在第 ① 步<strong>是"拼接"不是"取平均"</strong>。取平均会把四个顶点糊成一团（信息真丢了）；拼接是把四份原料原封不动摆进一条长向量，<u>再让线性层学着怎么搅拌</u>——搅法是训练出来的，可以有取有舍，而不是粗暴对半分。所以序列短了 4 倍，信息还在通道里。</p>
+<p>光靠这条压出来的短 query 还嫌信息不够，于是再用<a class="jr term-hit" href="#g-08">交叉注意力</a>让每枚短 query 回头"问"全部 <code>N</code> 个原始顶点（原始顶点留着当 key/value）：谁需要哪个顶点的细节，就把它抓回来。所以"压短"<strong>不等于扔掉另外四分之三</strong>。解码端做反向的 TokenSplit，把 <code>N/4</code> 重新摊回 <code>N</code>。</p>
 
 <figure id="fig-vae" class="reveal"><figcaption><span>Fig 03 · 8 个 token 压成 2 个 latent</span><span>TOKEN AXIS → CHANNEL AXIS → QUERY</span></figcaption><div class="vae">
   <div class="vblock rev"><b>INPUT / 8×D</b><div class="token-row"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><small>顶点 + 法线 + 邻居<br>完整 token 留作 K / V</small></div><div class="arr rev d2">→</div>
-  <div class="vblock merge rev d2"><b>MERGE / 2×4D</b><div class="token-row"><i></i><i></i></div><small>[1,2,3,4] → q₁=2.5<br>[5,6,7,8] → q₂=6.5</small></div><div class="arr rev d3">→</div>
+  <div class="vblock merge rev d2"><b>MERGE / 2×4D</b><div class="token-row"><i></i><i></i></div><small>4 token 拼成一条 → 线性<br>不是取平均</small></div><div class="arr rev d3">→</div>
   <div class="vblock latent rev d3"><b>LATENT / 2×D</b><div class="token-row"><i></i><i></i></div><small>cross-attention 后<br>均值 μ 与方差 σ</small></div>
-</div><div class="query-loop rev d4">两枚短 query ── cross-attention ──► 回看完整 8 枚输入 token · 解码端 TokenSplit 反向展开</div><p class="fig-note">图里用平均权重只是为了手算。真实 Linear(4D,D) 会学习怎样混合四组通道；真正的信息取舍发生在线性层与注意力中。</p></figure>
+</div><div class="query-loop rev d4">两枚短 query ── cross-attention ──► 回看完整 8 枚输入 token · 解码端 TokenSplit 反向展开</div><p class="fig-note">格子只是示意"8 个 token 压成 2 个"。真正的动作是<strong>拼接 + 线性层学着混合</strong>，再靠交叉注意力回看全部原始顶点——信息取舍发生在线性层和注意力里，不是简单取平均。</p></figure>
 
 <h3>五笔损失，各自管什么</h3>
 <div class="losses"><div class="loss"><b>MASK BCE</b><span>这个 padding 位置是真顶点，还是补齐长度用的空位？</span></div><div class="loss"><b>VERTEX MSE</b><span>预测 xyz 离真值坐标多远。</span></div><div class="loss"><b>NORMAL MSE</b><span>顶点外法线方向有没有偏。</span></div><div class="loss"><b>EDGE CONTRAST</b><span>真边分数推过阈值；非边反向推开。</span></div><div class="loss"><b>KL · 10⁻³</b><span>让 latent 靠近高斯，便于 Flow 从噪声生成。</span></div></div>
@@ -109,13 +144,15 @@ figure{margin:38px 0 55px;padding:25px;border:2px solid var(--ink);background:va
 <figure id="fig-extract" class="reveal"><figcaption><span>Fig 04 · 从解码张量到可渲染三角面</span><span>MASK → EDGES → 3-CYCLES → ORIENTATION</span></figcaption><div class="flowline"><div class="state rev"><b>4096 SLOTS</b>顶点 / 法线 / h / mask</div><div class="state rev d2"><b>VALID ONLY</b>mask 删 padding</div><div class="state rev d3"><b>EDGE SOUP</b>score &gt; τ</div><div class="state rev d4"><b>3-CYCLES</b>共同邻居成面</div><div class="state clean rev d5"><b>ORIENTED MESH</b>法线修正绕序</div></div><p class="fig-note">这里借用同一条流程样式，箭头文字应读成“下一步”，不是 Flow 的数值更新。错误边若碰巧组成三环，会凭空长出错误面。</p></figure>
 
 <h2><span class="num">§ 05 / Rectified flow</span>从噪声往回走：每一步同时移动全部 latent</h2>
-<p>训练先抽干净 latent <code>x₀</code> 与高斯噪声 <code>ε</code>，再在二者之间取直线。<a class="jr term-hit" href="#g-10">Rectified Flow</a>让<a class="jr term-hit" href="#g-11">DiT</a>看到中间点和时间，回归这条直线的速度。</p>
-<div class="formula">x(t) = (1−t)x₀ + tε        <b>中间点</b>
-u = ε − x₀                   <b>目标速度；这条直线上保持不变</b>
-L = ||vθ(x(t), t, c) − u||²  <b>预测速度与目标速度的平方误差</b></div>
-<p><code>t∈[0,1]</code> 是噪声强度；<code>c</code> 是点云条件；<code>vθ</code> 是 DiT 预测的速度。例：<code>x₀=[2,-1]</code>、<code>ε=[-2,3]</code>、<code>t=.25</code>，则 <code>x(t)=[1,0]</code>，目标 <code>u=[-4,4]</code>。若模型预测 <code>[-3.5,3.7]</code>，两维平方误差相加是 <code>.5²+.3²=.34</code>。</p>
+<p>这一节讲压好的 latent 到底怎么"长"出来。先建直觉：想象一屋子乱飞的灰尘（纯噪声），你要把它整理成一座雕像（干净数据）。<strong>Flow 学的就是"每一粒灰、在每个时刻、该往哪个方向、多快地飘"</strong>——这个"方向 + 快慢"就叫<b>速度场</b>。把整段路切成很多小步，每步都按预测的速度挪一点，灰尘就整体流成雕像。</p>
+<p>"整流（<a class="jr term-hit" href="#g-10">rectified</a>）"是让这条路走<strong>直线</strong>：训练时干脆把干净 latent <code>x₀</code> 和一团高斯噪声 <code>ε</code> 用一条直线连起来，直线上的速度自始至终恒定，就是 <code>ε−x₀</code>（终点减起点）。直线最好学、也最好走，采样时用很少几步就能到头。<a class="jr term-hit" href="#g-11">DiT</a> 的活儿：看着当前这个带噪点、当前时刻 <code>t</code> 和点云条件 <code>c</code>，把该走的速度预测出来。</p>
+<div class="formula">x(t) = (1−t)x₀ + tε        <b>直线上 t 时刻的点（t=0 是数据，t=1 是噪声）</b>
+u = ε − x₀                   <b>目标速度；这条直线上从头到尾不变</b>
+L = ||vθ(x(t), t, c) − u||²  <b>训练：让预测速度贴近目标速度</b></div>
+<p>拿数字走一遍：<code>x₀=[2,−1]</code>、<code>ε=[−2,3]</code>、<code>t=.25</code>，代入得中间点 <code>x(t)=[1,0]</code>，目标速度 <code>u=ε−x₀=[−4,4]</code>。若 DiT 预测成 <code>[−3.5,3.7]</code>，两维平方误差相加就是 <code>.5²+.3²=.34</code>，训练就是把这个数往 0 压。采样时反过来：从纯噪声出发，每步按预测速度往回挪 <code>Δt</code>，走到 <code>t=0</code> 就是干净 latent，交给 VAE 解码成 mesh。</p>
+<p class="note"><span class="label">先澄清一个常搞混的点</span><strong>flow 本身就不是自回归。</strong>自回归（MeshGPT 那路）是把面切成 token、吐完第 1 个才能吐第 2 个，输出越长串行等待越久；而 flow 一步就把<u>整串 latent 的速度一起算出来</u>，天生并行。所以"并行生成"<strong>不是 MeshFlow 发明的技巧，而是选了 flow 这条路自带的</strong>——MeshFlow 真正的功劳在前几节：把 mesh 改写成 flow 吞得下的连续 latent，flow 才用得上。</p>
 
-<figure id="fig-flow" class="reveal"><figcaption><span>Fig 05 · 四个 Euler 小步从噪声走回数据</span><span>TOY PERFECT VELOCITY / Δt=.25</span></figcaption><div class="flowline"><div class="state noise rev"><b>t=1.00</b>[−2, 3]</div><div class="state rev d2"><b>t=.75</b>[−1, 2]</div><div class="state rev d3"><b>t=.50</b>[0, 1]</div><div class="state rev d4"><b>t=.25</b>[1, 0]</div><div class="state clean rev d5"><b>t=.00</b>[2, −1]</div></div><div class="parallel"><div><strong>自回归</strong><br>先等 token 1，再有 token 2；串行链长度跟输出序列一起增长。</div><div><strong>MeshFlow</strong><br>每个采样步同时改整串 latent；公开 pipeline 默认 28 步。</div></div><p class="fig-note">“并行”不等于总计算严格线性。公开 DiT 仍用全量 self-attention，单层注意力对 latent token 数是 O(N²)；省掉的是随输出长度增长的串行生成轮数。</p></figure>
+<figure id="fig-flow" class="reveal"><figcaption><span>Fig 05 · 四个 Euler 小步从噪声走回数据</span><span>TOY PERFECT VELOCITY / Δt=.25</span></figcaption><div class="flowline"><div class="state noise rev"><b>t=1.00</b>[−2, 3]</div><div class="state rev d2"><b>t=.75</b>[−1, 2]</div><div class="state rev d3"><b>t=.50</b>[0, 1]</div><div class="state rev d4"><b>t=.25</b>[1, 0]</div><div class="state clean rev d5"><b>t=.00</b>[2, −1]</div></div><div class="parallel"><div><strong>自回归的 mesh 生成器（如 MeshGPT）</strong><br>先吐完 token 1 才能吐 token 2；串行链长度跟输出面数一起增长。</div><div><strong>MeshFlow（flow）</strong><br>每个采样步同时更新整串 latent；公开 pipeline 默认 28 步，步数不随 mesh 变大。</div></div><p class="fig-note">“并行”不等于总计算严格线性。公开 DiT 仍用全量 self-attention，单层注意力对 latent token 数是 O(N²)；省掉的是随输出长度增长的串行生成轮数。</p></figure>
 
 <h2><span class="num">§ 06 / Geometry conditioning</span>32³ 体素不是拿来建模，而是统一位置口径</h2>
 <p>训练条件来自 mesh 顶点，推理条件来自表面采样点；两者即使落在同一物体上，点的密度分布也不同。最终方案把坐标先落到粗<a class="jr term-hit" href="#g-12">体素</a>格，再用<a class="jr term-hit" href="#g-13">3D RoPE</a>把格子位置写进注意力。这样模型更关注“点在哪一块空间”，少记“点是怎么采出来的”。</p>
@@ -160,6 +197,7 @@ L = ||vθ(x(t), t, c) − u||²  <b>预测速度与目标速度的平方误差</
   <li id="g-14"><span class="term">Edge F1</span> · 预测边的 precision 与 recall 的调和平均；既处罚乱连，也处罚漏连。</li>
   <li id="g-15"><span class="term">CD / HD</span> · CD 看双向平均最近距离，HD 看最坏最近距离；两者都不直接检查拓扑。见<a href="../concepts/mesh-quality-metrics.html">手算例</a>。</li>
   <li id="g-16"><span class="term">Watertight manifold</span> · 没有开口、没有一条边被异常多张面共用的封闭表面；MeshFlow 的输入表示不强制满足它。</li>
+  <li id="g-17"><span class="term">内积 / Inner product</span> · 两条等长向量"逐位相乘再全部相加"得到的一个数；越大代表两向量越"同向"。这里用它当"两枚边嵌入合不合得来"的分数。</li>
 </ol></div>
 
 <footer class="colophon"><span>Sources / <a href="https://arxiv.org/abs/2606.04621">paper v2</a> · <a href="https://mesh-flow.github.io/">project page</a> · <a href="https://github.com/facebookresearch/meshflow">official code</a></span><span>Evidence / code commit 55f56f6 · Figures redrawn · No paper images reproduced</span></footer>
