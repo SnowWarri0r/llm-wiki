@@ -1,8 +1,8 @@
 ---
 name: promptable-segmentation
 type: concept
-sources: [sam, omnieraser]
-updated: 2026-06-23
+sources: [sam, omnieraser, sensenova-vision]
+updated: 2026-07-13
 ---
 
 # Promptable Segmentation · 可提示分割
@@ -45,3 +45,4 @@ updated: 2026-06-23
 - [[zero-shot-transfer]] · 可提示 = 能被 prompt 组合进下游任务，零样本迁移的前提
 - [[sam-data-engine]] · 正因为解码轻、可交互，标注飞轮才转得起来
 - [[clip]] · 同样用"通用预训练任务 + prompt"做基础模型的姊妹思路
+- [[sensenova-vision]] · 把点/框/涂鸦/掩码提示与语言 instruction 一起送入生成式分割

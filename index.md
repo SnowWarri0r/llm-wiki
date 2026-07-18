@@ -63,6 +63,7 @@
 - [ELT · Elastic Looped Transformers](wiki/papers/elt.md) — looped transformer 进视觉生成: N层block循环L圈(深度共享权重) + 一族深度弹性推理 + ILSD; 同算力 4× 参数缩减
 - [HiDream-O1-Image · 像素级统一 Transformer](wiki/papers/hidream-o1.md) — 文生图反向操作: 无VAE像素空间扩散 + 文本编码器收进主干(Qwen3-VL) + 混合注意力 + O1推理agent先想后画; 8B 超更大模型
 - [Qwen-Image-2.0 · 生成与编辑统一](wiki/papers/qwen-image-2.md) — 20B MMDiT: 生成vs编辑=条件里塞不塞原图latent(Concat), 同backbone, 没点名天然照抄; frozen Qwen3-VL条件编码器 + VAE升16×(f16c64) + MSRoPE + DMD蒸馏4-NFE; 中文文字渲染 + 1K token直出信息图; LMArena中文#1
+- [SenseNova-Vision · 把整个视觉工具箱接进同一个生成接口](wiki/papers/sensenova-vision.md) — Bagel-7B-MoT不加task head:框/OCR/关键点/pose写文本,mask/depth/normal/point map生成图像,panoptic/GCG用颜色图例+mask混合输出;SN-VC-50M覆盖四大视觉族。结构化任务最强,稠密几何接近专家,分割/多视图仍有专用模型差距;640×480框、inverse-depth、RGB调色板、1.25m pose完整往返手算,并拆论文50K与当前repo 200K差异。
 - [PiD · 像素扩散解码器](wiki/papers/pid-pixel-diffusion.md) — NVIDIA 把 latent→像素的确定性 VAE 解码器换成条件像素扩散: 解码从"忠实还原"升级成"生成式补细节+顺手超分4×/8×"; sigma-aware adapter 吃半成品 latent 让 latent 扩散早停 + DMD2 蒸 4 步 + 通吃 VAE/语义 latent; 512²→2048² 1秒内
 - [DiffusionNFT · 扩散 RL 搬回前向过程](wiki/papers/diffusionnft.md) — 扩散在线RL(ICLR2026,SD3.5-M基座): 似然算不出没法直接GRPO,FlowGRPO把反向采样切多步MDP但锁死一阶SDE/偏离前向/CFG两模型; 洞察=前向加噪唯一、反向去噪无数→把RL搬到前向flow matching上; 奖励r切正负分布(π⁺∝r·π_old/π⁻∝(1−r)π_old),正负速度之差Δ=强化引导(CFG=它的离线版); 单模型隐式装正负(v±=(1∓β)v_old±βv_θ对称夹v_old),RL揉进监督损失L=E[r‖v⁺−v‖²+(1−r)‖v⁻−v‖²]; 免似然/任意solver/只存干净图; GenEval~1k步逼0.98比FlowGRPO快3–25×,CFG-free还超CFG
 - [RAE-DiT · 表征自编码器当 latent](wiki/papers/rae-dit.md) — 别单训没语义的VAE压缩器, 拿冻结SigLIP-2/DINOv2当编码器(高维语义latent)只训解码器, 扩散在"看懂图"的空间里跑; 收敛快4×/VAE 64epoch崩RAE稳到256/越scale越赢; 唯一不能省=维度相关噪声调度(α=√(m/n))
@@ -278,6 +279,9 @@
 - [SPP + PAN Neck](wiki/concepts/spp-panet-neck.md) — SPP用1/5/9/13池化扩深层视野,PAN让语义13→26→52下发、位置52→26→13回流
 - [Mosaic · 四图拼接增强](wiki/concepts/mosaic-augmentation.md) — 四张图随机缩放裁剪后拼成一个训练样本,框坐标同步变换;混上下文并增加小目标
 - [CIoU Loss](wiki/concepts/complete-iou-loss.md) — 1−IOU管覆盖、中心距离管偏移、长宽比项管形状;用4×2真值与2×4偏心预测完整算到0.73167
+- [可解码视觉表示](wiki/concepts/decodable-vision-representation.md) — 把框/深度/法线/点图编码成模型能生成、benchmark能确定还原的文本或图像;640×480框完整往返
+- [颜色图例掩码](wiki/concepts/color-legend-mask.md) — 文本绑定region↔RGB,图像铺像素;200色用最远点采样拉开,也暴露文字实例列表错误向mask传播
+- [相机位姿 Token 化](wiki/concepts/camera-pose-tokenization.md) — 四元数/单位平移方向×1000,厘米scale单独编码;u×scale/100还原米制平移
 - [多尺度训练](wiki/concepts/multi-scale-training.md) — 每10 batch在320–608间切输入尺寸;同一权重部署时按速度/精度换挡
 - [层级分类 · WordTree](wiki/concepts/hierarchical-classification.md) — 每层兄弟类做softmax,叶子概率沿路径相乘;让狗与细品种标签共存并合并检测/分类数据
 - [IOU · 交并比](wiki/concepts/iou-intersection-over-union.md) — 两个框重合度=交集÷并集∈[0,1]; 同时管住位置+大小+长宽比; 置信度目标/NMS去重/mAP命中判定都用它
@@ -285,6 +289,7 @@
 - [mAP · 平均精度均值](wiki/concepts/mean-average-precision.md) — 检测总分: 每类PR曲线下面积(AP)再对类平均; 命中靠IOU≥0.5; 同时惩罚乱报(precision)和漏报(recall)
 
 ### 多模态
+- [统一多模态生成](wiki/concepts/unified-multimodal-generation.md) — 不为每个视觉任务接head;稀疏答案走文本、稠密答案走图像、语义+像素走混合输出,任务由instruction指定
 - [Contrastive Learning](wiki/concepts/contrastive-learning.md) — 拉近正样本 + 推开负样本, in-batch negatives 白送 N²-N 个负例
 - [Zero-Shot Image Classification](wiki/concepts/zero-shot-image-classification.md) — 分类变成"哪句话最配这张图", 类别由文本定义
 - [Dual-Tower Architecture](wiki/concepts/dual-tower-architecture.md) — 两个独立 encoder + 末端点积; 推理可缓存, 适合检索
