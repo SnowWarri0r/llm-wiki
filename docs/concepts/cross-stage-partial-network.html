@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Darknet-53 · 把残差接进 YOLO 骨干 · Concept</title>
+<title>CSP · 特征分两路，别让所有通道重复深加工 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,56 +27,58 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · darknet-53</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · cross-stage-partial-network</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Darknet-53 · 把残差接进 YOLO 骨干</h1>
+  <h1>CSP · 特征分两路，别让所有通道重复深加工</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>用 1×1/3×3 卷积、stride-2 下采样和残差捷径，换来接近 ResNet-152 的分类精度与约两倍速度。</p>
+<p>一部分特征过残差块，一部分走旁路，末尾再拼接融合。</p>
 <h2>直觉</h2>
-<p>Darknet-19 很快，但容量不够；ResNet-152 很准，却太重。Darknet-53 沿用 Darknet 擅长的规整卷积，再把 ResNet 的 shortcut 接进来：主路学习变化，捷径保留原特征，深度加上去时梯度不必层层硬闯。</p>
+<p>普通残差 stage 让整份特征反复经过同一串块，很多通道会传播相似的梯度。CSP 像把一批原料分成两车：一车进加工厂，一车保留直达通道，出厂口再合流。网络仍能拿到原始信息，但不必让全部通道重复走重活。</p>
 <h2>怎么做的</h2>
-<p>五个 stage 逐步减半空间、增加通道，残差块重复次数是：</p>
-<pre><code class="language-text">1 → 2 → 8 → 8 → 4
-总计 23 个 residual blocks
-每块包含 1×1 降/整通道 + 3×3 提特征，再加回输入
+<pre><code class="language-text">输入特征 x
+  ├─ 加工支路 → residual blocks → a'
+  └─ 旁路 --------------------→ b
+concat(a', b) → 1×1 卷积融合 → 输出
 </code></pre>
-<p>分类版在全局平均池化后用 1×1 卷积输出 1000 类；检测版拿掉分类头，把不同 stage 的特征交给三尺度检测头。</p>
+<p>YOLOv4 把这套 cross-stage partial 结构接到 Darknet-53 的残差 stage 上，得到 CSPDarknet53。</p>
 <h2>数字例子</h2>
-<p>论文的 256×256 ImageNet 单裁剪结果：</p>
-<pre><code class="language-text">Darknet-53 vs ResNet-152
-Top-5: 93.8 vs 93.8
-速度: 78 FPS vs 37 FPS
-速度倍率 = 78 / 37 ≈ 2.11×
+<p>取一个位置的 4 通道特征：</p>
+<pre><code class="language-text">x = [1,2,3,4]
+加工支路 a=[1,2]，旁路 b=[3,4]
 
-Darknet-53 vs ResNet-101
-Top-1: 77.2 vs 77.1
-速度: 78 FPS vs 53 FPS
-速度倍率 = 78 / 53 ≈ 1.47×
+残差块学到修正 [+0.5,-0.5]
+a' = [1.5,1.5]
+
+concat(a',b) = [1.5,1.5,3,4]
+1×1 融合权重都取 0.25
+输出 = 0.25×(1.5+1.5+3+4)=2.5
 </code></pre>
-<p>✓ 一组是相同 Top-5 下快约 2.1 倍，另一组是相近 Top-1 下快约 1.5 倍。</p>
+<p>✓ 两路都进了输出，但深加工只落在一部分特征上。</p>
+<p>论文 512 输入的硬件表里，CSPDarknet53 是 52 BFLOPs / 66 FPS，CSPResNeXt50 是 31 BFLOPs / 62 FPS。运算更多的一方反而更快，说明规整数据流和 GPU 利用率不能只看 BFLOPs 猜。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/yolov3.html">yolov3</a> · 使用 Darknet-53 作为特征提取骨干</li>
-<li><a href="../papers/resnet.html">resnet</a> · shortcut 的来源</li>
-<li><a href="../concepts/residual-connection.html">residual-connection</a> · 深网络的恒等梯度通道</li>
+<li><a href="../papers/yolov4.html">yolov4</a> · 使用 CSPDarknet53 作为骨干</li>
+<li><a href="../concepts/darknet-53.html">darknet-53</a> · 被 CSP 改造的上游骨干</li>
+<li><a href="../concepts/residual-connection.html">residual-connection</a> · 加工支路里的基础块</li>
+<li><a href="../concepts/receptive-field.html">receptive-field</a> · 检测骨干还要覆盖更大的空间范围</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 3 处</span>
-  <ul><li><a href="../papers/yolov3.html"><span class="cat">paper</span>YOLOv3 · 一张图铺三层探测网</a></li><li><a href="../papers/yolov4.html"><span class="cat">paper</span>YOLOv4 · 把实时检测器改装成一台完整赛车</a></li><li><a href="../concepts/cross-stage-partial-network.html"><span class="cat">concept</span>CSP · 特征分两路，别让所有通道重复深加工</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/yolov4.html"><span class="cat">paper</span>YOLOv4 · 把实时检测器改装成一台完整赛车</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/darknet-53.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/cross-stage-partial-network.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 

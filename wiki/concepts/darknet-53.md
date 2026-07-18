@@ -1,7 +1,7 @@
 ---
 name: darknet-53
 type: concept
-sources: [yolov3]
+sources: [yolov3, yolov4]
 updated: 2026-07-13
 ---
 

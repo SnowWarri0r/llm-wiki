@@ -1,8 +1,8 @@
 ---
 name: receptive-field
 type: concept
-sources: [cnn]
-updated: 2026-06-09
+sources: [cnn, yolov4]
+updated: 2026-07-13
 ---
 
 # Receptive Field · 感受野 · 一个输出能"看到"原图多大一片

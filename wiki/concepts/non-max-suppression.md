@@ -1,8 +1,8 @@
 ---
 name: non-max-suppression
 type: concept
-sources: [yolo]
-updated: 2026-07-09
+sources: [yolo, yolov4]
+updated: 2026-07-13
 ---
 
 # NMS · 一堆重叠框里,只留最有把握的那个
