@@ -108,6 +108,46 @@ Generator 使用图像、视频、音频、动作和视频 transfer 数据。视
 4. Generator 做图像、视频、音频联合预训练，再在 mid-training 中加入动作和 transfer 数据。
 5. 最后分支做文生图、图生视频和机器人策略 post-training。论文中的榜单冠军并非全部来自一个未经专项训练的通用 checkpoint。
 
+## QKV 复制过去，怎么从“预测下个词”变成“预测去噪速度”
+
+它不会在复制的一瞬间变成去噪器。复制只是给 Generator 一个比随机数更懂语义的起点，后面的生成预训练才真正改造这些参数。
+
+先区分两种容易混在一起的“attention 权重”：
+
+- 会复制的是模型参数：LayerNorm、`W_Q/W_K/W_V/W_O` 投影矩阵和 MLP。
+- 不会复制的是每次前向临时算出的注意力图 `softmax(QKᵀ)`。输入和 mask 一变，注意力图就会重新计算。
+
+QKV 参数本身并没有写着“只能预测下一个词”。Transformer block 做的事一直是把一串隐藏向量重新混合、提取关系。任务由输入、attention mask、输出头和损失共同决定：
+
+| 部分 | Reasoner | Generator |
+|---|---|---|
+| 输入 | 文本 token、ViT 特征 | 带噪 VAE / Audio / Action latent |
+| 输入适配 | token embedding、ViT projector | 模态线性投影、模态 embedding、噪声强度条件 |
+| Attention | 因果，只能看前文 | 双向，能看完整生成区和 Reasoner 条件 |
+| 输出 | 词表 logits | 连续速度 `v̂` |
+| 训练目标 | 下一个 token | `v*=ε-x₀` |
+| 损失 | Cross-Entropy | masked MSE |
+
+因此真正的过程是：把 Reasoner 的 Transformer 主干参数复制过来；视频、音频、动作先通过自己的投影进入同一个隐藏维度；Generator 改用双向 attention 和连续速度目标；Flow 训练产生的梯度再继续修改复制来的 QKV、MLP 和 Norm。论文明确说 VAE 与 Audio VAE 是冻结的，latent 通过线性层进入 Transformer；动作的输入、输出投影从随机初始化开始联合训练。
+
+沿用前面 `x₀=2、ε=-1、σ=0.25` 的例子：Generator 看到 `xσ=1.25`，正确速度是 `-3`。把几百亿参数临时压成一个玩具权重 `w=2`：
+
+```text
+初始预测：v̂ = w·xσ = 2×1.25 = 2.5
+初始损失：L = (2.5 - (-3))² = 30.25
+
+梯度：dL/dw = 2·(2.5 - (-3))·1.25 = 13.75
+若学习率是 0.1：
+w_new = 2 - 0.1×13.75 = 0.625
+
+新预测：0.625×1.25 = 0.78125
+新损失：(0.78125 - (-3))² ≈ 14.30
+```
+
+一步以后仍然不会去噪，但新目标已经把旧权重往正确方向推，损失从 `30.25` 降到 `14.30`。真实模型对所有 QKV、MLP、Norm 与模态投影重复这个过程很多步，才把“理解世界的初始化”改造成真正的去噪器。
+
+复制值得做，是因为 Reasoner 已经学会物体、动作、空间和语义之间怎样关联；Generator 不必从随机参数重新学“机械臂、杯子、托盘分别是什么”。但报告没有给出“随机初始化 Generator vs 复制 Reasoner 初始化”的严格消融。附录 E.1 的实验让两边 Generator 都从头训练，只替换条件侧的理解塔；它证明更好的 Reasoner 表征能提高 Physical AI domain 分数，不能单独证明复制初始化本身带来多少收益。
+
 ## 实验结果
 
 - 文生图 UniGenBench：专项后训练的 Cosmos3-Super 为 91.36，Qwen-Image-2512 为 84.25。
