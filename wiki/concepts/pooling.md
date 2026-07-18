@@ -1,53 +1,102 @@
 ---
 name: pooling
 type: concept
-sources: [cnn]
-updated: 2026-06-09
+sources: [cnn, x-vector, yolov4]
+updated: 2026-07-13
 ---
 
-# Pooling · 池化 · 把 feature map 缩小、抓重点
+# Pooling · 池化 · 用一个窗口汇总邻域
 
 ## 一句话
-在小窗口里取**最大值（max）或平均值（avg）**代表那一片 —— 把 feature map 分辨率砍半，留下"有没有这个特征"、丢掉"它精确在第几个像素"。
 
-## 直觉 · 认猫不需要数清每根毛
+Pooling 让一个窗口里的多个数变成一个数；**窗口怎么移动**由 kernel、stride、padding 决定，所以池化可以下采样，也可以像 YOLOv4 的 SPP 一样只扩大视野、不改变宽高。
 
-卷积出来的 feature map 还很大、很细。但做识别时，你关心的是"**这片有没有竖边**"，不是"竖边精确落在第 137 个像素"。Pooling 就是把一小片（比如 2×2）压成一个数：
+## 先别把“池化”和“缩小”画等号
 
-- **Max pooling**：取这 4 个里最大的 → "这片只要有一处强响应就留住"，最常用。
-- **Avg pooling**：取平均 → 更平滑，常用在最后一层（global avg pooling）把整张图压成一个向量。
+池化做两件彼此独立的事：
 
-2×2、stride 2 的 pooling 把宽高各砍一半（面积 1/4）。
+1. 在一个 <code>k×k</code> 窗口内汇总数值；max pooling 取最大值，average pooling 取平均值。
+2. 按 stride 移动窗口。stride 大于 1 才会跳格，通常才会缩小输出。
 
-## 怎么做的
+因此，“2×2、stride 2 的 max pool 会把宽高减半”是一个常见配置，不是 pooling 的定义。YOLOv4 的 SPP 用 5×5、9×9、13×13 的大窗口，却把 stride 固定为 1，再补 padding，输出空间尺寸完全不变。
 
-```
-feature map 4×4         max-pool 2×2, stride 2 → 2×2
-[ 1  3 | 2  0 ]
-[ 4  2 | 1  1 ]   每个 2×2 块取最大          [ 4  2 ]
-[ 0  1 | 5  2 ]   ─────────────────▶        [ 6  5 ]
-[ 6  3 | 1  4 ]
-```
+## 一次 max pooling 到底怎么算
 
-没有可学参数，就是个固定的下采样算子。
+输入只有一个通道：
 
-## 它换来什么 · 三个好处
-- **降计算**：分辨率砍半，后面层算得快、占显存少。
-- **扩感受野**：缩小后，同样 3×3 的核能"看到"原图更大一片（见 [[receptive-field]]）—— 这是 CNN 逐层"看得越来越宽"的主力。
-- **一点平移鲁棒**：特征在小窗口里挪一两格，max 结果不变 → 对微小位移不敏感。
+~~~text
+X = [ 1  2  0 ]
+    [ 3  4  1 ]
+    [ 0  2  9 ]
+~~~
 
-## 为什么现代网络在少用它
+使用 <code>kernel=3</code>、<code>stride=1</code>、<code>padding=1</code>。为了让边缘也有完整的 3×3 窗口，外围补上不会抢到最大值的 <code>−∞</code>。
 
-代价是**丢空间信息**（max 把"在哪"扔了）。所以：
-- 检测/分割这种要精确定位的任务，激进 pooling 会害事。
-- 很多现代骨干改用 **stride=2 的卷积** 来下采样（既缩尺寸又可学），把 pooling 换掉；但 **global avg pooling**（最后把每张 feature map 压成一个数）几乎人人还在用——它替掉了老式 CNN 末端那坨全连接，省一大把参数。
+左上角输出看到的窗口是：
 
-## 代码出处
-- `nn.MaxPool2d(2)` / `nn.AvgPool2d` / `nn.AdaptiveAvgPool2d(1)`（global avg pool）
-- 经典用法见 [[resnet]] 末端的 global average pooling
+~~~text
+[ −∞  −∞  −∞ ]
+[ −∞   1    2 ]  → max = 4
+[ −∞   3    4 ]
+~~~
+
+中心输出看到整张原图，最大值是 9。窗口每次只移动一格，完整输出为：
+
+~~~text
+maxpool(X) = [ 4  4  4 ]
+             [ 4  9  9 ]
+             [ 4  9  9 ]
+~~~
+
+这一步没有可学习权重。它只问：“这个邻域里，这个通道最强的激活是多少？”每个通道独立做同样操作，pooling 本身不混合通道。
+
+## 为什么输出还能保持 3×3
+
+一维长度的输出公式是：
+
+~~~text
+L_out = floor((L_in + 2p − k) / s) + 1
+~~~
+
+- <code>L_in</code>：输入高度或宽度。
+- <code>k</code>：池化窗口大小。
+- <code>s</code>：stride，窗口每次移动多少格。
+- <code>p</code>：两侧 padding 的格数。
+- <code>floor</code>：向下取整。
+
+上例代入 <code>L_in=3, k=3, s=1, p=1</code>：
+
+~~~text
+L_out = floor((3 + 2×1 − 3) / 1) + 1 = 3
+~~~
+
+对奇数窗口，只要 <code>s=1</code> 且 <code>p=(k−1)/2</code>，输出长度就等于输入长度。YOLOv4 的 13×13 特征图正是这样：
+
+~~~text
+k=5,  p=2  → (13+4−5)+1  = 13
+k=9,  p=4  → (13+8−9)+1  = 13
+k=13, p=6  → (13+12−13)+1 = 13
+~~~
+
+## Max 和 Average 分别保留什么
+
+- **Max pooling** 保留窗口里的最强响应。若某个通道代表“竖边”，它近似回答“附近有没有很强的竖边”。强响应在窗口内挪动一两格，结果可能不变，因此带来一点局部平移鲁棒性。
+- **Average pooling** 保留整体水平。它更像回答“附近平均有多强”，不会只被一个峰值支配。Global average pooling 则把每个通道的整张特征图平均成一个数。
+
+二者都丢信息：max 不告诉你最大值具体在哪，average 不告诉你各点如何分布。检测和分割需要精确定位，所以不宜无节制地下采样；但这不妨碍 SPP 用 stride 1 的 max pooling 收集上下文。
+
+## 两种典型配置不要混
+
+| 用途 | kernel / stride / padding | 输出变化 | 目的 |
+|---|---|---|---|
+| CNN 下采样 | 2 / 2 / 0 | 4×4 → 2×2 | 降计算、牺牲细位置 |
+| YOLOv4 SPP | 5、9、13 / 1 / same | 13×13 → 13×13 | 不降采样，只扩大每个位置看到的邻域 |
+| 分类末端 GAP | 覆盖整张图 | H×W → 1×1 | 每通道汇总成一个全局数 |
 
 ## 链接
-- [[convolution]] · pooling 夹在卷积层之间下采样
-- [[receptive-field]] · pooling 是扩感受野的主力
-- [[cnn]] · 卷积+池化堆成的完整网络
-- [[resnet]] · 末端 global avg pooling 替掉全连接
+
+- [[spp-panet-neck]] · YOLOv4 怎样把三档 stride-1 max pooling 并排拼接
+- [[receptive-field]] · 窗口变大为何能引入更宽上下文
+- [[convolution]] · 卷积有可学习权重，pooling 是固定汇总
+- [[cnn]] · 经典卷积网络里的下采样池化
+- [[resnet]] · 末端 global average pooling 的典型用法

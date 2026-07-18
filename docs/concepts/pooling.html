@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Pooling · 池化 · 把 feature map 缩小、抓重点 · Concept</title>
+<title>Pooling · 池化 · 用一个窗口汇总邻域 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,56 +34,106 @@
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Pooling · 池化 · 把 feature map 缩小、抓重点</h1>
+  <h1>Pooling · 池化 · 用一个窗口汇总邻域</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>在小窗口里取<strong>最大值（max）或平均值（avg）</strong>代表那一片 —— 把 feature map 分辨率砍半，留下"有没有这个特征"、丢掉"它精确在第几个像素"。</p>
-<h2>直觉 · 认猫不需要数清每根毛</h2>
-<p>卷积出来的 feature map 还很大、很细。但做识别时，你关心的是"<strong>这片有没有竖边</strong>"，不是"竖边精确落在第 137 个像素"。Pooling 就是把一小片（比如 2×2）压成一个数：</p>
-<ul>
-<li><strong>Max pooling</strong>：取这 4 个里最大的 → "这片只要有一处强响应就留住"，最常用。</li>
-<li><strong>Avg pooling</strong>：取平均 → 更平滑，常用在最后一层（global avg pooling）把整张图压成一个向量。</li>
-</ul>
-<p>2×2、stride 2 的 pooling 把宽高各砍一半（面积 1/4）。</p>
-<h2>怎么做的</h2>
-<pre><code>feature map 4×4         max-pool 2×2, stride 2 → 2×2
-[ 1  3 | 2  0 ]
-[ 4  2 | 1  1 ]   每个 2×2 块取最大          [ 4  2 ]
-[ 0  1 | 5  2 ]   ─────────────────▶        [ 6  5 ]
-[ 6  3 | 1  4 ]
+<p>Pooling 让一个窗口里的多个数变成一个数；<strong>窗口怎么移动</strong>由 kernel、stride、padding 决定，所以池化可以下采样，也可以像 YOLOv4 的 SPP 一样只扩大视野、不改变宽高。</p>
+<h2>先别把“池化”和“缩小”画等号</h2>
+<p>池化做两件彼此独立的事：</p>
+<ol>
+<li>在一个 <code>k×k</code> 窗口内汇总数值；max pooling 取最大值，average pooling 取平均值。</li>
+<li>按 stride 移动窗口。stride 大于 1 才会跳格，通常才会缩小输出。</li>
+</ol>
+<p>因此，“2×2、stride 2 的 max pool 会把宽高减半”是一个常见配置，不是 pooling 的定义。YOLOv4 的 SPP 用 5×5、9×9、13×13 的大窗口，却把 stride 固定为 1，再补 padding，输出空间尺寸完全不变。</p>
+<h2>一次 max pooling 到底怎么算</h2>
+<p>输入只有一个通道：</p>
+<pre><code class="language-text">X = [ 1  2  0 ]
+    [ 3  4  1 ]
+    [ 0  2  9 ]
 </code></pre>
-<p>没有可学参数，就是个固定的下采样算子。</p>
-<h2>它换来什么 · 三个好处</h2>
+<p>使用 <code>kernel=3</code>、<code>stride=1</code>、<code>padding=1</code>。为了让边缘也有完整的 3×3 窗口，外围补上不会抢到最大值的 <code>−∞</code>。</p>
+<p>左上角输出看到的窗口是：</p>
+<pre><code class="language-text">[ −∞  −∞  −∞ ]
+[ −∞   1    2 ]  → max = 4
+[ −∞   3    4 ]
+</code></pre>
+<p>中心输出看到整张原图，最大值是 9。窗口每次只移动一格，完整输出为：</p>
+<pre><code class="language-text">maxpool(X) = [ 4  4  4 ]
+             [ 4  9  9 ]
+             [ 4  9  9 ]
+</code></pre>
+<p>这一步没有可学习权重。它只问：“这个邻域里，这个通道最强的激活是多少？”每个通道独立做同样操作，pooling 本身不混合通道。</p>
+<h2>为什么输出还能保持 3×3</h2>
+<p>一维长度的输出公式是：</p>
+<pre><code class="language-text">L_out = floor((L_in + 2p − k) / s) + 1
+</code></pre>
 <ul>
-<li><strong>降计算</strong>：分辨率砍半，后面层算得快、占显存少。</li>
-<li><strong>扩感受野</strong>：缩小后，同样 3×3 的核能"看到"原图更大一片（见 <a href="../concepts/receptive-field.html">receptive-field</a>）—— 这是 CNN 逐层"看得越来越宽"的主力。</li>
-<li><strong>一点平移鲁棒</strong>：特征在小窗口里挪一两格，max 结果不变 → 对微小位移不敏感。</li>
+<li><code>L_in</code>：输入高度或宽度。</li>
+<li><code>k</code>：池化窗口大小。</li>
+<li><code>s</code>：stride，窗口每次移动多少格。</li>
+<li><code>p</code>：两侧 padding 的格数。</li>
+<li><code>floor</code>：向下取整。</li>
 </ul>
-<h2>为什么现代网络在少用它</h2>
-<p>代价是<strong>丢空间信息</strong>（max 把"在哪"扔了）。所以：</p>
+<p>上例代入 <code>L_in=3, k=3, s=1, p=1</code>：</p>
+<pre><code class="language-text">L_out = floor((3 + 2×1 − 3) / 1) + 1 = 3
+</code></pre>
+<p>对奇数窗口，只要 <code>s=1</code> 且 <code>p=(k−1)/2</code>，输出长度就等于输入长度。YOLOv4 的 13×13 特征图正是这样：</p>
+<pre><code class="language-text">k=5,  p=2  → (13+4−5)+1  = 13
+k=9,  p=4  → (13+8−9)+1  = 13
+k=13, p=6  → (13+12−13)+1 = 13
+</code></pre>
+<h2>Max 和 Average 分别保留什么</h2>
 <ul>
-<li>检测/分割这种要精确定位的任务，激进 pooling 会害事。</li>
-<li>很多现代骨干改用 <strong>stride=2 的卷积</strong> 来下采样（既缩尺寸又可学），把 pooling 换掉；但 <strong>global avg pooling</strong>（最后把每张 feature map 压成一个数）几乎人人还在用——它替掉了老式 CNN 末端那坨全连接，省一大把参数。</li>
+<li><strong>Max pooling</strong> 保留窗口里的最强响应。若某个通道代表“竖边”，它近似回答“附近有没有很强的竖边”。强响应在窗口内挪动一两格，结果可能不变，因此带来一点局部平移鲁棒性。</li>
+<li><strong>Average pooling</strong> 保留整体水平。它更像回答“附近平均有多强”，不会只被一个峰值支配。Global average pooling 则把每个通道的整张特征图平均成一个数。</li>
 </ul>
-<h2>代码出处</h2>
-<ul>
-<li><code>nn.MaxPool2d(2)</code> / <code>nn.AvgPool2d</code> / <code>nn.AdaptiveAvgPool2d(1)</code>（global avg pool）</li>
-<li>经典用法见 <a href="../papers/resnet.html">resnet</a> 末端的 global average pooling</li>
-</ul>
+<p>二者都丢信息：max 不告诉你最大值具体在哪，average 不告诉你各点如何分布。检测和分割需要精确定位，所以不宜无节制地下采样；但这不妨碍 SPP 用 stride 1 的 max pooling 收集上下文。</p>
+<h2>两种典型配置不要混</h2>
+<table>
+<thead>
+<tr>
+<th>用途</th>
+<th>kernel / stride / padding</th>
+<th>输出变化</th>
+<th>目的</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CNN 下采样</td>
+<td>2 / 2 / 0</td>
+<td>4×4 → 2×2</td>
+<td>降计算、牺牲细位置</td>
+</tr>
+<tr>
+<td>YOLOv4 SPP</td>
+<td>5、9、13 / 1 / same</td>
+<td>13×13 → 13×13</td>
+<td>不降采样，只扩大每个位置看到的邻域</td>
+</tr>
+<tr>
+<td>分类末端 GAP</td>
+<td>覆盖整张图</td>
+<td>H×W → 1×1</td>
+<td>每通道汇总成一个全局数</td>
+</tr>
+</tbody>
+</table>
 <h2>链接</h2>
 <ul>
-<li><a href="../concepts/convolution.html">convolution</a> · pooling 夹在卷积层之间下采样</li>
-<li><a href="../concepts/receptive-field.html">receptive-field</a> · pooling 是扩感受野的主力</li>
-<li><a href="../papers/cnn.html">cnn</a> · 卷积+池化堆成的完整网络</li>
-<li><a href="../papers/resnet.html">resnet</a> · 末端 global avg pooling 替掉全连接</li>
+<li><a href="../concepts/spp-panet-neck.html">spp-panet-neck</a> · YOLOv4 怎样把三档 stride-1 max pooling 并排拼接</li>
+<li><a href="../concepts/receptive-field.html">receptive-field</a> · 窗口变大为何能引入更宽上下文</li>
+<li><a href="../concepts/convolution.html">convolution</a> · 卷积有可学习权重，pooling 是固定汇总</li>
+<li><a href="../papers/cnn.html">cnn</a> · 经典卷积网络里的下采样池化</li>
+<li><a href="../papers/resnet.html">resnet</a> · 末端 global average pooling 的典型用法</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 7 处</span>
-  <ul><li><a href="../papers/cnn.html"><span class="cat">paper</span>CNN · 卷积神经网络</a></li><li><a href="../papers/x-vector.html"><span class="cat">paper</span>X-Vectors · 给一段语音拍张&quot;声纹身份证&quot;</a></li><li><a href="../concepts/convolution.html"><span class="cat">concept</span>Convolution · 卷积 · 一把小尺子滑过整张图</a></li><li><a href="../concepts/matrix-rank.html"><span class="cat">concept</span>矩阵的秩 · rank · 一个变换&quot;真正有几个独立旋钮&quot;</a></li><li><a href="../concepts/receptive-field.html"><span class="cat">concept</span>Receptive Field · 感受野 · 一个输出能&quot;看到&quot;原图多大一片</a></li><li><a href="../concepts/spp-panet-neck.html"><span class="cat">concept</span>SPP + PAN · 先把视野拉宽，再让高低层双向汇合</a></li><li><a href="../concepts/statistics-pooling.html"><span class="cat">concept</span>Statistics Pooling · 统计池化</a></li></ul>
+  <span class="label">引用此页的内容 · 9 处</span>
+  <ul><li><a href="../papers/cnn.html"><span class="cat">paper</span>CNN · 卷积神经网络</a></li><li><a href="../papers/x-vector.html"><span class="cat">paper</span>X-Vectors · 给一段语音拍张&quot;声纹身份证&quot;</a></li><li><a href="../papers/yolov4.html"><span class="cat">paper</span>YOLOv4 · 把实时检测器改装成一台完整赛车</a></li><li><a href="../concepts/convolution.html"><span class="cat">concept</span>Convolution · 卷积 · 一把小尺子滑过整张图</a></li><li><a href="../concepts/matrix-rank.html"><span class="cat">concept</span>矩阵的秩 · rank · 一个变换&quot;真正有几个独立旋钮&quot;</a></li><li><a href="../concepts/receptive-field.html"><span class="cat">concept</span>Receptive Field · 感受野 · 一个输出能&quot;看到&quot;原图多大一片</a></li><li><a href="../concepts/spatial-vs-pointwise-attention.html"><span class="cat">concept</span>Spatial-wise vs Point-wise Attention · 一张共享地图 vs 每个元素自己的门</a></li><li><a href="../concepts/spp-panet-neck.html"><span class="cat">concept</span>SPP + PAN · 同一位置看四档范围，再让高低层双向汇合</a></li><li><a href="../concepts/statistics-pooling.html"><span class="cat">concept</span>Statistics Pooling · 统计池化</a></li></ul>
 </div>
 
 <div class="colophon">
