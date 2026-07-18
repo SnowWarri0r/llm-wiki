@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet">
+<script defer src="../vendor/katex/katex.min.js"></script>
 <style>
 :root {
   --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
@@ -89,6 +91,14 @@ figure.play .vt-svg .grow { transform: scaleY(1); }
 .job-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.job{padding:14px 10px;border:1px solid var(--rule);background:#fffdfa;min-height:135px}.job .n{font:700 9px 'JetBrains Mono',monospace;color:var(--muted)}.job b{display:block;font:700 10px/1.4 'JetBrains Mono',monospace;color:var(--accent);margin:8px 0}.job span{display:block;font-size:13px;line-height:1.45}
 .var-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.var-card{background:#fffdfa;border:1px solid var(--rule);padding:10px 13px;font-size:14px;line-height:1.45}.var-card code{color:#28768a;font-weight:700}
 .math-dark{background:#14243a;color:#f7f1de;padding:20px 22px;font:13px/1.8 'JetBrains Mono',monospace;overflow-x:auto;margin:18px 0}.math-dark .cyan{color:#91d0dc}.math-dark .gold{color:#f1cb70}.math-dark .green{color:#a5d3b7}.math-dark .dim{color:#9da9b7}
+.math-board{position:relative;background:#14243a;color:#f7f1de;border:1px solid #263d5a;border-left:5px solid #28768a;padding:18px 20px 16px;margin:18px 0;overflow:hidden;box-shadow:inset 0 1px rgba(255,255,255,.04)}
+.math-board.bound{border-left-color:var(--ochre)}.math-board.loss{border-left-color:var(--wine)}
+.math-board .math-label{display:flex;align-items:center;gap:10px;margin-bottom:12px;color:#9da9b7;font:700 9px 'JetBrains Mono',monospace;letter-spacing:1.8px;text-transform:uppercase}.math-board .math-label::after{content:"";height:1px;flex:1;background:#324a67}
+.math-board .tex{min-height:34px;color:#f7f1de;font:14px/1.65 'JetBrains Mono',monospace;white-space:pre-wrap}.math-board .katex-display{margin:0;overflow:auto hidden;padding:3px 0 7px;text-align:left}.math-board .katex-display>.katex{white-space:nowrap;text-align:left}.math-board .katex{font-size:1.06em}
+.tex-mobile{display:none}
+.math-caption{margin-top:10px;padding-top:10px;border-top:1px dashed #3b526d;color:#aeb9c4;font:11px/1.65 'JetBrains Mono',monospace}.math-caption strong{color:#f7f1de}
+.math-keyline{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}.math-keyline span{padding:4px 8px;border:1px solid #405672;background:#1a2d45;color:#c7d0d9;font:10px/1.35 'JetBrains Mono',monospace}.math-keyline .eq{border-color:#28768a;color:#91d0dc}.math-keyline .ineq{border-color:var(--ochre);color:#f1cb70}.math-keyline .corr{border-color:var(--moss);color:#a5d3b7}
+.math-fallback .tex{color:#f7f1de}.math-error{color:#ffb4a8!important}
 .sdp-steps{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.sdp-step{background:#fffdfa;border:1px solid var(--rule);padding:14px 10px;min-height:128px}.sdp-step b{display:block;font:700 9px 'JetBrains Mono',monospace;color:var(--accent)}.sdp-step strong{display:block;font:700 18px 'JetBrains Mono',monospace;color:#28768a;margin:8px 0}.sdp-step span{display:block;font-size:13px;line-height:1.4}.sdp-step.why{background:var(--ochre-soft);border-color:var(--ochre)}
 .sdp-lanes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}.sdp-lane{background:#fffdfa;border:1px solid var(--rule);padding:17px}.sdp-lane.train-lane{border-top:5px solid var(--ochre)}.sdp-lane.infer-lane{border-top:5px solid var(--wine)}.sdp-lane b{display:block;font:700 10px 'JetBrains Mono',monospace;color:var(--accent);margin-bottom:8px}.sdp-lane p{font-size:14px;line-height:1.5;margin:6px 0}.sdp-lane .pipe{font:11px/1.7 'JetBrains Mono',monospace;color:#1f6272;background:#eef4f1;border:1px solid #aac3b9;padding:10px;margin-top:10px}
 .formula-key{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:12px 0}.formula-key div{background:#fffdfa;border:1px solid var(--rule);padding:11px 13px;font-size:13px;line-height:1.45}.formula-key b{font:700 10px 'JetBrains Mono',monospace;color:#1f6272}.calc-check{background:var(--paper-3);border-left:4px solid var(--ochre);padding:15px 18px;margin:16px 0;font-size:15px}.calc-check pre{margin:8px 0 0;font:12px/1.75 'JetBrains Mono',monospace;white-space:pre-wrap}
@@ -101,7 +111,7 @@ figure.play .vt-svg .grow { transform: scaleY(1); }
 .voice-flow{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.voice-flow div{padding:12px 7px;text-align:center;border:1px solid #28768a;background:#d2e5e8}.voice-flow b{display:block;font:700 9px 'JetBrains Mono',monospace;color:#1f6272}.voice-flow span{font-size:12px;line-height:1.35}
 .takeaway{background:#14243a;color:var(--paper-card);padding:25px;margin-top:32px}.takeaway .label{color:var(--ochre-soft);font:700 9px 'JetBrains Mono',monospace;letter-spacing:2px}.takeaway p{font:21px/1.5 'Fraunces','Noto Serif SC',serif}
 @media(max-width:760px){.toc{grid-template-columns:1fr 1fr}.precision{grid-template-columns:1fr;gap:4px}.job-grid{grid-template-columns:1fr 1fr}.job:last-child{grid-column:1/-1}.route-map{grid-template-columns:1fr}.route-tag{padding:7px}.route-line{display:grid}.route-arr{justify-self:center;transform:rotate(90deg)}.sdp-steps,.loss-grid,.voice-flow{grid-template-columns:1fr 1fr}.sdp-step:last-child,.loss-card:last-child,.voice-flow div:last-child{grid-column:1/-1}.recipe,.ablation-grid,.limits,.period-demo,.var-grid,.sdp-lanes,.gan-rounds{grid-template-columns:1fr}}
-@media(max-width:470px){.toc,.job-grid,.sdp-steps,.loss-grid,.voice-flow,.formula-key,.gan-roles{grid-template-columns:1fr}.job:last-child,.sdp-step:last-child,.loss-card:last-child,.voice-flow div:last-child{grid-column:auto}.wave-rail{padding:0 58px}}
+@media(max-width:470px){.toc,.job-grid,.sdp-steps,.loss-grid,.voice-flow,.formula-key,.gan-roles{grid-template-columns:1fr}.job:last-child,.sdp-step:last-child,.loss-card:last-child,.voice-flow div:last-child{grid-column:auto}.wave-rail{padding:0 58px}.math-board{padding:15px 14px 13px}.math-board .katex{font-size:.92em}.math-board .math-label{letter-spacing:1.2px}.math-keyline{display:grid;grid-template-columns:1fr}.tex-desktop{display:none}.tex-mobile{display:block}}
 @media (prefers-reduced-motion: reduce) { .vt-rev { opacity: 1; transition: none; } .vt-svg .grow { transform: none; transition: none; } }
 </style>
 </head>
@@ -247,11 +257,18 @@ figure.play .vt-svg .grow { transform: scaleY(1); }
   <div class="var-card"><code>ε</code> · 标准高斯噪声，让同一分布可以采出不同样本。</div>
 </div>
 
-<div class="math-dark">
-  <span class="cyan">ε ~ N(0,I)</span><br>
-  z = μ<sub>q</sub> + σ<sub>q</sub> ⊙ ε<br><br>
-  <span class="green">L<sub>recon</sub></span> = || x<sub>mel</sub> − mel(G(z)) ||<sub>1</sub><br>
-  <span class="gold">L<sub>kl</sub></span> = log q<sub>φ</sub>(z | x<sub>lin</sub>) − log p<sub>θ</sub>(z | c<sub>text</sub>)
+<div class="math-board loss">
+  <div class="math-label">CVAE · 采样与两项训练目标</div>
+  <div class="tex">\begin{aligned}
+\varepsilon &\sim \mathcal N(0,I) \\
+z &= \mu_q+\sigma_q\odot\varepsilon \\[4pt]
+\color{#a5d3b7}{L_{\mathrm{recon}}}
+&=\left\lVert x_{\mathrm{mel}}-\mathrm{mel}\!\left(G(z)\right)\right\rVert_1 \\
+\color{#f1cb70}{L_{\mathrm{kl}}}
+&=\log q_\phi\!\left(z\mid x_{\mathrm{lin}}\right)
+-\log p_\theta\!\left(z\mid c_{\mathrm{text}}\right)
+\end{aligned}</div>
+  <div class="math-caption"><strong>绿色</strong>管波形能否还原；<strong>金色</strong>管训练时的后验能否与推理时的文本先验接上。</div>
 </div>
 <p><code>⊙</code> 是逐元素相乘。重参数化把随机性放进 ε，让梯度仍能回到均值 μ<sub>q</sub> 与标准差 σ<sub>q</sub>。重建项逐格比较真实 mel 与生成波形的 mel；KL 则逼文本先验覆盖后验常出现的声音。</p>
 
@@ -393,8 +410,12 @@ z=1.5 → z<sub>p</sub>=<span class="cyan">3.5</span>；逆变换 3.5−2=<span 
 </figure>
 
 <p>动态规划状态 <code>Q(i,j)</code> 表示“用前 i 个音素解释前 j 帧”的最高累计分数：</p>
-<div class="math-dark">Q(i,j) = s(i,j) + max( Q(i,j−1), Q(i−1,j−1) )<br><br>
-一个 3×5 玩具分数表：<br>
+<div class="math-board">
+  <div class="math-label">MAS · 每一格只比较两条合法来路</div>
+  <div class="tex">Q(i,j)=s(i,j)+\max\!\left\{Q(i,j-1),\;Q(i-1,j-1)\right\}</div>
+  <div class="math-keyline"><span class="eq">Q(i,j−1) · 继续当前音素</span><span class="corr">Q(i−1,j−1) · 切到下一个音素</span></div>
+</div>
+<div class="math-dark">一个 3×5 玩具分数表：<br>
 　　　 帧1　帧2　帧3　帧4　帧5<br>
 音素 A　 4　　3　　1　　0　　0<br>
 音素 B　 0　　2　　4　　3　　1<br>
@@ -438,9 +459,15 @@ B 在帧2的累计分是 4+2=6；走到帧3：继续 B 得 6+4=<span class="dim"
   <h3>先学会读 qφ(u,ν | d,c_text)，再看公式</h3>
   <p>不用先会“联合条件分布”这个名词。把竖线 <code>|</code><a class="jr" href="#g-19">19</a> 直接读成“<strong>已知</strong>”：竖线右边是抽样前已经知道的信息，左边是这次要抽出的东西。</p>
 
-  <div class="math-dark"><span class="cyan">q<sub>φ</sub>(</span> u,ν <span class="gold">|</span> d,c<sub>text</sub> <span class="cyan">)</span><br>
- 　　　　　<span class="green">要抽什么</span>　<span class="gold">已知</span>　<span class="green">已经给了什么</span><br><br>
-  <span class="dim">整句读作：已经知道 d 和 c_text 时，u、ν 会怎样取值。</span></div>
+  <div class="math-board">
+    <div class="math-label">条件分布 · 竖线左右各管什么</div>
+    <div class="tex">q_\phi\!\left(
+\underbrace{u,\nu}_{\color{#a5d3b7}{\text{要抽的}}}
+\;\color{#f1cb70}{\big|}\;
+\underbrace{d,c_{\mathrm{text}}}_{\color{#a5d3b7}{\text{已经给定}}}
+\right)</div>
+    <div class="math-caption">整句读作：已经知道 <strong>d 和 c_text</strong> 时，<strong>u、ν</strong> 会怎样取值。</div>
+  </div>
 
   <div class="formula-key">
     <div><b>qφ</b><br>参数为 φ 的训练专用采样器；φ 是网络权重，不是要抽的变量</div>
@@ -470,45 +497,94 @@ d−u 不是新标签；它是在整数 d 对应的区间里，
 
   <p><code>ν</code> 也是连续辅助变量，最终不会输出。要得到整数 <code>d</code> 的总概率，就得把所有 <code>u</code> 对应的连续位置、以及所有 <code>ν</code> 全部加起来。连续变量的“全部加起来”写成积分：</p>
 
-  <div class="math-dark"><span class="green">标量 d=2：</span><br>
-  p<sub>θ</sub>(d=2|c<sub>text</sub>)<br>
-  = ∫<sub>u=0..1</sub> ∫<sub>ν=−∞..∞</sub> <span class="cyan">p<sub>θ</sub>(2−u,ν|c<sub>text</sub>)</span> dν du<br><br>
-  <span class="green">向量 d=[2,4,3] 同理：</span><br>
-  p<sub>θ</sub>(d|c<sub>text</sub>) = ∫∫ <span class="cyan">p<sub>θ</sub>(d−u,ν|c<sub>text</sub>)</span> du dν</div>
+  <div class="math-board">
+    <div class="math-label">Step 1 · 把连续密度加回整数概率</div>
+    <div class="tex">\begin{aligned}
+p_\theta\!\left(d=2\mid c_{\mathrm{text}}\right)
+&=\int_0^1\!\int_{-\infty}^{\infty}
+\color{#91d0dc}{p_\theta\!\left(2-u,\nu\mid c_{\mathrm{text}}\right)}
+\,d\nu\,du \\[6pt]
+p_\theta\!\left(d\mid c_{\mathrm{text}}\right)
+&=\iint
+\color{#91d0dc}{p_\theta\!\left(d-u,\nu\mid c_{\mathrm{text}}\right)}
+\,du\,d\nu
+\end{aligned}</div>
+    <div class="math-caption"><strong>青色部分</strong>是 Flow 给一个连续代表算出的密度；积分符号表示把所有代表全部加回来。</div>
+  </div>
 
   <p>所以 <code>pθ(d−u,ν|c_text)</code> 不是凭空加进去的。它是 Flow 给某一个连续代表 <code>[d−u,ν]</code> 算出的密度；把所有代表的密度积分起来，才是整数时长 <code>d</code> 的概率。</p>
 
   <h3>② 为什么要除以 qφ</h3>
   <p>上面的积分维度很高，无法枚举所有 <code>u、ν</code>。VITS 便让 <code>qφ</code> 挑几组值得计算的样本。但 <code>qφ</code> 不是均匀抽样：某些区域抽得多，某些区域抽得少。直接平均 <code>pθ</code>，抽得多的区域就会被重复多算。</p>
 
-  <div class="math-dark"><span class="dim">先简写 p=pθ(d−u,ν|c_text)，q=qφ(u,ν|d,c_text)</span><br><br>
-  ∫∫ p du dν<br>
-  = ∫∫ q · (p/q) du dν　<span class="dim">← q×p/q 仍是 p</span><br>
-  = E<sub>q</sub>[p/q]　　　　　<span class="dim">← 按 q 抽样，再平均 p/q</span></div>
+  <div class="math-board">
+    <div class="math-label">Step 2 · 乘除同一个 q，积分没有改变</div>
+    <div class="tex">\begin{aligned}
+\iint p\,du\,d\nu
+&=\iint \color{#91d0dc}{q}\,\color{#f1cb70}{\frac{p}{q}}\,du\,d\nu \\
+&=\mathbb E_{\color{#91d0dc}{q}}\!\left[\color{#f1cb70}{\frac{p}{q}}\right]
+\end{aligned}</div>
+    <div class="math-keyline"><span class="eq">q × p/q = p · 前后严格相等</span><span class="corr">p/q · 抵消 q 的抽样偏重</span></div>
+    <div class="math-caption">这里简写了 p=pθ(d−u,ν|c_text)，q=qφ(u,ν|d,c_text)。</div>
+  </div>
 
   <p>这里前后<strong>严格相等</strong>。<code>q</code> 把一个区域抽得越频繁，该区域每次样本就要除以越大的 <code>q</code>，把重复抽样造成的偏重抵消掉。这叫重要性采样校正<a class="jr" href="#g-20">20</a>。</p>
 
-  <div class="math-dark">p<sub>θ</sub>(d|c<sub>text</sub>)<br>
-  = E<sub>qφ(u,ν|d,c<sub>text</sub>)</sub> [<br>
-  &nbsp;&nbsp;p<sub>θ</sub>(d−u,ν|c<sub>text</sub>) / q<sub>φ</sub>(u,ν|d,c<sub>text</sub>)<br>
-  ]</div>
+  <div class="math-board">
+    <div class="math-label">Step 2 · 把 p、q 的全名放回来</div>
+    <div class="tex tex-desktop">\begin{aligned}
+p_\theta\!\left(d\mid c_{\mathrm{text}}\right)
+=\mathbb E_{q_\phi(u,\nu\mid d,c_{\mathrm{text}})}\!\left[
+\frac{p_\theta(d-u,\nu\mid c_{\mathrm{text}})}
+{q_\phi(u,\nu\mid d,c_{\mathrm{text}})}
+\right]
+\end{aligned}</div>
+    <div class="tex tex-mobile">\begin{aligned}
+p&=p_\theta(d-u,\nu\mid c_{\mathrm{text}}) \\
+q&=q_\phi(u,\nu\mid d,c_{\mathrm{text}}) \\[3pt]
+p_\theta(d\mid c_{\mathrm{text}})&=\mathbb E_q\!\left[\frac pq\right]
+\end{aligned}</div>
+  </div>
 
   <h3>③ 为什么除以 q 最后写成 −log q</h3>
   <p>现在对等式两边取 <code>log</code>。难点是 <code>log</code> 仍套在平均值外面。对数函数向下弯，所以“先平均再取 log”不会小于“先取 log 再平均”。这叫 Jensen 不等式<a class="jr" href="#g-21">21</a>，也是整段推导里<strong>唯一产生 ≥ 的地方</strong>：</p>
 
-  <div class="math-dark">log p<sub>θ</sub>(d|c<sub>text</sub>)<br>
-  = log E<sub>q</sub>[p/q]<br>
-  ≥ E<sub>q</sub>[log(p/q)]<br>
-  = E<sub>q</sub>[<span class="cyan">log p</span> − <span class="gold">log q</span>]<br><br>
-  <span class="dim">最后一步只用了：log(p/q)=log p−log q</span></div>
+  <div class="math-board bound">
+    <div class="math-label">Step 3 · 唯一一次从等号变成下界</div>
+    <div class="tex">\begin{aligned}
+\log p_\theta\!\left(d\mid c_{\mathrm{text}}\right)
+&=\log\mathbb E_q\!\left[\frac pq\right] \\
+&\color{#f1cb70}{\ge}\mathbb E_q\!\left[\log\!\left(\frac pq\right)\right] \\
+&=\mathbb E_q\!\left[
+\color{#91d0dc}{\log p}-\color{#f1cb70}{\log q}
+\right]
+\end{aligned}</div>
+    <div class="math-keyline"><span class="eq">= · 仍是同一个量</span><span class="ineq">≥ · Jensen，只在这里变成下界</span><span class="corr">−log q · 来自 log(p/q)</span></div>
+  </div>
 
   <p>因此，<code>−log qφ(...)</code> 不是额外添加的惩罚项。完整来路是：用 <code>q</code> 抽样时必须用 <code>p/q</code> 校正；<code>p/q</code> 放进 <code>log</code>，便自然变成 <code>log p−log q</code>。</p>
 
   <h3>把三步合起来，才是论文公式</h3>
-  <div class="math-dark">log p<sub>θ</sub>(d | c<sub>text</sub>) ≥ E<sub>qφ(u,ν|d,c<sub>text</sub>)</sub> [<br>
-  &nbsp;&nbsp;<span class="cyan">log p<sub>θ</sub>(d−u,ν | c<sub>text</sub>)</span><br>
-  &nbsp;&nbsp;− <span class="gold">log q<sub>φ</sub>(u,ν | d,c<sub>text</sub>)</span><br>
-  ]<br><br><span class="dim">L<sub>dur</sub> = −右侧下界；最大化下界，等价于最小化 L<sub>dur</sub>。</span></div>
+  <div class="math-board bound">
+    <div class="math-label">VITS · 随机时长的变分下界</div>
+    <div class="tex tex-desktop">\begin{aligned}
+\underbrace{\log p_\theta(d\mid c_{\mathrm{text}})}_{\text{真正想算的}}
+\;\color{#f1cb70}{\ge}\;
+\mathbb E_{q_\phi(u,\nu\mid d,c_{\mathrm{text}})}\!\Big[
+&\color{#91d0dc}{\log p_\theta(d-u,\nu\mid c_{\mathrm{text}})} \\
+&-\color{#f1cb70}{\log q_\phi(u,\nu\mid d,c_{\mathrm{text}})}
+\Big]
+\end{aligned}</div>
+    <div class="tex tex-mobile">\begin{aligned}
+p&=p_\theta(d-u,\nu\mid c_{\mathrm{text}}) \\
+q&=q_\phi(u,\nu\mid d,c_{\mathrm{text}}) \\[4pt]
+\log p_\theta(d\mid c_{\mathrm{text}})
+&\color{#f1cb70}{\ge}\mathbb E_q\!\left[
+\color{#91d0dc}{\log p}-\color{#f1cb70}{\log q}
+\right]
+\end{aligned}</div>
+    <div class="math-caption"><strong>青色</strong>：Flow 给连续代表的密度；<strong>金色</strong>：抽样校正。训练取右侧的负数作为 L<sub>dur</sub>。</div>
+  </div>
 
   <div class="formula-key">
     <div><b>d / c_text</b><br>MAS 给出的真实时长 / 文本编码条件</div>
@@ -599,9 +675,17 @@ E_q[p/q] = .75×.16 + .25×.32
     </div>
     <div class="fold"><span>x1</span><span>x2</span><span>x3</span><span>x4</span><span>x5</span><span>x6</span><span>x7</span><span>x8</span><span>x9</span></div>
   </div>
-  <div class="math-dark"><span class="cyan">练判别器：</span> L<sub>adv</sub>(D) = E[(D(y)−1)² + D(G(z))²]<br>
-<span class="gold">练生成器：</span> L<sub>adv</sub>(G) = E[(D(G(z))−1)²]<br><br>
-<span class="dim">E 表示把 batch 里的样本和局部得分取平均；六个子判别器的损失再加起来。两条式子更新的网络不同。</span></div>
+  <div class="math-board loss">
+    <div class="math-label">GAN · 两回合更新的是不同网络</div>
+    <div class="tex">\begin{aligned}
+\color{#91d0dc}{L_{\mathrm{adv}}(D)}
+&=\mathbb E\!\left[(D(y)-1)^2+D(G(z))^2\right] \\
+\color{#f1cb70}{L_{\mathrm{adv}}(G)}
+&=\mathbb E\!\left[(D(G(z))-1)^2\right]
+\end{aligned}</div>
+    <div class="math-keyline"><span class="eq">青色 · 练 D：真声→1，假声→0</span><span class="ineq">金色 · 练 G：让假声→1</span></div>
+    <div class="math-caption">E 表示把 batch 样本与局部得分取平均；六个子判别器的损失再相加。</div>
+  </div>
   <p style="font-size:14px">判别周期是 [1,2,3,5,7,11]。period=1 直接看原始波形，其余周期专门抓嗓音重复结构中的破绽。</p>
 </figure>
 
@@ -618,7 +702,14 @@ E_q[p/q] = .75×.16 + .25×.32
 
 <p>最后的真假分数太粗，所以训练生成器时还会加一项<strong>特征匹配损失</strong><a class="jr" href="#g-13">13</a>：</p>
 
-<div class="math-dark">L<sub>fm</sub>(G) = E[ Σ<sub>l=1..T</sub> (1/N<sub>l</sub>) · ||D<sub>l</sub>(y)−D<sub>l</sub>(G(z))||<sub>1</sub> ]</div>
+<div class="math-board loss">
+  <div class="math-label">Feature matching · 逐层比较真假波形的内部特征</div>
+  <div class="tex">L_{\mathrm{fm}}(G)
+=\mathbb E\!\left[
+\sum_{\ell=1}^{T}\frac{1}{N_\ell}
+\left\lVert D_\ell(y)-D_\ell(G(z))\right\rVert_1
+\right]</div>
+</div>
 
 <div class="formula-key">
   <div><b>l / T</b><br>判别器第几层 / 一共比较多少层</div>
@@ -640,7 +731,15 @@ L_fm(G) = .5 + .3 = .8</pre></div>
 <div class="note"><span class="l">官方训练顺序</span><code>① G(z).detach() → L_adv(D) → 只更新 D</code><br><code>② 重新算 G(z) → L_adv(G)+L_fm(G)+其他生成侧损失 → 更新 G 与生成侧模块</code></div>
 
 <h2 id="s8"><span class="num">§ 08</span>五项损失，各自在拧哪颗螺丝</h2>
-<div class="math-dark">L<sub>vae</sub> = L<sub>recon</sub> + L<sub>kl</sub> + L<sub>dur</sub> + L<sub>adv</sub>(G) + L<sub>fm</sub>(G)</div>
+<div class="math-board loss">
+  <div class="math-label">Generator side · 五个岗位汇成一个目标</div>
+  <div class="tex">L_{\mathrm{vae}}
+=\color{#a5d3b7}{L_{\mathrm{recon}}}
++\color{#91d0dc}{L_{\mathrm{kl}}}
++\color{#f1cb70}{L_{\mathrm{dur}}}
++\color{#d7a6b7}{L_{\mathrm{adv}}(G)}
++\color{#e49a86}{L_{\mathrm{fm}}(G)}</div>
+</div>
 
 <figure id="fig-loss">
   <figcaption><span>FIG 10 · 总损失不是一锅糊涂账，每项都有明确岗位</span><span class="fnum">LOSS MIXER</span></figcaption>
@@ -762,6 +861,30 @@ L_fm(G) = .5 + .3 = .8</pre></div>
 </div>
 <script>
 {
+  document.addEventListener('DOMContentLoaded', () => {
+    const formulas = document.querySelectorAll('.tex');
+    if (!window.katex) {
+      document.documentElement.classList.add('math-fallback');
+      return;
+    }
+    formulas.forEach(el => {
+      const source = el.textContent.trim();
+      try {
+        katex.render(source, el, {
+          displayMode: el.dataset.display !== 'false',
+          fleqn: true,
+          throwOnError: true,
+          strict: false,
+          trust: false
+        });
+        el.dataset.rendered = 'true';
+      } catch (err) {
+        el.classList.add('math-error');
+        el.title = err.message;
+        console.error('KaTeX render failed:', source, err);
+      }
+    });
+  });
   const figs = ['fig-twostage','fig-jobs','fig-routes','fig-cvae','fig-flow','fig-mas','fig-sdp-core','fig-sdp','fig-period','fig-loss','fig-recipe','fig-ablation'];
   figs.forEach(id => {
     const el = document.getElementById(id);
