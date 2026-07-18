@@ -19,7 +19,8 @@
 <style>
 code{overflow-wrap:anywhere;word-break:break-word}
 .timeline{margin-bottom:64px}
-@media(max-width:780px){.timeline{margin-left:4px;margin-right:4px;margin-bottom:68px}.impact b{white-space:normal;width:120px}}
+.token-groups{display:grid;grid-template-columns:5fr 3fr;gap:10px}.token-group{padding:12px;background:#fff;border:1px solid var(--line)}.token-group.registers{background:#fff9e8;border-color:#cda947}.group-label{display:block;margin-bottom:9px;color:var(--muted);font:700 9px/1.45 'JetBrains Mono',monospace;letter-spacing:.5px}.token-group.registers .group-label{color:#765204}.token-group .tokens{display:grid;gap:5px;margin:0}.token-group.words .tokens{grid-template-columns:repeat(5,1fr)}.token-group.registers .tokens{grid-template-columns:repeat(3,1fr)}.visibility-flow{display:grid;grid-template-columns:1fr 118px 1fr;align-items:stretch;gap:10px;margin-top:13px}.vis-card{padding:15px 17px;background:var(--video-soft);border-left:5px solid var(--video)}.vis-card.register{background:var(--audio-soft);border-left-color:var(--audio)}.vis-card b{display:block;font-size:16px}.vis-card span{display:block;margin-top:5px;color:var(--ink2);font-size:12px;line-height:1.45}.biarrow{display:grid;place-content:center;text-align:center;color:var(--sync)}.biarrow strong{font:700 31px/1 'JetBrains Mono',monospace}.biarrow small{display:block;margin-top:5px;color:var(--muted);font:700 8px/1.4 'JetBrains Mono',monospace;text-transform:uppercase}.biarrow .vertical{display:none}.vis-note{margin:13px 0 0!important;padding:11px 13px;background:var(--night);color:#eef4f7;font-size:13px;text-align:center}.vis-note b{color:#ffd56d}
+@media(max-width:780px){.timeline{margin-left:4px;margin-right:4px;margin-bottom:68px}.impact b{white-space:normal;width:120px}.token-groups,.visibility-flow{grid-template-columns:1fr}.biarrow{min-height:65px}.biarrow .horizontal{display:none}.biarrow .vertical{display:inline}.vis-card{text-align:center}}
 </style>
 </head>
 <body>
@@ -131,7 +132,9 @@ code{overflow-wrap:anywhere;word-break:break-word}
 <h2 id="s7"><span class="sec">07 · THINKING TOKENS</span>名字像“思考”，代码里其实是可写寄存器</h2>
 <p>Gemma 是 causal decoder，原始 token 只能看左边。后接的 text connector<a class="jr" href="#g-09">09</a> 使用全双向 attention 重新混合整句；视频与音频各有一个 connector。padding 槽不再浪费，而由 learnable registers<a class="jr" href="#g-10">10</a> 替换。</p>
 <div class="figure" id="fig-07"><div class="figcap"><span>Fig 07 · padding 变成可读写的上下文槽</span><b>NOT CHAIN-OF-THOUGHT</b></div>
-  <div class="tokens"><div class="tok">猫</div><div class="tok">跳上</div><div class="tok">桌子</div><div class="tok">杯子</div><div class="tok">碎裂</div><div class="tok r">R1</div><div class="tok r">R2</div><div class="tok r">R3</div></div><div class="allattn"></div><p style="text-align:center"><b>全双向 connector：</b>正文 token 与 R1/R2/R3 全部互相可见</p>
+  <div class="token-groups"><div class="token-group words"><span class="group-label">正文 · 5 个真实 token</span><div class="tokens"><div class="tok">猫</div><div class="tok">跳上</div><div class="tok">桌子</div><div class="tok">杯子</div><div class="tok">碎裂</div></div></div><div class="token-group registers"><span class="group-label">原本是 3 个 padding 位 → 换成可学习槽</span><div class="tokens"><div class="tok r">R1</div><div class="tok r">R2</div><div class="tok r">R3</div></div></div></div>
+  <div class="visibility-flow"><div class="vis-card"><b>正文 token 可读取 register</b><span>每个词都能把 R1/R2/R3 当作额外上下文。</span></div><div class="biarrow"><strong class="horizontal">⇄</strong><strong class="vertical">⇅</strong><small>双向可见</small></div><div class="vis-card register"><b>register 可汇总整句</b><span>R1/R2/R3 能从全部正文 token 汇总信息。</span></div></div>
+  <p class="vis-note"><b>一次同时更新：</b>8 个位置彼此可见；箭头不是“先 register、再正文”的执行顺序。</p>
 </div>
 <p>它们不是词，不会输出可读推理步骤。假设某个 register 对五个正文 token 的权重为 `[.10,.15,.45,.20,.10]`，正文的“碰撞相关度”为 `[0,0,1,.5,0]`，聚合值就是 `.45×1+.20×.5=.55`。这说明它能收集全句信号，不证明它学会了 reasoning。论文也没有 thinking-token 独立消融。</p>
 
