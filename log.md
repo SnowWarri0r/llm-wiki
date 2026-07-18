@@ -969,3 +969,7 @@ skill 更新:
 - 12 张 bespoke 图与 18 条可点击术语；用 0.40s 碰撞 attention、三层特征拼接、25 token/s、CFG 三分支、tile overlap、H100 22.30/1.22=18.28× 贯穿手算。
 - 证据审计：内部质量人评未公开样本数/胜率/置信区间，训练规模与优化配置缺失；速度表不是同架构单变量消融；保留正文 14B+5B 与结论 13B+3B 的冲突。
 - 官方实现核对 commit `9377758131b1ffde4b7f766804590a6617bf2ab9`：两向 cross-attn 读取同一份 pre-AV 快照，本流 timestep 负责 scale/shift、对方 sigma 负责 gate，thinking tokens 实为替换 padding 的 learnable registers。
+
+## [2026-07-17] visual+fix | ltx-2 Fig 04 时间刻度与说明文字重合
+
+- 时间刻度标签向时间轴下方伸出 29px，原先只留 20px 下边距，导致 `0.36s / 0.40s / 0.44s` 与后面的 softmax 手算叠在一起；桌面底部留白改为 64px，390px 窄屏改为 68px。
