@@ -915,3 +915,5 @@ skill 更新:
 ## [2026-07-15] rewrite | vits 深度打磨 — 修正“端到端=没有任何中间量/没有失配”和“CMOS≈完全听不出差”两处过度表述，改成训练/推理双路线贯穿的12节语音工作台；新增五模块岗位图、完整变量定义与KL数字例、Flow正逆方向和30万步消融边界、MAS 3×5动态规划手算、SDP d=4→d−u=3.7→[3.7,0.8]去量化/增广/变分下界、多周期判别器折叠、五项损失工位、数据预处理与训练配方、LJ/VCTK/速度、消融与多样性、声音转换及六项局限；术语表扩到18项，md同步重写
 
 ## [2026-07-15] fix | cosmos-3 Fig10 时间线 — 原实现把竖线画成每个 stage 的负 margin 左边框，线偏离圆心且后绘制在编号圆点之上；改为 train 容器单一 ::before 背景线，精确对齐圆心，编号圆点提高层级遮住线，移除窄屏易错位的负 margin
+
+## [2026-07-15] expand | cosmos-3 Reasoner→Generator 权重迁移 — 补 Fig10B 拆清复制的是 LayerNorm/QKV/O/MLP 参数，不复制运行时 softmax(QKᵀ)；Reasoner 的文本/ViT+因果mask+词表头+CE 对照 Generator 的带噪latent+双向mask+速度头+masked MSE；沿用 xσ=1.25/v*=−3 手算玩具权重 w=2 一步梯度更新，loss 30.25→14.30，坐实“复制只是初始化，Flow 训练才把它改造成去噪器”；补 VAE/audio/action 投影边界和附录 E.1 只证明条件侧 Reasoner 更好、未直接消融复制初始化的证据边界；glossary 16→18
