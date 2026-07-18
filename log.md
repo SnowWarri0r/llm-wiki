@@ -935,3 +935,5 @@ skill 更新:
 ## [2026-07-15] fix | vits Step 1A 显式展开 g — 补清 g(w,ν) 只是条件联合密度 pθ(w,ν|c_text) 的临时简称，c_text 从第一行起就藏在 g 里；在 g(2−u,ν) 与最终积分之间新增“代回 g 的定义”等式，区分 w→2−u 的变量替换与 g→pθ 的简称展开；注明 ν 是希腊字母 nu 而非英文 v，桌面/手机公式同步
 
 ## [2026-07-15] visual | vits 深蓝公式注释提对比度 — math-caption 正文由 11px/灰蓝提升为 12px/高亮冷白（对深蓝 12.37:1），行内公式改暖金底+深蓝字（12.10:1），避免原浅灰字落在米白 code 底上仅 1.81:1；Step 1A 两条说明拆成青色“换元与展开”和金色“负号”双轨标记，手机端改为标签在上、解释在下
+
+## [2026-07-16] rewrite | krea-2 官方技术报告重做 — 以 Krea 2 Technical Report 为正文唯一主线，GitHub/Hugging Face 仅补 12B、Raw 52 步、Turbo 8 步与许可证；纠正“全程 0 AI 数据”（实际只限预训练图像）、双 VAE 串联、STPO 辅助项已知三处误读；重排为论点→数据过滤/SAE→caption/500 万实体覆盖→12B 单流 DiT 消融→rectified-flow 公式与 x₀=2 数字例→六阶段分布修改→DPO 两者一起降的完整公式/手算→四奖励 RL/rubric/GRPO-style 数字例→prompt expansion/多样性塌缩→style reference 披露边界→TDM/Raw/Turbo→训练与数据系统→MoE/MOPD/统一架构未来工作→已公开/未公开证据边界；视觉改为 Krea 官方样图上的“分布地图/创作模型实验室”系统，KaTeX 6 式、13 章、13 词条，桌面 1440 与手机 390 验收无横向溢出
