@@ -919,3 +919,5 @@ skill 更新:
 ## [2026-07-15] expand | cosmos-3 Reasoner→Generator 权重迁移 — 补 Fig10B 拆清复制的是 LayerNorm/QKV/O/MLP 参数，不复制运行时 softmax(QKᵀ)；Reasoner 的文本/ViT+因果mask+词表头+CE 对照 Generator 的带噪latent+双向mask+速度头+masked MSE；沿用 xσ=1.25/v*=−3 手算玩具权重 w=2 一步梯度更新，loss 30.25→14.30，坐实“复制只是初始化，Flow 训练才把它改造成去噪器”；补 VAE/audio/action 投影边界和附录 E.1 只证明条件侧 Reasoner 更好、未直接消融复制初始化的证据边界；glossary 16→18
 
 ## [2026-07-15] fix+expand | cosmos-3 Fig10B 梯度公式补全 — 原版直接写 dL/dw=13.75，没先定义玩具模型和损失；补 v̂(w)=w·xσ、L(w)=(v̂−v*)²=(w·xσ−v*)²，先记 e 再按链式法则拆 dL/dw=(dL/de)(de/dw)=2e·xσ，逐项解释 2e 与 xσ 从哪来；补 SGD 更新 w_new=w−ηdL/dw、η 定义和 w_best=v*/xσ=−2.4 自检，完整走 w:2→.625、loss:30.25→14.30，并明确单标量只是优化演示而非真实架构
+
+## [2026-07-15] expand+fix | vits §06/§07 随机时长与 GAN 公式重讲 — 拆清训练辅助随机 qφ→u,ν 与推理高斯采样 e→inverse Flow→logw→exp→ceil 两条路线，用 d=[2,4,3] 验证 ceil(d−u)=d、两份噪声得到 [2,3,2]/[3,4,3]；逐项翻译时长 ELBO 的 d/c/θ/φ/p/q/E/两项与 ≥，用 p:.20→.40 手算 Ldur:.916→.223；GAN 不再默认前置知识，定义 z/y/G/D/D_l/T/N_l/L1/E，手算 D loss .13、G loss .49→.09、两层 feature matching .8，并写明 detach 后先练 D、再固定 D 练 G；修复原有 18 条 glossary 仅 5 条正文可达的问题
