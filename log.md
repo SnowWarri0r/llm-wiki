@@ -955,3 +955,5 @@ skill 更新:
 ## [2026-07-16] visual+fix | 全站术语角标点击态对比度 — 通用浮卡脚本给角标加jr-active后，页面自身!important深色文字压过激活态浅色，Krea 2表现为深绿底上的深绿数字；在render.py通用注入样式中把激活态文字明确设为高优先级浅色，并同步边框颜色、补focus-visible轮廓，刷新65个bespoke paper页；浏览器实测Krea 2点击态为rgb(49,91,10)底/rgb(243,242,238)字，浮卡正常打开
 
 ## [2026-07-16] ingest | Trading in the Zone《交易心理分析》(Mark Douglas / 张轶译) — 第二本 book，全 137 页逐章精读后拆成 1 概览 + 11 章精讲(titz-ch01..11)；提炼五个基本事实、七个持续一致性原则、赌场概率模型、三组交易者、四种交易恐惧；关键例子小孩和狗/大豆甩单/免费送钱/圣诞老人能量守恒/跑步5英里原则/大峡谷独木桥/20笔赌场练习；叠工程视角(过程指标vs结果指标、认知=文档信念=权重、大数定律)；版权原书只在 raw/ 留指针不入库
+
+## [2026-07-16] expand | Krea 2 + Cosmos 3 基础设施概念层 — 两篇 Infra 不再堆框架名，正文先按数据管线/训练切分/GPU执行/互联通信/集群调度/故障恢复/服务部署分层，再补8个共享 concept：distributed-training-parallelism 用4卡例拆 FSDP2-HSDP/TP/CP-Ulysses，activation-checkpointing 用4层8GB→4GB说明重算换显存，gpu-kernels-and-compilation 手算3 kernel 54μs→融合38μs，training-checkpointing-and-recovery 算存档间隔与平均丢进度，large-scale-data-pipelines 对照 SILA-Lance-Ray 与 krablet-PostgreSQL-SKIP LOCKED，gpu-cluster-scheduling 算128卡 gang scheduling，gpu-interconnects-and-collectives 拆 PCIe/NVLink/InfiniBand/NCCL，model-serving-stack 拆 PyTorch/TensorRT/vLLM-Omni/Cache-DiT；Krea glossary 24→28，Cosmos glossary 25→29，所有新词条直链 concept

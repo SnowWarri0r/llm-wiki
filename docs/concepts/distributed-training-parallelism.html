@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>分布式训练并行 · 模型、数据和长序列分别怎么切 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · distributed-training-parallelism</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>分布式训练并行 · 模型、数据和长序列分别怎么切</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>显存不够时不要只说“多加几张卡”：参数、矩阵乘和 token 是三种不同的东西，要用三种切法。</p>
+<h2>先认清三个瓶颈</h2>
+<ul>
+<li><strong>FSDP2 / HSDP：切模型状态。</strong> 参数、梯度和优化器状态分散到多张卡；算某层前临时把那层参数凑齐，算完再释放。它解决“整套模型状态放不下”。</li>
+<li><strong>Tensor Parallel，简称 TP：切一层计算。</strong> 同一个大矩阵乘拆给多张卡，每张卡算一部分输出。它解决“单层太大或单层计算太慢”。</li>
+<li><strong>Context Parallel，简称 CP：切长序列。</strong> 同一条超长序列的 token 分给多张卡。Ulysses 是一种 CP 实现，通过 all-to-all 交换，让每张卡轮流拿到完成注意力所需的 head 或序列片段。</li>
+</ul>
+<p>它们可以叠加：外层 HSDP 切模型状态，内层 TP 切矩阵，CP 再切 token。代价是每多切一刀，就多一种跨卡通信和故障点。</p>
+<h2>数字例子</h2>
+<p>假设训练状态共占 24 GB，一条视频有 8000 个 token，一层线性变换要算 4096 个输出通道，现有 4 张 GPU：</p>
+<pre><code class="language-text">普通数据并行：每卡都放完整 24 GB 状态
+FSDP2：       24 ÷ 4 = 每卡常驻约 6 GB 状态
+
+Context Parallel：8000 ÷ 4 = 每卡先处理约 2000 个 token
+Tensor Parallel： 4096 ÷ 4 = 每卡先算约 1024 个输出通道
+</code></pre>
+<p>这不是白省：FSDP2 算某层前要 all-gather 参数；TP 算完要合并局部结果；CP 做注意力时要交换 token 或 head。若网络来不及搬数据，GPU 就会等通信。</p>
+<h2>HSDP 为什么多一个 H</h2>
+<p>全局有 16 张卡时，可以分成 4 组，每组 4 卡：组内像 FSDP 一样切成四份，组间复制一套。这样组内通信更密集，跨组通信更少。它用一些重复存储换更符合机器拓扑的通信量。</p>
+<h2>async-TP 在做什么</h2>
+<p>普通 TP 是“先通信，再计算”；async-TP 尽量让第 N 块的通信与第 N−1 块的矩阵乘同时进行。只有计算时间足以盖住通信时间，异步才真能变快。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/krea-2.html">krea-2</a> · FSDP2、Megatron TP 与 async-TP</li>
+<li><a href="../papers/cosmos-3.html">cosmos-3</a> · HSDP 与 Ulysses Context Parallel</li>
+<li><a href="../concepts/gpu-interconnects-and-collectives.html">gpu-interconnects-and-collectives</a> · 这些切法依赖的跨卡搬运</li>
+<li><a href="../concepts/activation-checkpointing.html">activation-checkpointing</a> · 不加卡时，另一种省显存办法</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/cosmos-3.html"><span class="cat">paper</span>Cosmos 3 · 把“看懂、想象、行动”塞进同一个世界模型</a></li><li><a href="../papers/krea-2.html"><span class="cat">paper</span>Krea 2 · 先保住视觉多样性，再提高生成可控性</a></li><li><a href="../concepts/gpu-interconnects-and-collectives.html"><span class="cat">concept</span>GPU 互联与集合通信 · 多卡训练为什么常卡在“搬”而不是“算”</a></li><li><a href="../concepts/model-serving-stack.html"><span class="cat">concept</span>模型服务栈 · PyTorch、TensorRT、vLLM 和 vLLM-Omni 各管什么</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/distributed-training-parallelism.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

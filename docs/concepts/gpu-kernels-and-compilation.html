@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>GPU Kernel 与编译 · 为什么同一个公式能快很多 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · gpu-kernels-and-compilation</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>GPU Kernel 与编译 · 为什么同一个公式能快很多</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>Kernel 是 GPU 一次执行的一小段程序；编译优化的目标，是少启动、少搬数据、选对专用实现。</p>
+<h2>从 PyTorch 表达式到 GPU</h2>
+<p>模型代码写的是 <code>归一化 → 乘法 → 激活 → attention</code>。GPU 实际执行的却是一串 kernel。每启动一个 kernel，CPU 都要下发任务；kernel 之间还可能把中间结果写回显存再读出。</p>
+<ul>
+<li><code>torch.compile</code> 会观察整段计算图，融合能合并的操作，并为实际形状选择实现。</li>
+<li>CUDA Graph 把一串已经稳定的 GPU 启动顺序录下来，后续直接整段重放，减少 CPU 逐个发令。</li>
+<li>AOT 是提前编译；JIT 是运行到某种形状时再编译。形状很多时，AOT 缓存能避免每台机器重复“热身”。</li>
+</ul>
+<h2>数字例子</h2>
+<p>假设三个小操作各算 10 微秒，每次 kernel 启动还要 8 微秒：</p>
+<pre><code class="language-text">三个独立 kernel：3 × (10 + 8) = 54 微秒
+融合成一个 kernel：30 + 8 = 38 微秒
+少掉：54 - 38 = 16 微秒，约 29.6%
+</code></pre>
+<p>真实收益还取决于内存搬运、形状和硬件，不能把这个玩具比例当成报告数字。Cosmos 3 实测 <code>torch.compile</code> 给 Nano Generator 带来约 41% 训练吞吐提升；视频 tokenizer 编译后编码延迟降低约 52%。</p>
+<h2>cuDNN、FlashAttention、FlexAttention、NATTEN 是什么关系</h2>
+<p>它们都是“底层怎么执行”的选择，不是四套模型：</p>
+<ul>
+<li><strong>cuDNN</strong>：NVIDIA 的通用深度学习算子库。</li>
+<li><strong>FlashAttention</strong>：针对标准密集 attention，重点减少 HBM 搬运。</li>
+<li><strong>FlexAttention</strong>：更容易表达特殊 mask，但通用性可能带来额外开销。</li>
+<li><strong>NATTEN</strong>：擅长局部 / 邻域 attention；Cosmos 3 在 Blackwell 上把它作为后端之一。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/krea-2.html">krea-2</a> · torch.compile、cuDNN、FlexAttention 与 FlashAttention 3</li>
+<li><a href="../papers/cosmos-3.html">cosmos-3</a> · 两路变长 kernel、AOT 缓存与 CUDA Graph</li>
+<li><a href="../concepts/flash-attention.html">flash-attention</a> · FlashAttention 为什么省搬运</li>
+<li><a href="../concepts/batch-invariant-kernel.html">batch-invariant-kernel</a> · kernel 选择还可能影响逐位可复现性</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/cosmos-3.html"><span class="cat">paper</span>Cosmos 3 · 把“看懂、想象、行动”塞进同一个世界模型</a></li><li><a href="../papers/krea-2.html"><span class="cat">paper</span>Krea 2 · 先保住视觉多样性，再提高生成可控性</a></li><li><a href="../concepts/model-serving-stack.html"><span class="cat">concept</span>模型服务栈 · PyTorch、TensorRT、vLLM 和 vLLM-Omni 各管什么</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/gpu-kernels-and-compilation.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

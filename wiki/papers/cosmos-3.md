@@ -214,6 +214,16 @@ L_new = (0.78125-(-3))²
 
 ## 训练与部署系统
 
+这部分名词分层看：
+
+- [[large-scale-data-pipelines]]：SILA、Lance、Ray actor、租约、心跳、背压和原子提交属于数据管线。
+- [[distributed-training-parallelism]]：HSDP 切模型状态，Ulysses Context Parallel 切超长序列。
+- [[activation-checkpointing]]：少存中间激活、反向时重算；与写盘恢复无关。
+- [[gpu-kernels-and-compilation]]：变长 attention kernel、FlashAttention 3、NATTEN、`torch.compile`、CUDA Graph 和 AOT 属于执行优化。
+- [[training-checkpointing-and-recovery]]：异步模型 checkpoint 管崩溃恢复。
+- [[model-serving-stack]]：PyTorch、TensorRT、vLLM、vLLM-Omni、Cache-DiT、CPU offload 和 FP8 属于服务部署。
+- [[gpu-interconnects-and-collectives]]：HSDP / CP 背后的多卡通信基础。
+
 SILA 是 Cosmos 的大规模数据处理与标注系统。它把媒体、embedding、caption、质量分和处理状态写进同一张 Lance 宽表；worker 通过分片租约和心跳领取任务，分段落持久 checkpoint，整个分片成功后原子提交。报告给出的效果是启动时间从 30–60 分钟降到约 5 分钟，吞吐提高约 10 倍，可达到每日十亿级标注。
 
 训练系统针对两类特殊负担做了优化：
