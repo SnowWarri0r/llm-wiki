@@ -1,8 +1,8 @@
 ---
 name: residual-connection
 type: concept
-sources: [resnet, attention-is-all-you-need]
-updated: 2026-05-21
+sources: [resnet, attention-is-all-you-need, yolov3]
+updated: 2026-07-13
 ---
 
 # Residual Connection · 残差连接 / Skip Connection
