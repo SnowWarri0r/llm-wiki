@@ -1,8 +1,8 @@
 ---
 name: cross-entropy
 type: concept
-sources: [gpt-2, dino, diffusion-opd]
-updated: 2026-06-12
+sources: [gpt-2, dino, diffusion-opd, yolov3]
+updated: 2026-07-13
 ---
 
 # Cross-Entropy · 交叉熵 · −log(你押对的概率)

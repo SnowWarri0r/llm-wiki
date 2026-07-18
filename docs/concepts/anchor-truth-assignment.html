@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Anchor 真值分配 · 一个负责，一圈别骂，其他当背景 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · anchor-truth-assignment</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Anchor 真值分配 · 一个负责，一圈别骂，其他当背景</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>每个真值只奖励最佳 anchor；其他高重叠候选忽略，低重叠候选才作为负样本。</p>
+<h2>直觉</h2>
+<p>密集检测会在物体附近报出很多相似框。如果只奖励一个最佳框，却把旁边同样盖住物体的框全骂成“背景”，监督会互相打架。Ignore 区的意思是：你没赢，不给奖励；但答案也不算离谱，所以不扣分。</p>
+<h2>怎么做的</h2>
+<pre><code class="language-text">
+1. 真值框与全部 anchor 中心对齐，形状 IOU 最高者负责
+2. 最佳 anchor：objectness=1，并学习坐标与类别
+3. 非最佳预测若与任一真值 IOU 超过 ignore threshold：物体性损失记 0
+4. 其余预测：objectness=0
+</code></pre>
+<p>坐标与类别损失只落在负责 anchor 上。论文写的忽略阈值是 0.5；官方 YOLOv3 配置使用 0.7。</p>
+<h2>数字例子</h2>
+<p>假设一个真值附近有三个候选，最佳 anchor 是 A，忽略阈值取 0.5：</p>
+<table>
+<thead>
+<tr>
+<th>候选</th>
+<th style="text-align: right;">与真值 IOU</th>
+<th>身份</th>
+<th>物体性监督</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td style="text-align: right;">0.76</td>
+<td>最佳 anchor</td>
+<td>目标 1，并学习框/类</td>
+</tr>
+<tr>
+<td>B</td>
+<td style="text-align: right;">0.62</td>
+<td>非最佳但超过阈值</td>
+<td>忽略，损失 0</td>
+</tr>
+<tr>
+<td>C</td>
+<td style="text-align: right;">0.18</td>
+<td>背景候选</td>
+<td>目标 0</td>
+</tr>
+</tbody>
+</table>
+<p>若当前物体性分数分别为 0.70、0.55、0.20，用平方差只演示监督方向：</p>
+<pre><code class="language-text">A: (1-0.70)² = 0.09
+B: ignored = 0
+C: (0-0.20)² = 0.04
+总计 = 0.13
+</code></pre>
+<p>若错误地把 B 也当背景，还会多出 <code>(0-0.55)²=0.3025</code>，而 B 明明已经较好地盖住物体。✓ Ignore 避免了这条矛盾梯度。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/yolov3.html">yolov3</a> · 明确使用最佳 anchor + ignore threshold</li>
+<li><a href="../concepts/anchor-boxes.html">anchor-boxes</a> · 候选框的形状起点</li>
+<li><a href="../concepts/iou-intersection-over-union.html">iou-intersection-over-union</a> · 匹配与忽略都靠 IOU</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/yolov3.html"><span class="cat">paper</span>YOLOv3 · 一张图铺三层探测网</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/anchor-truth-assignment.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

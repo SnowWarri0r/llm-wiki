@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>YOLOv3 · 一张图铺三层探测网</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&amp;family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=Noto+Serif+SC:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#efe8d5;--paper2:#e4dcc6;--card:#f7f1df;--ink:#15191a;--ink2:#343a38;
+  --muted:#6d7169;--rule:#b6ad96;--scope:#254c42;--scope2:#3e7564;--scope-soft:#c9ddd2;
+  --signal:#d86b2b;--signal-soft:#f0ceb8;--night:#17211f;--good:#3e7550;--bad:#9e403b;
+  --accent:var(--scope);--paper-card:var(--card);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.82 "Noto Serif SC",serif;-webkit-font-smoothing:antialiased}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;opacity:.24;background-image:linear-gradient(rgba(37,76,66,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(37,76,66,.04) 1px,transparent 1px);background-size:20px 20px}
+.page{max-width:1080px;margin:auto;padding:46px 40px 120px}
+.mast{display:flex;justify-content:space-between;gap:20px;padding:12px 0;border-top:4px solid var(--night);border-bottom:1px solid var(--rule);font:600 10px/1.4 "IBM Plex Mono",monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--scope)}
+.hero{display:grid;grid-template-columns:1.14fr .86fr;gap:40px;align-items:center;padding:70px 0 54px;position:relative}
+.eyebrow{font:700 10px/1.4 "IBM Plex Mono",monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--signal)}
+h1{margin:16px 0 20px;font:400 clamp(64px,10vw,116px)/.82 "Archivo Black",sans-serif;letter-spacing:-.065em;text-transform:uppercase;color:var(--night)}
+h1 span{display:block;color:var(--scope);font-size:.55em;letter-spacing:-.035em}
+.dek{max-width:660px;margin:0;font-size:clamp(19px,2vw,24px);line-height:1.6;color:var(--ink2);font-weight:500}
+.byline{margin-top:18px;font:500 10px/1.6 "IBM Plex Mono",monospace;color:var(--muted)}
+.scope-stack{height:430px;position:relative;background:var(--night);overflow:hidden;border:1px solid #0d1513}
+.scope-stack:before{content:"×3";position:absolute;right:-9px;top:-34px;font:400 170px/1 "Archivo Black",sans-serif;color:rgba(201,221,210,.08)}
+.scope{position:absolute;border:2px solid var(--scope-soft);background-color:rgba(62,117,100,.12);background-image:linear-gradient(rgba(201,221,210,.17) 1px,transparent 1px),linear-gradient(90deg,rgba(201,221,210,.17) 1px,transparent 1px)}
+.scope.s13{width:235px;height:235px;left:34px;top:32px;background-size:18px 18px}
+.scope.s26{width:190px;height:190px;right:34px;top:118px;background-size:9px 9px;border-color:var(--signal)}
+.scope.s52{width:142px;height:142px;left:78px;bottom:24px;background-size:4px 4px;border-color:#7db49e}
+.scope b{position:absolute;left:8px;top:7px;padding:3px 6px;background:var(--night);font:600 10px "IBM Plex Mono",monospace;color:#fff}
+.scope.s26 b{color:#ff9a5e}.scope.s52 b{color:#a7dbc5}
+.scope-dot{position:absolute;width:12px;height:12px;border:3px solid var(--signal);border-radius:50%;left:59%;top:45%;box-shadow:0 0 0 8px rgba(216,107,43,.14);animation:pulse 2.2s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.35);box-shadow:0 0 0 16px rgba(216,107,43,0)}}
+.scope-key{position:absolute;right:20px;bottom:17px;font:500 9px/1.7 "IBM Plex Mono",monospace;color:#adc9bd;text-align:right}
+.tldr{display:grid;grid-template-columns:130px 1fr;margin:10px 0 26px;border-top:5px solid var(--scope);border-bottom:1px solid var(--rule);background:var(--card)}
+.tldr .label{padding:24px;font:700 11px "IBM Plex Mono",monospace;letter-spacing:.14em;color:var(--signal)}
+.tldr p{margin:0;padding:21px 26px;border-left:1px solid var(--rule);font-size:18px;line-height:1.72}
+h2{margin:88px 0 20px;padding-top:18px;border-top:2px solid var(--night);font:400 clamp(35px,5vw,54px)/1.03 "Archivo Black",sans-serif;letter-spacing:-.04em;color:var(--night)}
+h2 .num{display:block;margin-bottom:10px;font:700 10px/1.2 "IBM Plex Mono",monospace;letter-spacing:.18em;color:var(--signal);text-transform:uppercase}
+h3{margin:40px 0 12px;font:700 25px/1.25 "Noto Serif SC",serif;color:var(--scope)}
+p{margin:13px 0}strong{color:var(--night)}
+a{color:var(--scope);text-decoration-thickness:1px;text-underline-offset:3px}
+code{font:500 .84em "IBM Plex Mono",monospace;background:#faf5e7;border:1px solid var(--rule);padding:1px 5px}
+.jr{font:600 9px "IBM Plex Mono",monospace;vertical-align:super;text-decoration:none;background:var(--signal-soft);border:1px solid var(--signal);color:var(--ink);padding:1px 5px;margin:0 2px}
+.note{margin:22px 0;padding:17px 20px;border-left:5px solid var(--signal);background:var(--card);color:var(--ink2)}
+.note .label{display:block;margin-bottom:5px;font:700 9px "IBM Plex Mono",monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--signal)}
+.formula{margin:22px 0;padding:18px 22px;background:var(--night);color:#e8f2ed;font:500 12px/1.9 "IBM Plex Mono",monospace;overflow-x:auto}
+.formula b{color:#ff9a5e}.formula .dim{color:#a6cbbd}
+.table-wrap{overflow-x:auto;margin:25px 0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:12px 13px;border-bottom:1px solid var(--rule);text-align:left}
+th{font:700 10px "IBM Plex Mono",monospace;letter-spacing:.08em;color:var(--scope);text-transform:uppercase}
+td.num,.num{text-align:right;font-family:"IBM Plex Mono",monospace}
+tr.focus{background:var(--scope-soft)}
+figure{margin:44px 0;padding:28px;background:var(--card);border:1px solid var(--rule);overflow:hidden}
+figcaption{display:flex;justify-content:space-between;gap:18px;margin-bottom:24px;padding-bottom:12px;border-bottom:1px dashed var(--rule);font:600 10px/1.4 "IBM Plex Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--scope)}
+figcaption .tag{color:var(--signal);text-align:right}
+.fig-note{margin-top:18px;font-size:13px;color:var(--muted)}
+.reveal .rev{opacity:0;transform:translateY(9px);transition:opacity .65s ease,transform .65s ease}.reveal.play .rev{opacity:1;transform:none}
+.reveal.play .d2{transition-delay:.1s}.reveal.play .d3{transition-delay:.2s}.reveal.play .d4{transition-delay:.3s}.reveal.play .d5{transition-delay:.4s}.reveal.play .d6{transition-delay:.5s}
+.version-map{display:grid;grid-template-columns:1fr 54px 1fr;align-items:stretch;gap:12px}
+.ver{padding:20px;border:1px solid var(--rule);background:#fbf6e8}.ver h4{margin:0 0 14px;font:400 23px "Archivo Black",sans-serif;color:var(--night)}
+.head-row{display:flex;gap:9px;align-items:center;margin:10px 0;font:500 10px "IBM Plex Mono",monospace;color:var(--muted)}
+.head-grid{display:grid;place-items:center;border:2px solid var(--scope);background:repeating-linear-gradient(0deg,transparent 0 7px,rgba(37,76,66,.12) 8px),repeating-linear-gradient(90deg,transparent 0 7px,rgba(37,76,66,.12) 8px);color:var(--scope);font-weight:700}
+.head-grid.g13{width:70px;height:70px}.head-grid.g26{width:76px;height:76px;background-size:4px 4px;border-color:var(--signal)}.head-grid.g52{width:84px;height:84px;background-size:2px 2px;border-color:#5e9c82}
+.ver-arrow{display:grid;place-items:center;font:400 30px "Archivo Black",sans-serif;color:var(--signal)}
+.scale-stage{display:grid;grid-template-columns:140px 1fr 150px;gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid var(--rule)}
+.scale-stage:last-child{border-bottom:0}.scale-grid{aspect-ratio:1;border:2px solid var(--scope);display:grid;place-items:center;font:700 14px "IBM Plex Mono",monospace;background-image:linear-gradient(rgba(37,76,66,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(37,76,66,.12) 1px,transparent 1px)}
+.scale-grid.lg{background-size:11px 11px}.scale-grid.md{background-size:6px 6px;border-color:var(--signal)}.scale-grid.sm{background-size:3px 3px;border-color:#5e9c82}
+.anchor-list{font:500 10px/1.8 "IBM Plex Mono",monospace;color:var(--ink2)}.anchor-list b{display:block;color:var(--scope);font-size:12px}
+.candidate{text-align:right;font:600 12px/1.6 "IBM Plex Mono",monospace;color:var(--scope)}.candidate strong{display:block;font:400 30px "Archivo Black",sans-serif;color:var(--signal)}
+.fusion-rail{position:relative;margin:20px 0 0;padding:18px;background:var(--night);color:#d8e7e0;display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:10px;font:500 10px/1.6 "IBM Plex Mono",monospace;text-align:center}.fusion-rail b{color:#ff9a5e}.fusion-arr{font-size:20px;color:#ff9a5e}
+.match-flow{display:grid;grid-template-columns:1fr 42px 1fr 42px 1fr;gap:10px;align-items:stretch}.match-step{padding:18px;border:1px solid var(--rule);background:#fbf6e8}.match-step b{display:block;font:400 18px "Archivo Black",sans-serif;color:var(--scope);margin-bottom:9px}.match-step code{display:block;border:0;padding:0;background:none;line-height:1.75}.match-arr{display:grid;place-items:center;color:var(--signal);font:400 24px "Archivo Black",sans-serif}
+.iou-list{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}.iou-card{padding:12px;border-top:4px solid var(--rule);background:#fffaf0;font:500 10px/1.6 "IBM Plex Mono",monospace}.iou-card b{display:block;color:var(--scope);font-size:13px}.iou-card.win{border-color:var(--signal);background:var(--signal-soft)}.iou-card.win b{color:var(--signal)}
+.assign-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.assign-card{padding:20px;border:1px solid var(--rule);background:#fffaf0}.assign-card .badge{display:inline-block;padding:3px 7px;margin-bottom:11px;background:var(--scope);color:white;font:700 9px "IBM Plex Mono",monospace;letter-spacing:.08em}.assign-card.ignore .badge{background:var(--signal)}.assign-card.neg .badge{background:var(--muted)}.assign-card b{display:block;font:400 25px "Archivo Black",sans-serif;color:var(--night)}.assign-card p{font-size:13px;line-height:1.65}.assign-card .loss{font:600 11px "IBM Plex Mono",monospace;color:var(--scope)}
+.class-panels{display:grid;grid-template-columns:1fr 1fr;gap:14px}.class-panel{padding:20px;border:1px solid var(--rule);background:#fffaf0}.class-panel h4{margin:0 0 13px;font:400 20px "Archivo Black",sans-serif;color:var(--scope)}
+.prob-row{display:grid;grid-template-columns:70px 1fr 52px;gap:8px;align-items:center;margin:9px 0;font:500 10px "IBM Plex Mono",monospace}.prob-track{height:12px;background:#e2d9c3}.prob-fill{height:100%;width:0;background:var(--scope2);transition:width 1s ease}.play .prob-fill{width:var(--w)}.soft .prob-fill{background:var(--signal)}.prob-val{text-align:right;font-weight:600}.target-line{margin-top:16px;padding:11px;background:var(--night);color:#d8e7e0;font:500 10px/1.7 "IBM Plex Mono",monospace}
+.backbone{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;align-items:end;min-height:280px}.stage{position:relative;background:var(--scope);color:#fff;padding:14px 9px;text-align:center;min-height:var(--h)}.stage:nth-child(2n){background:var(--scope2)}.stage b{display:block;font:400 28px "Archivo Black",sans-serif}.stage span{font:500 9px/1.55 "IBM Plex Mono",monospace;color:#d5e6de}.res-blocks{display:flex;flex-direction:column-reverse;gap:3px;margin:12px auto 0;max-width:74px}.res-blocks i{height:6px;background:#ff9a5e;display:block}.backbone-proof{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}.proof-card{padding:17px;background:var(--night);color:#d8e7e0;font:500 11px/1.8 "IBM Plex Mono",monospace}.proof-card b{color:#ff9a5e;font-size:14px}
+.metric-table th:nth-child(n+2),.metric-table td:nth-child(n+2){text-align:right}.metric-table td:nth-child(n+2){font-family:"IBM Plex Mono",monospace}.metric-table td.focus{background:var(--scope-soft)}.delta{color:var(--good);font-weight:700}
+.speed-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}.speed-card{padding:18px;background:var(--night);color:white}.speed-card b{display:block;font:400 29px "Archivo Black",sans-serif;color:#ff9a5e}.speed-card span{font:500 10px/1.7 "IBM Plex Mono",monospace;color:#b9d3c8}
+.fail-list{display:grid;grid-template-columns:1fr 1fr;gap:12px}.fail{padding:20px;border:1px solid var(--rule);background:#fffaf0}.fail .x{float:right;font:400 26px "Archivo Black",sans-serif;color:var(--bad)}.fail b{display:block;margin-bottom:8px;font:700 17px "Noto Serif SC",serif;color:var(--night)}.fail p{font-size:13px;line-height:1.7}.fail strong{color:var(--bad)}
+.ethics{margin:52px 0 0;padding:30px;background:var(--night);color:#dbe7e2;display:grid;grid-template-columns:140px 1fr;gap:25px}.ethics .q{font:400 74px/1 "Archivo Black",sans-serif;color:#ff9a5e}.ethics h3{margin:0 0 10px;color:#fff}.ethics p{margin:0;color:#c4d5ce}
+.gloss{margin-top:82px;padding-top:28px;border-top:4px solid var(--scope)}.gloss h2{margin-top:0;border:0;padding:0;font-size:35px}.gloss ol{list-style:none;padding:0;counter-reset:g}.gloss li{position:relative;padding:13px 0 13px 52px;border-bottom:1px dashed var(--rule);font-size:14px}.gloss li:before{counter-increment:g;content:counter(g,decimal-leading-zero);position:absolute;left:0;top:14px;font:700 10px "IBM Plex Mono",monospace;color:var(--signal)}.gloss .term{font-weight:700;color:var(--scope)}
+.colophon{display:flex;justify-content:space-between;gap:20px;margin-top:70px;padding-top:16px;border-top:1px solid var(--rule);font:500 10px/1.6 "IBM Plex Mono",monospace;color:var(--muted)}
+@media(max-width:800px){
+  .page{padding:28px 18px 80px}.hero{grid-template-columns:1fr;padding-top:46px}.scope-stack{height:360px}.tldr{grid-template-columns:1fr}.tldr p{border-left:0;border-top:1px solid var(--rule)}
+  .version-map,.match-flow{grid-template-columns:1fr}.ver-arrow,.match-arr{transform:rotate(90deg)}.scale-stage{grid-template-columns:90px 1fr}.candidate{grid-column:2}.fusion-rail{grid-template-columns:1fr}.fusion-arr{transform:rotate(90deg)}
+  .iou-list,.assign-grid,.class-panels,.backbone-proof,.fail-list{grid-template-columns:1fr 1fr}.backbone{grid-template-columns:repeat(5,minmax(72px,1fr));overflow-x:auto}.ethics{grid-template-columns:1fr}.ethics .q{font-size:50px}.colophon{flex-direction:column}
+}
+@media(max-width:520px){.mast{flex-direction:column}.scope-stack{height:315px}.scope.s13{width:190px;height:190px}.scope.s26{width:150px;height:150px}.scope.s52{width:112px;height:112px}.iou-list,.assign-grid,.class-panels,.backbone-proof,.fail-list,.speed-strip{grid-template-columns:1fr}.scale-stage{grid-template-columns:74px 1fr}.candidate{grid-column:1/-1;text-align:left}.backbone{grid-template-columns:1fr}.stage{min-height:auto!important}.res-blocks{flex-direction:row;flex-wrap:wrap;max-width:none}.res-blocks i{width:18px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.scope-dot{animation:none}.reveal .rev{opacity:1;transform:none;transition:none}.prob-fill{width:var(--w)!important;transition:none}}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · yolov3</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+<header class="mast"><span>Connectionism / Detection field notes</span><span>Technical report · 2018 · Redmon &amp; Farhadi</span></header>
+
+<section class="hero">
+  <div>
+    <div class="eyebrow">YOLO / GENERATION 03 · 2018</div>
+    <h1>YOLO<span>THREE SCALES</span></h1>
+    <p class="dek">v2 已经会挑合适的 anchor；v3 再决定应该在哪一层找它。粗网格管大物体，细网格管小物体，三层一起出框。</p>
+    <div class="byline">Joseph Redmon · Ali Farhadi · arXiv 1804.02767</div>
+  </div>
+  <div class="scope-stack" aria-label="13×13、26×26、52×52 三层检测网格">
+    <div class="scope s13"><b>13×13 / LARGE</b></div>
+    <div class="scope s26"><b>26×26 / MEDIUM</b></div>
+    <div class="scope s52"><b>52×52 / SMALL</b></div>
+    <span class="scope-dot"></span>
+    <div class="scope-key">ONE IMAGE<br>THREE DETECTION HEADS<br>10,647 CANDIDATES</div>
+  </div>
+</section>
+
+<div class="tldr"><div class="label">TL;DR</div><p>YOLOv3 沿用 v2 的 anchor 解码，但把 9 种框分到 13×13、26×26、52×52 三个检测头<a class="jr" href="#g-01">1</a>；anchor 匹配不仅选形状，也顺手选出负责的特征层。Darknet-53 用残差撑深骨干，类别改成独立 sigmoid。结果是 COCO small AP 从 5.0 涨到 18.3，AP50 达 57.9；代价是严格定位仍落后 RetinaNet。</p></div>
+
+<h2><span class="num">§ 01 / What actually changed</span>v2 把细节搬来，v3 直接在细节层出框</h2>
+<p>YOLOv3 仍是<a href="../concepts/one-stage-detection.html">一阶段检测</a>：不先生成候选区域，一次前向直接给出全部框。YOLOv2 的 passthrough 会把 26×26 特征重排后塞进 13×13 检测头，但最终仍只有一层输出。YOLOv3 改成三层都直接预测：深层粗网格抓大目标，中层和浅层逐步接入更早的细节特征，专门承接中小目标。这叫<a href="../concepts/multi-scale-detection.html">多尺度检测</a><a class="jr" href="#g-03">3</a>，和“不同 batch 换输入尺寸”的多尺度训练不是一回事。</p>
+
+<figure id="fig-version" class="reveal">
+  <figcaption><span>Fig 01 · 从一个出口变成三个出口</span><span class="tag">YOLOv2 → YOLOv3</span></figcaption>
+  <div class="version-map">
+    <div class="ver rev"><h4>YOLOv2</h4><div class="head-row"><div class="head-grid g13">13</div><span>唯一检测头<br>26×26 细节只搬进来</span></div><p class="fig-note">细节参与预测，但没有在细网格上自己出框。</p></div>
+    <div class="ver-arrow rev d2">→</div>
+    <div class="ver rev d3"><h4>YOLOv3</h4><div class="head-row"><div class="head-grid g13">13</div><span>大目标</span></div><div class="head-row"><div class="head-grid g26">26</div><span>中目标</span></div><div class="head-row"><div class="head-grid g52">52</div><span>小目标</span></div></div>
+  </div>
+  <p class="fig-note">框公式没换；变化的是同一张图同时有三张方格纸，每张都拥有自己的 anchor 与预测出口。</p>
+</figure>
+
+<div class="note"><span class="label">先抓主线</span>v3 的核心不是“加了两个上采样层”，而是把<strong>物体大小、anchor 大小、特征层分辨率</strong>绑成一次分工。</div>
+
+<h2><span class="num">§ 02 / Three detection heads</span>三层各管一档，总共 10,647 个候选</h2>
+<p>以 416×416 输入为例，三层的 stride<a class="jr" href="#g-02">2</a> 分别是 32、16、8。stride=8 表示特征图横向走一格，对应原图走 8 像素。9 个 COCO anchor<a class="jr" href="#g-04">4</a> 按大小排序，每层分 3 个；论文坦白说“9 个、3 层、每层 3 个”是经验选择，并非搜索出的最优解。</p>
+
+<figure id="fig-scales" class="reveal">
+  <figcaption><span>Fig 02 · 粗中细三层的真实 anchor 与候选数</span><span class="tag">416 INPUT / 3 ANCHORS EACH</span></figcaption>
+  <div class="scale-stage rev"><div class="scale-grid lg">13×13</div><div class="anchor-list"><b>LARGE · stride 32</b>(116,90) · (156,198) · (373,326)</div><div class="candidate"><strong>507</strong>13×13×3</div></div>
+  <div class="scale-stage rev d2"><div class="scale-grid md">26×26</div><div class="anchor-list"><b>MEDIUM · stride 16</b>(30,61) · (62,45) · (59,119)</div><div class="candidate"><strong>2,028</strong>26×26×3</div></div>
+  <div class="scale-stage rev d3"><div class="scale-grid sm">52×52</div><div class="anchor-list"><b>SMALL · stride 8</b>(10,13) · (16,30) · (33,23)</div><div class="candidate"><strong>8,112</strong>52×52×3</div></div>
+  <div class="fusion-rail rev d4"><span>13×13<br><b>强语义</b></span><span class="fusion-arr">↑×2 + concat</span><span>26×26<br>语义 + 位置</span><span class="fusion-arr">↑×2 + concat</span><span>52×52<br><b>细位置</b></span></div>
+  <p class="fig-note">总候选 507+2,028+8,112=10,647。每层输出通道相同：3×(4坐标+1物体性+80类)=255。</p>
+</figure>
+
+<p>上采样本身只是把小特征图放大，不能凭空找回边缘。关键是与骨干里更早、同尺寸的特征做拼接：深层告诉检测头“这像人”，早层告诉它“人的轮廓落在哪几格”。这和特征金字塔<a class="jr" href="#g-03">3</a> 的思路相近。</p>
+
+<h2><span class="num">§ 03 / One box, end to end</span>匹配 anchor 的同时，也选中了检测层</h2>
+<p>固定一个行人框：输入 416×416，真值中心 <code>(200,168) px</code>，宽高 <code>60×120 px</code>。先把 9 个 anchor 与它中心对齐，只比较形状 IOU。最接近的是 <code>59×119</code>，它属于中号组，所以这个物体自动落到 26×26 检测头。</p>
+
+<figure id="fig-match" class="reveal">
+  <figcaption><span>Fig 03 · 一个真值框从匹配到四数解码</span><span class="tag">60×120 TRUTH / 59×119 PRIOR</span></figcaption>
+  <div class="iou-list">
+    <div class="iou-card rev"><b>30×61</b>IOU 0.254</div><div class="iou-card rev d2"><b>62×45</b>IOU 0.370</div><div class="iou-card win rev d3"><b>59×119</b>IOU 0.975 · WIN</div><div class="iou-card rev d4"><b>116×90</b>IOU 0.441</div>
+  </div>
+  <div class="match-flow" style="margin-top:16px">
+    <div class="match-step rev"><b>① 选层</b><code>59×119 属于中号组<br>→ 26×26 head<br>→ stride=16</code></div><div class="match-arr rev d2">→</div>
+    <div class="match-step rev d3"><b>② 选格</b><code>(200,168)/16<br>=(12.5,10.5)<br>cell=(12,10)</code></div><div class="match-arr rev d4">→</div>
+    <div class="match-step rev d5"><b>③ 学四个数</b><code>tₓ=0 · tᵧ=0<br>t_w=ln(60/59)=.0168<br>t_h=ln(120/119)=.00837</code></div>
+  </div>
+  <div class="formula rev d6"><b>解码自检</b><br>bₓ=(σ(0)+12)×16=<b>200 px</b>　bᵧ=(σ(0)+10)×16=<b>168 px</b><br>b_w=59×e<sup>.0168</sup>≈<b>60 px</b>　b_h=119×e<sup>.00837</sup>≈<b>120 px</b> ✓</div>
+  <p class="fig-note">宽高修正几乎为 0，说明聚类先验已经很贴近真值；网络主要做小幅校准。</p>
+</figure>
+
+<p>框中心与尺寸仍沿用 v2 的公式：<code>b_x=σ(t_x)+c_x</code>、<code>b_y=σ(t_y)+c_y</code>、<code>b_w=p_w·e^t_w</code>、<code>b_h=p_h·e^t_h</code>。因此 v3 不是重新发明 anchor，而是把 anchor 分配扩成“形状 + 层级”的联合路由。</p>
+
+<h3>一个负责，一圈忽略，其他当背景</h3>
+<p>每个真值只把全局最佳 anchor 设成正样本。其余预测如果与某个真值重叠很高，就忽略物体性<a class="jr" href="#g-05">5</a>负损失；只有明显不像任何真值的候选才当背景。论文阈值写 0.5，官方配置使用 <code>ignore_thresh=.7</code><a class="jr" href="#g-06">6</a>，两个数要分清来源。</p>
+
+<figure id="fig-assign" class="reveal">
+  <figcaption><span>Fig 04 · 正样本 / 忽略 / 负样本不是一刀切</span><span class="tag">BEST ONE WINS</span></figcaption>
+  <div class="assign-grid">
+    <div class="assign-card rev"><span class="badge">POSITIVE</span><b>A · IOU .76</b><p>全局最佳 anchor。学习坐标、类别，物体性目标 1。</p><div class="loss">(1−.70)² = .09</div></div>
+    <div class="assign-card ignore rev d2"><span class="badge">IGNORE</span><b>B · IOU .62</b><p>不是最佳，但已经较好覆盖物体。不给奖励，也不当背景骂。</p><div class="loss">ignored = 0</div></div>
+    <div class="assign-card neg rev d3"><span class="badge">NEGATIVE</span><b>C · IOU .18</b><p>与所有真值都不够重叠。只学习物体性为 0。</p><div class="loss">(0−.20)² = .04</div></div>
+  </div>
+  <p class="fig-note">若把 B 错当背景，会额外产生 (0−.55)²=0.3025 的反向信号；它明明已经盖住物体，这条梯度会与定位目标打架。</p>
+</figure>
+
+<h2><span class="num">§ 04 / Class prediction</span>类别从单选题改成独立开关</h2>
+<p>YOLOv3 不再对类别做 softmax，而是每类独立 sigmoid，再用二元交叉熵<a class="jr" href="#g-08">8</a>训练。这是多标签分类<a class="jr" href="#g-07">7</a>：一个框可以同时是 Woman 和 Person，不必强迫两个正确名字抢一块总和为 1 的概率蛋糕。</p>
+
+<figure id="fig-class" class="reveal">
+  <figcaption><span>Fig 05 · 同一组 logit，softmax 与独立 sigmoid 的差别</span><span class="tag">ONE CHOICE vs MANY LABELS</span></figcaption>
+  <div class="class-panels">
+    <div class="class-panel soft rev"><h4>Softmax · 互相抢</h4><div class="prob-row"><span>Person</span><div class="prob-track"><div class="prob-fill" style="--w:68.3%"></div></div><span class="prob-val">.683</span></div><div class="prob-row"><span>Woman</span><div class="prob-track"><div class="prob-fill" style="--w:30.7%"></div></div><span class="prob-val">.307</span></div><div class="prob-row"><span>Dog</span><div class="prob-track"><div class="prob-fill" style="--w:1%"></div></div><span class="prob-val">.010</span></div><div class="target-line">总和固定 = 1<br>Person 高 → Woman 被压低</div></div>
+    <div class="class-panel rev d2"><h4>Sigmoid · 各答各的</h4><div class="prob-row"><span>Person</span><div class="prob-track"><div class="prob-fill" style="--w:90%"></div></div><span class="prob-val">.900</span></div><div class="prob-row"><span>Woman</span><div class="prob-track"><div class="prob-fill" style="--w:80.2%"></div></div><span class="prob-val">.802</span></div><div class="prob-row"><span>Dog</span><div class="prob-track"><div class="prob-fill" style="--w:11.9%"></div></div><span class="prob-val">.119</span></div><div class="target-line">target = [1,1,0]<br>BCE = .105+.221+.127 = .453</div></div>
+  </div>
+  <p class="fig-note">输入 logit 同为 2.2、1.4、−2.0。独立 sigmoid 允许前两类同时成立；推理时仍可再按阈值筛选。</p>
+</figure>
+
+<h2><span class="num">§ 05 / Backbone</span>Darknet-53：把残差接进 YOLO</h2>
+<p><a href="../concepts/darknet-53.html">Darknet-53</a> 把 Darknet-19 的规整 1×1/3×3 卷积和 ResNet 的残差捷径<a class="jr" href="#g-09">9</a>揉在一起。五个 stage 的残差块重复数是 1、2、8、8、4，共 23 个 block；每块两层卷积，捷径让输入与梯度可以跨过主路。</p>
+
+<figure id="fig-backbone" class="reveal">
+  <figcaption><span>Fig 06 · 1 / 2 / 8 / 8 / 4 个残差块逐级堆深</span><span class="tag">DARKNET-53</span></figcaption>
+  <div class="backbone">
+    <div class="stage rev" style="--h:116px"><b>1×</b><span>64 channels</span><div class="res-blocks"><i></i></div></div>
+    <div class="stage rev d2" style="--h:144px"><b>2×</b><span>128 channels</span><div class="res-blocks"><i></i><i></i></div></div>
+    <div class="stage rev d3" style="--h:260px"><b>8×</b><span>256 channels</span><div class="res-blocks"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+    <div class="stage rev d4" style="--h:260px"><b>8×</b><span>512 channels</span><div class="res-blocks"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+    <div class="stage rev d5" style="--h:190px"><b>4×</b><span>1024 channels</span><div class="res-blocks"><i></i><i></i><i></i><i></i></div></div>
+  </div>
+  <div class="backbone-proof rev d6"><div class="proof-card"><b>vs ResNet-152</b><br>Top-5 93.8 = 93.8<br>78 / 37 FPS = <b>2.11×</b></div><div class="proof-card"><b>vs ResNet-101</b><br>Top-1 77.2 ≈ 77.1<br>78 / 53 FPS = <b>1.47×</b></div></div>
+  <p class="fig-note">论文还报告 Darknet-53 的实测 BFLOP/s<a class="jr" href="#g-10">10</a> 最高：不仅运算量可控，结构也更能利用 GPU。</p>
+</figure>
+
+<h3>训练信息要分“论文写了什么”和“配置里有什么”</h3>
+<p>论文正文只说整图训练、不做 hard negative mining，继续使用多尺度训练、数据增强、BatchNorm。官方 <code>yolov3.cfg</code> 补出工程配方：batch 64、subdivisions 16、momentum 0.9、weight decay 0.0005、学习率 0.001、burn-in 1000，400k/450k 步各降 10 倍，最多 500,200 batch。它们是实现证据，不是论文逐项消融。</p>
+
+<h2><span class="num">§ 06 / Results</span>小目标翻身，严格定位仍是软肋</h2>
+<p>COCO 的 AP50 与 AP75<a class="jr" href="#g-11">11</a>像两把松紧不同的尺子：前者框住大概就算对，后者要求边界贴得更紧。YOLOv3-608 的 AP50=57.9，几乎追平 RetinaNet-101 的 59.1；综合 AP 却是 33.0 对 39.1，说明“找到物体”很强，“把框磨到很准”仍弱。</p>
+
+<figure id="fig-metrics" class="reveal">
+  <figcaption><span>Fig 07 · v2→v3 的真实 COCO 提升与剩余差距</span><span class="tag">TEST-DEV</span></figcaption>
+  <div class="table-wrap"><table class="metric-table"><thead><tr><th>指标</th><th>YOLOv2</th><th>YOLOv3-608</th><th>RetinaNet-101</th></tr></thead><tbody>
+    <tr><td>AP@[.5:.95]</td><td>21.6</td><td class="focus">33.0</td><td>39.1</td></tr><tr><td>AP50</td><td>44.0</td><td class="focus">57.9</td><td>59.1</td></tr><tr><td>AP75</td><td>19.2</td><td class="focus">34.4</td><td>42.3</td></tr><tr><td>AP-small</td><td>5.0</td><td class="focus delta">18.3 · +13.3</td><td>21.8</td></tr><tr><td>AP-medium</td><td>22.4</td><td class="focus">35.4</td><td>42.7</td></tr><tr><td>AP-large</td><td>35.5</td><td class="focus">41.9</td><td>50.2</td></tr>
+  </tbody></table></div>
+  <div class="speed-strip"><div class="speed-card rev"><b>320</b><span>28.2 AP · 22 ms</span></div><div class="speed-card rev d2"><b>416</b><span>31.0 AP · 29 ms</span></div><div class="speed-card rev d3"><b>608</b><span>33.0 AP · 51 ms</span></div></div>
+  <p class="fig-note">三尺度检测把 small AP 从 5.0 拉到 18.3；输入越大继续涨 AP，但延迟也同步增加。不同方法的时间来自 M40 或 Titan X，适合看论文当时的趋势，不是现代硬件绝对值。</p>
+</figure>
+
+<div class="note"><span class="label">别把提升全算给架构</span>论文 Figure 3 的图注说明，修复 YOLOv2 的数据加载 bug 本身带来约 2 mAP。由于论文没有足够的逐项消融，v2→v3 的总提升无法继续精确拆给三尺度检测、Darknet-53 与这个修复。</div>
+
+<h2><span class="num">§ 07 / Negative results</span>热门组件不一定装得进去</h2>
+<p>这篇技术报告最难得的是专门留出失败实验。它没有完整消融矩阵，但至少把四条走不通的路写明白。</p>
+
+<figure id="fig-fails" class="reveal">
+  <figcaption><span>Fig 08 · 四个试过但没留下的改法</span><span class="tag">THINGS THAT DIDN'T WORK</span></figcaption>
+  <div class="fail-list">
+    <div class="fail rev"><span class="x">×</span><b>普通 anchor 中心偏移</b><p>x/y 按框宽高做线性偏移，训练稳定性变差。</p></div>
+    <div class="fail rev d2"><span class="x">×</span><b>直接线性预测 x、y</b><p>拿掉 sigmoid 限位，mAP <strong>约掉 2 点</strong>。</p></div>
+    <div class="fail rev d3"><span class="x">×</span><b>Focal loss</b><p>针对易负样本降权的损失<a class="jr" href="#g-12">12</a>，在 YOLOv3 上 mAP <strong>约掉 2 点</strong>；作者也没完全确定原因。</p></div>
+    <div class="fail rev d4"><span class="x">×</span><b>双 IOU 阈值</b><p>模仿 Faster R-CNN 分正/忽略/负，没调出好结果。</p></div>
+  </div>
+  <p class="fig-note">“没用”只表示作者当时的训练体系和调参下没成功，不是这些方法在所有检测器里都无效。</p>
+</figure>
+
+<div class="ethics"><div class="q">?</div><div><h3>最后一节问的不是 AP</h3><p>作者把结尾留给视觉技术的用途：隐私收割、监控和军事应用都可能造成真实伤害。研究者不能只管把曲线往上推，也要考虑模型最终替谁工作、伤到谁，以及能否减轻这些后果。</p></div></div>
+
+<div class="note"><span class="label">一句话带走</span>YOLOv3 = v2 的框公式 + 9 个 anchor 的层级路由 + 三尺度直接检测 + Darknet-53 + 独立 sigmoid 分类。它把小目标补上来了，但没有把高 IOU 的精细定位彻底解决。</div>
+
+<div class="gloss">
+  <h2>引用 / 术语表</h2>
+  <ol>
+    <li id="g-01"><span class="term">Detection head</span> · 把特征图变成框、物体性和类别预测的输出模块；YOLOv3 有三个。</li>
+    <li id="g-02"><span class="term">Stride</span> · 特征图走一格对应原图走多少像素；416 输入的三层分别是 32、16、8。</li>
+    <li id="g-03"><span class="term">Feature pyramid</span> · 融合深层语义与浅层位置细节，在多个尺度检测。见 <a href="../concepts/multi-scale-detection.html">多尺度检测</a>。</li>
+    <li id="g-04"><span class="term">Anchor box</span> · 每个位置预设的宽高起点；v3 用 9 种，每层 3 种。见 <a href="../concepts/anchor-boxes.html">anchor</a>。</li>
+    <li id="g-05"><span class="term">Objectness</span> · 当前候选框里是否有物体的分数，与类别分数分开预测。</li>
+    <li id="g-06"><span class="term">Ignore threshold</span> · 非最佳预测若与真值重叠够高，不把它当负样本处罚。见 <a href="../concepts/anchor-truth-assignment.html">真值分配</a>。</li>
+    <li id="g-07"><span class="term">Multi-label classification</span> · 一个样本可同时有多个标签，每类独立判断。见 <a href="../concepts/multi-label-classification.html">多标签分类</a>。</li>
+    <li id="g-08"><span class="term">Binary cross-entropy</span> · 每个类别单独计算“是/否”的对数损失。见 <a href="../concepts/cross-entropy.html">交叉熵</a>。</li>
+    <li id="g-09"><span class="term">Residual connection</span> · 主路输出加回输入，为深网络保留恒等捷径。见 <a href="../concepts/residual-connection.html">残差连接</a>。</li>
+    <li id="g-10"><span class="term">BFLOP/s</span> · 每秒执行多少十亿次浮点运算，反映结构实际利用硬件的能力，不等同于总运算量。</li>
+    <li id="g-11"><span class="term">AP50 / AP75</span> · 分别用 IOU 0.5 / 0.75 判断框是否命中；后者更苛刻。见 <a href="../concepts/mean-average-precision.html">mAP</a>。</li>
+    <li id="g-12"><span class="term">Focal loss</span> · 给容易的负样本降权、把注意力留给难样本；YOLOv3 的尝试反而掉约 2 mAP。</li>
+  </ol>
+</div>
+
+<footer class="colophon"><span>Source / <a href="https://arxiv.org/abs/1804.02767">论文</a> · <a href="https://github.com/pjreddie/darknet/blob/master/cfg/yolov3.cfg">官方配置</a> · <a href="https://github.com/pjreddie/darknet/blob/master/src/yolo_layer.c">真值分配实现</a></span><span>Figures / 重画 · 数字取论文 Tables 2–3</span></footer>
+</div>
+
+<script>
+(function(){
+  var items=document.querySelectorAll('.reveal');
+  if(!('IntersectionObserver' in window)){items.forEach(function(el){el.classList.add('play')});return;}
+  var observer=new IntersectionObserver(function(entries){entries.forEach(function(entry){if(entry.isIntersecting){entry.target.classList.add('play');observer.unobserve(entry.target)}})},{threshold:.2});
+  items.forEach(function(el){observer.observe(el)});
+})();
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6);}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  var items={};
+  document.querySelectorAll('.gloss ol li[id^="g-"]').forEach(function(li){items[li.id]=li.innerHTML;});
+  if(!Object.keys(items).length)return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!items[id])return;
+      e.preventDefault();
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+items[id];
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+</body>
+</html>
