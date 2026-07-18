@@ -456,12 +456,12 @@ p{margin:13px 0}.lead{font-size:20px;line-height:1.68;color:var(--ink-2)}
   <div class="callout good"><span class="label">来源分开看</span><p>技术报告解释“为什么选择 TDM”；官方 GitHub 才给 Raw 52 步、Turbo 8 步等发布参数。权重采用 Krea 2 Community License，推理代码仓库采用 Apache-2.0，不能把代码许可证写成权重许可证。</p></div>
 
   <h2 id="s11"><span class="sec">11 · Infrastructure</span>大规模训练不是“显卡越多越快”，而是故障面一起膨胀</h2>
-  <p>报告有很长一部分讲基础设施，这不是跑题。数十亿图像的数据策展、长时间 12B 训练和 RL rollout 如果没有稳定系统，前面的方法根本落不了地。</p>
+  <p>报告有很长一部分讲基础设施，这不是跑题。数十亿图像的数据策展、长时间 12B 训练和 RL rollout 如果没有稳定系统，前面的方法根本落不了地。先抓住五层：<a class="jr" href="#g-25">训练怎么拆到多张卡</a>、<a class="jr" href="#g-26">卡与卡怎么通信</a>、<a class="jr" href="#g-21">任务怎么排队</a>、<a class="jr" href="#g-24">崩了怎么恢复</a>、<a class="jr" href="#g-23">数据任务怎么领取</a>。后面的框架名都能放回这五层。</p>
   <div class="infra-grid">
-    <article class="infra"><b>训练并行</b><span>PyTorch DTensor + torchtitan，FSDP2 与 Megatron 风格 TP；TP&gt;2 时启用 async-TP。</span></article>
+    <article class="infra"><b>训练并行</b><span>PyTorch DTensor + torchtitan，FSDP2 与 Megatron 风格 TP；TP&gt;2 时启用 async-TP<a class="jr" href="#g-25">25</a>。</span></article>
     <article class="infra"><b>研究吃满，推理外溢</b><span>Kueue 负责多机 gang scheduling 与配额借还；训练占满本地 GPU 时，Virtual Kubelet 把线上推理迁到外部算力。</span></article>
     <article class="infra"><b>调度器不替业务兜底</b><span>外部实例失败后，适配层把 pod 标为失败，让 Kubernetes / HPA 创建替代者，而不是自己再造一套恢复系统。</span></article>
-    <article class="infra"><b>模型做宽一点</b><span>更大的矩阵乘更容易掩盖预取延迟，也减少 all-gather / reduce-scatter 次数，NCCL 错误随之下降。</span></article>
+    <article class="infra"><b>模型做宽一点</b><span>更大的矩阵乘更容易掩盖预取延迟，也减少 all-gather / reduce-scatter 次数，NCCL 错误随之下降<a class="jr" href="#g-26">26</a>。</span></article>
     <article class="infra"><b>把故障当常态</b><span>不追求永不失败，而是靠频繁 checkpoint 和快速恢复改善 MTBF / MTTR；一次 checkpoint 约 30 秒。</span></article>
     <article class="infra"><b>别只看 GPU 利用率</b><span>坏卡可能显示 0%。团队更看<strong>张量核利用率</strong>、PCIe replay、NVLink 与 InfiniBand 指标。</span></article>
     <article class="infra"><b>最大的崩溃源</b><span><strong>InfiniBand fabric 不稳定</strong>是头号原因。少于 128 卡很稳；规模再翻倍，故障增长远超预期。</span></article>
@@ -469,10 +469,10 @@ p{margin:13px 0}.lead{font-size:20px;line-height:1.68;color:var(--ink-2)}
   </div>
 
   <h3>训练引擎：每一部分按自己的通信模式切</h3>
-  <p>训练代码从 PyTorch 搭起，分布式抽象采用 DTensor / torchtitan。MMDiT 主干同时使用 FSDP2 与 Megatron 风格 Tensor Parallel：FSDP2 把参数、梯度和优化器状态分到数据并行卡上；TP 则把同一层的大矩阵乘拆到多张卡。TP 大于 2 时启用 async-TP，让通信尽量和计算重叠。Autoencoder 体量较小，直接在每卡复制；文本编码器和 MMDiT 才做分片。</p>
+  <p>训练代码从 PyTorch 搭起，分布式抽象采用 DTensor / torchtitan。MMDiT 主干同时使用 FSDP2 与 Megatron 风格 Tensor Parallel：FSDP2 把参数、梯度和优化器状态分到数据并行卡上；TP 则把同一层的大矩阵乘拆到多张卡。TP 大于 2 时启用 async-TP，让通信尽量和计算重叠。Autoencoder 体量较小，直接在每卡复制；文本编码器和 MMDiT 才做分片。<a href="../concepts/distributed-training-parallelism.html">概念页用 4 张卡的数字例子把三种切法逐项算开 →</a></p>
   <div class="detail-grid">
     <article class="detail-card"><h3>为什么模型更宽、层数更少</h3><p>第一，更大的单次矩阵乘更容易盖住 FSDP2 预取等待，而且层数少意味着 all-gather / reduce-scatter 次数少，触发 NCCL 故障的机会也少。第二，8-bit 训练每层都要量化和反量化，矩阵更大时这部分固定开销更容易被摊薄。</p></article>
-    <article class="detail-card"><h3>Kernel 与显存取舍</h3><p>全模型用 <code>torch.compile</code>。注意力默认走 cuDNN，特殊 mask 再选 FlexAttention 或 FlashAttention 3。低分辨率只对昂贵 block 做选择性 activation checkpoint；高分辨率才全量重算，以计算换显存<a class="jr" href="#g-20">20</a>。</p></article>
+    <article class="detail-card"><h3>Kernel 与显存取舍</h3><p>全模型用 <code>torch.compile</code>。注意力默认走 cuDNN，特殊 mask 再选 FlexAttention 或 FlashAttention 3<a class="jr" href="#g-27">27</a>。低分辨率只对昂贵 block 做选择性 activation checkpoint；高分辨率才全量重算，以计算换显存<a class="jr" href="#g-20">20</a>。</p></article>
     <article class="detail-card"><h3>训练数据先按形状排好</h3><p>Parquet 每行记录图片引用、裁剪缩放参数、caption 和元数据。数据在进入 GPU 前预先裁剪、缩放，并按宽高比分桶打包，使一个 batch 内 padding 后形状一致，避免某些 CPU/GPU 因样本更大而拖慢整组。</p></article>
     <article class="detail-card"><h3>为什么强调“可精确重放”</h3><p>数据预先打乱后顺序扫描，样本打包结果可以原样重放。若某一步 loss 突然尖峰，团队能重新喂同一批图，而不是只看到“第 N 步坏了”却找不到当时的数据组合。</p></article>
   </div>
@@ -506,7 +506,7 @@ p{margin:13px 0}.lead{font-size:20px;line-height:1.68;color:var(--ink-2)}
   <p>最诚实的一条经验是：相同代码和数据可能连续两小时反复崩，什么都不改重启后却跑 16 小时；少于 128 GPU 的任务能稳定数天，规模继续放大后，故障增长远超线性预期。报告还明确说，他们的大规模 run 没有一次能连续超过 24 小时不失败。</p>
 
   <h3>存储与数据处理：把一张表同时当 DAG 和工作队列</h3>
-  <p>Ceph 在这支团队的规模与负载下造成大量问题；换到 WEKA 后，故障、停机和 checkpoint 时间都明显改善，一次 checkpoint 约 30 秒。所有数据与产物放进同一文件系统，管理简单；但通过 IPoIB 访问存储可能加重 InfiniBand 压力。报告强调网络问题在换存储前就存在，因此不能把两者简单写成单一因果。</p>
+  <p>Ceph 在这支团队的规模与负载下造成大量问题；换到 WEKA 后，故障、停机和 checkpoint 时间都明显改善，一次 checkpoint 约 30 秒。Ceph 和 WEKA 都是让很多机器共同读写的分布式存储；它们不是训练框架。所有数据与产物放进同一文件系统，管理简单；但通过 IPoIB 访问存储可能加重 InfiniBand 压力：普通存储流量和 GPU 通信可能争同一张高速网<a class="jr" href="#g-28">28</a>。报告强调网络问题在换存储前就存在，因此不能把两者简单写成单一因果。</p>
   <p>元数据系统 krablet<a class="jr" href="#g-23">23</a>由多个 PostgreSQL 分片和 funnel 批写层组成，管理约 208TB 元数据，并承受每秒数万次互相竞争的 UPSERT。大对象仍在对象存储里，数据库只保留引用和处理状态，作为单一事实来源。</p>
   <div class="queue-code">
     <b>为什么 FOR UPDATE SKIP LOCKED 能把表变成队列</b>
@@ -566,11 +566,15 @@ p{margin:13px 0}.lead{font-size:20px;line-height:1.68;color:var(--ink-2)}
       <li id="g-17"><span class="term">DCT · 离散余弦变换</span> · 把“每个像素有多亮”改写成“不同尺度的明暗变化各有多少”。输出左上角是整体亮度和粗结构等低频，越往右下越偏细边缘、纹理和噪点等高频。</li>
       <li id="g-18"><span class="term">时间步条件</span> · 告诉去噪网络当前状态离纯噪声或干净图有多远。相同的 latent 若处在不同时间点，模型该做的事不同：前期决定大结构，后期修局部细节。</li>
       <li id="g-19"><span class="term">Muon</span> · 面向矩阵参数的优化器，会先对动量更新做正交化，使不同方向的更新更均衡。它不是把 AdamW 名字换掉；哪些层使用、更新尺度怎样匹配、是否加 Nesterov momentum 都会显著影响稳定性。</li>
-      <li id="g-20"><span class="term">Activation checkpointing</span> · 前向时不保存部分中间激活，反向时再重新算一遍。它用更多计算换更少显存；这里的 checkpoint 不是写到磁盘的模型存档。</li>
-      <li id="g-21"><span class="term">Kueue / gang scheduling</span> · Kueue 先判断一整个分布式任务是否有足够配额；gang scheduling 要求所需 Pod 成组获得资源，避免只启动一半后集体空等。</li>
-      <li id="g-22"><span class="term">Virtual Kubelet</span> · 在 Kubernetes 中伪装成节点的适配层。调度器仍提交普通 Pod，它再把 Pod 规格翻译成外部算力供应商的部署请求，并把状态同步回来。</li>
-      <li id="g-23"><span class="term">krablet / SKIP LOCKED</span> · Krea 的分片 PostgreSQL 元数据系统。多个 worker 用行锁领取任务；<code>SKIP LOCKED</code> 让后来者跳过别人已经锁住的行，从而并行取走不同任务。</li>
-      <li id="g-24"><span class="term">MTBF / MTTR</span> · MTBF 是两次故障之间平均能运行多久；MTTR 是故障后平均多久恢复。前者越长越好，后者越短越好。团队通过频繁 checkpoint 和快速启动同时改善两者。</li>
+      <li id="g-20"><span class="term"><a href="../concepts/activation-checkpointing.html">Activation checkpointing</a></span> · 前向时不保存部分中间激活，反向时再重新算一遍。它用更多计算换更少显存；这里的 checkpoint 不是写到磁盘的模型存档。</li>
+      <li id="g-21"><span class="term"><a href="../concepts/gpu-cluster-scheduling.html">Kueue / gang scheduling</a></span> · Kueue 先判断一整个分布式任务是否有足够配额；gang scheduling 要求所需 Pod 成组获得资源，避免只启动一半后集体空等。Kubernetes 默认调度器随后才决定每个 Pod 放在哪台机器。</li>
+      <li id="g-22"><span class="term"><a href="../concepts/gpu-cluster-scheduling.html">Virtual Kubelet</a></span> · 在 Kubernetes 中伪装成节点的适配层。调度器仍提交普通 Pod，它再把 Pod 规格翻译成外部算力供应商的部署请求，并把状态同步回来。</li>
+      <li id="g-23"><span class="term"><a href="../concepts/large-scale-data-pipelines.html">krablet / SKIP LOCKED</a></span> · Krea 的分片 PostgreSQL 元数据系统。多个 worker 用行锁领取任务；<code>SKIP LOCKED</code> 让后来者跳过别人已经锁住的行，从而并行取走不同任务。</li>
+      <li id="g-24"><span class="term"><a href="../concepts/training-checkpointing-and-recovery.html">MTBF / MTTR</a></span> · MTBF 是两次故障之间平均能运行多久；MTTR 是故障后平均多久恢复。前者越长越好，后者越短越好。团队通过频繁模型 checkpoint 和快速启动同时改善两者。</li>
+      <li id="g-25"><span class="term"><a href="../concepts/distributed-training-parallelism.html">FSDP2 / TP / async-TP</a></span> · FSDP2 把参数、梯度和优化器状态切到多张数据并行卡；TP 把同一层矩阵乘拆开；async-TP 再尝试让通信与计算重叠。它们解决的瓶颈不同。</li>
+      <li id="g-26"><span class="term"><a href="../concepts/gpu-interconnects-and-collectives.html">NCCL / all-gather / reduce-scatter</a></span> · NCCL 是 GPU 集合通信库。all-gather 把各卡分片凑成完整数据；reduce-scatter 先汇总各卡结果，再把总结果切回各卡。NVLink、PCIe、InfiniBand 是底层道路。</li>
+      <li id="g-27"><span class="term"><a href="../concepts/gpu-kernels-and-compilation.html">GPU kernel / torch.compile</a></span> · kernel 是 GPU 一次执行的一小段程序。<code>torch.compile</code> 会融合操作、减少启动和中间搬运，并在 cuDNN、FlashAttention 等实现中选择更合适的路径。</li>
+      <li id="g-28"><span class="term"><a href="../concepts/gpu-interconnects-and-collectives.html">Ceph / WEKA / IPoIB</a></span> · Ceph 与 WEKA 是分布式存储系统；IPoIB 是让普通 IP 流量跑在 InfiniBand 上。存储流量也走 InfiniBand 时，可能和训练通信抢网络。</li>
     </ol>
   </section>
 

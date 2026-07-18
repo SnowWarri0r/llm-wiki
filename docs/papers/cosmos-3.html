@@ -450,7 +450,7 @@ w_new = w−η·dL/dw　　<span class="dim">η 是学习率</span><br>
 <div class="warn note"><span class="label">最容易夸大的地方</span>“一个模型支持很多任务”是真的；“同一个未经专项训练的 checkpoint 同时拿下所有第一”不是真的。论文表格里的星号明确标出后训练版本。</div>
 
 <h2 id="s11"><span class="num">§ 11</span>模型能训起来，靠的不是一句“分布式训练”</h2>
-<p>139 页报告里相当多篇幅在讲系统。原因是它同时处理文字、图片和数百帧视频，单条样本长度能差两个数量级；两塔注意力还有不同 mask。若数据管线、attention kernel 和 checkpoint 任一环节跟不上，算法配方根本跑不到规模。</p>
+<p>139 页报告里相当多篇幅在讲系统。原因是它同时处理文字、图片和数百帧视频，单条样本长度能差两个数量级；两塔注意力还有不同 mask。先把名词分层：<a class="jr" href="#g-21">SILA / Lance / Ray 管数据</a>，<a class="jr" href="#g-22">HSDP / Ulysses 管多卡切分</a>，<a class="jr" href="#g-26">kernel / 编译管单卡执行</a>，<a class="jr" href="#g-27">checkpoint 管崩溃恢复</a>。它们不在同一层，也不能互相替代。</p>
 
 <h3>SILA：把数十亿条素材做成可追踪的生产线</h3>
 <p><a class="jr" href="#g-21">SILA</a> 是 Scalable Infrastructure for Large-scale data processing and Annotation。它把原始媒体、embedding、caption、质量分和处理状态放进同一张有类型的 Lance 宽表，不再为每条管线维护一张 PostgreSQL 表再反复 join。</p>
@@ -473,13 +473,13 @@ w_new = w−η·dL/dw　　<span class="dim">η 是学习率</span><br>
 </figure>
 
 <h3>两种注意力规则，为什么要拆成两个 kernel</h3>
-<p>Reasoner 要因果 mask，Generator 要双向 mask。如果把两者塞进一个通用 FlexAttention mask，灵活但慢。系统把序列重排成 <code>[R₀,G₀,R₁,G₁,…]</code>，分别调用两次变长 SDPA kernel，再把结果放回原位：Nano 上比 FlexAttention 快约 22%。Hopper 用 FlashAttention-3，Blackwell 则用 NATTEN。</p>
+<p>Reasoner 要因果 mask，Generator 要双向 mask。如果把两者塞进一个通用 FlexAttention mask，灵活但慢。系统把序列重排成 <code>[R₀,G₀,R₁,G₁,…]</code>，分别调用两次变长 SDPA kernel，再把结果放回原位：Nano 上比 FlexAttention 快约 22%。Hopper 用 FlashAttention-3，Blackwell 则用 NATTEN。这里换的是 GPU 执行路径，不是换了一套模型；<a href="../concepts/gpu-kernels-and-compilation.html">kernel 概念页把这几层关系拆开了 →</a></p>
 
 <div class="grid2">
   <div class="panel"><h4>分片策略</h4><p>参数与优化器状态用<a class="jr" href="#g-22">HSDP</a>切分，长序列用 Ulysses context parallel 切 token；报告没有采用 ring attention，因为这里的交错序列和不对称 mask 会增加通信与实现复杂度。</p></div>
-  <div class="panel"><h4>少存一点中间结果</h4><p>Selective Activation Checkpointing 只保留注意力输出，报告称比完整重算多约 13% 开销；若整层 checkpoint，额外 FLOPs 约 33%。</p></div>
-  <div class="panel"><h4>编译</h4><p><code>torch.compile</code> 让训练吞吐提高约 41%。视频 tokenizer 按分辨率分块后，编译使编码延迟降低 52%；45 种图形用分布式 AOT 缓存，把启动从约 15 分钟压到 1 分钟内。</p></div>
-  <div class="panel"><h4>异步 checkpoint</h4><p>写盘与下一轮训练重叠。Nano 平均约 72 秒、Super 约 167 秒完成一次保存；对端到端训练的额外开销分别约 4% 和 9%。</p></div>
+  <div class="panel"><h4>少存一点中间结果</h4><p>Selective Activation Checkpointing 只保留注意力输出，报告称比完整重算多约 13% 开销；若整层 checkpoint，额外 FLOPs 约 33%<a class="jr" href="#g-29">29</a>。</p></div>
+  <div class="panel"><h4>编译</h4><p><code>torch.compile</code> 让训练吞吐提高约 41%。视频 tokenizer 按分辨率分块后，编译使编码延迟降低 52%；45 种图形用分布式 AOT 缓存，把启动从约 15 分钟压到 1 分钟内<a class="jr" href="#g-26">26</a>。</p></div>
+  <div class="panel"><h4>异步 checkpoint</h4><p>写盘与下一轮训练重叠。Nano 平均约 72 秒、Super 约 167 秒完成一次保存；对端到端训练的额外开销分别约 4% 和 9%<a class="jr" href="#g-27">27</a>。</p></div>
 </div>
 
 <div class="warn note"><span class="label">报告内部有一处数字冲突</span>训练章节写 Nano / Super 分别使用 1024 / 2048 张 GPU；吞吐表的 caption 却写 2048 / 4096 张。正文没有解释是否换了测量规模，因此这里只并列报告，不替作者擅自选一个“正确值”。</div>
@@ -501,8 +501,8 @@ w_new = w−η·dL/dw　　<span class="dim">η 是学习率</span><br>
 <h3>两套服务路线，各自解决什么</h3>
 <div class="ledger">
   <div class="ledger-row head"><b>路线</b><span>做了什么</span><span>适用边界</span></div>
-  <div class="ledger-row"><b>PYTORCH REFERENCE</b><span>逐 block 编译 / CUDA Graph、context parallel、CFG 双卡并行、Reasoner 条件缓存、变长 batch。</span><span>代码最接近研究实现，便于改模型和查错；不是为了把所有场景都压到最低延迟。</span></div>
-  <div class="ledger-row"><b>vLLM / TRT / OMNI</b><span>Reasoner 用 vLLM 或 TensorRT；Generator 用 vLLM-Omni，加入 Cache-DiT、Ulysses、HSDP、CPU offload、VAE patch parallel 与 FP8。</span><span>更适合稳定服务与多卡部署，但量化、缓存和并行策略都要按任务验证质量与收益。</span></div>
+  <div class="ledger-row"><b>PYTORCH REFERENCE</b><span>逐 block 编译 / CUDA Graph、context parallel、CFG 双卡并行、Reasoner 条件缓存、变长 batch<a class="jr" href="#g-28">28</a>。</span><span>代码最接近研究实现，便于改模型和查错；不是为了把所有场景都压到最低延迟。</span></div>
+  <div class="ledger-row"><b>vLLM / TRT / OMNI</b><span>Reasoner 用 vLLM 或 TensorRT；Generator 用 vLLM-Omni，加入 Cache-DiT、Ulysses、HSDP、CPU offload、VAE patch parallel 与 FP8<a class="jr" href="#g-28">28</a>。</span><span>更适合稳定服务与多卡部署，但量化、缓存和并行策略都要按任务验证质量与收益。</span></div>
 </div>
 <p>批处理收益也不是固定常数。189 帧、256p 文生视频时，报告看到 Nano 在 H100 上约 +8%、GB200 上约 +40%，Super 在 H100 上约 +55%、GB200 上约 +9%；到了 480p 只剩约 1–5%，720p 的 batch=1 则没有批处理收益。瓶颈会随分辨率、模型大小和硬件改变。</p>
 
@@ -635,11 +635,15 @@ w_new = w−η·dL/dw　　<span class="dim">η 是学习率</span><br>
     <li id="g-18"><span class="term">迁移初始化</span> · 复制旧任务学到的参数当新任务起点，不等于已经掌握新任务；新的输入、输出头与损失会继续改造全部主干参数。</li>
     <li id="g-19"><span class="term">结构化 caption</span> · 不把整段描述写成自由散文，而是把主体、空间、动作顺序、镜头和声音放进固定字段。它更容易逐项检查，也更适合稳定地转成训练条件。</li>
     <li id="g-20"><span class="term">Look-ahead packing · 前看式打包</span> · 当前样本塞不进剩余 token 容量时，先暂存它，再向后找较短样本填空；暂存样本留给下一包。目的是少 padding，同时不丢样本。</li>
-    <li id="g-21"><span class="term">SILA / Lance</span> · SILA 是 Cosmos 的大规模数据处理与标注系统；Lance 是适合媒体、向量和表格数据的列式存储格式。这里用于把素材、embedding、标注和处理状态放在同一份可追踪数据里。</li>
-    <li id="g-22"><span class="term">HSDP / Context Parallel</span> · HSDP 把模型参数、梯度和优化器状态分散到多张卡；context parallel 把同一条超长序列的 token 分开计算。一个解决“模型放不下”，另一个解决“序列放不下”。</li>
+    <li id="g-21"><span class="term"><a href="../concepts/large-scale-data-pipelines.html">SILA / Lance / Ray</a></span> · SILA 是 Cosmos 的数据处理与标注系统；Lance 是保存表格、媒体引用和向量的列式格式；Ray actor 是带状态的远程 worker。租约与心跳判断 worker 是否还活着，背压防止上游把下游塞爆，原子提交防止半成品进入训练集。</li>
+    <li id="g-22"><span class="term"><a href="../concepts/distributed-training-parallelism.html">HSDP / Ulysses Context Parallel</a></span> · HSDP 把模型参数、梯度和优化器状态分散到多张卡；Ulysses 把同一条超长序列的 token / attention head 交换到多卡计算。一个解决“模型状态放不下”，另一个解决“单条序列放不下”。</li>
     <li id="g-23"><span class="term">CFG · Classifier-Free Guidance</span> · 分别预测“有条件”和“无条件”的去噪方向，再放大两者差值，让结果更服从提示。guidance 太大可能使画面生硬或失真。</li>
     <li id="g-24"><span class="term">Cosmos-HUE</span> · 把一条视频提示拆成可直接回答 Yes / No / Unclear 的原子问题，再由两名标注员和质检复核。它比“整体打几分”更容易知道模型究竟错在物体、动作还是时序。</li>
     <li id="g-25"><span class="term">Two-weight CFG · 双权重 CFG</span> · 对无条件、文字条件、文字+控制条件做三次预测，再分别调节文字服从度和控制强度。多一个旋钮，也多一次 denoiser 前向。</li>
+    <li id="g-26"><span class="term"><a href="../concepts/gpu-kernels-and-compilation.html">GPU kernel / torch.compile / CUDA Graph / AOT</a></span> · kernel 是 GPU 一次执行的一小段程序；<code>torch.compile</code> 融合并选择实现；CUDA Graph 录下稳定的启动序列后整段重放；AOT 提前为固定形状编译，避免每台机器现场热身。</li>
+    <li id="g-27"><span class="term"><a href="../concepts/training-checkpointing-and-recovery.html">模型 checkpoint / 异步保存</a></span> · 把权重、优化器状态、训练步和数据进度写到持久存储。异步保存让下一轮训练先走，后台写盘；它降低前台暂停，但要保证各分片属于同一步。</li>
+    <li id="g-28"><span class="term"><a href="../concepts/model-serving-stack.html">PyTorch / TensorRT / vLLM-Omni 服务栈</a></span> · PyTorch 最接近研究代码；TensorRT 偏图优化与低精度部署；vLLM 管请求批处理和显存调度；vLLM-Omni 再补扩散、多模态、CFG 并行和 VAE 分块等路径。</li>
+    <li id="g-29"><span class="term"><a href="../concepts/activation-checkpointing.html">Activation checkpointing</a></span> · 前向时少存中间激活，反向经过这段时重新计算，以更多 FLOPs 换显存。它只服务当前训练步，不是崩溃后恢复用的写盘 checkpoint。</li>
   </ol>
 </div>
 

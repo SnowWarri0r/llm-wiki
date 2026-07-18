@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>大规模数据管线 · 素材、元数据和任务进度怎么不打架 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · large-scale-data-pipelines</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>大规模数据管线 · 素材、元数据和任务进度怎么不打架</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>大文件放数据层，小状态放元数据层；worker 靠租约或行锁领活，处理成功后再原子提交。</p>
+<h2>先分三层</h2>
+<ol>
+<li><strong>媒体数据层</strong>：图像、视频、音频和 checkpoint 很大，放对象存储或分布式文件系统。</li>
+<li><strong>元数据层</strong>：保存文件引用、caption、embedding、质量分、处理状态。Parquet / Lance 适合批量扫描，PostgreSQL 适合并发更新与事务。</li>
+<li><strong>执行层</strong>：Ray actor、Kubernetes worker 或普通进程领取任务，跑解码、模型标注与写回。</li>
+</ol>
+<p>Lance 是带向量能力的列式数据格式；Parquet 也是列式格式，但通常不直接承担高频任务状态更新。Ray actor 是带状态的远程 worker。背压则是下游忙时让上游减速，避免下载队列把内存撑爆。</p>
+<h2>数字例子</h2>
+<p>有 12 行待处理任务和 3 个 worker，每个一次领 4 行：</p>
+<pre><code class="language-text">worker A 锁住 1–4
+worker B 用 SKIP LOCKED 跳过 1–4，领 5–8
+worker C 再跳过前 8 行，领 9–12
+</code></pre>
+<p>三者不会重复处理。若 B 在第 7 行崩溃，数据库事务回滚或租约超时后，5–8 可以重新领取。若每处理完一条就直接宣布整批成功，7、8 就可能永远丢失；所以管线通常分段记进度，最后再原子提交整个分片。</p>
+<h2>Krea 2 和 Cosmos 3 的两种实现</h2>
+<ul>
+<li><strong>Krea 2</strong>：krablet 用 PostgreSQL 分片保存状态，<code>FOR UPDATE SKIP LOCKED</code> 把表直接当工作队列；funnel 把大量小更新合成批量写入。</li>
+<li><strong>Cosmos 3</strong>：SILA 用 Lance 宽表统一媒体元数据和 embedding；fragment lease + heartbeat 判断 worker 是否还活着，分段 checkpoint，最后 atomic commit。</li>
+</ul>
+<p>它们不是谁替代谁：PostgreSQL 强在事务与并发更新，Lance 强在大规模列扫描和向量数据。选择取决于读写模式。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/krea-2.html">krea-2</a> · krablet、PostgreSQL、Parquet、Ceph / WEKA</li>
+<li><a href="../papers/cosmos-3.html">cosmos-3</a> · SILA、Lance、Ray actor、租约与原子提交</li>
+<li><a href="../concepts/training-checkpointing-and-recovery.html">training-checkpointing-and-recovery</a> · 训练进度也遵循“先记录，再恢复”</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/cosmos-3.html"><span class="cat">paper</span>Cosmos 3 · 把“看懂、想象、行动”塞进同一个世界模型</a></li><li><a href="../papers/krea-2.html"><span class="cat">paper</span>Krea 2 · 先保住视觉多样性，再提高生成可控性</a></li><li><a href="../concepts/training-checkpointing-and-recovery.html"><span class="cat">concept</span>训练 Checkpoint 与恢复 · 大训练默认会崩，关键是少丢进度</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/large-scale-data-pipelines.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
