@@ -81,6 +81,28 @@ svg text{font-family:"IBM Plex Mono",monospace}
 .prior-box{border:3px solid var(--deep);background:rgba(40,79,118,.12)}
 .prior-panel.data .prior-box{border-color:var(--cal);background:rgba(200,94,18,.13)}
 .prior-legend{margin-top:12px;font:500 10px/1.5 "IBM Plex Mono",monospace;color:var(--muted)}
+.anchor-pipeline{display:grid;grid-template-columns:1fr 36px 1fr 36px 1fr;gap:10px;align-items:stretch;margin-bottom:22px}
+.pipe-step{padding:18px 16px;border:1px solid var(--rule);background:#fffaf0}
+.pipe-step b{display:block;margin-bottom:8px;font:700 18px "Barlow Condensed",sans-serif;color:var(--deep)}
+.pipe-step span{display:block;font-size:13px;line-height:1.65;color:var(--ink2)}
+.pipe-arrow{display:grid;place-items:center;color:var(--cal);font:700 24px "Barlow Condensed",sans-serif}
+.match-head{padding:17px 20px;background:var(--deep);color:#fff;font:500 12px/1.75 "IBM Plex Mono",monospace}
+.match-head b{color:#ff9a55}
+.anchor-match{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-top:12px}
+.anchor-option{min-height:148px;padding:14px 10px;border:1px solid var(--rule);background:#fffaf0;text-align:center;font:500 10px/1.65 "IBM Plex Mono",monospace;color:var(--muted)}
+.anchor-option .shape{height:56px;margin:0 auto 9px;display:grid;place-items:center;border:3px solid var(--deep);background:rgba(40,79,118,.10);color:var(--deep);font-weight:600}
+.anchor-option strong{display:block;color:var(--deep);font-size:12px}.anchor-option.winner{border:3px solid var(--cal);background:var(--cal-soft)}
+.anchor-option.winner .shape{border-color:var(--cal);background:rgba(200,94,18,.16)}.anchor-option.winner strong{color:var(--cal)}
+.symbol-table td:first-child{width:140px;font:600 13px "IBM Plex Mono",monospace;color:var(--deep);white-space:nowrap}
+.symbol-table td:last-child{width:170px;font:500 12px "IBM Plex Mono",monospace;color:var(--cal)}
+.decode-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.decode-card{padding:18px;background:#fffaf0;border:1px solid var(--rule)}
+.decode-card b{display:block;margin-bottom:9px;font:700 18px "Barlow Condensed",sans-serif;color:var(--deep)}
+.decode-card code{display:block;border:0;padding:0;background:none;font-size:12px;line-height:1.8;white-space:normal}
+.why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0}
+.why-card{padding:19px;border-top:4px solid var(--deep);background:var(--card);font-size:14px;line-height:1.7}
+.why-card b{display:block;margin-bottom:8px;font:700 19px "Barlow Condensed",sans-serif;color:var(--deep)}
+.why-card code{font-size:11px}
 .scale-proof{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
 .proof{padding:15px;background:var(--deep);color:#fff;font:500 11px/1.7 "IBM Plex Mono",monospace}
 .proof b{color:#ff9a55}
@@ -120,7 +142,8 @@ svg text{font-family:"IBM Plex Mono",monospace}
 @media(max-width:720px){
   .page{padding:28px 18px 80px}.mast{align-items:flex-start;flex-direction:column}.hero{padding-top:44px}
   h1{font-size:64px}.tldr{grid-template-columns:1fr}.rail-nodes{grid-template-columns:repeat(3,1fr);row-gap:14px;margin-top:0}.rail-track{display:none}.rail-node{padding-top:14px}.rail-node:before{top:4px}
-  .issue-map{grid-template-columns:1fr}.map-arrows{display:none}.prior-grid,.scale-proof,.error-grid{grid-template-columns:1fr}
+  .issue-map{grid-template-columns:1fr}.map-arrows{display:none}.prior-grid,.scale-proof,.error-grid,.decode-grid,.why-grid{grid-template-columns:1fr}
+  .anchor-pipeline{grid-template-columns:1fr}.pipe-arrow{transform:rotate(90deg)}.anchor-match{grid-template-columns:1fr 1fr}.anchor-option.winner{grid-column:1/-1}.symbol-table td:first-child,.symbol-table td:last-child{width:auto;white-space:normal}
   .metric-grid{grid-template-columns:1fr 1fr}.scale-cards{grid-template-columns:repeat(2,1fr)}.scale-card:last-child{grid-column:1/-1}
   .ab-row{grid-template-columns:112px 1fr 48px}.colophon{flex-direction:column}
 }
@@ -209,7 +232,17 @@ svg text{font-family:"IBM Plex Mono",monospace}
 <div class="note"><span class="label">先别急着看 mAP</span>Anchor 版本从 69.5 mAP 降到 69.2，却把 recall 从 81% 拉到 88%<a class="jr" href="#g-02">2</a>。多报候选让误报机会变多，但也把漏掉的物体捞回来；后续校准才有东西可修。</div>
 
 <h2><span class="num">§ 02 / Priors</span>Anchor 不是答案，合适的 anchor 才是</h2>
-<p>每个网格位置先摆 5 种宽高模板，网络不再凭空写完整框，只预测相对变化。问题随即变成：模板怎么选？手挑的 9 个 anchor 在 VOC 上平均最近 IOU<a class="jr" href="#g-03">3</a> 是 60.9；用 <a href="../concepts/dimension-clustering.html">IOU 距离聚类</a><a class="jr" href="#g-04">4</a>，5 个中心已经到 61.0，9 个能到 67.2。</p>
+<p>“Anchor 怎么选”其实问了两件事：<strong>训练前，全数据集选出哪 5 种模板；训练时，这个真值框交给 5 种模板里的哪一个</strong>。前者做一次聚类，后者对每个真值框做一次匹配。把这两步分开，后面的公式才有来处。</p>
+
+<div class="anchor-pipeline">
+  <div class="pipe-step"><b>① 收集真值宽高</b><span>读取训练集所有标注框的 (w,h)，统一单位；忽略原中心位置，把框都移到同一点。</span></div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step"><b>② 聚成 5 种形状</b><span>用 distance=1−IOU 做 k-means。收敛后的 5 个宽高中心，就是全局 anchor 模板。</span></div>
+  <div class="pipe-arrow">→</div>
+  <div class="pipe-step"><b>③ 复制到每个格子</b><span>不是全图只有 5 个框；同样 5 种形状会摆在 13×13 的每个位置，总共 845 个候选。</span></div>
+</div>
+
+<p>为什么不用普通宽高欧氏距离？它看绝对差，会让大框主导聚类；<a href="../concepts/dimension-clustering.html">1−IOU</a><a class="jr" href="#g-04">4</a> 看的是两个中心对齐后的相对重叠。手挑的 9 个 anchor 在 VOC 上平均最近 IOU<a class="jr" href="#g-03">3</a> 是 60.9；5 个 IOU 聚类中心已经到 61.0，9 个能到 67.2。论文选择 5，是覆盖能力与输出量的折中，不是“5”具有数学魔法。</p>
 
 <figure id="fig-cluster" class="reveal">
   <figcaption><span>Fig 02 · 普通距离看绝对差，IOU 距离看相对形状</span><span class="tag">K-MEANS / 1−IOU</span></figcaption>
@@ -237,48 +270,64 @@ svg text{font-family:"IBM Plex Mono",monospace}
     <div class="proof">小框 1×2 → 1.2×2.4<br>欧氏距离 <b>0.447</b><br>IOU 距离 <b>0.306</b></div>
     <div class="proof">大框 10×20 → 12×24<br>欧氏距离 <b>4.472</b><br>IOU 距离 <b>0.306</b></div>
   </div>
-  <p class="fig-note">同样都是宽高放大 20%，欧氏距离把大框罚成 10 倍；IOU 距离保持一致。完整手算见“维度聚类”概念页。</p>
+  <p class="fig-note">同样都是宽高放大 20%，欧氏距离把大框罚成 10 倍；IOU 距离保持一致。聚类输出的是 5 对宽高，不包含中心坐标。</p>
 </figure>
 
-<p>注意这张表测的是<strong>先验框未经调整时</strong>与真值的平均 IOU，不是最终检测 mAP。聚类只负责给回归一个顺手的起跑姿势，终点仍靠网络学。</p>
+<h3>第二次选：这个物体由哪一个 anchor 负责？</h3>
+<p>接下来固定一个例子，第三部分继续用它。输入 416×416，检测网格 13×13，因此 stride=32。某真值框中心为 <code>(112,152) px</code>、宽高为 <code>(96,64) px</code>；除以 32 后，中心是 <code>(3.50,4.75)</code>，宽高是 <code>3×2</code> 个网格单位。中心向下取整为 <code>(3,4)</code>，所以先锁定网格索引 (3,4)；索引从 0 开始，画面上是<strong>第 4 列、第 5 行</strong>。</p>
+
+<figure id="fig-anchor-match" class="reveal">
+  <figcaption><span>Fig 02B · 中心先选格子，形状 IOU 再选 anchor</span><span class="tag">ONE TRUTH → ONE RESPONSIBLE ANCHOR</span></figcaption>
+  <div class="match-head rev">真值：中心 <b>(3.50, 4.75)</b> · 宽高 <b>3×2</b>。负责格：<b>(cₓ,cᵧ)=(3,4)</b>。下面 5 个数值是为了手算而设的聚类结果。</div>
+  <div class="anchor-match">
+    <div class="anchor-option rev"><div class="shape" style="width:34px;height:34px">1×1</div><strong>IOU 0.167</strong>1 / (6+1−1)</div>
+    <div class="anchor-option rev d2"><div class="shape" style="width:68px;height:34px">2×1</div><strong>IOU 0.333</strong>2 / (6+2−2)</div>
+    <div class="anchor-option winner rev d3"><div class="shape" style="width:68px;height:56px">2×2</div><strong>IOU 0.667 · 胜出</strong>4 / (6+4−4)</div>
+    <div class="anchor-option rev d4"><div class="shape" style="width:90px;height:56px">4×3</div><strong>IOU 0.500</strong>6 / (6+12−6)</div>
+    <div class="anchor-option rev d5"><div class="shape" style="width:102px;height:24px">6×1</div><strong>IOU 0.333</strong>3 / (6+6−3)</div>
+  </div>
+  <p class="fig-note">比较时所有框中心临时对齐，只看宽高。2×2 的 IOU 最高，因此它负责学习这个物体；官方 Darknet 代码就是先由真值中心求格子 (i,j)，再遍历 anchor 记录 best_n。</p>
+</figure>
+
+<div class="note"><span class="label">真实值 vs 手算值</span>上图的 5 个小整数专门用于手算。官方 VOC 配置的真实 anchor 是 (1.3221,1.73145)、(3.19275,4.00944)、(5.05587,8.09892)、(9.47112,4.84053)、(11.2364,10.0071)，单位同样是网格。聚类决定“全局有哪 5 种模板”；匹配决定“当前物体由其中哪一种负责”。下节的 <code>(p_w,p_h)</code> 就是刚胜出的 <strong>(2,2)</strong>。</div>
 
 <h2><span class="num">§ 03 / Coordinates</span>中心加护栏，宽高用倍数</h2>
-<p>RPN 风格的中心偏移没有边界，随机初始化时一个位置的 anchor 能飞到整张图任何地方。YOLOv2 把中心重新绑回当前网格：<code>b_x=σ(t_x)+c_x</code>、<code>b_y=σ(t_y)+c_y</code>。宽高则用 <code>b_w=p_w·e^t_w</code> 表达相对先验的缩放。</p>
+<p>现在格子 <code>(3,4)</code> 和 anchor <code>(2,2)</code> 都有了，网络只需学习“中心在格内的小数位置”和“相对 2×2 放缩多少”。先别急着代公式，下面把每个符号逐一对上。</p>
+
+<table class="symbol-table">
+  <thead><tr><th>符号</th><th>它到底是什么</th><th>本例</th></tr></thead>
+  <tbody>
+    <tr><td>tₓ,tᵧ,t_w,t_h</td><td>网络对当前 anchor 直接输出的 4 个无约束实数；它们不是最终坐标。</td><td>0, 1.099, 0.405, 0</td></tr>
+    <tr><td>t_o</td><td>网络输出的物体性 logit；经过 sigmoid 才是 0–1 分数。</td><td>若 t_o=ln4，则分数 0.8</td></tr>
+    <tr><td>σ(z)</td><td>sigmoid：1/(1+e<sup>−z</sup>)，把任意实数压到 (0,1)。</td><td>σ(0)=0.5</td></tr>
+    <tr><td>cₓ,cᵧ</td><td>负责格左上角的整数网格坐标，由真值中心的整数部分确定。</td><td>(3,4)</td></tr>
+    <tr><td>p_w,p_h</td><td>上一节匹配胜出的 anchor 宽高，用网格单位表示。</td><td>(2,2)</td></tr>
+    <tr><td>bₓ,bᵧ</td><td>解码后的框中心，全局网格坐标。</td><td>(3.5,4.75)</td></tr>
+    <tr><td>b_w,b_h</td><td>解码后的框宽高，仍是网格单位。</td><td>(3,2)</td></tr>
+  </tbody>
+</table>
+
+<div class="formula-strip"><b>完整解码：</b> bₓ=σ(tₓ)+cₓ　 bᵧ=σ(tᵧ)+cᵧ　 b_w=p_w·e<sup>t_w</sup>　 b_h=p_h·e<sup>t_h</sup>　 objectness=σ(t_o)</div>
 
 <figure id="fig-box" class="reveal">
-  <figcaption><span>Fig 03 · 一个格子里的完整框解码</span><span class="tag">BOUND THE CENTER</span></figcaption>
-  <svg viewBox="0 0 800 390" role="img" aria-label="YOLOv2 边界框坐标解码">
-    <defs><marker id="arr-box" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#c85e12"/></marker></defs>
-    <g class="rev">
-      <rect x="44" y="48" width="300" height="300" fill="#eef4f7" stroke="#183756" stroke-width="2"/>
-      <g stroke="#9db4c5" stroke-width="1">
-        <path d="M104 48V348M164 48V348M224 48V348M284 48V348"/>
-        <path d="M44 108H344M44 168H344M44 228H344M44 288H344"/>
-      </g>
-      <rect x="224" y="168" width="60" height="60" fill="#f2d2b7" stroke="#c85e12" stroke-width="3"/>
-      <circle cx="254" cy="198" r="7" fill="#c85e12"/>
-      <text x="194" y="372" text-anchor="middle" font-size="12" fill="#183756">cₓ=3 · 当前格 [3,4]</text>
-    </g>
-    <g class="rev d2">
-      <rect x="176" y="128" width="156" height="140" rx="2" fill="none" stroke="#183756" stroke-width="3" stroke-dasharray="8 5"/>
-      <text x="254" y="116" text-anchor="middle" font-size="12" font-weight="600" fill="#183756">anchor p_w=2</text>
-    </g>
-    <g class="rev d3">
-      <path d="M360 196H430" stroke="#c85e12" stroke-width="3" marker-end="url(#arr-box)"/>
-      <rect x="454" y="70" width="300" height="246" fill="#183756"/>
-      <text x="478" y="108" font-size="13" font-weight="600" fill="#fff">CENTER</text>
-      <text x="478" y="138" font-size="12" fill="#c8d8e5">tₓ = 0 → σ(tₓ) = 0.5</text>
-      <text x="478" y="164" font-size="14" font-weight="600" fill="#ff9a55">bₓ = 3 + 0.5 = 3.5</text>
-      <line x1="478" y1="184" x2="730" y2="184" stroke="#6d89a0"/>
-      <text x="478" y="216" font-size="13" font-weight="600" fill="#fff">WIDTH</text>
-      <text x="478" y="246" font-size="12" fill="#c8d8e5">t_w = ln(1.5) ≈ 0.405</text>
-      <text x="478" y="272" font-size="14" font-weight="600" fill="#ff9a55">b_w = 2 × 1.5 = 3</text>
-      <text x="478" y="300" font-size="11" fill="#c8d8e5">反算 ln(3/2) = 0.405 ✓</text>
-    </g>
-  </svg>
+  <figcaption><span>Fig 03 · 同一个真值框，从网络目标解码回像素</span><span class="tag">GRID UNITS → PIXELS</span></figcaption>
+  <div class="decode-grid">
+    <div class="decode-card rev"><b>横向中心 x</b><code>目标小数 = 3.50−3 = 0.50<br>tₓ = logit(0.50) = 0<br>bₓ = σ(0)+3 = 3.50</code></div>
+    <div class="decode-card rev d2"><b>纵向中心 y</b><code>目标小数 = 4.75−4 = 0.75<br>tᵧ = logit(0.75) = ln3 ≈ 1.099<br>bᵧ = σ(1.099)+4 = 4.75</code></div>
+    <div class="decode-card rev d3"><b>宽度 w</b><code>目标倍率 = 3/2 = 1.5<br>t_w = ln(1.5) ≈ 0.405<br>b_w = 2·e<sup>0.405</sup> = 2·1.5 = 3</code></div>
+    <div class="decode-card rev d4"><b>高度 h</b><code>目标倍率 = 2/2 = 1<br>t_h = ln(1) = 0<br>b_h = 2·e<sup>0</sup> = 2</code></div>
+  </div>
+  <div class="match-head rev d5" style="margin-top:12px">乘回 stride=32：中心 <b>(3.5,4.75)×32=(112,152) px</b>；宽高 <b>(3,2)×32=(96,64) px</b>。与开头真值完全一致 ✓</div>
 </figure>
 
-<p>格子负责中心，anchor 负责初始形状，网络只报格内位置与相对倍率。论文把“新骨干 + 维度先验 + 直接位置预测”合成一个消融台阶：69.6 → 74.4。这个 4.8 不能全算给某一个组件。</p>
+<h3>为什么中心用 sigmoid，宽高却用指数？</h3>
+<div class="why-grid">
+  <div class="why-card"><b>中心：限制在本格</b><code>σ(t)</code> 永远在 0 与 1 之间；加上整数格坐标后，中心只能在负责格内。网络只学一个局部小数，不会在初始化时让 anchor 满图乱飞。</div>
+  <div class="why-card"><b>尺寸：表达相对倍率</b><code>exp(t)</code> 永远为正。<code>t=0</code> 保持 anchor，<code>t=ln2</code> 放大两倍，<code>t=−ln2</code> 缩小一半；放大与缩小在 log 空间互为正负。</div>
+  <div class="why-card"><b>物体性：变成分数</b><code>t_o</code> 是无界 logit，<code>σ(t_o)</code> 才落在 0–1。论文定义为 Pr(object)×IOU；正样本的 Pr(object)=1，所以目标是当前 IOU。官方 VOC 配置也设 <code>rescore=1</code>。</div>
+</div>
+
+<p>所以完整分工是：<strong>真值中心选格子，形状 IOU 选 anchor，sigmoid 解码格内位置，指数解码相对尺寸，stride 把网格单位换回像素</strong>。论文把“新骨干 + 维度先验 + 直接位置预测”合成一个消融台阶：69.6 → 74.4，这 4.8 不能全算给某一个组件。</p>
 
 <h2><span class="num">§ 04 / Detail &amp; Scale</span>细节搬回来，输入尺寸现场换挡</h2>
 <h3>Passthrough：空间折进通道</h3>
@@ -454,7 +503,7 @@ svg text{font-family:"IBM Plex Mono",monospace}
 </div>
 
 <footer class="colophon">
-  <span>Source / Redmon &amp; Farhadi · YOLO9000</span>
+  <span>Source / <a href="https://arxiv.org/abs/1612.08242">论文</a> · <a href="https://github.com/pjreddie/darknet/blob/master/src/region_layer.c">官方 Darknet 匹配实现</a></span>
   <span>Figures / 重画 · 数字取论文 Tables 1–7</span>
 </footer>
 </div>
