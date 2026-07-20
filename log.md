@@ -986,3 +986,10 @@ skill 更新:
 
 - Fig 02 改为纯文本生成全路径：prompt 文本管线、两块随机 latent、一次 48-block 双流前向、外层 solver 循环、两套解码器与最终同步音视频；明确训练时才走 VAE encoder。
 - §11 / Fig 10 改成 `0.5MP base → latent upscale → T/H/W 重叠分块精修 → latent 融合 → VAE decode` 四步，补 2.07MP÷0.5MP≈4.1× 的显存直觉、10/14 融合成 11 的手算，以及精修阶段音频执行路径未公开的边界。
+
+## [2026-07-20] ingest | HDR · Hierarchical Denoising for Multi-Step Visual Reasoning
+
+- 完整覆盖双向扩散/流式 AR 两难、Wan2.2-5B 总览、1/2/4/8/16/32 六层树、layer-wise flow matching、SHAP 可见集合与 flatten mask、共享 KV cache、O(KN²)→O(KavgN)、18k 训练配方、370 条六任务评测、主结果、层数/步数/数据/schedule 消融、实体机器人与 HDR-WAM、失败案例和证据边界。
+- bespoke 页面 12 章 12 图，用 1→2→4→8 小树、L4-6 query、v⁰=2/ε=−1/t=.25、延迟账本贯穿；18 条术语可点击，桌面和手机均按独立布局设计。
+- 新增 3 个 concept：hierarchical-latent-denoising、sparse-hierarchical-attention、autoregressive-vs-bidirectional-video-diffusion；复用 conditional-flow-matching 与 kv-cache。
+- 公式审计发现附录 `ceil(50·(Ñ/32)^.66)` 实算 `[6,9,13,21,32,50]`，论文报告 `[5,8,13,20,32,50]` 实际对应 round；另保留代码未公开、干净层级 token 构造缺失、16.19s prefill 不应被 0.70s streaming latency 遮蔽等复现边界。

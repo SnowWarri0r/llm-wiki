@@ -1,8 +1,8 @@
 ---
 name: conditional-flow-matching
 type: concept
-sources: [flow-matching]
-updated: 2026-05-22
+sources: [flow-matching, hierarchical-denoising-visual-reasoning]
+updated: 2026-07-20
 ---
 
 # Conditional Flow Matching · 条件流匹配

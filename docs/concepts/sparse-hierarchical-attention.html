@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>SHAP · 稀疏层级注意力 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · sparse-hierarchical-attention</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>SHAP · 稀疏层级注意力</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>树中每个节点只读同层前一个节点、自己的父节点、父节点左右邻居和层首参考帧，用固定数量的连接传递长程规划。</p>
+<h2>连接规则</h2>
+<p>对第 <code>ℓ</code> 层第 <code>i</code> 个节点：</p>
+<ul>
+<li>同层前一个 <code>(ℓ,i-1)</code>：保持局部时间连续。</li>
+<li>父节点 <code>π(ℓ,i)</code>：知道自己正在细化哪段粗计划。</li>
+<li>左右相邻父节点：知道这段前后边界。</li>
+<li>每层第一个节点读取干净第一帧；之后通过同层链继续传播。</li>
+</ul>
+<p>父层必须先生成，所以这些连接都指向已经存在的节点，不会看到未来。</p>
+<h2>为什么是线性复杂度</h2>
+<p>如果最终有 <code>N</code> 个细节点，完整二叉树约有 <code>2N-1</code> 个节点。每个节点只读固定的 4–5 个位置，因此注意力条目数量与节点数成正比，为 <code>O(N)</code>；全注意力或越来越长的完整前缀是 <code>O(N²)</code>。</p>
+<p>KV cache 负责保存已经生成节点的 K/V，SHAP 决定当前 query 从 cache 里取哪几项。两者不是同一个概念：cache 避免重算，稀疏 mask 减少读取数量。</p>
+<h2>容易误读</h2>
+<p>SHAP 不是让最终第 100 帧直接看所有前 99 帧。它靠“父层总结长时间段 + 同层一步接一步”间接传信息；代价是摘要若丢了精确状态，细层可能出现墙体消失、物体变色等漂移。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/hierarchical-denoising-visual-reasoning.html">hierarchical-denoising-visual-reasoning</a> · 论文与公式</li>
+<li><a href="../concepts/hierarchical-latent-denoising.html">hierarchical-latent-denoising</a> · 这棵树为何存在</li>
+<li><a href="../concepts/kv-cache.html">kv-cache</a> · 已生成 K/V 的复用</li>
+<li><a href="../concepts/self-attention.html">self-attention</a> · 注意力基础</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/hierarchical-denoising-visual-reasoning.html"><span class="cat">paper</span>HDR · 先规划整段轨迹，再逐层生成每一步</a></li><li><a href="../concepts/autoregressive-vs-bidirectional-video-diffusion.html"><span class="cat">concept</span>流式 AR vs 双向视频扩散</a></li><li><a href="../concepts/hierarchical-latent-denoising.html"><span class="cat">concept</span>Hierarchical Latent Denoising · 层级 latent 去噪</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/sparse-hierarchical-attention.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
