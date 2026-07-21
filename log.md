@@ -993,3 +993,9 @@ skill 更新:
 - bespoke 页面 12 章 12 图，用 1→2→4→8 小树、L4-6 query、v⁰=2/ε=−1/t=.25、延迟账本贯穿；18 条术语可点击，桌面和手机均按独立布局设计。
 - 新增 3 个 concept：hierarchical-latent-denoising、sparse-hierarchical-attention、autoregressive-vs-bidirectional-video-diffusion；复用 conditional-flow-matching 与 kv-cache。
 - 公式审计发现附录 `ceil(50·(Ñ/32)^.66)` 实算 `[6,9,13,21,32,50]`，论文报告 `[5,8,13,20,32,50]` 实际对应 round；另保留代码未公开、干净层级 token 构造缺失、16.19s prefill 不应被 0.70s streaming latency 遮蔽等复现边界。
+
+## [2026-07-21] expand | PPO → GRPO → Dr.GRPO / DAPO → GSPO 算法谱系
+
+- 新增统一 topic，用同一道题四条回答和同一组 token 概率贯穿 PPO critic advantage、GRPO 组相对 advantage、Dr.GRPO 去偏、DAPO 四项长 CoT 配方与 GSPO 序列比率；所有公式逐项定义并说明每个分母、clip 和聚合操作为什么存在。
+- 重写 PPO / GRPO / GSPO，纠正“GRPO 显存近乎减半”“token 级比率因只采一次所以无效”“所有主流模型都用 PPO”等过度概括；补 reward model、critic、reference policy 的职责边界。
+- 新增 Dr.GRPO 与 DAPO concept，明确二者都处理逐回答长度归一化但缩放方式不同；记录 DAPO 的 0.2/0.28 非对称 clip、动态有效 batch 和截断软惩罚的适用边界。

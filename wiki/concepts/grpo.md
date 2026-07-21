@@ -2,142 +2,76 @@
 name: grpo
 type: concept
 sources: [fish-speech-s2-pro, ppo, krea-2, diffusionnft]
-updated: 2026-05-31
+updated: 2026-07-21
 ---
 
 # GRPO · Group Relative Policy Optimization
 
 ## 一句话
-PPO 的简化版：不用 value network，用**同 prompt 一组采样**之间的相对 reward 当 advantage。
+GRPO 保留 PPO 的“新旧概率比率 + clip”，但不再训练 critic；它对同一道题采样一组回答，用各回答相对组均值的得分作为 advantage。
 
-## 直觉
-PPO 训 LLM 的痛点：要养一个 value network（critic）单独学每个状态的价值，跟 policy 一样大，训练成本翻倍且不稳定。
+## 它真正替换的是哪一块
 
-GRPO 砍了 critic，做法是：
-- 对同一个 prompt 一次性采样 **G 条响应**
-- 算每条的 reward
-- 用组内 mean / std 标准化 reward → 当 advantage
+PPO 通常用 critic `V(s)` 估计“写到这里，最终大概得多少分”，再从实际回报中减掉这个预期。GRPO 把这位过程预测员换成同题组内统计：
 
-类比：考试不需要"绝对分数模型"，只要看你在班里的排名相对位置就够了。
-
-## 怎么做的
-```
-for prompt in batch:
-    sample G responses {r_1, ..., r_G}
-    rewards = [R(r_i) for r_i in responses]
-    advantages = (rewards - mean(rewards)) / std(rewards)
-    loss = clipped_pg_loss(advantages) + KL_penalty(policy || ref_policy)
+```text
+PPO:  A_t ≈ return_t − V(s_t)          # V 是要训练的 critic
+GRPO: A_i = (R_i − mean(R_1...R_G)) / std(R_1...R_G)
 ```
 
-- **无 critic** → 只训 policy，省内存省计算
-- **组相对** → 自动消除 reward scale 漂移
-- **KL 约束** → 限制 policy 偏离参考模型太远，防止跑偏
+- `G`：同一个 prompt 采样的回答数。
+- `R_i`：第 `i` 条完整回答的 reward。
+- `mean` / `std`：这组 reward 的均值和标准差。
+- `A_i`：第 `i` 条回答的组相对 advantage。结果奖励场景下，这条回答的所有 token 共用它。
 
-来源：DeepSeek-Math 的 GRPO 论文（也用在 DeepSeek-R1 训练里）。
+固定例子：四条回答 reward 为 `[1,1,0,0]`，均值 `.5`、总体标准差 `.5`，所以 `A=[1,1,−1,−1]`。前两条的 token 概率整体往上推，后两条往下压。若四条全是 `1` 或全是 `0`，中心化后全为 `0`，这组没有策略梯度。
 
-## RM ≠ critic · GRPO 到底砍了哪个
+## reward model 和 critic 不是一回事
 
-最常见的误解：以为 GRPO 跟 PPO 的区别在 reward model。**不是。** RL 训练里有两个会"给分"的角色，长得像活儿完全不同，GRPO 砍的是 critic，不是 RM：
+| 角色 | 什么时候打分 | 回答什么问题 | GRPO 是否必然去掉 |
+|---|---|---|---|
+| reward model / 规则验证器 | 回答完成后 | “这份成品好不好？” | 否 |
+| critic / value model | 回答生成途中 | “从当前前缀继续，预计最后得几分？” | **是** |
 
-| | reward model (RM) | critic / value 网络 V(s) |
-|---|---|---|
-| 干啥 | 看**整篇答案**给总分 | 写到**一半**时预测"最后大概拿多少" |
-| 类比 | 终评委 / 阅卷老师 | 过程预测员 / 庄家盘口 |
-| 用来 | 提供 reward 信号 | 当 baseline 算 advantage |
-| 多大 | 一个独立模型 | **跟 policy 一样大**，且单独训、不稳 |
+数学和代码有可验证答案时，reward 可直接来自规则，所以常常既没有 reward model，也没有 critic；主观审美、帮助性等任务仍可能需要 reward model。是否需要 reward model 由任务的打分方式决定，不是由 GRPO 这个名字决定。
 
-PPO 算 advantage 靠 `A = reward − V(s)`，所以**必须养 critic**。GRPO 改成"同一题采 G 个回答，拿这组的 mean/std 当 baseline" —— 省掉那个跟 policy 同样大的网络，这才是它在 LLM 上火的实际原因（显存近乎减半），代价是采样开销上去。
+## 完整目标没有消失
 
-<figure style="margin:32px 0; padding:24px; background:#f7f1de; border:1px solid #bfb398; border-radius:4px;">
-<svg viewBox="0 0 900 465" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">
+原始 outcome GRPO 的策略项仍是逐 token 的 PPO-Clip：
 
-  <!-- 共享顶注: reward 来源不是区别 -->
-  <rect x="140" y="10" width="620" height="42" rx="5" fill="#faf4e1" stroke="#bfb398" stroke-width="0.8"/>
-  <text x="450" y="29" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a3128">reward 从哪来 · RM 学人类偏好 / reasoning 场景规则判对错</text>
-  <text x="450" y="44" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#4a6b3a">PPO 和 GRPO 都一样 —— 不是区别</text>
+```text
+ρ_i,t = π_θ(y_i,t | x,y_i,<t) / π_old(y_i,t | x,y_i,<t)
 
-  <line x1="450" y1="66" x2="450" y2="406" stroke="#d8cfb4" stroke-width="1" stroke-dasharray="4 4"/>
+L_i = (1/|y_i|) Σ_t min(
+        ρ_i,t A_i,
+        clip(ρ_i,t,1−ε,1+ε) A_i
+      )
+```
 
-  <!-- ===== PPO 半边 ===== -->
-  <text x="235" y="86" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="18" font-weight="700" fill="#9b2c2c">PPO</text>
+`ρ_i,t` 表示新模型相对采样时的旧模型，把这个 token 的概率改了多少；`ε` 限制一次更新的有效幅度；`|y_i|` 是回答 token 数。DeepSeekMath 原始版本还直接在目标里加入相对 reference policy 的逐 token KL 惩罚。
 
-  <rect x="170" y="100" width="130" height="40" rx="5" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.5"/>
-  <text x="235" y="125" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="12" fill="#3a3128">policy π</text>
-  <path d="M 235 140 L 235 165" fill="none" stroke="#3a3128" stroke-width="1.4" marker-end="url(#ga)"/>
+所以 GRPO 不是“只按 reward 做监督学习”，也不是把 PPO 整套推翻：**它主要替换 advantage 的估计方式，并保留 policy ratio、clip 和可选 KL 约束。**
 
-  <rect x="115" y="167" width="110" height="34" rx="4" fill="#ffffff" stroke="#bfb398" stroke-width="0.8"/>
-  <text x="170" y="189" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a3128">1 个回答</text>
-  <path d="M 225 184 L 252 184" fill="none" stroke="#3a3128" stroke-width="1.2" marker-end="url(#ga)"/>
-  <rect x="254" y="169" width="92" height="30" rx="4" fill="#f0e0a8" stroke="#b8841c" stroke-width="0.8"/>
-  <text x="300" y="189" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a3128">reward r</text>
+## 为什么省资源，但不是“白省”
 
-  <path d="M 235 201 L 235 228" fill="none" stroke="#3a3128" stroke-width="1.4" marker-end="url(#ga)"/>
+省掉与 policy 规模相近的 critic，可减少模型参数、优化器状态和前后向计算。但代价是每个 prompt 要采 `G` 条回答；生成很长时，rollout 本身可能成为主要成本。实际节省多少取决于并行、模型共享、序列长度和训练框架，不能笼统写成“显存减半”。
 
-  <!-- critic 高亮: 这就是 GRPO 砍的 -->
-  <rect x="115" y="230" width="240" height="64" rx="5" fill="#ffffff" stroke="#9b2c2c" stroke-width="2.2"/>
-  <text x="235" y="254" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="12" font-weight="700" fill="#9b2c2c">critic V(s)</text>
-  <text x="235" y="272" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#7a6f5d">独立网络, ≈ policy 大小, 单独训不稳</text>
-  <text x="235" y="287" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#9b2c2c">← GRPO 砍的就是它</text>
+## 原始 GRPO 的两个后续问题
 
-  <rect x="115" y="312" width="240" height="38" rx="4" fill="#f7f1de" stroke="#bfb398" stroke-width="0.8"/>
-  <text x="235" y="336" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="13" fill="#3a3128">A = r − <tspan fill="#9b2c2c" font-weight="700">V(s)</tspan></text>
+1. 除以每题自己的 `std` 会改变题目权重；每条回答先除以自身长度会改变长短回答的 token 权重。[[dr-grpo]] 针对这两点去偏。
+2. 全对 / 全错组无梯度、长 CoT 截断噪声和探索不足仍需系统处理。[[dapo]] 给出一套组合方案。
+3. reward 是序列级，却逐 token 计算 ratio 和 clip，训练 / 推理数值差异会让局部比率波动。[[gspo]] 把它提升到序列级。
 
-  <text x="235" y="374" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" fill="#3a3128">要养一个跟 policy 同样大的 critic</text>
+## 在这个 wiki 里怎么用
 
-  <!-- ===== GRPO 半边 ===== -->
-  <text x="670" y="86" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="18" font-weight="700" fill="#b8841c">GRPO</text>
+- [[fish-speech-s2-pro]]：多维 reward 做 TTS 对齐。
+- [[krea-2]]：文生图用多奖励组相对 RL。
+- [[diffusionnft]]：解释扩散模型为什么难直接照搬语言模型的似然比目标。
 
-  <rect x="605" y="100" width="130" height="40" rx="5" fill="#d8e6ce" stroke="#4a6b3a" stroke-width="1.5"/>
-  <text x="670" y="125" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="12" fill="#3a3128">policy π</text>
-  <path d="M 670 140 L 670 165" fill="none" stroke="#3a3128" stroke-width="1.4" marker-end="url(#ga)"/>
+## 来源与链接
 
-  <rect x="550" y="167" width="120" height="34" rx="4" fill="#ffffff" stroke="#bfb398" stroke-width="0.8"/>
-  <text x="610" y="189" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a3128">同一题 G 个回答</text>
-  <path d="M 670 184 L 697 184" fill="none" stroke="#3a3128" stroke-width="1.2" marker-end="url(#ga)"/>
-  <rect x="699" y="169" width="96" height="30" rx="4" fill="#f0e0a8" stroke="#b8841c" stroke-width="0.8"/>
-  <text x="747" y="189" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#3a3128">r₁ r₂ … r_G</text>
-
-  <path d="M 670 201 L 670 228" fill="none" stroke="#3a3128" stroke-width="1.4" marker-end="url(#ga)"/>
-
-  <!-- critic 位置留空 + 组统计 -->
-  <rect x="550" y="230" width="240" height="64" rx="5" fill="#f0e0a8" stroke="#b8841c" stroke-width="1.5"/>
-  <text x="670" y="254" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="12" font-weight="700" fill="#b8841c">组内 mean / std 当 baseline</text>
-  <text x="670" y="272" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#7a6f5d">本该放 critic 的位置 → 空着</text>
-  <text x="670" y="287" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#4a6b3a">✓ 不要网络, 纯统计</text>
-
-  <rect x="550" y="312" width="240" height="38" rx="4" fill="#f7f1de" stroke="#bfb398" stroke-width="0.8"/>
-  <text x="670" y="336" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="12" fill="#3a3128">A = (rᵢ − <tspan fill="#b8841c" font-weight="700">组均值</tspan>) / 组标准差</text>
-
-  <text x="670" y="374" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" fill="#3a3128">用 G 个回答互相比, 省掉 critic</text>
-
-  <!-- 底部 punchline -->
-  <rect x="90" y="398" width="720" height="56" rx="5" fill="#efd6c8" stroke="#9b2c2c" stroke-width="0.8"/>
-  <text x="450" y="421" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#181410">真正的区别 = 要不要 critic（那个跟 policy 同样大的过程预测员）</text>
-  <text x="450" y="442" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10.5" fill="#3a3128">reward model 是上游, 两边共用, 跟选 PPO 还是 GRPO 无关</text>
-
-  <defs>
-    <marker id="ga" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3a3128"/>
-    </marker>
-  </defs>
-</svg>
-</figure>
-
-**你以为**：SFT → reward model → PPO 三步里 RM 那么显眼，GRPO 肯定在 RM 这儿不一样。
-**其实**：RM 是 RLHF 这个场景的上游，PPO / GRPO 共用；GRPO 动的是 advantage 怎么算 —— 把"critic 估 baseline"换成"组内互比当 baseline"。而且在 reasoning 场景（数学/代码答案能自动判对错），GRPO 经常连 RM 都不训，reward 直接用规则（对=1 错=0）。
-
-所以 GRPO 严格说是"**省了 critic 的 PPO 变体**"，loss 还是 PPO 那个 `clip(r,1±ε)·A` + KL，几乎一字没改 —— 你觉得"区别不大"在 loss 层面没说错，只是真正省的那块在 critic，不在 RM。
-
-## fish-speech S2 怎么用
-- 不只一个 reward —— **多维 reward**：语义准确（ASR WER）+ 指令遵循（情感 tag 命中）+ 音色相似（SIM）+ 声学偏好（人评 / proxy 模型）
-- **Reward model = 数据清洗 / 标注用的同一套模型** → 解决传统 RLHF 的 distribution mismatch：reward model 训在另一份数据上 vs policy 训在 pre-train 数据上，那条 gap 消失
-
-## 跟 TML 的关系
-TML 也提到 RL 训练 → bitwise determinism 是为它服务的。[[bitwise-determinism]] 缺失会让 GRPO / PPO 这类 RL loop 不稳定甚至发散，因为训练时算梯度的 kernel 和推理时采样的 kernel 数值不一致 → 学到的 policy 偏离 sampler 的真实行为分布。
-
-## 链接
-- [[rl-for-llm-people]] · 看不懂 RL 术语先读这个打底
-- [[fish-speech-s2-pro]] · 这里 RL 对齐
-- [[bitwise-determinism]] · RL 训练稳定性前提
-- [[dual-ar]] · GRPO 在 Dual-AR 之上做 post-training
-- [[gspo]] · 后继：把 token 级重要性比率提到序列级，更稳（Qwen3 用）
+- [DeepSeekMath：GRPO 原论文](https://arxiv.org/abs/2402.03300)
+- [[ppo-grpo-gspo]] · PPO、GRPO、Dr.GRPO、DAPO、GSPO 的统一公式与手算
+- [[ppo]] · ratio 和 clip 的来源
+- [[advantage-function]] · baseline 为什么能降方差
+- [[rl-for-llm-people]] · RL 基础术语
