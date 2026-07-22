@@ -39,7 +39,7 @@
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>一个小 MLP，把<strong>冻结的外部编码器</strong>吐出的语音/图像特征，投影成 LLM 听得懂的 hidden 向量，塞进序列里的占位符位置 —— 让一个纯文本 LLM 不改主干就能"看图听音"。</p>
+<p>一个小 MLP，把外部编码器吐出的语音或图像特征，投影成 LLM 能接收的 hidden 向量，再放进文字序列。编码器和 LLM 可以始终冻结，也可以只在对齐初期冻结、后续一起训练；这取决于训练方案。</p>
 <h2>直觉 · 给 LLM 配翻译官，别重训它</h2>
 <p>要让 minimind-o 的语言主干处理图像和语音，最省的办法不是从头训一个多模态大模型，而是：</p>
 <ol>
@@ -55,7 +55,13 @@
 文本 ───────────────────────────────────────────────────────────────────▶ 直接进主干
 </code></pre>
 <p>最后三种模态的 token <strong>落到同一条序列</strong>里，一起做 self-attention（这就是 early fusion 的思路，见 <a href="../concepts/early-fusion.html">early-fusion</a>）。占位符位置原本是空槽，projector 把对应模态的向量灌进去。</p>
-<p>训练时编码器<strong>始终冻结</strong>，只更新 projector（和按阶段更新主干）。所以视觉对齐阶段可以只开 <code>vision_proj</code> 模式——只训视觉 projector，避免图像数据把已经学好的语言/语音能力冲掉。</p>
+<p>在 minimind-o 的方案里，编码器始终冻结，只更新 projector 和按阶段开放的主干。Qwen3-VL 则分两步：S0 只训练 merger，视觉编码器与 LLM 都冻结；S1 起三者全部联合训练。projector 是“接口层”，不等于它两侧必须永远冻结。</p>
+<h2>Qwen3-VL 的 merger 还顺便减少 token</h2>
+<p>假设视觉编码器输出 <code>12×16=192</code> 个特征。Qwen3-VL 每次把相邻 <code>2×2=4</code> 个特征拼起来，再经两层 MLP 映射到 LLM hidden size：</p>
+<pre><code class="language-text">12×16 个视觉特征 → 6×8 = 48 个视觉 token
+192 → 48，token 数减少 75%
+</code></pre>
+<p>所以它同时做两件事：把视觉向量翻译到语言空间，并降低后续 LLM 的上下文长度。见 <a href="../papers/qwen3-vl-report.html">qwen3-vl-report</a>。</p>
 <h2>为什么 projector 能这么小还管用</h2>
 <p>因为重活都被冻结编码器干完了：SigLIP2 已经把图压成富语义的 patch 特征，projector 只需做"<strong>换坐标系</strong>"——把一个语义空间线性地搬到 LLM 的语义空间。minimind-o 里 vision projector 才 1.18M、audio projector 0.99M，相比冻结的 SigLIP2(94M)/SenseVoice(234M) 几乎不占参数。这是"小投影层撬动大冻结编码器"的典型省法。</p>
 <h2>代码出处</h2>
@@ -76,7 +82,7 @@
 
 <div class="concept-backlinks">
   <span class="label">引用此页的内容 · 4 处</span>
-  <ul><li><a href="../papers/minimind-o.html"><span class="cat">paper</span>MiniMind-O · 0.1B 端到端 Omni</a></li><li><a href="../papers/qwen3-asr.html"><span class="cat">paper</span>Qwen3-ASR · 给 LLM 接个耳朵</a></li><li><a href="../papers/qwen3-vl-report.html"><span class="cat">paper</span>Qwen3-VL · 视觉语言模型怎么看图</a></li><li><a href="../concepts/thinker-talker.html"><span class="cat">concept</span>Thinker–Talker · 想的和说的分两条路</a></li></ul>
+  <ul><li><a href="../papers/minimind-o.html"><span class="cat">paper</span>MiniMind-O · 0.1B 端到端 Omni</a></li><li><a href="../papers/qwen3-asr.html"><span class="cat">paper</span>Qwen3-ASR · 给 LLM 接个耳朵</a></li><li><a href="../papers/qwen3-vl-report.html"><span class="cat">paper</span>Qwen3-VL · 一张图片怎样进入语言模型</a></li><li><a href="../concepts/thinker-talker.html"><span class="cat">concept</span>Thinker–Talker · 想的和说的分两条路</a></li></ul>
 </div>
 
 <div class="colophon">

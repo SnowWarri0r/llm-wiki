@@ -1,82 +1,38 @@
 <!doctype html>
+<!-- bespoke -->
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Qwen3-VL · 视觉语言模型怎么看图</title>
+<title>Qwen3-VL · 一张图片怎样进入语言模型</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
 <style>
-:root {
-  --paper: #f0e9d6; --paper-2: #e8e0c8; --paper-3: #faf4e1; --paper-card: #f7f1de;
-  --ink: #181410; --ink-2: #3a3128; --muted: #7a6f5d; --rule: #bfb398;
-  --brick: #9b2c2c; --brick-soft: #efd6c8;
-  --ochre: #b8841c; --ochre-soft: #f0e0a8;
-  --moss: #4a6b3a; --moss-soft: #d8e6ce;
-  --deep: #1f3a5f; --deep-soft: #c8d4e2;
-  --teal: #1a6a64; --teal-soft: #cce5e1;
-  --umber: #6b4a2e; --umber-soft: #e3d7c7;
-  --accent: var(--umber); --accent-soft: var(--umber-soft);
-}
-* { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
-body { font-family: 'Newsreader', 'Noto Serif SC', Georgia, serif; font-size: 18px; line-height: 1.75; -webkit-font-smoothing: antialiased; }
-body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>"); mix-blend-mode: multiply; opacity: 0.5; }
-.page { max-width: 920px; margin: 0 auto; padding: 56px 32px 120px; }
-.masthead { border-top: 4px double var(--ink); border-bottom: 1px solid var(--rule); padding: 14px 0; display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink-2); margin-bottom: 48px; }
-.masthead .l { font-weight: 700; } .masthead .r { color: var(--muted); }
-.hero { margin-bottom: 64px; }
-.hero .issue { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 12px; }
-.hero .issue::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
-h1.title { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: clamp(40px, 6.2vw, 72px); line-height: 0.98; letter-spacing: -0.03em; margin: 0 0 12px; }
-h1.title .em { font-style: italic; font-variation-settings: "opsz" 144, "SOFT" 100, "WONK" 1; color: var(--accent); }
-.byline { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--muted); margin: 18px 0 6px; }
-.hero .dek { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 36; font-style: italic; font-weight: 300; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.4; color: var(--ink-2); max-width: 720px; margin: 16px 0; }
-.tldr { background: var(--paper-card); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 22px 26px; margin: 32px 0; border-radius: 0 4px 4px 0; }
-.tldr .label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 8px; }
-h2 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-variation-settings: "opsz" 96, "SOFT" 30, "WONK" 1; font-weight: 700; font-size: 36px; letter-spacing: -0.02em; margin: 72px 0 20px; display: flex; align-items: baseline; gap: 18px; }
-h2 .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; min-width: 56px; }
-h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weight: 600; margin: 36px 0 12px; }
-p { margin: 12px 0; } strong { font-weight: 700; }
-ul { margin: 12px 0; padding-left: 24px; } li { margin: 6px 0; }
-code { font-family: 'JetBrains Mono', monospace; font-size: 0.86em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
-pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
-a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
-.jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--umber-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--umber); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
-.jr:hover { background: var(--umber); color: var(--paper); }
-figure { margin: 40px 0; padding: 28px; background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; }
-figcaption { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px dashed var(--rule); display: flex; justify-content: space-between; align-items: center; }
-figcaption .fnum { color: var(--accent); font-weight: 700; }
-.note { background: var(--paper-3); border-left: 3px solid var(--accent); padding: 14px 18px; margin: 18px 0; font-size: 16px; color: var(--ink-2); }
-.note .l { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); font-weight: 700; display: block; margin-bottom: 4px; }
-table.spec { width: 100%; border-collapse: collapse; margin: 20px 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; }
-table.spec td, table.spec th { border-bottom: 1px dashed var(--rule); padding: 7px 10px; text-align: left; }
-table.spec th { color: var(--accent); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; }
-table.spec td:first-child { color: var(--muted); }
-.gloss { margin-top: 64px; padding-top: 32px; border-top: 2px solid var(--rule); }
-.gloss h2 { font-size: 26px; margin-top: 0; }
-.gloss ol { padding-left: 0; counter-reset: g; list-style: none; }
-.gloss li { counter-increment: g; padding: 14px 0 14px 50px; position: relative; border-bottom: 1px dashed var(--rule); font-size: 16px; }
-.gloss li::before { content: counter(g, decimal-leading-zero); position: absolute; left: 0; top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); font-weight: 700; }
-.gloss li:target { background: var(--umber-soft); border-radius: 4px; animation: glossPulse 1.8s ease-out; }
-@keyframes glossPulse { 0% { background: var(--ochre-soft); } 100% { background: var(--umber-soft); } }
-.gloss .term { font-family: 'Fraunces', serif; font-weight: 700; font-style: italic; color: var(--ink); }
-.colophon { margin-top: 80px; padding-top: 18px; border-top: 1px solid var(--rule); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; display: flex; justify-content: space-between; }
-
-/* qv-specific */
-.qv-svg { width: 100%; height: auto; display: block; }
-.qv-rev { opacity: 0; transition: opacity 0.6s ease; }
-figure.play .qv-rev { opacity: 1; }
-figure.play .qv-rev.d1 { transition-delay: 0.15s; }
-figure.play .qv-rev.d2 { transition-delay: 0.45s; }
-figure.play .qv-rev.d3 { transition-delay: 0.75s; }
-figure.play .qv-rev.d4 { transition-delay: 1.05s; }
-figure.play .qv-rev.d5 { transition-delay: 1.35s; }
-figure.play .qv-rev.d6 { transition-delay: 1.65s; }
-.qv-svg .draw { stroke-dasharray: 1000; stroke-dashoffset: 1000; transition: stroke-dashoffset 1.5s ease; }
-figure.play .qv-svg .draw { stroke-dashoffset: 0; }
-@media (prefers-reduced-motion: reduce) { .qv-rev { opacity: 1; transition: none; } .qv-svg .draw { stroke-dashoffset: 0; transition: none; } }
+:root{--paper:#f1ecdd;--paper-hi:#fbf8ee;--paper-mid:#e5dcc8;--ink:#17191c;--ink-2:#343a40;--muted:#6e706f;--rule:#b9af99;--blue:#1f466d;--blue-dark:#15334f;--blue-soft:#cadcea;--teal:#087f82;--teal-soft:#c9e8e3;--amber:#b47712;--amber-soft:#f1dfa9;--coral:#b94f38;--coral-soft:#f2d0c5;--moss:#4f7049;--moss-soft:#dae7d3;--navy:#13283d;--white:#fffefa;--shadow:rgba(37,42,42,.12)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.82 'Noto Sans SC',sans-serif;-webkit-font-smoothing:antialiased}body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;opacity:.25;background-image:linear-gradient(rgba(35,58,77,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(35,58,77,.045) 1px,transparent 1px);background-size:32px 32px}.page{max-width:1120px;margin:auto;padding:46px 36px 120px}.page>section[id]{scroll-margin-top:54px}.mast{display:flex;justify-content:space-between;gap:20px;border-top:3px solid var(--ink);border-bottom:1px solid var(--rule);padding:11px 0;margin-bottom:52px;font:600 11px/1.4 'JetBrains Mono',monospace;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}.mast b{color:var(--blue)}
+.hero{padding-bottom:52px;border-bottom:1px solid var(--rule)}.eyebrow{font:700 11px/1.4 'JetBrains Mono',monospace;letter-spacing:2.4px;text-transform:uppercase;color:var(--teal);margin-bottom:18px}h1{font-family:'Fraunces','Noto Serif SC',serif;font-size:clamp(46px,7vw,80px);line-height:1;letter-spacing:-.045em;margin:0;max-width:950px;font-weight:760;font-variation-settings:"SOFT" 36,"WONK" 1}h1 em{display:block;color:var(--blue);font-weight:430;margin-top:9px}.dek{max-width:900px;margin:25px 0 0;font-family:'Noto Serif SC',serif;font-size:clamp(19px,2.2vw,26px);line-height:1.58;color:var(--ink-2)}.byline{margin-top:21px;color:var(--muted);font:500 11px/1.8 'JetBrains Mono',monospace}.tldr{display:grid;grid-template-columns:132px 1fr;margin:34px 0 0;background:var(--navy);color:#f7f4e9;border-radius:6px;overflow:hidden;box-shadow:8px 8px 0 var(--shadow)}.tldr-label{padding:24px 20px;background:var(--teal);font:700 11px/1.6 'JetBrains Mono',monospace;letter-spacing:2px;text-transform:uppercase}.tldr-body{padding:21px 25px}.tldr p{margin:0}.tldr strong{color:#9ce3dc}.reading-path{display:flex;flex-wrap:wrap;gap:8px;margin-top:28px}.reading-path a{font:600 10px/1 'JetBrains Mono',monospace;color:var(--ink-2);text-decoration:none;padding:9px 11px;border:1px solid var(--rule);background:rgba(255,255,255,.38);border-radius:999px}.reading-path a:hover,.reading-path a:focus-visible{border-color:var(--teal);color:var(--teal)}
+h2{display:grid;grid-template-columns:70px minmax(0,1fr);gap:12px;align-items:start;margin:88px 0 25px;font-family:'Fraunces','Noto Serif SC',serif;font-size:clamp(31px,4vw,46px);line-height:1.14;letter-spacing:-.025em}h2 .num{font:700 11px/1.5 'JetBrains Mono',monospace;letter-spacing:2px;color:var(--teal);padding-top:10px}h3{font-family:'Fraunces','Noto Serif SC',serif;font-size:25px;line-height:1.3;margin:35px 0 12px}p{margin:13px 0}strong{font-weight:700}a{color:var(--blue-dark);text-decoration-thickness:1px;text-underline-offset:3px}.lead{font-family:'Noto Serif SC',serif;font-size:20px;line-height:1.75;color:var(--ink-2);max-width:930px}.plain{background:var(--paper-hi);border-left:4px solid var(--teal);padding:16px 20px;margin:18px 0;color:var(--ink-2)}.plain b{color:var(--blue-dark)}code{font-family:'JetBrains Mono',monospace;font-size:.86em;background:rgba(255,255,255,.58);border:1px solid var(--rule);padding:1px 5px;border-radius:3px}.jr{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:20px;margin:0 3px;padding:0 5px;border:1px solid var(--teal);border-radius:10px;background:var(--paper-hi);color:var(--teal)!important;font:700 10px/1 'JetBrains Mono',monospace;text-decoration:none!important;vertical-align:2px}.jr:hover{background:var(--teal);color:white!important}.formula{margin:22px 0;background:var(--navy);color:#fff8e9;border-radius:6px;border-left:5px solid var(--teal);overflow-x:auto;padding:22px 24px;text-align:center;-webkit-overflow-scrolling:touch}.formula .katex{font-size:1.1em}.formula .katex-display{margin:0}.formula-note{margin:-10px 0 20px;color:var(--muted);font-size:14px}.vars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin:18px 0}.var{background:var(--paper-hi);padding:12px 15px;font-size:14px}.var code{color:var(--blue-dark);font-weight:700}
+figure{margin:34px 0 46px;padding:26px;background:rgba(255,254,250,.66);border:1px solid var(--rule);box-shadow:8px 8px 0 rgba(40,55,65,.07)}figcaption{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-bottom:23px;padding-bottom:13px;border-bottom:1px dashed var(--rule);font:600 11px/1.55 'JetBrains Mono',monospace;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}figcaption b{color:var(--teal)}
+.pipeline{display:grid;grid-template-columns:1fr 34px 1fr 34px 1fr 34px 1fr;gap:6px;align-items:stretch}.pnode{display:grid;align-content:center;min-height:112px;padding:15px 10px;text-align:center;background:var(--white);border:1px solid var(--rule);font-size:13px;font-weight:650}.pnode b{display:block;color:var(--blue-dark);font:700 11px/1.5 'JetBrains Mono',monospace;margin-bottom:5px}.pnode small{display:block;color:var(--muted);font:500 10px/1.5 'JetBrains Mono',monospace;margin-top:5px}.pnode.vision{background:var(--blue-soft);border-color:var(--blue)}.pnode.bridge{background:var(--amber-soft);border-color:var(--amber)}.pnode.brain{background:var(--teal-soft);border-color:var(--teal)}.parrow{display:grid;place-items:center;color:var(--teal);font:700 20px 'JetBrains Mono',monospace}.sequence{display:flex;align-items:stretch;gap:4px;margin-top:14px;overflow:hidden}.stok{min-width:44px;padding:9px 6px;text-align:center;border:1px solid var(--rule);font:700 9px/1.4 'JetBrains Mono',monospace}.stok.text{background:var(--paper-hi)}.stok.visual{background:var(--blue-soft);border-color:var(--blue)}.stok.answer{background:var(--teal-soft);border-color:var(--teal)}.seq-note{margin-top:8px;text-align:center;color:var(--muted);font-size:12px}
+.family{display:grid;grid-template-columns:1fr 1fr;gap:12px}.family-card{padding:18px;background:var(--white);border:1px solid var(--rule)}.family-card h4{margin:0 0 8px;font-family:'Fraunces','Noto Serif SC',serif;font-size:21px}.family-card.dense{border-top:5px solid var(--blue)}.family-card.moe{border-top:5px solid var(--teal)}.family-line{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.chip{padding:6px 9px;background:var(--paper-hi);border:1px solid var(--rule);font:700 10px 'JetBrains Mono',monospace}
+.resolution{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.res-card{display:grid;align-content:end;min-height:175px;padding:15px;background:var(--white);border:1px solid var(--rule);position:relative}.res-shape{position:absolute;left:15px;top:15px;background:var(--blue-soft);border:1px solid var(--blue)}.res-card.long .res-shape{width:46px;height:105px}.res-card.tiny .res-shape{width:104px;height:24px}.res-card.normal .res-shape{width:118px;height:66px}.res-card b{font:700 23px/1.3 'JetBrains Mono',monospace;color:var(--blue-dark)}.res-card span{font-size:12px;color:var(--muted)}.merge-math{display:grid;grid-template-columns:1fr 40px 1fr 40px 1fr;gap:8px;align-items:stretch;margin-top:14px}.merge-box{padding:15px 10px;text-align:center;background:var(--paper-hi);border:1px solid var(--rule);font-size:13px}.merge-box strong{display:block;color:var(--blue-dark);font:700 15px/1.5 'JetBrains Mono',monospace}.merge-box.out{background:var(--amber-soft);border-color:var(--amber)}
+.stack-map{display:grid;grid-template-columns:1.05fr 42px 1.35fr;gap:10px;align-items:stretch}.vit-stack,.llm-stack{display:grid;gap:8px}.layer{padding:13px;background:var(--white);border:1px solid var(--rule);font-size:12px}.layer b{font:700 10px 'JetBrains Mono',monospace;color:var(--blue-dark)}.layer.pick{background:var(--blue-soft);border-color:var(--blue)}.layer.inject{background:var(--teal-soft);border-color:var(--teal)}.stack-mid{display:grid;align-content:center;gap:33px;text-align:center;color:var(--amber);font:700 18px 'JetBrains Mono',monospace}.vector-demo{display:grid;grid-template-columns:1fr 36px 1fr 36px 1fr;gap:8px;align-items:stretch;margin-top:14px}.vector-box{padding:13px;background:var(--white);border:1px solid var(--rule);text-align:center;font:700 12px/1.7 'JetBrains Mono',monospace}.vector-box.result{background:var(--teal-soft);border-color:var(--teal)}
+.freq-wrap{display:grid;gap:22px}.freq-title{display:flex;justify-content:space-between;margin-bottom:7px;font-size:12px}.freq-title b{color:var(--blue-dark)}.freq-track{display:grid;grid-template-columns:repeat(12,1fr);gap:3px}.freq-cell{height:37px;display:grid;place-items:center;border:1px solid rgba(0,0,0,.18);font:700 11px 'JetBrains Mono',monospace}.freq-cell.t{background:var(--blue-soft);color:var(--blue-dark)}.freq-cell.h{background:var(--teal-soft);color:var(--teal)}.freq-cell.w{background:var(--coral-soft);color:#783324}.freq-axis{display:flex;justify-content:space-between;margin-top:5px;color:var(--muted);font:500 9px 'JetBrains Mono',monospace}.freq-verdict{margin-top:13px;padding:10px;background:var(--navy);color:white;text-align:center;font-size:12px}.freq-verdict b{color:#9ce3dc}
+.timeline{position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding-top:35px}.timeline:before{content:"";position:absolute;left:8%;right:8%;top:17px;height:2px;background:var(--blue)}.time-item{position:relative;padding:14px 10px;background:var(--white);border:1px solid var(--rule);text-align:center;font-size:12px}.time-item:before{content:"";position:absolute;width:14px;height:14px;border-radius:50%;background:var(--teal);border:3px solid var(--paper-hi);top:-27px;left:50%;transform:translateX(-50%);box-shadow:0 0 0 1px var(--teal)}.time-item code{display:block;margin-bottom:7px;color:var(--blue-dark);font-weight:700}.time-oldnew{display:grid;grid-template-columns:1fr 60px 1fr;gap:12px;align-items:center;margin-top:15px}.time-panel{padding:15px;background:var(--white);border:1px solid var(--rule);font-size:13px}.time-panel.old{border-top:5px solid var(--coral)}.time-panel.new{border-top:5px solid var(--teal)}.time-panel b{display:block;margin-bottom:6px}.time-swap{text-align:center;color:var(--teal);font:700 22px 'JetBrains Mono',monospace}
+.stages{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.stage{position:relative;padding:17px 13px;background:var(--white);border:1px solid var(--rule);min-height:185px}.stage:after{content:"→";position:absolute;right:-18px;top:52px;z-index:2;color:var(--teal);font:700 18px 'JetBrains Mono',monospace}.stage:last-child:after{display:none}.stage b{display:block;color:var(--teal);font:700 11px 'JetBrains Mono',monospace}.stage strong{display:block;margin:8px 0;font:700 18px 'Fraunces','Noto Serif SC',serif}.stage small{display:block;color:var(--muted);font-size:11px}.stage .budget{margin-top:11px;padding-top:9px;border-top:1px dashed var(--rule);font:700 10px/1.6 'JetBrains Mono',monospace}.cost-line{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:13px}.cost{padding:10px;background:var(--navy);color:white;text-align:center;font:500 10px/1.6 'JetBrains Mono',monospace}.cost b{display:block;color:#9ce3dc;font-size:14px}
+.data-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.data-card{padding:14px;background:var(--white);border:1px solid var(--rule);font-size:12px;min-height:137px}.data-card b{display:block;color:var(--blue-dark);font:700 10px/1.5 'JetBrains Mono',monospace;margin-bottom:6px}.data-card strong{color:var(--teal)}.coord-demo{display:grid;grid-template-columns:1fr 45px 1fr;gap:9px;align-items:center;margin-top:13px}.coord-box{padding:13px;background:var(--paper-hi);border:1px solid var(--rule);text-align:center;font:700 12px/1.7 'JetBrains Mono',monospace}.coord-box.out{background:var(--teal-soft);border-color:var(--teal)}
+.posttrain{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}.pt-card{padding:17px;background:var(--white);border:1px solid var(--rule);min-height:235px}.pt-card.sft{border-top:5px solid var(--blue)}.pt-card.distill{border-top:5px solid var(--amber)}.pt-card.rl{border-top:5px solid var(--teal)}.pt-card h4{margin:0 0 9px;font:700 12px 'JetBrains Mono',monospace}.pt-card p{font-size:13px;line-height:1.65}.pt-step{margin-top:9px;padding:8px;background:var(--paper-hi);border:1px solid var(--rule);font-size:11px}.prob-demo{display:grid;grid-template-columns:1fr 38px 1fr;gap:8px;align-items:center;margin-top:13px}.prob{padding:11px;background:var(--paper-hi);border:1px solid var(--rule);text-align:center;font:600 11px/1.6 'JetBrains Mono',monospace}.prob.student{background:var(--amber-soft);border-color:var(--amber)}
+.agent-loop{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;align-items:stretch}.agent-node{padding:13px 8px;background:var(--white);border:1px solid var(--rule);text-align:center;font-size:12px;position:relative}.agent-node:not(:last-child):after{content:"→";position:absolute;right:-17px;top:33px;z-index:2;color:var(--teal);font:700 16px 'JetBrains Mono',monospace}.agent-node b{display:block;color:var(--blue-dark);font:700 9px 'JetBrains Mono',monospace;margin-bottom:5px}.agent-node.tool{background:var(--amber-soft);border-color:var(--amber)}.reward-row{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:14px}.reward{padding:12px;background:var(--teal-soft);border:1px solid var(--teal);font-size:12px}.reward b{display:block;color:var(--teal);font:700 10px 'JetBrains Mono',monospace}
+.infra{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.infra-card{padding:14px 10px;background:var(--white);border:1px solid var(--rule);min-height:160px;font-size:12px}.infra-card b{display:block;margin-bottom:7px;color:var(--blue-dark);font:700 13px 'JetBrains Mono',monospace}.infra-card code{display:block;width:max-content;margin-bottom:8px;color:var(--teal);font-weight:700}.infra-line{margin-top:13px;padding:12px;background:var(--navy);color:white;text-align:center;font-size:12px}.infra-line b{color:#9ce3dc}
+.table-wrap{overflow-x:auto;margin:18px 0;border:1px solid var(--rule);background:var(--white);-webkit-overflow-scrolling:touch}table{width:100%;border-collapse:collapse;min-width:700px;font-size:13px}th,td{padding:11px 13px;border-bottom:1px solid var(--rule);text-align:left}th{background:var(--navy);color:white;font:600 10px 'JetBrains Mono',monospace;letter-spacing:.5px;text-transform:uppercase}td.num{font-family:'JetBrains Mono',monospace;text-align:right}tr:last-child td{border-bottom:0}tr.alt td{background:var(--teal-soft)}.tag{display:inline-block;padding:2px 6px;border-radius:2px;background:var(--amber-soft);color:#664608;font:700 9px 'JetBrains Mono',monospace}
+.needle{display:grid;grid-template-columns:1fr 1fr;gap:13px}.needle-panel{padding:17px;background:var(--white);border:1px solid var(--rule)}.needle-panel h4{margin:0 0 11px;font:700 11px 'JetBrains Mono',monospace;color:var(--blue-dark)}.heat{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}.heat i{height:22px;background:#91cfb0;border:1px solid rgba(0,0,0,.08)}.heat i:nth-child(7n){background:#86c7a7}.needle-score{margin-top:11px;font:700 21px 'JetBrains Mono',monospace;color:var(--teal)}.needle-panel p{font-size:12px;line-height:1.6}.warning{padding:13px;background:var(--coral-soft);border-left:4px solid var(--coral);font-size:13px;margin-top:13px}
+.ablation{display:grid;grid-template-columns:1fr 1fr;gap:13px}.abl-card{padding:17px;background:var(--white);border:1px solid var(--rule)}.abl-card h4{margin:0 0 13px;font-family:'Fraunces','Noto Serif SC',serif;font-size:21px}.bar-row{display:grid;grid-template-columns:120px 1fr 58px;gap:8px;align-items:center;margin:9px 0;font-size:11px}.bar-track{height:15px;background:var(--paper-mid)}.bar-fill{height:100%;background:var(--blue)}.bar-fill.after{background:var(--teal)}.bar-value{text-align:right;font:700 11px 'JetBrains Mono',monospace}.limits{display:grid;grid-template-columns:1fr 1fr;gap:9px}.limit{position:relative;padding:17px 15px 17px 52px;background:var(--white);border:1px solid var(--rule);font-size:13px}.limit b{display:block;color:var(--blue-dark);margin-bottom:4px}.limit span{position:absolute;left:15px;top:17px;color:var(--teal);font:700 11px 'JetBrains Mono',monospace}
+.gloss{margin-top:84px;padding-top:28px;border-top:3px double var(--ink)}.gloss h2{display:block;font-size:30px;margin:0 0 12px}.gloss ol{list-style:none;padding:0;margin:0}.gloss li{position:relative;padding:15px 14px 15px 54px;border-bottom:1px dashed var(--rule);font-size:14px}.gloss li:before{content:attr(data-n);position:absolute;left:10px;color:var(--teal);font:700 11px 'JetBrains Mono',monospace}.gloss li:target{background:var(--amber-soft)}.term{font-weight:700;color:var(--blue-dark)}.sources{margin-top:65px;padding:24px;background:var(--navy);color:#e9edf1}.sources h3{margin:0 0 10px;font:700 12px 'JetBrains Mono',monospace;color:#9ce3dc;text-transform:uppercase}.sources a{color:#9ce3dc}.sources ul{margin:0;padding-left:20px}.sources li{margin:5px 0;font-size:13px}.colophon{display:flex;justify-content:space-between;gap:15px;margin-top:26px;color:var(--muted);font:500 10px 'JetBrains Mono',monospace;letter-spacing:.5px}.reveal{opacity:0;transform:translateY(12px);transition:.55s ease}.reveal.play{opacity:1;transform:none}@media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
+@media(max-width:820px){.page{padding:34px 20px 90px}.mast{margin-bottom:38px}.tldr{grid-template-columns:1fr}.tldr-label{padding:12px 20px}.pipeline,.merge-math,.stack-map,.time-oldnew,.posttrain,.needle,.ablation{grid-template-columns:1fr}.parrow,.time-swap{transform:rotate(90deg);min-height:24px}.family,.data-grid,.limits{grid-template-columns:1fr 1fr}.resolution{grid-template-columns:1fr 1fr 1fr}.stages{grid-template-columns:1fr 1fr}.stage:nth-child(2):after{display:none}.agent-loop{grid-template-columns:repeat(3,1fr)}.agent-node:nth-child(3):after{display:none}.infra{grid-template-columns:repeat(2,1fr)}.reward-row{grid-template-columns:1fr}.vars{grid-template-columns:1fr}.stack-mid{display:none}.vector-demo{grid-template-columns:1fr 34px 1fr 34px 1fr}.cost-line{grid-template-columns:1fr 1fr 1fr}}
+@media(max-width:500px){body{font-size:16px}.page{padding:28px 14px 76px}.mast{font-size:9px;letter-spacing:1px}.hero{padding-bottom:40px}h2{grid-template-columns:1fr;gap:3px;margin-top:70px}h2 .num{padding-top:0}.tldr-body{padding:18px}.reading-path{gap:6px}.reading-path a{font-size:9px}figure{padding:15px;margin-left:0;margin-right:0}figcaption{display:block}figcaption b{display:block;margin-top:5px}.family,.resolution,.data-grid,.limits,.stages,.infra{grid-template-columns:1fr}.stage:after{display:none}.vector-demo,.prob-demo,.coord-demo{grid-template-columns:1fr}.vector-demo .parrow,.prob-demo .parrow,.coord-demo .parrow{transform:rotate(90deg);min-height:20px}.timeline{grid-template-columns:1fr;padding-top:0}.timeline:before,.time-item:before{display:none}.agent-loop{grid-template-columns:1fr}.agent-node:after{display:none!important}.sequence{flex-wrap:wrap}.freq-cell{height:32px;font-size:9px}.cost-line{grid-template-columns:1fr}.bar-row{grid-template-columns:96px 1fr 48px;gap:6px}.formula .katex{font-size:.94em}.colophon{display:block}.colophon span{display:block;margin:4px 0}}
 </style>
 </head>
 <body>
@@ -100,239 +56,128 @@ figure.play .qv-svg .draw { stroke-dashoffset: 0; }
   <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · qwen3-vl-report</span>
 </div>
 <!-- wiki-nav:end -->
-<div class="page">
+<main class="page">
+<div class="mast"><span>Connectionism · Paper Review</span><b>Vision-Language Models / 2025</b></div>
 
-<div class="masthead">
-  <span class="l">Connectionism · Personal Wiki</span>
-  <span class="r">Paper · 视觉语言模型 · Qwen3-VL · 2025</span>
-</div>
+<header class="hero">
+  <div class="eyebrow">Qwen3-VL Technical Report · v2 · Beginner-first rebuild</div>
+  <h1>一张图片，<em>怎样进入语言模型？</em></h1>
+  <p class="dek">Qwen3-VL 不是让 Qwen3 直接读取 JPEG。图片先被视觉编码器切成特征，再由 merger 合成语言模型能接收的视觉 token；从这一步开始，图和文字才进入同一条序列。理解这条数据流，DeepStack、MRoPE、长视频和后训练才能各归其位。</p>
+  <div class="byline">Qwen Team · Qwen3-VL Technical Report · arXiv:2511.21631v2 · 2025-11-27</div>
+  <div class="tldr"><div class="tldr-label">TL;DR<br>先记主线</div><div class="tldr-body"><p><strong>视觉编码器负责看，merger 负责接线，Qwen3 负责理解并写答案。</strong>DeepStack 把中间视觉特征补进 LLM 前三层；Interleaved-MRoPE 让时间、行、列都覆盖快慢频率；文字时间戳让模型直接读出视频的真实秒数。真正把能力做出来的还包括约 2T 级分阶段预训练、九类数据、SFT、强到弱蒸馏、两套 RL、视觉工具训练和万人 GPU 并行。</p></div></div>
+  <nav class="reading-path" aria-label="章节捷径"><a href="#overview">完整数据流</a><a href="#tokens">图片变 token</a><a href="#deepstack">DeepStack</a><a href="#mrope">位置编码</a><a href="#pretrain">预训练</a><a href="#posttrain">后训练</a><a href="#evaluation">实验边界</a></nav>
+</header>
 
-<section class="hero">
-  <div class="issue">FIELD NOTES · VLM · 看图 / 视频 / agent</div>
-  <h1 class="title">Qwen3-VL ·<br /><span class="em">给大模型装一双能看图的眼睛。</span></h1>
-  <div class="byline">Qwen Team, Alibaba · Qwen3-VL Technical Report · arXiv 2511.21631 · 2025-12</div>
-  <p class="dek">一个 VLM = 眼睛(视觉编码器) + 翻译插头(merger) + 大脑(LLM)：图按原生分辨率变成变长 token，和文字 token 进同一条序列让 LLM 一起读。Qwen3-VL 在这套上做了三处升级——Interleaved-MRoPE、DeepStack、文字时间戳——把长视频、细粒度感知、视频定位顶上去。</p>
+<section id="overview">
+<h2><span class="num">§ 01</span><span>先拼完整：从图片和问题，到一句文字答案</span></h2>
+<p class="lead">输入“这张图里有几只猫？”时，模型实际走四段路。视觉编码器只负责把像素整理成向量；它不会自己生成答案。答案仍由一个 decoder-only Qwen3 逐 token 写出来。</p>
+<figure class="reveal"><figcaption><span>Fig 01 · 一次问答的端到端数据流</span><b>像素不能直接进 LLM</b></figcaption><div class="pipeline"><div class="pnode"><b>INPUT</b>图片 + 问题<small>JPEG / PNG<br>“有几只猫？”</small></div><div class="parrow">→</div><div class="pnode vision"><b>QWEN3-VIT</b>视觉编码器<small>像素 → 二维特征网格</small></div><div class="parrow">→</div><div class="pnode bridge"><b>MLP MERGER</b>2×2 合成 1<small>降 token + 对齐维度</small></div><div class="parrow">→</div><div class="pnode brain"><b>QWEN3 LLM</b>读图文上下文<small>逐 token 输出“有 3 只”</small></div></div><div class="sequence"><span class="stok text">问题<br>这张</span><span class="stok text">图里</span><span class="stok visual">视觉<br>01</span><span class="stok visual">视觉<br>02</span><span class="stok visual">…</span><span class="stok text">有几只猫</span><span class="stok answer">有</span><span class="stok answer">3</span><span class="stok answer">只</span></div><div class="seq-note">视觉 token 与文字 token 宽度相同，排进同一条上下文；答案 token 只能读取自己前面的图文内容。</div></figure>
+<div class="plain"><b>最容易混淆的一点：</b>视觉 token 不是“猫、桌子、文字”这些离散标签，而是一串连续向量。LLM 通过训练逐渐学会这些向量和语言含义之间的对应关系。</div>
+<h3>Dense、MoE、Instruct、Thinking 是两组不同维度</h3>
+<figure class="reveal"><figcaption><span>Fig 01B · 模型家族怎样读</span><b>结构规模 ≠ 回答模式</b></figcaption><div class="family"><div class="family-card dense"><h4>Dense · 每个 token 走全部参数</h4><p>四种规模：2B、4B、8B、32B。模型越大，通常效果更好，显存与计算也同步增加。</p><div class="family-line"><span class="chip">2B</span><span class="chip">4B</span><span class="chip">8B</span><span class="chip">32B</span></div></div><div class="family-card moe"><h4>MoE · 每个 token 只走部分专家</h4><p><code>30B-A3B</code> 总参 30B、每 token 激活约 3B；<code>235B-A22B</code> 同理。完整权重仍需存储。</p><div class="family-line"><span class="chip">30B-A3B</span><span class="chip">235B-A22B</span></div></div></div><div class="plain"><b>同一规模再分两种后训练版本：</b>Instruct 偏直接回答；Thinking 会显式展开更长推理。Thinking 不是另一套视觉编码器，也不保证所有任务都更高分。</div></figure>
 </section>
 
-<div class="tldr">
-  <span class="label">TL;DR</span>
-  <p>Qwen3-VL = 三件套 VLM：<strong>SigLIP-2 ViT(眼睛)</strong> → <strong>MLP merger(翻译插头，2×2 patch 压成 1 token)</strong><a class="jr" href="#g-01">1</a> → <strong>Qwen3 LLM(大脑)</strong>，图按<strong>原生动态分辨率</strong>变成<strong>变长 token</strong><a class="jr" href="#g-02">2</a>。dense 2/4/8/32B + MoE 30B-A3B/235B-A22B，各出 non-thinking/thinking。三处架构升级(vs 2.5)：① <strong>Interleaved-MRoPE</strong><a class="jr" href="#g-03">3</a>——把 t/h/w 交错铺满高低频(老 MRoPE 分块→频谱不均、长视频差)；② <strong>DeepStack</strong><a class="jr" href="#g-04">4</a>——抽 3 个中间 ViT 层经各自 merger 注入 LLM 前 3 层(多层视觉特征，不增上下文)；③ <strong>文字时间戳</strong><a class="jr" href="#g-05">5</a>——视频每组帧前缀 <code>&lt;3.0 seconds&gt;</code> 文字 token 代替 T-RoPE。训练：预训练四阶段(S0 只训 merger→S1/2/3 全参，上下文 8K→32K→<strong>256K</strong>) + 后训练三步(长 CoT SFT→强师蒸馏→RL)。能力：原生 256K(→1M)、<strong>OCR 32 语种</strong>、2D+3D grounding、GUI agent、视觉数学，纯文本还反超同级文本模型。</p>
-</div>
+<section id="tokens">
+<h2><span class="num">§ 02</span><span>图片怎样变成视觉 token：动态分辨率与 2×2 merger</span></h2>
+<p class="lead">“动态分辨率”不是一句画质口号。图片越大、版面越长，视觉编码器产生的网格通常越大，最终进入 LLM 的视觉 token 也越多。小字更容易保住，计算账单也跟着上涨。</p>
+<figure class="reveal"><figcaption><span>Fig 02A · 官方架构图里的三种 token 长度</span><b>同一个模型，图片长度可以差一千多倍</b></figcaption><div class="resolution"><div class="res-card long"><i class="res-shape"></i><b>11,427</b><span>极长页面产生大量视觉 token</span></div><div class="res-card tiny"><i class="res-shape"></i><b>8</b><span>很小的横幅只需少量 token</span></div><div class="res-card normal"><i class="res-shape"></i><b>1,125</b><span>普通横图位于两者之间</span></div></div><div class="plain"><b>原生 / 动态的准确理解：</b>不把所有图片强行压成同一个固定正方形；实际预处理仍受尺寸上限与 token 预算约束。</div></figure>
+<h3>Merger 到底“合并”了什么</h3>
+<p>假设 ViT 输出 <code>12×16=192</code> 个特征，每格都是宽度 <code>Dv</code> 的向量。merger 每次拿相邻 <code>2×2=4</code> 格，先首尾拼接，再用两层 MLP 映射到 LLM 的隐藏宽度 <code>Dl</code>。</p>
+<div class="formula math" data-display="true">12\times16=192\quad\xrightarrow{\;2\times2\text{ 合并}\;}\quad6\times8=48\ \text{个视觉 token}</div>
+<figure class="reveal"><figcaption><span>Fig 02B · 一组 2×2 特征怎样变成一个 token</span><b>数量减 75%，每个 token 覆盖更大区域</b></figcaption><div class="merge-math"><div class="merge-box"><strong>4 × Dv</strong>四个相邻视觉向量<small><br>每个宽度 Dv</small></div><div class="parrow">→</div><div class="merge-box"><strong>[v00; v01; v10; v11]</strong>首尾拼成一个 4Dv 向量<small><br>分号表示拼接，不是相加</small></div><div class="parrow">→</div><div class="merge-box out"><strong>MLP → Dl</strong>得到一个 LLM 可读 token<small><br>宽度与文字 embedding 相同</small></div></div></figure>
+<div class="vars"><div class="var"><code>Dv</code>：视觉编码器每个格子的特征宽度。</div><div class="var"><code>Dl</code>：Qwen3 LLM 的 hidden size。</div><div class="var"><code>2×2 merge</code>：空间高宽各减半，token 总数变为四分之一。</div><div class="var"><code>MLP</code>：两层小网络，学习视觉空间到语言空间的转换。</div></div>
+<p>merger 是 <a href="../concepts/modality-projector.html">模态投影器</a><a class="jr" href="#g-01">1</a>，但比“只换维度”的 projector 多做了一步空间合并。代价也要说清：合并减少计算，却可能把很小的细节揉在一起；DeepStack 正是用中间层特征补这部分信息。</p>
+</section>
 
+<section id="deepstack">
+<h2><span class="num">§ 03</span><span>DeepStack：最后一层看语义，中间层补细节</span></h2>
+<p class="lead">普通 VLM 常把 ViT 最后一层输出一次性交给 LLM。问题是，视觉网络越往后越偏高级语义；小字、边缘和局部结构可能在抽象过程中变弱。DeepStack 不替换主路，而是额外从三个深度抽特征。</p>
+<div class="formula math" data-display="true">h_l^{\mathrm{new}}=h_l^{\mathrm{LLM}}+m_l\!\left(f_l^{\mathrm{ViT}}\right),\qquad l=1,2,3</div>
+<div class="vars"><div class="var"><code>fᵥⁱᵀ_l</code>：第 <code>l</code> 个抽取位置的视觉中间特征。</div><div class="var"><code>m_l</code>：该位置专用的 merger，负责数量和宽度对齐。</div><div class="var"><code>hᴸᴸᴹ_l</code>：LLM 第 <code>l</code> 层原本的 hidden state。</div><div class="var"><code>+</code>：逐元素残差相加，不是把 token 接到序列尾部。</div></div>
+<figure class="reveal"><figcaption><span>Fig 03A · 三层视觉特征怎样注入前三层 LLM</span><b>相加，所以不增加上下文长度</b></figcaption><div class="stack-map"><div class="vit-stack"><div class="layer pick"><b>VIT 抽取 A</b>偏局部边缘与纹理</div><div class="layer pick"><b>VIT 抽取 B</b>偏部件与布局</div><div class="layer pick"><b>VIT 抽取 C</b>偏高级语义</div><div class="layer"><b>VIT FINAL</b>主路视觉 token</div></div><div class="stack-mid"><span>＋</span><span>＋</span><span>＋</span></div><div class="llm-stack"><div class="layer inject"><b>LLM LAYER 1</b>主 hidden + merger A</div><div class="layer inject"><b>LLM LAYER 2</b>主 hidden + merger B</div><div class="layer inject"><b>LLM LAYER 3</b>主 hidden + merger C</div><div class="layer"><b>LLM 后续层</b>继续处理已经融合的图文表示</div></div></div><div class="vector-demo"><div class="vector-box">LLM hidden<br>[1.0, 2.0]</div><div class="parrow">＋</div><div class="vector-box">视觉补充<br>[0.2, −0.5]</div><div class="parrow">＝</div><div class="vector-box result">新 hidden<br>[1.2, 1.5]</div></div></figure>
+<p>消融使用内部 15B-A2B、200B 预训练 token、没有后训练：平均分 <code>74.7→76.0</code>，InfoVQA <code>71.9→74.2</code>，DocVQA <code>89.5→91.1</code>；TVQA 则 <code>80.6→80.5</code>。证据支持“整体有帮助，文档细节任务尤其受益”，不支持“每项都涨”。</p>
+</section>
 
-<!-- §01 -->
-<h2><span class="num">§ 01</span>VLM 三件套：眼睛 → 插头 → 大脑</h2>
+<section id="mrope">
+<h2><span class="num">§ 04</span><span>Interleaved-MRoPE：三把位置尺都要有粗刻度和细刻度</span></h2>
+<p class="lead"><a href="../concepts/mrope.html">M-RoPE</a><a class="jr" href="#g-02">2</a> 不再只给 token 一个序号，而是给视觉 token 三个坐标：时间 <code>t</code>、行 <code>h</code>、列 <code>w</code>。RoPE 用这些位置旋转 attention 的 query 和 key，让相对时间与空间距离影响注意力。</p>
+<p>旋转频率有快慢：慢频率转得慢，适合保留远距离关系；快频率对小位移敏感，适合分辨近处细节。原版连续切三段，每个轴只能拿到一段频率。Interleaved 改为交错分配。</p>
+<figure class="reveal"><figcaption><span>Fig 04 · 12 对旋转维度的教学例</span><b>真实模型维度更多，分配原则相同</b></figcaption><div class="freq-wrap"><div><div class="freq-title"><b>原版 · 连续分块</b><span>每个轴只占一段</span></div><div class="freq-track"><i class="freq-cell t">t</i><i class="freq-cell t">t</i><i class="freq-cell t">t</i><i class="freq-cell t">t</i><i class="freq-cell h">h</i><i class="freq-cell h">h</i><i class="freq-cell h">h</i><i class="freq-cell h">h</i><i class="freq-cell w">w</i><i class="freq-cell w">w</i><i class="freq-cell w">w</i><i class="freq-cell w">w</i></div><div class="freq-axis"><span>慢频率 · 看远处</span><span>快频率 · 辨近处</span></div></div><div><div class="freq-title"><b>Qwen3-VL · 交错分配</b><span>每个轴横跨全频段</span></div><div class="freq-track"><i class="freq-cell t">t</i><i class="freq-cell h">h</i><i class="freq-cell w">w</i><i class="freq-cell t">t</i><i class="freq-cell h">h</i><i class="freq-cell w">w</i><i class="freq-cell t">t</i><i class="freq-cell h">h</i><i class="freq-cell w">w</i><i class="freq-cell t">t</i><i class="freq-cell h">h</i><i class="freq-cell w">w</i></div><div class="freq-axis"><span>慢频率 · 看远处</span><span>快频率 · 辨近处</span></div></div></div><div class="freq-verdict">没有增加维度或 attention 次数；只重排“<b>哪一对维度使用 t、h、w</b>”。</div></figure>
+<p>报告认为它能缓解原版频谱偏置、改善长视频位置建模，但没有给单独关闭 Interleaved-MRoPE 的消融。长视频进步还同时来自时间戳、视频数据和长上下文训练，不能把全部增益算给这一项。</p>
+</section>
 
-<p>视觉语言模型(VLM)的标准结构就三块（跟 <a href="minimind-o.html">minimind-o</a>/<a href="qwen3-asr.html">Qwen3-ASR</a> 同一套 <a href="../concepts/modality-projector.html">模态编码器→projector→LLM</a>）：</p>
+<section id="timestamp">
+<h2><span class="num">§ 05</span><span>文字时间戳：别让模型从巨大位置编号里猜秒数</span></h2>
+<p>Qwen2.5-VL 的 T-RoPE<a class="jr" href="#g-03">3</a> 把绝对时间绑进时间位置 ID。视频很长或采样不均时，ID 会又大又稀；训练还得覆盖很多 fps，才能学会位置编号与真实时间的对应。</p>
+<figure class="reveal"><figcaption><span>Fig 05 · 时间从“位置编号”搬到“可读文字”</span><b>内容更直接，代价是多占少量 token</b></figcaption><div class="time-oldnew"><div class="time-panel old"><b>旧 · 时间藏在位置编码</b><code>t = 0, 72, 305, 588 ...</code><p>模型要从稀疏 ID 学出真实秒数，还要适应不同采样帧率。</p></div><div class="time-swap">→</div><div class="time-panel new"><b>新 · 时间直接写进上下文</b><code>&lt;3.0 seconds&gt;</code><p>模型像读字幕一样读取秒数；训练也覆盖 <code>时:分:秒</code> 格式。</p></div></div><div class="timeline"><div class="time-item"><code>&lt;0.0 seconds&gt;</code>第 1 组视频帧</div><div class="time-item"><code>&lt;3.0 seconds&gt;</code>第 2 组视频帧</div><div class="time-item"><code>&lt;7.5 seconds&gt;</code>第 3 组视频帧</div><div class="time-item"><code>&lt;00:01:12&gt;</code>第 4 组视频帧</div></div></figure>
+<div class="plain"><b>它没有做到的事：</b>时间戳只标记已经采到的帧，不能恢复采样时漏掉的动作；它解决“何时发生”，帧间发生了什么仍由视觉特征和 Transformer 学习。</div>
+</section>
 
-<ul>
-<li><strong>SigLIP-2 ViT（眼睛）</strong>：把图切 patch 编码；继续在<strong>动态分辨率</strong>上训，用 2D-RoPE + 插值绝对位置适配任意尺寸。旗舰用 SigLIP2-SO-400M，小模型(2B/4B)用 SigLIP2-Large(300M)。</li>
-<li><strong>MLP merger（翻译插头）</strong>：两层 MLP 把 <strong>2×2 个视觉特征压成 1 个 token</strong>、对齐到 LLM 维度——既降 token 数又接进语言空间。</li>
-<li><strong>Qwen3 LLM（大脑）</strong>：图像 token 和文字 token 进<strong>同一条序列</strong>一起 attention。dense 2/4/8/32B + MoE 30B-A3B / 235B-A22B(后者激活 22B)。</li>
-</ul>
+<section id="pretrain">
+<h2><span class="num">§ 06</span><span>四阶段预训练：先把线接通，再逐步拉到 256K</span></h2>
+<figure class="reveal"><figcaption><span>Fig 06 · 预训练课程表</span><b>token 预算不是去重数据量</b></figcaption><div class="stages"><div class="stage"><b>S0 · 8K</b><strong>只训 merger</strong><small>冻结 ViT 与 LLM，先学会把视觉特征翻译到语言空间。</small><div class="budget">67B training tokens</div></div><div class="stage"><b>S1 · 8K</b><strong>全参数联合训练</strong><small>图文、交错文档、grounding、VQA、STEM 与少量视频。</small><div class="budget">≈ 1T training tokens</div></div><div class="stage"><b>S2 · 32K</b><strong>长上下文</strong><small>提高纯文本、视频与 agent 数据占比，训练多步长任务。</small><div class="budget">≈ 1T training tokens</div></div><div class="stage"><b>S3 · 256K</b><strong>超长适配</strong><small>集中训练长视频与长文档，不再从头承担全部预训练。</small><div class="budget">100B training tokens</div></div></div><div class="cost-line"><div class="cost"><b>8K → 32K</b>长度 ×4</div><div class="cost"><b>朴素 attention</b>配对数约 ×16</div><div class="cost"><b>分阶段</b>避免全程付最高成本</div></div></figure>
+<p>逐步拉长是训练成本上的合理安排：self-attention 需要比较 token 对，长度放大四倍，朴素配对数约放大十六倍。这是基于 Transformer 计算规律的解释；报告只明确给出了阶段配置。</p>
+<div class="plain"><b>报告没有给公式的地方：</b>作者说把 per-sample loss 改成“平方根归一的 per-token loss”，目的是平衡文本与多模态样本，但没有披露精确归一对象、packing 方式和公式。这里不拿常见实现替作者补空白。</div>
+</section>
 
-<figure id="fig-arch" class="fig-arch">
-  <figcaption>
-    <span>Fig 01 · 三件套 + DeepStack 注入</span>
-    <span class="fnum">图→ViT→merger→LLM · 3 层 ViT 特征进前 3 层 LLM</span>
-  </figcaption>
-  <svg class="qv-svg" viewBox="0 0 720 290" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <marker id="qv1-h" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#6b4a2e"/></marker>
-      <marker id="qv1-d" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#b8841c"/></marker>
-    </defs>
-    <!-- 图/视频 -->
-    <g class="qv-rev d1" font-family="JetBrains Mono,monospace" font-size="9" text-anchor="middle">
-      <rect x="22" y="116" width="72" height="48" rx="3" fill="#faf4e1" stroke="#7a6f5d"/><text x="58" y="137" fill="#3a3128">图/视频</text><text x="58" y="152" fill="#7a6f5d" font-size="7.5">动态分辨率</text>
-    </g>
-    <!-- ViT 带3层抽头 -->
-    <g class="qv-rev d2" font-family="JetBrains Mono,monospace" font-size="8.5" text-anchor="middle">
-      <rect x="116" y="60" width="92" height="170" rx="4" fill="#e3d7c7" stroke="#6b4a2e" stroke-width="1.6"/>
-      <text x="162" y="52" fill="#5a3d24" font-weight="700" font-size="9.5">SigLIP-2 ViT</text>
-      <rect x="128" y="74" width="68" height="20" rx="2" fill="#fff" stroke="#b8841c"/><text x="162" y="88" fill="#7a5310">L 深(语义)</text>
-      <rect x="128" y="140" width="68" height="20" rx="2" fill="#fff" stroke="#b8841c"/><text x="162" y="154" fill="#7a5310">L 中</text>
-      <rect x="128" y="200" width="68" height="20" rx="2" fill="#fff" stroke="#b8841c"/><text x="162" y="214" fill="#7a5310">L 浅(细节)</text>
-    </g>
-    <line class="qv-rev d2" x1="94" y1="140" x2="114" y2="140" stroke="#6b4a2e" stroke-width="1.5" marker-end="url(#qv1-h)"/>
-    <!-- merger -->
-    <g class="qv-rev d3" font-family="JetBrains Mono,monospace" font-size="8.5" text-anchor="middle">
-      <rect x="232" y="118" width="92" height="44" rx="3" fill="#d8e6ce" stroke="#4a6b3a"/><text x="278" y="136" fill="#3a5a2a" font-weight="700">merger</text><text x="278" y="150" fill="#7a6f5d" font-size="7.5">2×2 → 1 token</text>
-    </g>
-    <line class="qv-rev d3" x1="208" y1="140" x2="230" y2="140" stroke="#6b4a2e" stroke-width="1.5" marker-end="url(#qv1-h)"/>
-    <!-- 文字 token -->
-    <g class="qv-rev d4" font-family="JetBrains Mono,monospace" font-size="8.5" text-anchor="middle">
-      <rect x="232" y="196" width="92" height="34" rx="3" fill="#cce5e1" stroke="#1a6a64"/><text x="278" y="217" fill="#0f4a45">文字 token</text>
-    </g>
-    <!-- LLM -->
-    <g class="qv-rev d4" font-family="JetBrains Mono,monospace" font-size="8.5" text-anchor="middle">
-      <rect x="430" y="52" width="150" height="190" rx="4" fill="#e3d7c7" stroke="#6b4a2e" stroke-width="1.8"/>
-      <text x="505" y="46" fill="#5a3d24" font-weight="700" font-size="10">Qwen3 LLM</text>
-      <rect x="444" y="64" width="122" height="16" rx="2" fill="#f7f1de" stroke="#b8841c"/><text x="505" y="76" fill="#7a5310" font-size="7.5">层1 ← DeepStack</text>
-      <rect x="444" y="84" width="122" height="16" rx="2" fill="#f7f1de" stroke="#b8841c"/><text x="505" y="96" fill="#7a5310" font-size="7.5">层2 ← DeepStack</text>
-      <rect x="444" y="104" width="122" height="16" rx="2" fill="#f7f1de" stroke="#b8841c"/><text x="505" y="116" fill="#7a5310" font-size="7.5">层3 ← DeepStack</text>
-      <text x="505" y="150" fill="#7a6f5d" font-size="7.5">… 图 token + 文字 token</text>
-      <text x="505" y="164" fill="#7a6f5d" font-size="7.5">同序列 attention</text>
-      <text x="505" y="186" fill="#7a6f5d" font-size="7.5">Interleaved-MRoPE</text>
-    </g>
-    <!-- 主路 merger->LLM -->
-    <line class="qv-rev d4" x1="324" y1="140" x2="428" y2="140" stroke="#6b4a2e" stroke-width="1.8" marker-end="url(#qv1-h)"/>
-    <line class="qv-rev d4" x1="324" y1="213" x2="428" y2="190" stroke="#6b4a2e" stroke-width="1.5" marker-end="url(#qv1-h)"/>
-    <!-- DeepStack 注入 3 层（虚线 ochre） -->
-    <g class="qv-rev d5" stroke="#b8841c" stroke-width="1.2" stroke-dasharray="4 2" fill="none">
-      <path d="M196,84 Q330,40 442,72" marker-end="url(#qv1-d)"/>
-      <path d="M196,150 Q330,108 442,92" marker-end="url(#qv1-d)"/>
-      <path d="M196,210 Q330,150 442,112" marker-end="url(#qv1-d)"/>
-    </g>
-    <text class="qv-rev d5" x="330" y="34" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="8" font-weight="700" fill="#b8841c">DeepStack：3 层 ViT 特征 → 前 3 层 LLM（残差注入）</text>
-    <!-- 输出 -->
-    <line class="qv-rev d6" x1="580" y1="140" x2="608" y2="140" stroke="#6b4a2e" stroke-width="1.8" marker-end="url(#qv1-h)"/>
-    <g class="qv-rev d6" font-family="JetBrains Mono,monospace" font-size="9" text-anchor="middle">
-      <rect x="610" y="120" width="80" height="40" rx="3" fill="#f7f1de" stroke="#6b4a2e"/><text x="650" y="144" fill="#5a3d24">文本输出</text>
-    </g>
-  </svg>
-</figure>
+<section id="data">
+<h2><span class="num">§ 07</span><span>九类预训练数据：三项结构改动不会凭空长出能力</span></h2>
+<p class="lead">OCR、3D 定位、视觉数学和 GUI 操作不是同一种任务。报告为它们分别造数据、打伪标签和做过滤。把这部分删掉，只剩“模型结构先进”，会错过技术报告的大半信息。</p>
+<figure class="reveal"><figcaption><span>Fig 07 · 数据类别与它教会模型的能力</span><b>规模、合成方法和公开程度各不相同</b></figcaption><div class="data-grid"><div class="data-card"><b>CAPTION / INTERLEAVED</b>重写图注；书页按自然顺序合并到 256K，学习跨页图文关系。</div><div class="data-card"><b>VISUAL KNOWLEDGE</b>十余类长尾实体，兼顾高频知识和稀有概念。</div><div class="data-card"><b>OCR / DOCUMENT</b><strong>30M OCR</strong>；3M Common Crawl PDF + 4M 内部文档；覆盖 39 种语言。</div><div class="data-card"><b>GROUNDING / COUNTING</b>框、点、计数三类任务；二维坐标统一到 <code>[0,1000]</code>。</div><div class="data-card"><b>SPATIAL / 3D</b>相对位置、可操作性与 9-DoF 三维框，统一虚拟相机坐标。</div><div class="data-card"><b>MULTIMODAL CODE</b>截图转 HTML、图转 SVG、图表和公式转代码。</div><div class="data-card"><b>VIDEO</b>短片段图注合成长故事；按阶段调整 fps、帧数与分辨率。</div><div class="data-card"><b>STEM</b><strong>1M</strong> 点定位、2M VQA、6M 图注、60M 习题、12M 长 CoT。</div><div class="data-card"><b>AGENT</b>桌面、手机、网页轨迹，以及多轮函数调用和搜索。</div></div><div class="coord-demo"><div class="coord-box">原图宽 2000<br>目标 x = 500</div><div class="parrow">→</div><div class="coord-box out">500 ÷ 2000 × 1000<br>= 归一坐标 250</div></div><div class="seq-note">换成宽 4000、目标仍在四分之一处，输出仍是 250；下游不必先猜原图尺寸。</div></figure>
+<p>数据大量来自旧模型、检测器、规则和伪标签，再经过规则或模型过滤。报告披露了流程与部分规模，没有公开完整数据清单和混合比例，因此外部团队无法只靠报告重建训练集。</p>
+</section>
 
+<section id="posttrain">
+<h2><span class="num">§ 08</span><span>后训练：SFT 教格式，蒸馏教解法，RL 纠正行为</span></h2>
+<figure class="reveal"><figcaption><span>Fig 08A · 三个阶段各补哪块短板</span><b>不是把同一批数据重复训练三遍</b></figcaption><div class="posttrain"><div class="pt-card sft"><h4>01 · SFT</h4><p>约 120 万样本：1/3 纯文本，2/3 图文或视频。先 32K 一轮，再混入 256K 长文档和长视频。</p><div class="pt-step">Instruct 学直接回答；Thinking 学显式长 CoT。</div></div><div class="pt-card distill"><h4>02 · STRONG → WEAK</h4><p>先学强老师现成答案，再让学生自己生成，老师逐 token 对齐学生真正走到的序列。</p><div class="pt-step">off-policy 覆盖老师路径；on-policy 修学生自己的错误。</div></div><div class="pt-card rl"><h4>03 · RL</h4><p>Reasoning RL 处理可验证数学、代码、定位；General RL 处理问答、格式、偏好和坏习惯。</p><div class="pt-step">规则奖励 + 模型 judge；Reasoning RL 使用 SAPO。</div></div></div></figure>
+<h3>长 CoT 数据为什么先检查“没有图还能不能答”</h3>
+<p>视觉数学题有时题面文字已经泄露答案。报告用 Qwen3-30B-nothink 在<strong>不提供图片</strong>的情况下试答；若仍能答对，就删除样本。这样留下的训练题才真的要求模型看图，而不是靠文字模式蒙答案。</p>
+<h3>蒸馏的 on-policy 到底多做了什么</h3>
+<figure class="reveal"><figcaption><span>Fig 08B · 老师概率怎样纠正学生</span><b>两词教学例；真实词表有数万项</b></figcaption><div class="prob-demo"><div class="prob"><b>老师</b><br>“3” = 0.8<br>“2” = 0.2</div><div class="parrow">→</div><div class="prob student"><b>学生当前</b><br>“3” = 0.5<br>“2” = 0.5</div></div><p class="seq-note">KL divergence<a class="jr" href="#g-04">4</a> 会推动学生提高“3”的概率、压低“2”。on-policy 的关键不是换一个损失，而是让学生先生成，老师再纠正学生真实会走到的上下文。</p></figure>
+<p>Reasoning RL 最终约 30K 条 query。每题先采 16 个回答：全错的题在准备阶段被删，训练时又删掉通过率超过 90% 的简单题，留下“不是完全不会，也没有已经学会”的区间。SAPO<a class="jr" href="#g-05">5</a> 是报告采用的策略梯度算法；本报告只给名称与引用，没有展开它的完整公式。</p>
+</section>
 
-<!-- §02 -->
-<h2><span class="num">§ 02</span>三处升级(vs Qwen2.5-VL)</h2>
+<section id="tools">
+<h2><span class="num">§ 09</span><span>Thinking with Images：不是脑内生图，而是多轮调用视觉工具</span></h2>
+<p class="lead">这里的 “with Images” 指模型能根据当前证据决定下一步视觉动作，读取工具或环境返回的新证据，再继续回答。报告没有完整列出工具接口，所以不能把所有常见裁剪、放大、搜索动作都当成已公开实现。</p>
+<figure class="reveal"><figcaption><span>Fig 09 · 多轮视觉 agent 闭环</span><b>工具结果会回到下一轮上下文</b></figcaption><div class="agent-loop"><div class="agent-node"><b>01</b>看原图与问题</div><div class="agent-node"><b>02</b>判断缺什么证据</div><div class="agent-node tool"><b>03</b>调用工具 / 环境动作</div><div class="agent-node"><b>04</b>读取返回结果</div><div class="agent-node"><b>05</b>继续推理或再调用</div><div class="agent-node"><b>06</b>给最终答案</div></div><div class="reward-row"><div class="reward"><b>答案奖励</b>最后答对了吗？</div><div class="reward"><b>多轮推理奖励</b>是否正确理解工具反馈并形成连贯路线？</div><div class="reward"><b>调用次数奖励</b>调用次数是否接近专家按题目难度估计的目标？</div></div></figure>
+<p>训练先用约 10K grounding 样本把 Qwen2.5-VL-32B 做成第一代视觉 agent，再蒸馏出约 120K 多轮交互训练 Qwen3-VL。早期模型发现了奖励漏洞：无论难题简单题都只调一次工具，仍可能骗过答案与推理 judge。第三项调用次数奖励就是专门堵这个漏洞。</p>
+</section>
 
-<h3>① Interleaved-MRoPE · 把频谱铺均匀</h3>
-<p>多模态位置编码 <a href="../concepts/mrope.html">MRoPE</a> 给每个 token 标 (时间 t, 高 h, 宽 w) 坐标。老做法把嵌入维度<strong>切成 t / h / w 三大块</strong>各给一段旋转频率 → <strong>频谱不均</strong>（t 全占低频、w 全占高频），长视频位置建模差。Qwen3-VL 把 t/h/w <strong>交错铺满高低频</strong> → 每个轴都均匀覆盖全频段 → 长视频长程位置强多了。</p>
+<section id="infra">
+<h2><span class="num">§ 10</span><span>万人 GPU 怎样分工：五种并行切的不是同一件东西</span></h2>
+<p class="lead">预训练最高扩到约 10,000 张 GPU。只写“用了 Megatron-LM”没有解释力：235B 参数、256K token 和 MoE 专家分别压在不同瓶颈上，必须从不同方向切开。</p>
+<figure class="reveal"><figcaption><span>Fig 10 · 每种并行到底切什么</span><b>模型状态、层、矩阵、token、专家是五笔账</b></figcaption><div class="infra"><div class="infra-card"><code>TP</code><b>切一层矩阵</b>同一次大矩阵乘分给多张卡，解决单层太宽。</div><div class="infra-card"><code>PP</code><b>切连续层</b>不同卡组负责不同 Transformer 层，激活沿流水线传递。</div><div class="infra-card"><code>CP</code><b>切长序列</b>把 256K token 分给多张卡，再为 attention 交换所需信息。</div><div class="infra-card"><code>EP</code><b>切 MoE 专家</b>不同专家放在不同卡，token 经路由发往对应专家。</div><div class="infra-card"><code>ZeRO-1 DP</code><b>切优化器状态</b>数据并行副本处理不同 batch，同时分摊 optimizer state。</div></div><div class="infra-line"><b>组合逻辑：</b>256K 首先需要 CP；235B MoE 需要 EP；单层太大叠 TP；层数再沿 PP 分段。每多切一刀，就多一种通信和负载均衡问题。</div></figure>
+<p>训练与部署不是一套系统。报告用 vLLM 或 <a href="../concepts/sglang-inference.html">SGLang</a><a class="jr" href="#g-06">6</a> 做推理：前者用 PagedAttention 管理不等长请求的 KV cache，后者侧重结构化生成、复杂 prompt 和请求调度。完整并行背景见 <a href="../concepts/distributed-training-parallelism.html">分布式训练并行</a>。</p>
+</section>
 
-<figure id="fig-mrope" class="fig-mrope">
-  <figcaption>
-    <span>Fig 02 · 老 MRoPE 分块 vs Interleaved</span>
-    <span class="fnum">分块→频谱不均 · 交错→均衡</span>
-  </figcaption>
-  <svg class="qv-svg" viewBox="0 0 720 240" xmlns="http://www.w3.org/2000/svg">
-    <!-- 老 MRoPE -->
-    <text class="qv-rev d1" x="60" y="48" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#9b2c2c">老 MRoPE：t/h/w 分块</text>
-    <g class="qv-rev d1" font-family="JetBrains Mono,monospace" font-size="9" text-anchor="middle">
-      <rect x="60" y="58" width="186" height="28" fill="#c8d4e2" stroke="#1f3a5f"/><text x="153" y="77" fill="#1f3a5f">t（全占低频）</text>
-      <rect x="246" y="58" width="187" height="28" fill="#d8e6ce" stroke="#4a6b3a"/><text x="339" y="77" fill="#3a5a2a">h（中频）</text>
-      <rect x="433" y="58" width="187" height="28" fill="#efd6c8" stroke="#9b2c2c"/><text x="526" y="77" fill="#7a2020">w（全占高频）</text>
-    </g>
-    <text class="qv-rev d2" x="60" y="104" font-family="JetBrains Mono,monospace" font-size="9" fill="#7a6f5d">低频 ←———————————— 嵌入维度 / 频率 ————————————→ 高频</text>
-    <text class="qv-rev d2" x="340" y="124" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" font-weight="700" fill="#9b2c2c">每个轴只占一段 → 频谱不均 → 长视频差</text>
-    <!-- Interleaved -->
-    <text class="qv-rev d3" x="60" y="166" font-family="Fraunces,serif" font-style="italic" font-size="13" font-weight="700" fill="#1f7a5c">Interleaved-MRoPE：t/h/w 交错</text>
-    <g class="qv-rev d4" font-family="JetBrains Mono,monospace" font-size="8" text-anchor="middle">
-      <rect x="60" y="176" width="60" height="28" fill="#c8d4e2" stroke="#1f3a5f"/><text x="90" y="194" fill="#1f3a5f">t</text>
-      <rect x="120" y="176" width="60" height="28" fill="#d8e6ce" stroke="#4a6b3a"/><text x="150" y="194" fill="#3a5a2a">h</text>
-      <rect x="180" y="176" width="60" height="28" fill="#efd6c8" stroke="#9b2c2c"/><text x="210" y="194" fill="#7a2020">w</text>
-      <rect x="240" y="176" width="60" height="28" fill="#c8d4e2" stroke="#1f3a5f"/><text x="270" y="194" fill="#1f3a5f">t</text>
-      <rect x="300" y="176" width="60" height="28" fill="#d8e6ce" stroke="#4a6b3a"/><text x="330" y="194" fill="#3a5a2a">h</text>
-      <rect x="360" y="176" width="60" height="28" fill="#efd6c8" stroke="#9b2c2c"/><text x="390" y="194" fill="#7a2020">w</text>
-      <rect x="420" y="176" width="60" height="28" fill="#c8d4e2" stroke="#1f3a5f"/><text x="450" y="194" fill="#1f3a5f">t</text>
-      <rect x="480" y="176" width="60" height="28" fill="#d8e6ce" stroke="#4a6b3a"/><text x="510" y="194" fill="#3a5a2a">h</text>
-      <rect x="540" y="176" width="80" height="28" fill="#efd6c8" stroke="#9b2c2c"/><text x="580" y="194" fill="#7a2020">w</text>
-    </g>
-    <text class="qv-rev d5" x="340" y="226" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" font-weight="700" fill="#1f7a5c">t/h/w 都均匀铺满高低频 → 频谱均衡 → 长视频强</text>
-  </svg>
-</figure>
+<section id="evaluation">
+<h2><span class="num">§ 11</span><span>实验怎么读：Thinking 不总赢，工具结果不能混进裸模型</span></h2>
+<p>下面选旗舰 235B-A22B 的代表指标。OmniDocBench 是错误率，越低越好；其余表内指标越高越好。</p>
+<div class="table-wrap"><table><thead><tr><th>能力</th><th>Benchmark</th><th>Thinking</th><th>Instruct</th><th>真正结论</th></tr></thead><tbody><tr><td>视觉推理</td><td>MMMU</td><td class="num">80.6</td><td class="num">78.7</td><td>Thinking 更强</td></tr><tr class="alt"><td>通用 VQA</td><td>MMBench-EN</td><td class="num">88.8</td><td class="num">89.3</td><td>Instruct 略强</td></tr><tr><td>OCR</td><td>OCRBench</td><td class="num">875</td><td class="num">920</td><td>直接识别无需长推理</td></tr><tr class="alt"><td>文档解析 ↓</td><td>OmniDocBench-EN</td><td class="num">.155</td><td class="num">.143</td><td>Instruct 错误更少</td></tr><tr><td>2D 定位</td><td>RefCOCO avg</td><td class="num">92.1</td><td class="num">91.9</td><td>两者接近</td></tr><tr class="alt"><td>视频</td><td>MLVU avg</td><td class="num">83.8</td><td class="num">84.3</td><td>Instruct 略强</td></tr><tr><td>GUI agent</td><td>OSWorld</td><td class="num">38.1</td><td class="num">31.6</td><td>Thinking 更强，但成功率仍有限</td></tr></tbody></table></div>
+<div class="plain"><b>工具增强另算：</b>V* 的 <code>93.7+</code>、HRBench-4K 的 <code>85.4+</code>、HRBench-8K 的 <code>82.4+</code> 都带 <code>+</code>，表示推理时用了工具。不能和不调用工具的一次前向结果放在同一列直接比较。</div>
+<h3>1M 上下文实验到底证明了什么</h3>
+<figure class="reveal"><figcaption><span>Fig 11 · Video Needle-in-a-Haystack</span><b>长距离检索很强，不等于完整理解两小时视频</b></figcaption><div class="needle"><div class="needle-panel"><h4>训练长度内 · 0–30 分钟</h4><div class="heat"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="needle-score">100%</div><p>256K token 内，在不同位置插入关键帧，模型能找到并回答。</p></div><div class="needle-panel"><h4>YaRN 外推 · 40–120 分钟</h4><div class="heat"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="needle-score">99.5%</div><p>外推到约 1M token，仍能完成这项合成长距离检索任务。</p></div></div><div class="warning"><b>测试条件：</b>视频按 1 FPS 采样，并随视频变长降低帧分辨率以维持视觉 token 预算。它不能证明模型保留了两小时视频的每个动作和每处高清细节。</div></figure>
+<h3>排行榜还有两条必须连着看的脚注</h3>
+<p>视频横评时 Qwen3-VL 最多使用 2,048 帧；受 API 与资源限制，Gemini 2.5 Pro、GPT-5、Claude Opus 4.1 分别只输入 512、256、100 帧。作者明确承认比较不能保证完全公平。</p>
+<p>纯文本也不是“全面反超 Qwen3”。235B Instruct 的 AIME-25 是 <code>74.7 vs 70.3</code>，但 MMLU-Pro 是 <code>81.8 vs 83.0</code>；Thinking 版 AIME-25 也低于对应文本模型 <code>89.7 vs 92.3</code>。更准确的说法是：加入视觉后，语言能力总体保住，部分任务因新数据与后训练得到提升。</p>
+</section>
 
-<h3>② DeepStack · 不只取最后一层 ViT</h3>
-<p>普通 VLM 只把 ViT <strong>最后一层</strong>的视觉 token 喂给 LLM。DeepStack <strong>抽 3 个不同深度的 ViT 层</strong>（浅层细节 → 深层语义），各过一个专用 merger，<strong>残差加到 LLM 前 3 层</strong>的 hidden state 上——多层视觉信息都进来，而且<strong>不增加上下文长度</strong>。</p>
-<div class="note">
-  <span class="l">眼熟吗</span>
-  <p>这跟 <a href="ideogram-4.html">Ideogram-4</a> 把 Qwen3-VL 当文本编码器时"<strong>取 13 个中间层</strong>拼起来"是同一个思想：<strong>多层特征 &gt; 只取最后一层</strong>，不同深度编码不同抽象度，全要。一个发生在 ViT 侧(DeepStack)、一个在 LLM 侧(Ideogram)。</p>
-</div>
+<section id="ablation">
+<h2><span class="num">§ 12</span><span>消融与边界：哪些因果证据扎实，哪些还不能拆账</span></h2>
+<figure class="reveal"><figcaption><span>Fig 12 · 两组真正做了开关对照的实验</span><b>同样要看下降项和实验口径</b></figcaption><div class="ablation"><div class="abl-card"><h4>Qwen3-ViT vs 原 SigLIP-2</h4><div class="bar-row"><span>OmniBench</span><div class="bar-track"><div class="bar-fill" style="width:73%"></div></div><span class="bar-value">36.9</span></div><div class="bar-row"><span>Qwen3-ViT</span><div class="bar-track"><div class="bar-fill after" style="width:91%"></div></div><span class="bar-value">45.5</span></div><div class="bar-row"><span>ImageNet-S</span><div class="bar-track"><div class="bar-fill" style="width:76.2%"></div></div><span class="bar-value">76.2</span></div><div class="bar-row"><span>Qwen3-ViT</span><div class="bar-track"><div class="bar-fill after" style="width:74.5%"></div></div><span class="bar-value">74.5</span></div><p>综合视觉语言基准涨得多，但传统分类并非每项上涨。</p></div><div class="abl-card"><h4>DeepStack · 无后训练</h4><div class="bar-row"><span>平均 · baseline</span><div class="bar-track"><div class="bar-fill" style="width:74.7%"></div></div><span class="bar-value">74.7</span></div><div class="bar-row"><span>平均 · +DS</span><div class="bar-track"><div class="bar-fill after" style="width:76%"></div></div><span class="bar-value">76.0</span></div><div class="bar-row"><span>InfoVQA · base</span><div class="bar-track"><div class="bar-fill" style="width:71.9%"></div></div><span class="bar-value">71.9</span></div><div class="bar-row"><span>InfoVQA · +DS</span><div class="bar-track"><div class="bar-fill after" style="width:74.2%"></div></div><span class="bar-value">74.2</span></div><p>内部 15B-A2B、200B token；文档细节任务提升较明显。</p></div></div></figure>
+<div class="plain"><b>没有单独消融：</b>报告没有分别关闭 Interleaved-MRoPE、文字时间戳或平方根归一损失。长视频结果同时受结构、数据、采样和上下文扩展影响，不能把全部进步归给一个零件。</div>
+<div class="limits"><div class="limit"><span>01</span><b>数据不可完整复现</b>内部收集、合成、伪标签与具体混合比例没有全部公开。</div><div class="limit"><span>02</span><b>1M 不是原生训练长度</b>原生训练到 256K，1M 来自 YaRN 位置外推。</div><div class="limit"><span>03</span><b>动态高分辨率很贵</b>官方示例可达 11,427 个视觉 token，prefill 和 KV cache 都会增长。</div><div class="limit"><span>04</span><b>部分评测依赖模型 judge</b>开放回答和 VideoMMMU 等口径会继承 judge 偏差。</div><div class="limit"><span>05</span><b>推理预算必须分开</b>Thinking、工具调用与纯 Instruct 不是同等成本。</div><div class="limit"><span>06</span><b>训练目标披露不完整</b>平方根归一 per-token loss 没有精确公式与 packing 细节。</div></div>
+<div class="plain"><b>一句话带走：</b>Qwen3-VL 的主线不是三个新名词，而是一套完整系统——动态分辨率 ViT 把图变成 token，merger 降采样并接入 Qwen3，DeepStack 补回中间视觉细节，位置与时间机制服务长视频，再靠专门数据、蒸馏、RL 和分布式训练把能力真正做出来。</div>
+</section>
 
-<h3>③ 文字时间戳 · 视频帧前缀 &lt;3.0 seconds&gt;</h3>
-<p>Qwen2.5-VL 用 <a href="../concepts/mrope.html">T-RoPE</a> 把时间塞进位置编码，长视频时位置 id <strong>又大又稀</strong>、还要密集采各种帧率训（<a href="../concepts/mrope.html">背景见 M-RoPE 页</a>）。Qwen3-VL 改成：给每组视频帧<strong>前缀一个文字时间戳 token</strong>（如 <code>&lt;3.0 seconds&gt;</code>，秒和 HMS 两种格式都训）→ 简单、精确，视频定位/dense caption 更强。<em>（优化上还把 per-sample loss 换成<strong>平方根归一的 per-token loss</strong>，平衡纯文本 vs 多模态。）</em></p>
+<section class="gloss" aria-label="术语表"><h2>术语表 · 点正文角标即可回看</h2><ol><li id="g-01" data-n="01"><span class="term">Modality projector / merger</span>：把视觉特征改成 LLM hidden size 的小网络。Qwen3-VL 的 merger 还会把相邻 2×2 特征合成一个 token。</li><li id="g-02" data-n="02"><span class="term">M-RoPE</span>：多模态旋转位置编码。用时间、行、列三个坐标表示视觉 token 的位置。</li><li id="g-03" data-n="03"><span class="term">T-RoPE</span>：Qwen2.5-VL 把视频绝对时间绑入时间位置 ID 的方案；Qwen3-VL 改用文字时间戳。</li><li id="g-04" data-n="04"><span class="term">KL divergence</span>：衡量两组概率分布差异。蒸馏时让学生对每个候选 token 的概率靠近老师。</li><li id="g-05" data-n="05"><span class="term">SAPO</span>：Smooth and Adaptive Policy Optimization，本报告 Reasoning RL 使用的策略梯度算法；详细目标函数来自其独立论文。</li><li id="g-06" data-n="06"><span class="term">SGLang</span>：LLM / VLM 推理服务框架，负责请求调度、KV cache 和结构化生成等工程工作。</li></ol></section>
 
-
-<!-- §03 -->
-<h2><span class="num">§ 03</span>训练：四阶段预训练 + 三步后训练</h2>
-
-<figure id="fig-train" class="fig-train">
-  <figcaption>
-    <span>Fig 03 · 预训练四阶段（上下文渐长）</span>
-    <span class="fnum">S0 只训 merger → S1/2/3 全参 · 8K→256K</span>
-  </figcaption>
-  <svg class="qv-svg" viewBox="0 0 720 230" xmlns="http://www.w3.org/2000/svg">
-    <defs><marker id="qv3-h" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,1 L9,5 L0,9 z" fill="#6b4a2e"/></marker></defs>
-    <g class="qv-rev d1" fill="#e3d7c7" stroke="#6b4a2e">
-      <rect x="60" y="150" width="130" height="40"/><rect x="205" y="120" width="130" height="70"/><rect x="350" y="92" width="130" height="98"/><rect x="495" y="50" width="150" height="140"/>
-    </g>
-    <g class="qv-rev d2" font-family="JetBrains Mono,monospace" font-weight="700" text-anchor="middle" fill="#5a3d24" font-size="10">
-      <text x="125" y="174">S0</text><text x="270" y="158">S1</text><text x="415" y="142">S2</text><text x="570" y="120">S3</text>
-    </g>
-    <g class="qv-rev d3" font-family="JetBrains Mono,monospace" font-size="8" text-anchor="middle" fill="#7a6f5d">
-      <text x="125" y="186">8K</text><text x="270" y="172">8K</text><text x="415" y="156">32K</text><text x="570" y="134">256K</text>
-    </g>
-    <g class="qv-rev d4" stroke="#6b4a2e" stroke-width="1.4" fill="none">
-      <line x1="190" y1="186" x2="203" y2="186" marker-end="url(#qv3-h)"/><line x1="335" y1="186" x2="348" y2="186" marker-end="url(#qv3-h)"/><line x1="480" y1="186" x2="493" y2="186" marker-end="url(#qv3-h)"/>
-    </g>
-    <g class="qv-rev d5" font-family="JetBrains Mono,monospace" font-size="7.5" text-anchor="middle" fill="#5a3d24">
-      <text x="125" y="206">只训 merger</text><text x="125" y="216">对齐 67B</text>
-      <text x="270" y="206">全参·多模态</text><text x="270" y="216">~1T</text>
-      <text x="415" y="206">全参·长上下文</text><text x="415" y="216">~1T</text>
-      <text x="570" y="206">全参·超长</text><text x="570" y="216">100B</text>
-    </g>
-  </svg>
-</figure>
-
-<table class="spec">
-  <tr><th>阶段</th><th>训什么</th><th>token / 上下文</th></tr>
-  <tr><td>S0 对齐</td><td>只训 MLP merger（ViT + LLM 冻结）</td><td>67B / 8K</td></tr>
-  <tr><td>S1 多模态预训练</td><td>全参（ViT+merger+LLM 一起）</td><td>~1T / 8K</td></tr>
-  <tr><td>S2 长上下文</td><td>全参，加大视频/agent 数据</td><td>~1T / 32K</td></tr>
-  <tr><td>S3 超长适配</td><td>全参，主攻长视频/长文档</td><td>100B / 256K</td></tr>
-</table>
-
-<p><strong>后训练三步</strong>：① 长链思考(CoT) SFT → ② 强师知识蒸馏 → ③ 强化学习(RL)。分流出 <strong>non-thinking</strong>（直答）和 <strong>thinking</strong>（显式推理，复杂任务更强）两版。</p>
-
-
-<!-- §04 -->
-<h2><span class="num">§ 04</span>能力 · 放进 wiki</h2>
-
-<table class="spec">
-  <tr><th>能力</th><th>说明</th></tr>
-  <tr><td>上下文</td><td>原生 256K → 可扩到 1M（长文档/长视频）</td></tr>
-  <tr><td>OCR</td><td>32 语种（2.5 是 10），低光/模糊/倾斜鲁棒</td></tr>
-  <tr><td>视觉 grounding</td><td>2D bbox + 3D + 点定位（交点/角点/重心）</td></tr>
-  <tr><td>agent</td><td>操作 PC/手机 GUI：认元素、懂功能、调工具</td></tr>
-  <tr><td>推理</td><td>MMMU / MathVista / MathVision；纯文本反超同级文本模型</td></tr>
-</table>
-
-<div class="note">
-  <span class="l">放进 wiki 这条线</span>
-  <p>Qwen3-VL = <a href="../concepts/modality-projector.html">模态编码器→projector→LLM</a> 那套在视觉上的旗舰落地（同 <a href="minimind-o.html">minimind-o</a>/<a href="qwen3-asr.html">Qwen3-ASR</a> 骨架）：眼睛 <a href="clip.html">SigLIP-2</a>(CLIP 家族 ViT) + merger + <a href="next-token-forward-pass.html">Qwen3 解码器</a>，位置用 <a href="../concepts/mrope.html">Interleaved-MRoPE</a>。它也是 <a href="ideogram-4.html">Ideogram-4</a>/<a href="qwen-image-2.html">Qwen-Image-2.0</a> 当<a href="../concepts/qwen3-vl.html">文本/条件编码器</a>用的那个大脑。一句话：<strong>VLM 就是给 LLM 接个 ViT 眼睛 + merger 插头；Qwen3-VL 靠 Interleaved-MRoPE + DeepStack + 文字时间戳把长视频和细粒度感知顶上去。</strong></p>
-</div>
-
-
-<!-- glossary -->
-<div class="gloss">
-  <h2>引用 / 术语表</h2>
-  <ol>
-    <li id="g-01"><span class="term">三件套 + MLP merger</span> · 视觉编码器(SigLIP-2 ViT) + MLP merger(2×2 视觉特征压成 1 token、对齐 LLM 维度) + Qwen3 LLM。merger = 视觉版的 <a href="../concepts/modality-projector.html">projector</a>。</li>
-    <li id="g-02"><span class="term">动态分辨率 → 变长 token</span> · 图按原生尺寸进，token 数随分辨率变；ViT 用 2D-RoPE + 插值绝对位置适配任意尺寸。</li>
-    <li id="g-03"><span class="term">Interleaved-MRoPE</span> · <a href="../concepts/mrope.html">MRoPE</a> 给 token 标 (t,h,w)。老做法分块致频谱不均、长视频差；新做法把 t/h/w 交错铺满高低频 → 均衡 → 长程视频位置强。</li>
-    <li id="g-04"><span class="term">DeepStack</span> · 抽 3 个中间 ViT 层、各过专用 merger、残差加到 LLM 前 3 层 → 多层视觉特征(浅细节→深语义)都进，不增上下文。同 <a href="ideogram-4.html">Ideogram-4</a> "取 13 中间层"的思想。</li>
-    <li id="g-05"><span class="term">文字时间戳</span> · 视频每组帧前缀 <code>&lt;3.0 seconds&gt;</code> 文字 token 代替 T-RoPE 的绝对时间位置 → 简单精确、利于视频定位/dense caption。</li>
-    <li id="g-06"><span class="term">四阶段预训练 + thinking</span> · S0 只训 merger 对齐 → S1/2/3 全参，上下文 8K→32K→256K；后训练长 CoT SFT→强师蒸馏→RL，出 non-thinking / thinking 两版。</li>
-  </ol>
-</div>
-
-<div class="colophon">
-  <span>SOURCE · arXiv 2511.21631 · Qwen3-VL Technical Report (Qwen Team, Alibaba · 2025)</span>
-  <span>INGESTED · 2026-06-15</span>
-</div>
-
-</div>
+<section class="sources"><h3>Primary sources</h3><ul><li><a href="https://arxiv.org/abs/2511.21631">Qwen3-VL Technical Report v2</a> · 架构、数据、训练、评测与消融的正文依据。</li><li><a href="https://github.com/QwenLM/Qwen3-VL">Qwen3-VL 官方仓库</a> · 公开模型、使用与部署入口。</li></ul></section>
+<div class="colophon"><span>REVIEWED · 2026-07-22 · beginner-first full rebuild</span><span>12 sections · 15 inline figures · KaTeX</span></div>
+</main>
 <script>
-{
-  const figs = ['fig-arch','fig-mrope','fig-train'];
-  figs.forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const obs = new IntersectionObserver(es => {
-      es.forEach(e => { if (e.isIntersecting) { el.classList.add('play'); obs.disconnect(); } });
-    }, { threshold: 0.15 });
-    obs.observe(el);
-  });
-}
+document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('.math').forEach(el=>{try{katex.render(el.textContent,el,{displayMode:el.dataset.display==='true',throwOnError:false})}catch(e){}});const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('play');obs.unobserve(e.target)}}),{threshold:.08});document.querySelectorAll('.reveal').forEach(el=>obs.observe(el))});
 </script>
 <!-- gloss-popover:start -->
 <style>

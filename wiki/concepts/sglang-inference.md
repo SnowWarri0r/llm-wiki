@@ -1,8 +1,8 @@
 ---
 name: sglang-inference
 type: concept
-sources: [fish-speech-s2-pro]
-updated: 2026-05-22
+sources: [fish-speech-s2-pro, qwen3-vl-report]
+updated: 2026-07-22
 ---
 
 # SGLang Inference
