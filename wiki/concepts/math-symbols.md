@@ -2,7 +2,7 @@
 name: math-symbols
 type: concept
 sources: [flow-matching, attention-is-all-you-need, resnet, gpt-3]
-updated: 2026-05-22
+updated: 2026-07-22
 ---
 
 # 数学符号速查
@@ -54,6 +54,8 @@ flow matching loss 公式里的 `E_{t, x_0, x_1}[...]` = "对所有 (t, x_0, x_1
 
 ### `log p(x)` · 对数概率
 直接用 p 数值范围太广（10⁻¹⁰ 到 1.0），取 log 后变成 -23 到 0 这种神经网络友好的范围。
+
+乘除如何变成加减、指数怎样移到 log 外、换底公式如何推导，见 [[logarithms]]。
 
 ### `∇log p(x)` · score
 就是上面"梯度"应用到"对数概率"。直觉上：<strong>这个向量指向概率密度更大的方向</strong>。详见 [[score-function]]。
@@ -131,6 +133,7 @@ attention 里的 `Q · Kᵀ` 是 [seq, d] @ [d, seq] = [seq, seq] —— 每对 
 带 bar 的（如 ᾱ）通常表示"累积的"或"平均的"。带 hat 的（如 x̂）表示"估计的 / 预测的"。
 
 ## 链接
+- [[logarithms]] · 外加内乘、外减内除、换底公式与 GSPO 数值例
 - [[ode-vs-sde]] · ODE vs SDE 详细
 - [[score-function]] · score 详细
 - [[velocity-field]] · flow matching 学的东西

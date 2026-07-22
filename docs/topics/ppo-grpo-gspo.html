@@ -7,6 +7,32 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
 <link rel="stylesheet" href="../style.css?v=43080b49" />
 </head>
 <body>
@@ -119,10 +145,14 @@
 <p>注意：这张表说的是论文中的典型定义，不代表所有开源框架都逐字照搬。<code>PPO</code> 是通用 RL 算法；后四种主要围绕 LLM 在线 RL / 可验证奖励场景展开。</p>
 <h2>先吃透 PPO 的一项核心公式</h2>
 <p>PPO-Clip 最大化：</p>
-<pre><code class="language-text">L_PPO = E_t [ min( ρ_t A_t, clip(ρ_t, 1−ε, 1+ε) A_t ) ]
-
-ρ_t = π_θ(y_t | x, y_&lt;t) / π_old(y_t | x, y_&lt;t)
-</code></pre>
+<div class="tex math-display" data-display="true">L_{\mathrm{PPO}}=\mathbb E_t\!\left[
+\min\!\left(
+\rho_tA_t,
+\operatorname{clip}(\rho_t,1-\varepsilon,1+\varepsilon)A_t
+\right)
+\right]</div>
+<div class="tex math-display" data-display="true">\rho_t=\frac{\pi_\theta(y_t\mid x,y_{&lt;t})}
+{\pi_{\mathrm{old}}(y_t\mid x,y_{&lt;t})}</div>
 <p>每个符号：</p>
 <ul>
 <li><code>x</code>：prompt，例如题目 <code>17 × 6</code>。</li>
@@ -138,15 +168,14 @@
 <p>为什么需要 <code>ρ_t</code>？回答由 <code>π_old</code> 采样，但梯度更新的是 <code>π_θ</code>。新旧模型已经不完全一样，<code>ρ_t</code> 用来修正这点差异。为什么再 clip？同一批回答会训练多个 epoch；如果某个 token 概率已经从 <code>0.1</code> 涨到 <code>0.3</code>，比率是 <code>3</code>，继续按三倍力度奖励它很容易把策略推坏。clip 让超出边界后的额外变化不再带来收益。</p>
 <h3>PPO 的 advantage 为什么需要 critic</h3>
 <p>最简单地看：</p>
-<pre><code class="language-text">A_t ≈ 实际回报 − V_φ(s_t)
-</code></pre>
+<div class="tex math-display" data-display="true">A_t\approx \mathrm{return}_t-V_\phi(s_t)</div>
 <p><code>s_t = (x, y_&lt;t)</code> 是写到第 <code>t</code> 个 token 前的状态；<code>V_φ(s_t)</code> 是 critic 对“从这里继续写，预计最终能拿多少 reward”的预测，<code>φ</code> 是 critic 的参数。实际工程通常用 <a href="../concepts/gae.html">gae</a> 把多步 TD 误差平滑起来，而不是只做一次相减。</p>
 <p>如果某条正确回答 reward 是 <code>1</code>，critic 在开头预测 <code>0.4</code>，那么简化 advantage 是 <code>1 − 0.4 = 0.6</code>。关键不是“答对得 1 分”，而是它比当前模型原本预期多了 <code>0.6</code>。</p>
 <p>critic 不是 reward model：reward model / 规则验证器负责给已完成的回答判分；critic 负责预测尚未写完时的未来得分。GRPO 砍掉的是后者。</p>
 <h2>GRPO：不用 critic，同一道题内部互比</h2>
 <p>对一个 prompt 采样 <code>G</code> 条回答，reward 为 <code>R_1 ... R_G</code>。原始 GRPO 的 outcome advantage 是：</p>
-<pre><code class="language-text">A_i = (R_i − mean(R_1...R_G)) / std(R_1...R_G)
-</code></pre>
+<div class="tex math-display" data-display="true">A_i=\frac{R_i-\operatorname{mean}(R_1,\ldots,R_G)}
+{\operatorname{std}(R_1,\ldots,R_G)}</div>
 <ul>
 <li><code>i</code>：组内第 <code>i</code> 条回答。</li>
 <li><code>G</code>：同一道题采样的回答数。</li>
@@ -156,9 +185,11 @@
 <li><code>A_i</code>：整条回答的组相对 advantage；在 outcome supervision 下，同一回答的所有 token 共用它。</li>
 </ul>
 <p>固定例子：四条回答 reward 是 <code>[1, 1, 0, 0]</code>。组均值是 <code>0.5</code>，总体标准差是 <code>0.5</code>，所以 advantage 是：</p>
-<pre><code class="language-text">A = [(1−.5)/.5, (1−.5)/.5, (0−.5)/.5, (0−.5)/.5]
-  = [1, 1, −1, −1]
-</code></pre>
+<div class="tex math-display" data-display="true">\begin{aligned}
+A&amp;=\left[\frac{1-0.5}{0.5},\frac{1-0.5}{0.5},
+\frac{0-0.5}{0.5},\frac{0-0.5}{0.5}\right] \\
+&amp;=[1,1,-1,-1]
+\end{aligned}</div>
 <p>这就替代了 critic：答对的两条相对组均值更好，所有 token 一起增大概率；答错的两条反过来。若四条全对或全错，reward 完全相同，中心化后 advantage 全为 <code>0</code>，这组数据不会产生策略梯度。</p>
 <p>原始 GRPO 仍使用 PPO 的 token 级比率和 clip。省掉 critic 不等于省掉 reward：数学、代码等任务可以用规则验证器；主观偏好任务仍可能需要 reward model。</p>
 <h2>同一条回答，PPO / GRPO / GSPO 到底怎么算</h2>
@@ -201,16 +232,19 @@
 </table>
 <p>设 <code>ε = 0.2</code>，clip 区间为 <code>[0.8, 1.2]</code>。</p>
 <p><strong>PPO：</strong>假设 critic 算出的 <code>A_t</code> 都简化为 <code>0.6</code>。前 3 个 token 的比率没越界；第 4 个 token 的 <code>1.25</code> 超过上界。对正 advantage，四项贡献是：</p>
-<pre><code class="language-text">[1.10×.6, 1.05×.6, .90×.6, min(1.25×.6, 1.20×.6)]
-= [.66, .63, .54, .72]
-</code></pre>
+<div class="tex math-display" data-display="true">\begin{aligned}
+&amp;[1.10\times0.6,\;1.05\times0.6,\;0.90\times0.6,\;
+\min(1.25\times0.6,1.20\times0.6)] \\
+&amp;=[0.66,0.63,0.54,0.72]
+\end{aligned}</div>
 <p>最后一项没有继续用 <code>0.75</code>，而被限制成 <code>0.72</code>。这就是 clip 真正在做的事。</p>
 <p><strong>GRPO：</strong>这条回答的组相对 advantage 是 <code>A_i = 1</code>，于是四项变成 <code>[1.10, 1.05, 0.90, 1.20]</code>。算法骨架没换，只是 advantage 不再来自 critic。</p>
 <p><strong>GSPO：</strong>不再让四个 token 各拿一个比率，先求整条回答的长度归一似然比：</p>
-<pre><code class="language-text">s_i = exp( (1/4) × [log 1.10 + log 1.05 + log .90 + log 1.25] )
-    = (1.10 × 1.05 × .90 × 1.25)^(1/4)
-    ≈ 1.0677
-</code></pre>
+<div class="tex math-display" data-display="true">\begin{aligned}
+s_i&amp;=\exp\!\left(\frac14[\log1.10+\log1.05+\log0.90+\log1.25]\right) \\
+&amp;=(1.10\times1.05\times0.90\times1.25)^{1/4} \\
+&amp;\approx1.0677
+\end{aligned}</div>
 <p>它就是四个 token 比率的几何平均。<code>1.0677</code> 没越过 <code>[0.8, 1.2]</code>，所以整条回答的目标贡献约为 <code>1.0677 × 1 = 1.0677</code>。</p>
 <p>这里不是说 token 级比率“算错了”。PPO 的重要性采样在理论上是逐动作定义的；GSPO 的主张是：LLM 常拿到整条回答的奖励，若训练时又因推理/训练数值差异让个别 token 比率波动，逐 token clip 会让一条回答内部出现不一致的截断。把比率和 clip 提到序列级，更贴合序列级 reward，也更能容忍局部概率波动。</p>
 <h2>Dr.GRPO：原始 GRPO 暗中给谁加了权</h2>
@@ -222,17 +256,14 @@
 </code></pre>
 <p>题 A 的正确回答 advantage 是 <code>1</code>；题 B 的正确回答是 <code>(1−.25)/.433 ≈ 1.732</code>。因为题 B 的组内标准差更小，同样一个正确样本会收到更大的更新权重。极易或极难的问题常出现 reward 几乎全相同，标准差很小；除以它会把少量差异放大。</p>
 <p>Dr.GRPO 改成：</p>
-<pre><code class="language-text">A_i^Dr = R_i − mean(R_1...R_G)
-</code></pre>
+<div class="tex math-display" data-display="true">A_i^{\mathrm{Dr}}=R_i-\operatorname{mean}(R_1,\ldots,R_G)</div>
 <p>仍然减组均值，所以 baseline 还在、critic 仍不需要；只是取消除以组内标准差，避免每道题因自己的 <code>std</code> 被重新加权。</p>
 <h3>2. 每条回答先除以自身长度，会形成长度偏置</h3>
 <p>原始 GRPO 常写成：</p>
-<pre><code class="language-text">每条回答的目标 = (1/|y_i|) × Σ_t token_loss(i,t)
-</code></pre>
+<div class="tex math-display" data-display="true">L_i=\frac1{|y_i|}\sum_t\ell_{i,t}</div>
 <p><code>|y_i|</code> 是第 <code>i</code> 条回答的 token 数。4-token 回答里每个 token 占整条目标的 <code>1/4</code>；8-token 回答里每个 token 只占 <code>1/8</code>。因此好长回答中的推理 token 被摊薄；坏长回答中的错误 token 也被摊薄。论文观察到后者会让错误回答越写越长。</p>
 <p>Dr.GRPO 把分母换成训练期间固定的生成上限 <code>M</code>：</p>
-<pre><code class="language-text">每条回答的目标 = (1/M) × Σ_t token_loss(i,t)
-</code></pre>
+<div class="tex math-display" data-display="true">L_i^{\mathrm{Dr}}=\frac1M\sum_t\ell_{i,t}</div>
 <p><code>M</code> 对所有回答相同，只改变整体梯度尺度，不再按每条回答的实际长度重新加权。这里不是奖励“越长越好”，而是让每个有效 token 的单位权重不随其所在回答长度改变。</p>
 <h2>DAPO：不是只改一条公式，而是修长 CoT 的整条流水线</h2>
 <p>DAPO 沿用组相对 advantage 和 token 级 PPO 目标，组合四项工程修改：</p>
@@ -249,9 +280,15 @@
 <p>DAPO 论文在 Qwen2.5-32B / AIME 2024 上报告从 naive GRPO 的 30 分逐项加到 50 分；这是特定模型、数据和训练系统上的组合消融，不能把每项增益直接外推到别的任务。</p>
 <h2>GSPO：把“更新幅度”从 token 级统一到回答级</h2>
 <p>GSPO 的序列级比率为：</p>
-<pre><code class="language-text">s_i(θ) = [ π_θ(y_i|x) / π_old(y_i|x) ]^(1/|y_i|)
-       = exp( (1/|y_i|) × Σ_t log[π_θ(y_i,t|x,y_i,&lt;t) / π_old(...)] )
-</code></pre>
+<div class="tex math-display" data-display="true">\begin{aligned}
+s_i(\theta)
+&amp;=\left(\frac{\pi_\theta(y_i\mid x)}{\pi_{\mathrm{old}}(y_i\mid x)}\right)^{1/|y_i|} \\
+&amp;=\exp\!\left[
+\frac1{|y_i|}\sum_t
+\log\frac{\pi_\theta(y_{i,t}\mid x,y_{i,&lt;t})}
+{\pi_{\mathrm{old}}(y_{i,t}\mid x,y_{i,&lt;t})}
+\right]
+\end{aligned}</div>
 <ul>
 <li><code>s_i</code>：第 <code>i</code> 条回答唯一的序列级重要性比率。</li>
 <li><code>π(y_i|x)</code>：整条回答的似然，等于各 token 条件概率连乘。</li>
@@ -259,8 +296,13 @@
 <li><code>1/|y_i|</code> 次方：把连乘比率变成平均每 token 的尺度；否则序列越长，乘积越容易指数级趋近 0 或无穷大。</li>
 </ul>
 <p>GSPO 目标为：</p>
-<pre><code class="language-text">L_GSPO = E_x,{y_i} [ (1/G) × Σ_i min(s_i A_i, clip(s_i,1−ε,1+ε) A_i) ]
-</code></pre>
+<div class="tex math-display" data-display="true">L_{\mathrm{GSPO}}=\mathbb E_{x,\{y_i\}}\!\left[
+\frac1G\sum_i
+\min\!\left(
+s_iA_i,
+\operatorname{clip}(s_i,1-\varepsilon,1+\varepsilon)A_i
+\right)
+\right]</div>
 <p><code>A_i</code> 仍可使用 GRPO 的组相对 advantage。真正改变的是：一条回答只算一个 <code>s_i</code>，整条一起 clip、一起放大或缩小。Qwen 团队报告它比 GRPO 更稳定，尤其能稳定 MoE 模型 RL；其解释包括序列 reward 与 token clip 的粒度错位，以及训练、推理引擎或 MoE 路由造成的 token 概率差异。</p>
 <h2>这些算法不是一条“越来越先进”的排行榜</h2>
 <ul>
@@ -294,6 +336,7 @@
 <li><a href="../concepts/dr-grpo.html">dr-grpo</a> · 两种归一化偏置</li>
 <li><a href="../concepts/dapo.html">dapo</a> · 长 CoT 训练的四项系统修改</li>
 <li><a href="../concepts/gspo.html">gspo</a> · 序列级重要性比率</li>
+<li><a href="../concepts/logarithms.html">logarithms</a> · 外加内乘、外减内除、换底公式，以及 GSPO 的 log 求和</li>
 <li><a href="../concepts/rl-for-llm-people.html">rl-for-llm-people</a> · 先补 policy / reward / rollout / on-policy 基础</li>
 <li><a href="../concepts/clipped-surrogate-objective.html">clipped-surrogate-objective</a> · 单独理解 PPO clip</li>
 <li><a href="../concepts/advantage-function.html">advantage-function</a> · 为什么要减 baseline</li>
@@ -311,6 +354,19 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

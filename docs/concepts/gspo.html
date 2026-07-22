@@ -7,6 +7,32 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
 <link rel="stylesheet" href="../style.css?v=43080b49" />
 </head>
 <body>
@@ -42,14 +68,23 @@
 <p>GSPO 沿用 GRPO 的组相对 advantage，但让整条回答共用一个长度归一的新旧策略比率，并在序列级做 clip；它修的是更新粒度，不是 reward 的来源。</p>
 <h2>GRPO 的 token 级比率并非“算错”，问题是粒度错位</h2>
 <p>在 outcome RL 中，一条回答通常只拿一个最终 reward，组相对 advantage <code>A_i</code> 也属于整条回答。但 GRPO 沿用 PPO，对每个 token 分别计算：</p>
-<pre><code class="language-text">ρ_i,t = π_θ(y_i,t | x,y_i,&lt;t) / π_old(y_i,t | x,y_i,&lt;t)
-</code></pre>
+<div class="tex math-display" data-display="true">\rho_{i,t}=\frac{\pi_\theta(y_{i,t}\mid x,y_{i,&lt;t})}
+{\pi_{\mathrm{old}}(y_{i,t}\mid x,y_{i,&lt;t})}</div>
+<ul>
+<li><span class="tex math-inline" data-display="false">x</span>：输入的 prompt。</li>
+<li><span class="tex math-inline" data-display="false">y_{i,t}</span>：第 <span class="tex math-inline" data-display="false">i</span> 条回答的第 <span class="tex math-inline" data-display="false">t</span> 个 token；<span class="tex math-inline" data-display="false">y_{i,&lt;t}</span> 是它前面的 token。</li>
+<li><span class="tex math-inline" data-display="false">\pi_{\mathrm{old}}</span>：采样这条回答时的旧策略；<span class="tex math-inline" data-display="false">\pi_\theta</span> 是参数为 <span class="tex math-inline" data-display="false">\theta</span> 的待更新策略。</li>
+<li><span class="tex math-inline" data-display="false">\rho_{i,t}</span>：新概率除以旧概率。它等于 1 表示没变，1.1 表示新模型把该 token 的概率提高了 10%。</li>
+</ul>
 <p>然后每个 <code>ρ_i,t</code> 各自 clip。于是同一条好回答里，某些 token 可能按 <code>1.2</code> 奖励，另一些按 <code>0.8</code> 或未截断值更新。若训练和推理引擎精度不同，或 MoE 路由让局部 log-prob 更敏感，个别 token 的比率波动会改变 clip 决策。</p>
 <p>GSPO 的思路是：既然奖惩对象是一条回答，就让更新幅度也属于整条回答。</p>
 <h2>序列比率公式逐项拆开</h2>
-<pre><code class="language-text">s_i(θ) = [π_θ(y_i|x) / π_old(y_i|x)]^(1/|y_i|)
-       = exp((1/|y_i|) Σ_t log ρ_i,t)
-</code></pre>
+<div class="tex math-display" data-display="true">\begin{aligned}
+s_i(\theta)
+&amp;=\left(\frac{\pi_\theta(y_i\mid x)}
+{\pi_{\mathrm{old}}(y_i\mid x)}\right)^{1/|y_i|} \\
+&amp;=\exp\!\left(\frac{1}{|y_i|}\sum_t\log\rho_{i,t}\right)
+\end{aligned}</div>
 <ul>
 <li><code>y_i</code>：同一 prompt 的第 <code>i</code> 条完整回答。</li>
 <li><code>π(y_i|x)</code>：整条回答的似然，即各 token 条件概率连乘。</li>
@@ -59,15 +94,28 @@
 <li><code>exp(mean(log ρ))</code>：与上式完全等价，也是 token 比率的几何平均，数值计算时更稳定。</li>
 </ul>
 <p>GSPO 最大化：</p>
-<pre><code class="language-text">L = E[(1/G) Σ_i min(s_i A_i, clip(s_i,1−ε,1+ε) A_i)]
-</code></pre>
-<p><code>A_i</code> 仍可按 <a href="../concepts/grpo.html">grpo</a> 从同题多回答 reward 算出。变化只在 <code>s_i</code>：整条回答一起放大、缩小或被 clip。</p>
+<div class="tex math-display" data-display="true">L=\mathbb E\!\left[
+\frac1G\sum_i
+\min\!\left(
+s_iA_i,\operatorname{clip}(s_i,1-\varepsilon,1+\varepsilon)A_i
+\right)
+\right]</div>
+<ul>
+<li><span class="tex math-inline" data-display="false">L</span>：要最大化的训练目标；值越大，表示这次策略更新越符合 reward 给出的方向。</li>
+<li><span class="tex math-inline" data-display="false">\mathbb E</span>：对训练中采样到的 prompt 和回答求平均。</li>
+<li><span class="tex math-inline" data-display="false">G</span>：同一道题采样的回答数；<span class="tex math-inline" data-display="false">\frac1G\sum_i</span> 就是先把这 <span class="tex math-inline" data-display="false">G</span> 条回答的贡献平均。</li>
+<li><span class="tex math-inline" data-display="false">A_i</span>：第 <span class="tex math-inline" data-display="false">i</span> 条回答的 advantage，仍可按 <a href="../concepts/grpo.html">grpo</a> 从同题多回答的 reward 算出。</li>
+<li><span class="tex math-inline" data-display="false">\varepsilon</span>：clip 宽度；若 <span class="tex math-inline" data-display="false">\varepsilon=0.2</span>，允许区间就是 <span class="tex math-inline" data-display="false">[0.8,1.2]</span>。</li>
+<li><span class="tex math-inline" data-display="false">\min</span>：在未截断与截断后的两项里取更保守的一项。</li>
+</ul>
+<p>真正变化只在 <span class="tex math-inline" data-display="false">s_i</span>：整条回答一起放大、缩小或被 clip。</p>
 <h2>四个 token 的手算</h2>
 <p>若 token 比率为 <code>[1.10, 1.05, .90, 1.25]</code>：</p>
-<pre><code class="language-text">s = (1.10 × 1.05 × .90 × 1.25)^(1/4)
-  = 1.299375^(1/4)
-  ≈ 1.0677
-</code></pre>
+<div class="tex math-display" data-display="true">\begin{aligned}
+s&amp;=(1.10\times1.05\times0.90\times1.25)^{1/4} \\
+ &amp;=1.299375^{1/4} \\
+ &amp;\approx1.0677
+\end{aligned}</div>
 <p>不做 <code>1/4</code> 次方时，总比率是 <code>1.299375</code>，仅仅因为序列更长就更容易远离 1。长度归一以后，<code>1.0677</code> 可解释为平均每个 token 约提高 6.77%。若 <code>A_i=1</code>、clip 区间 <code>[.8,1.2]</code>，这条回答的目标贡献就是 <code>1.0677</code>；不会只因末 token 的 <code>1.25</code> 就让局部单独触发上侧 clip。</p>
 <p>这不是说异常 token “被证明是噪声”，而是用全序列的几何平均把局部波动合成一个共同更新尺度。好处是稳定，代价是失去逐 token 区分更新幅度的自由度。</p>
 <h2>为什么对 MoE 特别重要</h2>
@@ -86,13 +134,14 @@
 <li><a href="https://qwenlm.github.io/zh/blog/gspo/">Qwen 官方中文解读</a></li>
 <li><a href="../topics/ppo-grpo-gspo.html">ppo-grpo-gspo</a> · 与 PPO / GRPO / Dr.GRPO / DAPO 放在同一数值例子中比较</li>
 <li><a href="../concepts/grpo.html">grpo</a> · 它继承的组相对 advantage</li>
+<li><a href="../concepts/logarithms.html">logarithms</a> · <code>exp(mean(log ratio))</code> 的对数运算逐步解释</li>
 <li><a href="../papers/qwen3-asr.html">qwen3-asr</a> · GSPO 在语音后训练中的使用</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 6 处</span>
-  <ul><li><a href="../papers/ppo.html"><span class="cat">paper</span>PPO · Proximal Policy Optimization</a></li><li><a href="../papers/qwen3-asr.html"><span class="cat">paper</span>Qwen3-ASR · 给 LLM 接个耳朵</a></li><li><a href="../topics/ppo-grpo-gspo.html"><span class="cat">topic</span>PPO → GRPO → Dr.GRPO / DAPO → GSPO · LLM 强化学习算法地图</a></li><li><a href="../concepts/dapo.html"><span class="cat">concept</span>DAPO · Decoupled Clip and Dynamic Sampling Policy Optimization</a></li><li><a href="../concepts/grpo.html"><span class="cat">concept</span>GRPO · Group Relative Policy Optimization</a></li><li><a href="../concepts/softmax.html"><span class="cat">concept</span>Softmax · 一组实数压成概率分布 · 温度调软硬</a></li></ul>
+  <span class="label">引用此页的内容 · 7 处</span>
+  <ul><li><a href="../papers/ppo.html"><span class="cat">paper</span>PPO · Proximal Policy Optimization</a></li><li><a href="../papers/qwen3-asr.html"><span class="cat">paper</span>Qwen3-ASR · 给 LLM 接个耳朵</a></li><li><a href="../topics/ppo-grpo-gspo.html"><span class="cat">topic</span>PPO → GRPO → Dr.GRPO / DAPO → GSPO · LLM 强化学习算法地图</a></li><li><a href="../concepts/dapo.html"><span class="cat">concept</span>DAPO · Decoupled Clip and Dynamic Sampling Policy Optimization</a></li><li><a href="../concepts/grpo.html"><span class="cat">concept</span>GRPO · Group Relative Policy Optimization</a></li><li><a href="../concepts/logarithms.html"><span class="cat">concept</span>对数 · 把乘除变成加减</a></li><li><a href="../concepts/softmax.html"><span class="cat">concept</span>Softmax · 一组实数压成概率分布 · 温度调软硬</a></li></ul>
 </div>
 
 <div class="colophon">
@@ -101,6 +150,19 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {
