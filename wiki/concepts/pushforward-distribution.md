@@ -2,7 +2,8 @@
 name: pushforward-distribution
 type: concept
 domain: ml
-sources: [drifting-models, normalizing-flow, flow-matching]
+sources: [drifting-models, normalizing-flow, flow-matching, dmd]
+updated: 2026-07-22
 ---
 
 # Pushforward Distribution · 推前分布

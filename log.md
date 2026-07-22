@@ -1019,3 +1019,10 @@ skill 更新:
 - DeepStack、Interleaved-MRoPE、文字时间戳全部改成“旧数据流为什么不够 → 新零件接在哪 → 数字例 → 代价与消融边界”；纠正“Thinking 总更强”“纯文本全面反超”“三项结构独自产生全部长视频增益”等过度结论。
 - 补齐原报告九类预训练数据、四阶段预训练、120 万 SFT、off/on-policy 蒸馏、Reasoning/General RL、Thinking with Images 奖励漏洞、五种分布式并行、11 类评测口径、1M needle 测试条件和横评帧预算差异。
 - bespoke HTML 重做为 15 张响应式内联图并接入 KaTeX；同步修订 M-RoPE 与 modality projector 概念页，并回接 MoE、分布式并行、SGLang 和 on/off-policy。
+
+## [2026-07-22] ingest | DMD · One-step Diffusion with Distribution Matching Distillation
+
+- 逐节覆盖 CVPR 主文与 22 页 arXiv 附录：从一步生成器初始化、反向 KL、两个 score、加噪重叠、动态 fake-score、时间权重、LPIPS 回归、CFG 蒸馏一路讲到 Algorithm 1/2/3、附录梯度推导和四套训练配方。
+- 用同一条标量例从 `x_t=.66` 算出 real/fake score、`w=1.5`、生成器梯度 `−1.6`、参数更新与 stopgrad 伪损失，明确伪 MSE 只负责注入梯度，不是 KL 数值。
+- 纠正旧概念页把原始 DMD 写成 4 步、把“不逐样本强制对齐”写成近似无配对的混淆；原论文严格为 1 NFE，DMD2/TDM 与后续 4/8 步应用分开记。
+- 补齐 ImageNet / CIFAR / COCO 主结果、两项损失和时间权重消融、LPIPS/L2 补充实验、测速口径与显存/配对集/fake-score 追踪等局限。
