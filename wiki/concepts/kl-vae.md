@@ -1,8 +1,8 @@
 ---
 name: kl-vae
 type: concept
-sources: [ideogram-4, qwen-image-2, mrt, stable-diffusion-3-5, pid-pixel-diffusion, rae-dit, meshflow]
-updated: 2026-06-18
+sources: [ideogram-4, qwen-image-2, mrt, stable-diffusion-3-5, pid-pixel-diffusion, rae-dit, meshflow, drifting-models]
+updated: 2026-07-22
 ---
 
 # KL-VAE · 把图压进 latent 的那层地基

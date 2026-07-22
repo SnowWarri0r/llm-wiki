@@ -1009,5 +1009,6 @@ skill 更新:
 
 - 以论文 v2、附录、官方项目页与 JAX 实现重新核证：补 pushforward、核漂移逐项定义、一维数字例、反对称的单向逻辑、stopgrad 真实梯度路线、双向 softmax、特征空间、训练时 CFG、latent/pixel DiT、队列与训练配方。
 - 实验不再只列最佳 FID：补吸引/排斥破坏消融、样本数/特征质量/核归一化、一步与多步的公平口径，以及机器人任务中的明确退步项。
-- bespoke HTML 重做为 13 节、11 张内联图的 rust field-notes 页面，加入 KaTeX、完整模型总览、桌面/移动响应式布局与就地术语；新建 [[pushforward-distribution]] 概念页并回接 CFG、DiT、QK-Norm、perceptual loss、flow matching、DMD。
+- bespoke HTML 重做为 13 节、14 张内联图的 rust field-notes 页面，加入 KaTeX、完整模型总览、桌面/移动响应式布局与就地术语；新建 [[pushforward-distribution]] 概念页并回接 CFG、DiT、QK-Norm、perceptual loss、flow matching、DMD。
 - stopgrad 段二次重写：纠正“冻结整个 f、跨轮比较”的误解，改成同一次前向里的活分支 / 目标快照分叉图；补无 stopgrad 时梯度为何抵消、旧靶验算与下一轮重新造靶的边界。
+- 第 7、9 节补全数据流：解释特征空间负责选择语义邻居、冻结特征网仍通过输入 Jacobian 传梯度，并列出局部/全局/分区特征；从 patchify 开始追踪 latent/pixel 的 256 个图像 token、两路条件注入、272 长度序列与 unpatchify。纠正 32 个 style embedding 被误写成 32 个序列 token：它们先求和并入条件向量。

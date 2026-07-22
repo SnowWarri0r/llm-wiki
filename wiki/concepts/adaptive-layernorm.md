@@ -1,7 +1,7 @@
 ---
 name: adaptive-layernorm
 type: concept
-sources: [dit, ltx-2]
+sources: [dit, ltx-2, drifting-models]
 updated: 2026-07-17
 ---
 
