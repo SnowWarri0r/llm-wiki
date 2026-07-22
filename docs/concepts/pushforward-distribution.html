@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Pushforward Distribution · 推前分布 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · pushforward-distribution</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Pushforward Distribution · 推前分布</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把随机变量送进函数后，原来的概率质量被函数搬到输出空间；输出形成的新分布就叫推前分布。</p>
+<h2>先别把 <code>#</code> 当乘号</h2>
+<p>若噪声 <code>ε</code> 服从分布 <code>p_ε</code>，生成器输出 <code>x=f(ε)</code>，就写：</p>
+<div class="tex math-display" data-display="true">q=f_{\#}p_\epsilon=[f]_{\#}p_\epsilon</div>
+<p>它读作“<code>p_ε</code> 经过 <code>f</code> 的推前分布是 <code>q</code>”。<code>#</code> 只是在标记“分布被函数搬过去了”，不是数值运算。</p>
+<h2>一个离散数字例</h2>
+<p>噪声只有两种可能：</p>
+<ul>
+<li><code>P(ε=-1)=0.5</code></li>
+<li><code>P(ε=+1)=0.5</code></li>
+</ul>
+<p>若生成器满足 <code>f(-1)=0</code>、<code>f(+1)=2</code>，那么输出也只有两种可能：</p>
+<ul>
+<li><code>P(x=0)=0.5</code></li>
+<li><code>P(x=2)=0.5</code></li>
+</ul>
+<p>输入端的两团概率质量被搬到了 <code>0</code> 和 <code>2</code>；这个输出分布就是 <code>q=f#p_ε</code>。</p>
+<h2>连续情形怎么理解</h2>
+<p>对输出空间里的任意区域 <code>A</code>：</p>
+<div class="tex math-display" data-display="true">q(A)=p_\epsilon\big(f^{-1}(A)\big)</div>
+<ul>
+<li><code>A</code>：你关心的输出区域。</li>
+<li><code>f⁻¹(A)</code>：所有“经过 <code>f</code> 后会落进 A”的输入集合，不要求 <code>f</code> 真有一个单值反函数。</li>
+<li>右边先算这些输入在噪声分布中占多少概率；这就是输出落进 <code>A</code> 的概率。</li>
+</ul>
+<h2>为什么生成模型总写它</h2>
+<p>生成模型通常不会直接手写复杂图像分布 <code>q(x)</code>，而是选一个容易采样的噪声分布，再学习函数 <code>f</code>。训练真正改变的是 <code>f</code>，但由此也间接改变了 <code>q=f#p_ε</code>。</p>
+<p>在 <a href="../papers/drifting-models.html">drifting-models</a> 里，每轮参数更新都会改变 <code>f_θ</code>，所以当前生成分布 <code>q_θ</code> 也跟着改变；漂移场正是根据这个新 <code>q_θ</code> 重新计算。</p>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/drifting-models.html"><span class="cat">paper</span>Generative Modeling via Drifting · 把反复修图留在训练时，生成时一步出图</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/pushforward-distribution.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

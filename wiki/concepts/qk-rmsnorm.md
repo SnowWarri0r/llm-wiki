@@ -1,8 +1,8 @@
 ---
 name: qk-rmsnorm
 type: concept
-sources: [ideogram-4, stable-diffusion-3-5, qwen-image-2, krea-2]
-updated: 2026-06-05
+sources: [ideogram-4, stable-diffusion-3-5, qwen-image-2, krea-2, drifting-models]
+updated: 2026-07-22
 ---
 
 # QK-Norm · 给 Q/K 做归一化稳住训练

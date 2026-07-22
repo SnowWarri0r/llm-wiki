@@ -1005,3 +1005,8 @@ skill 更新:
 - 自动渲染器支持显式 `\\(...\\)` 行内公式与 `\\[...\\]` 独立公式，并跳过代码块；只有真正含公式的页面才加载本地 KaTeX，避免把 `$NVDA` 一类普通文本误判成数学。
 - 新增 logarithms concept，从 `log₂8=3 ⇔ 2³=8` 的定义出发，推导外加内乘、外减内除、系数进指数、不可拆 `log(x+y)` 与换底公式，并用 `log₂10≈3.321928` 反算验证。
 - 将 PPO / GRPO / Dr.GRPO / DAPO / GSPO 核心目标和手算迁入 KaTeX；旧 concept 中被 Markdown 吃掉反斜杠的两处公式也恢复正确渲染。
+## [2026-07-22] refine | drifting-models · 从 5 节速记重做为完整机制讲解
+
+- 以论文 v2、附录、官方项目页与 JAX 实现重新核证：补 pushforward、核漂移逐项定义、一维数字例、反对称的单向逻辑、stopgrad 真实梯度路线、双向 softmax、特征空间、训练时 CFG、latent/pixel DiT、队列与训练配方。
+- 实验不再只列最佳 FID：补吸引/排斥破坏消融、样本数/特征质量/核归一化、一步与多步的公平口径，以及机器人任务中的明确退步项。
+- bespoke HTML 重做为 13 节、11 张内联图的 rust field-notes 页面，加入 KaTeX、完整模型总览、桌面/移动响应式布局与就地术语；新建 [[pushforward-distribution]] 概念页并回接 CFG、DiT、QK-Norm、perceptual loss、flow matching、DMD。
