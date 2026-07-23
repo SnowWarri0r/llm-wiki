@@ -2,11 +2,37 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Score Function · ∇log p(x) · 对数概率梯度 · Concept</title>
+<title>Score Function · 不是评分，而是“这张带噪图该往哪改” · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
 <link rel="stylesheet" href="../style.css?v=43080b49" />
 </head>
 <body>
@@ -34,65 +60,225 @@
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Score Function · ∇log p(x) · 对数概率梯度</h1>
+  <h1>Score Function · 不是评分，而是“这张带噪图该往哪改”</h1>
 </header>
 
 <article class="concept-body">
-<h2>一句话</h2>
-<p>对一个概率密度 p(x)，<strong>score = ∇log p(x)</strong> —— 指向"概率密度更大的方向"的向量。diffusion 模型学这个，flow matching 不学这个。</p>
-<h2>直觉</h2>
-<p>想象数据分布是一坨地形（高度 = 概率密度）。在地形上某一点 x：</p>
+<h2>先别看公式：从修照片的学徒说起</h2>
+<p>一家照片修复店想训练学徒。师傅手里有很多清晰照片，却没有现成的“每一个坏位置该怎么修”标签。于是店里自己造练习题：</p>
+<ol>
+<li>随机拿一张清晰照片；</li>
+<li>随机决定这次要破坏多严重；</li>
+<li>由店里自己生成一份雪花噪声，盖到照片上；</li>
+<li>把带噪照片交给学徒，让他猜“刚才加了哪一份噪声”；</li>
+<li>店里知道标准答案，因为噪声就是自己加的；猜错多少可以直接算；</li>
+<li>重复看几百万道题后，学徒学会：看到某种带噪结构时，通常应该把哪些位置调大、哪些位置调小。</li>
+</ol>
+<p>扩散模型训练 real-score 网络，做的就是这件事。</p>
+<p>这套类比的对应关系是：</p>
+<table>
+<thead>
+<tr>
+<th>修照片练习</th>
+<th>扩散训练</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>原始清晰照片</td>
+<td>真实训练样本 <code>x₀</code></td>
+</tr>
+<tr>
+<td>破坏程度</td>
+<td>噪声时刻 <code>t</code></td>
+</tr>
+<tr>
+<td>店里生成的雪花</td>
+<td>高斯噪声 <code>ε</code></td>
+</tr>
+<tr>
+<td>盖上雪花的照片</td>
+<td>带噪样本 <code>xₜ</code></td>
+</tr>
+<tr>
+<td>学徒</td>
+<td>去噪 / score 网络</td>
+</tr>
+<tr>
+<td>猜出的雪花</td>
+<td><code>ε̂θ(xₜ,t)</code></td>
+</tr>
+<tr>
+<td>标准答案</td>
+<td>当初亲手加进去的 <code>ε</code></td>
+</tr>
+</tbody>
+</table>
+<p>所以 <strong>real-score 网络不是拿 DMD 学生图训练出来的</strong>。它先在大量真实图片上完成普通扩散训练；进入 DMD 以后参数冻结，只负责给方向。</p>
+<h2>Score 不是“这张图得 85 分”</h2>
+<p>扩散里的 score 定义是：</p>
+<div class="tex math-display" data-display="true">s_p(x)=\nabla_x\log p(x)</div>
+<p>它不是一个标量评分，而是和 <code>x</code> 形状相同的一组修改建议：</p>
 <ul>
-<li><strong>概率密度 p(x)</strong> = 这点的地形高度</li>
-<li><strong>score ∇log p(x)</strong> = 这点的<strong>上坡方向 + 坡度</strong></li>
+<li>图像某个位置应该增大，那里就是正数；</li>
+<li>应该减小，那里就是负数；</li>
+<li>绝对值越大，说明这一方向的局部坡度越陡。</li>
 </ul>
-<p>如果你想生成 "像数据的样本"，就<strong>沿 score 方向走</strong> —— 一步步爬向高密度区域。这就是 diffusion 反向去噪的本质。</p>
-<p>类比 1：迷雾里找村庄。你看不到全局地图（不知道 p(x) 长什么样），但每点能感受到"哪边人多 / 灯光更密"（score 方向）。沿这个感觉走，最终到村庄（高密度区）。</p>
-<p>类比 2：物理。如果 p 是势能函数 e^(-E)，那 ∇log p = -∇E = 受力方向。粒子在势场里运动 = 沿 score 走。</p>
-<h2>为什么是 log</h2>
-<p>两个原因：</p>
-<p><strong>1 · 数值范围合理</strong>。<code>p(x)</code> 在高维空间常常是 10⁻¹⁰⁰ 这种夸张小数；<code>log p(x)</code> 是 -230 左右，神经网络好处理。</p>
-<p><strong>2 · 让梯度公式简化</strong>。<code>∇p(x) / p(x) = ∇log p(x)</code> —— 学 score 等于学 "归一化的梯度方向"，不受 p 数值大小影响，只关注方向。</p>
-<h2>为什么 diffusion 学 score 而不是 p 本身</h2>
-<p>学 p 直接需要知道 partition function（积分配一才能归一化）—— 高维上 intractable。</p>
-<p>学 score 跳过 partition function：</p>
-<pre><code>∇log p(x) = ∇log [unnormalized_p(x) / Z]
-          = ∇log unnormalized_p(x) - ∇log Z
-          = ∇log unnormalized_p(x)        # Z 是常数, 梯度为 0
+<p>如果 <code>x</code> 是一个 <code>4×64×64</code> latent，score 也是 <code>4×64×64</code>。可以把它理解成给这 16,384 个数各写一条“小修多少”的批注。</p>
+<p>公式中的各项：</p>
+<ul>
+<li><code>x</code>：当前样本，可以是一张图或图像 latent；</li>
+<li><code>p(x)</code>：目标数据在 <code>x</code> 附近的概率密度；</li>
+<li><code>log</code>：对概率密度取对数；</li>
+<li><code>∇ₓ</code>：逐个改变 <code>x</code> 的每个元素，找出 <code>log p(x)</code> 上升最快的方向；</li>
+<li><code>s_p(x)</code>：最终得到的方向张量。</li>
+</ul>
+<h2>Real-score 网络到底怎么训练</h2>
+<p>从真实数据抽一张干净图 <code>x₀</code>，再采噪声时刻 <code>t</code> 和高斯噪声 <code>ε</code>：</p>
+<div class="tex math-display" data-display="true">\begin{aligned}
+x_t&amp;=\alpha_t x_0+\sigma_t\epsilon,\\
+\epsilon&amp;\sim\mathcal N(0,I)
+\end{aligned}</div>
+<ul>
+<li><code>αₜ</code>：这一时刻还保留多少原图；</li>
+<li><code>σₜ</code>：这一时刻加入多少噪声；</li>
+<li><code>ε</code>：程序自己采样的噪声，形状与图片相同；</li>
+<li><code>xₜ</code>：交给网络的带噪图片。</li>
+</ul>
+<p>网络看见 <code>xₜ</code> 和 <code>t</code>，预测当初加入的噪声：</p>
+<div class="tex math-display" data-display="true">\widehat\epsilon_\psi=\epsilon_\psi(x_t,t)</div>
+<p>再用均方误差训练：</p>
+<div class="tex math-display" data-display="true">\begin{aligned}
+\mathcal L_{\mathrm{noise}}(\psi)
+&amp;=\mathbb E_{x_0,t,\epsilon}\Bigl[\\
+&amp;\qquad \left\|\epsilon_\psi(x_t,t)-\epsilon\right\|_2^2
+\Bigr]
+\end{aligned}</div>
+<ul>
+<li><code>ψ</code>：real-score 网络的参数；</li>
+<li><code>εψ(xₜ,t)</code>：网络猜出的噪声；</li>
+<li><code>ε</code>：程序真正加进去的噪声；</li>
+<li><code>‖a-b‖₂²</code>：对应元素作差、平方，再求和或平均；</li>
+<li><code>E</code>：不断换真实图、噪声时刻和噪声，最后取平均。</li>
+</ul>
+<p>训练目标说白了就是：</p>
+<blockquote>
+<p>我亲手把哪份噪声加进去，你就把哪份噪声指出来。</p>
+</blockquote>
+<p>网络练熟以后，可以把预测噪声换成 score：</p>
+<div class="tex math-display" data-display="true">s_\psi(x_t,t)\approx-\frac{\epsilon_\psi(x_t,t)}{\sigma_t}</div>
+<p>负号的原因也很直接：<code>ε</code> 是刚才“加坏”的方向；要回到更像干净数据的区域，就要朝相反方向改。再除以 <code>σₜ</code>，是把不同破坏程度换到可比较的尺度。</p>
+<h2>一组数字从加噪算到 real score</h2>
+<p>为了能手算，把整张 latent 缩成一个数。取：</p>
+<pre><code class="language-text">真实干净值 x₀ = 1.5
+保留系数 α = 0.8
+噪声系数 σ = 0.6
+程序采到的噪声 ε = -0.9
 </code></pre>
-<p>→ 只要知道 unnormalized density 的形状就够，partition function 自动消掉。</p>
-<h2>diffusion 怎么学 score</h2>
-<p>直接学 score 没法做（不知道 p_t 是啥）。Trick：用<strong>加噪后样本预测原噪声</strong>，通过 Tweedie's formula 转成 score。</p>
-<pre><code class="language-python"># Diffusion 训练
-x_0 ~ data
-ε ~ N(0, I)
-t ~ U(0, T)
-x_t = √(ᾱ_t)·x_0 + √(1 − ᾱ_t)·ε       # 加噪到 t 时刻
-ε_pred = model(x_t, t)                # 模型预测噪声
-loss = || ε_pred − ε ||²              # MSE on noise
+<p>第一步，程序自己造带噪输入：</p>
+<pre><code class="language-text">xₜ = αx₀ + σε
+   = 0.8×1.5 + 0.6×(-0.9)
+   = 1.2 - 0.54
+   = 0.66
+</code></pre>
+<p>第二步，网络看见的只有 <code>xₜ=0.66</code> 和噪声时刻。假设刚开始预测 <code>ε̂=-0.3</code>：</p>
+<pre><code class="language-text">L = (ε̂-ε)²
+  = [-0.3-(-0.9)]²
+  = 0.6²
+  = 0.36
+</code></pre>
+<p>训练会调整参数，让预测逐渐接近真正的 <code>-0.9</code>。假设训练完成后这道题预测正确：</p>
+<pre><code class="language-text">ε̂ = -0.9
+</code></pre>
+<p>第三步，把预测噪声换成 score：</p>
+<pre><code class="language-text">s = -ε̂/σ
+  = -(-0.9)/0.6
+  = 1.5
+</code></pre>
+<p><code>s=+1.5</code> 表示：站在当前带噪位置 <code>0.66</code>，目标分布给出的局部修改方向朝右。</p>
+<p>同一件事也可以让网络直接预测干净值 <code>μ(xₜ,t)</code>。两种写法可以互换：</p>
+<div class="tex math-display" data-display="true">s(x_t,t)
+=-\frac{x_t-\alpha_t\mu(x_t,t)}{\sigma_t^2}</div>
+<p>把 <code>xₜ=.66、α=.8、μ=1.5、σ=.6</code> 代入：</p>
+<pre><code class="language-text">s = -[0.66-0.8×1.5]/0.6²
+  = -(-0.54)/0.36
+  = 1.5
+</code></pre>
+<p>结果和 <code>-ε̂/σ</code> 完全一致。DMD 论文主要使用这种“预测干净图，再换算 score”的记法。</p>
+<h2>放回 DMD：real 与 fake 两套网络差在哪</h2>
+<p>两套网络的结构可以相同，差别在训练数据和更新时间：</p>
+<table>
+<thead>
+<tr>
+<th>网络</th>
+<th>用什么干净样本造加噪题</th>
+<th>什么时候训练</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>μ_real</code></td>
+<td>真实训练图片</td>
+<td>DMD 开始前已经训练好；DMD 中冻结</td>
+</tr>
+<tr>
+<td><code>μ_fake</code></td>
+<td>学生刚生成的图片</td>
+<td>DMD 训练期间持续更新</td>
+</tr>
+</tbody>
+</table>
+<p>DMD 把同一个学生带噪样本 <code>xₜ</code> 同时交给两套网络：</p>
+<ul>
+<li>real score 说：如果这里属于真实图分布，应该往哪改；</li>
+<li>fake score 说：如果这里属于学生当前分布，应该往哪改。</li>
+</ul>
+<p>梯度下降最终让学生大致沿：</p>
+<pre><code class="language-text">real score - fake score
+</code></pre>
+<p>前进。前一项把它拉向真实分布，后一项抵消学生已经挤得过密的区域。</p>
+<h2>放回 Drifting：它为什么不需要 real-score 老师</h2>
+<p>Drifting 想得到的仍是一根“学生样本该往哪改”的箭头，但它不先训练照片修复学徒。</p>
+<p>它在每轮训练里直接拿一批真实样本和一批生成样本：</p>
+<ul>
+<li>附近真实样本给吸引方向；</li>
+<li>附近生成样本给排斥方向；</li>
+<li>核权重决定谁离当前样本更近、影响更大。</li>
+</ul>
+<p>因此两条路线的区别可以记成：</p>
+<pre><code class="language-text">DMD：
+先把大量真实图教给一套扩散网络，
+以后问这套网络“这里该往哪改”。
 
-# 推理时通过 Tweedie's formula:
-score_at_t = -ε_pred / √(1 − ᾱ_t)     # 等价于学到了 score
+Drifting：
+不训练 score 老师，
+每轮直接查看附近的真实样本和生成样本，现场合成方向。
 </code></pre>
-<p>这就是 <a href="../concepts/flow-matching.html">flow-matching</a> 论文吐槽 diffusion "训练目标不直观"的原因 —— 你想生成，结果学了"加噪样本的噪声预测"，绕一圈才转回 score。</p>
-<h2>flow matching 怎么避开 score</h2>
-<p>flow matching 直接学 <a href="../concepts/velocity-field.html">velocity-field</a> v(x, t) —— "该往哪走"。完全不需要 score 这个抽象。</p>
-<p>数学上两者有关系：在某些 path（如 VP-SDE）下，velocity 跟 score 有线性关系，所以 diffusion 可以视作 flow matching 的特例。但<strong>训练目标的直观度</strong>差异巨大。</p>
-<h2>跟 energy-based model 的关系</h2>
-<p>EBM 学 unnormalized log p（叫 energy E(x)，其实是 −log p 加常数）。score = −∇E。</p>
-<p>EBM / score-matching / diffusion 一脉相承，都是"绕过 partition function"的路线。flow matching 是另一条路：<strong>不解决 partition function，直接绕开整个 p 的建模，只学搬运速度</strong>。</p>
+<h2>为什么公式里用 <code>log p</code></h2>
+<p>这部分可以放到第二遍再看。核心恒等式是：</p>
+<div class="tex math-display" data-display="true">\nabla_x\log p(x)=\frac{\nabla_xp(x)}{p(x)}</div>
+<p>它看的是概率密度的<strong>相对变化</strong>。高维图片的 <code>p(x)</code> 往往小得无法直接计算，取对数也能把连乘变成相加。</p>
+<p>扩散模型并不需要先算出完整的 <code>p(x)</code>；上面的加噪训练直接学到了 <code>∇ₓlog pₜ(x)</code> 这根局部方向。</p>
+<h2>一个容易混淆的同名术语</h2>
+<p>统计学还会把下面这项叫 score：</p>
+<div class="tex math-display" data-display="true">\nabla_\theta\log p_\theta(x)</div>
+<p>它是对模型参数 <code>θ</code> 求导。扩散模型通常说的是：</p>
+<div class="tex math-display" data-display="true">\nabla_x\log p(x)</div>
+<p>也就是对样本 <code>x</code> 求导。一个回答“参数怎么改”，另一个回答“当前图片怎么改”，不能混用。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../concepts/flow-matching.html">flow-matching</a> · 提出不学 score 的方案</li>
-<li><a href="../concepts/velocity-field.html">velocity-field</a> · flow matching 学的替代目标</li>
-<li><a href="../concepts/math-symbols.html">math-symbols</a> · ∇ / log / partition function 这些符号的速查</li>
-<li><a href="../papers/ode-sde.html">ode-sde</a> · score 是 SDE 反向漂移里的关键项（diffusion 那头）</li>
+<li><a href="../papers/dmd.html">dmd</a> · real / fake 两个 score 怎样共同更新一步学生</li>
+<li><a href="../papers/drifting-models.html">drifting-models</a> · 不训练 score 老师，怎样从样本邻居直接算漂移</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · 不学 score，改学连续时间速度</li>
+<li><a href="../concepts/velocity-field.html">velocity-field</a> · 每个时间和位置对应的速度向量</li>
+<li><a href="../concepts/math-symbols.html">math-symbols</a> · <code>∇</code>、<code>log</code>、期望与范数的符号速查</li>
+<li><a href="../papers/ode-sde.html">ode-sde</a> · score 怎样进入反向 SDE</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 7 处</span>
-  <ul><li><a href="../papers/dmd.html"><span class="cat">paper</span>DMD · 不抄老师每一步，只让学生交出的整批图像像老师</a></li><li><a href="../papers/dmd2.html"><span class="cat">paper</span>DMD2 · 拆掉昂贵的配对稳定器，再把一步分布匹配扩成可用的少步生成器</a></li><li><a href="../papers/ode-sde.html"><span class="cat">paper</span>ODE vs SDE · 确定性流与随机流（底层 + 数值例子）</a></li><li><a href="../concepts/bayes-probability.html"><span class="cat">concept</span>条件概率 / 链式法则 / 贝叶斯 · 拿观测更新信念</a></li><li><a href="../concepts/dmd-distillation.html"><span class="cat">concept</span>DMD 蒸馏 · 匹配整批图像，不逐步临摹老师</a></li><li><a href="../concepts/gaussian-splatting.html"><span class="cat">concept</span>3D Gaussian Splatting · 3DGS · 用一堆高斯椭球表示场景</a></li><li><a href="../concepts/math-symbols.html"><span class="cat">concept</span>数学符号速查</a></li></ul>
+  <span class="label">引用此页的内容 · 8 处</span>
+  <ul><li><a href="../papers/dmd.html"><span class="cat">paper</span>DMD · 不抄老师每一步，只让学生交出的整批图像像老师</a></li><li><a href="../papers/dmd2.html"><span class="cat">paper</span>DMD2 · 拆掉昂贵的配对稳定器，再把一步分布匹配扩成可用的少步生成器</a></li><li><a href="../papers/drifting-models.html"><span class="cat">paper</span>Generative Modeling via Drifting · 把反复修图留在训练时，生成时一步出图</a></li><li><a href="../papers/ode-sde.html"><span class="cat">paper</span>ODE vs SDE · 确定性流与随机流（底层 + 数值例子）</a></li><li><a href="../concepts/bayes-probability.html"><span class="cat">concept</span>条件概率 / 链式法则 / 贝叶斯 · 拿观测更新信念</a></li><li><a href="../concepts/dmd-distillation.html"><span class="cat">concept</span>DMD 蒸馏 · 匹配整批图像，不逐步临摹老师</a></li><li><a href="../concepts/gaussian-splatting.html"><span class="cat">concept</span>3D Gaussian Splatting · 3DGS · 用一堆高斯椭球表示场景</a></li><li><a href="../concepts/math-symbols.html"><span class="cat">concept</span>数学符号速查</a></li></ul>
 </div>
 
 <div class="colophon">
@@ -101,6 +287,19 @@ score_at_t = -ε_pred / √(1 − ᾱ_t)     # 等价于学到了 score
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {
