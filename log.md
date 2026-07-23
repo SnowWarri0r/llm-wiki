@@ -1061,3 +1061,10 @@ skill 更新:
 - 用同一组 `x₀=1.5、α=.8、σ=.6、ε=−.9` 验算 `xₜ=.66`，再从噪声预测和干净图预测两条等价路径都得到 score `1.50`；逐项解释 `ψ、t、α、σ、ε、μ、λ` 的职责。
 - DMD 新增 real-score 生命周期与 Fig 06A：老师先在 DMD 外完成普通扩散预训练，进入 DMD 后冻结；动态 fake-score 仍只追踪学生最新分布。首页与总览同步标出这段前置，不再让 real score 像凭空出现。
 - Drifting 新增生活化对照：DMD 是先培养一位修复老师再查询方向，Drifting 是每轮把真实样本和当前生成样本摊开后现场计算核漂移；明确后者不训练、不调用 score 网络，箭头相似不代表算法相同。
+
+## [2026-07-23] rebuild | DMD2 · 从“改动清单”重排为零前置教程
+
+- 新增 §00 独立入口：先用学生修照片的短类比分清 real score、fake score 与配对回归，再用 `x=1.2` 同一条标量例从加噪算到 `sreal−sfake≈1.3333`，不再默认读者已经把 DMD 记在脑中。
+- 把 DMD2 重排成四个连续因果：删配对回归 → TTUR 补 fake-score 追踪 → GAN 直接读取真实图 → backward simulation 对齐多步输入；总览图逐项标出“哪项改动补哪个洞”。
+- TTUR 新增过时 score 把正确步长 `.20` 放大成 `.80` 的数字例；GAN 将 `areal=1.2、afake=−.7` 逐项代入 softplus，并验证学生 logit 升到 `.2` 后生成器损失 `1.103→.598`。
+- 训练循环补齐官方变量映射：`loss_dm / gen_cls_loss / loss_fake / cls_loss` 分别更新谁，明确 `loss_dm` 只是注入分布梯度的伪损失、`detach` 只截断梯度；backward simulation 同步澄清不是反向传播。
