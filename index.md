@@ -24,6 +24,7 @@
 - [Flow Matching](wiki/papers/flow-matching.md) — 把 diffusion 的 score matching 换成"学速度场 + ODE 积分"，简单 + 少步推理
 - [ODE vs SDE · 确定性流与随机流](wiki/papers/ode-sde.md) — 方法底层页: ODE=风场弹珠确定/SDE=醉汉每步随机踹; 桥=同一团云两看法; Euler 真数字演算(同起点ODE永远落5/SDE跑出6.13与3.30); 接 flow-matching + diffusion
 - [DMD · 一步分布匹配蒸馏](wiki/papers/dmd.md) — 不逐步抄老师轨迹：冻结 real score 拉向目标、动态 fake score 防样本挤成一团、离线 LPIPS 回归守住粗结构；从 KL→两个 score→加噪→伪损失/stopgrad 完整推导，原始论文严格是 1 NFE，不与后来的 4/8 步 DMD 家族混写
+- [DMD2 · 去掉大规模配对稳定器](wiki/papers/dmd2.md) — 保留 DMD 双 score，但让 fake-score 以 5:1 频率追上移动的学生分布；再用真实图 GAN 补老师近似误差，用 backward simulation 让多步训练看到学生推理时真正产生的中间 latent。ImageNet 一步 FID 1.28，SDXL 四步追平 100-NFE 老师；同时保留 SDXL 一步仍用 10K 对短预热的边界
 - [Generative Modeling via Drifting](wiki/papers/drifting-models.md) — 完整拆解一步生成：pushforward、核吸引/排斥、反对称的正确边界、stopgrad 梯度、特征空间、训练时 CFG、DiT/队列配方、ImageNet 与机器人消融
 - [DiffusionOPD · 扩散的 On-Policy 蒸馏](wiki/papers/diffusion-opd.md) — 多奖励对齐扩散: 先各训单任务专家老师, 再沿学生rollout轨迹蒸进一个学生; 扩散=高斯马尔可夫链→同协方差KL塌成均值MSE; 接 ppo+ode-sde+cross-entropy
 - [dMel](wiki/papers/dmel.md) — 跳过 neural codec 直接 bin quantize log-mel，简单方案跟 RVQ 一样好
