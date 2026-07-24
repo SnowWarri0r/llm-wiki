@@ -74,16 +74,16 @@ figure{margin:34px 0 46px;padding:26px;border:1px solid var(--rule);background:r
 
 <section id="whole">
 <h2><span class="n">§ 01</span><span>先看训练全图：三个网络分两拍更新</span></h2>
-<p class="lead">先别碰公式，先认清三个网络。<code>Gθ</code> 是最终要部署的一步生成器；<code>μreal</code> 在 DMD 开始前已用真实图片完成普通扩散预训练，进入这里后冻结；<code>μfakeφ</code> 是一套会持续追踪学生分布的辅助去噪器。每轮训练分两拍：先更新学生，再更新辅助去噪器。</p>
+<p class="lead">别急着看公式，先把三个网络认清。<code>Gθ</code> 是最后真正上线的那个「一步生成器」；<code>μreal</code> 是老师——它在 DMD 开工前就拿真图练成了一个普通扩散模型，进来后一直冻着；<code>μfakeφ</code> 是个「跟屁虫」，专盯着学生现在画成什么样。每轮训练分两拍：先动学生，再让跟屁虫追上。</p>
 <figure class="reveal"><figcaption><span>Fig 01A · 一轮训练的两拍与推理留下什么</span><b>先有全图，再拆公式</b></figcaption><div class="system-board"><div class="system-lane generator"><h4>第一拍 · 更新一步生成器 θ<small>两套 score 网络此时都冻结，只负责报方向</small></h4><div class="pipe"><div class="pipe-node">随机噪声<br>z</div><div class="pipe-arrow">→</div><div class="pipe-node network">学生 Gθ<br>得到 x</div><div class="pipe-arrow">→</div><div class="pipe-node">给 x 加噪<br>得到 xₜ</div><div class="pipe-arrow">→</div><div class="pipe-node frozen">μreal 与 μfake<br>各算一个 score</div><div class="pipe-arrow">→</div><div class="pipe-node loss">分布方向<br>+ 配对回归</div><div class="pipe-arrow">→</div><div class="pipe-node network">更新 θ</div></div></div><div class="system-lane tracker"><h4>第二拍 · 更新 fake-score 网络 φ<small>学生输出 x 先 stopgrad；这一拍不能反传回 Gθ</small></h4><div class="pipe"><div class="pipe-node">刚生成的 x<br>只取数值</div><div class="pipe-arrow">→</div><div class="pipe-node">重新加噪<br>得到 xₜ</div><div class="pipe-arrow">→</div><div class="pipe-node network">μfakeφ<br>预测干净 x</div><div class="pipe-arrow">→</div><div class="pipe-node loss">去噪 MSE</div><div class="pipe-arrow">→</div><div class="pipe-node network">只更新 φ</div></div></div><div class="system-lane infer"><h4>部署时 · 训练脚手架全部拆掉<small>老师、fake-score、加噪、配对集和两项训练损失都不再运行</small></h4><div class="pipe"><div class="pipe-node">随机噪声 z</div><div class="pipe-arrow">→</div><div class="pipe-node network">Gθ 一次前向</div><div class="pipe-arrow">→</div><div class="pipe-node loss">最终图像 x</div></div></div></div><div class="system-key"><div><b>参数 θ</b>属于最终一步生成器，第一拍更新。</div><div><b>参数 φ</b>属于 fake-score 辅助网络，第二拍更新。</div><div><b>μreal</b>始终冻结，只在训练时提供老师方向。</div></div></figure>
-<p>NFE 是生成一张图调用神经网络多少次。训练虽然要同时摆着三套网络，但推理只留下 <code>Gθ</code>。这就是“训练很重”和“部署一步”能够同时成立的原因。</p>
+<p>NFE 就是「出一张图要调几次网络」。训练时三套网络一起摆着，看着是重；可一上线，老师和跟屁虫全撤，只剩 <code>Gθ</code> 跑一次。所以「训练很重」和「出图一步」根本不打架。</p>
 <figure class="reveal"><figcaption><span>Fig 01B · 推理时真正省掉的路径</span><b>老师多次调用，学生一次调用</b></figcaption><div class="compare"><div class="panel teacher"><h4>扩散老师 · 多次前向</h4><p>每次只去掉一部分噪声，再把中间结果送回同一个网络。</p><div class="steps"><span class="step noise">z</span><span class="arr">→</span><span class="step">1</span><span class="arr">→</span><span class="step">2</span><span class="arr">→</span><span class="step">…</span><span class="arr">→</span><span class="step">50</span><span class="arr">→</span><span class="step image">y</span></div><p><span class="badge">SD BASELINE · 50 NFE</span></p></div><div class="panel student"><h4>DMD 学生 · 一次前向</h4><p>不经过中间去噪状态，直接从噪声得到最终图像。</p><div class="one-line"><div class="node">噪声<br>z</div><div class="beam"></div><div class="node out">图像<br>x</div></div><p><span class="badge">DMD · 1 NFE</span></p></div></div></figure>
-<div class="plain"><b>不能混写：</b>Qwen-Image、MRT、PiD 等后来把 DMD 家族用成 4 步或 8 步。那是后续应用，不是原始 DMD 的定义。</div>
+<div class="plain"><b>别搞混：</b>Qwen-Image、MRT、PiD 这些是后来把 DMD 家族拿去做 4 步、8 步的——那是后续应用，原始 DMD 就是一步。</div>
 </section>
 
 <section id="transfer">
 <h2><span class="n">§ 10</span><span>训练目标已经懂了，再看权重怎样接过来</span></h2>
-<p class="lead">参数没有突然换职业。网络内部的卷积、attention 和残差块仍在提取与变换特征；DMD 复制老师在最大噪声端的权重，再用新目标继续微调。</p>
+<p class="lead">权重不是突然「转行」。网络里那些卷积、attention、残差块，处理特征的本事一点没丢；DMD 只是把老师在「最大噪声端」的那套权重复制过来，再拿新目标接着调。</p>
 <p class="formula-purpose">这条式子只说明“学生从哪里初始化”，不是训练损失：</p>
 <div class="formula math" data-display="true">\theta\leftarrow\theta_{\mathrm{base}},\qquad G_\theta(z)=\mu_{\mathrm{base}}(z,T-1)\quad\text{（初始化时）}</div>
 <div class="symbol-grid"><div class="symbol"><code>θbase</code>老师去噪器原来的参数；<b>先复制数值</b>。</div><div class="symbol"><code>θ</code>学生生成器的参数；复制后会被新损失继续更新。</div><div class="symbol"><code>z</code>形状和图像 latent 相同的标准高斯噪声，是学生输入。</div><div class="symbol"><code>T−1</code>最大噪声端；老师此时本来就在做“从几乎纯噪声猜干净图”。</div></div>
@@ -93,20 +93,20 @@ figure{margin:34px 0 46px;padding:26px;border:1px solid var(--rule);background:r
 
 <section id="mapping">
 <h2><span class="n">§ 02</span><span>先定目标：不是逐张抄答案，而是让整批作品对上</span></h2>
-<p>逐样本回归要求每个 <code>z</code> 都命中老师沿几十步轨迹得到的指定 <code>y</code>。一步学生很难拟合这张高维复杂映射。DMD 把要求放松到整批图像：对应关系可以换，只要总体质量和多样性对得上。</p>
+<p>逐张回归的要求是：每个 <code>z</code> 都得画出老师沿几十步轨迹得到的那张指定 <code>y</code>。一步学生哪拟合得了这么复杂的高维映射。DMD 把要求松到「整批」：谁对谁可以换，只要整批的质量和花样对得上老师就行。</p>
 <figure class="reveal"><figcaption><span>Fig 03 · 同一批四份噪声，两种合格标准</span><b>逐对可以不同，整批计数仍能相同</b></figcaption><div class="maps"><div class="mapbox"><strong>老师给出的逐对答案</strong><div class="pairs"><div class="pair">z₁→猫</div><div class="pair">z₂→猫</div><div class="pair">z₃→狗</div><div class="pair">z₄→车</div></div><p><b>逐样本回归：</b>四个箭头必须逐一照抄。整批计数是猫 2、狗 1、车 1。</p></div><div class="map-arrow">≠</div><div class="mapbox"><strong>分布匹配允许的答案</strong><div class="pairs"><div class="pair loose">z₁→车</div><div class="pair loose">z₂→猫</div><div class="pair loose">z₃→猫</div><div class="pair loose">z₄→狗</div></div><p><b>分布匹配：</b>单个对应关系换了，但整批仍是猫 2、狗 1、车 1。</p></div></div><div class="verdict">DMD <b>不是完全不要配对</b>：分布损失负责整批质量和多样性，少量 LPIPS 配对回归仍负责守住结构。</div></figure>
 </section>
 
 <section id="kl">
 <h2><span class="n">§ 06</span><span>方向已经会算了，再解释它为什么来自 KL</span></h2>
 <div class="plain"><b>这不是训练时额外执行的一步。</b>§05 已经把一轮更新跑通；本章只是回头回答：为什么 <code>fake score − real score</code> 正好对应“让两批图更接近”的分布目标。</div>
-<p class="lead">学生把噪声推成输出分布 <code>p_fake</code><a class="jr" href="#g-06">6</a>。DMD 最小化反向 KL<a class="jr" href="#g-05">5</a>：从学生样本出发，问“在学生常画的地方，老师认为概率有多大？”</p>
+<p class="lead">学生把噪声「推」成自己的输出分布 <code>p_fake</code><a class="jr" href="#g-06">6</a>。DMD 要压小的是反向 KL<a class="jr" href="#g-05">5</a>——站在学生常画的那些地方，问一句：「这儿，老师觉得该有多少概率？」</p>
 <p class="formula-purpose">目标公式：比较学生整批输出和老师目标分布差了多少。</p>
 <div class="formula math" data-display="true">D_{\mathrm{KL}}(p_{\mathrm{fake}}\Vert p_{\mathrm{real}})=\mathbb E_{x\sim p_{\mathrm{fake}}}\!\left[\log p_{\mathrm{fake}}(x)-\log p_{\mathrm{real}}(x)\right]</div>
 <div class="symbol-grid"><div class="symbol"><code>D_KL</code>一个非负标量；越小表示学生分布越接近目标分布。</div><div class="symbol"><code>p_fake(x)</code>学生在图像 <code>x</code> 附近放了多少概率密度。</div><div class="symbol"><code>p_real(x)</code>老师目标分布在同一张图附近的概率密度。</div><div class="symbol"><code>E_{x~p_fake}</code>先从学生生成一批图，再对括号里的量求平均。</div><div class="symbol"><code>log</code>把密度比 <code>p_fake/p_real</code> 写成减法；不是额外网络。</div><div class="symbol"><code>fake ‖ real</code>取平均的样本来自 fake，所以这是“反向 KL”，顺序不能交换。</div></div>
 <div class="repair-story"><div class="repair-card real"><b>先当成照片修复批注</b>修复师不会只给整张坏照片打“85 分”，而会逐处标出：这里增亮、那里减噪、这块纹理往哪种样子靠。score 也是与图像同形状的一组增减方向。</div><div class="repair-card dmd"><b>修复师也要先练出来</b>real-score 老师在 DMD 开始前，已经用大量真实图做过“自己加噪、再把干净图或噪声猜回来”的训练。DMD 只冻结并调用它；完整训练过程见 §06。</div></div>
-<p><a href="../concepts/score-function.html">score</a><a class="jr" href="#g-01">1</a> 的正式写法是 <code>∇x log p(x)</code>。它不是“这张图有多真”的标量分数，而是与图像同形状的方向张量。先把图像压成一个数：score 为正，说明把这个数调大更接近该分布；为负则该调小。真实 latent 里，每个元素都会得到一条修改批注。</p>
-<p>KL 里面本来就是 <code>log p_fake − log p_real</code>。两项都对图像 <code>x</code> 求导，自然得到 <code>s_fake − s_real</code>；再乘生成器的导数，才把“输出该怎么改”传回参数：</p>
+<p><a href="../concepts/score-function.html">score</a><a class="jr" href="#g-01">1</a> 正式写法是 <code>∇x log p(x)</code>。它不是给整张图打的「真不真」分数，而是一张跟图同样大的「方向图」。把图先压成一个数来想：score 为正，就说明把这个数调大更贴近这个分布，为负就该调小。真的 latent 里，每个元素都拿到一条这样的修改批注。</p>
+<p>KL 里本来就摆着 <code>log p_fake − log p_real</code>。两项都对图像 <code>x</code> 求导，自然得出 <code>s_fake − s_real</code>；再乘上生成器那一截导数，才把「这张图该怎么改」一路传回参数：</p>
 <p class="formula-purpose">训练真正使用的是梯度：先得到图像方向，再通过生成器传回参数。</p>
 <div class="formula math" data-display="true">\nabla_\theta D_{\mathrm{KL}}=\mathbb E_z\!\left[\underbrace{\left(s_{\mathrm{fake}}(x)-s_{\mathrm{real}}(x)\right)}_{\text{输出 x 的方向}}\underbrace{\frac{\partial G_\theta(z)}{\partial\theta}}_{\text{换成参数方向}}\right]</div>
 <figure class="reveal"><figcaption><span>Fig 04 · 在同一个学生输出上问两次方向</span><b>沿用 §07 的 x=1.2</b></figcaption><div class="score-ledger"><div class="score-row"><div class="score-name">REAL SCORE = +1.50<small>冻结老师给出的坡度</small></div><div class="score-track"><i class="vector real-vector"></i></div><div class="score-note"><b>往右，力度 1.50</b>老师认为右边更像目标分布。</div></div><div class="score-row"><div class="score-name">FAKE SCORE = +0.17<small>学生当前分布的坡度</small></div><div class="score-track"><i class="vector fake-vector"></i></div><div class="score-note"><b>也往右，但只有 0.17</b>这是学生自身密度造成的方向。</div></div><div class="score-row result"><div class="score-name">真正更新方向 = +1.33<small>real − fake</small></div><div class="score-track"><i class="vector update-vector"></i></div><div class="score-note"><b>1.50 − 0.17 = 1.33</b>优化器会减去梯度 <code>fake−real</code>，等价于沿 <code>real−fake</code> 前进。</div></div><p class="score-foot">这张图只回答“输出 <code>x</code> 往哪改”。公式里的 <code>∂Gθ/∂θ</code> 再把这根输出箭头换算成每个网络参数该改多少。</p></div></figure>
@@ -116,7 +116,7 @@ figure{margin:34px 0 46px;padding:26px;border:1px solid var(--rule);background:r
 
 <section id="noise">
 <h2><span class="n">§ 03</span><span>比较之前先搭桥：为什么要给学生图加噪</span></h2>
-<p>训练初期两团分布可能完全分开。站在学生样本的位置，老师分布的密度几乎为 0，老师也就很难给出稳定的局部坡度。高斯噪声把两团分布同时抹宽；出现交叠以后，同一个带噪位置才同时落在两套分布覆盖的区域里，两个 score 才有可比性。</p>
+<p>训练刚起步时，两团分布可能压根不挨着。站在学生样本这个位置，老师分布的密度几乎是 0，老师自然给不出靠谱的局部坡度。加一层高斯噪声，把两团都抹宽——一旦盖到同一片位置，同一个带噪点才同时落进两套分布里，两个 score 这才有得比。</p>
 <p class="formula-purpose">加噪公式：把干净学生输出 x 变成噪声时刻 t 的输入 xₜ。</p>
 <div class="formula math" data-display="true">x_t=\alpha_t x+\sigma_t\epsilon,\qquad \epsilon\sim\mathcal N(0,I)</div>
 <figure class="reveal"><figcaption><span>Fig 05 · 加噪后必须真的出现共同覆盖区</span><b>diffusion 在这里是训练工具</b></figcaption><div class="overlap"><div class="cloud"><span class="cloud-title">未加噪 · 学生点落不到老师区域</span><div class="blob real"><span>real</span></div><div class="blob fake"><span>fake</span></div></div><div class="overlap-mid">+ ε<small>同一噪声尺度 t</small></div><div class="cloud blur"><span class="cloud-title">加噪后 · 两套密度覆盖同一位置</span><div class="blob real"><span>realₜ</span></div><div class="blob fake"><span>fakeₜ</span></div><div class="overlap-mark">共同覆盖区<br>可同时比较两个 score</div></div></div></figure>
@@ -189,7 +189,7 @@ figure{margin:34px 0 46px;padding:26px;border:1px solid var(--rule);background:r
 
 <section id="stopgrad">
 <h2><span class="n">§ 07</span><span>方向算好了，怎样把它交给自动求导</span></h2>
-<p class="lead">§05 的数字例已经算出输出梯度 <code>g=gₓ=−1.6</code>，§06 又解释了它为何来自 KL。但训练框架习惯接收一个标量损失再自动求导，所以作者临时造一个平方误差，让它对 <code>x</code> 的导数恰好等于这条预先算好的方向。</p>
+<p class="lead">§05 的数字例已经把输出梯度 <code>g=gₓ=−1.6</code> 算出来了，§06 又说清它为啥来自 KL。可训练框架就认一个标量 loss、然后自己求导。于是作者耍了个花招：临时搭一个平方误差，让它对 <code>x</code> 求导，结果正好等于这条早算好的方向。</p>
 <p class="formula-purpose">伪损失公式：损失数值不代表 KL，只借它产生指定梯度 g。</p>
 <div class="formula math" data-display="true">L_{\mathrm{pseudo}}=\frac12\left\|x-\operatorname{stopgrad}(x-g)\right\|_2^2</div>
 <div class="symbol-grid"><div class="symbol"><code>Lpseudo</code>交给自动求导框架的标量；它的数值本身没有分布距离含义。</div><div class="symbol"><code>x</code>左边这份学生输出保留梯度，仍连接到 <code>Gθ</code>。</div><div class="symbol"><code>g</code>上一节算出的目标输出梯度；本例是 <code>−1.6</code>。</div><div class="symbol"><code>stopgrad(x−g)</code>只保留数值作为本拍目标，右侧不参加反向传播。</div><div class="symbol"><code>1/2</code>让平方项求导时出现的 2 正好抵消。</div><div class="symbol"><code>‖·‖₂²</code>逐元素平方后求和或平均；本标量例就是普通平方。</div></div>
