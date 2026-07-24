@@ -1,14 +1,14 @@
 ---
 name: flow-matching
 type: concept
-sources: [interaction-models-tml, ideogram-4, stable-diffusion-3-5, krea-2, omnieraser, diffusionnft, sensenova-vision, meshflow, ltx-2, drifting-models]
-updated: 2026-07-22
+sources: [interaction-models-tml, ideogram-4, stable-diffusion-3-5, krea-2, omnieraser, diffusionnft, sensenova-vision, meshflow, ltx-2, drifting-models, solaris-multiplayer-world-model]
+updated: 2026-07-24
 ---
 
 # Flow Matching · 流匹配
 
 ## 一句话
-不直接预测音频样本，而是学一个**速度场**，从噪声出发沿场积分若干步到目标音频。
+不直接一次猜出目标数据，而是学一个**速度场**，从噪声出发沿场积分若干步到图像、视频或音频。
 
 ## 直觉
 跟 diffusion 是近亲：
@@ -21,11 +21,13 @@ updated: 2026-07-22
 
 数学根源是 **Continuous Normalizing Flow (CNF) + Conditional Flow Matching**（Lipman et al. 2022）。
 
-## TML 为什么用它做音频输出
+## 不同论文怎样使用它
 - **连续值** → 可微，端到端跟主 transformer 联合训练
 - **可控步数** → 推理时步数可调，质量/延迟可 trade
 - **比 VQ codec 平滑** → 不需要量化误差恢复
 - **跟 transformer 接口干净** → flow head 拼在 transformer 输出上
+
+TML 用它生成连续音频特征；Solaris 则在双人视频 latent 上学习 `ε−x`，让动作条件决定两路画面怎样共同变化。
 
 ## 跟 RVQ 的对比
 | 维度 | RVQ codec | Flow matching |
@@ -51,3 +53,4 @@ updated: 2026-07-22
 - [[early-fusion]] · flow head 接在主 transformer 后
 - [[stable-diffusion-3-5]] · 整流流(直线少步)就是 flow-matching 在文生图的落地
 - [[sensenova-vision]] · mask、深度、法线与 point map 都作为 VAE latent 用 rectified-flow 目标训练
+- [[solaris-multiplayer-world-model]] · 双人视频 latent 上的逐符号公式与数值还原

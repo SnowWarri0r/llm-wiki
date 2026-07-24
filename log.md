@@ -1068,3 +1068,18 @@ skill 更新:
 - 把 DMD2 重排成四个连续因果：删配对回归 → TTUR 补 fake-score 追踪 → GAN 直接读取真实图 → backward simulation 对齐多步输入；总览图逐项标出“哪项改动补哪个洞”。
 - TTUR 新增过时 score 把正确步长 `.20` 放大成 `.80` 的数字例；GAN 将 `areal=1.2、afake=−.7` 逐项代入 softplus，并验证学生 logit 升到 `.2` 后生成器损失 `1.103→.598`。
 - 训练循环补齐官方变量映射：`loss_dm / gen_cls_loss / loss_fake / cls_loss` 分别更新谁，明确 `loss_dm` 只是注入分布梯度的伪损失、`detach` 只截断梯度；backward simulation 同步澄清不是反向传播。
+
+## [2026-07-24] ingest | Solaris · 双人 Minecraft 视频世界模型
+
+- 新增 `wiki/papers/solaris-multiplayer-world-model.md` 与 bespoke `docs/papers/solaris-multiplayer-world-model.html`。
+- 按“为什么多人难 → 同步数据 → player 张量与共享注意力 → Flow Matching 手算 → 四阶段训练 → Checkpointed Self Forcing → 评测与边界”重排，不照原文章节复述。
+- 用 `x=2, ε=-1, σ=.25` 从混合、目标速度、损失一路算到 `x̂₀=2`；逐个解释 `B/P/T/H/W/C/D`、`Ls/Lt` 与两遍重算为何仍可反传。
+- 收录 Table 2/3 的关键原值和反例：Solaris 五项 FID 最低，但 Movement VLM 低于 frame concat；KV-BP 改善 FID 的同时让三项动作指标下降。
+
+## [2026-07-24] ingest | Towards Interactive Video World Modeling · 交互式世界模型综述
+
+- 新增 `wiki/papers/interactive-video-world-modeling-survey.md` 与 bespoke `docs/papers/interactive-video-world-modeling-survey.html`。
+- 以“走进房间再回头”的闭环例子解释 `o_{t+1}~pφ(o_{t+1}|Ht,at,ct)` 和 POMDP，再把全领域重组为界面、动作注入、记忆、生成主干、推理加速、评测六层。
+- 将历史帧、latent memory、显式 3D memory、直接重建 3D 排成四级记忆；对照 Teacher / Diffusion / Self / LIVE / Geometry / Context Forcing，明确 forcing 改的是训练历史来源。
+- 单独解释一致性与动作响应的冲突、少步蒸馏和两类缓存、四应用评测地图，并强调综述表格来自不同协议，不能当统一排行榜。
+- 更新 `flow-matching`、`kv-cache`、`world-foundation-model`、`autoregressive-vs-bidirectional-video-diffusion` 与 `diffusion-transformer` 的 sources 和回链。

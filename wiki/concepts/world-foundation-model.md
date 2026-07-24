@@ -1,8 +1,8 @@
 ---
 name: world-foundation-model
 type: concept
-sources: [cosmos-3]
-updated: 2026-06-24
+sources: [cosmos-3, solaris-multiplayer-world-model, interactive-video-world-modeling-survey]
+updated: 2026-07-24
 ---
 
 # World Foundation Model · WFM · 世界基础模型
@@ -42,3 +42,5 @@ updated: 2026-06-24
 - [[physical-ai]] · 它服务的对象：具身智能体
 - [[lumine]] · 对照：直接学"看画面→出动作"的策略，不显式建世界模型
 - [[diffusion-transformer]] · 世界模型常用的生成主干
+- [[interactive-video-world-modeling-survey]] · 用动作、记忆、实时性三问判断一个模型是否真正可交互
+- [[solaris-multiplayer-world-model]] · 两位玩家共享同一生成世界的具体案例
