@@ -312,34 +312,47 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 
 <section id="gan">
 <h2><span class="n">§ 05</span><span>GAN 直接接触真实图，补的是老师的近似误差</span></h2>
-<p>DMD 的 real score 归根到底来自老师。老师自己没学好的纹理、颜色，学生光盯着老师是纠正不过来的。于是 DMD2 加进 GAN<a class="jr" href="#g-04">4</a>，让它直接拿真实图和学生图对比。</p>
-<figure><figcaption><span>Fig 05 · 同一个分类头看真图与学生图</span><b>两边先按随机 t 加噪</b></figcaption>
+<p>DMD 的 real score 归根到底来自老师。老师自己没学好的纹理、颜色，学生光盯着老师纠不过来。于是 DMD2 加进 GAN<a class="jr" href="#g-04">4</a>：请一个「鉴定器」直接拿真实图和学生图比，逼学生把真实感补上。下面从鉴定器吐出的那个数讲起，一步步搭出两条损失，符号都不留黑箱。</p>
+<figure><figcaption><span>Fig 05 · 同一个鉴定器看真图与学生图</span><b>两边先按随机 t 加噪</b></figcaption>
   <div class="gan-flow">
     <div class="gan-node real"><h4>真实图 xreal</h4><p>来自训练数据<br>F(xreal,t) 随机加噪</p></div><div class="flow-arrow">→</div>
-    <div class="gan-node mid"><h4>fake UNet encoder + Dψ</h4><p>共享特征提取<br>bottleneck 接分类头<br>输出 logit a</p></div><div class="flow-arrow out">←</div>
+    <div class="gan-node mid"><h4>fake UNet encoder + Dψ</h4><p>共享特征提取<br>bottleneck 接鉴定头<br>吐一个数 a</p></div><div class="flow-arrow out">←</div>
     <div class="gan-node fake"><h4>学生图 xfake</h4><p>来自 Gθ(z)<br>F(xfake,t) 随机加噪</p></div>
   </div>
-  <div class="gan-losses"><div><b>更新判别器 ψ</b>真实 logit 要变大，学生 logit 要变小。</div><div><b>更新生成器 θ</b>只让学生 logit 变大；真实图支路不连到学生。</div></div>
+  <div class="gan-losses"><div><b>更新鉴定器 ψ</b>真图的 a 顶大，假图的 a 压小。</div><div><b>更新生成器 θ</b>只把学生图的 a 顶大；真图支路不连到学生。</div></div>
 </figure>
-<p class="formula-purpose">官方实现的判别器损失：softplus 是 log(1+eᵘ)。</p>
-<div class="formula math" data-display="true">\begin{aligned}\mathcal L_D={}&\mathbb E_{\rm real}[\operatorname{softplus}(-a_{\rm real})]\\&+\mathbb E_{\rm fake}[\operatorname{softplus}(a_{\rm fake})]\end{aligned}</div>
-<p class="formula-purpose">生成器的非饱和 GAN 损失：让学生图的 logit 变大。</p>
-<div class="formula math" data-display="true">\begin{aligned}\mathcal L_G^{\rm GAN}&=\mathbb E_{\rm fake}[\operatorname{softplus}(-a_{\rm fake})]\\&=-\mathbb E_{\rm fake}[\log D(x_{\rm fake})]\end{aligned}</div>
+
+<h3>第 1 步 · 鉴定器吐的那个数 a 是什么</h3>
+<p>先把主角认清：鉴定器就是个真假打分器，喂它一张（加过噪的）图，它吐一个数 <code>a</code>（行话叫 logit）。<code>a</code> 只有一层意思——<strong>越大越「像真」，越小越「像假」</strong>，可正可负，本身还不是概率。要变成「我觉得这是真图的概率」，套一个 sigmoid 压进 0~1：</p>
+<div class="formula math" data-display="true">D(x)=\sigma(a)=\frac{1}{1+e^{-a}}</div>
+<p>对一下直觉：<code>a=0→D=.5</code>（拿不准）；<code>a=1.2→D≈.77</code>（挺像真）；<code>a=−.7→D≈.33</code>（偏假）。后面两条损失，翻来覆去只在说一句话——<strong>把该大的 a 顶大、该小的 a 压小</strong>。</p>
+
+<h3>第 2 步 · 鉴定器的损失：就是最普通的二分类</h3>
+<p>鉴定器要做的事一句话：<strong>真图给高概率，假图给低概率</strong>。这就是最普通的二分类，损失取负对数似然（猜对了损失小，猜错了损失大）。真图项要 <code>D(real)→1</code>，写作 <code>−log D(real)</code>；假图项要 <code>D(fake)→0</code>，写作 <code>−log(1−D(fake))</code>。</p>
+<p>把 <code>D=σ(a)</code> 代进去，这两项各自缩成一个 <code>softplus</code>（记 <code>softplus(u)=log(1+eᵘ)</code>）。为什么能缩？把 sigmoid 代进去一算就出来：<code>−log σ(a)=log(1+e^{−a})=softplus(−a)</code>，同理 <code>−log(1−σ(a))=softplus(a)</code>。所以：</p>
+<div class="formula math" data-display="true">\mathcal L_D=\mathbb E_{\rm real}\big[\underbrace{\operatorname{softplus}(-a_{\rm real})}_{-\log D(\mathrm{real})}\big]+\mathbb E_{\rm fake}\big[\underbrace{\operatorname{softplus}(a_{\rm fake})}_{-\log(1-D(\mathrm{fake}))}\big]</div>
+<p>现在符号有意义了：<code>softplus(−a_real)</code> 要变小 ⟺ <code>a_real</code> 要变大（真图判得更真）；<code>softplus(a_fake)</code> 要变小 ⟺ <code>a_fake</code> 要变小（假图判得更假）。这正是图里那句「真图 a 顶大、假图 a 压小」。</p>
+
+<h3>第 3 步 · 生成器的损失：把假图的 a 顶上去</h3>
+<p>轮到学生（生成器），目标和鉴定器正相反：<strong>想骗过鉴定器，让自己的假图也被判成真</strong>，即 <code>D(fake)→1</code>。于是最小化 <code>−log D(fake)</code>，同样缩成一个 softplus：</p>
+<div class="formula math" data-display="true">\mathcal L_G^{\rm GAN}=\mathbb E_{\rm fake}\big[\operatorname{softplus}(-a_{\rm fake})\big]=-\mathbb E_{\rm fake}\big[\log D(x_{\rm fake})\big]</div>
+<p>关键就在这个符号对着拧：学生这项是 <code>softplus(−a_fake)</code>（要 <code>a_fake</code> 大），鉴定器那项是 <code>softplus(a_fake)</code>（要 <code>a_fake</code> 小）——同一个数，一个想顶上去、一个想压下来，这就是「对抗」。至于<b>「非饱和」</b>：这里用 <code>−log D</code>，而不是 GAN 原版的 <code>log(1−D)</code>。原版在学生画得还烂（<code>D</code> 接近 0）时梯度几乎为 0，学生学不动；换成 <code>−log D</code>，越被识破梯度越大，学生反而更使劲。</p>
 <div class="symbol-grid">
-  <div class="symbol"><code>areal / afake</code>分类器对真实图和学生图输出的未归一化 logit。</div><div class="symbol"><code>D(x)=sigmoid(a)</code>把 logit 变成“像真实图”的概率。</div>
-  <div class="symbol"><code>softplus</code>数值稳定地实现二分类交叉熵。</div><div class="symbol"><code>Ereal / Efake</code>分别对真实图 batch 与学生图 batch 求平均。</div>
+  <div class="symbol"><code>a_real / a_fake</code>鉴定器对真实图 / 学生图吐的那个数（logit）。</div><div class="symbol"><code>D(x)=σ(a)</code>套 sigmoid，把 a 压成“像真图”的概率。</div>
+  <div class="symbol"><code>softplus(u)=log(1+eᵘ)</code><code>−log σ</code> 的等价写法，数值更稳。</div><div class="symbol"><code>E_real / E_fake</code>分别对真实图、学生图一个 batch 求平均。</div>
 </div>
-<h3>把 logit 真正代进 softplus</h3>
-<p>取一个真实图 logit <code>areal=1.2</code>，一个学生图 logit <code>afake=−.7</code>。利用 <code>softplus(u)=log(1+eᵘ)</code>：</p>
+
+<h3>把一组 a 真正代进去</h3>
+<p>取 <code>a_real=1.2</code>、<code>a_fake=−.7</code>。先换成概率看这一版鉴定器：真图 <code>D=.77</code>、假图 <code>D=.33</code>，判得还行。</p>
 <div class="score-sheet">
-  <div class="score-cell label">判别器的真实图项</div><div class="score-cell">softplus(−1.2) ≈ .263</div>
-  <div class="score-cell label">判别器的学生图项</div><div class="score-cell">softplus(−.7) ≈ .403</div>
-  <div class="score-cell label">判别器总损失</div><div class="score-cell">LD ≈ .263 + .403 = .666</div>
-  <div class="score-cell label">生成器当前损失</div><div class="score-cell">LGGAN = softplus(.7) ≈ 1.103</div>
-  <div class="score-cell label">学生 logit 提升到 .2 后</div><div class="score-cell result">softplus(−.2) ≈ .598，损失下降</div>
+  <div class="score-cell label">鉴定器·真图项 = −log D(real)</div><div class="score-cell">softplus(−1.2) ≈ .263</div>
+  <div class="score-cell label">鉴定器·假图项 = −log(1−D(fake))</div><div class="score-cell">softplus(−.7) ≈ .403</div>
+  <div class="score-cell label">鉴定器总损失 L_D</div><div class="score-cell">.263 + .403 = .666</div>
+  <div class="score-cell label">生成器损失 = −log D(fake)</div><div class="score-cell">softplus(.7) ≈ 1.103</div>
+  <div class="score-cell label">学生把 a_fake 从 −.7 顶到 .2</div><div class="score-cell result">D(fake) .33→.55，损失 softplus(−.2) ≈ .598 ↓</div>
 </div>
-<p>这组数把两边的目标分开了：判别器希望真实 logit 高、学生 logit 低；轮到生成器时，它只想把自己的 logit 推高。</p>
-<div class="plain"><b>为什么要先加噪：</b>加噪会糊掉那些一眼就能认出的高频瑕疵，让真、假两批分布在好几个噪声档位上互相重叠。判别器没法一上来就打满分，学生也就能拿到更平滑连续的梯度。这和 DiffusionGAN 的稳定思路是一致的。</div>
+<p>看最后一行就明白「对抗」怎么转起来：学生把自己的 a 从 −.7 顶到 .2，被判成真的概率从 .33 升到 .55，它的损失从 1.103 掉到 .598；可同一个动作会把鉴定器的假图项顶大——下一轮鉴定器再收紧。你追我赶。</p>
+<div class="plain"><b>为什么两边都先加噪：</b>加噪糊掉一眼可辨的高频瑕疵，让真、假两批图在好几个噪声档位上互相重叠。鉴定器没法一上来就满分识破，学生也就能拿到更平滑连续的梯度。这和 DiffusionGAN 的稳定思路一致。</div>
 </section>
 
 <section id="roles">
