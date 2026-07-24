@@ -334,10 +334,17 @@ figcaption b{color:var(--rust)}
 
 <section id="cfg">
 <h2><span class="num">§ 10</span><span>最后一个可选增强：把 CFG 提前到训练时</span></h2>
-<p>普通 <a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a> 在每个推理步分别跑条件和无条件预测，再外推；这会把网络评估次数翻倍。Drifting 把真实无条件样本混进训练负分布：</p>
-<div class="formula math" data-display="true">\widetilde q(\cdot|c)=(1-\gamma)q_\theta(\cdot|c)+\gamma p_{data}(\cdot|\varnothing)</div>
-<div class="formula math" data-display="true">q_\theta(\cdot|c)=\alpha p_{data}(\cdot|c)-(\alpha-1)p_{data}(\cdot|\varnothing),\qquad \alpha=\frac{1}{1-\gamma}</div>
-<div class="vars"><div class="var"><code>c</code>：类别条件。</div><div class="var"><code>∅</code>：无条件。</div><div class="var"><code>γ</code>：训练负分布里无条件真实样本的占比。</div><div class="var"><code>α</code>：推理时输入模型的 guidance 强度。</div></div>
+<p><b>先补前置：CFG 是什么。</b><a href="../concepts/classifier-free-guidance.html">Classifier-free guidance</a> 是文生图里让画面「更贴题」的常用招：同一步跑两次预测——一次给条件（“画只猫”）、一次什么都不给（无条件），再沿「条件 − 无条件」这个方向多推几步，把类别特征放大。代价是<strong>每一步都要跑两遍网络</strong>，只跑一次前向的 Drifting 付不起这笔账。</p>
+<p><b>Drifting 的招：把它变成反面教材，提前烤进参数。</b>想想斥力那堆负样本（§03）——本来只放学生自己生成的图。现在往里再掺一批「不看类别、随便什么内容」的真实图 <code>p_data(∅)</code>（那批“大众脸”）。模型为了<strong>躲开这批大众脸</strong>，就会把当前类别的特征画得更突出——这恰好就是 CFG「放大条件方向」的效果，只是不在推理时现算，而是提前练进权重里。掺多少，由占比 <code>γ</code> 定，这批掺了料的负分布记作 <code>q̃</code>：</p>
+<div class="formula math" data-display="true">\widetilde q(\cdot|c)=(1-\gamma)\,q_\theta(\cdot|c)+\gamma\,p_{data}(\cdot|\varnothing)</div>
+<div class="vars"><div class="var"><code>c</code>：类别条件（“画只猫”）。</div><div class="var"><code>∅</code>：无条件（什么都不给）。</div><div class="var"><code>q_θ(·|c)</code>：模型在条件 c 下的输出分布，就是 §02 那个 <code>q_θ</code> 带上条件。</div><div class="var"><code>p_data(·|∅)</code>：真实图但不看类别，即“大众脸”。</div><div class="var"><code>γ</code>：负样本堆里掺了多少无条件真实图（0~1）。</div><div class="var"><code>q̃</code>：掺料后真正拿去算斥力的负分布。</div></div>
+<p><b>这样练，模型最后会学成什么？</b>用 §03 那条不动点：漂移在「负分布追上正分布」时归零。这里正样本是该类别的真实图 <code>p_data(·|c)</code>，负分布是掺了料的 <code>q̃</code>。收敛时两者相等，列出等式：</p>
+<div class="formula math" data-display="true">(1-\gamma)\,q_\theta(\cdot|c)+\gamma\,p_{data}(\cdot|\varnothing)=p_{data}(\cdot|c)</div>
+<p>把 <code>q_θ(·|c)</code> 解出来。第一步移项，把 <code>γ·p_data(∅)</code> 挪到右边；第二步两边同除 <code>(1−γ)</code>：</p>
+<div class="formula math" data-display="true">q_\theta(\cdot|c)=\frac{p_{data}(\cdot|c)-\gamma\,p_{data}(\cdot|\varnothing)}{1-\gamma}=\frac{1}{1-\gamma}\,p_{data}(\cdot|c)-\frac{\gamma}{1-\gamma}\,p_{data}(\cdot|\varnothing)</div>
+<p>记 <code>α=1/(1−γ)</code>。那个 <code>γ/(1−γ)</code> 的系数正好等于 <code>α−1</code>（<code>α−1 = 1/(1−γ) − 1 = [1−(1−γ)]/(1−γ) = γ/(1−γ)</code>），代进去就收成干净的外推式：</p>
+<div class="formula math" data-display="true">q_\theta(\cdot|c)=\alpha\,p_{data}(\cdot|c)-(\alpha-1)\,p_{data}(\cdot|\varnothing),\qquad \alpha=\frac{1}{1-\gamma}</div>
+<p>翻成人话就是 CFG 的分布版：「把类别分布放大 α 倍，再把大众脸减掉 (α−1) 倍」。掺一半时 <code>γ=.5 → α=2</code>，模型学成 <code>2·p_data(c) − p_data(∅)</code>——正是下图那个数字例。推理时把强度 <code>α</code> 当条件喂进去，一次前向就够，不用再跑第二遍无条件。</p>
 <figure class="reveal">
   <figcaption><span>Fig 08 · α=2 的数字例</span><b>训练混合，推理单路</b></figcaption>
   <div class="cfg">
