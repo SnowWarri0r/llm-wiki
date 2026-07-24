@@ -166,6 +166,7 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
 
 <section id="s3">
   <h2><span class="n">SECTION 03</span><span>模型只改关键一处：玩家内独立处理，玩家间共享注意力</span></h2>
+  <div class="symbols"><div class="sym"><b>B</b>一批有几局</div><div class="sym"><b>P</b>每局玩家数，本文为 2</div><div class="sym"><b>T</b>时间位置数</div><div class="sym"><b>H / W / C</b>latent 高、宽、通道</div><div class="sym"><b>D</b>动作向量宽度</div></div>
   <p class="formula-purpose">一批多人视频的形状：</p>
   <div class="formula" data-expr="\mathbf{x}\in\mathbb{R}^{B\times P\times T\times H\times W\times C},\qquad \mathbf{a}\in\mathbb{R}^{B\times P\times T\times D}"></div>
   <figure>
@@ -173,8 +174,9 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
     <div class="shape"><div class="dim"><b>B</b><span>一批有几局</span></div><div class="dim player"><b>P</b><span>每局几位玩家<br>本文 P=2</span></div><div class="dim"><b>T</b><span>时间位置</span></div><div class="dim"><b>H</b><span>latent 高</span></div><div class="dim"><b>W</b><span>latent 宽</span></div><div class="dim"><b>C</b><span>latent 通道</span></div></div>
   </figure>
   <p class="formula-purpose">整段视频的自回归概率：</p>
+  <div class="symbols"><div class="sym"><b>θ</b>Solaris 参数</div><div class="sym"><b>x_t</b>时刻 t 的联合画面</div><div class="sym"><b>x_&lt;t</b>此前联合画面</div><div class="sym"><b>a_&lt;t</b>此前玩家动作</div></div>
   <div class="formula" data-expr="p_\theta(\mathbf{x})=\prod_{t=1}^{T}p_\theta(\mathbf{x}_t\mid \mathbf{x}_{<t},\mathbf{a}_{<t})"></div>
-  <div class="symbols"><div class="sym"><b>x_t</b>时刻 t 所有玩家的联合画面</div><div class="sym"><b>x_&lt;t</b>此前所有联合画面</div><div class="sym"><b>a_&lt;t</b>此前所有玩家动作</div></div>
+  <p>乘号来自概率的链式分解，不是假设各帧独立。若三步条件概率是 <code>.8、.6、.9</code>，这段特定视频的联合概率为 <code>.8×.6×.9=.432</code>；后两项都已经把之前发生的画面和动作当作条件。</p>
   <figure>
     <figcaption><span>Fig 05 · Multiplayer attention</span><b>共享的是视觉交流，不是动作</b></figcaption>
     <div class="attn">
@@ -188,11 +190,12 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
 
 <section id="s4">
   <h2><span class="n">SECTION 04</span><span>Flow Matching：给半成品，预测回到干净数据的速度</span></h2>
+  <div class="symbols"><div class="sym"><b>x</b>真实双人视频 latent</div><div class="sym"><b>ε</b>同形状高斯噪声</div><div class="sym"><b>σ</b>噪声比例：0 干净，1 全噪声</div><div class="sym"><b>xσ</b>混合后的训练输入</div><div class="sym"><b>vθ</b>网络预测速度</div><div class="sym"><b>a</b>两位玩家动作</div></div>
   <p class="formula-purpose">先把真实 latent 和随机噪声按比例混合：</p>
   <div class="formula" data-expr="\mathbf{x}_{\boldsymbol{\sigma}}=(1-\boldsymbol{\sigma})\mathbf{x}+\boldsymbol{\sigma}\boldsymbol{\epsilon},\qquad \boldsymbol{\epsilon}\sim\mathcal{N}(0,I)"></div>
   <p class="formula-purpose">沿这条直线的正确速度是 <code>ε−x</code>，网络用平方误差拟合：</p>
   <div class="formula" data-expr="\mathcal{L}_\theta=\mathbb{E}\left[\left\|v_\theta(\mathbf{x}_{\boldsymbol{\sigma}},\boldsymbol{\sigma},\mathbf{a})-(\boldsymbol{\epsilon}-\mathbf{x})\right\|_2^2\right]"></div>
-  <div class="symbols"><div class="sym"><b>x</b>真实双人视频 latent</div><div class="sym"><b>ε</b>同形状高斯噪声</div><div class="sym"><b>σ</b>0 干净，1 全噪声</div><div class="sym"><b>vθ</b>网络预测速度</div><div class="sym"><b>a</b>两位玩家动作</div><div class="sym"><b>||·||²₂</b>逐元素误差平方后求和</div></div>
+  <p><code>||e||²₂</code> 里的下标 2 表示 L2 范数，上标 2 表示再平方，因此 <code>||e||²₂=Σᵢeᵢ²</code>：把每个速度误差平方后相加，正负误差不会互相抵消，偏得越远惩罚增长越快。</p>
   <figure>
     <figcaption><span>Fig 06 · 一个数算到还原结果</span><b>公式、代入、答案不跳步</b></figcaption>
     <div class="calc">
