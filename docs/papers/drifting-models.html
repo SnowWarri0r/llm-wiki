@@ -352,7 +352,8 @@ figcaption b{color:var(--rust)}
     <div class="cfg-card infer"><h4>推理 · α 作为输入条件</h4><div class="one-pass">ε + 类别 c + 强度 α<br><b>→ fθ 一次前向 → 图像</b></div><p>没有第二次无条件网络前向。</p></div>
   </div>
 </figure>
-<p class="plain"><b>数学边界：</b><code>2pcond−p∅</code> 是 CFG 式分布外推的表达，不保证每个位置都像普通概率混合那样非负。论文的 L/2 最佳 FID 使用 <code>α=1.0</code>，也提醒我们 guidance 并非越强越好。</p>
+<p class="plain"><b>数学边界：</b><code>2pcond−p∅</code> 是 CFG 式分布外推的表达，不保证每个位置都像普通概率混合那样非负。</p>
+<div class="plain"><b>那 L/2 最佳 FID 用 α=1.0，是不是说加大众脸还不如不加？</b>要分两层看。<b>机械上确实是：</b><code>α=1 ⟺ γ=0</code>，一张大众脸都没掺、guidance 关掉，模型退回纯条件分布 <code>p_data(c)</code>，L/2 最好的 FID 就落在这里。<b>但这不是"机制没用"，是 CFG 的老规律：</b>FID 比的是整批生成图和真实图的分布匹配，加 guidance（<code>α&gt;1</code>）会把样本往最典型的几种画法挤——类别感更浓、观感更讨喜，却丢多样性、覆盖度，<strong>FID 反而升</strong>。标准扩散 CFG 也一样：FID 最优点几乎总在 <code>α≈1</code>，人评/贴题最优在更高 <code>α</code>。所以这套"把 CFG 烤进训练"的真正卖点是<strong>省成本</strong>——让你在一次前向里就能调 <code>α</code>（不用推理时跑两遍无条件），要浓类别感就调大、代价是 FID；要最低 FID 就 <code>α=1</code>。它换的是那个可调旋钮，不是更低的 FID。</div>
 </section>
 
 <section id="architecture">
