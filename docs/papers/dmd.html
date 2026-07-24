@@ -195,6 +195,7 @@ figure{margin:34px 0 46px;padding:26px;border:1px solid var(--rule);background:r
 <p>把图里的数字代入：<code>ε̂=[.66−.8×1.5]/.6=−.9</code>，所以 <code>sreal=−(−.9)/.6=1.5</code>。这正好接上 §06 工作表中的 real score，不再把 <code>1.50</code> 当成凭空给出的数字。</p>
 <h3>DMD 开始后，两套网络看同一道题</h3>
 <p>DMD 把同一个 <code>xₜ</code> 和同一个 <code>t</code> 分别送进冻结老师与动态 fake 去噪器，得到两份“干净图估计”<a class="jr" href="#g-07">7</a>，再用同一条换算公式变成两个方向。</p>
+<p><b>为什么 score 正好是这个式子？</b>回到加噪那步 <code>xₜ=αx+σε</code>：给定干净图 <code>x</code>，带噪图 <code>xₜ</code> 其实就是一个高斯——均值 <code>αx</code>、方差 <code>σ²</code>。而 score 的定义就是「对数密度对 <code>xₜ</code> 求导」，高斯的这个导数有现成结果：<code>−(xₜ−均值)/方差 = −(xₜ−αx)/σ²</code>。真的 <code>x</code> 我们不知道，拿去噪器的估计 <code>μ</code> 顶上，就得到下面这条。分子 <code>xₜ−αμ</code> 正是「还没被解释掉的那点噪声」（≈σε），除以 <code>σ²</code> 归一化——它和上面那个 <code>−ε̂/σ</code> 是同一个数（<code>ε̂=(xₜ−αμ)/σ</code>，代进去就对上）。</p>
 <p class="formula-purpose">去噪器 → score：根据去噪残差，算当前位置的对数密度坡度。</p>
 <div class="formula math" data-display="true">s(x_t,t)=-\frac{x_t-\alpha_t\mu(x_t,t)}{\sigma_t^2}</div>
 <div class="symbol-grid"><div class="symbol"><code>s(xₜ,t)</code>与 <code>xₜ</code> 同形状的方向张量；不是 0 到 1 的真假分数。</div><div class="symbol"><code>μ(xₜ,t)</code>去噪器预测的干净图或干净 latent；网络前向得到。</div><div class="symbol"><code>xₜ−αₜμ</code>模型预测重新加权后，还解释不了的带噪残差。</div><div class="symbol"><code>σₜ²</code>当前噪声方差；用它归一化，才能比较不同噪声时刻的方向。</div></div>
