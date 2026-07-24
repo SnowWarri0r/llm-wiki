@@ -1083,3 +1083,11 @@ skill 更新:
 - 将历史帧、latent memory、显式 3D memory、直接重建 3D 排成四级记忆；对照 Teacher / Diffusion / Self / LIVE / Geometry / Context Forcing，明确 forcing 改的是训练历史来源。
 - 单独解释一致性与动作响应的冲突、少步蒸馏和两类缓存、四应用评测地图，并强调综述表格来自不同协议，不能当统一排行榜。
 - 更新 `flow-matching`、`kv-cache`、`world-foundation-model`、`autoregressive-vs-bidirectional-video-diffusion` 与 `diffusion-transformer` 的 sources 和回链。
+
+## [2026-07-24] ingest | SenseFlow · Scaling DMD to SD 3.5 / FLUX
+
+- 新增 `wiki/papers/senseflow.md` 与 bespoke `docs/papers/senseflow.html`，按“DMD 前置 → 内循环失稳 → IDA → ISG → VFM 判别器 → 完整循环 → 实验与边界”重排，不照论文目录复述。
+- 从 `V=KL(pg||pr)-KL(pg||pf)` 逐行说明 fake 追踪误差怎样污染外循环；用 `θ=2、φ=1.5、λ=.97` 算出 IDA 的 `φnew=1.515`，并保留理论依赖局部 Lipschitz、Fisher-to-KL 等假设的边界。
+- 用 `.75→.60→.50` 同一条一维轨迹算完 ISG：老师前半段得到 `.50`，冻结学生后半段得到目标 `.65`，直接学生得到 `.45`，平方误差 `.04`；明确目标不是老师独跑全程。
+- 核对官方代码 commit `fafc81b7`：SD3.5 Large 的 IDA 权重为 `.97`；ISG 实现用平滑绝对误差而非正文 L2，并在段端点留 50 index、老师前半段用 CFG=5；v2 附录也更正真实参考图走 DINOv2 而非 CLIP。
+- 新增 `implicit-distribution-alignment`、`intra-segment-guidance`、`vfm-discriminator`、`hinge-loss` 四个 concept；实验同时记录 SDXL 的 Patch FID-T / CLIP 退步、CLIP diversity 约降 18.6%、一步需要额外 6000 iteration 微调等反例。
