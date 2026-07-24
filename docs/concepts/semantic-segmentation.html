@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Semantic Segmentation · 语义分割 · 给每个像素分类 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · semantic-segmentation</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Semantic Segmentation · 语义分割 · 给每个像素分类</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>分类只给整张图一个答案；语义分割给图里的<strong>每个像素</strong>一个类别，最后输出一张与图像逐点对应的 mask。</p>
+<h2>直觉</h2>
+<p>一张 <code>4×4</code> 小图里，左边是细胞，右边是背景。分类模型只会说“图里有细胞”，却没法回答细胞占哪几格。语义分割要输出：</p>
+<pre><code class="language-text">输入图像                    输出类别 mask
+亮 亮 暗 暗                 1 1 0 0
+亮 亮 暗 暗        →        1 1 0 0
+亮 暗 暗 暗                 1 0 0 0
+暗 暗 暗 暗                 0 0 0 0
+</code></pre>
+<p>这里 <code>1=细胞，0=背景</code>。输出没有唯一实例编号：两只同类细胞都标成 1。要区分“第一只”和“第二只”，属于实例分割。</p>
+<h2>怎么做的</h2>
+<p>网络在每个位置输出 <code>K</code> 个类别分数。假设某个像素的两类 logits 是 <code>[2,0]</code>：</p>
+<pre><code class="language-text">softmax([2,0])
+= [exp(2)/(exp(2)+exp(0)), exp(0)/(exp(2)+exp(0))]
+= [7.389/8.389, 1/8.389]
+= [0.881, 0.119]
+</code></pre>
+<p>若第一类是细胞，就把这个像素判成细胞。对 <code>H×W</code> 个位置都做一遍，输出形状就是 <code>H×W×K</code>。</p>
+<h2>数字例子</h2>
+<p>预测 mask 与真实 mask：</p>
+<pre><code class="language-text">预测            真值
+1 1 0           1 1 0
+1 0 0           1 1 0
+0 0 0           0 0 0
+</code></pre>
+<p>预测为 1 的像素有 3 个，真值为 1 的有 4 个，重合 3 个；并集有 4 个：</p>
+<pre><code class="language-text">IoU = 交集 / 并集 = 3 / 4 = 0.75
+</code></pre>
+<p>自检：若预测完全等于真值，交集=并集=4，IoU=1；若完全不重合，交集=0，IoU=0。</p>
+<h2>代码出处</h2>
+<ul>
+<li>PyTorch 常见输出：<code>logits.shape == [B, K, H, W]</code></li>
+<li><code>argmax(dim=1)</code> 把每个位置的 <code>K</code> 个分数变成类别编号</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/unet.html">unet</a> · 经典编码器—解码器语义分割网络</li>
+<li><a href="../concepts/softmax.html">softmax</a> · 把每个像素的类别分数变成概率</li>
+<li><a href="../concepts/cross-entropy.html">cross-entropy</a> · 逐像素分类常用损失</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/unet.html"><span class="cat">paper</span>U-Net · 一边看清是什么，一边记住它在哪</a></li><li><a href="../concepts/fully-convolutional-network.html"><span class="cat">concept</span>Fully Convolutional Network · 全卷积网络 · 输入变大，输出网格跟着变</a></li><li><a href="../concepts/weighted-pixelwise-cross-entropy.html"><span class="cat">concept</span>Weighted Pixel-wise Cross-Entropy · 逐像素加权交叉熵</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/semantic-segmentation.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

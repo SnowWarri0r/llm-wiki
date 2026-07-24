@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>U-Net · 一边看清是什么，一边记住它在哪</title>
+<link rel="stylesheet" href="../vendor/katex/katex-swap.min.css">
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+:root{
+  --paper:#f1ead8;--paper2:#e8deca;--card:#fffaf0;--ink:#171512;--ink2:#3c352d;
+  --muted:#716858;--rule:#b9ad93;--deep:#173f5f;--deep2:#0d2b43;--blue:#2878a2;
+  --blue-soft:#cae1eb;--coral:#bc4b32;--coral-soft:#efd0c5;--green:#3c7359;
+  --green-soft:#d1e5d8;--gold:#b37c13;--gold-soft:#f2dfa9;--white:#fff;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{margin:0;overflow-x:hidden;background:var(--paper);color:var(--ink);font:17px/1.82 "Noto Serif SC","Songti SC",Georgia,serif;-webkit-font-smoothing:antialiased}
+body:before{content:"";position:fixed;inset:0;z-index:30;pointer-events:none;opacity:.25;background-image:linear-gradient(rgba(23,63,95,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(23,63,95,.055) 1px,transparent 1px);background-size:32px 32px}
+.page{width:min(1180px,calc(100% - 56px));margin:auto;padding:54px 0 120px}
+.mast{display:flex;justify-content:space-between;gap:20px;padding:12px 0;border-top:4px double var(--ink);border-bottom:1px solid var(--rule);font:700 11px/1.4 "JetBrains Mono",monospace;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.hero{padding:66px 0 54px;border-bottom:1px solid var(--rule)}
+.kicker{display:flex;align-items:center;gap:14px;color:var(--blue);font:700 11px/1.4 "JetBrains Mono",monospace;letter-spacing:3px;text-transform:uppercase}
+.kicker:after{content:"";height:1px;flex:1;background:var(--rule)}
+h1{margin:25px 0 15px;font:900 clamp(68px,12vw,148px)/.82 Georgia,"Times New Roman","Noto Serif SC",serif;letter-spacing:-.065em}
+h1 em{color:var(--blue);font-weight:500}
+.byline{color:var(--muted);font:600 11px/1.6 "JetBrains Mono",monospace;letter-spacing:1.2px}
+.dek{max-width:970px;margin:33px 0 0;font:600 clamp(22px,2.6vw,34px)/1.55 "Noto Serif SC","Songti SC",serif;color:var(--ink2)}
+.tldr{display:grid;grid-template-columns:140px 1fr;margin:38px 0 0;background:var(--deep2);color:#f9f4e8;border-left:7px solid var(--blue);box-shadow:10px 10px 0 rgba(23,63,95,.12)}
+.tldr b{color:#9bd9ee}.tldr .tag{padding:27px 22px;color:#9bd9ee;font:700 11px/1.6 "JetBrains Mono",monospace;letter-spacing:2px}.tldr p{padding:24px 28px;margin:0}
+.path{display:flex;flex-wrap:wrap;gap:8px;margin:28px 0 0}
+.path a{padding:8px 12px;border:1px solid var(--rule);border-radius:999px;background:rgba(255,255,255,.35);color:var(--ink2);font:600 10px/1 "JetBrains Mono",monospace;text-decoration:none}
+.path a:hover,.path a:focus-visible{background:var(--blue);border-color:var(--blue);color:var(--white);outline:none}
+section{scroll-margin-top:56px}
+h2{display:grid;grid-template-columns:74px minmax(0,1fr);gap:14px;align-items:start;margin:94px 0 25px;font:900 clamp(33px,4.3vw,54px)/1.14 "Noto Serif SC","Songti SC",serif;letter-spacing:-.035em}
+h2 .n{padding-top:10px;color:var(--blue);font:700 11px/1.4 "JetBrains Mono",monospace;letter-spacing:2px}
+h3{margin:38px 0 12px;font:800 25px/1.3 "Noto Serif SC","Songti SC",serif}
+p{margin:13px 0}
+.lead{max-width:980px;color:var(--ink2);font:600 20px/1.72 "Noto Serif SC","Songti SC",serif}
+a{color:var(--deep);text-decoration-thickness:1px;text-underline-offset:3px}
+code{padding:1px 5px;border:1px solid var(--rule);border-radius:3px;background:rgba(255,255,255,.6);font:.86em "JetBrains Mono",monospace}
+.jr{display:inline-flex!important;align-items:center;justify-content:center;min-width:21px;height:20px;margin:0 3px;padding:0 5px;border:1px solid var(--coral)!important;border-radius:50%;background:var(--card);color:#8c2f20!important;text-decoration:none!important;font:700 10px/1 "JetBrains Mono",monospace;vertical-align:2px}
+.jr:hover,.jr:focus-visible{background:var(--coral)!important;color:#fff!important;outline:2px solid var(--ink);outline-offset:2px}
+.plain,.warning,.fact{margin:20px 0;padding:16px 20px;border-left:5px solid var(--blue);background:var(--card);color:var(--ink2)}
+.warning{border-color:var(--coral);background:var(--coral-soft)}
+.fact{border-color:var(--green);background:var(--green-soft)}
+.plain b,.warning b,.fact b{color:var(--ink)}
+.formula-purpose{margin:24px 0 7px;color:var(--deep);font-weight:800}
+.formula{margin:0 0 18px;padding:23px 22px;overflow-x:auto;background:var(--deep2);border-left:6px solid #55b6d7;color:white;text-align:center;-webkit-overflow-scrolling:touch}
+.formula .katex{font-size:1.12em}.formula .katex-display{margin:0}
+.vars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;margin:17px 0;background:var(--rule);border:1px solid var(--rule)}
+.var{padding:14px 16px;background:var(--card);font-size:15px}.var code{color:#7e2e20;font-weight:700}
+figure{margin:36px 0 48px;padding:27px;background:rgba(255,250,240,.78);border:1px solid var(--rule);box-shadow:9px 9px 0 rgba(23,63,95,.08)}
+figcaption{display:flex;justify-content:space-between;gap:18px;margin-bottom:24px;padding-bottom:13px;border-bottom:1px dashed var(--rule);color:var(--muted);font:700 11px/1.5 "JetBrains Mono",monospace;letter-spacing:1.2px;text-transform:uppercase}
+figcaption b{color:var(--blue)}
+.reveal{opacity:0;transform:translateY(12px);transition:opacity .55s ease,transform .55s ease}.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{transition-delay:.24s}.d4{transition-delay:.36s}.d5{transition-delay:.48s}
+.task-compare{display:grid;grid-template-columns:1fr 64px 1fr;gap:12px;align-items:stretch}
+.task-card{padding:24px;border:2px solid var(--rule);background:rgba(255,255,255,.6)}
+.task-card.classify{border-color:var(--coral)}.task-card.segment{border-color:var(--blue)}
+.task-card .tag,.flow-card .tag,.arch-box .tag,.loss-card .tag{font:700 10px/1.4 "JetBrains Mono",monospace;letter-spacing:1.5px;color:var(--muted)}
+.task-card h4,.flow-card h4,.arch-box h4,.loss-card h4{margin:10px 0 7px;font:800 24px/1.2 "Noto Serif SC",serif}
+.mini-img{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;width:170px;margin:20px auto}
+.mini-img i{aspect-ratio:1;border-radius:50%;background:#e5ded0}.mini-img i.cell{background:var(--blue)}.mini-img i.edge{background:var(--coral)}
+.task-out{margin-top:16px;padding:10px;text-align:center;background:var(--deep2);color:white;font:700 13px/1.4 "JetBrains Mono",monospace}
+.big-arrow,.flow-arrow{display:flex;align-items:center;justify-content:center;color:var(--coral);font:900 28px/1 "JetBrains Mono",monospace}
+.sliding{display:grid;grid-template-columns:1fr 56px 1fr;gap:10px;align-items:stretch}
+.flow-card{padding:22px;border:1px solid var(--rule);background:var(--card)}
+.flow-card.bad{border-top:6px solid var(--coral)}.flow-card.good{border-top:6px solid var(--green)}
+.repeat-row{display:flex;gap:4px;margin:18px 0}.repeat-row i{height:34px;flex:1;border:1px solid var(--rule);background:var(--coral-soft)}.repeat-row i:nth-child(2n){transform:translateX(-8px)}
+.whole-row{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;margin:18px 0}.whole-row i{aspect-ratio:1;background:var(--green-soft);border:1px solid #8cb29c}
+.unet-map{display:grid;grid-template-columns:minmax(0,1fr) 120px minmax(0,1fr);gap:10px;align-items:center}
+.arch-col{display:grid;gap:9px}.arch-box{position:relative;padding:15px 17px;border:1px solid var(--rule);background:var(--card)}
+.arch-col.enc .arch-box{border-left:6px solid var(--blue)}.arch-col.dec .arch-box{border-right:6px solid var(--green)}
+.arch-box h4{font-size:19px}.arch-box p{margin:3px 0;color:var(--muted);font:600 11px/1.5 "JetBrains Mono",monospace}
+.arch-box:not(:last-child):after{content:"↓  POOL";display:block;margin:11px 0 -5px;color:var(--coral);font:700 10px/1 "JetBrains Mono",monospace;text-align:center}
+.arch-col.dec .arch-box:not(:last-child):after{content:"↑  UP";color:var(--green)}
+.bridges{display:grid;grid-template-rows:repeat(4,1fr);gap:9px;align-self:stretch}.bridge{align-self:center;padding:6px 2px;border-top:2px solid var(--gold);color:#7a5000;text-align:center;font:700 9px/1.35 "JetBrains Mono",monospace}
+.bottom{grid-column:1/-1;margin-top:12px;padding:16px;text-align:center;background:var(--deep2);color:white}.bottom b{color:#9bd9ee}
+.ledger{overflow-x:auto}.ledger table,.results table{width:100%;border-collapse:collapse;min-width:720px}
+.ledger th,.ledger td,.results th,.results td{padding:11px 12px;border-bottom:1px solid var(--rule);text-align:right;font:600 12px/1.4 "JetBrains Mono",monospace}
+.ledger th:first-child,.ledger td:first-child,.results th:first-child,.results td:first-child{text-align:left}
+.ledger tr.key td{background:var(--blue-soft);color:var(--deep2);font-weight:800}.ledger tr.turn td{background:var(--gold-soft)}
+.skip-flow{display:grid;grid-template-columns:1fr 42px 1fr 42px 1fr 42px 1fr;gap:8px;align-items:stretch}
+.skip-node{padding:17px 13px;border:1px solid var(--rule);background:var(--card);text-align:center}
+.skip-node b{display:block;color:var(--deep);font:800 19px/1.25 "Noto Serif SC",serif}.skip-node code{display:inline-block;margin-top:9px}
+.skip-node.out{background:var(--green-soft);border-color:var(--green)}
+.tile-row{display:grid;grid-template-columns:1fr 80px 1fr;gap:12px;align-items:center}
+.tile-wrap{text-align:center}.tile{position:relative;width:min(230px,100%);aspect-ratio:1;margin:auto;border:4px solid var(--coral);background:repeating-linear-gradient(45deg,var(--coral-soft),var(--coral-soft) 8px,#f7e6df 8px,#f7e6df 16px)}
+.tile .core{position:absolute;width:67.83%;height:67.83%;left:16.085%;top:16.085%;display:flex;align-items:center;justify-content:center;border:4px solid var(--blue);background:var(--blue-soft);color:var(--deep2);font:800 13px/1.4 "JetBrains Mono",monospace}
+.tile-label{margin-top:11px;color:var(--muted);font:700 11px/1.5 "JetBrains Mono",monospace}
+.overlap-demo{position:relative;width:336px;max-width:100%;height:auto;aspect-ratio:336/220;margin:auto}
+.over-tile{position:absolute;top:4.545%;width:59.524%;height:90.909%;border:4px solid var(--coral);background:rgba(239,208,197,.58)}
+.over-tile.one{left:0}
+.over-tile.two{left:40.476%;border-color:var(--gold);background:rgba(242,223,169,.58)}
+.over-core{position:absolute;left:16%;top:16%;width:68%;height:68%;display:flex;align-items:center;justify-content:center;border:4px solid var(--blue);background:rgba(202,225,235,.76);color:var(--deep2);font:800 11px/1.4 "JetBrains Mono",monospace}
+.over-tile.two .over-core{border-color:var(--green);background:rgba(209,229,216,.78)}
+.loss-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.loss-card{padding:18px;border:1px solid var(--rule);background:var(--card)}
+.loss-card.boundary{border:3px solid var(--coral);background:var(--coral-soft)}
+.loss-card h4{font-size:20px}.loss-card .num{margin-top:12px;color:var(--deep2);font:800 18px/1.3 "JetBrains Mono",monospace}
+.aug-flow{display:grid;grid-template-columns:1fr 64px 1fr;gap:14px;align-items:center}
+.warp{padding:18px;background:var(--card);border:1px solid var(--rule)}
+.grid9{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;width:200px;aspect-ratio:1;margin:auto;padding:15px}
+.grid9 i{position:relative;border-radius:50%;background:var(--blue);box-shadow:0 0 0 1px var(--deep)}
+.grid9.warped i:nth-child(1){transform:translate(7px,5px)}.grid9.warped i:nth-child(2){transform:translate(-3px,8px)}.grid9.warped i:nth-child(3){transform:translate(-7px,2px)}.grid9.warped i:nth-child(4){transform:translate(5px,-3px)}.grid9.warped i:nth-child(5){transform:translate(0,3px)}.grid9.warped i:nth-child(6){transform:translate(-5px,-5px)}.grid9.warped i:nth-child(7){transform:translate(8px,-6px)}.grid9.warped i:nth-child(8){transform:translate(2px,-8px)}.grid9.warped i:nth-child(9){transform:translate(-8px,-4px)}
+.warp p{text-align:center;color:var(--muted);font:600 12px/1.5 "JetBrains Mono",monospace}
+.recipe{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.recipe div{padding:17px;border:1px solid var(--rule);background:var(--card)}.recipe b{display:block;color:var(--blue);font:800 11px/1.5 "JetBrains Mono",monospace;letter-spacing:1px}.recipe span{display:block;margin-top:8px}
+.results{overflow-x:auto}.results .win{background:var(--green-soft);color:#17472f;font-weight:800}.results .caveat{background:var(--gold-soft)}
+.era{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.era div{padding:18px;border:1px solid var(--rule);background:var(--card)}.era b{display:block;margin-bottom:8px;color:var(--deep);font:800 19px/1.3 "Noto Serif SC",serif}
+.gloss{margin-top:82px;padding-top:32px;border-top:3px double var(--ink)}.gloss h2{margin:0 0 20px;font-size:30px}.gloss ol{padding:0;margin:0;list-style:none;counter-reset:g}.gloss li{position:relative;padding:14px 10px 14px 54px;border-bottom:1px dashed var(--rule);font-size:16px}.gloss li:before{content:counter(g,decimal-leading-zero);counter-increment:g;position:absolute;left:8px;top:15px;color:var(--blue);font:800 11px/1.5 "JetBrains Mono",monospace}.gloss li:target{background:var(--gold-soft)}.term{font-weight:800;color:var(--ink)}
+.sources{margin-top:54px;padding:22px;border:1px solid var(--rule);background:var(--card)}.sources h3{margin-top:0}.sources li{margin:7px 0}
+.colophon{display:flex;justify-content:space-between;gap:20px;margin-top:70px;padding-top:18px;border-top:1px solid var(--rule);color:var(--muted);font:600 11px/1.5 "JetBrains Mono",monospace;letter-spacing:1px}
+@media(max-width:900px){
+  .task-compare,.sliding,.aug-flow{grid-template-columns:1fr}.big-arrow,.flow-arrow{min-height:34px}.big-arrow:before,.flow-arrow:before{content:"↓";font-size:26px}.big-arrow,.flow-arrow{font-size:0}
+  .unet-map{grid-template-columns:1fr 84px 1fr}.skip-flow{grid-template-columns:1fr}.skip-flow .flow-arrow{min-height:32px}
+  .tile-row{grid-template-columns:1fr}.tile-row>.flow-arrow{min-height:36px}.loss-grid,.recipe,.era{grid-template-columns:1fr 1fr}
+}
+@media(max-width:620px){
+  .page{width:calc(100% - 24px);padding:34px 0 80px}.mast{align-items:flex-start}.mast span:last-child{text-align:right}
+  .hero{padding:46px 0 36px}h1{font-size:66px}.dek{font-size:21px}.tldr{grid-template-columns:1fr}.tldr .tag{padding:17px 20px 0}.tldr p{padding:16px 20px 23px}
+  h2{grid-template-columns:1fr;gap:3px;margin-top:70px;font-size:34px}h2 .n{padding:0}figure{margin-left:0;margin-right:0;padding:18px 14px}figcaption{display:block}figcaption b{display:block;margin-top:4px}
+  .vars,.loss-grid,.recipe,.era{grid-template-columns:1fr}.unet-map{grid-template-columns:1fr}.bridges{display:none}.arch-col.dec{display:flex;flex-direction:column-reverse}.bottom{grid-column:auto}
+  .arch-box:not(:last-child):after{content:"↓"}.arch-col.dec .arch-box:not(:last-child):after{content:"↓"}
+  .formula{margin-left:-2px;margin-right:-2px;padding:20px 14px;text-align:left}.formula .katex{font-size:.96em}.formula .katex-display{text-align:left}
+  .tile{width:210px}.colophon{display:block}.colophon span{display:block;margin-top:8px}
+}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}.reveal{opacity:1;transform:none;transition:none}}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · unet</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page">
+<header>
+  <div class="mast"><span>Connectionism · Paper Notes</span><span>MICCAI 2015 · arXiv 1505.04597</span></div>
+  <div class="hero">
+    <div class="kicker">Pixel-wise prediction · Multi-scale fusion</div>
+    <h1>U<em>-Net.</em></h1>
+    <div class="byline">Olaf Ronneberger · Philipp Fischer · Thomas Brox · University of Freiburg</div>
+    <p class="dek">分类网络只说“图里有什么”；U-Net 要给每个像素落笔。它一路压缩来弄懂上下文，再一路放大，并从编码器横向取回边界细节——既看清是什么，也记住具体在哪。</p>
+    <div class="tldr"><div class="tag">TL;DR<br>先记这句</div><p>U-Net 的核心不是字母形状，而是三份职责：<b>编码器拿上下文，解码器恢复网格，跳跃连接补精确位置</b>。原版使用 valid convolution，所以 <code>572×572</code> 输入只预测中央 <code>388×388</code>；这也解释了为何 skip 要先 crop、为何大图推理要让输入 tile 重叠。训练再用弹性形变解决小数据，用边界加权交叉熵把粘连细胞之间的窄缝变成高分题。</p></div>
+    <nav class="path" aria-label="章节导航">
+      <a href="#task">任务</a><a href="#old">滑窗代价</a><a href="#map">全图</a><a href="#size">尺寸账</a><a href="#skip">跳连</a><a href="#tile">切大图</a><a href="#loss">损失</a><a href="#augment">小数据</a><a href="#results">实验</a><a href="#legacy">今天的 U-Net</a>
+    </nav>
+  </div>
+</header>
+
+<section id="task">
+<h2><span class="n">§ 01</span><span>先分清任务：一张图一个答案，还是每个像素一个答案</span></h2>
+<p class="lead">图像分类把整张图压成一个标签；<a href="../concepts/semantic-segmentation.html">语义分割</a><a class="jr" href="#g-01">1</a>必须保留空间网格，让输出位置和输入区域一一对应。</p>
+<figure id="fig-task"><figcaption><span>Fig 01 · 同一张显微图，两种输出契约</span><b>ONE LABEL VS EVERY PIXEL</b></figcaption>
+  <div class="task-compare">
+    <div class="task-card classify reveal"><span class="tag">CLASSIFICATION</span><h4>整张图 → 一个标签</h4><div class="mini-img"><i class="cell"></i><i class="cell"></i><i></i><i></i><i></i><i class="cell"></i><i class="edge"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="task-out">“有细胞”</div></div>
+    <div class="big-arrow reveal d2">→</div>
+    <div class="task-card segment reveal d3"><span class="tag">SEGMENTATION</span><h4>每个位置 → 一个类别</h4><div class="mini-img"><i class="cell"></i><i class="cell"></i><i></i><i></i><i></i><i class="cell"></i><i class="edge"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="task-out">5×5 类别 mask</div></div>
+  </div>
+</figure>
+<p>“语义”表示同一类别共享一个编号；两只细胞都叫“细胞”。若还要给每只细胞独立编号，那是实例分割。原论文的网络先做逐像素分类，再通过边界权重帮助后续把粘连目标分开。</p>
+</section>
+
+<section id="old">
+<h2><span class="n">§ 02</span><span>旧滑窗为什么慢：邻居只挪一格，却把重叠区域从头算一遍</span></h2>
+<p>早期滑窗方法以每个像素为中心裁 patch，网络只判断中心点。窗口右移一个像素，输入内容大半重合，但卷积全部重跑。patch 小又看不全上下文，patch 大则需要更多池化，位置变粗。</p>
+<figure id="fig-old"><figcaption><span>Fig 02 · 重复算 patch，还是一次算完整 tile</span><b>REDUNDANT WINDOWS → SHARED CONV</b></figcaption>
+  <div class="sliding">
+    <div class="flow-card bad reveal"><span class="tag">SLIDING WINDOW</span><h4>每个中心像素跑一次</h4><div class="repeat-row"><i></i><i></i><i></i><i></i><i></i></div><p>相邻 patch 高度重叠；同一条边缘被算很多次。</p></div>
+    <div class="flow-arrow reveal d2">→</div>
+    <div class="flow-card good reveal d3"><span class="tag">FULLY CONVOLUTIONAL</span><h4>整块输入一次前向</h4><div class="whole-row"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><p>中间卷积特征共享，一次同时产出一大片像素。</p></div>
+  </div>
+</figure>
+<div class="plain"><b>关键不是“窗口消失了”。</b>卷积本来仍在局部滑动；变化是把所有相邻位置合成一次整图前向，让重叠计算在特征图里天然共享。</div>
+</section>
+
+<section id="map">
+<h2><span class="n">§ 03</span><span>完整拼图：压缩拿语义，放大还网格，横向连接补位置</span></h2>
+<p class="lead">U-Net 是一套<a href="../concepts/fully-convolutional-network.html">全卷积网络</a><a class="jr" href="#g-02">2</a>。左路通过<a class="jr" href="#g-03">3</a>最大池化扩大<a href="../concepts/receptive-field.html">感受野</a><a class="jr" href="#g-04">4</a>；右路上采样；每个尺度再从左边复制高分辨率特征。</p>
+<figure id="fig-map"><figcaption><span>Fig 03 · 四级 U 形数据流</span><b>CONTEXT DOWN · LOCATION ACROSS · GRID UP</b></figcaption>
+  <div class="unet-map">
+    <div class="arch-col enc reveal">
+      <div class="arch-box"><span class="tag">ENC 1</span><h4>568² × 64</h4><p>边缘 / 纹理 · 定位细</p></div>
+      <div class="arch-box"><span class="tag">ENC 2</span><h4>280² × 128</h4><p>小结构</p></div>
+      <div class="arch-box"><span class="tag">ENC 3</span><h4>136² × 256</h4><p>较大部件</p></div>
+      <div class="arch-box"><span class="tag">ENC 4</span><h4>64² × 512</h4><p>上下文更广</p></div>
+    </div>
+    <div class="bridges reveal d2"><div class="bridge">CROP → CONCAT</div><div class="bridge">CROP → CONCAT</div><div class="bridge">CROP → CONCAT</div><div class="bridge">CROP → CONCAT</div></div>
+    <div class="arch-col dec reveal d3">
+      <div class="arch-box"><span class="tag">DEC 1</span><h4>388² × 64</h4><p>像素类别</p></div>
+      <div class="arch-box"><span class="tag">DEC 2</span><h4>196² × 128</h4><p>恢复边界</p></div>
+      <div class="arch-box"><span class="tag">DEC 3</span><h4>100² × 256</h4><p>融合语义</p></div>
+      <div class="arch-box"><span class="tag">DEC 4</span><h4>52² × 512</h4><p>从瓶颈放大</p></div>
+    </div>
+    <div class="bottom reveal d4"><b>BOTTLENECK · 28² × 1024</b>　最小网格，最宽通道；看得广，但位置最粗</div>
+  </div>
+</figure>
+<p>通道从 64 翻到 1024，是让小空间网格能装下更多语义特征；解码时再逐级减半。最后用 <a class="jr" href="#g-05">5</a><code>1×1</code> 卷积把每个位置的 64 维特征映成 `K` 个类别分数。</p>
+</section>
+
+<section id="size">
+<h2><span class="n">§ 04</span><span>572 为什么最后只剩 388：原版每次 3×3 卷积都会吃掉一圈</span></h2>
+<p>原版用不补边的 <a href="../concepts/convolution.html">valid convolution</a><a class="jr" href="#g-06">6</a>。步长 1、卷积核 3 时，输出边长是 `n−3+1=n−2`。连续两次就缩 4；池化再除以 2。</p>
+<p class="formula-purpose">这条式子回答：一维输入经过卷积后还能落下多少个合法窗口。</p>
+<div class="formula math" data-display="true">n_{\mathrm{out}}=\left\lfloor\frac{n_{\mathrm{in}}+2p-k}{s}\right\rfloor+1</div>
+<div class="vars"><div class="var"><code>n_in / n_out</code>输入 / 输出边长。</div><div class="var"><code>k=3</code>卷积核边长。</div><div class="var"><code>p=0</code>原版不补边。</div><div class="var"><code>s=1</code>卷积每次滑一格。</div></div>
+<figure id="fig-size"><figcaption><span>Fig 04 · 原版完整尺寸账</span><b>572 IN → 388 OUT · 23 CONV LAYERS</b></figcaption>
+  <div class="ledger reveal"><table>
+    <thead><tr><th>位置</th><th>操作</th><th>空间边长</th><th>通道</th></tr></thead>
+    <tbody>
+      <tr class="key"><td>输入</td><td>-</td><td>572</td><td>1</td></tr>
+      <tr><td>编码 1</td><td>3×3, 3×3</td><td>572→570→568</td><td>64</td></tr>
+      <tr><td>池化 1</td><td>2×2 / 2</td><td>568→284</td><td>64</td></tr>
+      <tr><td>编码 2</td><td>3×3, 3×3, pool</td><td>284→282→280→140</td><td>128</td></tr>
+      <tr><td>编码 3</td><td>3×3, 3×3, pool</td><td>140→138→136→68</td><td>256</td></tr>
+      <tr><td>编码 4</td><td>3×3, 3×3, pool</td><td>68→66→64→32</td><td>512</td></tr>
+      <tr class="turn"><td>瓶颈</td><td>3×3, 3×3</td><td>32→30→28</td><td>1024</td></tr>
+      <tr><td>解码 4</td><td>up×2, 3×3, 3×3</td><td>28→56→54→52</td><td>512</td></tr>
+      <tr><td>解码 3</td><td>up×2, 3×3, 3×3</td><td>52→104→102→100</td><td>256</td></tr>
+      <tr><td>解码 2</td><td>up×2, 3×3, 3×3</td><td>100→200→198→196</td><td>128</td></tr>
+      <tr><td>解码 1</td><td>up×2, 3×3, 3×3</td><td>196→392→390→388</td><td>64</td></tr>
+      <tr class="key"><td>输出</td><td>1×1 分类</td><td>388</td><td>2</td></tr>
+    </tbody>
+  </table></div>
+</figure>
+<p>总共 23 个卷积层：编码与瓶颈 10 个，四次 up-conv 加八个解码卷积共 12 个，最后 `1×1` 再算 1 个。输入每边比输出多 `(572−388)/2=92` 像素上下文。</p>
+</section>
+
+<section id="skip">
+<h2><span class="n">§ 05</span><span>上采样只会增加格子；边界到底在哪，要从编码器取回来</span></h2>
+<p class="lead">池化后只剩“这块里最强的特征”，精确坐标已经被压粗。<a href="../concepts/transposed-convolution.html">上采样 / 转置卷积</a><a class="jr" href="#g-07">7</a>不能凭空找回它。U-Net 用<a href="../concepts/skip-connection.html">跳跃连接</a><a class="jr" href="#g-08">8</a>把同尺度浅层特征直接交给解码器。</p>
+<figure id="fig-skip"><figcaption><span>Fig 05 · 原版第一次 skip 的四步尺寸</span><b>CROP FIRST · CONCAT CHANNELS</b></figcaption>
+  <div class="skip-flow">
+    <div class="skip-node reveal"><b>编码器存档</b><code>64×64×512</code></div><div class="flow-arrow reveal d2">→</div>
+    <div class="skip-node reveal d2"><b>四周各裁 4</b><code>56×56×512</code></div><div class="flow-arrow reveal d3">→</div>
+    <div class="skip-node reveal d3"><b>与上采样拼接</b><code>512+512</code></div><div class="flow-arrow reveal d4">→</div>
+    <div class="skip-node out reveal d4"><b>保留两份证据</b><code>56×56×1024</code></div>
+  </div>
+</figure>
+<p>这里是按通道 <strong>concat</strong>，不是相加。若两份特征各有两个通道，`[10,20] concat [1,2]=[10,20,1,2]`；后续卷积自己学怎么融合。相加只会得到 `[11,22]`。concat 保留信息更完整，但通道翻倍，也更耗显存。</p>
+<div class="warning"><b>现代 U-Net 常不需要 crop。</b>如果每个 3×3 卷积都补一圈零，编码和解码的同尺度特征宽高一致，可直接拼接。crop 是原版 valid convolution 的尺寸后果，不是 U-Net 的永恒定义。</div>
+</section>
+
+<section id="tile">
+<h2><span class="n">§ 06</span><span>没有全连接层，为什么就能处理大图；为什么还要重叠切块</span></h2>
+<p>全连接层要求固定展平长度；卷积核只关心局部 `3×3` 和通道数，不绑定绝对坐标。输入变大，核只是多滑几次，输出网格跟着变大。这就是“全卷积支持可变空间输入”的具体原因。</p>
+<p>但 2015 年 6 GB 显存装不下任意大显微图，所以作者用 <a class="jr" href="#g-09">9</a>overlap-tile：每块输入 572，只保留中央 388 的可靠预测。</p>
+<figure id="fig-tile"><figcaption><span>Fig 06 · 92 像素 halo 为中央输出提供完整上下文</span><b>INPUT 572 · CORE 388 · OVERLAP 184</b></figcaption>
+  <div class="tile-row">
+    <div class="tile-wrap reveal"><div class="tile"><div class="core">可靠输出<br>388×388</div></div><div class="tile-label">输入 tile 572×572 · 四周 halo 各 92</div></div>
+    <div class="flow-arrow reveal d2">→</div>
+    <div class="tile-wrap reveal d3">
+      <div class="overlap-demo">
+        <div class="over-tile one"><div class="over-core">输出 A</div></div>
+        <div class="over-tile two"><div class="over-core">输出 B</div></div>
+      </div>
+      <div class="tile-label">两块输入相隔 388 · 输入区重叠 184 · 两个输出 core 首尾相接</div>
+    </div>
+  </div>
+</figure>
+<p>整张图边缘连 92 像素上下文都没有，原版用镜像外推补出它。注意，重叠区域不是重复交付两份结果；它是每个中央输出块周围的“上下文缓冲带”。</p>
+</section>
+
+<section id="loss">
+<h2><span class="n">§ 07</span><span>相邻细胞之间那条细缝，为什么要算十倍重</span></h2>
+<p class="lead">最后每个像素输出 `K` 个 logits，经<a href="../concepts/softmax.html">softmax</a><a class="jr" href="#g-10">10</a>变成概率，再用<a href="../concepts/weighted-pixelwise-cross-entropy.html">逐像素加权交叉熵</a><a class="jr" href="#g-11">11</a>训练。</p>
+<p class="formula-purpose">总损失：每个像素的负对数概率，再乘该位置的重要权重。</p>
+<div class="formula math" data-display="true">\mathcal L=-\sum_{\mathbf x\in\Omega}w(\mathbf x)\log p_{\ell(\mathbf x)}(\mathbf x)</div>
+<p class="formula-purpose">权重图：离最近和第二近细胞边界都很近的位置，额外权重最高。</p>
+<div class="formula math" data-display="true">w(\mathbf x)=w_c(\mathbf x)+w_0\exp\left(-\frac{(d_1(\mathbf x)+d_2(\mathbf x))^2}{2\sigma^2}\right)</div>
+<div class="vars"><div class="var"><code>Ω</code>所有输出像素位置。</div><div class="var"><code>ℓ(x)</code>位置 x 的真实类别。</div><div class="var"><code>p</code>模型给真实类别的概率。</div><div class="var"><code>w_c</code>类别平衡权重。</div><div class="var"><code>d₁,d₂</code>到最近、第二近细胞边界的距离。</div><div class="var"><code>w₀=10, σ≈5</code>原文的边界增强设置。</div></div>
+<figure id="fig-loss"><figcaption><span>Fig 07 · 同样答错，关键窄缝更贵</span><b>P_TRUE=.119 · CE=2.127</b></figcaption>
+  <div class="loss-grid">
+    <div class="loss-card reveal"><span class="tag">普通背景</span><h4>面积大，容易学</h4><div class="num">w=1<br>loss=2.127</div></div>
+    <div class="loss-card boundary reveal d2"><span class="tag">两细胞之间</span><h4>d₁=d₂=1</h4><div class="num">w=10.231<br>loss=21.76</div></div>
+    <div class="loss-card reveal d3"><span class="tag">预测修正后</span><h4>p_true=.9</h4><div class="num">w=10.231<br>loss=1.08</div></div>
+  </div>
+</figure>
+<p>手算：`exp(-(1+1)²/(2×5²))=exp(-.08)=.9231`，所以 `w=1+10×.9231=10.231`。真实类别概率 `.119` 时，`-log(.119)=2.127`，相乘得 `21.76`。</p>
+<div class="warning"><b>原论文 Eq. (1) 印成没有负号的 `Σw log p`。</b>若把它当要最小化的 loss，方向会反。等价的正确训练口径是最大化加权 log-likelihood，或像这里一样最小化带负号的交叉熵<a class="jr" href="#g-12">12</a>。</div>
+</section>
+
+<section id="augment">
+<h2><span class="n">§ 08</span><span>只有几十张图，靠什么不把训练集背下来</span></h2>
+<p>论文把小数据问题交给任务匹配的数据增强：平移、旋转、灰度变化，以及最关键的<a class="jr" href="#g-13">13</a>弹性形变。它不是让像素各自乱跑，而是在粗 `3×3` 网格上采样位移，再平滑插值到整张图。</p>
+<figure id="fig-aug"><figcaption><span>Fig 08 · 9 个控制点先移动，整张图再平滑跟着变</span><b>GAUSSIAN STD 10 PX · BICUBIC</b></figcaption>
+  <div class="aug-flow">
+    <div class="warp reveal"><div class="grid9"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><p>规则 3×3 控制网格</p></div>
+    <div class="flow-arrow reveal d2">→</div>
+    <div class="warp reveal d3"><div class="grid9 warped"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><p>控制点随机位移 · 像素场平滑插值</p></div>
+  </div>
+</figure>
+<p>图像与 mask 必须使用同一份形变，否则输入里的细胞挪了，答案还留在原位。论文还在编码器末端使用 dropout。</p>
+<h3>训练配方与初始化</h3>
+<div class="recipe"><div><b>DATA</b><span>EM 30 张 · PhC 35 张 · DIC 20 张</span></div><div><b>OPTIMIZER</b><span>Caffe SGD · batch 1 · momentum .99</span></div><div><b>HARDWARE</b><span>NVIDIA Titan 6 GB · 约 10 小时</span></div></div>
+<p class="formula-purpose">He 初始化：让 ReLU 网络各层信号方差别一路爆炸或消失。</p>
+<div class="formula math" data-display="true">\operatorname{std}(W)=\sqrt{\frac{2}{N}},\qquad N=3\times3\times64=576,\qquad \operatorname{std}\approx0.0589</div>
+<p><code>N</code> 是一个输出位置接收的输入数。`0.0589` 是高斯采样的标准差，不是把每个权重都设成这个数。</p>
+</section>
+
+<section id="results">
+<h2><span class="n">§ 09</span><span>实验怎么读：三项任务都强，但不是每个指标都第一</span></h2>
+<figure id="fig-results"><figcaption><span>Fig 09 · 论文原表关键数字</span><b>LOWER ERROR · HIGHER IOU</b></figcaption>
+  <div class="results reveal"><table>
+    <thead><tr><th>任务 / 方法</th><th>Warping ↓</th><th>Rand ↓</th><th>Pixel ↓</th><th>IoU ↑</th></tr></thead>
+    <tbody>
+      <tr class="win"><td>EM · U-Net</td><td>.000353</td><td>.0382</td><td>.0611</td><td>-</td></tr>
+      <tr><td>EM · IDSIA 滑窗 CNN</td><td>.000420</td><td>.0504</td><td>.0613</td><td>-</td></tr>
+      <tr class="caveat"><td>EM · DIVE-SCI</td><td>.000355</td><td>.0305</td><td>.0584</td><td>-</td></tr>
+      <tr class="win"><td>PhC-U373 · U-Net</td><td>-</td><td>-</td><td>-</td><td>.9203</td></tr>
+      <tr><td>PhC 2015 第二名</td><td>-</td><td>-</td><td>-</td><td>.83</td></tr>
+      <tr class="win"><td>DIC-HeLa · U-Net</td><td>-</td><td>-</td><td>-</td><td>.7756</td></tr>
+      <tr><td>DIC 2015 第二名</td><td>-</td><td>-</td><td>-</td><td>.46</td></tr>
+    </tbody>
+  </table></div>
+</figure>
+<p>EM 结果平均了 7 个旋转版本，且不做额外前后处理。U-Net 的 warping error 第一，但 DIVE-SCI 的 Rand 和 pixel error 更低，不能笼统写成“所有指标碾压”。PhC 与 DIC 的 IoU 差距则很大。</p>
+<div class="plain"><b>IoU 手算：</b>预测区域与真值重合 80 个像素，并集 100 个像素，`IoU=80/100=.8`。论文没给逐零件消融，也没有多随机种子均值和方差，所以只能证明整套方案有效，不能精确分摊 skip、增强、边界损失各贡献多少。</div>
+</section>
+
+<section id="legacy">
+<h2><span class="n">§ 10</span><span>今天说的 U-Net，保留了思想，但通常不是原版 23 层网络</span></h2>
+<div class="era">
+  <div><b>2015 原版</b>valid conv · crop+concat · 加权像素交叉熵 · Caffe · 无 BatchNorm</div>
+  <div><b>现代分割 U-Net</b>same padding · 直接 concat · BN/GN · Dice/CE/focal 混合</div>
+  <div><b>扩散 U-Net</b>多尺度 U 形 + skip 保留；加入残差、时间条件、注意力，输出噪声或速度</div>
+</div>
+<p>因此，Stable Diffusion 的 U-Net 和这篇论文有清楚的家族关系，却不是把医学分割网络原封不动搬去生成图像。后来的 3D U-Net 把操作扩成三维；Attention U-Net 给 skip 加门；U-Net++ 把单条 skip 改成嵌套、稠密路径。再后来，<a href="dit.html">DiT</a> 直接用 Transformer 接替扩散 U-Net。</p>
+<div class="fact"><b>一句话带走：</b>U-Net 真正留下的是多尺度分工——深层保语义，浅层保位置，解码器把两者逐级合回来。</div>
+</section>
+
+<div class="gloss" id="glossary">
+<h2><span class="n">TERMS</span><span>术语就地补课</span></h2>
+<ol>
+  <li id="g-01"><span class="term">Semantic segmentation</span> · 语义分割；为每个像素分配类别，同类实例共享标签。详见 <a href="../concepts/semantic-segmentation.html">concept</a>。</li>
+  <li id="g-02"><span class="term">Fully convolutional</span> · 全卷积；没有固定长度全连接层，输入空间变大时输出网格跟着变。详见 <a href="../concepts/fully-convolutional-network.html">concept</a>。</li>
+  <li id="g-03"><span class="term">Max pooling</span> · 最大池化；每个小窗口只保留最大值，用更小网格表示局部最强特征。</li>
+  <li id="g-04"><span class="term">Receptive field</span> · 感受野；一个特征最终能受原图多大区域影响。详见 <a href="../concepts/receptive-field.html">concept</a>。</li>
+  <li id="g-05"><span class="term">1×1 convolution</span> · 不混空间邻居，只在同一位置重组通道；U-Net 用它把 64 维特征映成 K 类 logits。</li>
+  <li id="g-06"><span class="term">Valid convolution</span> · 不补边，只在卷积核完全落入输入时计算；3×3、stride 1 会让边长减少 2。</li>
+  <li id="g-07"><span class="term">Up-convolution</span> · 原文的上采样加 2×2 卷积；现代常由转置卷积或插值加卷积实现。详见 <a href="../concepts/transposed-convolution.html">concept</a>。</li>
+  <li id="g-08"><span class="term">Skip connection</span> · 跨层直连；U-Net 把编码器特征按通道拼进解码器，ResNet 则常逐元素相加。详见 <a href="../concepts/skip-connection.html">concept</a>。</li>
+  <li id="g-09"><span class="term">Overlap-tile</span> · 带重叠的切块推理；每块输入带上下文 halo，只交付中央可靠输出。</li>
+  <li id="g-10"><span class="term">Softmax</span> · 把同一像素的 K 个 logits 变成总和为 1 的类别概率。详见 <a href="../concepts/softmax.html">concept</a>。</li>
+  <li id="g-11"><span class="term">Weighted pixel-wise cross-entropy</span> · 每个像素先算交叉熵，再乘位置权重。详见 <a href="../concepts/weighted-pixelwise-cross-entropy.html">concept</a>。</li>
+  <li id="g-12"><span class="term">Cross-entropy</span> · 分类常用的 `−log p_true`；正确类概率越低，惩罚越大。详见 <a href="../concepts/cross-entropy.html">concept</a>。</li>
+  <li id="g-13"><span class="term">Elastic deformation</span> · 弹性形变；移动粗网格控制点，再平滑插值成像素位移场，模拟组织拉伸和挤压。</li>
+</ol>
+</div>
+
+<div class="sources">
+<h3>Primary sources / 口径</h3>
+<ul>
+  <li><a href="https://arxiv.org/abs/1505.04597">U-Net: Convolutional Networks for Biomedical Image Segmentation · arXiv</a></li>
+  <li><a href="https://lmb.informatik.uni-freiburg.de/people/ronneber/u-net/">University of Freiburg · 官方项目、模型与 2015 代码包</a></li>
+</ul>
+<p>架构尺寸、训练配置和实验数字均按 2015 原文；现代 same-padding / Dice loss / diffusion U-Net 单独标为后续常见实现，不冒充原论文设置。</p>
+</div>
+
+<div class="colophon"><span>Authored / Paper-first, beginner-readable</span><span>Last audited / 2026-07-24</span></div>
+</main>
+<script>
+document.addEventListener("DOMContentLoaded",()=>{
+  document.querySelectorAll(".math").forEach(el=>{
+    try{katex.render(el.textContent,el,{displayMode:el.dataset.display==="true",throwOnError:false})}catch(e){}
+  });
+  document.querySelectorAll("figure").forEach(fig=>{
+    const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){fig.classList.add("play");obs.disconnect()}}),{threshold:.18});
+    obs.observe(fig);
+  });
+});
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  var items={};
+  document.querySelectorAll('.gloss ol li[id^="g-"]').forEach(function(li){items[li.id]=li.innerHTML;});
+  if(!Object.keys(items).length)return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!items[id])return;
+      e.preventDefault();
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+items[id];
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+</body>
+</html>

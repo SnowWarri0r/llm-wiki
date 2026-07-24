@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Transposed Convolution · 转置卷积 · 可学习的上采样 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · transposed-convolution</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Transposed Convolution · 转置卷积 · 可学习的上采样</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>普通卷积把一片输入汇成较少输出；转置卷积把每个输入值按可学习卷积核“铺”到更大的输出网格，并把重叠贡献相加。</p>
+<h2>先纠正名字</h2>
+<p>它不是把普通卷积的结果精确还原，也不是真正的逆卷积。名字里的“转置”来自线性代数：把普通卷积写成矩阵乘法 <code>y=Ax</code> 后，转置卷积执行形状相反的 <code>Aᵀy</code>。</p>
+<h2>怎么做的</h2>
+<p>最小一维例子，输入 <code>[2,3]</code>，核 <code>[1,2]</code>，stride=1：</p>
+<pre><code class="language-text">输入 2 铺出：2×[1,2] = [2,4,0]
+输入 3 铺出：3×[1,2] = [0,3,6]
+重叠相加：              [2,7,6]
+</code></pre>
+<p>输出从长度 2 变成 3。二维同理：每个输入位置把一个 <code>k×k</code> 小块写进更大的平面，重叠处求和。</p>
+<h2>数字例子 · stride=2 怎样放大</h2>
+<p>输入 <code>[2,3]</code>，核仍为 <code>[1,2]</code>，stride=2：</p>
+<pre><code class="language-text">2 的小块从位置 0 开始：[2,4,0,0]
+3 的小块从位置 2 开始：[0,0,3,6]
+相加：                 [2,4,3,6]
+</code></pre>
+<p>输出长度翻到 4。真实 U-Net 用二维 <code>2×2</code> 上采样把宽高各放大 2 倍。</p>
+<h2>它和插值有什么差别</h2>
+<ul>
+<li>最近邻 / 双线性插值：放大规则固定，没有可学习参数；</li>
+<li>转置卷积：放大核由数据学；</li>
+<li>插值 + 普通卷积：先固定放大，再学习如何混合，常用来减少棋盘格伪影。</li>
+</ul>
+<p>上采样只负责增加空间位置，不能凭空恢复池化前的精确边界。U-Net 仍需要跳跃连接补回高分辨率特征。</p>
+<h2>代码出处</h2>
+<ul>
+<li>PyTorch：<code>nn.ConvTranspose2d</code></li>
+<li>原始 U-Net 论文写成 “upsampling followed by a 2×2 up-convolution”；现代复现常用 2×2 转置卷积</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/unet.html">unet</a> · 解码器每级先放大，再拼接编码器特征</li>
+<li><a href="../concepts/skip-connection.html">skip-connection</a> · 上采样后真正补细节的数据来源</li>
+<li><a href="../concepts/convolution.html">convolution</a> · 与普通卷积的执行方向对照</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/unet.html"><span class="cat">paper</span>U-Net · 一边看清是什么，一边记住它在哪</a></li><li><a href="../concepts/skip-connection.html"><span class="cat">concept</span>Skip Connection · 跨层连接 · 让早期信息绕过中间层</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/transposed-convolution.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

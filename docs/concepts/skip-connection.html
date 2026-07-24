@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Skip Connection · 跨层连接 · 让早期信息绕过中间层 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · skip-connection</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Skip Connection · 跨层连接 · 让早期信息绕过中间层</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把较早层的特征直接送到较后层，中间不用逐层传递；U-Net 用 <code>concat</code> 补回空间细节，ResNet 用 <code>add</code> 让残差和梯度容易通过。</p>
+<h2>直觉</h2>
+<p>深层网络会不断改写信息。下采样尤其会丢掉精确位置。跨层连接给早期特征留一条直达后面的通道，避免所有信息都必须穿过瓶颈。</p>
+<p>但“跳过去”之后怎么合并，有两种常见做法：</p>
+<pre><code class="language-text">ResNet：y = F(x) + x            # 同形状逐元素相加
+U-Net：y = concat(up, skip)     # 沿通道拼接
+</code></pre>
+<h2>数字例子 · add 和 concat 不是一回事</h2>
+<p>取两份两通道特征：</p>
+<pre><code class="language-text">深层特征 up   = [10, 20]
+浅层特征 skip = [ 1,  2]
+</code></pre>
+<p>ResNet 式相加：</p>
+<pre><code class="language-text">[10,20] + [1,2] = [11,22]
+</code></pre>
+<p>两份信息已经混在同两个通道里。</p>
+<p>U-Net 式拼接：</p>
+<pre><code class="language-text">concat([10,20],[1,2]) = [10,20,1,2]
+</code></pre>
+<p>后面的卷积能分别看到四个数，再决定如何组合。代价是通道从 2 变 4，计算和显存都增加。</p>
+<h2>尺寸为什么必须对齐</h2>
+<p>拼接要求宽高相同。原版 U-Net 中：</p>
+<pre><code class="language-text">编码器特征：64×64×512
+解码器特征：56×56×512
+</code></pre>
+<p>先从编码器四周各裁：</p>
+<pre><code class="language-text">(64-56)/2 = 4 像素
+</code></pre>
+<p>变成 <code>56×56×512</code>，才能拼成 <code>56×56×1024</code>。</p>
+<h2>代码出处</h2>
+<ul>
+<li>U-Net：<code>torch.cat([decoder, encoder_crop], dim=1)</code></li>
+<li>ResNet：<code>out = F(x) + x</code></li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/unet.html">unet</a> · 横向跳连把定位细节送入解码器</li>
+<li><a href="../concepts/residual-connection.html">residual-connection</a> · 用逐元素相加实现的另一类跨层连接</li>
+<li><a href="../concepts/transposed-convolution.html">transposed-convolution</a> · 解码特征放大后再与 skip 对齐</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/unet.html"><span class="cat">paper</span>U-Net · 一边看清是什么，一边记住它在哪</a></li><li><a href="../concepts/transposed-convolution.html"><span class="cat">concept</span>Transposed Convolution · 转置卷积 · 可学习的上采样</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/skip-connection.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

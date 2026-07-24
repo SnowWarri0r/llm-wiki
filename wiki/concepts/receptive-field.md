@@ -1,8 +1,8 @@
 ---
 name: receptive-field
 type: concept
-sources: [cnn, yolov4]
-updated: 2026-07-13
+sources: [cnn, unet, yolov4]
+updated: 2026-07-24
 ---
 
 # Receptive Field · 感受野 · 一个输出能"看到"原图多大一片
@@ -45,3 +45,4 @@ updated: 2026-07-13
 - [[cnn]] · 逐层撑大感受野是 CNN 的核心机制
 - [[self-attention]] · 一层即全局，对照卷积的"慢慢撑"
 - [[resnet]] · 深度撑感受野的代表
+- [[unet]] · 下采样扩大视野，跳跃连接补回精确位置
