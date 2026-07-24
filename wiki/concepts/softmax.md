@@ -1,7 +1,7 @@
 ---
 name: softmax
 type: concept
-sources: [unet]
+sources: [unet, drift-ar]
 updated: 2026-07-24
 ---
 

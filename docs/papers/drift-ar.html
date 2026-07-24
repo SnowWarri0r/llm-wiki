@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Drift-AR · 同一种熵信号，两头加速视觉自回归</title>
+<link rel="stylesheet" href="../vendor/katex/katex-swap.min.css">
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+:root{
+  --paper:#f0e9d6;--paper2:#e8e0c8;--card:#fffaf0;--ink:#181410;--ink2:#40372d;
+  --muted:#746957;--rule:#b9ad92;--deep:#152f46;--blue:#236b8e;--blue-soft:#c9e0e8;
+  --amber:#a96d08;--amber-soft:#f1dda5;--rust:#a1432f;--rust-soft:#edcdc1;
+  --green:#3f7456;--green-soft:#d1e4d6;--violet:#675487;--violet-soft:#ded6ea;--white:#fff;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{margin:0;overflow-x:hidden;background:var(--paper);color:var(--ink);font:17px/1.82 "Noto Serif SC","Songti SC",Georgia,serif;-webkit-font-smoothing:antialiased}
+body:before{content:"";position:fixed;inset:0;z-index:30;pointer-events:none;opacity:.22;background-image:linear-gradient(rgba(21,47,70,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(21,47,70,.055) 1px,transparent 1px);background-size:31px 31px}
+.page{width:min(1180px,calc(100% - 56px));margin:auto;padding:54px 0 120px}
+.mast{display:flex;justify-content:space-between;gap:20px;padding:12px 0;border-top:4px double var(--ink);border-bottom:1px solid var(--rule);font:700 11px/1.4 "JetBrains Mono",monospace;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.hero{padding:66px 0 54px;border-bottom:1px solid var(--rule)}
+.kicker{display:flex;align-items:center;gap:14px;color:var(--amber);font:700 11px/1.4 "JetBrains Mono",monospace;letter-spacing:3px;text-transform:uppercase}
+.kicker:after{content:"";height:1px;flex:1;background:var(--rule)}
+h1{max-width:1050px;margin:25px 0 19px;font:900 clamp(58px,9vw,118px)/.88 Georgia,"Times New Roman","Noto Serif SC",serif;letter-spacing:-.058em}
+h1 em{display:block;color:var(--amber);font-weight:500}
+.byline{color:var(--muted);font:600 11px/1.6 "JetBrains Mono",monospace;letter-spacing:1.2px}
+.dek{max-width:980px;margin:32px 0 0;font:600 clamp(22px,2.5vw,32px)/1.55 "Noto Serif SC","Songti SC",serif;color:var(--ink2)}
+.tldr{display:grid;grid-template-columns:150px 1fr;margin:38px 0 0;background:var(--deep);color:#faf5e8;border-left:7px solid var(--amber);box-shadow:10px 10px 0 rgba(21,47,70,.12)}
+.tldr .tag{padding:27px 22px;color:#f6d47d;font:700 11px/1.6 "JetBrains Mono",monospace;letter-spacing:2px}.tldr p{padding:24px 28px;margin:0}.tldr b{color:#f6d47d}
+.path{display:flex;flex-wrap:wrap;gap:8px;margin:28px 0 0}
+.path a{padding:8px 12px;border:1px solid var(--rule);border-radius:999px;background:rgba(255,255,255,.35);color:var(--ink2);font:600 10px/1 "JetBrains Mono",monospace;text-decoration:none}
+.path a:hover,.path a:focus-visible{background:var(--amber);border-color:var(--amber);color:var(--white);outline:2px solid var(--ink);outline-offset:2px}
+section{scroll-margin-top:58px}
+h2{display:grid;grid-template-columns:74px minmax(0,1fr);gap:14px;align-items:start;margin:94px 0 25px;font:900 clamp(33px,4.1vw,52px)/1.15 "Noto Serif SC","Songti SC",serif;letter-spacing:-.035em}
+h2 .n{padding-top:10px;color:var(--amber);font:700 11px/1.4 "JetBrains Mono",monospace;letter-spacing:2px}
+h3{margin:38px 0 12px;font:800 25px/1.3 "Noto Serif SC","Songti SC",serif}
+p{margin:13px 0}.lead{max-width:990px;color:var(--ink2);font:600 20px/1.72 "Noto Serif SC","Songti SC",serif}
+a{color:var(--blue);text-decoration-thickness:1px;text-underline-offset:3px}
+code{padding:1px 5px;border:1px solid var(--rule);border-radius:3px;background:rgba(255,255,255,.62);font:.86em "JetBrains Mono",monospace}
+.jr{display:inline-flex!important;align-items:center;justify-content:center;min-width:21px;height:20px;margin:0 3px;padding:0 5px;border:1px solid var(--rust)!important;border-radius:50%;background:var(--card);color:#852f20!important;text-decoration:none!important;font:700 10px/1 "JetBrains Mono",monospace;vertical-align:2px}
+.jr:hover,.jr:focus-visible{background:var(--rust)!important;color:#fff!important;outline:2px solid var(--ink);outline-offset:2px}
+.plain,.warning,.fact{margin:20px 0;padding:16px 20px;border-left:5px solid var(--blue);background:var(--card);color:var(--ink2)}
+.warning{border-color:var(--rust);background:var(--rust-soft)}.fact{border-color:var(--green);background:var(--green-soft)}
+.plain b,.warning b,.fact b{color:var(--ink)}
+.formula-purpose{margin:24px 0 7px;color:var(--deep);font-weight:800}
+.formula{margin:0 0 18px;padding:23px 22px;overflow-x:auto;background:var(--deep);border-left:6px solid var(--amber);color:white;text-align:center;-webkit-overflow-scrolling:touch}
+.formula .katex{font-size:1.08em}.formula .katex-display{margin:0}
+.vars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;margin:17px 0;background:var(--rule);border:1px solid var(--rule)}
+.var{padding:14px 16px;background:var(--card);font-size:15px}.var code{color:#7d2e20;font-weight:700}
+.math-sheet{margin:20px 0;padding:18px 20px;background:#101f2d;color:#f7f1e3;border-left:6px solid var(--blue);overflow-x:auto;font:600 13px/1.75 "JetBrains Mono",monospace;white-space:pre-wrap}
+.math-sheet b{color:#f6d47d}
+figure{margin:36px 0 48px;padding:27px;background:rgba(255,250,240,.8);border:1px solid var(--rule);box-shadow:9px 9px 0 rgba(21,47,70,.08)}
+figcaption{display:flex;justify-content:space-between;gap:18px;margin-bottom:24px;padding-bottom:13px;border-bottom:1px dashed var(--rule);color:var(--muted);font:700 11px/1.5 "JetBrains Mono",monospace;letter-spacing:1.2px;text-transform:uppercase}
+figcaption b{color:var(--amber)}
+.reveal{opacity:0;transform:translateY(12px);transition:opacity .55s ease,transform .55s ease}.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{transition-delay:.24s}.d4{transition-delay:.36s}.d5{transition-delay:.48s}
+.flow-arrow{display:flex;align-items:center;justify-content:center;color:var(--rust);font:900 28px/1 "JetBrains Mono",monospace}
+.two-tax{display:grid;grid-template-columns:1fr 62px 1fr;gap:12px;align-items:stretch}
+.tax-card{padding:23px;border:2px solid var(--rule);background:var(--card)}
+.tax-card.ar{border-color:var(--blue)}.tax-card.dec{border-color:var(--rust)}
+.tag{font:700 10px/1.4 "JetBrains Mono",monospace;letter-spacing:1.4px;color:var(--muted)}
+.tax-card h4,.pipe-card h4,.entropy-card h4,.prior-card h4,.ab-card h4{margin:10px 0 8px;font:800 22px/1.25 "Noto Serif SC",serif}
+.ticks{display:flex;gap:6px;margin:20px 0}.ticks i{height:34px;flex:1;border:1px solid var(--blue);background:var(--blue-soft)}.ticks.red i{border-color:var(--rust);background:var(--rust-soft)}.ticks i:nth-child(2){opacity:.88}.ticks i:nth-child(3){opacity:.76}.ticks i:nth-child(4){opacity:.64}.ticks i:nth-child(5){opacity:.52}
+.tax-result{padding:10px;background:var(--deep);color:white;text-align:center;font:800 12px/1.4 "JetBrains Mono",monospace}
+.signal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.signal-map{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;padding:18px;background:var(--card);border:1px solid var(--rule)}
+.signal-map i{aspect-ratio:1;border-radius:2px;background:var(--blue-soft)}.signal-map i.mid{background:var(--amber-soft)}.signal-map i.hot{background:var(--rust-soft);border:2px solid var(--rust)}
+.signal-legend{grid-column:1/-1;display:flex;justify-content:space-between;margin-top:8px;color:var(--muted);font:700 10px/1.4 "JetBrains Mono",monospace}
+.evidence{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.evidence div{padding:17px;border:1px solid var(--rule);background:var(--card)}.evidence b{display:block;color:var(--blue);font:900 25px/1.2 Georgia,serif}.evidence span{display:block;margin-top:7px;color:var(--muted);font-size:13px}
+.full-map{display:grid;grid-template-columns:1fr 76px 1fr;gap:12px;align-items:stretch}
+.map-lane{padding:20px;border:2px solid var(--rule);background:var(--card)}.map-lane.left{border-color:var(--blue)}.map-lane.right{border-color:var(--green)}
+.lane-head{padding-bottom:12px;border-bottom:1px dashed var(--rule)}.lane-head b{display:block;font:900 25px/1.2 Georgia,serif;color:var(--deep)}.lane-head span{color:var(--muted);font-size:13px}
+.lane-step{position:relative;margin-top:12px;padding:12px 13px 12px 44px;background:var(--paper2);font-size:14px}.lane-step:before{content:attr(data-i);position:absolute;left:13px;top:13px;color:var(--amber);font:800 11px/1.5 "JetBrains Mono",monospace}
+.shared-node{display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);font:700 10px/1.5 "JetBrains Mono",monospace;text-align:center;text-transform:uppercase}.shared-node b{display:grid;place-items:center;width:52px;height:52px;margin-top:8px;border-radius:50%;background:var(--amber);color:#fff;font:900 16px/1 Georgia,serif}
+.shared{grid-column:1/-1;margin-top:14px;padding:14px;text-align:center;background:var(--deep);color:white;font:700 12px/1.5 "JetBrains Mono",monospace}.shared b{color:#f6d47d}
+.draft-flow{display:grid;grid-template-columns:1fr 44px 1.3fr 44px 1fr;gap:8px;align-items:stretch}
+.pipe-card{padding:18px 15px;border:1px solid var(--rule);background:var(--card);text-align:center}.pipe-card.draft{border-top:6px solid var(--blue)}.pipe-card.target{border-top:6px solid var(--green)}
+.tokens{display:flex;justify-content:center;gap:5px;margin:16px 0}.tokens i{display:grid;place-items:center;width:35px;height:35px;border:2px solid var(--blue);background:var(--blue-soft);font:800 11px/1 "JetBrains Mono",monospace}.tokens i.ok{border-color:var(--green);background:var(--green-soft)}.tokens i.bad{border-color:var(--rust);background:var(--rust-soft)}
+.matrix{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;width:min(390px,100%);margin:0 auto 18px}
+.cell{padding:15px 5px;border:1px solid var(--rule);background:var(--blue-soft);text-align:center;font:800 13px/1 "JetBrains Mono",monospace}.cell.dominant{background:var(--rust-soft);border:3px solid var(--rust)}
+.entropy-compare{display:grid;grid-template-columns:1fr 1fr;gap:10px}.entropy-card{padding:18px;border:1px solid var(--rule);background:var(--card)}.entropy-card.low{border-top:6px solid var(--rust)}.entropy-card.high{border-top:6px solid var(--green)}
+.meter{height:15px;margin:14px 0;background:var(--paper2)}.meter i{display:block;height:100%;background:var(--rust);width:42.38%}.entropy-card.high .meter i{width:88.05%;background:var(--green)}
+.threshold{display:grid;grid-template-columns:1fr 52px 1fr 52px 1fr;gap:8px;align-items:stretch}
+.threshold .pipe-card{display:flex;flex-direction:column;justify-content:center}.threshold .num{color:var(--amber);font:900 24px/1.2 Georgia,serif}
+.sigma-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.prior-card{padding:20px;border:2px solid var(--rule);background:var(--card)}.prior-card.low{border-color:var(--blue)}.prior-card.high{border-color:var(--rust)}
+.cloud{position:relative;height:170px;margin:16px 0;background:linear-gradient(180deg,#f7f2e5,#ece3d0)}
+.cloud:before{content:"AR 中心 1.2";position:absolute;left:50%;top:12px;transform:translateX(-50%);color:var(--deep);font:800 11px/1.3 "JetBrains Mono",monospace;white-space:nowrap}
+.cloud .axis{position:absolute;left:8%;right:8%;top:95px;height:2px;background:var(--ink)}
+.cloud .mean{position:absolute;left:50%;top:82px;width:14px;height:28px;transform:translateX(-50%);background:var(--deep)}
+.cloud .spread{position:absolute;left:38%;top:73px;width:24%;height:46px;border-radius:50%;background:rgba(35,107,142,.26);border:2px solid var(--blue)}
+.prior-card.high .spread{left:19%;width:62%;background:rgba(161,67,47,.22);border-color:var(--rust)}
+.prior-card .calc{font:700 12px/1.6 "JetBrains Mono",monospace;color:var(--ink2)}
+.drift-flow{display:grid;grid-template-columns:1fr 40px 1fr 40px 1fr;gap:8px;align-items:stretch}.drift-flow .pipe-card{display:flex;flex-direction:column;justify-content:center}
+.force-strip{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px}.force-strip div{padding:13px;background:var(--paper2);text-align:center;font:700 12px/1.5 "JetBrains Mono",monospace}.force-strip .plus{color:var(--green)}.force-strip .minus{color:var(--rust)}.force-strip .net{background:var(--deep);color:white}
+.schedule{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.phase{padding:18px;border:1px solid var(--rule);background:var(--card)}.phase b{display:block;color:var(--amber);font:900 25px/1.2 Georgia,serif}.phase strong{display:block;margin:8px 0}.phase .bar{height:12px;margin-top:14px;background:var(--green-soft)}.phase .bar i{display:block;height:100%;background:var(--blue)}.phase.start .bar i{width:95%}.phase.mid .bar i{width:47.5%}.phase.end .bar i{width:0}
+.schedule-key{display:flex;justify-content:center;gap:20px;margin-top:13px;color:var(--muted);font:700 11px/1.4 "JetBrains Mono",monospace}.schedule-key i{display:inline-block;width:14px;height:8px;margin-right:5px}.schedule-key .ar{background:var(--blue)}.schedule-key .drift{background:var(--green-soft)}
+.keep-flow{display:grid;grid-template-columns:1fr 42px 1fr 42px 1fr 42px 1fr;gap:7px;align-items:stretch}.keep-flow .pipe-card{display:flex;flex-direction:column;justify-content:center}.keep-flow .final{background:var(--green-soft);border-color:var(--green)}
+.recipe{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.recipe div{padding:17px;border:1px solid var(--rule);background:var(--card)}.recipe b{display:block;color:var(--blue);font:800 11px/1.5 "JetBrains Mono",monospace;letter-spacing:1px}.recipe span{display:block;margin-top:8px}
+.table-wrap{overflow-x:auto}.table-wrap table{width:100%;border-collapse:collapse;min-width:760px}.table-wrap th,.table-wrap td{padding:11px 12px;border-bottom:1px solid var(--rule);text-align:right;font:600 12px/1.45 "JetBrains Mono",monospace}.table-wrap th:first-child,.table-wrap td:first-child{text-align:left}.table-wrap .win td{background:var(--green-soft);font-weight:800}.table-wrap .caveat td{background:var(--amber-soft)}
+.ab-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.ab-card{padding:17px;border:1px solid var(--rule);background:var(--card)}.ab-card.full{background:var(--green-soft);border-color:var(--green)}.ab-card b{display:block;color:var(--rust);font:900 23px/1.2 Georgia,serif}.ab-card.full b{color:var(--green)}
+.limits{display:grid;grid-template-columns:1fr 1fr;gap:9px}.limits div{padding:17px;border:1px solid var(--rule);background:var(--card)}.limits b{display:block;color:var(--rust);font:800 11px/1.5 "JetBrains Mono",monospace;letter-spacing:1px}.limits p{margin:7px 0 0;font-size:15px}
+.gloss{margin-top:82px;padding-top:32px;border-top:3px double var(--ink)}.gloss h2{margin:0 0 20px;font-size:30px}.gloss ol{padding:0;margin:0;list-style:none;counter-reset:g}.gloss li{position:relative;padding:14px 10px 14px 54px;border-bottom:1px dashed var(--rule);font-size:16px}.gloss li:before{content:counter(g,decimal-leading-zero);counter-increment:g;position:absolute;left:8px;top:15px;color:var(--amber);font:800 11px/1.5 "JetBrains Mono",monospace}.gloss li:target{background:var(--amber-soft)}.term{font-weight:800;color:var(--ink)}
+.sources{margin-top:54px;padding:22px;border:1px solid var(--rule);background:var(--card)}.sources h3{margin-top:0}.sources li{margin:7px 0}
+.colophon{display:flex;justify-content:space-between;gap:20px;margin-top:70px;padding-top:18px;border-top:1px solid var(--rule);color:var(--muted);font:600 11px/1.5 "JetBrains Mono",monospace;letter-spacing:1px}
+@media(max-width:900px){
+  .two-tax,.full-map,.draft-flow,.threshold,.drift-flow,.keep-flow{grid-template-columns:1fr}.flow-arrow{min-height:34px;font-size:0}.flow-arrow:before{content:"↓";font-size:26px}.shared-node{min-height:54px}.shared-node b{width:44px;height:44px;margin-top:5px}
+  .signal-grid{grid-template-columns:1fr}.evidence,.recipe,.ab-grid{grid-template-columns:1fr 1fr}.shared{grid-column:auto}
+}
+@media(max-width:620px){
+  .page{width:calc(100% - 24px);padding:34px 0 80px}.mast{align-items:flex-start}.mast span:last-child{text-align:right}
+  .hero{padding:46px 0 36px}h1{font-size:58px}.dek{font-size:21px}.tldr{grid-template-columns:1fr}.tldr .tag{padding:17px 20px 0}.tldr p{padding:16px 20px 23px}
+  h2{grid-template-columns:1fr;gap:3px;margin-top:70px;font-size:34px}h2 .n{padding:0}figure{margin-left:0;margin-right:0;padding:18px 14px}figcaption{display:block}figcaption b{display:block;margin-top:4px}
+  .vars,.entropy-compare,.sigma-grid,.schedule,.recipe,.ab-grid,.limits{grid-template-columns:1fr}
+  .formula{margin-left:-2px;margin-right:-2px;padding:20px 14px;text-align:left}.formula .katex{font-size:.94em}.formula .katex-display{text-align:left}
+  .colophon{display:block}.colophon span{display:block;margin-top:8px}.evidence{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}.reveal{opacity:1;transform:none;transition:none}}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · drift-ar</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page">
+<div class="mast"><span>Connectionism · Field Notes</span><span>Visual Generation · arXiv v3 · 2026</span></div>
+
+<header class="hero">
+  <div class="kicker">Paper 2603.28049 · Entropy as shared control</div>
+  <h1>Drift<em>AR</em></h1>
+  <div class="byline">ZHEN ZOU · XIAOXIAO MA · MINGDE YAO · JIE HUANG · LINJIANG HUANG · FENG ZHAO</div>
+  <p class="dek">视觉 AR 前半段一个位置一个位置写，后半段又反复去噪。Drift-AR 找到两段都能用的一份信号：注意力熵。</p>
+  <div class="tldr"><div class="tag">TL;DR</div><p><b>同一种逐位置熵信号，两头复用。</b>左边让小草稿模型别过度自信，并决定何时交回目标模型；右边把熵变成每个位置的高斯噪声尺度，再训练一次前向的漂移解码器。论文报告 <b>3.81～5.53×</b> 加速，但“1 NFE”只指视觉解码器调用一次，不等于整条系统只跑一个网络。</p></div>
+  <nav class="path" aria-label="阅读路径">
+    <a href="#old">旧系统</a><a href="#signal">熵是什么</a><a href="#map">完整拼图</a><a href="#draft">草稿线</a><a href="#entropy">熵手算</a><a href="#prior">先验线</a><a href="#drift">漂移训练</a><a href="#schedule">两阶段</a><a href="#results">实验</a><a href="#limits">边界</a>
+  </nav>
+</header>
+
+<section id="old">
+<h2><span class="n">§ 00</span><span>旧系统为什么慢两遍</span></h2>
+<p class="lead">连续视觉 AR 混合模型<a class="jr" href="#g-02">2</a>不是“AR 或 diffusion”。它先用 AR 排好语义，再用 diffusion / flow 把连续特征做成高保真图像，两段都在花时间。</p>
+<figure>
+  <figcaption><span>Fig 01 · 两只时钟一起走</span><b>AR 串行 + Decoder 迭代</b></figcaption>
+  <div class="two-tax">
+    <div class="tax-card ar reveal"><span class="tag">CLOCK A · AUTOREGRESSIVE</span><h4>一个位置接一个位置</h4><div class="ticks"><i></i><i></i><i></i><i></i><i></i></div><p>第 5 个连续特征要等前 4 个，目标大模型难以一次并行写完。</p><div class="tax-result">R 个位置 · 串行依赖</div></div>
+    <div class="flow-arrow reveal d2">→</div>
+    <div class="tax-card dec reveal d3"><span class="tag">CLOCK B · VISUAL DECODER</span><h4>同一张 latent 反复修</h4><div class="ticks red"><i></i><i></i><i></i><i></i><i></i></div><p>AR 特征出来以后，扩散 / flow 解码器仍要多次调用才能成图。</p><div class="tax-result">20 NFE · 20 次整网前向</div></div>
+  </div>
+</figure>
+<p><a class="jr" href="#g-01">1</a>连续空间避开离散码本的信息损失，却把系统拆成“语义排布 + 高保真合成”两段。只加推测解码，后半段还慢；只蒸馏解码器，前半段仍串行。</p>
+</section>
+
+<section id="signal">
+<h2><span class="n">§ 01</span><span>论文说的“预测熵”，到底是哪张张量</span></h2>
+<p class="lead">名字容易让人以为模型显式输出了一条概率分布。其实 Eq. (4) 读取草稿模型倒数第二层的因果注意力图，量一行注意力分得有多散。</p>
+<div class="warning"><b>先把边界说死：</b>这是注意力熵<a class="jr" href="#g-04">4</a>，作者把它当连续特征预测不确定性的代理；它不是连续输出分布的精确熵。<code>r=0.64</code> 的相关性支持“能当信号用”，不等于两者完全相同。</div>
+<figure>
+  <figcaption><span>Fig 02 · 同一张熵图的两种用途</span><b>easy region ≠ hard region</b></figcaption>
+  <div class="signal-grid">
+    <div class="signal-map reveal" aria-label="逐位置熵示意">
+      <i></i><i></i><i></i><i class="mid"></i><i class="mid"></i><i></i>
+      <i></i><i></i><i class="mid"></i><i class="hot"></i><i class="hot"></i><i class="mid"></i>
+      <i></i><i class="mid"></i><i class="hot"></i><i class="hot"></i><i class="hot"></i><i class="mid"></i>
+      <i></i><i></i><i class="mid"></i><i class="hot"></i><i class="mid"></i><i></i>
+      <div class="signal-legend"><span>蓝 · 平滑区 · 低熵</span><span>红 · 边界 / 纹理 · 高熵</span></div>
+    </div>
+    <div class="evidence reveal d2">
+      <div><b>0.64</b><span>逐位置熵与 AR 预测误差的 Pearson 相关系数</span></div>
+      <div><b>左线</b><span>草稿熵过低，可能是小模型塌成过度自信</span></div>
+      <div><b>右线</b><span>熵越高，初始高斯给这一位置留的散布越大</span></div>
+    </div>
+  </div>
+</figure>
+</section>
+
+<section id="map">
+<h2><span class="n">§ 02</span><span>完整拼图：同一种熵信号，控制两条线</span></h2>
+<p class="lead">左线负责把 AR 串行阶段跑快，右线负责把视觉解码压成一次前向。两条线复用同一种逐位置熵定义，但各自解决的瓶颈不同。</p>
+<figure>
+  <figcaption><span>Fig 03 · Drift-AR 总览</span><b>一个信号 · 两个执行阶段</b></figcaption>
+  <div class="full-map">
+    <div class="map-lane left reveal">
+      <div class="lane-head"><b>AR 草稿线</b><span>减少目标 AR 的串行调用</span></div>
+      <div class="lane-step" data-i="01">6 层草稿模型连续预测连续特征</div>
+      <div class="lane-step" data-i="02">Smooth L1 靠近目标特征</div>
+      <div class="lane-step" data-i="03">负熵损失缓解过度自信</div>
+      <div class="lane-step" data-i="04">动态阈值决定何时停止草稿</div>
+      <div class="lane-step" data-i="05">目标模型一次验证最长前缀</div>
+    </div>
+    <div class="shared-node reveal d2"><span>同类控制量</span><b>E⁽ʳ⁾</b></div>
+    <div class="map-lane right reveal d3">
+      <div class="lane-head"><b>单步解码线</b><span>删除多步去噪循环</span></div>
+      <div class="lane-step" data-i="01">AR 特征作高斯均值</div>
+      <div class="lane-step" data-i="02">熵映射成逐位置标准差</div>
+      <div class="lane-step" data-i="03">采样一次初始状态 x₀</div>
+      <div class="lane-step" data-i="04">Entropy-AdaLN 注入熵图</div>
+      <div class="lane-step" data-i="05">漂移解码器 1 NFE 成图</div>
+    </div>
+    <div class="shared reveal d4"><b>“共用”指同一种定义和接口：</b>早停会比较草稿熵与目标熵，解码先验读取 AR 阶段的逐位置熵；不同位置、不同轮次当然不是同一个数。</div>
+  </div>
+</figure>
+<p>这张总览先固定顺序。后面所有公式都只是把其中一个框拆开，不会突然再冒出第三条生成流程。</p>
+</section>
+
+<section id="draft">
+<h2><span class="n">§ 03</span><span>草稿模型先写，目标模型一次验一段</span></h2>
+<p class="lead"><a class="jr" href="#g-03">3</a>推测解码省时间的关键，不是“小模型取代大模型”，而是大模型能一次并行检查一段候选。最终留下的前缀仍由目标模型认可。</p>
+<figure>
+  <figcaption><span>Fig 04 · Draft → Verify</span><b>最长合格前缀 = 3</b></figcaption>
+  <div class="draft-flow">
+    <div class="pipe-card draft reveal"><span class="tag">DRAFT · CHEAP</span><h4>连续起草 4 个位置</h4><div class="tokens"><i>1</i><i>2</i><i>3</i><i>4</i></div><p>输入是已有连续特征，不再是离散 token ID。</p></div>
+    <div class="flow-arrow reveal d2">→</div>
+    <div class="pipe-card target reveal d3"><span class="tag">TARGET · VERIFY ONCE</span><h4>一次并行检查整段</h4><div class="tokens"><i class="ok">✓</i><i class="ok">✓</i><i class="ok">✓</i><i class="bad">×</i></div><p>保留前 3 个，第 4 个及之后全部丢掉。</p></div>
+    <div class="flow-arrow reveal d4">→</div>
+    <div class="pipe-card reveal d5"><span class="tag">CONTINUE</span><h4>从第 4 位重新开始</h4><p>接受越长，目标模型摊到每个位置的成本越低；拒绝过多，草稿计算就白花。</p></div>
+  </div>
+</figure>
+<p class="formula-purpose">连续特征回归：草稿下一向量要靠近目标下一向量</p>
+<div class="formula"><span data-tex="\mathcal L_{\mathrm{reg}}=\operatorname{SmoothL1}\!\left(z_{j+1},\operatorname{DraftModel}(Z_{1:j},F_{1:j})\right)"></span></div>
+<div class="vars">
+  <div class="var"><code>Z₁:j</code> · 已有的连续 AR 特征序列。</div><div class="var"><code>F₁:j</code> · 目标模型相应位置的隐藏状态。</div>
+  <div class="var"><code>zⱼ₊₁</code> · 目标模型给出的下一连续特征。</div><div class="var"><code>Smooth L1</code><a class="jr" href="#g-06">6</a> · 小误差平方精修，大误差线性限幅。</div>
+</div>
+<div class="math-sheet"><b>标量手算</b>
+目标 z = 1.2，草稿 = 0.7，误差 = 0.5
+|误差| &lt; 1 → Smooth L1 = 0.5 × 0.5² = 0.125
+
+若误差 = 2：
+|误差| &gt; 1 → Smooth L1 = 2 − 0.5 = 1.5
+不会像 MSE 那样涨到 4。</div>
+<div class="warning"><b>复现缺口：</b>论文没有写连续特征在验证阶段用什么距离和容差判“匹配”，也没有报告平均接受长度。离散 EAGLE 的 token 验收规则不能直接当成连续向量规则。</div>
+</section>
+
+<section id="entropy">
+<h2><span class="n">§ 04</span><span>熵公式：为什么要除以 log r</span></h2>
+<p class="lead">因果注意力<a class="jr" href="#g-05">5</a>第 <code>r</code> 行只能看前 <code>r</code> 个位置。第 4 行比第 2 行候选更多，原始熵天然更大；除以各自满分 <code>log r</code>，才有同一把 <code>0～1</code> 量尺。</p>
+<p class="formula-purpose">一行注意力分得有多散</p>
+<div class="formula"><span data-tex="\mathcal E_{\mathrm{entropy}}^{(r)}=-\frac{1}{\log r}\sum_{c=1}^{r}\Omega_{r,c}\log\Omega_{r,c}"></span></div>
+<div class="vars">
+  <div class="var"><code>r</code> · 当前查询位置，也是这一行最多能看的位置数。</div><div class="var"><code>c</code> · 被关注的位置编号。</div>
+  <div class="var"><code>Ωᵣ,c</code> · softmax 后的注意力概率，整行加起来为 1。</div><div class="var"><code>log r</code> · <code>r</code> 个候选完全均匀时的最大熵。</div>
+</div>
+<figure>
+  <figcaption><span>Fig 05 · 四位置手算</span><b>0.4238 vs 0.8805</b></figcaption>
+  <div class="entropy-compare">
+    <div class="entropy-card low reveal"><span class="tag">DRAFT · OVERCONFIDENT</span><h4>[.85, .05, .05, .05]</h4><div class="matrix"><div class="cell dominant">.85</div><div class="cell">.05</div><div class="cell">.05</div><div class="cell">.05</div></div><p><code>H=.5875</code> · <code>E=.5875/log4=.4238</code></p><div class="meter"><i></i></div></div>
+    <div class="entropy-card high reveal d2"><span class="tag">TARGET · MORE DISTRIBUTED</span><h4>[.50, .20, .20, .10]</h4><div class="matrix"><div class="cell">.50</div><div class="cell">.20</div><div class="cell">.20</div><div class="cell">.10</div></div><p><code>H=1.2206</code> · <code>E=1.2206/log4=.8805</code></p><div class="meter"><i></i></div></div>
+  </div>
+</figure>
+<p>第 1 行只有自己一个候选，熵必定为 0，而且 <code>log1=0</code> 不能当分母，所以求和从 <code>r=2</code> 开始。</p>
+<p class="formula-purpose">总损失：最小化负熵，也就是把熵推高</p>
+<div class="formula"><span data-tex="\mathcal L_{\mathrm{entropy}}=-\frac1R\sum_{r=2}^{R}\mathcal E_{\mathrm{entropy}}^{(r)}"></span></div>
+<div class="warning"><b>论文措辞比公式更强：</b>它称这一步“对齐草稿与目标熵”，可式子里没有目标熵，也没有二者的距离。公式实际做的是提高草稿注意力熵，缓解过度自信。详见 <a href="../concepts/causal-normalized-attention-entropy.html">归一化注意力熵</a>。</div>
+</section>
+
+<section id="stop">
+<h2><span class="n">§ 05</span><span>低熵不是一律好：停止线还要看内容</span></h2>
+<p class="lead">天空本来就容易，低熵合理；纹理区目标模型都拿不准，草稿却低熵，就更像容量不足导致的假自信。动态阈值用目标模型当前熵的 EMA<a class="jr" href="#g-15">15</a>把两者分开。</p>
+<p class="formula-purpose">全局基线 + 内容自适应阈值</p>
+<div class="formula"><span data-tex="\tau_{\mathrm{global}}=0.3\,\mathbb E[\mathcal E^r]-0.1\,\operatorname{std}(\mathcal E^r),\qquad \bar{\mathcal E}^{\,\mathrm{target}}_c=0.9\bar{\mathcal E}^{\,\mathrm{target}}_{c-1}+0.1\mathcal E^{\mathrm{target}}_c,\qquad \tau_c=0.8\bar{\mathcal E}^{\,\mathrm{target}}_c"></span></div>
+<figure>
+  <figcaption><span>Fig 06 · 动态停止线</span><b>draft E &lt; τc → stop</b></figcaption>
+  <div class="threshold">
+    <div class="pipe-card reveal"><span class="tag">TRAIN STATS</span><div class="num">.17</div><p><code>.3×.6−.1×.1</code></p></div>
+    <div class="flow-arrow reveal d2">→</div>
+    <div class="pipe-card reveal d3"><span class="tag">TARGET EMA</span><div class="num">.24125</div><p><code>.9×.2125+.1×.5</code></p></div>
+    <div class="flow-arrow reveal d4">→</div>
+    <div class="pipe-card reveal d5"><span class="tag">DYNAMIC τc</span><div class="num">.193</div><p>草稿熵 <code>.15&lt;.193</code><br><b>停止继续起草</b></p></div>
+  </div>
+</figure>
+<p>复杂区域目标熵高，停止线也高，更容易拦下过度自信的草稿；平滑区域目标熵低，停止线随之放宽。目标模型验证时本来就会生成注意力图，因此没有多加一套网络。</p>
+</section>
+
+<section id="prior">
+<h2><span class="n">§ 06</span><span>右线：把熵变成高斯标准差</span></h2>
+<p class="lead">AR 已经给出每个位置的连续特征。Drift-AR 不再从统一噪声起步，而是让 AR 特征当高斯中心，熵决定这一位置要散多开。</p>
+<p class="formula-purpose">归一化熵 → 噪声尺度</p>
+<div class="formula"><span data-tex="\sigma(\mathcal E)=\sigma_{\max}\cdot\frac{\exp(\mathcal E/\tau_\sigma)-1}{\exp(\mathcal E_{\max}/\tau_\sigma)-1}"></span></div>
+<div class="vars">
+  <div class="var"><code>E∈[0,1]</code> · 当前位置的归一化注意力熵。</div><div class="var"><code>σ(E)</code> · 标准差/噪声尺度，不是方差本身。</div>
+  <div class="var"><code>σmax=.5</code> · 实验里的尺度上限。</div><div class="var"><code>τσ=2</code> · 映射曲线的弯曲程度。</div>
+</div>
+<p class="formula-purpose">逐位置高斯与重参数采样<a class="jr" href="#g-09">9</a></p>
+<div class="formula"><span data-tex="q\!\left(x^{(r)}\mid z_{\mathrm{AR}}^{(r)},\mathcal E^{(r)}\right)=\mathcal N\!\left(z_{\mathrm{AR}}^{(r)},\sigma^2(\mathcal E^{(r)})I\right),\qquad x_0^{(r)}=z_{\mathrm{AR}}^{(r)}+\sigma(\mathcal E^{(r)})\epsilon"></span></div>
+<div class="warning"><b>论文这里的文字不够严谨：</b>它多次把 <code>σ</code> 叫 variance，可高斯协方差写的是 <code>σ²I</code>，采样也乘 <code>σ</code>。标准概率记号下，<code>σ</code> 是标准差<a class="jr" href="#g-08">8</a>，真正方差是 <code>σ²</code>。多元高斯<a class="jr" href="#g-07">7</a>的 <code>I</code> 表示各维先用同一尺度、互不相关。</div>
+<figure>
+  <figcaption><span>Fig 07 · 同一中心，不同散布</span><b>zAR=1.2 · ε=−.5</b></figcaption>
+  <div class="sigma-grid">
+    <div class="prior-card low reveal"><span class="tag">LOW ENTROPY · E=.4238</span><h4>σ = .1819</h4><div class="cloud"><div class="axis"></div><div class="spread"></div><div class="mean"></div></div><div class="calc">x₀=1.2+.1819×(−.5)=<b>1.1090</b></div></div>
+    <div class="prior-card high reveal d2"><span class="tag">HIGH ENTROPY · E=.8805</span><h4>σ = .4263</h4><div class="cloud"><div class="axis"></div><div class="spread"></div><div class="mean"></div></div><div class="calc">x₀=1.2+.4263×(−.5)=<b>.9869</b></div></div>
+  </div>
+</figure>
+<p>高熵位置离中心更远，获得更大的可修正范围。熵还会通过 Entropy-AdaLN<a class="jr" href="#g-14">14</a>进入解码器各层；论文没有公开逐位置熵图怎样投影成每层调制参数的代码细节。</p>
+</section>
+
+<section id="drift">
+<h2><span class="n">§ 07</span><span>单步解码器怎样学会一次修完</span></h2>
+<p class="lead">先验只给起点，真正把它改成图的是单步解码器。训练时，冻结特征编码器把真实图和生成图放进同一空间，再现场算吸引、排斥和净漂移。</p>
+<figure>
+  <figcaption><span>Fig 08 · 训练数据流</span><b>训练脚手架最后全部删除</b></figcaption>
+  <div class="drift-flow">
+    <div class="pipe-card reveal"><span class="tag">ONE FORWARD</span><h4>fθ(x₀,c,E)</h4><p>一次前向得到当前图像 latent <code>x̂</code></p></div>
+    <div class="flow-arrow reveal d2">→</div>
+    <div class="pipe-card reveal d3"><span class="tag">FROZEN φ</span><h4>统一特征空间</h4><p>复制目标 AR 倒数第二层，参数冻结，输入梯度仍保留。</p></div>
+    <div class="flow-arrow reveal d4">→</div>
+    <div class="pipe-card reveal d5"><span class="tag">KERNEL DRIFT</span><h4>真实吸引 − 生成方向</h4><p>得到本轮净漂移 <code>Vₚ,q</code></p></div>
+  </div>
+  <div class="force-strip reveal d5"><div class="plus">V⁺ · 吸向真实</div><div class="minus">−V⁻ · 离开生成团块</div><div class="net">V = V⁺ − V⁻</div></div>
+</figure>
+<p class="formula-purpose">当前特征朝冻结临时目标移动</p>
+<div class="formula"><span data-tex="\mathcal L_{\mathrm{drift}}=\mathbb E\left[\left\|\phi(\hat x)-\operatorname{stopgrad}\!\left(\phi(\hat x)+V_{p,q}(\phi(\hat x))\right)\right\|_2^2\right]"></span></div>
+<div class="vars">
+  <div class="var"><code>φ</code><a class="jr" href="#g-13">13</a> · 冻结特征编码器；权重不更新，梯度仍能穿过输入。</div><div class="var"><code>Vₚ,q</code><a class="jr" href="#g-10">10</a> · 真实分布 <code>p</code> 与当前生成分布 <code>q</code> 算出的核漂移。</div>
+  <div class="var"><code>stopgrad</code><a class="jr" href="#g-12">12</a> · 右侧只当本轮固定目标。</div><div class="var"><code>||·||²₂</code> · 特征逐项作差、平方后求和。</div>
+</div>
+<div class="math-sheet"><b>把上一节的高熵样本继续算到更新</b>
+x₀=.9869，缩小版解码器 x̂=w·x₀，当前 w=1
+x̂=.9869
+
+真实邻居 y⁺=1.6，生成邻居 y⁻=.8
+V⁺=1.6−.9869=.6131
+V⁻=.8−.9869=−.1869
+V=V⁺−V⁻=.6131−(−.1869)=+.8
+
+冻结目标 = stopgrad(.9869+.8)=1.7869
+L=(.9869−1.7869)²=.64
+
+dL/dw=2(.9869−1.7869)×.9869≈−1.5790
+w_new=1−.1×(−1.5790)=1.1579
+x̂_new=1.1579×.9869≈1.1427
+旧靶验方向：L_new=(1.1427−1.7869)²≈.4150  ✓</div>
+<p>损失确实下降，输出朝本轮目标移动。下一轮会重新采样、重算 <code>q</code> 和 <code>V</code>，不会永久追这一个旧靶。反对称<a class="jr" href="#g-11">11</a>保证 <code>p=q</code> 时漂移为零；它不自动证明反过来的 <code>V=0⇒p=q</code>。</p>
+</section>
+
+<section id="schedule">
+<h2><span class="n">§ 08</span><span>为什么前 80% 联合训，后 20% 冻结 AR</span></h2>
+<p class="lead">AR 一更新，<code>z_AR</code> 和熵图就变，解码起点分布也跟着搬家。漂移解码器若一直追着移动的源分布学，很难稳定。</p>
+<p class="formula-purpose">AR 权重逐步让位给漂移损失</p>
+<div class="formula"><span data-tex="\mathcal L_{\mathrm{total}}=\alpha(t)\left(\mathcal L_{\mathrm{reg}}+\mathcal L_{\mathrm{entropy}}\right)+\left(1-\alpha(t)\right)\mathcal L_{\mathrm{drift}}"></span></div>
+<figure>
+  <figcaption><span>Fig 09 · α(t) 从 .95 降到 0</span><b>source q 先稳定，再固定</b></figcaption>
+  <div class="schedule">
+    <div class="phase start reveal"><span class="tag">t=0</span><b>α=.95</b><strong>AR 95% · Drift 5%</strong><p>解码器从一开始就有小信号，避免冷启动。</p><div class="bar"><i></i></div></div>
+    <div class="phase mid reveal d2"><span class="tag">t=.4T</span><b>α=.475</b><strong>AR 47.5% · Drift 52.5%</strong><p><code>.95−.95×(.4/.8)</code></p><div class="bar"><i></i></div></div>
+    <div class="phase end reveal d3"><span class="tag">t=.8T</span><b>α=0</b><strong>冻结 AR · 纯 Drift</strong><p>后 20% 固定先验，不准漂移梯度改 AR。</p><div class="bar"><i></i></div></div>
+  </div>
+  <div class="schedule-key"><span><i class="ar"></i>AR loss</span><span><i class="drift"></i>Drift loss</span></div>
+</figure>
+<div class="plain"><b>“端到端”不等于全程一起更新。</b>Phase I 在同一流水线联合优化；Phase II 明确 detach <code>z_AR</code> 和熵图，只让漂移解码器继续学。移动的是源分布 <code>q</code>，真实目标 <code>p</code> 并没有移动。</div>
+</section>
+
+<section id="infer">
+<h2><span class="n">§ 09</span><span>推理时留下什么，删掉什么</span></h2>
+<p class="lead">真实样本、负样本、冻结特征网和核漂移都只是训练脚手架。部署时只保留“起草—验证—采样—单步解码”。</p>
+<figure>
+  <figcaption><span>Fig 10 · 最终部署路径</span><b>1 NFE belongs to visual decoder</b></figcaption>
+  <div class="keep-flow">
+    <div class="pipe-card reveal"><span class="tag">01 · DRAFT</span><h4>草稿 AR</h4><p>连续提出候选特征</p></div>
+    <div class="flow-arrow reveal d2">→</div>
+    <div class="pipe-card reveal d3"><span class="tag">02 · VERIFY</span><h4>目标 AR</h4><p>验最长前缀，留下 <code>z_AR+E</code></p></div>
+    <div class="flow-arrow reveal d4">→</div>
+    <div class="pipe-card reveal d5"><span class="tag">03 · SAMPLE</span><h4>x₀=z+σ(E)ε</h4><p>按位置采样一次</p></div>
+    <div class="flow-arrow reveal d5">→</div>
+    <div class="pipe-card final reveal d5"><span class="tag">04 · 1 NFE</span><h4>单步视觉解码</h4><p>整套 <code>fθ</code> 调用一次</p></div>
+  </div>
+</figure>
+<p>NFE<a class="jr" href="#g-16">16</a>只数视觉解码器函数调用。AR 草稿、目标验证、VAE 解码、内存搬运和 kernel 启动都不会凭空消失，所以“1 NFE”与“整条请求只做一次计算”不是一回事。</p>
+</section>
+
+<section id="recipe">
+<h2><span class="n">§ 10</span><span>论文公开的训练配方</span></h2>
+<div class="recipe">
+  <div><b>BACKBONES</b><span>MAR · TransDiff · NextStep-1</span></div>
+  <div><b>DRAFT</b><span>TransDiff 使用 6 层草稿 Transformer</span></div>
+  <div><b>SCHEDULE</b><span>Phase I 80% · Phase II 20%</span></div>
+  <div><b>PRIOR</b><span>σmax=.5 · τσ=2.0</span></div>
+  <div><b>DRIFT KERNEL</b><span>τ∈{.02,.05,.2}</span></div>
+  <div><b>IMAGENET</b><span>AdamW · lr 1e−4 · batch 32</span></div>
+</div>
+<div class="warning"><b>没有公开：</b>训练硬件、精度、总 step、表中延迟的 batch 与设备口径、连续特征验收规则、实际接受率、Entropy-AdaLN 实现。截至 2026-07-24，论文链接的官方仓库只有空项目页，没有代码文件。</div>
+</section>
+
+<section id="results">
+<h2><span class="n">§ 11</span><span>主结果：速度涨了，质量真的没掉吗</span></h2>
+<figure>
+  <figcaption><span>Fig 11 · ImageNet 256²</span><b>reported latency · hardware undisclosed</b></figcaption>
+  <div class="table-wrap"><table>
+    <thead><tr><th>方法</th><th>延迟/s</th><th>加速</th><th>FID↓</th><th>IS↑</th></tr></thead>
+    <tbody>
+      <tr><td>MAR-L</td><td>5.31</td><td>1.00×</td><td>1.78</td><td>296.0</td></tr>
+      <tr class="win"><td>MAR-L + Drift-AR</td><td>.96</td><td>5.53×</td><td>1.76</td><td>297.4</td></tr>
+      <tr><td>MAR-H</td><td>9.97</td><td>1.00×</td><td>1.55</td><td>303.7</td></tr>
+      <tr class="win"><td>MAR-H + Drift-AR</td><td>1.93</td><td>5.16×</td><td>1.53</td><td>304.6</td></tr>
+      <tr><td>TransDiff-L</td><td>3.17</td><td>1.00×</td><td>1.61</td><td>295.1</td></tr>
+      <tr class="win"><td>TransDiff-L + Drift-AR</td><td>.64</td><td>4.96×</td><td>1.61</td><td>295.8</td></tr>
+      <tr><td>TransDiff-H</td><td>6.72</td><td>1.00×</td><td><b>1.55</b></td><td>297.9</td></tr>
+      <tr class="caveat"><td>TransDiff-H + Drift-AR</td><td>1.33</td><td>5.06×</td><td>1.57</td><td><b>298.1</b></td></tr>
+    </tbody>
+  </table></div>
+</figure>
+<p>TransDiff-H 的 FID 从 <code>1.55</code> 轻微变差到 <code>1.57</code>，IS 从 <code>297.9</code> 微升到 <code>298.1</code>。准确说法是“质量大体匹配，部分指标提高”，不是每一格都赢。</p>
+<h3>NextStep-1 文生图</h3>
+<div class="table-wrap"><table>
+  <thead><tr><th>方法</th><th>加速</th><th>GenEval↑</th><th>FID↓</th><th>CLIP↑</th></tr></thead>
+  <tbody><tr><td>NextStep-1</td><td>1.00×</td><td>.63</td><td>6.71</td><td>28.67</td></tr><tr><td>+ 推测解码</td><td>2.03×</td><td>.63</td><td>6.90</td><td>27.96</td></tr><tr><td>+ DMD</td><td>1.66×</td><td>.59</td><td>8.33</td><td>25.19</td></tr><tr class="win"><td>+ Drift-AR</td><td>3.81×</td><td>.66</td><td>6.66</td><td>29.02</td></tr></tbody>
+</table></div>
+<p>FID / IS / CLIP<a class="jr" href="#g-17">17</a>只描述批量统计、可辨识度或图文相似度，各自都不是“单张图是否漂亮”的完整答案。论文没有多种子误差条，<code>6.71→6.66</code> 这类小差异要克制解读。</p>
+</section>
+
+<section id="ablation">
+<h2><span class="n">§ 12</span><span>五项消融：少哪块会漏风</span></h2>
+<figure>
+  <figcaption><span>Fig 12 · TransDiff-H ablation</span><b>full = 1.57 FID / 298.1 IS</b></figcaption>
+  <div class="ab-grid">
+    <div class="ab-card reveal"><span class="tag">W/O A · ENTROPY PRIOR</span><b>1.72 / 289.3</b><h4>退步最大</h4><p>固定方差不能按位置分修正空间。</p></div>
+    <div class="ab-card reveal d2"><span class="tag">W/O B · ANNEAL</span><b>1.69 / 292.6</b><h4>先验一直动</h4><p>固定 α=.5，AR 没有先稳定下来。</p></div>
+    <div class="ab-card reveal d3"><span class="tag">W/O C · ANTISYMMETRY</span><b>1.69 / 291.8</b><h4>只剩吸引</h4><p>匹配时漂移不再保证归零。</p></div>
+    <div class="ab-card reveal"><span class="tag">W/O D · EARLY STOP</span><b>1.62 / 295.5</b><h4>草稿写过头</h4><p>低质量候选传播得更远。</p></div>
+    <div class="ab-card reveal d2"><span class="tag">W/O E · FREEZE</span><b>1.67 / 291.9</b><h4>Phase II 泄漏</h4><p>漂移梯度继续改变 AR 源分布。</p></div>
+    <div class="ab-card full reveal d3"><span class="tag">FULL</span><b>1.57 / 298.1</b><h4>五块一起</h4><p>熵先验是最关键单项，但不是单独就够。</p></div>
+  </div>
+</figure>
+<p>表里没有 AR 接受率和分项耗时，因此不能据此把 <code>5.06×</code> 精确拆成“草稿贡献多少、单步解码贡献多少”。</p>
+</section>
+
+<section id="steps">
+<h2><span class="n">§ 13</span><span>单步不是把原解码器硬砍到一步</span></h2>
+<div class="table-wrap"><table>
+  <thead><tr><th>解码器</th><th>步数</th><th>加速</th><th>FID↓</th><th>IS↑</th></tr></thead>
+  <tbody>
+    <tr><td>Diffusion</td><td>20</td><td>1.00×</td><td>1.55</td><td>297.9</td></tr>
+    <tr><td>Diffusion</td><td>4</td><td>4.07×</td><td>3.89</td><td>261.5</td></tr>
+    <tr><td>Diffusion</td><td>1</td><td>5.25×</td><td>14.72</td><td>148.3</td></tr>
+    <tr><td>DMD</td><td>4</td><td>3.63×</td><td>2.11</td><td>282.9</td></tr>
+    <tr><td>DMD</td><td>1</td><td>5.17×</td><td>2.93</td><td>273.2</td></tr>
+    <tr class="win"><td>Drifting</td><td>1</td><td>5.06×</td><td>1.57</td><td>298.1</td></tr>
+  </tbody>
+</table></div>
+<p>原 diffusion 直接减到一步，FID 崩到 <code>14.72</code>；Drift-AR 的目标从训练开始就是一次前向，所以一步仍到 <code>1.57</code>。这不代表 DMD 原理上必须多步：原始 DMD<a class="jr" href="#g-18">18</a>同样能训练一步学生，区别在于老师 score 蒸馏和直接样本核漂移。</p>
+<h3>σmax 也不能无限加大</h3>
+<div class="table-wrap"><table><thead><tr><th>σmax</th><th>.1</th><th>.3</th><th>.5</th><th>.7</th><th>1.0</th></tr></thead><tbody><tr><td>FID↓</td><td>1.68</td><td>1.58</td><td><b>1.57</b></td><td><b>1.57</b></td><td>1.64</td></tr><tr><td>IS↑</td><td>292.7</td><td>296.5</td><td><b>298.1</b></td><td>296.3</td><td>293.1</td></tr></tbody></table></div>
+<p>太小几乎缩成一个点，没有覆盖面；太大撒得太开，一步修不回来。<code>σmax</code> 是修正范围上限，不是越大越有创造力。</p>
+</section>
+
+<section id="limits">
+<h2><span class="n">§ 14</span><span>这篇论文的证据边界</span></h2>
+<div class="limits">
+  <div><b>PROXY ≠ TRUTH</b><p>注意力熵只是连续预测不确定性的代理，分布外或无因果注意力架构可能失效。</p></div>
+  <div><b>ALIGNMENT WORDING</b><p>负熵式提高草稿熵，没有直接比较草稿熵与目标熵。</p></div>
+  <div><b>INDIRECT DRIFT</b><p>熵改变先验与 AdaLN，不是直接乘在漂移向量上；“高熵更强漂移”靠经验支持。</p></div>
+  <div><b>LONGER TRAINING</b><p>先稳 AR 再纯漂移，比标准蒸馏需要更长日程。</p></div>
+  <div><b>SPEED PROTOCOL</b><p>没有硬件、精度、batch 与同步口径，绝对延迟难以跨论文比较。</p></div>
+  <div><b>NO CODE YET</b><p>截至 2026-07-24，官方仓库没有实现文件，连续验收与 Entropy-AdaLN 无法代码核对。</p></div>
+  <div><b>NO ACCEPTANCE TABLE</b><p>缺少接受率、平均前缀长度与 AR/decoder 分项延迟。</p></div>
+  <div><b>OPEN SCALE</b><p>视频与更高分辨率的空间熵更复杂，论文明确留给未来。</p></div>
+</div>
+<div class="fact"><b>最稳妥的结论：</b>论文充分展示了“用 AR 熵参数化单步漂移先验”在三套骨架上的可行性；AR 推测解码的复现与速度归因证据相对薄一些。</div>
+</section>
+
+<section class="gloss" aria-label="术语表">
+<h2>引用 / 术语表</h2>
+<ol>
+  <li id="g-01"><span class="term">AR-Diffusion hybrid</span> · 前段自回归排语义，后段扩散或流模型合成高保真图像；不是两种模型二选一。</li>
+  <li id="g-02"><span class="term">Continuous latent</span> · 连续实数向量形式的视觉表示，不受离散码本词表限制。</li>
+  <li id="g-03"><span class="term">Speculative decoding</span> · 小草稿模型先提一段，大目标模型一次并行验证，保留最长合格前缀。</li>
+  <li id="g-04"><span class="term">Attention entropy</span> · 一行注意力概率分得有多散；本文把它当预测不确定性的代理。</li>
+  <li id="g-05"><span class="term">Causal mask</span> · 第 r 个位置只能看自己和前面位置，不能偷看未来。</li>
+  <li id="g-06"><span class="term">Smooth L1</span> · 小误差用平方细修，大误差转成线性，减少异常值影响。</li>
+  <li id="g-07"><span class="term">Gaussian prior</span> · 解码前初始状态按高斯采样；均值定中心，协方差定散布。</li>
+  <li id="g-08"><span class="term">Standard deviation / variance</span> · 标准差是 σ，方差是 σ²；本文文字有时把两者混叫 variance。</li>
+  <li id="g-09"><span class="term">Reparameterization</span> · 用 <code>x=μ+σε</code> 把随机性移到 ε，使 μ、σ 仍可反传。</li>
+  <li id="g-10"><span class="term">Drifting field</span> · 真实样本吸引、生成样本排斥合成的局部更新方向。</li>
+  <li id="g-11"><span class="term">Anti-symmetry</span> · <code>Vₚ,q=−Vq,p</code>；交换两分布，方向反转，因此 p=q 时漂移为零。</li>
+  <li id="g-12"><span class="term">stopgrad</span> · 前向保留数值，反向把该分支当常数；这里只冻结本轮目标。</li>
+  <li id="g-13"><span class="term">Frozen feature encoder</span> · 权重不更新，但对输入的导数仍在，能把特征损失传回生成器。</li>
+  <li id="g-14"><span class="term">Entropy-AdaLN</span> · 用熵条件临时生成归一化调制参数，让不同空间位置获得不同处理。</li>
+  <li id="g-15"><span class="term">EMA</span> · <code>新平均=.9·旧平均+.1·新值</code>，用很少状态平滑瞬时波动。</li>
+  <li id="g-16"><span class="term">NFE</span> · Number of Function Evaluations，一次生成调用目标神经网络多少次。</li>
+  <li id="g-17"><span class="term">FID / IS / CLIP</span> · 分别偏向批量分布距离、可辨识度/多样性与图文相似度，越低或越高方向不同。</li>
+  <li id="g-18"><span class="term">DMD</span> · 用 real/fake score 的差匹配学生与老师分布，可训练一步或多步学生。</li>
+</ol>
+</section>
+
+<section class="sources">
+<h3>Sources</h3>
+<ul>
+  <li><a href="https://arxiv.org/abs/2603.28049">Drift-AR · arXiv v3</a></li>
+  <li><a href="https://arxiv.org/pdf/2603.28049">论文 PDF · 17 pages</a></li>
+  <li><a href="https://github.com/aSleepyTree/Drift-AR">官方 GitHub · 截至 2026-07-24 尚无实现文件</a></li>
+</ul>
+</section>
+
+<div class="colophon"><span>Field notes · rewritten by cognitive dependency</span><span>Evidence · paper v3 · checked 2026-07-24</span></div>
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('[data-tex]').forEach(function(el){
+    if(window.katex){try{katex.render(el.getAttribute('data-tex'),el,{displayMode:true,throwOnError:false});}catch(e){el.textContent=el.getAttribute('data-tex');}}
+  });
+  var obs=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('play');obs.unobserve(e.target);}});},{threshold:.16});
+  document.querySelectorAll('figure').forEach(function(f){obs.observe(f);});
+});
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  var items={};
+  document.querySelectorAll('.gloss ol li[id^="g-"]').forEach(function(li){items[li.id]=li.innerHTML;});
+  if(!Object.keys(items).length)return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!items[id])return;
+      e.preventDefault();
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+items[id];
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+</body>
+</html>
