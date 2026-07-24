@@ -24,7 +24,7 @@ html{scroll-behavior:smooth}
 body{margin:0;background:var(--paper);color:var(--ink);font-family:'Noto Sans SC',sans-serif;font-size:17px;line-height:1.8;-webkit-font-smoothing:antialiased}
 body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;opacity:.3;background-image:linear-gradient(rgba(90,69,37,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(90,69,37,.035) 1px,transparent 1px);background-size:28px 28px}
 .page{max-width:1120px;margin:auto;padding:46px 36px 120px;display:flex;flex-direction:column}
-.page>#overview{order:1}.page>#pushforward{order:2}.page>#feature{order:3}.page>#field{order:4}.page>#stopgrad{order:5}.page>#batch{order:6}.page>#architecture{order:7}.page>#recipe{order:8}.page>#antisymmetry{order:9}.page>#cfg{order:10}.page>#experiments{order:11}.page>#relations{order:12}.page>#limits{order:13}.page>.gloss{order:14}.page>.sources{order:15}.page>.colophon{order:16}
+.page>#overview{order:1}.page>#pushforward{order:2}.page>#field{order:3}.page>#stopgrad{order:4}.page>#feature{order:5}.page>#batch{order:6}.page>#architecture{order:7}.page>#recipe{order:8}.page>#antisymmetry{order:9}.page>#cfg{order:10}.page>#experiments{order:11}.page>#relations{order:12}.page>#limits{order:13}.page>.gloss{order:14}.page>.sources{order:15}.page>.colophon{order:16}
 .mast{display:flex;justify-content:space-between;gap:20px;border-top:3px solid var(--ink);border-bottom:1px solid var(--rule);padding:11px 0;margin-bottom:52px;font:600 11px/1.4 'JetBrains Mono',monospace;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
 .mast b{color:var(--rust)}
 .hero{position:relative;padding:0 0 54px;border-bottom:1px solid var(--rule)}
@@ -110,7 +110,7 @@ figcaption b{color:var(--rust)}
     <div class="tldr-body"><p>噪声经生成器变成当前生成分布 <strong>q</strong>；真实分布 <strong>p</strong> 把样本往合理区域拉，当前 <strong>q</strong> 又把拥挤的生成样本推开。训练每轮都重算这股<strong>漂移场</strong><a class="jr" href="#g-01">1</a>。当 <code>q=p</code>，反对称让场归零。训练完成后，核、特征网络和样本队列全部删掉，推理只需 <strong>1 次前向</strong>。ImageNet 256 latent L/2 报 FID <strong>1.54</strong>，但代价是大批量、多特征网络和高训练算力。</p></div>
   </div>
   <nav class="reading-path" aria-label="章节捷径">
-    <a href="#overview">完整拼图</a><a href="#pushforward">q 从哪来</a><a href="#feature">先选比较尺度</a><a href="#field">再算漂移</a><a href="#stopgrad">梯度怎么走</a><a href="#batch">怎样放进 batch</a><a href="#architecture">fθ 怎样出图</a><a href="#recipe">完整训练循环</a><a href="#antisymmetry">最后看证明</a><a href="#experiments">实验与反例</a>
+    <a href="#overview">完整拼图</a><a href="#pushforward">q 从哪来</a><a href="#field">漂移怎么搭</a><a href="#stopgrad">怎么变损失</a><a href="#feature">在哪量距离</a><a href="#batch">怎样放进 batch</a><a href="#architecture">fθ 怎样出图</a><a href="#recipe">完整训练循环</a><a href="#antisymmetry">最后看证明</a><a href="#experiments">实验与反例</a>
   </nav>
 </header>
 
@@ -163,21 +163,39 @@ figcaption b{color:var(--rust)}
 </section>
 
 <section id="field">
-<h2><span class="num">§ 04</span><span>尺度选好了，再算吸引与排斥</span></h2>
-<p class="lead">站在当前这个生成点 <code>x</code> 上，先问一句“附近的真实点想把我往哪拉”，这是引力；再问一句“附近的生成点都挤在哪”，这个方向要被减掉，才变成把 <code>x</code> 推开的斥力。</p>
-<div class="formula math" data-display="true">V_p^+(x)=\frac{1}{Z_p}\mathbb E_{y^+\sim p}\left[k(x,y^+)(y^+-x)\right]</div>
-<div class="formula math" data-display="true">V_q^-(x)=\frac{1}{Z_q}\mathbb E_{y^-\sim q}\left[k(x,y^-)(y^--x)\right]</div>
-<div class="formula math" data-display="true">V_{p,q}(x)=V_p^+(x)-V_q^-(x)</div>
-<div class="vars">
-  <div class="var"><code>x</code>：正在修正的生成样本特征。</div><div class="var"><code>y⁺ ∼ p</code>：真实正样本特征。</div>
-  <div class="var"><code>y⁻ ∼ q</code>：当前模型生成的负样本特征。</div><div class="var"><code>k(x,y)</code>：距离越近，权重越大。</div>
-  <div class="var"><code>Zp、Zq</code>：各自权重之和，用来归一化。</div><div class="var"><code>V⁺ − V⁻</code>：引力（吸向真实）减去指向生成扎堆处的斥力方向。</div>
-</div>
-<h3>核函数只回答一件事：谁更该影响 x</h3>
+<h2><span class="num">§ 03</span><span>核心：漂移 V 一块块搭出来，那个减号为什么非有不可</span></h2>
+<p class="lead">q 已经清楚了，现在是全篇的心脏：站在一个当前生成样本 <code>x</code> 上，这一轮它到底该往哪挪一点点？这个方向就叫漂移 <code>V</code>。别急着抄公式——先说清它要满足什么，再一块一块搭出来，最后你会看到那个减号不是随手写的。</p>
+<div class="plain"><b>先把符号约定死，后面每一步都用它：</b><code>x</code> = 正在修正的当前生成样本；<code>y⁺∼p</code> = 一个真实样本（正样本）；<code>y⁻∼q</code> = 本轮另一个生成样本（负样本）。这里先把它们当成同一个空间里的点；至于“距离到底在哪个空间量”，留到 §05 再说，不影响这里的形式。</div>
+
+<h3>第 1 块 · 一个真实邻居怎么拉你</h3>
+<p>一个真实点 <code>y⁺</code> 想把 <code>x</code> 拉向自己。“从 x 指向 y⁺”的方向，就是两点相减 <code>(y⁺−x)</code>——朝它走一步该走的方向、该走多远，都在这一个向量里。这是最小的一块。</p>
+
+<h3>第 2 块 · 近的邻居更有发言权</h3>
+<p>但不能每个真实点都同等重要：隔着半张图的点，不该和你旁边的点一样有话语权。于是给每个邻居乘一个权重 <code>k(x,y)</code>，离得越近越大：</p>
 <div class="formula math" data-display="true">k(x,y)=\exp\!\left(-\frac{\lVert x-y\rVert_2}{\tau}\right)</div>
-<p><code>||x−y||₂</code> 是欧氏距离；<code>τ</code> 是温度<a class="jr" href="#g-03">3</a>。小温度只信很近的邻居，大温度会看更广。最终模型把 <code>0.02、0.05、0.2</code> 三个尺度合用，不押注单一邻域大小。</p>
+<p><code>‖x−y‖₂</code> 是欧氏距离，越近越小；取负号再取 <code>exp</code>，距离小 → 指数接近 <code>1</code>（权重大），距离大 → 迅速衰减到 <code>0</code>。<code>τ</code> 是温度<a class="jr" href="#g-03">3</a>：小温度只信身边很近的几个邻居，大温度看得更宽。最终模型 <code>0.02、0.05、0.2</code> 三个温度合用，不押注单一邻域大小。</p>
+
+<h3>第 3 块 · 把真实邻居的拉力做加权平均 = 引力 V⁺</h3>
+<p>把每个真实邻居的拉力方向 <code>(y⁺−x)</code> 按权重 <code>k</code> 加起来，再除以权重总和 <code>Zp</code> 归一化——不归一化的话邻居越多力越大，不同位置没法比。这就是引力：一批真实点合起来，平均想把 <code>x</code> 拉去哪。</p>
+<div class="formula math" data-display="true">V_p^+(x)=\frac{1}{Z_p}\mathbb E_{y^+\sim p}\left[k(x,y^+)(y^+-x)\right]</div>
+
+<h3>第 4 块 · 生成邻居也在拉你 = 斥力候选 V⁻</h3>
+<p>同一套算法，把真实点换成本轮的生成点 <code>y⁻</code>，得到“一批生成点平均想把 x 拉去哪”。注意此刻它算出来的还是个<strong>吸引</strong>方向，形式和 V⁺ 一模一样，只是数据来源不同：</p>
+<div class="formula math" data-display="true">V_q^-(x)=\frac{1}{Z_q}\mathbb E_{y^-\sim q}\left[k(x,y^-)(y^--x)\right]</div>
+
+<h3>第 5 块 · 减号从哪来：让这股力在“追上”时自己归零</h3>
+<p>最后一步把两者相减，才得到真正的漂移：</p>
+<div class="formula math" data-display="true">V_{p,q}(x)=V_p^+(x)-V_q^-(x)</div>
+<p>这个减号是整套方法的命门，两层理由，从浅到深：</p>
+<p><b>浅的一层：</b>只有引力时，一大堆生成点会一起扑向少数几个真实点，全挤成一团（mode collapse）。把“生成点扎堆的方向”减掉，等于对 <code>x</code> 说“你那边已经太挤了，别再往那凑”，把它从自己人堆里推开。</p>
+<p><b>深的一层，也是减号真正的来处：</b>我们要的是一股能<strong>自己停下来</strong>的力——当生成分布 <code>q</code> 真追上真实分布 <code>p</code>，就不该再乱推了。盯着减号看：<code>q=p</code> 时，引力和斥力是<strong>从同一批点</strong>算出来的，两个加权平均一模一样，一减正好抵成 <code>0</code>，漂移归零、训练停住。换成加号或别的组合都没这个性质。这个“追上就自动归零”的不动点，正是减号带来的；它的形式化证明（反对称）留到 §09，但设计动机在这一步就已经定了。</p>
+<div class="vars">
+  <div class="var"><code>x</code>：正在修正的当前生成样本。</div><div class="var"><code>y⁺ ∼ p</code>：真实正样本。</div>
+  <div class="var"><code>y⁻ ∼ q</code>：本轮的生成负样本。</div><div class="var"><code>k(x,y)</code>：距离越近，权重越大。</div>
+  <div class="var"><code>Zp、Zq</code>：各自权重之和，用来归一化。</div><div class="var"><code>V⁺ − V⁻</code>：引力（吸向真实）减去指向生成扎堆处的方向。</div>
+</div>
 <figure class="reveal">
-  <figcaption><span>Fig 03 · 把一维例子从权重算到方向</span><b>注意斥力来自最后那个减号</b></figcaption>
+  <figcaption><span>Fig 03 · 把一维例子从权重算到方向</span><b>注意净漂移来自最后那个减号</b></figcaption>
   <div class="force-demo">
     <div class="axis"></div>
     <div class="dot fake" style="left:18%"></div><div class="dot-label" style="left:18%;top:59%">y⁻=−1</div>
@@ -191,12 +209,12 @@ figcaption b{color:var(--rust)}
     <div class="force-calc">τ=2 · 正权重 [.731,.269] · 负权重 [.438,.562] · V⁻=−.157 · 所以 V=2.538−(−.157)=2.695</div>
   </div>
 </figure>
-<div class="plain"><b>为什么不能只有引力？</b>只有引力时，一大堆生成点可能一起扑向少数几个真实点；斥力就是来提醒模型“这片生成区域已经太挤了”。但它只是降低 mode collapse 的风险，谈不上“天生杜绝塌缩”。</div>
+<div class="plain"><b>别把斥力夸大：</b>它只是把 <code>x</code> 从生成过密处推开、降低坍缩风险，不等于“天生杜绝塌缩”；真要严格证“不塌”，还得靠 §09 那些额外条件。</div>
 </section>
 
 <section id="antisymmetry">
 <h2><span class="num">§ 09</span><span>主线跑通后，再看反对称究竟证明了什么</span></h2>
-<div class="plain"><b>这不是训练循环里新增的一步。</b>到这里算法已经完整了；本章只做一个事后验算：万一生成分布真的追上了目标分布，前面那套漂移会不会自己停下来。</div>
+<div class="plain"><b>这节是给 §03 那个设计动机补证书。</b>§03 用直觉说了“减号能让 <code>q</code> 追上 <code>p</code> 时漂移自动归零”；这里把那句话<strong>形式化证严</strong>——靠一个反对称性质，两行就能推出来。它不是训练循环里的新步骤。</div>
 <div class="formula math" data-display="true">V_{p,q}(x)=-V_{q,p}(x)</div>
 <div class="equation-step"><span class="step">1</span><p>若 <code>q=p</code>，交换两边什么都没变，所以 <span class="math">V_{p,p}(x)=-V_{p,p}(x)</span>。</p></div>
 <div class="equation-step"><span class="step">2</span><p>一个向量若等于自己的相反数，只能是零，于是 <span class="math">V_{p,p}(x)=0</span>。</p></div>
@@ -212,7 +230,8 @@ figcaption b{color:var(--rust)}
 </section>
 
 <section id="stopgrad">
-<h2><span class="num">§ 05</span><span><code>stopgrad</code>：数值等于漂移平方，梯度路线却不同</span></h2>
+<h2><span class="num">§ 04</span><span>把漂移 V 变成损失：一个 stopgrad 定成败</span></h2>
+<p>§03 给出的 <code>V</code> 只是“<code>x</code> 该往哪挪”的方向，还不是能喂给优化器的损失。最直接的做法：把“当前输出”推一步到 <code>x+V</code>，让它当本轮的目标，再用平方误差把 <code>x</code> 拉过去。但这里藏着一个不加就全错的细节。</p>
 <p class="lead">先把最容易误解的地方说死：<strong>冻结的不是生成器，也不是“这一轮的整个 f”</strong>。同一次前向算出的 <code>x</code> 被用两次：左边保留梯度，右边先加漂移，再复制成一张不参与反传的数值快照。loss 当场比较这两份数值。</p>
 <div class="formula math" data-display="true">\mathcal L(\theta)=\mathbb E_\epsilon\!\left[\left\lVert f_\theta(\epsilon)-\operatorname{sg}\!\left(f_\theta(\epsilon)+V_{p,q_\theta}(f_\theta(\epsilon))\right)\right\rVert_2^2\right]</div>
 <div class="vars">
@@ -278,11 +297,11 @@ figcaption b{color:var(--rust)}
 </section>
 
 <section id="feature">
-<h2><span class="num">§ 03</span><span>计算方向以前，先决定“哪两张图算相近”</span></h2>
-<p class="lead">前两章只说明了生成分布从哪里来。真正计算漂移前，必须先决定<strong>在哪里量距离</strong>。这件事不能含糊：核函数会把“离当前样本近”的点当邻居，邻居一旦选错，后面的引力和斥力算得再准也是白算。</p>
-<div class="plain"><b>这章只做一件事：</b>先用冻结的特征网络 <code>φ</code> 把图像换成更有语义的坐标，再在这个坐标系里选邻居、算漂移。漂移虽然写在特征上，损失的梯度仍会沿 <code>特征 → 图像 / latent → 生成器参数</code> 原路传回去。</div>
+<h2><span class="num">§ 05</span><span>那个距离到底在哪个空间量：冻结特征坐标系</span></h2>
+<p class="lead">§03 的核 <code>k(x,y)</code> 和 §04 的损失，都反复用到一个距离 <code>‖x−y‖</code>，却一直没说清在哪儿量。这节补上最后这块：直接在像素上量会选错邻居，得先把图换进一个冻结特征网络 <code>φ</code> 的语义坐标里，再在那儿选邻居、算漂移。</p>
 <h3>为什么不直接比较像素</h3>
-<p>同一只猫向右平移几格，很多像素都会改变，但语义没有变；一只猫和一只颜色相近的狗，像素均值可能很接近，语义却不同。原始像素因此不适合直接回答“谁应该互相吸引”。自监督训练过的 MAE、ResNet 或 ConvNeXtV2，会把边缘、纹理、部件乃至类别信息逐层整理出来，论文便借这些中间特征定义邻居。</p>
+<p>同一只猫向右平移几格，很多像素都会变，但语义没变；一只猫和一只颜色相近的狗，像素均值可能很接近，语义却天差地别。原始像素因此答不好“谁该互相吸引”这个问题。自监督训练过的 MAE、ResNet 或 ConvNeXtV2，会把边缘、纹理、部件乃至类别信息逐层整理出来，论文就在这些中间特征上量距离、定义邻居。</p>
+<div class="plain"><b>于是把 §03、§04 整套照搬进 φ 空间：</b>核和漂移都改成在特征 <code>φ(x)</code> 上算，损失也从 <code>‖x−sg(x+V)‖²</code> 换成特征版；再进一步，对每个尺度 <code>j</code>（下面 LOCAL / GLOBAL / 分区）各算一份漂移和损失，最后求和。梯度照样沿 <code>特征 → 图像 / latent → 生成器参数</code> 原路传回。</div>
 <div class="formula math" data-display="true">\mathcal L=\sum_j\mathbb E\left[\left\lVert\phi_j(x)-\operatorname{sg}\!\left(\phi_j(x)+V_j\right)\right\rVert_2^2\right]</div>
 <div class="vars"><div class="var"><code>x=fθ(ε)</code>：生成器当前产出的 latent 或 RGB 图。</div><div class="var"><code>φj(x)</code>：冻结特征网络在第 <code>j</code> 个位置或尺度读出的特征。</div><div class="var"><code>Vj</code>：用同一尺度的真实 / 生成特征算出的净漂移。</div><div class="var"><code>sg(·)</code>：把本轮目标拍成快照；只阻止目标分支反传。</div><div class="var"><code>Σj</code>：每种局部和全局特征各算一份损失，最后相加。</div><div class="var"><code>‖·‖²₂</code>：对应特征向量逐项作差、平方后求和。</div></div>
 <p>读法是：当前特征是 <code>φj(x)</code>，核漂移说它在这一尺度上应该再走 <code>Vj</code>，于是得到临时目标 <code>φj(x)+Vj</code>。右边被 <code>stopgrad</code> 固定，左边保留梯度，模型才会真的朝目标更新。与普通 <a href="../concepts/perceptual-loss.html">perceptual loss</a> 的区别是：普通感知损失通常有一张配对目标图 <code>y</code>，目标是 <code>φ(y)</code>；这里没有配对的正确答案，目标方向由一批真实样本和生成样本共同算出来。</p>
@@ -505,8 +524,8 @@ figcaption b{color:var(--rust)}
 document.addEventListener('DOMContentLoaded', function () {
   // Read mechanism first and theory second; figure numbers follow that visible order.
   var figureOrder={
-    overview:['Fig 01A','Fig 01B'],pushforward:['Fig 02'],feature:['Fig 03A','Fig 03B'],
-    field:['Fig 04'],stopgrad:['Fig 05'],batch:['Fig 06'],
+    overview:['Fig 01A','Fig 01B'],pushforward:['Fig 02'],field:['Fig 03'],
+    stopgrad:['Fig 04'],feature:['Fig 05A','Fig 05B'],batch:['Fig 06'],
     architecture:['Fig 07A','Fig 07B','Fig 07C','Fig 07D'],recipe:['Fig 08'],
     antisymmetry:['Fig 09'],cfg:['Fig 10'],experiments:['Fig 11']
   };
