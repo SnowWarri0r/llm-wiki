@@ -31,6 +31,7 @@
 - [ViiTorVoice · 低帧率语义码+并行填声](wiki/papers/viitorvoice.md) — 开源流式零样本 TTS 引擎(无独立论文,思路源自 DualCodec+OmniVoice): 三招各砍一刀延迟—①DualCodec 把 24kHz 压到 12.5 帧/秒,RVQ-1 语义(w2v-BERT 蒸馏,码本16384)+RVQ 2-8 声学残差; ②NAR 掩码并行填声(像完形填空,步数从200降到~8); ③首块流式首帧~60ms; 给参考音零样本克隆+两路CFG调情绪
 - [VITS · 文本进去，波形出来](wiki/papers/vits.md) — 把两段式 TTS 的固定 mel 交接收回一套联合训练：条件 VAE 用 z 装下文字没写出的声音，Flow 接通文本先验与音频后验，MAS 从整句配对中找音素—帧路径，随机时长用去量化 u 与增广 ν 建模多种节奏，HiFi-GAN 多周期判别器补波形细节；LJ MOS 4.43 vs 真人4.46，×67.12实时，并完整覆盖损失、配方、VCTK、消融、声音转换和局限
 - [LTX-2 · 让声音和画面在同一段去噪中彼此校正](wiki/papers/ltx-2.md) — 开源联合音视频生成：两套 causal VAE 保留模态差异，14B 视频流与 5B 音频流在 48 层中用双向 cross-attention 沿共同时间轴交换；Gemma 全层特征+双向 connector+thinking registers 加强文本条件，modality-CFG 分开调文字遵循和音视频同步，0.5MP base→latent 放大→重叠 tiles 生成 1080p。H100 每步 1.22s vs Wan2.2 22.30s 约18×，但内部质量人评缺少样本数/胜率/置信区间，训练规模与配方也未公开；正文 14B+5B 与结论 13B+3B 矛盾留档。
+- [HDR · 先规划整段轨迹，再逐层生成每一步](wiki/papers/hierarchical-denoising-visual-reasoning.md) — 流式视频生成一旦早期转错就无法撤回；HDR 在输出前先生成 1/2/4/8/16/32 六层时间 latent，粗层少去噪保留可修改方案，细层再落实画面。SHAP 每节点只读同层前一步、父节点和相邻父节点，把时间注意力从 O(KN²) 降到 O(KavgN)。六任务 overall success 34.22→60.29，stream 0.70s/latent，但另有16.19s prefill；完整覆盖 flow 目标、mask、复杂度、18k训练、370评测、消融、HDR-WAM与失败，并指出 entropy schedule 的 ceil 公式实际算不出论文数列、代码未公开。
 - [RoPE · Rotary Position Embedding](wiki/papers/rope.md) — 不加位置向量，旋转 Q/K 让点积天然含相对位置；LLaMA / Mistral / Qwen 全在用
 - [Whisper](wiki/papers/whisper.md) — 68 万小时弱监督训 ASR，zero-shot 碾压精标模型；语音领域的 GPT 时刻
 - [Qwen3-ASR · 给 LLM 接个耳朵](wiki/papers/qwen3-asr.md) — 不从头训ASR: 预训练Qwen3当解码器+AuT音频编码器(8×下采样12.5Hz+动态窗口流式/离线)+projector; modality-projector生产级; prompt塞热词定制转写; RL用GSPO; 带口音英语完胜Whisper
@@ -198,6 +199,9 @@
 ### 生成模型基础
 - [Velocity Field](wiki/concepts/velocity-field.md) — flow matching 学的目标，(x, t) → 该往哪走
 - [Conditional Flow Matching](wiki/concepts/conditional-flow-matching.md) — 实际可训练的 flow matching loss
+- [层级 Latent 去噪](wiki/concepts/hierarchical-latent-denoising.md) — 先用少量粗时间节点定整段轨迹，再逐层补成细状态；粗层故意少去噪，避免方案过早锁死
+- [SHAP · 稀疏层级注意力](wiki/concepts/sparse-hierarchical-attention.md) — 每节点只读同层前一步、父节点和相邻父节点；用固定连接把层级树的时间注意力维持在线性级
+- [流式 AR vs 双向视频扩散](wiki/concepts/autoregressive-vs-bidirectional-video-diffusion.md) — 双向可全局修正但整段重算，流式低延迟但早期错误不可撤回；HDR要化解的两难
 - [Probability Path](wiki/concepts/probability-path.md) — 噪声到数据的密度演化路径
 - [Optimal Transport](wiki/concepts/optimal-transport.md) — 让噪声到数据尽量走直路的路径选择
 - [Continuity Equation](wiki/concepts/continuity-equation.md) — 粒子守恒：密度变化 = 净流入

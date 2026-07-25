@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>流式 AR vs 双向视频扩散 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · autoregressive-vs-bidirectional-video-diffusion</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>流式 AR vs 双向视频扩散</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>双向扩散让整段视频在每个去噪 step 互相修改，推理强但代价高；流式 AR 从左到右提交，延迟低但早期错误无法撤回。</p>
+<h2>双向扩散</h2>
+<p>一开始就建立固定长度的整段 noisy latent。每轮去噪时，任意时间位置都能和其他位置交换信息，所以终点约束能反过来修正开头。代价是每轮都处理整段序列，全局时间注意力约为 <code>O(KN²)</code>。</p>
+<h2>流式自回归扩散</h2>
+<p>按 <code>p(z₁|c)p(z₂|z₁,c)…p(zN|z&lt;N,c)</code> 从左到右生成。过去的 K/V 可以缓存，新的 latent 生成后立即输出；但错误的 <code>z₃</code> 会成为 <code>z₄,z₅…</code> 的固定条件。</p>
+<p>KV cache 减少了过去 token 的重复投影，不代表总 attention 变为线性：第 <code>i</code> 个 query 仍要读取 <code>i</code> 个历史 key，<code>1+2+…+N</code> 仍是平方级。</p>
+<h2>HDR 的折中</h2>
+<p>HDR 在输出最终细节点之前，先生成粗时间层。它把“整段可修改”压缩成少量上层节点，再用稀疏父子连接传给下层，目标是保留流式延迟，同时推迟早期决定。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/hierarchical-denoising-visual-reasoning.html">hierarchical-denoising-visual-reasoning</a> · HDR 完整方案</li>
+<li><a href="../concepts/sparse-hierarchical-attention.html">sparse-hierarchical-attention</a> · 稀疏连接</li>
+<li><a href="../concepts/kv-cache.html">kv-cache</a> · 流式复用的基础</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/hierarchical-denoising-visual-reasoning.html"><span class="cat">paper</span>HDR · 先规划整段轨迹，再逐层生成每一步</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/autoregressive-vs-bidirectional-video-diffusion.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
