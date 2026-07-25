@@ -23,7 +23,7 @@
 - [ReLAT · 给潜在推理闭环](wiki/papers/relat.md) — 潜在推理(把"想"压进K个连续向量省token)是开环:生成完没人验它是否还忠于原问题。ReLAT用"能否从潜在重建回问题Q"当保真信号(必要非充分,纯自监督);潜在用softmax期望嵌入做成可微,测试时只调临时LoRA(N=16步)最小化重建损失再答、答完复位;Qwen3-8B AIME24 50→73.3(比开环+16.6)、比Self-Refine省84%token还更准
 - [Flow Matching](wiki/papers/flow-matching.md) — 把 diffusion 的 score matching 换成"学速度场 + ODE 积分"，简单 + 少步推理
 - [ODE vs SDE · 确定性流与随机流](wiki/papers/ode-sde.md) — 方法底层页: ODE=风场弹珠确定/SDE=醉汉每步随机踹; 桥=同一团云两看法; Euler 真数字演算(同起点ODE永远落5/SDE跑出6.13与3.30); 接 flow-matching + diffusion
-- [Generative Modeling via Drifting](wiki/papers/drifting-models.md) — 一步生成新范式(Kaiming He组): 吸引真数据+排斥自己的漂移场, 反对称→q=p场归零; 把迭代从推理时搬进训练时, 推理1步; ImageNet256 FID 1.54; 像无判别器GAN
+- [Generative Modeling via Drifting](wiki/papers/drifting-models.md) — 完整拆解一步生成：pushforward、核吸引/排斥、反对称的正确边界、stopgrad 梯度、特征空间、训练时 CFG、DiT/队列配方、ImageNet 与机器人消融
 - [DiffusionOPD · 扩散的 On-Policy 蒸馏](wiki/papers/diffusion-opd.md) — 多奖励对齐扩散: 先各训单任务专家老师, 再沿学生rollout轨迹蒸进一个学生; 扩散=高斯马尔可夫链→同协方差KL塌成均值MSE; 接 ppo+ode-sde+cross-entropy
 - [dMel](wiki/papers/dmel.md) — 跳过 neural codec 直接 bin quantize log-mel，简单方案跟 RVQ 一样好
 - [Interaction Models · Thinking Machines](wiki/papers/interaction-models-tml.md) — 把交互能力做进权重的 276B MoE 模型

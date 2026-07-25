@@ -1,8 +1,8 @@
 ---
 name: classifier-free-guidance
 type: concept
-sources: [ideogram-4, flux-1, diffusionnft, viitorvoice, ltx-2]
-updated: 2026-07-17
+sources: [ideogram-4, flux-1, diffusionnft, viitorvoice, ltx-2, drifting-models]
+updated: 2026-07-22
 ---
 
 # Classifier-Free Guidance · CFG
