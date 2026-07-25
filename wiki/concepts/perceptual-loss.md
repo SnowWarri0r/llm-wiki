@@ -1,7 +1,7 @@
 ---
 name: perceptual-loss
 type: concept
-sources: [hidream-o1, drifting-models]
+sources: [hidream-o1, drifting-models, dmd]
 updated: 2026-07-22
 ---
 
