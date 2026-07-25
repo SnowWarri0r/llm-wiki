@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>GSPO · Group Sequence Policy Optimization · 把重要性比率提到序列级 · Concept</title>
+<title>GSPO · Group Sequence Policy Optimization · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,167 +34,65 @@
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>GSPO · Group Sequence Policy Optimization · 把重要性比率提到序列级</h1>
+  <h1>GSPO · Group Sequence Policy Optimization</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>GRPO 在 <strong>token 级</strong>算重要性比率（每个 token 一个 <code>r</code>）；GSPO 把比率提到<strong>整条序列</strong>——因为每个 token 只采一次、token 级比率是高方差噪声、容易把训练带崩，而奖励本来就是给整条序列的。</p>
-<h2>直觉 · 别逐字纠，看整篇</h2>
-<p>先接上 <a href="../concepts/grpo.html">grpo</a>：它的 loss 还是 PPO 那套 <code>clip(r, 1±ε)·A + KL</code>，其中 <code>r = π_new / π_old</code> 是<strong>重要性比率</strong>（新旧策略给同一段输出的概率之比，用来做 off-policy 校正）。GRPO 给<strong>每个 token 各算一个 <code>r_t</code></strong>。</p>
-<p>问题在这儿：<strong>每个 token 在那条采样里只出现一次</strong>。拿"只采了一个样本"去估一个 token 的概率比，根本做不了有效的分布校正，只会<strong>灌进高方差噪声</strong> → 梯度估计不稳 → 长序列、尤其 MoE（路由让每步概率更抖）下<strong>训练直接崩</strong>。</p>
-<p>GSPO 的修法：<strong>奖励既然是给<u>整条</u>回答的，off-policy 校正和优化就也该在<u>整条序列</u>级别做</strong>。用整句的似然比当一个 <code>r_seq</code>，clip、加权、优化全在序列级。</p>
-<blockquote>
-<p>类比：给一篇作文打分，你不会<strong>逐字</strong>去纠"这个字该不该写"（噪声大、还自相矛盾），而是看<strong>整篇</strong>好坏来调。逐字微调是抖动，整篇判断才稳。</p>
-</blockquote>
-<figure style="margin:26px 0; padding:22px; background:#eef2f7; border:1px solid #9fb3c8; border-radius:4px;">
-<svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:JetBrains Mono,monospace;">
-  <line x1="360" y1="34" x2="360" y2="226" class="reveal d1" stroke="#bfb398" stroke-width="1" stroke-dasharray="5 4"/>
-  <!-- 左 GRPO token 级 -->
-  <text class="reveal d1" x="175" y="44" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#9b2c2c">GRPO · token 级</text>
-  <g class="reveal d2" font-size="9" text-anchor="middle">
-    <rect x="40" y="100" width="42" height="30" rx="3" fill="#faf4e1" stroke="#bfb398"/><text x="61" y="119" fill="#3a3128">y₁</text>
-    <rect x="92" y="100" width="42" height="30" rx="3" fill="#faf4e1" stroke="#bfb398"/><text x="113" y="119" fill="#3a3128">y₂</text>
-    <rect x="144" y="100" width="42" height="30" rx="3" fill="#faf4e1" stroke="#bfb398"/><text x="165" y="119" fill="#3a3128">y₃</text>
-    <rect x="196" y="100" width="42" height="30" rx="3" fill="#faf4e1" stroke="#bfb398"/><text x="217" y="119" fill="#3a3128">y₄</text>
-    <rect x="248" y="100" width="42" height="30" rx="3" fill="#faf4e1" stroke="#bfb398"/><text x="269" y="119" fill="#3a3128">y₅</text>
-  </g>
-  <!-- 每 token 一个抖动比率 -->
-  <g class="reveal d3" font-size="8.5" font-weight="700" fill="#9b2c2c" text-anchor="middle">
-    <text x="61" y="84">r₁=1.4</text><text x="113" y="84">r₂=0.6</text><text x="165" y="84">r₃=1.7</text><text x="217" y="84">r₄=0.5</text><text x="269" y="84">r₅=1.3</text>
-  </g>
-  <text class="reveal d3" x="175" y="162" text-anchor="middle" font-size="9.5" fill="#9b2c2c">每 token 一个比率，只采一次</text>
-  <text class="reveal d4" x="175" y="180" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#9b2c2c">高方差噪声 → 易崩（MoE 更甚）</text>
-  <!-- 右 GSPO 序列级 -->
-  <text class="reveal d4" x="545" y="44" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="14" font-weight="700" fill="#1a6a64">GSPO · 序列级</text>
-  <g class="reveal d5" font-size="9" text-anchor="middle">
-    <rect x="420" y="100" width="42" height="30" rx="3" fill="#cce5e1" stroke="#1a6a64"/><text x="441" y="119" fill="#0f4a45">y₁</text>
-    <rect x="472" y="100" width="42" height="30" rx="3" fill="#cce5e1" stroke="#1a6a64"/><text x="493" y="119" fill="#0f4a45">y₂</text>
-    <rect x="524" y="100" width="42" height="30" rx="3" fill="#cce5e1" stroke="#1a6a64"/><text x="545" y="119" fill="#0f4a45">y₃</text>
-    <rect x="576" y="100" width="42" height="30" rx="3" fill="#cce5e1" stroke="#1a6a64"/><text x="597" y="119" fill="#0f4a45">y₄</text>
-    <rect x="628" y="100" width="42" height="30" rx="3" fill="#cce5e1" stroke="#1a6a64"/><text x="649" y="119" fill="#0f4a45">y₅</text>
-  </g>
-  <!-- 一个序列级比率罩住 -->
-  <path class="reveal d6" d="M420,86 L670,86" stroke="#1a6a64" stroke-width="2"/>
-  <path class="reveal d6" d="M420,86 L420,94 M670,86 L670,94" stroke="#1a6a64" stroke-width="2"/>
-  <text class="reveal d6" x="545" y="80" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1a6a64">整条一个比率 r_seq（似然比，长度归一）</text>
-  <text class="reveal d6" x="545" y="162" text-anchor="middle" font-size="9.5" fill="#1a6a64">跟奖励同粒度（奖励本就给整条）</text>
-  <text class="reveal d6" x="545" y="180" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#1a6a64">低方差 → 稳，尤其救活 MoE RL</text>
-</svg>
-</figure>
-
-<h2>怎么做的</h2>
-<pre><code>GRPO（token 级）:  r_t = π_new(y_t | x, y_&lt;t) / π_old(y_t | x, y_&lt;t)   # 每个 token 各 clip
-GSPO（序列级）:    r_seq = ( π_new(y | x) / π_old(y | x) )^(1/|y|)      # 整条一个比率，长度归一
-                  loss = clip(r_seq, 1±ε) · A      # clip / 优化都在序列级
+<p>GSPO 沿用 GRPO 的组相对 advantage，但让整条回答共用一个长度归一的新旧策略比率，并在序列级做 clip；它修的是更新粒度，不是 reward 的来源。</p>
+<h2>GRPO 的 token 级比率并非“算错”，问题是粒度错位</h2>
+<p>在 outcome RL 中，一条回答通常只拿一个最终 reward，组相对 advantage <code>A_i</code> 也属于整条回答。但 GRPO 沿用 PPO，对每个 token 分别计算：</p>
+<pre><code class="language-text">ρ_i,t = π_θ(y_i,t | x,y_i,&lt;t) / π_old(y_i,t | x,y_i,&lt;t)
+</code></pre>
+<p>然后每个 <code>ρ_i,t</code> 各自 clip。于是同一条好回答里，某些 token 可能按 <code>1.2</code> 奖励，另一些按 <code>0.8</code> 或未截断值更新。若训练和推理引擎精度不同，或 MoE 路由让局部 log-prob 更敏感，个别 token 的比率波动会改变 clip 决策。</p>
+<p>GSPO 的思路是：既然奖惩对象是一条回答，就让更新幅度也属于整条回答。</p>
+<h2>序列比率公式逐项拆开</h2>
+<pre><code class="language-text">s_i(θ) = [π_θ(y_i|x) / π_old(y_i|x)]^(1/|y_i|)
+       = exp((1/|y_i|) Σ_t log ρ_i,t)
 </code></pre>
 <ul>
-<li><strong>A 还是 <a href="../concepts/grpo.html">grpo</a> 那个组相对 advantage</strong>（同 prompt 采 G 条、组内标准化）——GSPO 只改"重要性比率在哪一级"，不动 advantage 的算法。</li>
-<li><strong>长度归一</strong>（开 <code>1/|y|</code> 次方）让不同长度的序列比率可比，避免长序列比率指数爆/塌。</li>
-<li>好处：<strong>低方差、稳</strong>；显著<strong>稳住 MoE 的 RL 训练</strong>（token 级在 MoE 上尤其抖）；简化 RL 基建。Qwen3 / <a href="../papers/qwen3-asr.html">qwen3-asr</a> 的 RL 阶段用的就是它。</li>
+<li><code>y_i</code>：同一 prompt 的第 <code>i</code> 条完整回答。</li>
+<li><code>π(y_i|x)</code>：整条回答的似然，即各 token 条件概率连乘。</li>
+<li><code>s_i</code>：这条回答唯一的序列级重要性比率。</li>
+<li><code>|y_i|</code>：回答 token 数。</li>
+<li><code>1/|y_i|</code>：长度归一；把连乘后的总比率拉回“平均每 token”尺度。</li>
+<li><code>exp(mean(log ρ))</code>：与上式完全等价，也是 token 比率的几何平均，数值计算时更稳定。</li>
 </ul>
-<h2>举个数字例子 · 4 个 token 的回答</h2>
-<p>设一条回答 <code>y</code> 只有 4 个 token，列出新旧策略给每个 token 的概率，顺手算 token 级比率 <code>r_t = π_new/π_old</code>：</p>
-<table>
-<thead>
-<tr>
-<th>token</th>
-<th>π_old</th>
-<th>π_new</th>
-<th>r_t（token 级）</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>y₁</td>
-<td>0.5</td>
-<td>0.6</td>
-<td>1.20</td>
-</tr>
-<tr>
-<td>y₂</td>
-<td>0.4</td>
-<td>0.2</td>
-<td><strong>0.50</strong> ← 抖得最凶</td>
-</tr>
-<tr>
-<td>y₃</td>
-<td>0.6</td>
-<td>0.7</td>
-<td>1.17</td>
-</tr>
-<tr>
-<td>y₄</td>
-<td>0.5</td>
-<td>0.55</td>
-<td>1.10</td>
-</tr>
-</tbody>
-</table>
-<p><strong>GRPO（token 级）</strong>：每个 token 各拿自己的 <code>r_t</code> 去 clip + 更新。<code>y₂</code> 的 0.50 是个大摆动，还<strong>超出 clip 区间 [0.8, 1.2] → 被砍到 0.8</strong>，单这一个 token 就被狠推一下。一条回答里几个这种"只采一次、估不准"的 token，梯度就被搅得很抖。</p>
-<p><strong>GSPO（序列级）</strong>：先把整条似然乘起来，再开 <code>|y|</code> 次方：</p>
-<pre><code>P_old(y|x) = 0.5·0.4·0.6·0.5    = 0.0600
-P_new(y|x) = 0.6·0.2·0.7·0.55   = 0.0462
-raw 比      = 0.0462 / 0.0600    = 0.77
-r_seq = 0.77 ^ (1/4)            ≈ 0.94      # 开 4 次方 = 长度归一
+<p>GSPO 最大化：</p>
+<pre><code class="language-text">L = E[(1/G) Σ_i min(s_i A_i, clip(s_i,1−ε,1+ε) A_i)]
 </code></pre>
-<p><code>r_seq</code> 正好是 4 个 token 比率的<strong>几何平均</strong>：<code>(1.20·0.50·1.17·1.10)^(1/4) ≈ 0.94</code>。<strong>那个抖得最凶的 0.50，被另外三个正常 token 一揉，稀释成温和的 0.94</strong>——一个稳的比率罩住整条，跟"奖励本来就是给整条回答的"对上了。</p>
-<figure style="margin:26px 0; padding:22px; background:#eef2f7; border:1px solid #9fb3c8; border-radius:4px;">
-<svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;font-family:JetBrains Mono,monospace;">
-  <!-- clip 区间带 -->
-  <rect class="reveal d1" x="60" y="110" width="560" height="40" fill="#d8e6ce" opacity="0.5"/>
-  <text class="reveal d1" x="614" y="118" text-anchor="end" font-size="8.5" fill="#4a6b3a">clip 区间 [0.8, 1.2]</text>
-  <!-- baseline r=1 -->
-  <line class="reveal d1" x1="60" y1="130" x2="620" y2="130" stroke="#7a6f5d" stroke-width="1" stroke-dasharray="5 4"/>
-  <text class="reveal d1" x="64" y="126" font-size="8.5" fill="#7a6f5d">r = 1.0（新旧一样）</text>
-  <!-- token 级柱 -->
-  <g class="reveal d2">
-    <rect x="118" y="110" width="44" height="20" fill="#9b2c2c" opacity="0.5"/>
-    <text x="140" y="104" text-anchor="middle" font-size="9" font-weight="700" fill="#9b2c2c">1.20</text>
-  </g>
-  <g class="reveal d3">
-    <rect x="268" y="130" width="44" height="50" fill="#9b2c2c"/>
-    <text x="290" y="194" text-anchor="middle" font-size="9" font-weight="700" fill="#9b2c2c">0.50</text>
-    <line x1="262" y1="150" x2="318" y2="150" stroke="#9b2c2c" stroke-width="1.4" stroke-dasharray="3 2"/>
-    <text x="324" y="153" font-size="8" fill="#9b2c2c">← 被 clip 到 0.8，狠推一下</text>
-  </g>
-  <g class="reveal d4">
-    <rect x="418" y="113" width="44" height="17" fill="#9b2c2c" opacity="0.5"/>
-    <text x="440" y="107" text-anchor="middle" font-size="9" font-weight="700" fill="#9b2c2c">1.17</text>
-  </g>
-  <g class="reveal d4">
-    <rect x="538" y="120" width="44" height="10" fill="#9b2c2c" opacity="0.5"/>
-    <text x="560" y="114" text-anchor="middle" font-size="9" font-weight="700" fill="#9b2c2c">1.10</text>
-  </g>
-  <!-- token 标签 -->
-  <g class="reveal d2" font-size="9" fill="#3a3128" text-anchor="middle">
-    <text x="140" y="214">y₁</text><text x="290" y="214">y₂</text><text x="440" y="214">y₃</text><text x="560" y="214">y₄</text>
-  </g>
-  <text class="reveal d2" x="140" y="228" text-anchor="middle" font-size="8" fill="#9b2c2c">token 级：各推各的</text>
-  <!-- 序列级 r_seq 线 -->
-  <line class="draw d3" pathLength="1000" x1="110" y1="136" x2="590" y2="136" stroke="#1a6a64" stroke-width="2.6"/>
-  <text class="reveal d5" x="350" y="246" text-anchor="middle" font-family="Fraunces,serif" font-style="italic" font-size="12" font-weight="700" fill="#1a6a64">r_seq = 0.94（几何平均）→ 一个稳值罩整条，0.50 被揉化</text>
-</svg>
-</figure>
-
-<p><strong>为什么要开 <code>1/|y|</code> 次方（长度归一）</strong>：不归一的话，raw 比是所有 token 概率比的<strong>连乘</strong>，会随长度<strong>指数爆/塌</strong>——100 个 token 的连乘比可能小到 <code>1e-10</code>。开 <code>|y|</code> 次方把它拉回"平均每 token 的比率"尺度，不同长度的回答<strong>可比</strong>，长回答也不会因为长就被放大。</p>
-<h2>代码出处</h2>
+<p><code>A_i</code> 仍可按 <a href="../concepts/grpo.html">grpo</a> 从同题多回答 reward 算出。变化只在 <code>s_i</code>：整条回答一起放大、缩小或被 clip。</p>
+<h2>四个 token 的手算</h2>
+<p>若 token 比率为 <code>[1.10, 1.05, .90, 1.25]</code>：</p>
+<pre><code class="language-text">s = (1.10 × 1.05 × .90 × 1.25)^(1/4)
+  = 1.299375^(1/4)
+  ≈ 1.0677
+</code></pre>
+<p>不做 <code>1/4</code> 次方时，总比率是 <code>1.299375</code>，仅仅因为序列更长就更容易远离 1。长度归一以后，<code>1.0677</code> 可解释为平均每个 token 约提高 6.77%。若 <code>A_i=1</code>、clip 区间 <code>[.8,1.2]</code>，这条回答的目标贡献就是 <code>1.0677</code>；不会只因末 token 的 <code>1.25</code> 就让局部单独触发上侧 clip。</p>
+<p>这不是说异常 token “被证明是噪声”，而是用全序列的几何平均把局部波动合成一个共同更新尺度。好处是稳定，代价是失去逐 token 区分更新幅度的自由度。</p>
+<h2>为什么对 MoE 特别重要</h2>
+<p>MoE 每个 token 只激活部分专家。训练引擎与 rollout 引擎在精度、batch 划分或路由实现上的细小差异，可能使少数 token 的专家选择和 log-prob 更敏感。token 级 ratio / clip 会把这种局部差异直接变成不同的梯度截断；序列级聚合对此更宽容。Qwen 团队报告 GSPO 稳定了此前不稳定的 MoE RL，并可去掉 Routing Replay 等额外机制。</p>
+<p>这是论文和官方技术报告给出的机制解释与实验结果，不应外推为“所有 MoE 训练都必须用 GSPO”。</p>
+<h2>它没有改什么</h2>
 <ul>
-<li>概念性：把 GRPO 实现里逐 token 的 <code>ratio = exp(logp_new - logp_old)</code> 换成<strong>整条序列求和再除以长度</strong>：<code>ratio = exp((logp_new.sum() - logp_old.sum()) / len)</code>，clip 与加权改在序列维度</li>
-<li>来源：Qwen 团队 GSPO 论文（arXiv 2507.18071，2025）</li>
+<li>没有改 reward 的来源：仍可用规则或 reward model。</li>
+<li>没有自动去掉 critic：GSPO 论文沿用 group-relative advantage，但序列级 ratio 本身也可与别的 advantage 估计结合。</li>
+<li>没有解决全对 / 全错组的零 advantage；那是 <a href="../concepts/dapo.html">dapo</a> Dynamic Sampling 处理的问题。</li>
+<li>没有自动去掉 GRPO 的标准差 / 长度偏置；可另行结合 <a href="../concepts/dr-grpo.html">dr-grpo</a> 式修正。</li>
 </ul>
-<h2>链接</h2>
+<h2>来源与链接</h2>
 <ul>
-<li><a href="../concepts/grpo.html">grpo</a> · GSPO 的直接前身；只把 token 级比率换成序列级</li>
-<li><a href="../papers/ppo.html">ppo</a> · 重要性比率 + clip 的老家</li>
-<li><a href="../concepts/rl-for-llm-people.html">rl-for-llm-people</a> · 重要性采样 / off-policy 这些术语先在这打底</li>
-<li><a href="../papers/qwen3-asr.html">qwen3-asr</a> · RL 阶段用 GSPO 磨噪声鲁棒 + 转写稳定</li>
+<li><a href="https://arxiv.org/abs/2507.18071">GSPO 论文</a></li>
+<li><a href="https://qwenlm.github.io/zh/blog/gspo/">Qwen 官方中文解读</a></li>
+<li><a href="../topics/ppo-grpo-gspo.html">ppo-grpo-gspo</a> · 与 PPO / GRPO / Dr.GRPO / DAPO 放在同一数值例子中比较</li>
+<li><a href="../concepts/grpo.html">grpo</a> · 它继承的组相对 advantage</li>
+<li><a href="../papers/qwen3-asr.html">qwen3-asr</a> · GSPO 在语音后训练中的使用</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 3 处</span>
-  <ul><li><a href="../papers/qwen3-asr.html"><span class="cat">paper</span>Qwen3-ASR · 给 LLM 接个耳朵</a></li><li><a href="../concepts/grpo.html"><span class="cat">concept</span>GRPO · Group Relative Policy Optimization</a></li><li><a href="../concepts/softmax.html"><span class="cat">concept</span>Softmax · 一组实数压成概率分布 · 温度调软硬</a></li></ul>
+  <span class="label">引用此页的内容 · 6 处</span>
+  <ul><li><a href="../papers/ppo.html"><span class="cat">paper</span>PPO · Proximal Policy Optimization</a></li><li><a href="../papers/qwen3-asr.html"><span class="cat">paper</span>Qwen3-ASR · 给 LLM 接个耳朵</a></li><li><a href="../topics/ppo-grpo-gspo.html"><span class="cat">topic</span>PPO → GRPO → Dr.GRPO / DAPO → GSPO · LLM 强化学习算法地图</a></li><li><a href="../concepts/dapo.html"><span class="cat">concept</span>DAPO · Decoupled Clip and Dynamic Sampling Policy Optimization</a></li><li><a href="../concepts/grpo.html"><span class="cat">concept</span>GRPO · Group Relative Policy Optimization</a></li><li><a href="../concepts/softmax.html"><span class="cat">concept</span>Softmax · 一组实数压成概率分布 · 温度调软硬</a></li></ul>
 </div>
 
 <div class="colophon">

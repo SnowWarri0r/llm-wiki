@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Dr.GRPO · Group Relative Policy Optimization Done Right · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · dr-grpo</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Dr.GRPO · Group Relative Policy Optimization Done Right</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>Dr.GRPO 保留“同题多回答、减组均值”的无 critic 优势估计，但去掉<strong>除组内标准差</strong>和<strong>除每条回答实际长度</strong>，避免原始 GRPO 暗中重加权题目与回答。</p>
+<h2>它不是另一套 RL 循环</h2>
+<p><a href="../concepts/grpo.html">grpo</a> 的两次除法看似只是归一化：</p>
+<pre><code class="language-text">A_i = (R_i − group_mean) / group_std
+L_i = (1/response_length_i) × Σ_t token_loss(i,t)
+</code></pre>
+<p>但分母会改变样本的相对权重：<code>group_std</code> 小的题更新更重；长回答的每个 token 更新更轻。Dr.GRPO 改成：</p>
+<pre><code class="language-text">A_i^Dr = R_i − group_mean
+L_i^Dr = (1/M) × Σ_t token_loss(i,t)
+</code></pre>
+<p><code>M</code> 是所有样本共享的固定常数，例如最大生成 token 数。它只统一缩放整批梯度，不随单条回答长度变化。</p>
+<h2>两个数字立刻看懂</h2>
+<p>题 A 的 reward 为 <code>[1,1,0,0]</code>，正确回答的原 GRPO advantage 是 <code>(1−.5)/.5=1</code>。题 B 为 <code>[1,0,0,0]</code>，正确回答是 <code>(1−.25)/.433≈1.732</code>。除标准差以后，题 B 的这个正确样本天然被放大 73%。Dr.GRPO 分别得到 <code>.5</code> 和 <code>.75</code>，不再额外乘 <code>1/std</code>。</p>
+<p>再看长度：若 4-token 和 8-token 回答每个 token 的局部贡献都是 <code>1</code>，原始逐回答平均后两条的总目标都等于 <code>1</code>，但长回答每个 token 只有短回答一半权重。改用同一个 <code>M=16</code> 后，总目标分别是 <code>4/16=.25</code> 和 <code>8/16=.5</code>；每个 token 都是 <code>1/16</code>，不再因为住在长回答里就被摊薄。</p>
+<h2>边界</h2>
+<ul>
+<li>它去除的是 objective 中可分析的偏置，不保证回答一定变短或性能一定提高。</li>
+<li>它仍需同题多次采样，仍可能遇到全对 / 全错组没有梯度。</li>
+<li>“不除组标准差”也意味着不同 reward 标尺必须在上游设计得可比较。</li>
+</ul>
+<h2>来源与链接</h2>
+<ul>
+<li><a href="https://arxiv.org/abs/2503.20783">原论文</a></li>
+<li><a href="../topics/ppo-grpo-gspo.html">ppo-grpo-gspo</a> · 放回完整算法谱系和统一数值例子</li>
+<li><a href="../concepts/grpo.html">grpo</a> · 它修正的原始目标</li>
+<li><a href="../concepts/dapo.html">dapo</a> · 另一条处理长 CoT 训练问题的路线</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 5 处</span>
+  <ul><li><a href="../papers/ppo.html"><span class="cat">paper</span>PPO · Proximal Policy Optimization</a></li><li><a href="../topics/ppo-grpo-gspo.html"><span class="cat">topic</span>PPO → GRPO → Dr.GRPO / DAPO → GSPO · LLM 强化学习算法地图</a></li><li><a href="../concepts/dapo.html"><span class="cat">concept</span>DAPO · Decoupled Clip and Dynamic Sampling Policy Optimization</a></li><li><a href="../concepts/grpo.html"><span class="cat">concept</span>GRPO · Group Relative Policy Optimization</a></li><li><a href="../concepts/gspo.html"><span class="cat">concept</span>GSPO · Group Sequence Policy Optimization</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/dr-grpo.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

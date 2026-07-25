@@ -4,6 +4,7 @@ type: paper
 source: https://arxiv.org/abs/1707.06347
 upstream: https://arxiv.org/abs/1707.06347
 ingested: 2026-05-28
+updated: 2026-07-21
 authors: [John Schulman, Filip Wolski, Prafulla Dhariwal, Alec Radford, Oleg Klimov]
 year: 2017
 ---
@@ -11,65 +12,94 @@ year: 2017
 # PPO · Proximal Policy Optimization
 
 ## 一句话
-强化学习里**最关键也最容易翻车**的一件事是更新步子的大小 —— PPO 用一行 `clip` 把"别走太远"这个约束硬塞进 loss 里, **简单到能在 200 行代码内复现, 又稳到撑起了 ChatGPT 的对齐**。
+PPO 允许用同一批旧策略 rollout 做多轮小批量更新，同时用新旧动作概率比率的 clip 限制单轮策略变化；它把 TRPO 较复杂的受约束优化，换成了能直接交给 Adam 的代理目标。
 
-## 它要解决的痛点
+## 它要解决什么
 
-强化学习的基本设定: agent 跟环境互动, 每步选一个 action, 拿到 reward, 目标是让长期累计 reward 最大。**策略** π(a|s) 告诉 agent "在状态 s 下选 action a 的概率"。训练就是调 π 的参数 θ, 让好的 action 概率上升、坏的下降。
+策略梯度用已采样轨迹判断哪些动作应该更常出现。但 rollout 来自更新前的 `π_old`，训练时改的是 `π_θ`。如果新策略一步走得太远，旧数据对新策略的代表性快速下降，反复使用这批数据就会产生不稳定的大更新。
 
-**策略梯度** (policy gradient) 是最直接的训法: 算梯度 → 走一步 → 算梯度 → 走一步。但它有个致命缺陷 —— **步子大小决定生死**:
+TRPO 显式限制新旧策略的 KL 距离，但需要二阶近似、共轭梯度和线搜索。PPO 的 clipped 版本把“别走太远”直接写进目标函数，能用普通 minibatch SGD / Adam 优化。
 
-- 步子太小 → 训得太慢, 一个游戏要跑几亿帧
-- 步子太大 → 一更新 π 就跑偏, 收集的数据立刻不能用, 整个学习崩盘
+## 核心公式逐项解释
 
-具体崩在哪? 因为你收集 rollout 时用的是**老的策略 π_old**, 算 gradient 用的是**新的策略 π_new**。如果 π_new 离 π_old 太远, 那些 rollout 描述的"在 π_old 下哪些 action 好"对 π_new 就完全不适用了。**数据失效, 训练崩盘**。
+```text
+L_CLIP(θ) = E_t[min(ρ_t(θ) A_t,
+                    clip(ρ_t(θ),1−ε,1+ε) A_t)]
 
-之前的解法是 **TRPO** (Schulman 2015): 加一个 KL 散度约束 `KL(π_new ‖ π_old) ≤ δ`, 强制每步不能跑太远。理论漂亮, 但工程上要做共轭梯度 + 线搜索, 复杂、慢、跟现代深度学习框架不亲。
+ρ_t(θ) = π_θ(a_t|s_t) / π_old(a_t|s_t)
+```
 
-**PPO 的回答**: 不用 KL 约束, 不用共轭梯度, 就一行 `torch.clamp` —— 把新老策略的概率比值卡在 `[1-ε, 1+ε]` (ε 一般 0.2) 之间。**简单粗暴, 效果跟 TRPO 接近, 且能跑 Adam**.
+- `s_t`：第 `t` 步的状态；LLM 中是 prompt 加已生成前缀。
+- `a_t`：这一步实际采到的动作；LLM 中是下一个 token。
+- `π_old`：收集 rollout 时冻结的旧策略。
+- `π_θ`：当前正在训练的新策略，`θ` 是模型参数。
+- `ρ_t`：新旧策略给同一已采动作的概率比。大于 1 表示新策略提高了它的概率。
+- `A_t`：advantage，表示这个动作比当前状态的平均预期好多少；正数应提高概率，负数应降低。
+- `ε`：clip 宽度，论文常用 `.1` 或 `.2` 一类的小值。
+- `E_t`：对采样时间步求平均。
 
-## 核心贡献
+若 `A_t>0` 且 `ρ_t` 已超过 `1+ε`，继续提高这个动作概率不再增加代理目标；若 `A_t<0` 且比率跌破 `1−ε`，继续压低也不再获益。`min` 会在不同 advantage 符号下自动取到更保守的一边。
 
-1. **Clipped surrogate objective** —— PPO 的核心。把"新老策略别差太远"这个约束**直接写进 loss**, 不需要拉格朗日乘子, 不需要 KL 约束。
-   
-   $$L^{CLIP}(\theta) = \mathbb{E}_t \left[ \min(r_t(\theta) A_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) A_t) \right]$$
-   
-   其中 $r_t = \pi_{new}(a_t|s_t) / \pi_{old}(a_t|s_t)$ 是新老策略概率比, $A_t$ 是优势函数
+clip 截断的是**目标函数中的收益**，不是直接把参数、概率或梯度硬裁到某个区间；因此 PPO 仍应监控实际 KL，clip 也不构成严格的 KL 上界。
 
-2. **Sample efficiency 大幅提升**: 同一批 rollout 数据可以**反复跑 K 个 epoch** (论文用 K=3-10), 不像 vanilla 策略梯度只能用一次扔掉。因为 clip 保证了 π_new 不会跑太远, 所以老数据还能用
+## PPO 不只是一条 clip
 
-3. **跟现代深度学习无缝集成**: 用标准 Adam 优化器 + minibatch SGD, 不需要任何特殊数值方法, 一个 PyTorch programmer 一下午就能复现
+常见 PPO 是 actor-critic 系统：
 
-4. **跨任务的鲁棒性**: 同一套超参数在 MuJoCo 连续控制、Atari 离散控制、Roboschool 多任务上都能跑得动 —— 这是 RL 算法少见的"开箱即用"
+1. actor `π_θ` 选择动作。
+2. critic `V_φ(s_t)` 预测从当前状态继续的未来回报。
+3. [[gae]] 用多步 TD 误差估计 `A_t`。
+4. actor 优化 clipped policy objective。
+5. critic 用 return 回归 value；另加 [[entropy-regularization]] 保持探索。
 
-## 跟 LLM 的关系
+LLM RLHF 还常加入相对冻结 reference policy 的 KL 惩罚，防止模型为追 reward 远离原有语言分布。critic、reward model、reference model 是三个不同角色。
 
-PPO 在 LLM 圈被**疯狂使用**的地方是 [[rlhf]] (Reinforcement Learning from Human Feedback):
+## 为什么能复用同一批数据
 
-- **InstructGPT** (OpenAI 2022): 用 PPO 让 GPT-3 学会跟人类偏好对齐, 直接造就了 ChatGPT
-- **GPT-4 alignment**: PPO 是核心
-- **Claude / Llama / Qwen / DeepSeek 的 chat 模型**: PPO 或其变种 (DPO / GRPO) 几乎都用
+普通 on-policy policy gradient 往往更新一次就丢掉 rollout。PPO 对同一批数据跑多个 minibatch epoch；训练中 `π_θ` 逐渐离开采样时的 `π_old`，`ρ_t` 追踪这段变化，clip 抑制过度利用。它不能让旧数据永久有效：epoch 太多时，大量 token 都进入 clip 区间，继续训练既偏离 on-policy，又得不到有用目标增益。
 
-你已经在 [[fish-speech-s2-pro]] 里见过 [[grpo]] —— **GRPO 是 PPO 的简化版本**, DeepSeek 2024 提出, 干掉了 PPO 里的 value network, 用一组样本的相对得分直接当 advantage。本质还是 PPO 那套思想。
+## 到 LLM：token 就是 action
 
-## 关键概念 → 概念页链接
+在自回归生成里：
 
-- [[policy-gradient]] · 策略梯度, RL 的基础
-- [[clipped-surrogate-objective]] · PPO 的核心创新 (一行 clip)
-- [[advantage-function]] · 比 raw reward 信号更稳的"超出预期多少"
-- [[actor-critic]] · PPO 跑在其上的双网络结构 (clip 只是 actor 那半)
-- [[gae]] · 把优势算得又稳又准的 λ 插值法 (工程上比 clip 还关键)
-- [[entropy-regularization]] · 完整 loss 的第三项, 防过早笃定
-- [[rlhf]] · PPO 在 LLM 端的杀手级应用
-- [[grpo]] · PPO 的后继简化版, 你已经熟悉的
+```text
+state  s_t = (prompt, 已生成 token y_<t)
+action a_t = 下一个 token y_t
+policy π   = LLM 的 next-token 概率分布
+episode    = 一条完整回答
+```
 
-## 我的批注 / 疑问
+InstructGPT 明确使用 PPO 做 RLHF，是 PPO 进入大模型后训练的代表案例。后来的模型是否使用哪种算法，应以公开技术报告为准，不能仅凭行业惯例推断。
 
-- **PPO 真正的价值不在数学**, 在工程稳定性。同期还有 ACER、A3C、ACKTR 等算法, 论文里说自己"on par" with state-of-the-art, 但**实际工程界几乎都选了 PPO**, 因为它最稳、最少需要调参。这跟 ResNet 在 CNN 里、Transformer 在 NLP 里的地位类似 —— "不是最聪明, 是最能 work"
-- **clip 这个 trick 看起来朴素**, 但隐含的设计哲学是: **当你不知道精确解时, 给一个粗暴但够用的近似**。TRPO 是精确解 (KL 约束 + 求精确 step size), PPO 是粗暴近似 (clip)。**结果工程上反而是粗暴的赢了**, 因为它简单到 (1) 没 bug (2) 能跑大数据 (3) 能跟现代优化器组合。一个迷你版的 bitter lesson
-- 现在 (2024-2025) PPO 在 LLM 端逐渐被 **DPO** (Direct Preference Optimization) 替代 —— DPO 用对比学习的思路直接 skip 掉 reward model, 训练更稳。但 DPO 跟 PPO 不是冲突, 是接力 —— 大模型 alignment 用 DPO 多, 但需要 online 探索的场景 (比如 GRPO 在 reasoning 训练) 还是 PPO 系
-- 一个误解: 很多人以为 "PPO = clipped objective". 实际上 PPO 论文给了两个版本, "clipped" 和 "KL penalty", **clipped 版本简单且效果稍好, 所以工程界几乎都用 clipped**。论文里的 KL penalty 版本基本没人提
-- 工程坑: PPO 训练时 "advantage 怎么算" 比 "clip" 本身重要得多。GAE (Generalized Advantage Estimation) 是 PPO 的标配, 但调好 λ 参数 (一般 0.95) 需要经验
-- **"PPO = clip" 是只看了一半**: clip 是 actor 那半, 但 PPO 跑在 [[actor-critic]] 结构上 —— 还有个 critic 在用监督回归估 V, [[gae]] 拿它算优势, 完整 loss 是**三项**(clip 策略项 + 价值回归项 + [[entropy-regularization]] 熵项), 不是论文公式里那一个 $L^{CLIP}$。少了 critic 优势没法算, 少了熵项策略容易过早确定化 —— 自己动手训过才会发现, clip 只是冰山一角
-- 训练实战体感 (论文不写但一跑就懂): ① RL 的 `loss` 不代表学得好坏 (跟监督学习直觉相反), 要看 reward 走势; ② `explained_variance` 是 critic 的成绩单 (0→1 越准); ③ 奖励数值太大会淹没熵奖励 → 熵秒崩 → 策略躺平, 所以要奖励归一化; ④ on-policy 怕经验单一, 多开并行环境收集去相关的数据; ⑤ 没收敛的策略别用 deterministic (argmax) 评估, 会低估它 —— 该用随机采样
-- 疑问: PPO 的 KL 散度约束做不到精确边界 —— `clip(r, 1-ε, 1+ε)` 只保证概率比值有界, 但不保证 KL 有界。**为什么这种"近似 trust region" 反而工程上够用**? 看起来跟梯度下降的"局部线性近似"是一脉相承的: 在小邻域内, 近似就足够准
+## GRPO / Dr.GRPO / DAPO / GSPO 跟 PPO 的关系
+
+它们共享“在线采样 + advantage 加权 + 限制策略变化”的骨架，但修改不同部位：
+
+| 算法 | 相对 PPO 的主要变化 |
+|---|---|
+| [[grpo]] | 去掉 critic，用同题多回答的组内相对 reward 估 advantage；仍保留 token 级 ratio 和 clip |
+| [[dr-grpo]] | 去掉 GRPO 的组标准差归一化与逐回答长度归一化，修题目难度和长度偏置 |
+| [[dapo]] | 为长 CoT 增加非对称 clip、动态采样、token 级 loss 汇总和超长软惩罚 |
+| [[gspo]] | advantage 可继续组内互比，但把 ratio 与 clip 从 token 级提升到序列级 |
+
+完整公式、同一组数字手算和选型见 [[ppo-grpo-gspo]]。
+
+[[direct-preference-optimization]] 则是另一条路线：使用离线偏好对直接优化策略，不进行 PPO 式在线 rollout。它不是“更先进的 PPO”，适用数据和能力边界不同。
+
+## 论文贡献与边界
+
+- PPO 原论文提出 clipped surrogate 和 adaptive KL penalty 两个版本；工程界更常提 clipped 版本。
+- 论文在模拟机器人、Atari 等任务上比较了样本复杂度和实现便利性；它不是 LLM 论文。
+- PPO 的稳定性来自目标、advantage 估计、value loss、熵、batch、学习率等整套配方，不能把所有效果归因于一行 `clip`。
+- LLM 长序列、终局 reward、大模型 critic 成本和训推引擎差异，催生了后续 GRPO 系修改；这些不是原 PPO 论文已经解决的问题。
+
+## 链接
+
+- [[ppo-grpo-gspo]] · PPO 家族完整地图
+- [[policy-gradient]] · 从 `∇logπ · reward` 开始
+- [[clipped-surrogate-objective]] · clip 的正负 advantage 四种情况
+- [[advantage-function]] · baseline 为何降方差
+- [[actor-critic]] · policy 与 value 两套职责
+- [[gae]] · 多步 advantage 估计
+- [[rlhf]] · PPO 在语言模型对齐中的使用
+- [[rl-for-llm-people]] · 用 LLM 术语补齐 RL 基础
