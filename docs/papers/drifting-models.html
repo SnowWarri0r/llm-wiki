@@ -293,6 +293,7 @@ figcaption b{color:var(--rust)}
     <div class="norm"><b>GEOMETRIC MEAN</b><span class="math">A=\sqrt{A_{row}A_{col}}</span>，两边都认可才高。</div>
   </div>
 </figure>
+<p><b>左上角这一格怎么从 0 变成 .802：</b>行 softmax 把第 1 行 <code>[0,−1]</code> 归一成 <code>[.731,.269]</code>（这一行里它更信候选 1）；列 softmax 把第 1 列 <code>[0,−2]</code> 归一成 <code>[.881,.119]</code>（这一列里候选 1 也没被别人抢）；两个都高，几何平均 <code>√(.731×.881)=.802</code> 才高。若只有行高、列被抢（列值低），几何平均就被拉下来——这正是「防止一堆查询点全挤向同一个候选」的机制。</p>
 <p>论文消融：只按候选方向归一化 FID <code>8.92</code>，行列都归一化 <code>8.46</code>，完全不归一化 <code>10.54</code>。官方代码还用 float32 算距离、同时使用三个温度，并对目标和力做 stop-gradient。</p>
 </section>
 

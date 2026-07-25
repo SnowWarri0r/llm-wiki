@@ -252,13 +252,14 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 </div>
 <p>两套去噪器把干净预测换成 score<a class="jr" href="#g-02">2</a>：</p>
 <div class="formula math" data-display="true">s(x_t,t)=\nabla_{x_t}\log p_t(x_t)=-\frac{x_t-\alpha_t\mu(x_t,t)}{\sigma_t^2}</div>
+<p class="formula-note">为什么是这个式子：给定干净图，加噪后的 <code>xₜ</code> 是个高斯（均值 <code>αx</code>、方差 <code>σ²</code>），score 就是它对数密度的坡度 <code>−(xₜ−αx)/σ²</code>，把 <code>x</code> 换成去噪估计 <code>μ</code> 即得；逐步推导见 <a href="dmd.html">DMD</a>。</p>
 <div class="symbol-grid">
   <div class="symbol"><code>pt(xt)</code>第 t 个噪声尺度下，xt 附近的概率密度。</div><div class="symbol"><code>μ(xt,t)</code>扩散去噪器预测的干净样本。</div>
   <div class="symbol"><code>∇xt log pt</code>对带噪输入逐元素求导；得到“往哪改”的方向张量。</div><div class="symbol"><code>σt²</code>当前噪声方差，把不同噪声尺度的残差换到对应单位。</div>
 </div>
 <p class="formula-purpose">DMD 梯度：同一带噪位置上，用学生分布 score 减目标分布 score。</p>
 <div class="formula math" data-display="true">\begin{aligned}\nabla_\theta\mathcal L_{\rm DMD}&=\mathbb E_t\!\Bigl[\left(s_{\rm fake}(x_t,t)-s_{\rm real}(x_t,t)\right)\\[-2pt]&\qquad\cdot\frac{\partial G_\theta(z)}{\partial\theta}\Bigr]\end{aligned}</div>
-<p>梯度下降本身还会再取一次负号，所以最终效果是：学生图被引力吸向 <code>sreal</code>（更真），同时被斥力推离自己已经扎堆的那些画法。完整推导见 <a href="dmd.html">DMD</a>。</p>
+<p>为什么梯度正好是两套 score 之差？因为目标是缩小学生分布到目标分布的<strong>反向 KL</strong>，对它求导时会冒出一项「<code>p_fake</code> 自己也随 θ 变」的东西，但它对整批样本一平均恒等于 0（总概率永远是 1），于是只剩 <code>s_fake−s_real</code> 乘生成器那截导数。梯度下降再取一次负号，最终效果就是：学生图被引力吸向 <code>sreal</code>（更真），同时被斥力推离自己已经扎堆的那些画法。逐步推导见 <a href="dmd.html">DMD</a>。</p>
 <p class="formula-purpose">原来那根稳定绳：同一份噪声 z，要去逼近老师多步跑出来的那张指定图 y。</p>
 <div class="formula math" data-display="true">\mathcal L_{\rm reg}=\mathbb E_{(z,y)}\!\left[d\!\left(G_\theta(z),y\right)\right]</div>
 <figure><figcaption><span>Fig 02 · 配对回归的两笔账</span><b>拴住了路径，也压低了天花板</b></figcaption>
