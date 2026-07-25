@@ -1,8 +1,8 @@
 ---
 name: swiglu
 type: concept
-sources: [dit, krea-2]
-updated: 2026-06-24
+sources: [dit, krea-2, drifting-models]
+updated: 2026-07-22
 ---
 
 # SwiGLU · 带门的 FFN
