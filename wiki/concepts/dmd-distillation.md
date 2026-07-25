@@ -1,8 +1,8 @@
 ---
 name: dmd-distillation
 type: concept
-sources: [dmd, dmd2, qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2, drifting-models]
-updated: 2026-07-22
+sources: [dmd, dmd2, senseflow, qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2, drifting-models]
+updated: 2026-07-24
 ---
 
 # DMD 蒸馏 · 匹配整批图像，不逐步临摹老师
@@ -57,18 +57,20 @@ L_{\mathrm{pseudo}}=\tfrac12
 
 若 `x=1.2, g=-1.6`，冻结目标为 `2.8`，所以 `dL/dx=1.2-2.8=-1.6`，与预先算好的 `g` 完全一致。去掉 stopgrad 后左右两个 `x` 一起动，梯度会抵消。
 
-## 原始 DMD、DMD2、TDM 的边界
+## 原始 DMD、DMD2、SenseFlow、TDM 的边界
 
 | 方法 | 匹配位置 | 原始回归配对集 | 典型步数 |
 |---|---|---|---|
 | DMD | 最终生成分布 | 需要，用来稳定和防漏模式 | 论文为 1 步 |
 | DMD2 | 最终生成分布 | 主方法去掉大规模配对集；用 fake-score 高频更新与 GAN 补强。SDXL 一步仍用 10K 对短暂预热 | 1 步或多步 |
+| SenseFlow | 同一 DMD2 主线 | 沿用无大规模配对主线；IDA 缩短 fake 追踪差、ISG 补段内时间监督、VFM 判别器补语义 | 主文为 4 步，附录扩到 2/1 步 |
 | TDM | 去噪轨迹多个时刻的分布 | 取决于具体实现 | 灵活少步 |
 
 ## 链接
 
 - [[dmd]] · 原论文完整公式、算法、配方、消融和局限
 - [[dmd2]] · 去配对回归、5:1 fake-score 更新、真实图 GAN 与 backward simulation
+- [[senseflow]] · 为什么 DMD2 搬到 8B / 12B flow 模型会失稳，以及 IDA / ISG / VFM 三处修补
 - [[score-function]] · 对数密度梯度为什么是修改方向
 - [[entropy-kl]] · DMD 最小化的反向 KL
 - [[pushforward-distribution]] · 学生输出分布怎样由噪声和生成器共同决定

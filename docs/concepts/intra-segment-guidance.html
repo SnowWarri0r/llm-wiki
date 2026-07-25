@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>ISG · 让一个稀疏 anchor 代表整段去噪区间 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · intra-segment-guidance</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>ISG · 让一个稀疏 anchor 代表整段去噪区间</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>ISG（Intra-Segment Guidance，段内引导）在相邻两个少步 anchor 之间随机抽一个中间时刻，用“老师走前半段、学生走后半段”的路线，监督学生一次跨完整段的直接跳转。</p>
+<h2>为什么固定四个时间点还不够</h2>
+<p>四步生成器只在四个 coarse timestep 上接受监督。例如 SD 3.5 Large 使用 <code>{.25,.5,.75,1.0}</code>。但老师在相邻时间点上的重建能力并不平滑：SenseFlow 测得的一步重建误差会局部振荡，尤其在高噪声的 <code>.8–1.0</code> 区间。</p>
+<p>所以一个手工选中的 anchor 可能恰好落在老师不可靠的位置；而两个 anchor 之间的大量时间点完全没有直接把信息送给学生。</p>
+<h2>三条路线</h2>
+<p>设当前段是 <code>τ_i→τ_{i-1}</code>：</p>
+<ol>
+<li>随机抽 <code>t_mid∈(τ_{i-1},τ_i)</code>；</li>
+<li>冻结老师，从 <code>x_{τ_i}</code> 走到 <code>x_{t_mid}</code>；</li>
+<li>冻结这条目标支路里的学生，从 <code>x_{t_mid}</code> 再走到 <code>x_tar</code>；</li>
+<li>活跃的学生从 <code>x_{τ_i}</code> 直接一步走到 <code>x_{τ_{i-1}}</code>；</li>
+<li>让直接结果贴近 <code>stopgrad(x_tar)</code>。</li>
+</ol>
+<p>正式目标是：</p>
+<div class="tex math-display" data-display="true">\mathcal L_{\mathrm{ISG}}^{(i)}
+=\mathbb E_{\epsilon,t_{\mathrm{mid}}}
+\left[
+\left\|
+x_{\tau_{i-1}}-\operatorname{stopgrad}(x_{\mathrm{tar}})
+\right\|_2^2
+\right].</div>
+<ul>
+<li><code>i</code>：当前是哪一段；</li>
+<li><code>τ_i</code>：这段的高噪声端；</li>
+<li><code>τ_{i-1}</code>：这段的低噪声端；</li>
+<li><code>t_mid</code>：段内随机采样的中间时刻；</li>
+<li><code>x_{τ_{i-1}}</code>：学生直接跨完整段得到的结果；</li>
+<li><code>x_tar</code>：老师走前半段、学生走后半段得到的目标；</li>
+<li><code>stopgrad</code>：目标数值参与比较，但目标支路不接收梯度；</li>
+<li><code>E</code>：不断更换噪声和中间时刻后取平均。</li>
+</ul>
+<h2>一维数字例</h2>
+<p>取 <code>τ_i=.75、t_mid=.60、τ_{i-1}=.50、x_{τ_i}=.20</code>。为方便手算，把速度都当常数。</p>
+<pre><code class="language-text">老师前半段速度 vr = -2.0
+xmid = .20 + (.60-.75)×(-2.0)
+     = .50
+
+目标支路的学生速度 vG(mid) = -1.5
+xtar = .50 + (.50-.60)×(-1.5)
+     = .65
+
+学生直接跨段速度 vG(anchor) = -1.0
+xdirect = .20 + (.50-.75)×(-1.0)
+        = .45
+
+LISG = (.45-.65)² = .04
+</code></pre>
+<p>反向传播只推动直接路线的 <code>.45</code> 靠近冻结目标 <code>.65</code>。下次训练会重新采 <code>t_mid</code>，于是同一个 anchor 逐渐吸收整段里不同位置的信息。</p>
+<h2>一个容易误读的地方</h2>
+<p><code>x_tar</code> 不是“老师独自跑完整段”的答案。老师只走 <code>τ_i→t_mid</code>，后半段仍由学生完成，只是这条目标支路被 <code>no_grad / stopgrad</code> 冻结。这样既把老师的局部行为带进来，又避免要求学生严格复刻老师完整轨迹。</p>
+<p>论文公式写平方 L2；2026-07-24 检查到的官方代码 commit <code>fafc81b7</code> 使用平滑绝对误差：</p>
+<div class="tex math-display" data-display="true">\sqrt{(x_{\mathrm{direct}}-x_{\mathrm{tar}})^2+10^{-6}}-10^{-3}.</div>
+<p>它在误差很小时平滑，在误差很大时更接近绝对值，对异常大误差没有平方损失那么敏感。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/senseflow.html">senseflow</a> · ISG 在完整 SenseFlow 训练循环里的位置</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · <code>x_next=x+Δt·v</code> 的速度场更新</li>
+<li><a href="../papers/dmd2.html">dmd2</a> · backward simulation 解决的是训练输入与少步推理输入错位，和 ISG 的职责不同</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/senseflow.html"><span class="cat">paper</span>SenseFlow · DMD2 扩到 SD 3.5 与 FLUX，为什么突然训不动了</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/intra-segment-guidance.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

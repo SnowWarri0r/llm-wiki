@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>VFM 判别器 · 冻结视觉骨干，只训练轻量真假头 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · vfm-discriminator</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>VFM 判别器 · 冻结视觉骨干，只训练轻量真假头</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>VFM 判别器把 DINOv2 这类视觉基础模型当作冻结的“特征显微镜”，再训练小型判别头判断生成图是否逼真、是否符合文字以及是否接近真实参考图。</p>
+<h2>为什么不用从零训练判别器</h2>
+<p>普通 GAN 判别器要一边学习“图片里有什么”，一边学习“哪里像假图”。大模型蒸馏时，生成器变化快、图像语义复杂，从零训练的判别器可能先学会低级纹理捷径，给不出稳定的语义反馈。</p>
+<p>SenseFlow 把职责拆开：</p>
+<ul>
+<li>冻结 DINOv2：提取多层空间视觉特征；</li>
+<li>冻结 CLIP 文本编码器：把 prompt 变成文字条件；</li>
+<li>真实参考图也过 DINOv2：提供真实图特征；</li>
+<li>只训练每一层后面的轻量卷积判别头。</li>
+</ul>
+<h2>数据流</h2>
+<div class="tex math-display" data-display="true">D(x,c,r)=h\!\left(f_{\mathrm{VFM}}(x),c,r\right)</div>
+<ul>
+<li><code>x</code>：待判断的生成图或真实图；</li>
+<li><code>f_VFM(x)</code>：冻结 DINOv2 提取的多层特征；</li>
+<li><code>c=f_CLIP(text)</code>：冻结 CLIP 生成的文字条件；</li>
+<li><code>r=f_VFM(x_ref)</code>：真实参考图经过同一 DINOv2 得到的特征；</li>
+<li><code>h</code>：可训练的判别头；</li>
+<li><code>D</code>：输出的真假 logit；数值越高越偏向“真实且匹配”。</li>
+</ul>
+<p>SenseFlow v2 附录专门更正：参考图特征 <code>r</code> 来自 DINOv2，不是正文早先写的 CLIP 图像编码器。</p>
+<h2>Hinge loss 怎么工作</h2>
+<p>判别器目标：</p>
+<div class="tex math-display" data-display="true">\mathcal L_D
+=\mathbb E_{\mathrm{real}}\!\left[\max(0,1-D(x_{\mathrm{real}}))\right]
++\mathbb E_{\mathrm{fake}}\!\left[\max(0,1+D(x_{\mathrm{fake}}))\right].</div>
+<p>真实图希望 <code>D≥1</code>，假图希望 <code>D≤-1</code>。已经越过安全边界的样本损失为 0，不再继续把 logit 推到无穷大。</p>
+<p>若 <code>D(real)=.4、D(fake)=-.2</code>：</p>
+<pre><code class="language-text">真实项 = max(0,1-.4)  = .6
+假图项 = max(0,1-.2)  = .8
+总损失 = 1.4
+</code></pre>
+<p>生成器则最小化 <code>-D(x_fake)</code>，也就是努力把假图 logit 调高。</p>
+<h2>SenseFlow 的时间权重</h2>
+<p>带噪图在高噪声时刻不可靠，GAN 信号不能压过 DMD。SenseFlow 使用：</p>
+<div class="tex math-display" data-display="true">\omega(t)=(1-\sigma_t)^2=\alpha_t^2,\qquad
+\mathcal L_G^{\mathrm{adv}}=-\omega(t)\,\mathbb E[D(x_{\mathrm{fake}})].</div>
+<p>若 <code>σ=.8</code>，权重只有 <code>.04</code>；若 <code>σ=.2</code>，权重为 <code>.64</code>。越接近干净图，判别器越值得信；越接近纯噪声，主要依靠 DMD 方向。</p>
+<h2>工程边界</h2>
+<p>官方 SD 3.5 Large 实现使用 DINOv2 ViT-L/14 的 7 层特征和可微颜色、平移、cutout 增强，只优化判别头。更大的 VFM 并不单调更好：论文附录中 ViT-B 的 FID-T 最好，ViT-S 的 CLIP / ImageReward 更高，ViT-L 只在部分人偏好指标略强。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/senseflow.html">senseflow</a> · VFM 判别器与 DMD、IDA、ISG 的组合</li>
+<li><a href="../papers/dmd2.html">dmd2</a> · DMD2 原来的扩散骨干判别头</li>
+<li><a href="../papers/dino.html">dino</a> · DINO 系列如何用自监督学视觉表征</li>
+<li><a href="../concepts/hinge-loss.html">hinge-loss</a> · margin 与生成器/判别器两个方向</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/senseflow.html"><span class="cat">paper</span>SenseFlow · DMD2 扩到 SD 3.5 与 FLUX，为什么突然训不动了</a></li><li><a href="../concepts/hinge-loss.html"><span class="cat">concept</span>Hinge Loss · 过了安全边界就不再追</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/vfm-discriminator.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

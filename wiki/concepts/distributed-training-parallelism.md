@@ -1,8 +1,8 @@
 ---
 name: distributed-training-parallelism
 type: concept
-sources: [krea-2, cosmos-3, qwen3-vl-report]
-updated: 2026-07-22
+sources: [krea-2, cosmos-3, qwen3-vl-report, senseflow]
+updated: 2026-07-24
 ---
 
 # 分布式训练并行 · 模型、数据和长序列分别怎么切

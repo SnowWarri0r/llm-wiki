@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>IDA · 每次学生更新后，让 fake 网络先跟进一小步 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · implicit-distribution-alignment</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>IDA · 每次学生更新后，让 fake 网络先跟进一小步</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>IDA（Implicit Distribution Alignment，隐式分布对齐）不是直接混合两套概率分布，而是把 <strong>fake 网络参数向刚更新的生成器参数插值一小步</strong>，减轻 DMD 内循环追不上移动学生的问题。</p>
+<h2>它先解决哪个问题</h2>
+<p>DMD / DMD2 同时训练：</p>
+<ul>
+<li>生成器 <code>G_θ</code>，它决定当前学生分布 <code>p_g</code>；</li>
+<li>fake 网络 <code>μ_φ</code>，它要估计当前学生分布的 score。</li>
+</ul>
+<p>生成器一更新，<code>p_g</code> 就移动。fake 网络若仍描述上一版学生，<code>s_fake-s_real</code> 就会给生成器一根过时的梯度。DMD2 的 TTUR 让 fake 网络在生成器两次更新之间多训练几次；模型扩大到 SD 3.5 Large 和 FLUX 后，SenseFlow 发现即使把频率提到 20:1，训练仍会振荡或坍塌。</p>
+<h2>公式逐项拆开</h2>
+<div class="tex math-display" data-display="true">\phi\leftarrow\lambda\phi+(1-\lambda)\theta,\qquad 0&lt;\lambda\le 1</div>
+<ul>
+<li><code>θ</code>：刚完成一次更新的生成器参数张量；</li>
+<li><code>φ</code>：更新前的 fake 网络参数张量；</li>
+<li><code>λ</code>：保留多少旧 fake 参数；</li>
+<li><code>1-λ</code>：从生成器参数复制多少新变化；</li>
+<li><code>←</code>：把右边算出的新值写回 <code>φ</code>，生成器 <code>θ</code> 本身不在这一步改变。</li>
+</ul>
+<p>SenseFlow 的 SD 3.5 Large 官方代码使用 <code>λ=.97</code>。这意味着 fake 网络保留 97% 自己的参数，再混入 3% 生成器参数。它随后仍会照常接受去噪损失更新；IDA 只是 generator step 后的一次额外校正。</p>
+<h2>一维数字例</h2>
+<p>把整套网络缩成一个参数：</p>
+<pre><code class="language-text">更新后的生成器参数 θ = 2.000
+更新前的 fake 参数  φ = 1.500
+λ = .97
+
+φnew = .97×1.500 + .03×2.000
+     = 1.455 + .060
+     = 1.515
+</code></pre>
+<p>参数差从 <code>|2−1.5|=.5</code> 变成 <code>|2−1.515|=.485</code>。单次只缩小一点，是因为生成器参数只在稀疏 anchor 上接受监督，不能把 fake 网络整个覆盖掉；fake 网络还要靠自己的稠密时间步训练，继续学习完整的学生噪声分布。</p>
+<h2>为什么相同形状的参数可以插值</h2>
+<p>SenseFlow 的生成器和 fake 网络都从同一个扩散 / flow teacher 复制出来，采用相同的时间条件速度网络结构。生成器虽然只在少数 anchor 时间步获得梯度，仍然可以在任意 <code>t</code> 上前向；所以参数坐标具有对应关系，能够逐元素插值。</p>
+<p>这不是“生成权重突然变成 score 权重”。两边本来就是同结构、同初始化的时间条件网络；区别在于训练职责：</p>
+<ul>
+<li>生成器在少数步上学会完成大跨度跳转；</li>
+<li>fake 网络在稠密时间步上拟合生成器当前诱导的分布；</li>
+<li>IDA 只把生成器最近学到的一小部分变化转给 fake 网络。</li>
+</ul>
+<h2>理论边界</h2>
+<p>SenseFlow 证明的是：在参数到速度场局部 Lipschitz、生成器步长趋近于零、score 与速度误差能控制 KL 等假设下，IDA 可让 <code>p_f</code> 成为 <code>p_g</code> 的 <code>ε-best response</code>。这不是“权重接近必然等于分布相同”的无条件定理；离开这些假设，IDA 仍主要是一个有实验支持的稳定化策略。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/senseflow.html">senseflow</a> · IDA 与 ISG、VFM 判别器一起如何进入完整训练循环</li>
+<li><a href="../papers/dmd2.html">dmd2</a> · TTUR 为什么能缓解 fake 网络追踪滞后</li>
+<li><a href="../concepts/dmd-distillation.html">dmd-distillation</a> · real / fake 两个 score 的分工</li>
+<li><a href="../concepts/ema.html">ema</a> · 形式同为参数插值，但 EMA 通常追踪模型自己的历史，IDA 在两个不同职责的网络之间传递变化</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/senseflow.html"><span class="cat">paper</span>SenseFlow · DMD2 扩到 SD 3.5 与 FLUX，为什么突然训不动了</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/implicit-distribution-alignment.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

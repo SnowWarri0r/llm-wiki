@@ -25,6 +25,7 @@
 - [ODE vs SDE · 确定性流与随机流](wiki/papers/ode-sde.md) — 方法底层页: ODE=风场弹珠确定/SDE=醉汉每步随机踹; 桥=同一团云两看法; Euler 真数字演算(同起点ODE永远落5/SDE跑出6.13与3.30); 接 flow-matching + diffusion
 - [DMD · 一步分布匹配蒸馏](wiki/papers/dmd.md) — 不逐步抄老师轨迹：冻结 real score 拉向目标、动态 fake score 防样本挤成一团、离线 LPIPS 回归守住粗结构；从 KL→两个 score→加噪→伪损失/stopgrad 完整推导，原始论文严格是 1 NFE，不与后来的 4/8 步 DMD 家族混写
 - [DMD2 · 去掉大规模配对稳定器](wiki/papers/dmd2.md) — 保留 DMD 双 score，但让 fake-score 以 5:1 频率追上移动的学生分布；再用真实图 GAN 补老师近似误差，用 backward simulation 让多步训练看到学生推理时真正产生的中间 latent。ImageNet 一步 FID 1.28，SDXL 四步追平 100-NFE 老师；同时保留 SDXL 一步仍用 10K 对短预热的边界
+- [SenseFlow · DMD2 扩到 SD 3.5 / FLUX](wiki/papers/senseflow.md) — 大模型上 fake 网络即使 20:1 追赶仍会振荡：IDA 每次把 fake 参数向学生挪 3%，ISG 用老师前半段+冻结学生后半段把整段信息压进四个 anchor，VFM 判别器用冻结 DINOv2/CLIP 补语义；含完整 min-max 分解、数字例、代码差异、消融与质量-覆盖取舍
 - [Generative Modeling via Drifting](wiki/papers/drifting-models.md) — 完整拆解一步生成：pushforward、核吸引/排斥、反对称的正确边界、stopgrad 梯度、特征空间、训练时 CFG、DiT/队列配方、ImageNet 与机器人消融
 - [DiffusionOPD · 扩散的 On-Policy 蒸馏](wiki/papers/diffusion-opd.md) — 多奖励对齐扩散: 先各训单任务专家老师, 再沿学生rollout轨迹蒸进一个学生; 扩散=高斯马尔可夫链→同协方差KL塌成均值MSE; 接 ppo+ode-sde+cross-entropy
 - [dMel](wiki/papers/dmel.md) — 跳过 neural codec 直接 bin quantize log-mel，简单方案跟 RVQ 一样好
@@ -237,6 +238,10 @@
 - [拆细则打分 · Rubric-Based Eval](wiki/concepts/rubric-based-evaluation.md) — 别给"好不好"打一个总分,拆成一堆可逐项判定的小问题各打0/1/2再聚合; 可复现+能定位差在哪条; Qwen-Image-Bench拆到56条
 - [LLM-as-Judge · 拿模型当判官](wiki/concepts/llm-as-judge.md) — 用模型自动给输出打分替人评,前提是用人标把判官校准到人类口味(看Spearman ρ); 跟RLHF的reward model同母题
 - [DMD 蒸馏 / NFE](wiki/concepts/dmd-distillation.md) — 原始DMD把多步老师蒸成1-NFE学生：冻结real score拉向目标、动态fake score抵消学生过密区域、离线回归防漏模式；DMD2/TDM和4/8步应用另算
+- [IDA · 隐式分布对齐](wiki/concepts/implicit-distribution-alignment.md) — 生成器每次更新后，把同构 fake 网络参数向它插值一小步；不是混概率，也不是覆盖 fake 的稠密时间步训练
+- [ISG · 段内引导](wiki/concepts/intra-segment-guidance.md) — 老师走前半段、冻结学生走后半段，用这条绕路目标监督学生直接跨段，让稀疏 anchor 代表整段
+- [VFM 判别器](wiki/concepts/vfm-discriminator.md) — 冻结 DINOv2 / CLIP 的通用表征，只训练多层卷积真假头；高噪声时用 α² 降低 GAN 权重
+- [Hinge Loss](wiki/concepts/hinge-loss.md) — 真实 logit 过 +1、假 logit 过 −1 后损失归零；判别器与生成器的优化方向分开算
 - [TDM · 轨迹分布匹配](wiki/concepts/trajectory-distribution-matching.md) — DMD只匹配终点分布→TDM沿去噪轨迹多个路标都匹配; 少步更稳/步数灵活/超参少; Krea 2从DMD/DMD2/piFlow/APT里选它蒸出K2 Turbo
 - [生成模型数据策展](wiki/concepts/generative-data-curation.md) — 别按美学分过滤(等于把打分器偏见焊死+剪掉分布尾巴→审美收敛), 关口换成"caption准不准"; 预训练0张AI合成图(合成图"更好学"会把模型往简单分布拽给质量封顶); Krea 2灵魂
 - [SigLIP 语义去重](wiki/concepts/siglip-semantic-dedup.md) — 图压成向量, 余弦相似度>阈值算近重复每簇留一张; 删的是"语义重复"(裁剪/压缩/改水印的同一张)而非字节相同, 哈希抓不到
