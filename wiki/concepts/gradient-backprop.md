@@ -1,8 +1,8 @@
 ---
 name: gradient-backprop
 type: concept
-sources: []
-updated: 2026-06-18
+sources: [drifting-models]
+updated: 2026-07-22
 ---
 
 # 梯度 / 反向传播 · 往哪调参数能让 loss 变小
