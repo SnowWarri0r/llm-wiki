@@ -1,8 +1,8 @@
 ---
 name: patch-embedding
 type: concept
-sources: [vit, clip]
-updated: 2026-05-28
+sources: [vit, clip, drifting-models]
+updated: 2026-07-22
 ---
 
 # Patch Embedding · 图像切块成 token
