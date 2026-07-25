@@ -1,75 +1,253 @@
 ---
 name: score-function
 type: concept
-sources: [flow-matching, ode-sde, dmd]
-updated: 2026-07-22
+sources: [flow-matching, ode-sde, dmd, dmd2, drifting-models]
+updated: 2026-07-23
 ---
 
-# Score Function · ∇log p(x) · 对数概率梯度
+# Score Function · 不是评分，而是“这张带噪图该往哪改”
 
-## 一句话
-对一个概率密度 p(x)，**score = ∇log p(x)** —— 指向"概率密度更大的方向"的向量。diffusion 模型学这个，flow matching 不学这个。
+## 先别看公式：从修照片的学徒说起
 
-## 直觉
-想象数据分布是一坨地形（高度 = 概率密度）。在地形上某一点 x：
-- **概率密度 p(x)** = 这点的地形高度
-- **score ∇log p(x)** = 这点的<strong>上坡方向 + 坡度</strong>
+一家照片修复店想训练学徒。师傅手里有很多清晰照片，却没有现成的“每一个坏位置该怎么修”标签。于是店里自己造练习题：
 
-如果你想生成 "像数据的样本"，就<strong>沿 score 方向走</strong> —— 一步步爬向高密度区域。这就是 diffusion 反向去噪的本质。
+1. 随机拿一张清晰照片；
+2. 随机决定这次要破坏多严重；
+3. 由店里自己生成一份雪花噪声，盖到照片上；
+4. 把带噪照片交给学徒，让他猜“刚才加了哪一份噪声”；
+5. 店里知道标准答案，因为噪声就是自己加的；猜错多少可以直接算；
+6. 重复看几百万道题后，学徒学会：看到某种带噪结构时，通常应该把哪些位置调大、哪些位置调小。
 
-类比 1：迷雾里找村庄。你看不到全局地图（不知道 p(x) 长什么样），但每点能感受到"哪边人多 / 灯光更密"（score 方向）。沿这个感觉走，最终到村庄（高密度区）。
+扩散模型训练 real-score 网络，做的就是这件事。
 
-类比 2：物理。如果 p 是势能函数 e^(-E)，那 ∇log p = -∇E = 受力方向。粒子在势场里运动 = 沿 score 走。
+这套类比的对应关系是：
 
-## 为什么是 log
-两个原因：
+| 修照片练习 | 扩散训练 |
+|---|---|
+| 原始清晰照片 | 真实训练样本 `x₀` |
+| 破坏程度 | 噪声时刻 `t` |
+| 店里生成的雪花 | 高斯噪声 `ε` |
+| 盖上雪花的照片 | 带噪样本 `xₜ` |
+| 学徒 | 去噪 / score 网络 |
+| 猜出的雪花 | `ε̂θ(xₜ,t)` |
+| 标准答案 | 当初亲手加进去的 `ε` |
 
-**1 · 数值范围合理**。`p(x)` 在高维空间常常是 10⁻¹⁰⁰ 这种夸张小数；`log p(x)` 是 -230 左右，神经网络好处理。
+所以 **real-score 网络不是拿 DMD 学生图训练出来的**。它先在大量真实图片上完成普通扩散训练；进入 DMD 以后参数冻结，只负责给方向。
 
-**2 · 让梯度公式简化**。`∇p(x) / p(x) = ∇log p(x)` —— 学 score 等于学 "归一化的梯度方向"，不受 p 数值大小影响，只关注方向。
+## Score 不是“这张图得 85 分”
 
-## 为什么 diffusion 学 score 而不是 p 本身
-学 p 直接需要知道 partition function（积分配一才能归一化）—— 高维上 intractable。
+扩散里的 score 定义是：
 
-学 score 跳过 partition function：
+\[
+s_p(x)=\nabla_x\log p(x)
+\]
+
+它不是一个标量评分，而是和 `x` 形状相同的一组修改建议：
+
+- 图像某个位置应该增大，那里就是正数；
+- 应该减小，那里就是负数；
+- 绝对值越大，说明这一方向的局部坡度越陡。
+
+如果 `x` 是一个 `4×64×64` latent，score 也是 `4×64×64`。可以把它理解成给这 16,384 个数各写一条“小修多少”的批注。
+
+公式中的各项：
+
+- `x`：当前样本，可以是一张图或图像 latent；
+- `p(x)`：目标数据在 `x` 附近的概率密度；
+- `log`：对概率密度取对数；
+- `∇ₓ`：逐个改变 `x` 的每个元素，找出 `log p(x)` 上升最快的方向；
+- `s_p(x)`：最终得到的方向张量。
+
+## Real-score 网络到底怎么训练
+
+从真实数据抽一张干净图 `x₀`，再采噪声时刻 `t` 和高斯噪声 `ε`：
+
+\[
+\begin{aligned}
+x_t&=\alpha_t x_0+\sigma_t\epsilon,\\
+\epsilon&\sim\mathcal N(0,I)
+\end{aligned}
+\]
+
+- `αₜ`：这一时刻还保留多少原图；
+- `σₜ`：这一时刻加入多少噪声；
+- `ε`：程序自己采样的噪声，形状与图片相同；
+- `xₜ`：交给网络的带噪图片。
+
+网络看见 `xₜ` 和 `t`，预测当初加入的噪声：
+
+\[
+\widehat\epsilon_\psi=\epsilon_\psi(x_t,t)
+\]
+
+再用均方误差训练：
+
+\[
+\begin{aligned}
+\mathcal L_{\mathrm{noise}}(\psi)
+&=\mathbb E_{x_0,t,\epsilon}\Bigl[\\
+&\qquad \left\|\epsilon_\psi(x_t,t)-\epsilon\right\|_2^2
+\Bigr]
+\end{aligned}
+\]
+
+- `ψ`：real-score 网络的参数；
+- `εψ(xₜ,t)`：网络猜出的噪声；
+- `ε`：程序真正加进去的噪声；
+- `‖a-b‖₂²`：对应元素作差、平方，再求和或平均；
+- `E`：不断换真实图、噪声时刻和噪声，最后取平均。
+
+训练目标说白了就是：
+
+> 我亲手把哪份噪声加进去，你就把哪份噪声指出来。
+
+网络练熟以后，可以把预测噪声换成 score：
+
+\[
+s_\psi(x_t,t)\approx-\frac{\epsilon_\psi(x_t,t)}{\sigma_t}
+\]
+
+负号的原因也很直接：`ε` 是刚才“加坏”的方向；要回到更像干净数据的区域，就要朝相反方向改。再除以 `σₜ`，是把不同破坏程度换到可比较的尺度。
+
+## 一组数字从加噪算到 real score
+
+为了能手算，把整张 latent 缩成一个数。取：
+
+```text
+真实干净值 x₀ = 1.5
+保留系数 α = 0.8
+噪声系数 σ = 0.6
+程序采到的噪声 ε = -0.9
 ```
-∇log p(x) = ∇log [unnormalized_p(x) / Z]
-          = ∇log unnormalized_p(x) - ∇log Z
-          = ∇log unnormalized_p(x)        # Z 是常数, 梯度为 0
+
+第一步，程序自己造带噪输入：
+
+```text
+xₜ = αx₀ + σε
+   = 0.8×1.5 + 0.6×(-0.9)
+   = 1.2 - 0.54
+   = 0.66
 ```
 
-→ 只要知道 unnormalized density 的形状就够，partition function 自动消掉。
+第二步，网络看见的只有 `xₜ=0.66` 和噪声时刻。假设刚开始预测 `ε̂=-0.3`：
 
-## diffusion 怎么学 score
-直接学 score 没法做（不知道 p_t 是啥）。Trick：用<strong>加噪后样本预测原噪声</strong>，通过 Tweedie's formula 转成 score。
-
-```python
-# Diffusion 训练
-x_0 ~ data
-ε ~ N(0, I)
-t ~ U(0, T)
-x_t = √(ᾱ_t)·x_0 + √(1 − ᾱ_t)·ε       # 加噪到 t 时刻
-ε_pred = model(x_t, t)                # 模型预测噪声
-loss = || ε_pred − ε ||²              # MSE on noise
-
-# 推理时通过 Tweedie's formula:
-score_at_t = -ε_pred / √(1 − ᾱ_t)     # 等价于学到了 score
+```text
+L = (ε̂-ε)²
+  = [-0.3-(-0.9)]²
+  = 0.6²
+  = 0.36
 ```
 
-这就是 [[flow-matching]] 论文吐槽 diffusion "训练目标不直观"的原因 —— 你想生成，结果学了"加噪样本的噪声预测"，绕一圈才转回 score。
+训练会调整参数，让预测逐渐接近真正的 `-0.9`。假设训练完成后这道题预测正确：
 
-## flow matching 怎么避开 score
-flow matching 直接学 [[velocity-field]] v(x, t) —— "该往哪走"。完全不需要 score 这个抽象。
+```text
+ε̂ = -0.9
+```
 
-数学上两者有关系：在某些 path（如 VP-SDE）下，velocity 跟 score 有线性关系，所以 diffusion 可以视作 flow matching 的特例。但<strong>训练目标的直观度</strong>差异巨大。
+第三步，把预测噪声换成 score：
 
-## 跟 energy-based model 的关系
-EBM 学 unnormalized log p（叫 energy E(x)，其实是 −log p 加常数）。score = −∇E。
+```text
+s = -ε̂/σ
+  = -(-0.9)/0.6
+  = 1.5
+```
 
-EBM / score-matching / diffusion 一脉相承，都是"绕过 partition function"的路线。flow matching 是另一条路：<strong>不解决 partition function，直接绕开整个 p 的建模，只学搬运速度</strong>。
+`s=+1.5` 表示：站在当前带噪位置 `0.66`，目标分布给出的局部修改方向朝右。
+
+同一件事也可以让网络直接预测干净值 `μ(xₜ,t)`。两种写法可以互换：
+
+\[
+s(x_t,t)
+=-\frac{x_t-\alpha_t\mu(x_t,t)}{\sigma_t^2}
+\]
+
+把 `xₜ=.66、α=.8、μ=1.5、σ=.6` 代入：
+
+```text
+s = -[0.66-0.8×1.5]/0.6²
+  = -(-0.54)/0.36
+  = 1.5
+```
+
+结果和 `-ε̂/σ` 完全一致。DMD 论文主要使用这种“预测干净图，再换算 score”的记法。
+
+## 放回 DMD：real 与 fake 两套网络差在哪
+
+两套网络的结构可以相同，差别在训练数据和更新时间：
+
+| 网络 | 用什么干净样本造加噪题 | 什么时候训练 |
+|---|---|---|
+| `μ_real` | 真实训练图片 | DMD 开始前已经训练好；DMD 中冻结 |
+| `μ_fake` | 学生刚生成的图片 | DMD 训练期间持续更新 |
+
+DMD 把同一个学生带噪样本 `xₜ` 同时交给两套网络：
+
+- real score 说：如果这里属于真实图分布，应该往哪改；
+- fake score 说：如果这里属于学生当前分布，应该往哪改。
+
+梯度下降最终让学生大致沿：
+
+```text
+real score - fake score
+```
+
+前进。前一项把它拉向真实分布，后一项抵消学生已经挤得过密的区域。
+
+## 放回 Drifting：它为什么不需要 real-score 老师
+
+Drifting 想得到的仍是一根“学生样本该往哪改”的箭头，但它不先训练照片修复学徒。
+
+它在每轮训练里直接拿一批真实样本和一批生成样本：
+
+- 附近真实样本给吸引方向；
+- 附近生成样本给排斥方向；
+- 核权重决定谁离当前样本更近、影响更大。
+
+因此两条路线的区别可以记成：
+
+```text
+DMD：
+先把大量真实图教给一套扩散网络，
+以后问这套网络“这里该往哪改”。
+
+Drifting：
+不训练 score 老师，
+每轮直接查看附近的真实样本和生成样本，现场合成方向。
+```
+
+## 为什么公式里用 `log p`
+
+这部分可以放到第二遍再看。核心恒等式是：
+
+\[
+\nabla_x\log p(x)=\frac{\nabla_xp(x)}{p(x)}
+\]
+
+它看的是概率密度的**相对变化**。高维图片的 `p(x)` 往往小得无法直接计算，取对数也能把连乘变成相加。
+
+扩散模型并不需要先算出完整的 `p(x)`；上面的加噪训练直接学到了 `∇ₓlog pₜ(x)` 这根局部方向。
+
+## 一个容易混淆的同名术语
+
+统计学还会把下面这项叫 score：
+
+\[
+\nabla_\theta\log p_\theta(x)
+\]
+
+它是对模型参数 `θ` 求导。扩散模型通常说的是：
+
+\[
+\nabla_x\log p(x)
+\]
+
+也就是对样本 `x` 求导。一个回答“参数怎么改”，另一个回答“当前图片怎么改”，不能混用。
 
 ## 链接
-- [[flow-matching]] · 提出不学 score 的方案
-- [[velocity-field]] · flow matching 学的替代目标
-- [[math-symbols]] · ∇ / log / partition function 这些符号的速查
-- [[ode-sde]] · score 是 SDE 反向漂移里的关键项（diffusion 那头）
+
+- [[dmd]] · real / fake 两个 score 怎样共同更新一步学生
+- [[drifting-models]] · 不训练 score 老师，怎样从样本邻居直接算漂移
+- [[flow-matching]] · 不学 score，改学连续时间速度
+- [[velocity-field]] · 每个时间和位置对应的速度向量
+- [[math-symbols]] · `∇`、`log`、期望与范数的符号速查
+- [[ode-sde]] · score 怎样进入反向 SDE
