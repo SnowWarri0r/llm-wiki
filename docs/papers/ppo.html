@@ -39,6 +39,26 @@ h3 { font-family: 'Fraunces', 'Noto Serif SC', serif; font-size: 22px; font-weig
 p { margin: 12px 0; } strong { font-weight: 700; }
 code { font-family: 'JetBrains Mono', monospace; font-size: 0.88em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
 pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+.algo-table { width: 100%; border-collapse: collapse; margin: 22px 0 30px; font-size: 15px; line-height: 1.55; }
+.algo-table th, .algo-table td { padding: 12px 14px; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
+.algo-table th { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .7px; color: var(--deep); background: var(--deep-soft); }
+.algo-table td:first-child { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--brick); white-space: nowrap; }
+.calc-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:18px 0; }
+.calc-strip > div { background:var(--paper-card); border:1px solid var(--rule); padding:12px 8px; text-align:center; }
+.calc-strip b { display:block; font-family:'JetBrains Mono',monospace; color:var(--deep); font-size:14px; }
+.calc-strip span { display:block; color:var(--muted); font-size:13px; margin-top:3px; }
+@media(max-width:600px){
+  #ppo-family { display:block; font-size:30px; line-height:1.15; }
+  #ppo-family .num { display:block; margin-bottom:10px; }
+  .algo-table, .algo-table tbody, .algo-table tr, .algo-table td { display:block; width:100%; }
+  .algo-table thead { display:none; }
+  .algo-table tr { border:1px solid var(--rule); margin:0 0 14px; background:var(--paper-card); }
+  .algo-table td { display:grid; grid-template-columns:88px minmax(0,1fr); gap:10px; padding:8px 10px; border-bottom:1px dashed var(--rule); font-size:13px; white-space:normal; }
+  .algo-table td:last-child { border-bottom:0; }
+  .algo-table td::before { content:attr(data-label); font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); font-weight:700; }
+  .algo-table td:first-child { background:var(--deep-soft); color:var(--brick); }
+  .calc-strip { grid-template-columns:repeat(2,1fr); }
+}
 a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--brick-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--brick); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
 .jr:hover { background: var(--brick); color: var(--paper); }
@@ -178,14 +198,14 @@ figcaption .fnum { color: var(--accent); font-weight: 700; }
 
 <section class="hero">
   <div class="issue">FIELD NOTES · REINFORCEMENT LEARNING · ALIGNMENT</div>
-  <h1 class="title">PPO ·<br /><span class="em">一行 clip 撑起 ChatGPT.</span></h1>
+  <h1 class="title">PPO ·<br /><span class="em">给策略更新设一道护栏.</span></h1>
   <div class="byline">Schulman · Wolski · Dhariwal · Radford · Klimov · OpenAI · 2017</div>
-  <p class="dek">策略梯度最头疼的"步子大就崩"问题, PPO 用一行 torch.clamp 干掉了。简单到 200 行能复现, 稳到撑起了 RLHF, 也就是 ChatGPT 真正会聊天的那一步。</p>
+  <p class="dek">策略梯度既想重复利用刚采到的数据，又怕新策略一步走得太远。PPO 用新旧动作概率比率衡量变化，再用 clip 让越界后的额外变化不再带来目标收益。</p>
 </section>
 
 <div class="tldr">
   <span class="label">TL;DR</span>
-  <p>强化学习里 policy gradient<a class="jr" href="#g-01">1</a> 走太大一步策略就崩, 老数据立刻不能用。TRPO<a class="jr" href="#g-02">2</a> 用 KL 散度精确约束步长, 但需要共轭梯度 + 线搜索, 复杂。PPO 的回答: <strong>不约束 KL, 直接 clip 新老策略的概率比值</strong><a class="jr" href="#g-03">3</a>。一行 <code>torch.clamp(r, 1-ε, 1+ε)</code> 让 loss 在"该停的方向"梯度归零, 软性 trust region。代价是不精确, 收获是简单、稳、能跟 Adam 配。<strong>顺手解锁的是同一批 rollout 跑 K 个 epoch</strong><a class="jr" href="#g-04">4</a>, sample efficiency 翻倍。2017 出, 2022 撑起 InstructGPT/ChatGPT 的 RLHF<a class="jr" href="#g-05">5</a>。</p>
+  <p>强化学习里 policy gradient<a class="jr" href="#g-01">1</a> 走太大一步时，旧 rollout 很快失去代表性。TRPO<a class="jr" href="#g-02">2</a> 显式限制平均 KL，但需要共轭梯度和线搜索。PPO-Clip 的回答是：<strong>用新旧策略给已采动作的概率比衡量变化，再截断越界更新的代理收益</strong><a class="jr" href="#g-03">3</a>。它不是严格的 KL 上界，却能直接配合 Adam 与 minibatch，并让同一批 rollout 训练多个 epoch<a class="jr" href="#g-04">4</a>。PPO 后来成为 InstructGPT 所用 RLHF<a class="jr" href="#g-05">5</a> 的策略优化器之一。</p>
 </div>
 
 <div class="note">
@@ -869,41 +889,88 @@ PPO: 一批 rollout 可以反复跑 <strong>K 个 epoch (K=3~10)</strong>, sampl
 </div>
 
 
-<!-- §06 -->
-<h2><span class="num">§ 10</span>遗产 · GRPO · DPO · 跟它们的关系</h2>
+<!-- §10 -->
+<h2 id="ppo-family"><span class="num">§ 10</span>PPO 家族 · GRPO / Dr.GRPO / DAPO / GSPO 到底改了什么</h2>
 
-<p>PPO 之后的 RL alignment 演化, 几条主要路线都跟它有渊源:</p>
+<p>这些名字不是五套从头重写的 RL。它们都在做“采样回答 → 打分 → 提高好回答概率、降低坏回答概率”，分歧集中在三处：<strong>advantage 从哪来、token loss 怎样汇总、重要性比率与 clip 在 token 级还是序列级</strong>。完整推导与选型见 <a href="../topics/ppo-grpo-gspo.html">PPO 家族总览</a>。</p>
 
-<h3>GRPO (DeepSeek 2024)</h3>
+<table class="algo-table">
+  <thead><tr><th>算法</th><th>advantage</th><th>loss 汇总</th><th>ratio / clip</th><th>主要目的</th></tr></thead>
+  <tbody>
+    <tr><td data-label="算法">PPO</td><td data-label="advantage">critic + GAE</td><td data-label="loss 汇总">经典定义按时间步</td><td data-label="ratio / clip">token / action</td><td data-label="主要目的">限制单轮更新，复用 rollout</td></tr>
+    <tr><td data-label="算法">GRPO</td><td data-label="advantage">同题组内标准化 reward</td><td data-label="loss 汇总">每条回答先按 token 平均</td><td data-label="ratio / clip">token</td><td data-label="主要目的">省掉 critic</td></tr>
+    <tr><td data-label="算法">Dr.GRPO</td><td data-label="advantage">只减组均值，不除组 std</td><td data-label="loss 汇总">token 和除固定常数</td><td data-label="ratio / clip">token</td><td data-label="主要目的">去掉题目与长度偏置</td></tr>
+    <tr><td data-label="算法">DAPO</td><td data-label="advantage">组相对 advantage</td><td data-label="loss 汇总">全 batch 有效 token 平均</td><td data-label="ratio / clip">token；上下界不对称</td><td data-label="主要目的">稳定长 CoT 训练</td></tr>
+    <tr><td data-label="算法">GSPO</td><td data-label="advantage">组相对 advantage</td><td data-label="loss 汇总">每条回答一个目标</td><td data-label="ratio / clip"><strong>sequence</strong></td><td data-label="主要目的">让更新粒度对齐序列 reward</td></tr>
+  </tbody>
+</table>
 
-<p>PPO 的 LLM 友好简化版<a class="jr" href="#g-10">10</a>。<strong>干掉了 value network</strong>, 改用一组样本 (一个 prompt 采样 N 个回答) 的相对得分直接当 advantage:</p>
+<h3>第一步 · PPO 用 critic 回答“比预期好多少”</h3>
 
-<pre class="eq"># PPO 标准做法
-A_t = GAE(rewards, V_critic(state))    # 需要训 critic 估 V
+<pre class="eq">A_t ≈ 实际回报 − V_critic(s_t)
 
-# GRPO 简化做法
-A_t = (r_i - mean(group)) / std(group) # 一组样本里相对位置</pre>
+ρ_t = π_θ(y_t | x,y_&lt;t) / π_old(y_t | x,y_&lt;t)
 
-<p>省一个网络, 训得更稳。DeepSeek R1 (2025) 用 GRPO 做 reasoning 训练取得突破。<a href="../concepts/grpo.html">详见 grpo concept</a></p>
+L_t = min(ρ_t A_t, clip(ρ_t, 1−ε, 1+ε) A_t)</pre>
 
-<h3>DPO (2023)</h3>
+<p><code>x</code> 是 prompt，<code>y_t</code> 是第 t 个 token，<code>V_critic</code> 预测从当前前缀继续写的未来回报；<code>ρ_t</code> 是新旧策略给同一个已采 token 的概率比。reward model 给完成品打分，critic 预测半成品将来得几分，两者不是同一个模型。</p>
 
-<p>Direct Preference Optimization<a class="jr" href="#g-12">12</a> 跳过 reward model + PPO, <strong>直接用对比学习的思路一步训 LLM</strong>:</p>
+<h3>第二步 · GRPO 用同一道题的回答互比，替掉 critic</h3>
 
-<pre class="eq">loss = -log σ( β · log[π(y_w|x) / π_ref(y_w|x)] - β · log[π(y_l|x) / π_ref(y_l|x)] )
-                          ↑ 偏好的回答                       ↑ 不偏好的回答</pre>
+<pre class="eq">A_i = (R_i − mean(R_1...R_G)) / std(R_1...R_G)</pre>
 
-<p>没有 RM, 没有 PPO 循环, 一个 cross-entropy 一样的 loss 训完。<strong>工程上更稳, 但不能 online 探索</strong> —— 适合"用现成偏好数据对齐", 不适合需要 RL 探索的场景 (比如 reasoning)。</p>
+<p><code>G</code> 是同题回答数，<code>R_i</code> 是第 i 条完整回答的 reward。若四条回答得分为 <code>[1,1,0,0]</code>，均值和总体标准差都是 <code>.5</code>，所以 <code>A=[1,1,−1,−1]</code>。正确回答所有 token 往上推，错误回答往下压。GRPO<a class="jr" href="#g-10">10</a>省掉的是 critic，不是必然省掉 reward model；数学和代码能用规则判分，主观任务仍可能需要 RM。</p>
 
-<h3>当前生态</h3>
+<h3>同一条正确回答 · token 比率怎样经过 clip</h3>
 
-<p>2024-2025 的格局大致是:</p>
+<p>取第一条正确回答，四个 token 的新旧概率比为：</p>
 
-<p>• <strong>对话对齐</strong> (chat models, helpfulness, harmlessness): DPO 多, 因为偏好数据现成 + 工程稳<br/>
-• <strong>Reasoning 训练</strong> (R1 / o1 系): GRPO 多, 因为 reward signal 来自正确性 (可验证), 需要 online RL 探索<br/>
-• <strong>需要严格 KL 控制 + 明确 reward 的场景</strong>: PPO 经典版仍在用</p>
+<div class="calc-strip">
+  <div><b>ρ₁ = 1.10</b><span>未越界</span></div>
+  <div><b>ρ₂ = 1.05</b><span>未越界</span></div>
+  <div><b>ρ₃ = 0.90</b><span>未越界</span></div>
+  <div><b>ρ₄ = 1.25</b><span>上侧 clip → 1.20</span></div>
+</div>
 
-<p>所以 PPO 没死, 它分裂成了几条更专的路线 —— 但 <strong>clipped surrogate + advantage 这套 core idea, 是 DPO/GRPO 都建立在其上的基础</strong>。</p>
+<p>令 <code>ε=.2</code>，GRPO 的这条回答有 <code>A_i=1</code>，四项贡献就是 <code>[1.10,1.05,.90,1.20]</code>。最后一个 token 原本是 <code>1.25</code>，但继续超过 20% 的概率增长不再增加代理目标。GRPO 没有抛弃 PPO 的 clip，只换了 advantage。</p>
+
+<h3>第三步 · Dr.GRPO 去掉两种隐藏加权</h3>
+
+<p>Dr.GRPO<a class="jr" href="#g-19">19</a>指出：除以每道题自己的 reward 标准差，会让 <code>std</code> 小的题更新更重；每条回答先除以自身 token 数，会让长回答里的每个 token 权重更轻。它改为：</p>
+
+<pre class="eq">A_i^Dr = R_i − group_mean                 # 不再除 group_std
+L_i^Dr = (1/M) × Σ_t token_loss(i,t)     # M 是所有回答共享的常数</pre>
+
+<p>例如 <code>[1,1,0,0]</code> 的正确回答在原 GRPO 中 advantage 为 <code>1</code>；<code>[1,0,0,0]</code> 的正确回答因标准差更小，advantage 变成约 <code>1.732</code>。Dr.GRPO 保留减组均值，但取消额外的 <code>1/std</code> 放大。固定分母 <code>M</code> 也不是奖励长回答，而是让 token 不因所在回答更长就被摊薄。</p>
+
+<h3>第四步 · DAPO 修的是长 CoT 的整条训练流水线</h3>
+
+<p>DAPO<a class="jr" href="#g-20">20</a>不是只换一项公式，而是四个互补修改：</p>
+
+<p>• <strong>Clip-Higher</strong>：论文实验把比率区间从对称 <code>[.8,1.2]</code> 改成 <code>[.8,1.28]</code>，给低概率但有价值的探索 token 多一点上升空间。<br/>
+• <strong>Dynamic Sampling</strong>：全对或全错组的中心化 advantage 都是 0，过采样并过滤这些零梯度组，凑满有效 batch。<br/>
+• <strong>Token-Level PG Loss</strong>：不再每条回答先平均，改为 batch 内所有有效 token 一起平均。<br/>
+• <strong>Overlong Reward Shaping</strong>：达到长度上限不等于推理全错；用过滤或渐进软惩罚代替边界处突然硬罚。</p>
+
+<h3>第五步 · GSPO 让整条回答共用一个比率</h3>
+
+<pre class="eq">s_i = [π_θ(y_i|x) / π_old(y_i|x)]^(1/|y_i|)
+    = exp((1/|y_i|) × Σ_t log ρ_i,t)</pre>
+
+<p><code>s_i</code> 是第 i 条回答唯一的序列级比率；<code>|y_i|</code> 是回答长度。对刚才四个 token：</p>
+
+<pre class="eq">s = (1.10 × 1.05 × .90 × 1.25)^(1/4) ≈ 1.0677</pre>
+
+<p>它是四个 token 比率的几何平均。GSPO<a class="jr" href="#g-21">21</a>让整条回答以 <code>1.0677</code> 一起 clip、一起更新，而不是四个 token 各做一次 clip。这里不是说 PPO 的 token 比率“无效”，而是 GSPO 认为 LLM 的 reward 常属于整条序列，ratio 和 clip 也用同一粒度会更稳；Qwen 团队尤其报告了对 MoE RL 的稳定作用。</p>
+
+<div class="note">
+  <span class="l">不要把名字当成互斥开关</span>
+  <p>GSPO 改 ratio / clip 粒度，不强制保留原 GRPO 的标准差归一化；DAPO 的动态采样也可以跟别的 objective 组合。实际系统应写清最终 advantage、loss reduction、clip 与 KL，而不是只报“用了某某 PO”。</p>
+</div>
+
+<h3>DPO 在另一条路上</h3>
+
+<p>DPO<a class="jr" href="#g-12">12</a>使用现成的偏好回答对做离线优化，不进行上述在线 rollout 循环。它与 PPO 家族不是简单的新旧替代关系：有成对偏好数据时 DPO 更直接；需要让当前模型持续采样、探索并接受可验证 reward 时，PPO / GRPO 系更自然。</p>
 
 
 <!-- §07 -->
@@ -949,6 +1016,9 @@ A_t = (r_i - mean(group)) / std(group) # 一组样本里相对位置</pre>
     <li id="g-16"><span class="term">Entropy bonus · 熵项 / ent_coef</span> · PPO 完整 loss 的第三项 (− c·entropy)。奖励策略保留随机性、别太早笃定, 防过早收敛到"撞死"那种局部最优。ent_coef 是探索力度旋钮 (常用 0.01)。论文最易被忽略、实操最易翻车的一项。详见 <a href="../concepts/entropy-regularization.html">entropy-regularization</a>。</li>
     <li id="g-17"><span class="term">Reward normalization · 奖励归一化</span> · 把环境给的几百上千的 reward 滚动除以标准差, 压到 ±1 尺度。否则巨大的奖励会淹没那一点点熵奖励 → 熵秒崩 → 策略躺平。图像任务里它常是熵正则能起作用的前提 —— 尺度不对, 调熵也白搭。</li>
     <li id="g-18"><span class="term">Deterministic vs stochastic 评估</span> · 评估策略时取最高概率动作 (deterministic/argmax) vs 按概率采样 (stochastic)。没收敛的策略关键动作概率还没过 50% 时, argmax 会一直卡同一个坎, 严重低估它; 该用随机采样才看得出真实水平。</li>
+    <li id="g-19"><span class="term">Dr.GRPO · GRPO Done Right</span> · 保留同题多回答减组均值，但去掉除组内标准差与除单条回答实际长度；前者避免按每题 reward 方差重新加权，后者避免长回答中的每个 token 被摊薄。详见 <a href="../concepts/dr-grpo.html">dr-grpo</a>。</li>
+    <li id="g-20"><span class="term">DAPO</span> · 面向长 CoT 在线 RL 的组合配方：非对称 Clip-Higher、过滤零梯度组的 Dynamic Sampling、按所有有效 token 汇总 loss、超长回答的平滑 reward shaping。详见 <a href="../concepts/dapo.html">dapo</a>。</li>
+    <li id="g-21"><span class="term">GSPO · Group Sequence Policy Optimization</span> · 沿用组相对 advantage，把新旧策略似然比做长度归一后提升到整条序列，并在序列级 clip；目标是让更新粒度与序列 reward 对齐并降低局部概率波动的影响。详见 <a href="../concepts/gspo.html">gspo</a>。</li>
   </ol>
 </div>
 

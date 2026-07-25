@@ -44,7 +44,7 @@
 - [ViT · An Image is Worth 16×16 Words](wiki/papers/vit.md) — 把图切成 16×16 patch 当 token，纯 Transformer 干视觉；CNN 在视觉的护城河被填平
 - [CLIP · Learning Transferable Visual Models](wiki/papers/clip.md) — 4 亿图文对对比学习, 图像和文本对齐到同一向量空间; DALL-E / SD / LLaVA 都靠它
 - [SAM · Segment Anything](wiki/papers/sam.md) — 分割界的基础模型(Meta): 可提示分割(给点/框/字返回掩码,歧义就吐3个+IoU挑)+重编码器跑一次轻解码器~50ms可交互+数据引擎飞轮造出SA-1B(11M图/1.1B掩码,99.1%全自动,400×); 零样本迁移多任务; 图像编码器被DeepSeek-OCR借去当DeepEncoder前半
-- [PPO · Proximal Policy Optimization](wiki/papers/ppo.md) — 一行 clip 干掉 TRPO 的复杂; RLHF 的训练发动机, 撑起 ChatGPT 的对齐
+- [PPO · Proximal Policy Optimization](wiki/papers/ppo.md) — 用新旧策略概率比率校正旧 rollout，再用 clip 限制单轮更新；从 critic+GAE 到 GRPO/GSPO 的共同起点
 - [TurboQuant · 随机旋转把向量分布变已知](wiki/papers/turboquant.md) — 在线向量量化(ICLR2026,Google): 在线量化看不到数据统计只能盲切格子; 洞察=随机旋转让每坐标服从固定已知的集中Beta(挤±1/√d)+高维近独立→离线预制最优标量量化器在线只旋转+套(data-oblivious),逼近信息论下界差≈2.7×; 两阶段治内积偏差(MSE最优→内积系统偏小,1-bit QJL残差纠无偏); KV 3.5bit无损/2.5bit微降,≥6×省内存+H100 attention快8×; recall超PQ建索引近零成本
 - [Go GC · 从 mark-sweep 到 Green Tea](wiki/papers/go-gc.md) — 系统/runtime 深度页: 三色并发 mark-sweep + write barrier + GOGC/GOMEMLIMIT, 到 Go 1.26 默认的 Green Tea 按页扫优化
 - [康波周期 · 经济的四季](wiki/papers/kondratiev-wave.md) — 宏观/有争议框架: 50–60 年长波 + 五次技术浪潮 + 四季资产轮动 + 多周期嵌套 + 周金涛本土化; 当罗盘不当钟表
@@ -117,6 +117,7 @@
 
 ## Topics · 综合
 
+- [PPO → GRPO → Dr.GRPO / DAPO → GSPO](wiki/topics/ppo-grpo-gspo.md) — 同一条四回答 rollout 贯穿五种 LLM RL：改的是 advantage、loss 归一化还是 ratio/clip 粒度；含逐符号公式、手算、偏置与选型
 - [训练 vs 推理 · 同一个模型的两种跑法](wiki/topics/training-vs-inference.md) — 三种架构训练/推理对比（teacher forcing / causal mask / KV cache / MLM 放在一起看）
 - [音频 token 化：RVQ vs Flow](wiki/topics/audio-tokenization-rvq-vs-flow.md) — 两种主流路线的工程对照
 - [Joint-Attention 谱系：cross-attn → MMDiT / Unified / MoT](wiki/topics/joint-attention-lineage.md) — 多模态都从"独立编码器+cross-attention"搬到"一条序列+联合自注意力"; 剩下两个旋钮(权重共享/分流 × 注意力全双向/混合)摆成2×2: MMDiT(分流+全双向,只画图)/Unified(共享+混合)/MoT(分流+混合); 混合注意力=能不能顺带生成文本
@@ -334,6 +335,7 @@
 - [Modality Projector](wiki/concepts/modality-projector.md) — 两层 MLP 把冻结编码器特征翻译进 LLM 隐空间占位符, 小投影撬动大编码器
 
 ### 强化学习 / 对齐
+- [PPO 家族总览](wiki/topics/ppo-grpo-gspo.md) — PPO→GRPO→Dr.GRPO/DAPO→GSPO；共同训练循环、统一公式与同一组数字手算
 - [RL 直觉打底](wiki/concepts/rl-for-llm-people.md) — 给懂 LLM 不懂 RL 的人: policy/rollout/advantage/KL/loss 走势全翻译成自回归术语 (含 loss 函数走势对照图)
 - [Policy Gradient](wiki/concepts/policy-gradient.md) — RL 的基础: 用 reward 当 loss 权重直接 gradient ascent, 步子大就崩
 - [Clipped Surrogate Objective](wiki/concepts/clipped-surrogate-objective.md) — PPO 核心的一行 clip, 软性 trust region
@@ -343,7 +345,10 @@
 - [Entropy Regularization](wiki/concepts/entropy-regularization.md) — 完整 loss 第三项, 花钱买探索防过早笃定撞死
 - [RLHF](wiki/concepts/rlhf.md) — SFT → reward model → PPO 三步, 把人类排序偏好变成 LLM 训练信号
 - [on-policy vs off-policy](wiki/concepts/on-policy-vs-off-policy.md) — on-policy=学当前策略自己刚生成的(准但贵,旧数据即过期); off-policy=学别的策略/旧数据(省但分布错位); 重要性采样π/μ纠偏(裸平均5.5→纠偏2.8), 差太远比率爆方差→PPO clip限小步; SFT拿外部数据=off-policy, GRAPE选合身=拉回on-policy
-- [GSPO](wiki/concepts/gspo.md) — GRPO 后继: 重要性比率从 token 级提到序列级(每 token 只采一次→token 级是高方差噪声易崩), 稳住 MoE RL; Qwen3 用
+- [GRPO](wiki/concepts/grpo.md) — 不训 critic；同题采 G 条回答，用组内相对 reward 当 advantage，保留 PPO 的 token ratio 与 clip
+- [Dr.GRPO](wiki/concepts/dr-grpo.md) — 保留减组均值，去掉除组标准差和除回答实际长度，修正题目难度与长度偏置
+- [DAPO](wiki/concepts/dapo.md) — 长 CoT 的四项配方：Clip-Higher、Dynamic Sampling、token 级 loss 汇总、超长软惩罚
+- [GSPO](wiki/concepts/gspo.md) — 沿用组相对 advantage，把重要性比率与 clip 从 token 级提升到整条序列，稳定 MoE RL
 - [DPO · 直接偏好优化](wiki/concepts/direct-preference-optimization.md) — 跳过奖励模型+PPO, 拿赢/输成对样本当sigmoid二分类直接对齐(隐式奖励=β·log(πθ/π_ref)); 坑: 只看"赢减输"差→模型会把赢输一起压低凑差距(策略发散); Krea STPO加辅助损失顶住赢家
 - [测试时训练 TTT](wiki/concepts/test-time-training.md) — 推理时对当前这道题用无监督辅助损失临时调参(只动LoRA)再答、答完复位; 区别于不改权重的ICL; ReLAT用"重建输入"当辅助损失(N=16步,lr2e-5)
 - [潜在推理](wiki/concepts/latent-reasoning.md) — 把推理中间步从语言CoT压成K个连续潜在向量当条件,省token但不透明; 开环风险:生成完没人验是否还忠于原问题,漂移会传下去(ReLAT补闭环)
