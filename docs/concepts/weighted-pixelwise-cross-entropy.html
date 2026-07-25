@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Weighted Pixel-wise Cross-Entropy · 逐像素加权交叉熵 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · weighted-pixelwise-cross-entropy</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Weighted Pixel-wise Cross-Entropy · 逐像素加权交叉熵</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>每个像素仍用 <code>-log(真实类别概率)</code> 计错，但关键像素再乘更大的权重，让模型优先修正更重要、也更容易被多数像素淹没的错误。</p>
+<h2>直觉</h2>
+<p>一张细胞图里，背景可能占 90%，两只细胞之间的窄缝不到 1%。所有像素一视同仁时，模型把窄缝错成细胞，对总损失影响很小；结果两只细胞粘成一团。</p>
+<p>权重图相当于在答案纸上标出：“这几道边界题分值更高。”</p>
+<h2>公式回答什么</h2>
+<pre><code class="language-text">L = - Σ_{x∈Ω} w(x) log p_{l(x)}(x)
+</code></pre>
+<ul>
+<li><code>Ω</code>：所有输出像素的位置集合；</li>
+<li><code>x</code>：其中一个像素坐标；</li>
+<li><code>l(x)</code>：该像素真实类别；</li>
+<li><code>p_{l(x)}(x)</code>：模型给真实类别的概率；</li>
+<li><code>w(x)</code>：这个像素的权重；</li>
+<li><code>Σ</code>：把所有像素的损失相加；</li>
+<li><code>-log</code>：正确概率越小，惩罚越大。</li>
+</ul>
+<h2>U-Net 的边界权重</h2>
+<pre><code class="language-text">w(x)=w_c(x)+w_0 exp(-(d_1(x)+d_2(x))²/(2σ²))
+</code></pre>
+<ul>
+<li><code>w_c</code> 平衡类别数量；</li>
+<li><code>d_1,d_2</code> 分别是到最近、第二近细胞边界的距离；</li>
+<li>两者都小，说明像素夹在两个细胞之间；</li>
+<li>原文取 <code>w_0=10, σ≈5 px</code>。</li>
+</ul>
+<h2>数字例子</h2>
+<p>取一个夹在两只细胞间的背景像素：</p>
+<pre><code class="language-text">w_c=1, d_1=1, d_2=1, w_0=10, σ=5
+
+w = 1 + 10×exp(-(1+1)²/(2×5²))
+  = 1 + 10×exp(-4/50)
+  = 1 + 10×0.9231
+  = 10.231
+</code></pre>
+<p>模型给真实背景的概率只有 <code>p=0.119</code>：</p>
+<pre><code class="language-text">普通损失 = -log(0.119) = 2.127
+加权损失 = 10.231×2.127 = 21.76
+</code></pre>
+<p>同一预测错误在普通区域若 <code>w=1</code>，只有 <code>2.127</code>。边界像素于是获得约 <code>10.23</code> 倍梯度权重。</p>
+<p>自检：若模型把真实类别概率提高到 <code>0.9</code>：</p>
+<pre><code class="language-text">加权损失 = 10.231×[-log(0.9)]
+         = 10.231×0.1053
+         ≈ 1.08
+</code></pre>
+<p>预测变好，损失从 <code>21.76</code> 降到 <code>1.08</code>，方向正确。</p>
+<h2>易混点</h2>
+<p>原论文 Eq. (1) 印成正的 <code>Σw log p</code>。若把它当“要最小化的 loss”，方向会反；实际等价做法是最大化这条加权对数似然，或最小化带负号的交叉熵。现代框架采用后者。</p>
+<h2>代码出处</h2>
+<ul>
+<li>PyTorch 可先用 <code>F.cross_entropy(..., reduction="none")</code> 得到逐像素损失，再乘位置权重图</li>
+<li>类别权重和位置权重不是一回事：前者按类别固定，后者可随像素位置变化</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/unet.html">unet</a> · 原论文用它分开相邻细胞</li>
+<li><a href="../concepts/cross-entropy.html">cross-entropy</a> · 基础的 <code>-log p_true</code></li>
+<li><a href="../concepts/softmax.html">softmax</a> · 产生每个像素的类别概率</li>
+<li><a href="../concepts/semantic-segmentation.html">semantic-segmentation</a> · 损失作用于哪张输出图</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/unet.html"><span class="cat">paper</span>U-Net · 一边看清是什么，一边记住它在哪</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/weighted-pixelwise-cross-entropy.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

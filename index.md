@@ -8,6 +8,7 @@
 
 - [FFT · 快速傅里叶变换](wiki/papers/fft.md) — 信号处理/算法基础: 傅里叶=棱镜拆频率, FFT 用偶奇折半+单位根对称(蝴蝶)把 N² 砍成 N·logN; 接卷积定理 + 音频频谱(STFT)
 - [CNN · 卷积神经网络](wiki/papers/cnn.md) — 视觉骨架基础: 小核滑遍全图+权重共享, 把局部性/平移不变焊进结构; 卷积滑窗动画 + LeNet→ResNet→ViT 谱系
+- [U-Net · 一边看清是什么，一边记住它在哪](wiki/papers/unet.md) — MICCAI 2015 像素分割祖师爷：编码器缩图拿上下文，解码器放大还网格，同尺度 skip 裁剪后 concat 补回边界；原版 572→388 尺寸账、overlap-tile、弹性形变和细胞窄缝加权损失完整手算
 - [Deep Residual Learning · ResNet](wiki/papers/resnet.md) — 残差连接的起源，把"网络越深越好"做成现实，也给两年后的 Transformer 留好 sublayer 模板
 - [YOLO · 看一眼就把框和类一起吐出来](wiki/papers/yolo.md) — CVPR2016 YOLO v1:原始 R-CNN 逐框提特征,Fast R-CNN 共享整图卷积但仍等 Selective Search,Faster R-CNN 用 RPN 提候选;YOLO 一次前向输出 7×7×30。训练损失拆责任框中心/尺寸/置信度、空框置信度、类别五块;√w,h 让同样 1% 图宽误差对小框产生 7.20× 平方损失。VOC2007:63.4%mAP@45FPS;错误画像是 19.0% 定位 vs 4.75% 背景误检;与最佳 Fast R-CNN 组合 71.8→75.0(+3.2)。VOC2012 57.9,小物体仍弱;Picasso/People-Art 显示艺术画迁移优势但不外推为普遍域泛化。
 - [YOLOv2 / YOLO9000 · 给 YOLO v1 逐项校准](wiki/papers/yolov2-yolo9000.md) — CVPR2017:BatchNorm+高分辨率预训练+anchor+IOU维度聚类+sigmoid位置限位+passthrough+多尺度训练,消融63.4→78.6;同一权重416为76.8mAP@67FPS、544为78.6@40FPS。Darknet-19仅5.58B运算;WordTree把COCO框监督与ImageNet分类合成9418类。边界:COCO AP@[.5:.95]21.6/小目标AP5.0;156个无框监督类16.0mAP,动物迁移好但服饰类可到0。
@@ -175,6 +176,11 @@
 - [Convolution](wiki/concepts/convolution.md) — 小核滑遍全图、逐元素相乘求和；局部连接+权重共享，省参数又平移不变
 - [Pooling](wiki/concepts/pooling.md) — 窗口内取max/avg,是否缩图由kernel/stride/padding共同决定;3×3滑窗手算+YOLOv4的stride-1池化为何保持13×13
 - [Receptive Field](wiki/concepts/receptive-field.md) — 一个输出能看到原图多大一片；堆卷积线性长、下采样指数级扩
+- [Semantic Segmentation](wiki/concepts/semantic-segmentation.md) — 给每个像素分类；与整图分类、实例分割的输出契约分开
+- [Fully Convolutional Network](wiki/concepts/fully-convolutional-network.md) — 没有固定长度全连接层；输入空间变大，卷积输出网格跟着变
+- [Skip Connection](wiki/concepts/skip-connection.md) — 跨层直连；U-Net 用 concat 补位置，ResNet 用 add 帮优化
+- [Transposed Convolution](wiki/concepts/transposed-convolution.md) — 每个输入值按可学习核铺到更大网格，重叠处相加；不是精确逆卷积
+- [Weighted Pixel-wise Cross-Entropy](wiki/concepts/weighted-pixelwise-cross-entropy.md) — 给关键像素更高分值；U-Net 让相邻细胞间窄缝的错误贵约 10 倍
 
 ### ResNet 系
 - [Residual Connection](wiki/concepts/residual-connection.md) — `+ x` 快车道，identity 是默认值

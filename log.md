@@ -1097,3 +1097,11 @@ skill 更新:
 - §05 按多步推导规范重写：五步路线图 + 五样小工具（期望/换元抽样/链式法则/θ多处分头求/总概率=1）+ 逐步不跳（reparameterization→拆两块→real块→fake块两条路→消失项）+ 贯穿 running numeric（x=1.2, s_real=1.5, s_fake=.1667 → 原始方向 −1.333 → 裹权重得 gₓ=−1.6）。
 - 「p_fake 也依赖 θ 为何不多一项」从脚注升为独立一步（score-function 恒等式 = 总概率恒为 1），并用 N(θ,·) 数值验证均衡/非均衡两组都 →0。
 - 删除运行时 crossRefs 文本 hack（§06→§04 会污染新正文）；源码内 section 号与阅读序对齐。
+
+## [2026-07-24] ingest | U-Net · 一边看清是什么，一边记住它在哪
+
+- 按“像素分割 → 滑窗浪费 → U 形全图 → 尺寸账 → skip → overlap-tile → 边界损失 → 小数据训练 → 实验边界”重排原论文，不把现代 same-padding U-Net 冒充 2015 原版。
+- 用完整尺寸链从 `572→570→…→28→…→388` 算清 23 个卷积层，并用 `64→crop 56→concat 1024` 解释为何原版跳连必须先裁剪。
+- 从 `d₁=d₂=1、w₀=10、σ=5` 算出边界权重 `10.231`，再把错误概率 `.119` 算到加权损失 `21.76`；同时标明原文 Eq. (1) 少负号与实际最小化交叉熵的口径。
+- 补齐 batch 1 / momentum .99、He 初始化 `√(2/576)=.0589`、3×3 控制网格弹性形变、三套数据与完整原表数字，并保留 DIVE-SCI 在 Rand / pixel error 上更优、论文无逐项消融等反例。
+- 新增 semantic-segmentation、fully-convolutional-network、skip-connection、transposed-convolution、weighted-pixelwise-cross-entropy 五个 concept，并修正 softmax 页旧数字例的求和与概率。

@@ -1,8 +1,8 @@
 ---
 name: cross-entropy
 type: concept
-sources: [gpt-2, dino, diffusion-opd, yolov3, sensenova-vision]
-updated: 2026-07-13
+sources: [gpt-2, dino, diffusion-opd, yolov3, sensenova-vision, unet]
+updated: 2026-07-24
 ---
 
 # Cross-Entropy · 交叉熵 · −log(你押对的概率)
@@ -84,3 +84,4 @@ updated: 2026-07-13
 - [[rl-for-llm-people]] · KL 散度跟交叉熵的关系在这条线里
 - [[diffusion-opd]] · 同协方差高斯的 KL 退化成均值差的 MSE
 - [[sensenova-vision]] · 框、OCR、关键点与相机参数作为文本 token，用 next-token 交叉熵训练
+- [[unet]] · 逐像素交叉熵再乘边界权重图
