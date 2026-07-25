@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Hierarchical Latent Denoising · 层级 latent 去噪 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · hierarchical-latent-denoising</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Hierarchical Latent Denoising · 层级 latent 去噪</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>先用少量粗时间节点决定整段轨迹，再用更多细节点逐层落实；粗层故意不完全去噪，避免太早把一种方案锁死。</p>
+<h2>直觉</h2>
+<p>流式生成最难修的是早期错误。普通模型生成迷宫第一段路线后，后面只能沿着它继续。层级去噪把“马上输出第一段”改成“先做整段低分辨率规划”：</p>
+<pre><code class="language-text">1 个节点：整段方向
+2 个节点：前半 / 后半
+4 个节点：四个阶段
+8 个节点：具体时间点
+</code></pre>
+<p>上层不是文字计划，也不是显式搜索树，而是时间分辨率较低的连续 latent。</p>
+<h2>为什么粗层少去噪</h2>
+<p>把粗节点完全去噪，会得到非常具体的上层状态，下层只能补细节；少去噪则保留残余噪声，使下层还有修正空间。HDR 用 <code>[5,8,13,20,32,50]</code>，从粗到细逐渐增加采样步数。</p>
+<p>这不等于“噪声越多推理越好”。粗层需要模糊，最细层仍需充分去噪，三者失衡都会变差。</p>
+<h2>证据边界</h2>
+<p>HDR 的 All-50 消融从 <code>60.29/89.56</code> 降到 <code>58.38/88.21</code>，支持保留粗层不确定性；但作者没有直接测量每层熵，也未公开层级干净 token 的完整构造代码。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/hierarchical-denoising-visual-reasoning.html">hierarchical-denoising-visual-reasoning</a> · HDR 完整论文</li>
+<li><a href="../concepts/sparse-hierarchical-attention.html">sparse-hierarchical-attention</a> · 层级节点怎样通信</li>
+<li><a href="../concepts/conditional-flow-matching.html">conditional-flow-matching</a> · 每个节点如何训练</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/hierarchical-denoising-visual-reasoning.html"><span class="cat">paper</span>HDR · 先规划整段轨迹，再逐层生成每一步</a></li><li><a href="../concepts/sparse-hierarchical-attention.html"><span class="cat">concept</span>SHAP · 稀疏层级注意力</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/hierarchical-latent-denoising.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
