@@ -1,8 +1,8 @@
 ---
 name: score-function
 type: concept
-sources: [flow-matching, ode-sde, dmd, dmd2, drifting-models]
-updated: 2026-07-23
+sources: [flow-matching, ode-sde, dmd, dmd2, senseflow, drifting-models]
+updated: 2026-07-24
 ---
 
 # Score Function · 不是评分，而是“这张带噪图该往哪改”

@@ -1,8 +1,8 @@
 ---
 name: ema
 type: concept
-sources: [dino, krea-2]
-updated: 2026-06-11
+sources: [dino, krea-2, senseflow]
+updated: 2026-07-24
 ---
 
 # EMA · 指数滑动平均 · 一行就够
@@ -57,6 +57,7 @@ m 越接近 1，爬得越慢、越稳。
 
 ## 哪里都在用
 - **[[dino]]**：teacher 权重 = EMA(student 权重)（momentum encoder，追一个更稳的自己）；centering 的 c = EMA(teacher 输出均值)。
+- **[[senseflow]] 的 IDA**：公式同样是 `φ←λφ+(1−λ)θ`，但不是模型追自己的历史。`φ` 属于 fake 网络，`θ` 属于刚更新的生成器；这次插值负责把学生在稀疏 anchor 上的新变化软传给 fake 网络，fake 随后仍用自己的稠密时间步去噪损失继续训练。
 - **[[batchnorm]]**：推理用的 running mean / var 是训练时的 EMA。
 - **Adam 优化器**：一阶动量 m_t、二阶 v_t **都是梯度的 EMA**（见 [[adam]]）。
 - **EMA 权重**：把训练后期的模型权重做 EMA 当最终 checkpoint，往往更稳更好。
@@ -67,5 +68,6 @@ m 越接近 1，爬得越慢、越稳。
 
 ## 链接
 - [[dino]] · teacher 和 center 都用 EMA
+- [[senseflow]] · IDA 形式像 EMA，但混合的是两个职责不同、结构相同的网络
 - [[adam]] · 动量和方差都是梯度的 EMA
 - [[batchnorm]] · running 统计量是 EMA
