@@ -191,23 +191,23 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 
 <section id="start">
 <h2><span class="n">§ 00</span><span>没读过 DMD，也先把这条主线搭起来</span></h2>
-<div class="story-entry"><b>先借“学生修照片”理解三种反馈</b><p>学生交出一张作品后，修图老师会指出“往哪改更像目标图”；对学生当前作品的统计会指出“已经在哪些画法上挤得太多”；原始 DMD 还会拿出老师指定的标准答案，要求同一份噪声尽量复刻同一张图。</p><p>比喻到这里就停。真实训练中，前两项是与图像 latent 同形状的方向张量，第三项则要事先保存 <code>(噪声 z, 老师最终图 y)</code>。</p></div>
+<div class="story-entry"><b>先借“学生学画画”理解三种反馈</b><p>学生交出一张画，有三种人给他反馈。修图老师指一条道——“往这边改就更像真图”，这是把画往真实拽的引力；另一个人盯着学生最近这批画说“你这些全一个套路，别都挤这儿”，这是把画从千篇一律里推开的斥力；原始 DMD 还多请了一个人，甩出一张标准答案图，逼学生“同一份噪声就得复刻这张”，一笔一笔照着临。</p><p>比喻到此为止。真到训练里，前两种反馈是和图像 latent 同形状的方向张量；第三种得事先把一对对 <code>(噪声 z, 老师最终图 y)</code> 存下来。</p></div>
 <div class="feedback-grid">
-  <div class="feedback"><b>REAL SCORE</b>冻结扩散老师给方向：当前学生图怎样修改，更靠近目标图像分布。</div>
-  <div class="feedback"><b>FAKE SCORE</b>在线 fake 去噪器描述学生当前分布：哪些生成区域已经挤得过密。</div>
-  <div class="feedback"><b>PAIRED REGRESSION</b>同一份噪声必须靠近老师指定图；稳，但要预先造大量答案。</div>
+  <div class="feedback"><b>REAL SCORE</b>冻结的扩散老师指一条道：学生这张图往哪改，才更像真实分布。这就是把图往真拽的引力。</div>
+  <div class="feedback"><b>FAKE SCORE</b>在线 fake 去噪器盯着学生当前分布：哪些画法已经挤得太密。取个负号，就成了把图从扎堆里推开的斥力。</div>
+  <div class="feedback"><b>PAIRED REGRESSION</b>同一份噪声必须逼近老师给的那张图；稳是稳，可得预先造一大批答案图。</div>
 </div>
-<figure><figcaption><span>Fig 00A · 原始 DMD 的三条反馈</span><b>DMD2 删除配对回归，保留两套 score</b></figcaption>
+<figure><figcaption><span>Fig 00A · 原始 DMD 的三条反馈</span><b>DMD2 砍掉配对回归，留下两套 score</b></figcaption>
   <div class="baseline-chain">
     <div class="base-node student">随机噪声 z 输入学生 Gθ<small>先生成当前作品 x</small></div><div class="base-arrow"></div>
-    <div class="base-node scores">同一个带噪 xₜ<br>询问 real / fake score<small>得到分布修改方向</small></div><div class="base-arrow"></div>
+    <div class="base-node scores">在同一个带噪 xₜ 上<br>各问一次 real / fake score<small>拿到往哪改的方向</small></div><div class="base-arrow"></div>
     <div class="base-node answer">另查老师配对 y<small>同一 z 的指定答案</small></div><div class="base-arrow"></div>
     <div class="base-node">DMD 方向 + 配对回归<small>共同更新学生 θ</small></div>
   </div>
 </figure>
 <h3>先用一个数算清两套 score 在做什么</h3>
 <p>把整张 latent 缩成一个数。学生输出 <code>x=1.2</code>，取 <code>α=.8、σ=.6、ε=−.5</code>，所以 <code>xₜ=.8×1.2+.6×(−.5)=.66</code>。冻结老师预测干净值 <code>μreal=1.5</code>，fake 网络预测 <code>μfake=.9</code>。</p>
-<p class="formula-purpose">两套去噪预测都用这条式子换成“当前位置往哪改”。</p>
+<p class="formula-purpose">两套去噪预测，都靠这条式子换算成“当前该往哪个方向改”。</p>
 <div class="formula math" data-display="true">s(x_t,t)=-\frac{x_t-\alpha\mu(x_t,t)}{\sigma^2}</div>
 <div class="score-sheet">
   <div class="score-cell label">老师方向</div><div class="score-cell">sreal = −[.66−.8×1.5]/.6² = 1.5000</div>
@@ -215,11 +215,11 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
   <div class="score-cell label">梯度下降后的实际输出方向</div><div class="score-cell result">sreal−sfake ≈ 1.3333</div>
   <div class="score-cell label">配对回归的简化示意：若老师指定 y=1.4</div><div class="score-cell">(x−y)²=(1.2−1.4)²=.04</div>
 </div>
-<p>前两行让整批学生图靠近目标分布并避免挤在少数模式；最后一行把这个具体样本拴向老师指定答案。真实 DMD 使用 LPIPS，而不是这里为了手算采用的平方误差。real-score 老师怎样预训练，可先看 <a href="../concepts/score-function.html">score function</a>。</p>
+<p>前两行合起来，把整批学生图往目标分布拽、又不让它们全挤在少数几种画法上；最后一行则把这个具体样本死死拴在老师指定的答案上。真实 DMD 用的是 LPIPS，这里为了能手算才换成平方误差。real-score 老师是怎么预训练出来的，可以先看 <a href="../concepts/score-function.html">score function</a>。</p>
 <figure><figcaption><span>Fig 00B · DMD2 四项改动分别补哪一个洞</span><b>按因果顺序读，不是功能清单</b></figcaption>
   <div class="repair-grid">
     <div class="repair-card"><b>01 · REMOVE</b><strong>删配对回归</strong><p>不再要求同一个 z 复刻老师指定 y，也不再依赖百万级离线答案。</p></div>
-    <div class="repair-card"><b>02 · STABILIZE</b><strong>TTUR 追上学生</strong><p>稳定器拆掉后，fake-score 多更新几次，减少过时方向。</p></div>
+    <div class="repair-card"><b>02 · STABILIZE</b><strong>TTUR 追上学生</strong><p>稳定绳一拆，就让 fake-score 多更新几拍，少给过时的方向。</p></div>
     <div class="repair-card"><b>03 · SEE REAL DATA</b><strong>GAN 看真实图</strong><p>老师 score 也会估错；GAN 提供一条不经过老师的质量信号。</p></div>
     <div class="repair-card"><b>04 · ALIGN INPUTS</b><strong>多步反向模拟</strong><p>后续步骤用学生自己的中间状态训练，和推理输入对齐。</p></div>
   </div>
@@ -228,7 +228,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 
 <section id="overview">
 <h2><span class="n">§ 01</span><span>先看整套系统：四个角色，两个更新阶段</span></h2>
-<p class="lead">DMD2 训练时摆着四个网络，但部署时只留下学生。先把谁给谁数据、谁在什么时候更新看清，后面的公式才不会散成零件。</p>
+<p class="lead">DMD2 训练时同时摆着四个网络，部署时只留学生一个。先把谁喂谁数据、谁在什么时候更新理清楚，后面的公式才不会看着像一堆散零件。</p>
 <figure><figcaption><span>Fig 01 · 训练全图</span><b>训练四个角色，部署只留 Gθ</b></figcaption>
   <div class="cards">
     <div class="card student"><span class="tag">DEPLOYABLE</span><h4>学生 Gθ</h4><p>输入噪声或中间带噪 latent；一步或四步输出干净预测。DMD + GAN 只更新它。</p></div>
@@ -243,12 +243,12 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 
 <section id="baseline">
 <h2><span class="n">§ 02</span><span>原始 DMD 为什么还绑着昂贵的配对稳定器</span></h2>
-<p>DMD 不要求同一份噪声逐步复刻老师轨迹，而是比较学生与目标的输出分布<a class="jr" href="#g-01">1</a>。学生生成 <code>x=Gθ(z)</code> 后先加噪：</p>
-<p class="formula-purpose">前向扩散：把干净学生输出放到第 t 个噪声尺度。</p>
+<p>DMD 不要求同一份噪声一步步复刻老师的采样轨迹，而是直接比学生和目标的整体输出分布<a class="jr" href="#g-01">1</a>。学生先生成 <code>x=Gθ(z)</code>，再给它加噪：</p>
+<p class="formula-purpose">前向扩散：把学生这张干净图，加噪到第 t 个噪声档位。</p>
 <div class="formula math" data-display="true">x_t=F(x,t)=\alpha_t x+\sigma_t\epsilon,\qquad \epsilon\sim\mathcal N(0,\mathbf I)</div>
 <div class="symbol-grid">
   <div class="symbol"><code>x=Gθ(z)</code>学生由高斯噪声 z 生成的干净图或 latent。</div><div class="symbol"><code>t</code>本轮随机抽到的扩散时刻，决定加多少噪声。</div>
-  <div class="symbol"><code>αt / σt</code>噪声日程给出的信号保留系数与噪声强度。</div><div class="symbol"><code>ε~N(0,I)</code>与 x 同形状、各维独立且方差为 1 的高斯噪声。</div>
+  <div class="symbol"><code>αt / σt</code>噪声日程给的两个系数：一个管保留多少原信号，一个管掺进多少噪声。</div><div class="symbol"><code>ε~N(0,I)</code>与 x 同形状、各维独立且方差为 1 的高斯噪声。</div>
 </div>
 <p>两套去噪器把干净预测换成 score<a class="jr" href="#g-02">2</a>：</p>
 <div class="formula math" data-display="true">s(x_t,t)=\nabla_{x_t}\log p_t(x_t)=-\frac{x_t-\alpha_t\mu(x_t,t)}{\sigma_t^2}</div>
@@ -258,10 +258,10 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 </div>
 <p class="formula-purpose">DMD 梯度：同一带噪位置上，用学生分布 score 减目标分布 score。</p>
 <div class="formula math" data-display="true">\begin{aligned}\nabla_\theta\mathcal L_{\rm DMD}&=\mathbb E_t\!\Bigl[\left(s_{\rm fake}(x_t,t)-s_{\rm real}(x_t,t)\right)\\[-2pt]&\qquad\cdot\frac{\partial G_\theta(z)}{\partial\theta}\Bigr]\end{aligned}</div>
-<p>梯度下降会再减一次，所以输出实际吸向 <code>sreal</code>，并离开学生已经堆得过密的方向。完整推导见 <a href="dmd.html">DMD</a>。</p>
-<p class="formula-purpose">原始稳定器：同一份噪声 z，回归老师多步生成的指定图 y。</p>
+<p>梯度下降本身还会再取一次负号，所以最终效果是：学生图被引力吸向 <code>sreal</code>（更真），同时被斥力推离自己已经扎堆的那些画法。完整推导见 <a href="dmd.html">DMD</a>。</p>
+<p class="formula-purpose">原来那根稳定绳：同一份噪声 z，要去逼近老师多步跑出来的那张指定图 y。</p>
 <div class="formula math" data-display="true">\mathcal L_{\rm reg}=\mathbb E_{(z,y)}\!\left[d\!\left(G_\theta(z),y\right)\right]</div>
-<figure><figcaption><span>Fig 02 · 配对回归的两笔账</span><b>约束路径，同时也限制上限</b></figcaption>
+<figure><figcaption><span>Fig 02 · 配对回归的两笔账</span><b>拴住了路径，也压低了天花板</b></figcaption>
   <div class="compare"><div class="panel old"><h4>原始 DMD</h4><ul><li>双 score 做分布匹配</li><li>另存大量 (z,y) 配对</li><li>LPIPS 回归守住结构和模式</li><li>学生仍被老师确定性路径拴住</li></ul></div><div class="flow-arrow">→</div><div class="panel new"><h4>DMD2 的目标</h4><ul><li>保留双 score</li><li>删除大规模配对回归</li><li>让 fake-score 自己追得更准</li><li>用真实图 GAN 补老师误差</li></ul></div></div>
   <div class="cost"><div><strong>≈5s</strong>SDXL 生成一对</div><div><strong>12M</strong>原 DMD LAION 配对</div><div><strong>≈700</strong>A100·天</div></div>
 </figure>
@@ -283,7 +283,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
     <div class="card disc"><span class="tag">ADDED</span><h4>补真实数据</h4><p>GAN 直接看真实图，学生不再只能继承老师的近似。</p></div>
   </div>
 </figure>
-<div class="warning"><b>重要例外：</b>SDXL 一步模型仍用 10K 对数据做过短暂回归预热，以修复块状噪声。四步模型和其他骨干不需要这项补丁。“去配对”指摆脱大规模配对依赖，不等于所有公开 checkpoint 都严格零配对。</div>
+<div class="warning"><b>一个重要例外：</b>SDXL 的一步模型还是先拿 10K 对数据做过一小段回归预热，用来消掉块状噪声。四步模型和别的骨干都不需要这个补丁。所以“去配对”说的是甩掉大规模配对依赖，并不代表所有公开 checkpoint 都严格零配对。</div>
 </section>
 
 <section id="ttur">
@@ -297,7 +297,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
   </div>
   <div class="balance"><div><strong>1:1</strong>亮度 / FID 振荡</div><div><strong>5:1</strong>稳定与速度最佳折中</div><div><strong>10:1</strong>很稳，但墙钟更慢</div><div><strong>LR×5</strong>不如真的更新五次</div></div>
 </figure>
-<p>TTUR<a class="jr" href="#g-03">3</a> 在这里采用不同更新频率，而不是强制使用不同学习率。ImageNet 和 SDXL 用 5:1；SD v1.5 用 10:1。论文建议换任务时监控平均亮度等总体统计量，选“刚好不再振荡”的最小比例。</p>
+<p>TTUR<a class="jr" href="#g-03">3</a> 在这里的做法是用不同的更新频率，而不是硬套不同的学习率。ImageNet 和 SDXL 用 5:1；SD v1.5 用 10:1。论文建议：换任务时盯着平均亮度这类总体统计量，挑“刚好不再抖”的最小比例。</p>
 <div class="note"><b>因果链：</b>删回归 → fake-score 误差暴露 → <code>sfake−sreal</code> 偏掉 → 学生把错误方向继续放大；提高 fake 更新频率先把估计器追上，再允许学生移动。</div>
 <h3>一个数看懂：过时的 fake score 会把步子放大多少</h3>
 <p>下面是讲解用数字，不是论文观测值。假设 <code>sreal=1.00</code>，学生当前分布真正的 <code>sfake=.80</code>，但还没追上的 fake 网络只估成 <code>.20</code>。</p>
@@ -312,7 +312,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 
 <section id="gan">
 <h2><span class="n">§ 05</span><span>GAN 直接接触真实图，补的是老师的近似误差</span></h2>
-<p>DMD 的 real score 仍来自老师。老师没学好的纹理或颜色，学生只看老师就无法纠正。DMD2 增加 GAN<a class="jr" href="#g-04">4</a>，直接比较真实图和学生图。</p>
+<p>DMD 的 real score 归根到底来自老师。老师自己没学好的纹理、颜色，学生光盯着老师是纠正不过来的。于是 DMD2 加进 GAN<a class="jr" href="#g-04">4</a>，让它直接拿真实图和学生图对比。</p>
 <figure><figcaption><span>Fig 05 · 同一个分类头看真图与学生图</span><b>两边先按随机 t 加噪</b></figcaption>
   <div class="gan-flow">
     <div class="gan-node real"><h4>真实图 xreal</h4><p>来自训练数据<br>F(xreal,t) 随机加噪</p></div><div class="flow-arrow">→</div>
@@ -339,7 +339,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
   <div class="score-cell label">学生 logit 提升到 .2 后</div><div class="score-cell result">softplus(−.2) ≈ .598，损失下降</div>
 </div>
 <p>这组数把两边的目标分开了：判别器希望真实 logit 高、学生 logit 低；轮到生成器时，它只想把自己的 logit 推高。</p>
-<div class="plain"><b>为什么先加噪：</b>它会抹掉最容易识别的高频瑕疵，让真假分布在多个噪声尺度上出现重叠。判别器不容易瞬间满分，学生能拿到更连续的梯度。这与 DiffusionGAN 的稳定思路一致。</div>
+<div class="plain"><b>为什么要先加噪：</b>加噪会糊掉那些一眼就能认出的高频瑕疵，让真、假两批分布在好几个噪声档位上互相重叠。判别器没法一上来就打满分，学生也就能拿到更平滑连续的梯度。这和 DiffusionGAN 的稳定思路是一致的。</div>
 </section>
 
 <section id="roles">
@@ -353,7 +353,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 
 <section id="multistep">
 <h2><span class="n">§ 07</span><span>从一步扩成四步：每步先去噪，再按下一时刻加回噪声</span></h2>
-<p class="lead">SDXL 从纯噪声一步跳到 1024² 图像太难。DMD2 固定四个时刻，并要求训练和推理严格使用同一张时间表。</p>
+<p class="lead">SDXL 想从纯噪声一步蹦到 1024² 的成图，实在太难。DMD2 干脆固定四个时刻，而且要求训练和推理用同一张时间表，一步都不许错开。</p>
 <p class="formula-purpose">第 i 步：学生先预测干净样本。</p>
 <div class="formula math" data-display="true">\hat x_{t_i}=G_\theta(x_{t_i},t_i)</div>
 <p class="formula-purpose">若还没结束：把干净预测重新加噪到下一时刻。</p>
@@ -384,7 +384,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
   </div>
   <div class="gap-result">输入差距：1.043 − (−.077) = 1.120</div>
 </figure>
-<p>数字只演示数据流，不是论文 latent。它说明第一步稍有偏差，第二步就可能落到训练从未见过的位置；随后误差继续传给第三、四步。</p>
+<p>这些数字只是演示数据怎么流，不是论文里真实的 latent。它想说的是：第一步只要稍微偏一点，第二步就可能掉进训练时从没见过的地方；偏差再一路传给第三、四步。</p>
 </section>
 
 <section id="backsim">
@@ -430,7 +430,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
   </tbody>
 </table></div>
 <div class="plain"><b>把代码压成一条线：</b>学生出图 → 若轮到 G，算 <code>loss_dm + gen_cls_loss</code> 更新 θ → 学生图 detach → 算 <code>loss_fake</code> 更新 φ → 真图与学生图各自加噪，算 <code>cls_loss</code> 更新 ψ → 下一小步。</div>
-<div class="warning"><b>两个名字最容易误导：</b><code>loss_dm</code> 的数值不等于 KL，它只是把已经算好的分布方向塞进自动求导；<code>detach</code> 也不删除学生图，只保留数值并截断回到生成器的梯度。</div>
+<div class="warning"><b>两个名字最容易误导：</b><code>loss_dm</code> 这个数值并不等于 KL，它只是把已经算好的分布方向塞给自动求导；<code>detach</code> 也不是删掉学生图，只是留下数值、把往生成器回传的梯度掐断。</div>
 </section>
 
 <section id="head">
@@ -443,7 +443,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
     <div class="arch-node"><b>CLASSIFY</b><strong>1 logit</strong><p>正值更像真实图</p></div>
   </div>
 </figure>
-<p>共享 encoder 省下一套完整判别器，并让分类器天然接收时间与文本条件。代价是 fake-score 的去噪目标和真假分类目标会共同更新 encoder，优化更耦合。</p>
+<p>复用这个 encoder，既省下一整套判别器，又让分类器顺带拿到了时间和文本条件。代价是 fake-score 的去噪目标和真假分类目标会一起改这个 encoder，两边的优化就更纠缠在一起。</p>
 </section>
 
 <section id="recipe">
