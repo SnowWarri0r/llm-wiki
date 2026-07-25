@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>PRoPE · 把相机几何写进注意力 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · projective-rope</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>PRoPE · 把相机几何写进注意力</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>普通 RoPE 告诉 attention“两个 token 在画面里相隔多远”；PRoPE 再把相机内参和位姿写进 Q/K/V 的坐标变换，使两个不同帧的 token 交互时能直接看到相机之间的相对投影关系。</p>
+<h2>为什么二维位置不够</h2>
+<p>同一张桌子在连续两帧中可能从画面左侧移到右侧。只看二维像素坐标，模型不知道这是桌子移动了，还是相机向左转了。若每一帧都带有：</p>
+<ul>
+<li><code>K_i</code>：相机内参，描述焦距和主点；</li>
+<li><code>T_i^{cw}</code>：从世界坐标变到第 <code>i</code> 帧相机坐标的外参；</li>
+</ul>
+<p>就可以把“第 1 帧和第 2 帧的相机如何相对移动”显式送进注意力。</p>
+<p>PRoPE 先把二者合成 4×4 投影矩阵：</p>
+<div class="tex math-display" data-display="true">\widetilde P_i=
+\begin{bmatrix}
+[K_i\;0]T_i^{cw}\\
+e_4^\top
+\end{bmatrix},
+\qquad e_4=(0,0,0,1)^\top.</div>
+<p>随后把一部分 attention head 维度留给 <code>\widetilde P_i</code>，剩余部分继续使用横向 <code>x</code> 与纵向 <code>y</code> 的普通 RoPE。两个 token 的 Q/K 做点积时，真正留下的是：</p>
+<div class="tex math-display" data-display="true">\widetilde P_{i_1}\widetilde P_{i_2}^{-1}.</div>
+<p>也就是“从第 2 帧相机坐标换到第 1 帧相机坐标”的相对变换，而不是两份互不相关的绝对位姿。</p>
+<h2>一个只移动 1 米的例子</h2>
+<p>为简化，令两台相机内参都是单位矩阵。第 1 帧相机不动，第二帧相机沿世界 <code>x</code> 轴移动 <code>+1</code>，其 world-to-camera 外参含 <code>-1</code> 平移。于是：</p>
+<div class="tex math-display" data-display="true">\widetilde P_1\widetilde P_2^{-1}
+=
+\begin{bmatrix}
+1&amp;0&amp;0&amp;1\\
+0&amp;1&amp;0&amp;0\\
+0&amp;0&amp;1&amp;0\\
+0&amp;0&amp;0&amp;1
+\end{bmatrix}.</div>
+<p>右上角的 <code>+1</code> 正是两台相机之间的相对水平位移。真实模型同时处理旋转、平移、焦距和每个 token 的二维坐标。</p>
+<h2>与“把 pose token 拼进去”有什么不同</h2>
+<p>拼 pose token 是让网络自己学“这些数字和画面有什么关系”；PRoPE 直接把已知投影几何放进 attention 运算。前者更自由，后者归纳偏置更强。它仍不是 3D 重建：网络没有显式 mesh 或点云，只是更容易根据相对相机关系对齐跨帧内容。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/minwm.html">minwm</a> · PRoPE 怎样进入一条完整的实时世界模型训练流水线</li>
+<li><a href="../concepts/rotary-position-embedding.html">rotary-position-embedding</a> · 普通 RoPE 的旋转与相对位置</li>
+<li><a href="../concepts/camera-pose-tokenization.html">camera-pose-tokenization</a> · 另一类把相机位姿编码成 token 的方案</li>
+<li><a href="../concepts/self-attention.html">self-attention</a> · Q/K/V 点积的基础</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/minwm.html"><span class="cat">paper</span>minWM · 把离线视频扩散模型改造成可操控、能逐段输出的世界模型</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/projective-rope.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

@@ -49,6 +49,8 @@
 <p>HDR 在输出最终细节点之前，先生成粗时间层。它把“整段可修改”压缩成少量上层节点，再用稀疏父子连接传给下层，目标是保留流式延迟，同时推迟早期决定。</p>
 <h2>Solaris 的 teacher → student 路线</h2>
 <p>Solaris 先训练能整段联合去噪的双向多人 teacher，再把中间 checkpoint 改成只能读取过去的因果 student。student 用 6 个 latent frame 的滚动窗口生成，最后在自己生成的历史上做 Checkpointed Self Forcing。这里“双向质量高、因果可部署”的分工非常直接。</p>
+<h2>minWM 的 teacher → student 路线</h2>
+<p>minWM 先把现成双向视频扩散模型训出相机控制，再用 teacher forcing 改成多步因果模型；随后用 causal ODE 或 causal consistency distillation 压成四步，最后让因果学生 self-rollout，并由双向 real/fake score 做 DMD。它把“高质量双向老师”和“低延迟因果学生”拆成一条可复现流水线。</p>
 <h2>链接</h2>
 <ul>
 <li><a href="../papers/hierarchical-denoising-visual-reasoning.html">hierarchical-denoising-visual-reasoning</a> · HDR 完整方案</li>
@@ -56,12 +58,13 @@
 <li><a href="../concepts/kv-cache.html">kv-cache</a> · 流式复用的基础</li>
 <li><a href="../papers/solaris-multiplayer-world-model.html">solaris-multiplayer-world-model</a> · 双向单人→双向多人→因果多人→Self Forcing</li>
 <li><a href="../papers/interactive-video-world-modeling-survey.html">interactive-video-world-modeling-survey</a> · 交互式世界模型为什么必须做因果 rollout</li>
+<li><a href="../papers/minwm.html">minwm</a> · 从双向 T2V/TI2V 到四步因果世界模型的完整工程配方</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 4 处</span>
-  <ul><li><a href="../papers/hierarchical-denoising-visual-reasoning.html"><span class="cat">paper</span>HDR · 先规划整段轨迹，再逐层生成每一步</a></li><li><a href="../papers/interactive-video-world-modeling-survey.html"><span class="cat">paper</span>交互式视频世界模型综述 · 不是“生成一段视频”，而是每次操作后都要继续维持同一个世界</a></li><li><a href="../papers/solaris-multiplayer-world-model.html"><span class="cat">paper</span>Solaris · 两个人同时行动时，视频世界模型怎样维护同一个 Minecraft</a></li><li><a href="../concepts/speculative-decoding.html"><span class="cat">concept</span>Speculative Decoding · 小模型先起草，大模型一次验一段</a></li></ul>
+  <span class="label">引用此页的内容 · 6 处</span>
+  <ul><li><a href="../papers/hierarchical-denoising-visual-reasoning.html"><span class="cat">paper</span>HDR · 先规划整段轨迹，再逐层生成每一步</a></li><li><a href="../papers/interactive-video-world-modeling-survey.html"><span class="cat">paper</span>交互式视频世界模型综述 · 不是“生成一段视频”，而是每次操作后都要继续维持同一个世界</a></li><li><a href="../papers/minwm.html"><span class="cat">paper</span>minWM · 把离线视频扩散模型改造成可操控、能逐段输出的世界模型</a></li><li><a href="../papers/solaris-multiplayer-world-model.html"><span class="cat">paper</span>Solaris · 两个人同时行动时，视频世界模型怎样维护同一个 Minecraft</a></li><li><a href="../concepts/speculative-decoding.html"><span class="cat">concept</span>Speculative Decoding · 小模型先起草，大模型一次验一段</a></li><li><a href="../concepts/teacher-forcing-video-diffusion.html"><span class="cat">concept</span>视频扩散里的 Teacher Forcing · 训练时喂真历史</a></li></ul>
 </div>
 
 <div class="colophon">

@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Causal Consistency Distillation · 不存整条 ODE 轨迹也能学少步 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · causal-consistency-distillation</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Causal Consistency Distillation · 不存整条 ODE 轨迹也能学少步</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>让学生在相邻两个噪声时刻给出同一个干净视频段：左边由当前学生预测，右边由 EMA 学生接住老师走过的一小步；这样在线产生监督，不必预先保存大量 ODE 中间 latent。</p>
+<h2>它要替代什么</h2>
+<p>少步学生原本可以用离线 ODE 数据训练：先让慢速因果老师跑完整去噪轨迹，把每个中间状态存盘；之后学生学习从指定中间状态直接跳到干净结果。问题是生成和保存轨迹都很贵。</p>
+<p>一致性蒸馏只现场做老师的一小步：</p>
+<div class="tex math-display" data-display="true">\mathcal L_{\mathrm{CD}}=
+\mathbb E\left[
+w(t)\,
+d\!\left(
+G_\theta(x_t^i,x_{\mathrm{gt}}^{&lt;i},t),
+G_{\theta^-}(\hat x_{t-\Delta t}^i,x_{\mathrm{gt}}^{&lt;i},t-\Delta t)
+\right)
+\right].</div>
+<ul>
+<li><code>i</code>：当前自回归视频段；</li>
+<li><code>x_t^i</code>：当前段在噪声时刻 <code>t</code> 的状态；</li>
+<li><code>x_gt^{&lt;i}</code>：当前段之前的真实干净历史；</li>
+<li><code>\hat x_{t-Δt}^i</code>：因果老师从 <code>t</code> 沿 ODE 走一小步得到的状态；</li>
+<li><code>G_θ</code>：正在训练的学生；</li>
+<li><code>G_{θ^-}</code>：学生参数的 EMA 副本，作为停止梯度的稳定目标；</li>
+<li><code>w(t)</code>：不同噪声时刻的权重；</li>
+<li><code>d</code>：距离函数，例如平方误差。</li>
+</ul>
+<h2>一个标量例子</h2>
+<p>若当前学生预测 <code>.60</code>，EMA 目标预测 <code>.55</code>，距离取平方差，且 <code>w(t)=2</code>：</p>
+<pre><code class="language-text">L = 2 × (.60 − .55)²
+  = 2 × .0025
+  = .005
+</code></pre>
+<p>学生被要求在两个相邻时刻都指向同一个干净结果。EMA 目标只提供靶子，不随这一项损失一起反向传播，否则靶子也会跟着学生同时移动。</p>
+<h2>代价没有消失，只是换了位置</h2>
+<p>离线 ODE 把老师计算提前做完并占用磁盘；causal CD 在训练时在线调用老师和 EMA 学生，省存储、少数据准备，但每个训练 step 的模型调用更多。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/minwm.html">minwm</a> · Stage 2a 与 2b 的完整取舍</li>
+<li><a href="../concepts/ema.html">ema</a> · <code>θ⁻</code> 为什么比当前参数更适合当目标</li>
+<li><a href="../concepts/ode-vs-sde.html">ode-vs-sde</a> · 一小步 ODE 到底是什么意思</li>
+<li><a href="../concepts/teacher-forcing-video-diffusion.html">teacher-forcing-video-diffusion</a> · 公式里的真实历史从哪里来</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/minwm.html"><span class="cat">paper</span>minWM · 把离线视频扩散模型改造成可操控、能逐段输出的世界模型</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/causal-consistency-distillation.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

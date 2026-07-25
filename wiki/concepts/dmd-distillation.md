@@ -1,7 +1,7 @@
 ---
 name: dmd-distillation
 type: concept
-sources: [dmd, dmd2, senseflow, qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2, drifting-models, drift-ar]
+sources: [dmd, dmd2, senseflow, qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2, drifting-models, drift-ar, minwm]
 updated: 2026-07-24
 ---
 
@@ -77,3 +77,4 @@ L_{\mathrm{pseudo}}=\tfrac12
 - [[lpips]] · 原始 DMD 的回归稳定器
 - [[drifting-models]] · 同样有吸引/排斥结构，但实现不是两套扩散 score
 - [[trajectory-distribution-matching]] · 从只看终点扩展到沿途多个时刻
+- [[minwm]] · 因果少步学生用双向 real/fake score 做 asymmetric DMD

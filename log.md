@@ -1121,3 +1121,12 @@ skill 更新:
 - 对六篇低分页同步修订 Markdown 与 bespoke HTML：把符号定义移到公式之前，补齐公式“解决什么问题—怎样构造—为什么这样算”，并增加 MRoPE 旋转、on-policy KL、联合概率、动作调制、IDA/ISG、卷积尺寸、边界损失、熵先验与漂移更新等可复算数字例。
 - DMD、DMD2 与 Drifting Models 各节复评分均不低于 4，保留现状，不为制造改动而重写已经闭环的内容。
 - 九篇共 102 条 KaTeX 表达式强解析通过；HTML 重复 ID、页内锚点、本地链接、术语跳转和最终差异检查全部通过。
+
+## [2026-07-24] ingest | minWM · 从双向视频扩散到四步因果世界模型
+
+- 新增论文页 `wiki/papers/minwm.md` 与 bespoke 页面 `docs/papers/minwm.html`
+- 以“可控→因果→少步→self-rollout 纠偏”重排技术报告，不照原论文段落平移
+- 11 张 CSS 图分别覆盖完整流水线、三道交互门槛、三类轨迹数据、PRoPE 相对相机、teacher forcing 错位、ODE/CD 分叉、asymmetric DMD、首帧延迟、双 backbone、证据边界和开源状态
+- 三组数字例已复核：ODE 平方误差 `.20`、CD 损失 `.005`、DMD 梯度 `−.4 → θ=1.04`
+- 新增 `projective-rope`、`teacher-forcing-video-diffusion`、`causal-consistency-distillation` 三个概念页，并回链 DMD 与双向/因果视频扩散
+- 对照论文 TeX 与官方仓库 commit `df522a26`，单独记录论文训练配方、脚本默认值、VAE 排除口径和 README 的 TBD 项
