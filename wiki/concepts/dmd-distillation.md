@@ -1,7 +1,7 @@
 ---
 name: dmd-distillation
 type: concept
-sources: [dmd, qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2, drifting-models]
+sources: [dmd, dmd2, qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2, drifting-models]
 updated: 2026-07-22
 ---
 
@@ -62,12 +62,13 @@ L_{\mathrm{pseudo}}=\tfrac12
 | 方法 | 匹配位置 | 原始回归配对集 | 典型步数 |
 |---|---|---|---|
 | DMD | 最终生成分布 | 需要，用来稳定和防漏模式 | 论文为 1 步 |
-| DMD2 | 最终生成分布 | 去掉；改用 two-time-scale、GAN 等补强 | 1 步或多步 |
+| DMD2 | 最终生成分布 | 主方法去掉大规模配对集；用 fake-score 高频更新与 GAN 补强。SDXL 一步仍用 10K 对短暂预热 | 1 步或多步 |
 | TDM | 去噪轨迹多个时刻的分布 | 取决于具体实现 | 灵活少步 |
 
 ## 链接
 
 - [[dmd]] · 原论文完整公式、算法、配方、消融和局限
+- [[dmd2]] · 去配对回归、5:1 fake-score 更新、真实图 GAN 与 backward simulation
 - [[score-function]] · 对数密度梯度为什么是修改方向
 - [[entropy-kl]] · DMD 最小化的反向 KL
 - [[pushforward-distribution]] · 学生输出分布怎样由噪声和生成器共同决定
