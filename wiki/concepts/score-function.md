@@ -1,8 +1,8 @@
 ---
 name: score-function
 type: concept
-sources: [flow-matching, ode-sde]
-updated: 2026-06-12
+sources: [flow-matching, ode-sde, dmd]
+updated: 2026-07-22
 ---
 
 # Score Function · ∇log p(x) · 对数概率梯度

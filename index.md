@@ -23,6 +23,7 @@
 - [ReLAT · 给潜在推理闭环](wiki/papers/relat.md) — 潜在推理(把"想"压进K个连续向量省token)是开环:生成完没人验它是否还忠于原问题。ReLAT用"能否从潜在重建回问题Q"当保真信号(必要非充分,纯自监督);潜在用softmax期望嵌入做成可微,测试时只调临时LoRA(N=16步)最小化重建损失再答、答完复位;Qwen3-8B AIME24 50→73.3(比开环+16.6)、比Self-Refine省84%token还更准
 - [Flow Matching](wiki/papers/flow-matching.md) — 把 diffusion 的 score matching 换成"学速度场 + ODE 积分"，简单 + 少步推理
 - [ODE vs SDE · 确定性流与随机流](wiki/papers/ode-sde.md) — 方法底层页: ODE=风场弹珠确定/SDE=醉汉每步随机踹; 桥=同一团云两看法; Euler 真数字演算(同起点ODE永远落5/SDE跑出6.13与3.30); 接 flow-matching + diffusion
+- [DMD · 一步分布匹配蒸馏](wiki/papers/dmd.md) — 不逐步抄老师轨迹：冻结 real score 拉向目标、动态 fake score 防样本挤成一团、离线 LPIPS 回归守住粗结构；从 KL→两个 score→加噪→伪损失/stopgrad 完整推导，原始论文严格是 1 NFE，不与后来的 4/8 步 DMD 家族混写
 - [Generative Modeling via Drifting](wiki/papers/drifting-models.md) — 完整拆解一步生成：pushforward、核吸引/排斥、反对称的正确边界、stopgrad 梯度、特征空间、训练时 CFG、DiT/队列配方、ImageNet 与机器人消融
 - [DiffusionOPD · 扩散的 On-Policy 蒸馏](wiki/papers/diffusion-opd.md) — 多奖励对齐扩散: 先各训单任务专家老师, 再沿学生rollout轨迹蒸进一个学生; 扩散=高斯马尔可夫链→同协方差KL塌成均值MSE; 接 ppo+ode-sde+cross-entropy
 - [dMel](wiki/papers/dmel.md) — 跳过 neural codec 直接 bin quantize log-mel，简单方案跟 RVQ 一样好
@@ -232,7 +233,7 @@
 - [图像质量指标 PSNR/SSIM](wiki/concepts/image-quality-metrics.md) — 重建像不像两把尺子: PSNR逐像素误差(dB)/SSIM局部结构(0-1); PSNR平移即崩→故有LPIPS
 - [拆细则打分 · Rubric-Based Eval](wiki/concepts/rubric-based-evaluation.md) — 别给"好不好"打一个总分,拆成一堆可逐项判定的小问题各打0/1/2再聚合; 可复现+能定位差在哪条; Qwen-Image-Bench拆到56条
 - [LLM-as-Judge · 拿模型当判官](wiki/concepts/llm-as-judge.md) — 用模型自动给输出打分替人评,前提是用人标把判官校准到人类口味(看Spearman ρ); 跟RLHF的reward model同母题
-- [DMD 蒸馏 / NFE](wiki/concepts/dmd-distillation.md) — 把40步老师蒸成4步学生: 不抄轨迹只让出图分布匹配(teacher_score−fake_score=吸老师斥自己=Drifting同构); NFE=跑几次网络
+- [DMD 蒸馏 / NFE](wiki/concepts/dmd-distillation.md) — 原始DMD把多步老师蒸成1-NFE学生：冻结real score拉向目标、动态fake score抵消学生过密区域、离线回归防漏模式；DMD2/TDM和4/8步应用另算
 - [TDM · 轨迹分布匹配](wiki/concepts/trajectory-distribution-matching.md) — DMD只匹配终点分布→TDM沿去噪轨迹多个路标都匹配; 少步更稳/步数灵活/超参少; Krea 2从DMD/DMD2/piFlow/APT里选它蒸出K2 Turbo
 - [生成模型数据策展](wiki/concepts/generative-data-curation.md) — 别按美学分过滤(等于把打分器偏见焊死+剪掉分布尾巴→审美收敛), 关口换成"caption准不准"; 预训练0张AI合成图(合成图"更好学"会把模型往简单分布拽给质量封顶); Krea 2灵魂
 - [SigLIP 语义去重](wiki/concepts/siglip-semantic-dedup.md) — 图压成向量, 余弦相似度>阈值算近重复每簇留一张; 删的是"语义重复"(裁剪/压缩/改水印的同一张)而非字节相同, 哈希抓不到
