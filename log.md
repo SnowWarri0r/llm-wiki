@@ -1091,3 +1091,9 @@ skill 更新:
 - 用 `.75→.60→.50` 同一条一维轨迹算完 ISG：老师前半段得到 `.50`，冻结学生后半段得到目标 `.65`，直接学生得到 `.45`，平方误差 `.04`；明确目标不是老师独跑全程。
 - 核对官方代码 commit `fafc81b7`：SD3.5 Large 的 IDA 权重为 `.97`；ISG 实现用平滑绝对误差而非正文 L2，并在段端点留 50 index、老师前半段用 CFG=5；v2 附录也更正真实参考图走 DINOv2 而非 CLIP。
 - 新增 `implicit-distribution-alignment`、`intra-segment-guidance`、`vfm-discriminator`、`hinge-loss` 四个 concept；实验同时记录 SDXL 的 Patch FID-T / CLIP 退步、CLIP diversity 约降 18.6%、一步需要额外 6000 iteration 微调等反例。
+
+## [2026-07-24] revise | dmd
+- 重排 §05/§06：把「梯度怎么推」（反向 KL → s_fake−s_real 的推导）挪到手算例之前，读者先懂公式再代数字，不再是「先算后解释」。
+- §05 按多步推导规范重写：五步路线图 + 五样小工具（期望/换元抽样/链式法则/θ多处分头求/总概率=1）+ 逐步不跳（reparameterization→拆两块→real块→fake块两条路→消失项）+ 贯穿 running numeric（x=1.2, s_real=1.5, s_fake=.1667 → 原始方向 −1.333 → 裹权重得 gₓ=−1.6）。
+- 「p_fake 也依赖 θ 为何不多一项」从脚注升为独立一步（score-function 恒等式 = 总概率恒为 1），并用 N(θ,·) 数值验证均衡/非均衡两组都 →0。
+- 删除运行时 crossRefs 文本 hack（§06→§04 会污染新正文）；源码内 section 号与阅读序对齐。
