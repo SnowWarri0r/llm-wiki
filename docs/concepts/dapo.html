@@ -7,6 +7,32 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
 <link rel="stylesheet" href="../style.css?v=43080b49" />
 </head>
 <body>
@@ -73,9 +99,9 @@
 </tbody>
 </table>
 <h2>为什么 Clip-Higher 只放宽上侧</h2>
-<p>重要性比率 <code>ρ_t = π_θ / π_old</code>。正 advantage 希望 <code>ρ_t</code> 变大，普通 PPO 在 <code>1.2</code> 封顶。DAPO 论文实验把上界放到 <code>1.28</code>，让原本概率很低但有价值的探索 token 多一点上升空间；下界仍为 <code>0.8</code>，避免把低概率 token 进一步过度压低、缩死探索空间。</p>
+<p>重要性比率 <span class="tex math-inline" data-display="false">\rho_t=\pi_\theta/\pi_{\mathrm{old}}</span>。正 advantage 希望 <span class="tex math-inline" data-display="false">\rho_t</span> 变大，普通 PPO 在 1.2 封顶。DAPO 论文实验把上界放到 1.28，让原本概率很低但有价值的探索 token 多一点上升空间；下界仍为 0.8，避免把低概率 token 进一步过度压低、缩死探索空间。</p>
 <h2>Dynamic Sampling 不是“丢掉难题”</h2>
-<p>它过滤的是这一轮采样中 <code>G</code> 条回答全错或全对的组，因为 <code>R_i−mean(R)=0</code>，当前 batch 里没有相对方向。下一轮策略变化后，同一道题仍可能重新出现有效分歧。它的目标是让每个训练 batch 保持足够多非零梯度组，而不是断言这些题永远没价值。</p>
+<p>它过滤的是这一轮采样中 <span class="tex math-inline" data-display="false">G</span> 条回答全错或全对的组，因为 <span class="tex math-inline" data-display="false">R_i-\operatorname{mean}(R)=0</span>，当前 batch 里没有相对方向。下一轮策略变化后，同一道题仍可能重新出现有效分歧。它的目标是让每个训练 batch 保持足够多非零梯度组，而不是断言这些题永远没价值。</p>
 <h2>跟 Dr.GRPO 的关系</h2>
 <p>两者都注意到“每条回答先除以自己的长度”会改变 token 权重：<a href="../concepts/dr-grpo.html">dr-grpo</a> 用固定生成上限作分母；DAPO 用整个 batch 的有效 token 总数作分母。它们方向相近，但缩放和 batch 权重并不完全相同。DAPO 还额外处理探索、零梯度采样和截断奖励。</p>
 <h2>论文结果要按口径读</h2>
@@ -101,6 +127,19 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

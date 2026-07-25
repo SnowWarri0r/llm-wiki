@@ -7,6 +7,32 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
 <link rel="stylesheet" href="../style.css?v=43080b49" />
 </head>
 <body>
@@ -44,11 +70,9 @@
 <p>音视频生成有两种不同的“听话”：画面/声音要符合文字，同时声音与画面还要彼此同步。只用一个 CFG scale，会把两种控制绑在一起。Modality-CFG 多算一个去掉另一模态的分支，将两条差值方向拆开。</p>
 <p>它不是新的训练损失，而是推理时组合多次模型预测的方法；控制更细，但需要更多前向计算。</p>
 <h2>怎么做的</h2>
-<p>[
-\widehat M=M(x,c,m)
+<div class="tex math-display" data-display="true">\widehat M=M(x,c,m)
 +s_{text}[M(x,c,m)-M(x,\varnothing,m)]
-+s_{cross}[M(x,c,m)-M(x,c,\varnothing)]
-]</p>
++s_{cross}[M(x,c,m)-M(x,c,\varnothing)]</div>
 <ul>
 <li><code>x</code>：当前模态的 noisy latent；</li>
 <li><code>c</code>：文本条件；</li>
@@ -88,6 +112,19 @@ no_cross = M(x,c,∅) = 1.2  → cross direction = 0.8
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

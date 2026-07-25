@@ -1158,6 +1158,49 @@ def find_backlinks(target_slug: str) -> list[tuple]:
 # Concept / topic / thread page renderer
 # ============================================================
 
+KATEX_PAGE_HEAD = """<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
+"""
+
+KATEX_PAGE_SCRIPT = r"""<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
+"""
+
 CONCEPT_PAGE_TEMPLATE = """<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -1167,7 +1210,7 @@ CONCEPT_PAGE_TEMPLATE = """<!doctype html>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../style.css?v={css_ver}" />
+{math_head}<link rel="stylesheet" href="../style.css?v={css_ver}" />
 </head>
 <body>
 <div class="page concept" data-cat="{category}">
@@ -1189,7 +1232,7 @@ CONCEPT_PAGE_TEMPLATE = """<!doctype html>
 </div>
 
 </div>
-<script>
+{math_script}<script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {{
   var figs = document.querySelectorAll('figure');
@@ -1208,6 +1251,59 @@ CONCEPT_PAGE_TEMPLATE = """<!doctype html>
 </body>
 </html>
 """
+
+
+def protect_math(text: str) -> tuple[str, list[tuple[str, str, bool]]]:
+    """Protect explicit LaTeX delimiters before Markdown consumes backslashes.
+
+    Supported on auto-rendered pages:
+      \\(...\\)  inline math
+      \\[...\\]  display math on its own line
+
+    Dollar delimiters are intentionally unsupported because the wiki contains
+    stock tickers such as $NVDA. Fenced and inline code are skipped so examples
+    can show the literal delimiters safely.
+    """
+    maths: list[tuple[str, str, bool]] = []
+    fence_re = re.compile(r"(```[\s\S]*?```|~~~[\s\S]*?~~~)")
+    inline_code_re = re.compile(r"(`+[^`\n]*?`+)")
+
+    def protect_plain(segment: str) -> str:
+        def display_repl(match):
+            token = f"KATEXDISPLAYTOKEN{len(maths)}ZZ"
+            maths.append((token, match.group(1).strip(), True))
+            return f"\n{token}\n"
+
+        def inline_repl(match):
+            token = f"KATEXINLINETOKEN{len(maths)}ZZ"
+            maths.append((token, match.group(1).strip(), False))
+            return token
+
+        segment = re.sub(r"\\\[\s*([\s\S]*?)\s*\\\]", display_repl, segment)
+        segment = re.sub(r"\\\((.+?)\\\)", inline_repl, segment)
+        return segment
+
+    fenced_parts = fence_re.split(text)
+    for i in range(0, len(fenced_parts), 2):
+        inline_parts = inline_code_re.split(fenced_parts[i])
+        for j in range(0, len(inline_parts), 2):
+            inline_parts[j] = protect_plain(inline_parts[j])
+        fenced_parts[i] = "".join(inline_parts)
+    return "".join(fenced_parts), maths
+
+
+def restore_math(body_html: str, maths: list[tuple[str, str, bool]]) -> str:
+    """Replace protected tokens with KaTeX-ready nodes after Markdown."""
+    for token, tex, display in maths:
+        escaped = html.escape(tex)
+        if display:
+            node = f'<div class="tex math-display" data-display="true">{escaped}</div>'
+            body_html = body_html.replace(f"<p>{token}</p>", node)
+            body_html = body_html.replace(token, node)
+        else:
+            node = f'<span class="tex math-inline" data-display="false">{escaped}</span>'
+            body_html = body_html.replace(token, node)
+    return body_html
 
 
 def normalize_md(text: str) -> str:
@@ -1274,6 +1370,9 @@ def render_concept_page(entry: Entry, chapter_nav_top: str = "", chapter_nav_bot
     body = body.lstrip()
     body = re.sub(r"^#\s+.+?(?:\n|$)", "", body, count=1).lstrip()
 
+    # Protect explicit LaTeX before Markdown consumes the delimiter backslashes.
+    body, maths = protect_math(body)
+
     # Resolve [[wikilinks]] BEFORE markdown so they become <a> tags pre-conversion
     body = resolve_wikilinks(body, from_dir=entry.category)
 
@@ -1288,6 +1387,7 @@ def render_concept_page(entry: Entry, chapter_nav_top: str = "", chapter_nav_bot
         body,
         extensions=["fenced_code", "tables", "sane_lists", "attr_list"],
     )
+    body_html = restore_math(body_html, maths)
 
     # Build backlinks block
     backlinks = find_backlinks(entry.slug)
@@ -1324,6 +1424,8 @@ def render_concept_page(entry: Entry, chapter_nav_top: str = "", chapter_nav_bot
         backlinks_html=backlinks_html,
         chapter_nav_top=chapter_nav_top,
         chapter_nav_bottom=chapter_nav_bottom,
+        math_head=KATEX_PAGE_HEAD if maths else "",
+        math_script=KATEX_PAGE_SCRIPT if maths else "",
         css_ver=_css_ver(),
     )
 
