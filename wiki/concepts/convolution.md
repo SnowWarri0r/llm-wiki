@@ -1,8 +1,8 @@
 ---
 name: convolution
 type: concept
-sources: [cnn, elt, fft, resnet, yolo, yolov2-yolo9000, yolov3, yolov4]
-updated: 2026-07-14
+sources: [cnn, elt, fft, resnet, unet, yolo, yolov2-yolo9000, yolov3, yolov4]
+updated: 2026-07-24
 ---
 
 # Convolution · 卷积 · 一把小尺子滑过整张图
@@ -84,4 +84,5 @@ updated: 2026-07-14
 - [[inductive-bias]] · 局部性+平移不变是焊进结构的先验
 - [[patch-embedding]] · ViT 用它替掉卷积进视觉
 - [[resnet]] · 卷积网络做深的关键
+- [[unet]] · valid 卷积的尺寸变化怎样进入编码器—解码器
 - [[fft]] · 卷积定理：时域卷积 = 频域逐点乘，大核可走 FFT 加速

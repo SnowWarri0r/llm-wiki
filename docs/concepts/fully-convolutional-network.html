@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Fully Convolutional Network · 全卷积网络 · 输入变大，输出网格跟着变 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · fully-convolutional-network</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Fully Convolutional Network · 全卷积网络 · 输入变大，输出网格跟着变</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>网络里没有要求固定展平长度的全连接层；卷积核能在任意大小的空间网格上复用，所以输入宽高改变，输出特征图宽高也跟着改变。</p>
+<h2>直觉</h2>
+<p>固定全连接层像一张写死 100 个插孔的接线板。输入必须正好 100 维，101 维就插不进去。</p>
+<p>卷积核更像一把 <code>3×3</code> 小尺子。图片宽一点，它就多滑几步；高一点，也多滑几行。尺子自己的 9 个权重不用改。</p>
+<h2>怎么做的</h2>
+<p>一个不补边、步长 1 的 <code>3×3</code> 卷积：</p>
+<pre><code class="language-text">n_out = n_in - 3 + 1 = n_in - 2
+</code></pre>
+<p>同一层权重：</p>
+<pre><code class="language-text">输入 8×8  → 输出 6×6
+输入 10×10 → 输出 8×8
+</code></pre>
+<p>卷积核参数量只由通道和核大小决定：</p>
+<pre><code class="language-text">参数量 = 3×3×C_in×C_out
+</code></pre>
+<p>它和输入是 <code>8×8</code> 还是 <code>1000×1000</code> 无关。</p>
+<h2>数字例子</h2>
+<p>假设网络只有两层 <code>3×3 valid conv</code>，都不接全连接：</p>
+<pre><code class="language-text">12×12 → 10×10 → 8×8
+20×20 → 18×18 → 16×16
+</code></pre>
+<p>换输入尺寸后，两层权重形状完全不变，输出只是多出位置。</p>
+<p>若在末尾展平并接 <code>8×8×64 → 10 类</code> 的全连接矩阵：</p>
+<pre><code class="language-text">12×12 输入产生 8×8×64，能接上；
+20×20 输入产生 16×16×64，长度从 4096 变成 16384，矩阵立刻对不上。
+</code></pre>
+<p>这就是“没有固定长度全连接层”让空间输入可变的具体原因。</p>
+<h2>U-Net 的额外限制</h2>
+<p>“全卷积”不等于任意边长都自动合法。原版 U-Net 有四次 <code>2×2</code> 池化，还用 valid convolution；每次池化前的边长要能整除 2。因此作者选择与结构兼容的 tile 大小。</p>
+<h2>代码出处</h2>
+<ul>
+<li><code>nn.Conv2d</code>、<code>nn.MaxPool2d</code>、上采样与逐点卷积都可作用于可变空间尺寸</li>
+<li>固定输入限制通常来自 <code>Flatten + Linear</code></li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/unet.html">unet</a> · 全卷积结构配合 overlap-tile 处理大图</li>
+<li><a href="../concepts/convolution.html">convolution</a> · 核为什么能在不同空间位置共用</li>
+<li><a href="../concepts/semantic-segmentation.html">semantic-segmentation</a> · 输出网格为什么要与像素位置对应</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/unet.html"><span class="cat">paper</span>U-Net · 一边看清是什么，一边记住它在哪</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/fully-convolutional-network.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
