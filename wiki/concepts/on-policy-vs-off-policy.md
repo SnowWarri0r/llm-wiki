@@ -1,8 +1,8 @@
 ---
 name: on-policy-vs-off-policy
 type: concept
-sources: [grape]
-updated: 2026-06-29
+sources: [grape, qwen3-vl-report]
+updated: 2026-07-22
 ---
 
 # on-policy vs off-policy · 学自己刚做的，还是学别人/旧的

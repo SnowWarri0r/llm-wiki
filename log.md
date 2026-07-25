@@ -1012,3 +1012,10 @@ skill 更新:
 - bespoke HTML 重做为 13 节、14 张内联图的 rust field-notes 页面，加入 KaTeX、完整模型总览、桌面/移动响应式布局与就地术语；新建 [[pushforward-distribution]] 概念页并回接 CFG、DiT、QK-Norm、perceptual loss、flow matching、DMD。
 - stopgrad 段二次重写：纠正“冻结整个 f、跨轮比较”的误解，改成同一次前向里的活分支 / 目标快照分叉图；补无 stopgrad 时梯度为何抵消、旧靶验算与下一轮重新造靶的边界。
 - 第 7、9 节补全数据流：解释特征空间负责选择语义邻居、冻结特征网仍通过输入 Jacobian 传梯度，并列出局部/全局/分区特征；从 patchify 开始追踪 latent/pixel 的 256 个图像 token、两路条件注入、272 长度序列与 unpatchify。纠正 32 个 style embedding 被误写成 32 个序列 token：它们先求和并入条件向量。
+
+## [2026-07-22] rewrite | Qwen3-VL · 面向初学者的完整系统讲解
+
+- 从 4 节摘要扩成 12 节完整页：用“像素 → Qwen3-ViT → 2×2 merger → 图文同序列 → 自回归答案”贯穿架构，并用 `12×16→6×8` 手算视觉 token 数与 merger 维度。
+- DeepStack、Interleaved-MRoPE、文字时间戳全部改成“旧数据流为什么不够 → 新零件接在哪 → 数字例 → 代价与消融边界”；纠正“Thinking 总更强”“纯文本全面反超”“三项结构独自产生全部长视频增益”等过度结论。
+- 补齐原报告九类预训练数据、四阶段预训练、120 万 SFT、off/on-policy 蒸馏、Reasoning/General RL、Thinking with Images 奖励漏洞、五种分布式并行、11 类评测口径、1M needle 测试条件和横评帧预算差异。
+- bespoke HTML 重做为 15 张响应式内联图并接入 KaTeX；同步修订 M-RoPE 与 modality projector 概念页，并回接 MoE、分布式并行、SGLang 和 on/off-policy。

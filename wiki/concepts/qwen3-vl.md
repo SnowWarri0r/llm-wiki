@@ -1,8 +1,8 @@
 ---
 name: qwen3-vl
 type: concept
-sources: [ideogram-4, qwen-image-2, cosmos-3, qwen-image-bench, krea-2]
-updated: 2026-06-15
+sources: [ideogram-4, qwen-image-2, cosmos-3, qwen-image-bench, krea-2, qwen3-vl-report]
+updated: 2026-07-22
 ---
 
 # Qwen3-VL · 当文本编码器用的视觉语言模型
