@@ -330,7 +330,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 
 <h3>第 2 步 · 鉴定器的损失：就是最普通的二分类</h3>
 <p>鉴定器要做的事一句话：<strong>真图给高概率，假图给低概率</strong>。这就是最普通的二分类，损失取负对数似然（猜对了损失小，猜错了损失大）。真图项要 <code>D(real)→1</code>，写作 <code>−log D(real)</code>；假图项要 <code>D(fake)→0</code>，写作 <code>−log(1−D(fake))</code>。</p>
-<p>把 <code>D=σ(a)</code> 代进去，这两项各自缩成一个 <code>softplus</code>（记 <code>softplus(u)=log(1+eᵘ)</code>）。为什么能缩？把 sigmoid 代进去一算就出来：<code>−log σ(a)=log(1+e^{−a})=softplus(−a)</code>，同理 <code>−log(1−σ(a))=softplus(a)</code>。所以：</p>
+<p>把 <code>D=σ(a)</code> 代进去，这两项各自缩成一个 <code>softplus</code>（记 <code>softplus(u)=log(1+eᵘ)</code>）。别跳步，一步步看真图项：<code>σ(a)=1/(1+e⁻ᵃ)</code>，取负对数正好把分式翻上来——<code>−log σ(a)=−log[1/(1+e⁻ᵃ)]=log(1+e⁻ᵃ)=softplus(−a)</code>。假图项同理：<code>1−σ(a)=e⁻ᵃ/(1+e⁻ᵃ)</code>，<code>−log(1−σ(a))=a+log(1+e⁻ᵃ)=log(1+eᵃ)=softplus(a)</code>。所以：</p>
 <div class="formula math" data-display="true">\mathcal L_D=\mathbb E_{\rm real}\big[\underbrace{\operatorname{softplus}(-a_{\rm real})}_{-\log D(\mathrm{real})}\big]+\mathbb E_{\rm fake}\big[\underbrace{\operatorname{softplus}(a_{\rm fake})}_{-\log(1-D(\mathrm{fake}))}\big]</div>
 <p>现在符号有意义了：<code>softplus(−a_real)</code> 要变小 ⟺ <code>a_real</code> 要变大（真图判得更真）；<code>softplus(a_fake)</code> 要变小 ⟺ <code>a_fake</code> 要变小（假图判得更假）。这正是图里那句「真图 a 顶大、假图 a 压小」。</p>
 
