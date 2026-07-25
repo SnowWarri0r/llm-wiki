@@ -23,7 +23,8 @@
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--paper);color:var(--ink);font-family:'Noto Sans SC',sans-serif;font-size:17px;line-height:1.8;-webkit-font-smoothing:antialiased}
 body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:50;opacity:.3;background-image:linear-gradient(rgba(90,69,37,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(90,69,37,.035) 1px,transparent 1px);background-size:28px 28px}
-.page{max-width:1120px;margin:auto;padding:46px 36px 120px}
+.page{max-width:1120px;margin:auto;padding:46px 36px 120px;display:flex;flex-direction:column}
+.page>#overview{order:1}.page>#pushforward{order:2}.page>#feature{order:3}.page>#field{order:4}.page>#stopgrad{order:5}.page>#batch{order:6}.page>#architecture{order:7}.page>#recipe{order:8}.page>#antisymmetry{order:9}.page>#cfg{order:10}.page>#experiments{order:11}.page>#relations{order:12}.page>#limits{order:13}.page>.gloss{order:14}.page>.sources{order:15}.page>.colophon{order:16}
 .mast{display:flex;justify-content:space-between;gap:20px;border-top:3px solid var(--ink);border-bottom:1px solid var(--rule);padding:11px 0;margin-bottom:52px;font:600 11px/1.4 'JetBrains Mono',monospace;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
 .mast b{color:var(--rust)}
 .hero{position:relative;padding:0 0 54px;border-bottom:1px solid var(--rule)}
@@ -109,7 +110,7 @@ figcaption b{color:var(--rust)}
     <div class="tldr-body"><p>噪声经生成器变成当前生成分布 <strong>q</strong>；真实分布 <strong>p</strong> 把样本往合理区域拉，当前 <strong>q</strong> 又把拥挤的生成样本推开。训练每轮都重算这股<strong>漂移场</strong><a class="jr" href="#g-01">1</a>。当 <code>q=p</code>，反对称让场归零。训练完成后，核、特征网络和样本队列全部删掉，推理只需 <strong>1 次前向</strong>。ImageNet 256 latent L/2 报 FID <strong>1.54</strong>，但代价是大批量、多特征网络和高训练算力。</p></div>
   </div>
   <nav class="reading-path" aria-label="章节捷径">
-    <a href="#overview">完整拼图</a><a href="#pushforward">q 从哪来</a><a href="#field">漂移怎么算</a><a href="#stopgrad">梯度怎么走</a><a href="#feature">为何用特征</a><a href="#architecture">fθ 怎样出图</a><a href="#experiments">实验与反例</a>
+    <a href="#overview">完整拼图</a><a href="#pushforward">q 从哪来</a><a href="#feature">先选比较尺度</a><a href="#field">再算漂移</a><a href="#stopgrad">梯度怎么走</a><a href="#batch">怎样放进 batch</a><a href="#architecture">fθ 怎样出图</a><a href="#recipe">完整训练循环</a><a href="#antisymmetry">最后看证明</a><a href="#experiments">实验与反例</a>
   </nav>
 </header>
 
@@ -162,7 +163,7 @@ figcaption b{color:var(--rust)}
 </section>
 
 <section id="field">
-<h2><span class="num">§ 03</span><span>第二块拼图：漂移不是口号，它是两次加权平均</span></h2>
+<h2><span class="num">§ 04</span><span>尺度选好了，再算吸引与排斥</span></h2>
 <p class="lead">对当前生成点 <code>x</code>，先问“附近的真实点会把我拉向哪里”，再问“附近的生成点聚在哪里”。第二个方向被减掉，才成为排斥。</p>
 <div class="formula math" data-display="true">V_p^+(x)=\frac{1}{Z_p}\mathbb E_{y^+\sim p}\left[k(x,y^+)(y^+-x)\right]</div>
 <div class="formula math" data-display="true">V_q^-(x)=\frac{1}{Z_q}\mathbb E_{y^-\sim q}\left[k(x,y^-)(y^--x)\right]</div>
@@ -194,7 +195,8 @@ figcaption b{color:var(--rust)}
 </section>
 
 <section id="antisymmetry">
-<h2><span class="num">§ 04</span><span>反对称：匹配时一定停，不等于停时一定匹配</span></h2>
+<h2><span class="num">§ 09</span><span>主线跑通后，再看反对称究竟证明了什么</span></h2>
+<div class="plain"><b>这不是训练循环里的新一步。</b>前面已经能实现完整算法；本章只做事后验算：如果生成分布真的追上目标分布，刚才那套漂移是否会自动停下来。</div>
 <div class="formula math" data-display="true">V_{p,q}(x)=-V_{q,p}(x)</div>
 <div class="equation-step"><span class="step">1</span><p>若 <code>q=p</code>，交换两边什么都没变，所以 <span class="math">V_{p,p}(x)=-V_{p,p}(x)</span>。</p></div>
 <div class="equation-step"><span class="step">2</span><p>一个向量若等于自己的相反数，只能是零，于是 <span class="math">V_{p,p}(x)=0</span>。</p></div>
@@ -276,8 +278,8 @@ figcaption b{color:var(--rust)}
 </section>
 
 <section id="feature">
-<h2><span class="num">§ 07</span><span>特征空间到底干什么：先换一把懂语义的尺，再把力传回图像</span></h2>
-<p class="lead">前六章解决了“怎样根据真实样本和生成样本算一股力”，却还没有决定<strong>在哪里量距离</strong>。这件事不能含糊：核函数会把“离当前样本近”的点当邻居，邻居选错，后面的吸引和排斥算得再精确也没有意义。</p>
+<h2><span class="num">§ 03</span><span>计算方向以前，先决定“哪两张图算相近”</span></h2>
+<p class="lead">前两章只说明了生成分布从哪里来。真正计算漂移前，必须先决定<strong>在哪里量距离</strong>。这件事不能含糊：核函数会把“离当前样本近”的点当邻居，邻居选错，后面的吸引和排斥算得再精确也没有意义。</p>
 <div class="plain"><b>这章只做一件事：</b>先用冻结的特征网络 <code>φ</code> 把图像换成更有语义的坐标，再在这个坐标系里选邻居、算漂移。漂移虽然写在特征上，损失的梯度仍会沿 <code>特征 → 图像 / latent → 生成器参数</code> 原路传回去。</div>
 <h3>为什么不直接比较像素</h3>
 <p>同一只猫向右平移几格，很多像素都会改变，但语义没有变；一只猫和一只颜色相近的狗，像素均值可能很接近，语义却不同。原始像素因此不适合直接回答“谁应该互相吸引”。自监督训练过的 MAE、ResNet 或 ConvNeXtV2，会把边缘、纹理、部件乃至类别信息逐层整理出来，论文便借这些中间特征定义邻居。</p>
@@ -311,7 +313,7 @@ figcaption b{color:var(--rust)}
 </section>
 
 <section id="cfg">
-<h2><span class="num">§ 08</span><span>把 CFG 也提前到训练时</span></h2>
+<h2><span class="num">§ 10</span><span>最后一个可选增强：把 CFG 提前到训练时</span></h2>
 <p>普通 <a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a> 在每个推理步分别跑条件和无条件预测，再外推；这会把网络评估次数翻倍。Drifting 把真实无条件样本混进训练负分布：</p>
 <div class="formula math" data-display="true">\widetilde q(\cdot|c)=(1-\gamma)q_\theta(\cdot|c)+\gamma p_{data}(\cdot|\varnothing)</div>
 <div class="formula math" data-display="true">q_\theta(\cdot|c)=\alpha p_{data}(\cdot|c)-(\alpha-1)p_{data}(\cdot|\varnothing),\qquad \alpha=\frac{1}{1-\gamma}</div>
@@ -327,11 +329,11 @@ figcaption b{color:var(--rust)}
 </section>
 
 <section id="architecture">
-<h2><span class="num">§ 09</span><span>这一章不是新算法：它只把生成器 <code>fθ</code> 拆开</span></h2>
-<p class="lead">前八章解释的是<strong>怎样训练</strong>生成器：特征网络和漂移场负责给方向。第九章换了一个问题：<strong>训练完以后，真正留下来的 <code>fθ</code> 如何把一份随机数变成图像？</strong>这里的 patch、条件 token 和 Transformer 都是生成器内部零件，不是另一套漂移计算。</p>
+<h2><span class="num">§ 07</span><span>方向会算、梯度会传以后，再拆开生成器 <code>fθ</code></span></h2>
+<p class="lead">前六章解释的是<strong>怎样给生成器算训练方向</strong>。本章换一个问题：<strong>训练完以后，真正留下来的 <code>fθ</code> 如何把一份随机数变成图像？</strong>这里的 patch、条件 token 和 Transformer 都是生成器内部零件，不是另一套漂移计算。</p>
 <div class="chapter-task">
   <div><b>这章回答什么</b><code>fθ</code> 的输入、内部数据流和输出。</div>
-  <div><b>这章不回答什么</b>漂移方向怎么求；那是第 3、6、7 章。</div>
+  <div><b>这章不回答什么</b>漂移方向怎么求；那是 §03–§06 的主线。</div>
   <div><b>读完只需记住</b>训练脚手架会拆掉，部署只跑一次完整生成器。</div>
 </div>
 <figure class="reveal">
@@ -339,7 +341,7 @@ figcaption b{color:var(--rust)}
   <div class="arch-boundary">
     <div class="arch-role training-only"><b>训练脚手架 · 最后删除</b><p>真实图、生成图队列、冻结特征网络 <code>φ</code>、核权重和漂移 <code>V</code>。它们只负责算出“本轮输出该往哪改”。</p></div>
     <div class="arch-boundary-arrow"><span class="desktop">训练信号<strong>→</strong></span><span class="mobile">训练信号<strong>↓</strong></span></div>
-    <div class="arch-role deployed"><b>生成器 fθ · 训练后保留</b><p>噪声和条件进入 DiT 风格 Transformer，一次前向直接得到最终 latent 或 RGB。第九章只拆这一个方框。</p></div>
+    <div class="arch-role deployed"><b>生成器 fθ · 训练后保留</b><p>噪声和条件进入 DiT 风格 Transformer，一次前向直接得到最终 latent 或 RGB。本章只拆这一个方框。</p></div>
   </div>
   <div class="model-pipeline" style="margin-top:16px">
     <div class="model-stage"><b>01 · 输入随机性</b>高斯噪声 ε<br>+ 32 个随机 style 索引<small>再加类别 c 与 guidance α</small></div><i class="model-arrow"></i>
@@ -370,7 +372,7 @@ figcaption b{color:var(--rust)}
 <p>如果中间网络暂时什么也不改，unpatchify 按原位置把四块放回去，就会精确得到原来的 <code>4×4</code> 网格。真实模型的区别只在中间：Transformer 会根据训练学到的权重把这些噪声 token 改写成图像 token。<strong>切块和拼回只是接口，不是“去噪算法”。</strong></p>
 
 <h3>第二步：条件为什么要进两次</h3>
-<p>除了高斯噪声，模型还要知道“生成哪一类、希望类别特征多强”。三类条件分别是：类别标签 <code>c</code>、第八章里的 guidance 强度 <code>α</code>，以及额外的离散随机性。所谓 32 个 style embedding，是从 64 项可学习码本中随机抽 32 个索引，再把查到的向量<strong>求和</strong>；它不是 32 个可见的风格标签，也不会让序列多 32 个 token。论文只把它当额外随机输入，消融把 FID 从 <code>8.86</code> 改到 <code>8.46</code>。</p>
+<p>除了高斯噪声，模型还要知道“生成哪一类、希望类别特征多强”。三类条件分别是：类别标签 <code>c</code>、§10 才会细讲的 guidance 强度 <code>α</code>，以及额外的离散随机性。所谓 32 个 style embedding，是从 64 项可学习码本中随机抽 32 个索引，再把查到的向量<strong>求和</strong>；它不是 32 个可见的风格标签，也不会让序列多 32 个 token。论文只把它当额外随机输入，消融把 FID 从 <code>8.86</code> 改到 <code>8.46</code>。</p>
 <figure class="reveal">
   <figcaption><span>Fig 09C · 同一个条件向量走两条入口</span><b>A 调每一层；B 加进序列</b></figcaption>
   <div class="condition-build"><div class="condition-sources"><div class="cond-chip"><b>CLASS c</b>ImageNet 类别 → embedding</div><div class="cond-chip"><b>GUIDANCE α</b>类别强调强度 → projection</div><div class="cond-chip"><b>STYLE RANDOMNESS</b>32 次码本采样 → 求和</div></div><i class="arch-arrow">→</i><div class="condition-vector">合成条件向量<small>类别 + α + style sum</small></div><i class="arch-arrow">→</i><div class="condition-branches"><div class="condition-branch"><b>路线 A · AdaLN-zero</b><small>每一层都收到缩放、平移和残差门控；相当于告诉各层“这次按哪个条件处理”。</small></div><div class="condition-branch"><b>路线 B · 16 个 in-context / register token</b><small>把条件写进 16 个可学习槽位，接到图像 token 前面，让注意力可以直接读取。</small></div></div></div>
@@ -404,7 +406,7 @@ figcaption b{color:var(--rust)}
 </section>
 
 <section id="recipe">
-<h2><span class="num">§ 10</span><span>一轮训练实际发生什么</span></h2>
+<h2><span class="num">§ 08</span><span>把前面零件拼回一轮真实训练</span></h2>
 <figure class="reveal">
   <figcaption><span>Fig 10 · 从标签到参数更新的七步循环</span><b>大 batch 与样本队列都服务于漂移估计</b></figcaption>
   <div class="recipe"><div class="recipe-step"><b>01</b>抽类别标签</div><div class="recipe-step"><b>02</b>采 guidance 强度</div><div class="recipe-step"><b>03</b>噪声经 fθ 生成</div><div class="recipe-step"><b>04</b>取正样本与无条件负样本</div><div class="recipe-step"><b>05</b>提多尺度特征</div><div class="recipe-step"><b>06</b>算核漂移与冻结目标</div><div class="recipe-step"><b>07</b>反传更新 θ</div></div>
@@ -501,6 +503,18 @@ figcaption b{color:var(--rust)}
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  // Read mechanism first and theory second; figure numbers follow that visible order.
+  var figureOrder={
+    overview:['Fig 01A','Fig 01B'],pushforward:['Fig 02'],feature:['Fig 03A','Fig 03B'],
+    field:['Fig 04'],stopgrad:['Fig 05'],batch:['Fig 06'],
+    architecture:['Fig 07A','Fig 07B','Fig 07C','Fig 07D'],recipe:['Fig 08'],
+    antisymmetry:['Fig 09'],cfg:['Fig 10'],experiments:['Fig 11']
+  };
+  Object.entries(figureOrder).forEach(function(entry){
+    document.querySelectorAll('#'+entry[0]+' figcaption span').forEach(function(caption,i){
+      caption.textContent=caption.textContent.replace(/^Fig \d+[A-Z]?/,entry[1][i]);
+    });
+  });
   document.querySelectorAll('.math').forEach(function (el) {
     try { katex.render(el.textContent.trim(), el, {displayMode: el.dataset.display === 'true', throwOnError: false, strict: false}); }
     catch (e) { el.style.color = '#b94d1d'; }
