@@ -1,8 +1,8 @@
 ---
 name: dmd-distillation
 type: concept
-sources: [qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2]
-updated: 2026-06-17
+sources: [qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2, drifting-models]
+updated: 2026-07-22
 ---
 
 # DMD 蒸馏 · NFE · 把 40 步压成 4 步

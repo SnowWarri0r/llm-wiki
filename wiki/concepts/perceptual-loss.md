@@ -1,8 +1,8 @@
 ---
 name: perceptual-loss
 type: concept
-sources: [hidream-o1]
-updated: 2026-06-10
+sources: [hidream-o1, drifting-models]
+updated: 2026-07-22
 ---
 
 # Perceptual Loss · LPIPS / DINO · 在"特征空间"里比两张图像不像
