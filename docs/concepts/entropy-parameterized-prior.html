@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Entropy-parameterized Prior · 确定的位置少加噪，拿不准的位置多留余地 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · entropy-parameterized-prior</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Entropy-parameterized Prior · 确定的位置少加噪，拿不准的位置多留余地</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>把 AR 特征当高斯中心，再用逐位置熵决定噪声尺度：越确定越贴近中心，越拿不准越让初始样本散开。</p>
+<h2>直觉</h2>
+<p>连续视觉 AR 已经给每个位置预测了一个特征 <code>z_AR</code>。传统视觉解码器常从统一高斯噪声出发，没有利用“这个位置到底有多确定”。</p>
+<p><a href="../papers/drift-ar.html">drift-ar</a> 改成逐位置发预算：</p>
+<ul>
+<li>平滑天空、空墙之类容易位置：熵低，初始值紧贴 AR 预测；</li>
+<li>纹理、物体边界之类困难位置：熵高，在 AR 预测周围撒得更开，让单步解码器有更大修正空间。</li>
+</ul>
+<p>这里的“先验”不是关于世界的哲学信念，而是视觉解码器前向之前，初始 latent 按什么分布采样。</p>
+<h2>怎么做的</h2>
+<p>先把归一化熵 <code>E∈[0,1]</code> 映射成噪声尺度：</p>
+<div class="tex math-display" data-display="true">\sigma(\mathcal E)
+=\sigma_{\max}\cdot
+\frac{\exp(\mathcal E/\tau_\sigma)-1}
+{\exp(\mathcal E_{\max}/\tau_\sigma)-1}.</div>
+<ul>
+<li><code>E</code>：当前空间位置的归一化注意力熵；</li>
+<li><code>σ(E)</code>：这个位置的标准差，也就是噪声尺度；</li>
+<li><code>σ_max</code>：最大允许噪声尺度；</li>
+<li><code>τ_σ</code>：曲线弯曲程度；它决定噪声随熵增长得多快；</li>
+<li><code>E_max</code>：拿来归一化的熵上限；</li>
+<li><code>exp</code>：指数函数，保证映射单调且非负。</li>
+</ul>
+<p>然后构造逐位置高斯：</p>
+<div class="tex math-display" data-display="true">q(x^{(r)}\mid z_{\text{AR}}^{(r)},\mathcal E^{(r)})
+=\mathcal N\!\left(
+z_{\text{AR}}^{(r)},
+\sigma^2(\mathcal E^{(r)})I
+\right).</div>
+<p>等价采样写成：</p>
+<div class="tex math-display" data-display="true">x_0^{(r)}
+=z_{\text{AR}}^{(r)}
++\sigma(\mathcal E^{(r)})\epsilon,
+\qquad \epsilon\sim\mathcal N(0,I).</div>
+<p>论文正文常把 <code>σ</code> 叫 variance，但公式的协方差是 <code>σ²I</code>，采样又是 <code>σ·ε</code>。按标准概率记号，<code>σ</code> 应理解成<strong>标准差/噪声尺度</strong>，真正方差是 <code>σ²</code>。</p>
+<h2>数字例子</h2>
+<p>为了能手算，取论文实验参数 <code>σ_max=0.5、τ_σ=2</code>，并把 <code>E_max</code> 简化成 <code>1</code>。上一页算出的两种熵是：</p>
+<pre><code class="language-text">过度自信草稿：E = 0.4238
+较分散目标：  E = 0.8805
+</code></pre>
+<p>代入映射：</p>
+<pre><code class="language-text">σ(0.4238)
+= 0.5 × (exp(0.4238/2)−1) / (exp(1/2)−1)
+≈ 0.1819
+
+σ(0.8805)
+= 0.5 × (exp(0.8805/2)−1) / (exp(1/2)−1)
+≈ 0.4263
+</code></pre>
+<p>设 AR 中心 <code>z_AR=1.2</code>，这次抽到标准高斯噪声 <code>ε=−0.5</code>：</p>
+<pre><code class="language-text">低熵尺度：
+x₀ = 1.2 + 0.1819×(−0.5)
+   ≈ 1.1090
+
+高熵尺度：
+x₀ = 1.2 + 0.4263×(−0.5)
+   ≈ 0.9869
+</code></pre>
+<p>自检：</p>
+<pre><code class="language-text">|1.1090−1.2| = 0.0910
+|0.9869−1.2| = 0.2131
+</code></pre>
+<p>同一份噪声下，高熵位置离 AR 中心更远，确实获得了更大的可修正范围。真实训练的 <code>E_max</code> 来自训练熵统计，并不固定等于 1；这里取 1 只为把归一化区间完整手算一遍。</p>
+<h2>代码出处</h2>
+<p><a href="../papers/drift-ar.html">drift-ar</a> Eq. (6)(7)。截至 2026-07-24，论文指向的官方仓库尚未公开实现文件。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/causal-normalized-attention-entropy.html">causal-normalized-attention-entropy</a> · <code>E</code> 从哪来</li>
+<li><a href="../concepts/covariance-gaussian.html">covariance-gaussian</a> · <code>N(μ,σ²I)</code> 的中心和散布分别控制什么</li>
+<li><a href="../concepts/adaptive-layernorm.html">adaptive-layernorm</a> · 熵图还会作为条件注入单步解码器</li>
+<li><a href="../papers/drifting-models.html">drifting-models</a> · 这份先验随后怎样被单步漂移解码器修正</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/drift-ar.html"><span class="cat">paper</span>Drift-AR · 同一种熵信号，两头加速视觉自回归</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/entropy-parameterized-prior.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

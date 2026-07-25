@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Speculative Decoding · 小模型先起草，大模型一次验一段 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · speculative-decoding</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Speculative Decoding · 小模型先起草，大模型一次验一段</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>让便宜的草稿模型连续猜几步，再让目标大模型并行验收整段；验过的前缀直接留下，第一次不合格之后全部作废。</p>
+<h2>直觉</h2>
+<p>普通自回归生成像一位主编逐字写稿：</p>
+<pre><code class="language-text">主编写第 1 个 → 再写第 2 个 → 再写第 3 个 → 再写第 4 个
+</code></pre>
+<p>四个位置互相依赖，所以目标大模型要串行跑四次。</p>
+<p>推测解码多请一位速度快、水平稍弱的助理：</p>
+<pre><code class="language-text">助理先起草 4 个位置
+→ 主编一次并行检查这 4 个位置
+→ 前 3 个合格，第 4 个不合格
+→ 保留前 3 个，从第 4 个位置重新开始
+</code></pre>
+<p>它没有降低目标模型的标准：最终留下的结果仍要由目标模型认可。省下来的时间来自“目标模型一次检查一段”，而不是让小模型偷偷替代大模型。</p>
+<h2>怎么做的</h2>
+<p>设目标模型是 <code>T</code>，草稿模型是 <code>D</code>：</p>
+<ol>
+<li><code>D</code> 根据当前上下文连续提出 <code>K</code> 个候选；</li>
+<li><code>T</code> 用一次前向并行算出这 <code>K</code> 个位置的判断；</li>
+<li>从左到右验收，保留最长的合格前缀；</li>
+<li>丢掉第一个不合格位置及其后面的候选；</li>
+<li>从已接受位置继续下一轮。</li>
+</ol>
+<p>语言模型处理离散 token，候选是否匹配、怎样按概率接受都有成熟定义。连续视觉 AR 输出的是向量，不能简单比较“token ID 是否相同”，因此必须另外定义连续特征回归和接受标准。<a href="../papers/drift-ar.html">drift-ar</a> 用 Smooth L1 训练草稿特征，但论文没有完整公开连续前缀的数值验收容差；官方代码也尚未提供，这部分不能靠常见实现脑补。</p>
+<h2>数字例子</h2>
+<p>假设目标模型生成一个位置要 <code>10 ms</code>，草稿模型生成一个位置要 <code>1 ms</code>。要生成四个位置：</p>
+<pre><code class="language-text">普通 AR：
+目标模型串行 4 次 = 4 × 10 = 40 ms
+
+推测解码：
+草稿连续写 4 个 = 4 × 1 = 4 ms
+目标模型并行验整段 = 10 ms
+总计约 14 ms
+</code></pre>
+<p>若四个候选全被接受，理想加速约：</p>
+<pre><code class="language-text">40 ÷ 14 ≈ 2.86×
+</code></pre>
+<p>但若目标模型只接受第一个，后面三个草稿都白算，下一轮还要重来。实际速度因此取决于：</p>
+<ul>
+<li>草稿一次提多长；</li>
+<li>目标能接受多长的前缀；</li>
+<li>草稿和目标各自多快；</li>
+<li>并行验证是否真的能吃满硬件。</li>
+</ul>
+<p>所以“草稿更小”不自动等于“整体更快”，接受率才是这套方法能不能赚钱的关键。</p>
+<h2>代码出处</h2>
+<ul>
+<li>通用方法：draft-verify speculative decoding。</li>
+<li><a href="../papers/drift-ar.html">drift-ar</a>：把 EAGLE 式草稿从离散 token 改成连续视觉特征，并用注意力熵决定何时停止继续起草。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/drift-ar.html">drift-ar</a> · 用同一种注意力熵信号控制草稿阶段与单步视觉解码</li>
+<li><a href="../concepts/causal-normalized-attention-entropy.html">causal-normalized-attention-entropy</a> · 为什么不同位置的注意力熵必须先除以 <code>log r</code></li>
+<li><a href="../concepts/autoregressive-vs-bidirectional-video-diffusion.html">autoregressive-vs-bidirectional-video-diffusion</a> · 自回归为何天然有串行依赖</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/drift-ar.html"><span class="cat">paper</span>Drift-AR · 同一种熵信号，两头加速视觉自回归</a></li><li><a href="../concepts/causal-normalized-attention-entropy.html"><span class="cat">concept</span>Causal-normalized Attention Entropy · 给不同长度的注意力行统一量尺</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/speculative-decoding.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

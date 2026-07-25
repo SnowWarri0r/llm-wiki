@@ -1105,3 +1105,11 @@ skill 更新:
 - 从 `d₁=d₂=1、w₀=10、σ=5` 算出边界权重 `10.231`，再把错误概率 `.119` 算到加权损失 `21.76`；同时标明原文 Eq. (1) 少负号与实际最小化交叉熵的口径。
 - 补齐 batch 1 / momentum .99、He 初始化 `√(2/576)=.0589`、3×3 控制网格弹性形变、三套数据与完整原表数字，并保留 DIVE-SCI 在 Rand / pixel error 上更优、论文无逐项消融等反例。
 - 新增 semantic-segmentation、fully-convolutional-network、skip-connection、transposed-convolution、weighted-pixelwise-cross-entropy 五个 concept，并修正 softmax 页旧数字例的求和与概率。
+
+## [2026-07-24] ingest | Drift-AR · 同一种熵信号，两头加速视觉自回归
+
+- 不照论文目录复述，改按“为什么慢两遍 → 熵到底是什么 → 左线推测解码 → 右线单步漂移 → 两阶段训练 → 实验与缺口”组织；总览图先把两条加速线拼成完整系统。
+- 用同一组注意力概率手算原始熵、`log r` 归一化、动态停止阈值，再把熵代入 `σ(E)`，从 `z_AR=1.2、ε=−.5` 算到两个不同的高斯起点；所有公式先说明用途，再逐项解释符号。
+- 明确论文所谓 prediction entropy 实际是倒数第二层因果注意力熵，只是连续特征误差的代理；同时纠正正文把 `σ` 混叫 variance 的口径：公式里 `σ` 是标准差，方差是 `σ²`。
+- 补齐两阶段权重退火、Phase II 冻结、Entropy-AdaLN、上下文动态早停、ImageNet / NextStep 主表、五项消融、解码步数与 `σmax` 敏感性；保留无接受率、无分项延迟、无硬件与训练时长、代码仓库暂未公开内容等复现缺口。
+- 新增 speculative-decoding、causal-normalized-attention-entropy、entropy-parameterized-prior 三个 concept，并回接 AdaLN、EMA、高斯协方差、stopgrad、DMD 与对数。

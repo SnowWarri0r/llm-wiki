@@ -28,6 +28,7 @@
 - [DMD2 · 去掉大规模配对稳定器](wiki/papers/dmd2.md) — 保留 DMD 双 score，但让 fake-score 以 5:1 频率追上移动的学生分布；再用真实图 GAN 补老师近似误差，用 backward simulation 让多步训练看到学生推理时真正产生的中间 latent。ImageNet 一步 FID 1.28，SDXL 四步追平 100-NFE 老师；同时保留 SDXL 一步仍用 10K 对短预热的边界
 - [SenseFlow · DMD2 扩到 SD 3.5 / FLUX](wiki/papers/senseflow.md) — 大模型上 fake 网络即使 20:1 追赶仍会振荡：IDA 每次把 fake 参数向学生挪 3%，ISG 用老师前半段+冻结学生后半段把整段信息压进四个 anchor，VFM 判别器用冻结 DINOv2/CLIP 补语义；含完整 min-max 分解、数字例、代码差异、消融与质量-覆盖取舍
 - [Generative Modeling via Drifting](wiki/papers/drifting-models.md) — 完整拆解一步生成：pushforward、核吸引/排斥、反对称的正确边界、stopgrad 梯度、特征空间、训练时 CFG、DiT/队列配方、ImageNet 与机器人消融
+- [Drift-AR · 同一种熵信号，两头加速视觉自回归](wiki/papers/drift-ar.md) — 连续视觉 AR 的两笔延迟一起处理：6 层草稿用归一化注意力熵缓解过度自信并动态早停；同一种熵信号再映射成逐位置高斯标准差，给反对称漂移解码器设置一次前向的起点。含注意力熵手算、σ/方差口径、两阶段冻结、3.81～5.53× 结果与复现缺口
 - [DiffusionOPD · 扩散的 On-Policy 蒸馏](wiki/papers/diffusion-opd.md) — 多奖励对齐扩散: 先各训单任务专家老师, 再沿学生rollout轨迹蒸进一个学生; 扩散=高斯马尔可夫链→同协方差KL塌成均值MSE; 接 ppo+ode-sde+cross-entropy
 - [dMel](wiki/papers/dmel.md) — 跳过 neural codec 直接 bin quantize log-mel，简单方案跟 RVQ 一样好
 - [Interaction Models · Thinking Machines](wiki/papers/interaction-models-tml.md) — 把交互能力做进权重的 276B MoE 模型
@@ -209,6 +210,9 @@
 - [Scaling Laws](wiki/concepts/scaling-laws.md) — LM loss 跟参数/数据/算力的 power law
 
 ### 生成模型基础
+- [Speculative Decoding · 推测解码](wiki/concepts/speculative-decoding.md) — 小草稿模型先提一段，大目标模型一次并行验收；加速来自减少目标模型的串行调用，不是用小模型替代大模型
+- [因果归一化注意力熵](wiki/concepts/causal-normalized-attention-entropy.md) — 先算一行注意力有多分散，再除以该行最大熵 `log r`；不同因果长度由此落在同一条 0～1 量尺上
+- [熵参数化先验](wiki/concepts/entropy-parameterized-prior.md) — 用逐位置熵调高斯起点的标准差：模型越拿不准，单步生成器获得的可修正范围越大；σ 是标准差，方差是 σ²
 - [Velocity Field](wiki/concepts/velocity-field.md) — flow matching 学的目标，(x, t) → 该往哪走
 - [Conditional Flow Matching](wiki/concepts/conditional-flow-matching.md) — 实际可训练的 flow matching loss
 - [层级 Latent 去噪](wiki/concepts/hierarchical-latent-denoising.md) — 先用少量粗时间节点定整段轨迹，再逐层补成细状态；粗层故意少去噪，避免方案过早锁死

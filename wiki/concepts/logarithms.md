@@ -1,8 +1,8 @@
 ---
 name: logarithms
 type: concept
-sources: [gspo, ppo-grpo-gspo, perplexity, cross-entropy, math-symbols]
-updated: 2026-07-22
+sources: [gspo, ppo-grpo-gspo, perplexity, cross-entropy, math-symbols, drift-ar]
+updated: 2026-07-24
 ---
 
 # 对数 · 把乘除变成加减
