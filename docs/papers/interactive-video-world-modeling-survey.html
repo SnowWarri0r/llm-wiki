@@ -1,0 +1,355 @@
+<!doctype html>
+<!-- bespoke -->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>交互式视频世界模型 · 动作、记忆与实时性</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&amp;family=Noto+Sans+SC:wght@400;500;600;700&amp;family=Noto+Serif+SC:wght@400;600;700;900&amp;display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+:root{
+  --paper:#f0e9d9;--paper2:#faf6e9;--ink:#1c1a20;--muted:#706a67;--line:#baad99;
+  --purple:#38274f;--purple2:#ddd0e7;--red:#bd3e32;--red2:#f1cec4;--green:#317164;
+  --green2:#cde4dc;--gold:#bc871e;--gold2:#f1dfa1;--blue:#176f8b;--blue2:#cae4e9;--white:#fffef9;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:18px/1.8 "Noto Serif SC",serif}
+body:before{content:"";position:fixed;inset:0;z-index:-1;background-image:radial-gradient(rgba(56,39,79,.1) .7px,transparent .7px);background-size:16px 16px}
+.page{width:min(1200px,calc(100% - 44px));margin:auto;padding:42px 0 100px}
+.mast{display:flex;justify-content:space-between;padding:11px 0;border-top:4px double var(--ink);border-bottom:1px solid var(--line);color:var(--muted);font:500 11px/1.4 "DM Mono",monospace;letter-spacing:1.5px;text-transform:uppercase}
+.hero{padding:58px 0 42px;border-bottom:1px solid var(--line)}
+.eyebrow{color:var(--red);font:500 12px/1.4 "DM Mono",monospace;letter-spacing:2.5px;text-transform:uppercase}
+h1{max-width:1050px;margin:18px 0 20px;color:var(--purple);font-size:clamp(49px,8.5vw,108px);line-height:.98;letter-spacing:-.065em;font-weight:900}
+h1 em{color:var(--red);font-style:normal}.byline{color:var(--muted);font:500 11px/1.7 "DM Mono",monospace}
+.dek{max-width:970px;margin-top:25px;color:#403a45;font-size:clamp(21px,2.5vw,30px);line-height:1.52}
+.tldr{display:grid;grid-template-columns:120px 1fr;gap:20px;margin-top:30px;padding:24px 27px;background:var(--purple);color:white;border-left:7px solid var(--red)}
+.tldr b{color:#f3a391;font:500 11px/1.5 "DM Mono",monospace;letter-spacing:1.8px}.tldr p{margin:0;font-size:19px}
+.toc{display:grid;grid-template-columns:repeat(4,1fr);margin-top:28px;border:1px solid var(--line)}
+.toc a{padding:12px 13px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink);font:600 12px/1.5 "Noto Sans SC",sans-serif}.toc a:nth-child(4n){border-right:0}.toc a:nth-last-child(-n+4){border-bottom:0}.toc a:hover{background:var(--red);color:white}
+section{padding-top:64px}h2{display:grid;grid-template-columns:68px 1fr;gap:18px;align-items:baseline;margin:0 0 22px;font-size:clamp(31px,4vw,47px);line-height:1.25;letter-spacing:-.035em}h2 .n{color:var(--red);font:500 11px/1.4 "DM Mono",monospace;letter-spacing:2px}
+h2>span:last-child{min-width:0;overflow-wrap:anywhere}
+h3{margin:34px 0 12px;font-size:25px;line-height:1.45}p{margin:12px 0}.lead{color:#443e47;font-size:20px}a{color:var(--blue);text-underline-offset:3px}code{background:var(--paper2);border:1px solid var(--line);padding:2px 5px;border-radius:3px;font:500 .86em/1.4 "DM Mono",monospace}
+.formula-purpose{margin-top:22px;color:var(--purple);font:700 17px/1.5 "Noto Sans SC",sans-serif}.formula{margin:11px 0 18px;padding:23px 20px;overflow-x:auto;text-align:center;background:var(--purple);color:white;border-left:6px solid var(--red)}.formula .katex{color:white;font-size:1.08em}
+.symbols{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}.sym{padding:13px 14px;background:var(--paper2);border:1px solid var(--line);font:400 14px/1.6 "Noto Sans SC",sans-serif}.sym b{display:block;color:var(--red);font:700 12px/1.4 "DM Mono",monospace}
+.note,.warn{padding:16px 19px;margin:18px 0;font:500 16px/1.7 "Noto Sans SC",sans-serif}.note{background:var(--blue2);border-left:5px solid var(--blue)}.warn{background:var(--red2);border-left:5px solid var(--red)}
+figure{margin:34px 0;padding:28px;background:rgba(250,246,233,.92);border:1px solid var(--line);box-shadow:10px 10px 0 rgba(56,39,79,.06)}
+figcaption{display:flex;justify-content:space-between;gap:18px;margin-bottom:23px;padding-bottom:12px;border-bottom:1px dashed var(--line);color:var(--muted);font:500 11px/1.5 "DM Mono",monospace;letter-spacing:1.25px;text-transform:uppercase}figcaption span:first-child{color:var(--red)}figcaption b{color:var(--blue)}
+.timeline{display:grid;grid-template-columns:90px repeat(5,1fr);border:1px solid var(--line)}.timeline>div{min-height:72px;padding:10px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center;text-align:center;font:500 12px/1.45 "Noto Sans SC",sans-serif}.timeline>div:nth-child(6n){border-right:0}.timeline>div:nth-last-child(-n+6){border-bottom:0}.timeline .head{background:var(--purple);color:white;font:500 10px/1.3 "DM Mono",monospace}.timeline .obs{background:var(--blue2)}.timeline .act{background:var(--red2);color:#752219}.timeline .target{background:var(--green2);border:2px solid var(--green)}
+.system{display:grid;grid-template-columns:1fr 42px 1fr 42px 1fr;gap:7px;align-items:stretch}.node{min-height:140px;padding:17px;background:white;border:1px solid var(--line)}.node b{display:block;color:var(--red);font:700 10px/1.3 "DM Mono",monospace}.node strong{display:block;margin:8px 0;font-size:20px}.node p{margin:0;color:#48424a;font:400 13px/1.58 "Noto Sans SC",sans-serif}.node.interface{border-top:6px solid var(--red)}.node.memory{border-top:6px solid var(--blue)}.node.runtime{border-top:6px solid var(--green)}
+.arrow{display:grid;place-items:center;color:var(--red);font:700 24px/1 "DM Mono",monospace}.arrow:before{content:"→"}
+.triad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.pillar{padding:20px;background:white;border:1px solid var(--line);min-height:205px}.pillar b{font:700 11px/1.4 "DM Mono",monospace}.pillar strong{display:block;margin:8px 0;font-size:23px}.pillar p{font:400 14px/1.6 "Noto Sans SC",sans-serif}.pillar.control{border-top:7px solid var(--red)}.pillar.control b{color:var(--red)}.pillar.memory{border-top:7px solid var(--blue)}.pillar.memory b{color:var(--blue)}.pillar.speed{border-top:7px solid var(--green)}.pillar.speed b{color:var(--green)}
+.inject{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.method{padding:17px;background:white;border:1px solid var(--line);min-height:195px}.method b{color:var(--red);font:700 10px/1.4 "DM Mono",monospace}.method strong{display:block;margin:8px 0;font-size:19px}.method p{font:400 13px/1.58 "Noto Sans SC",sans-serif}
+.memory-ladder{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.mem{padding:17px;background:white;border:1px solid var(--line);min-height:230px}.mem b{color:var(--blue);font:700 10px/1.4 "DM Mono",monospace}.mem strong{display:block;margin:8px 0;font-size:19px}.mem p{font:400 13px/1.58 "Noto Sans SC",sans-serif}.mem .good{color:var(--green)}.mem .bad{color:var(--red)}
+.forcing{overflow-x:auto}table{width:100%;min-width:760px;border-collapse:collapse;background:white;font:400 13px/1.5 "Noto Sans SC",sans-serif}th,td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{background:var(--purple);color:white;font:500 10px/1.4 "DM Mono",monospace}.highlight td{background:var(--blue2)}
+.balance{display:grid;grid-template-columns:1fr 88px 1fr;gap:12px;align-items:stretch}.side{padding:20px;background:white;border:1px solid var(--line)}.side h4{margin:0 0 10px;font-size:22px}.side.history{border-top:7px solid var(--blue)}.side.action{border-top:7px solid var(--red)}.scale{display:grid;place-items:center;text-align:center;color:var(--purple);font:700 11px/1.5 "DM Mono",monospace}.scale:after{content:"↔";display:block;color:var(--red);font-size:35px}
+.speed{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.speed-card{padding:18px;background:white;border:1px solid var(--line);min-height:195px}.speed-card b{color:var(--green);font:700 10px/1.4 "DM Mono",monospace}.speed-card strong{display:block;margin:8px 0;font-size:20px}.speed-card p{font:400 13px/1.58 "Noto Sans SC",sans-serif}
+.domains{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.domain{padding:17px;background:white;border:1px solid var(--line);min-height:210px}.domain b{font:700 10px/1.4 "DM Mono",monospace;color:var(--purple)}.domain strong{display:block;margin:8px 0;font-size:19px}.domain p{font:400 13px/1.58 "Noto Sans SC",sans-serif}.domain:nth-child(1){border-top:6px solid var(--blue)}.domain:nth-child(2){border-top:6px solid var(--red)}.domain:nth-child(3){border-top:6px solid var(--green)}.domain:nth-child(4){border-top:6px solid var(--gold)}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.metric{padding:14px;background:white;border:1px solid var(--line);min-height:125px}.metric b{display:block;color:var(--red);font:700 11px/1.3 "DM Mono",monospace}.metric p{font:400 12px/1.55 "Noto Sans SC",sans-serif}
+.trends{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.trend{padding:19px;background:white;border:1px solid var(--line)}.trend b{color:var(--red);font:700 10px/1.4 "DM Mono",monospace}.trend strong{display:block;margin:8px 0;font-size:21px}.trend p{font:400 13px/1.58 "Noto Sans SC",sans-serif}
+.future{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.open{padding:15px;background:white;border:1px solid var(--line);min-height:190px}.open b{display:block;color:var(--red);font:700 10px/1.4 "DM Mono",monospace}.open strong{display:block;margin:8px 0;font-size:17px}.open p{font:400 12px/1.55 "Noto Sans SC",sans-serif}
+.check{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.q{padding:21px;background:var(--purple);color:white;min-height:180px}.q b{color:#f2a38f;font:700 12px/1.4 "DM Mono",monospace}.q strong{display:block;margin:9px 0;font-size:21px}.q p{font:400 13px/1.6 "Noto Sans SC",sans-serif;color:#eee7f2}
+.gloss{margin-top:70px;padding-top:28px;border-top:3px double var(--ink)}.gloss h2{grid-template-columns:1fr;font-size:31px}.gloss ol{list-style:none;padding:0;counter-reset:g}.gloss li{counter-increment:g;position:relative;padding:12px 12px 12px 52px;border-bottom:1px dashed var(--line);font:400 15px/1.65 "Noto Sans SC",sans-serif}.gloss li:before{content:counter(g,decimal-leading-zero);position:absolute;left:9px;color:var(--red);font:500 11px/1.7 "DM Mono",monospace}.gloss li:target{background:var(--gold2)}.term{font-weight:700;color:var(--purple)}
+.jr{vertical-align:super;text-decoration:none;background:var(--gold2);border:1px solid var(--gold);color:var(--purple);padding:1px 5px;border-radius:10px;font:500 9px/1 "DM Mono",monospace}
+.colophon{display:flex;justify-content:space-between;margin-top:56px;padding-top:15px;border-top:1px solid var(--line);color:var(--muted);font:500 10px/1.5 "DM Mono",monospace}
+.wiki-nav{min-width:0}.wiki-nav .ws-r{max-width:55vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:920px){.symbols{grid-template-columns:1fr 1fr}.inject,.memory-ladder,.domains{grid-template-columns:1fr 1fr}.future{grid-template-columns:1fr 1fr}.open:last-child{grid-column:1/-1}.metrics{grid-template-columns:1fr 1fr}}
+@media(max-width:620px){
+  body{font-size:16px}.page{width:calc(100% - 24px);padding-top:22px}.mast{font-size:9px;gap:8px}.hero{padding-top:40px}h1{font-size:51px}.tldr{grid-template-columns:1fr;gap:6px;padding:20px}.toc{grid-template-columns:1fr 1fr}
+  section{padding-top:46px}h2{grid-template-columns:1fr;gap:5px}figure{padding:16px 12px;margin:25px 0;box-shadow:5px 5px 0 rgba(56,39,79,.06)}figcaption{display:block}figcaption b{display:block;margin-top:4px}
+  .system{grid-template-columns:1fr}.arrow{min-height:28px}.arrow:before{content:"↓"}.triad,.inject,.memory-ladder,.speed,.domains,.metrics,.trends,.future,.check,.symbols{grid-template-columns:1fr}.open:last-child{grid-column:auto}.balance{grid-template-columns:1fr}.scale:after{content:"↕"}
+  .timeline{grid-template-columns:62px repeat(5,minmax(0,1fr))}.timeline>div{padding:6px 2px;font-size:9px}.colophon{display:block}.colophon span{display:block;margin-top:6px}
+  .forcing{overflow:visible}.forcing table,.forcing tbody,.forcing tr,.forcing td{display:block;width:100%;min-width:0}.forcing thead{display:none}.forcing tr{margin:0 0 12px;border:1px solid var(--line);background:white}.forcing td{position:relative;padding:10px 12px 10px 112px;border-bottom:1px solid var(--line);min-height:43px}.forcing td:last-child{border-bottom:0}.forcing td:before{content:attr(data-label);position:absolute;left:12px;top:10px;width:88px;color:var(--red);font:700 9px/1.45 "DM Mono",monospace}.forcing .highlight td{background:var(--blue2)}
+}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · interactive-video-world-modeling-survey</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page">
+<header class="mast"><span>Connectionism · Survey Field Guide</span><span>arXiv 2606.01164 · May 2026</span></header>
+<section class="hero">
+  <div class="eyebrow">Interactive video world modeling</div>
+  <h1>动作、记忆与<em>实时反馈</em>.</h1>
+  <div class="byline">Jiuming Liu · Chaojun Ni · Mengmeng Liu · Chensheng Peng · Fangjinhua Wang · Sitian Shen · Marc Pollefeys · Masayoshi Tomizuka · Ayush Tewari · Per Ola Kristensson</div>
+  <p class="dek">一次生成视频像提前写好剧本；交互式世界模型则要在你每次操作后继续演，而且不能忘记刚才发生过什么。</p>
+  <div class="tldr"><b>TL;DR</b><p>交互式 world model<a class="jr" href="#g-01">01</a> 是一个闭环<a class="jr" href="#g-03">03</a>生成器：历史说明世界走到哪里，当前动作决定下一步往哪走。现有方法主要在动作注入、长期记忆与少步/缓存加速之间做取舍。</p></div>
+  <nav class="toc">
+    <a href="#s0">00 · 生活例子</a><a href="#s1">01 · 数学定义</a><a href="#s2">02 · 系统六层</a><a href="#s3">03 · 动作注入</a>
+    <a href="#s4">04 · 长期记忆</a><a href="#s5">05 · Forcing</a><a href="#s6">06 · 一致与灵敏</a><a href="#s7">07 · 实时加速</a>
+    <a href="#s8">08 · 评测地图</a><a href="#s9">09 · 研究趋势</a><a href="#s10">10 · 未解难题</a><a href="#s11">11 · 三问法</a>
+  </nav>
+</section>
+
+<section id="s0">
+  <h2><span class="n">SECTION 00</span><span>先别背模型名：想象你走进房间再回头</span></h2>
+  <p class="lead">你看见红沙发，按 W 前进；向右转后看见书架；继续走，再回头。模型要同时做到动作生效、沙发还在、反馈及时。</p>
+  <figure>
+    <figcaption><span>Fig 01 · 一轮一轮闭环</span><b>输出会成为下一轮输入</b></figcaption>
+    <div class="timeline">
+      <div class="head">TIME</div><div class="head">t=1</div><div class="head">t=2</div><div class="head">t=3</div><div class="head">t=4</div><div class="head">t=5</div>
+      <div class="head">观察 o</div><div class="obs">红沙发</div><div class="obs">沙发变近</div><div class="obs">右侧书架</div><div class="obs">书架近景</div><div class="target">应重新看见沙发</div>
+      <div class="head">动作 a</div><div class="act">前进</div><div class="act">右转</div><div class="act">前进</div><div class="act">回头</div><div>等待下一动作</div>
+    </div>
+  </figure>
+  <p><strong>one-shot video control</strong> 与 <strong>multi-shot interaction</strong><a class="jr" href="#g-04">04</a> 的区别是：前者在开拍前一次给完提示词与轨迹，后者每轮都能接收新动作。后者不是简单循环前者，因为每轮生成误差都会进入下一轮历史，而且每轮都有延迟预算。</p>
+</section>
+
+<section id="s1">
+  <h2><span class="n">SECTION 01</span><span>定义：历史告诉模型“到了哪”，当前动作告诉它“往哪走”</span></h2>
+  <p>论文先用 POMDP<a class="jr" href="#g-02">02</a> 列出世界的五样东西：</p>
+  <div class="formula" data-expr="(\mathcal S,\mathcal A,\mathcal O,\mathcal T,\mathcal R)"></div>
+  <div class="symbols"><div class="sym"><b>S · state</b>完整世界状态，相机未必看得全</div><div class="sym"><b>A · action</b>前进、转向、抓取等动作</div><div class="sym"><b>O · observation</b>当前图像、深度、声音</div><div class="sym"><b>T · transition</b>世界怎样变到下一状态</div><div class="sym"><b>R · reward</b>结果有多好，供决策使用</div><div class="sym"><b>φ</b>视频世界模型的参数</div></div>
+  <p class="formula-purpose">模型生成下一观察：</p>
+  <div class="formula" data-expr="o_{t+1}\sim p_\phi(o_{t+1}\mid H_t,a_t,c_t)"></div>
+  <p class="formula-purpose">历史展开：</p>
+  <div class="formula" data-expr="H_t=\{o_{1:t},a_{1:t-1},c_{1:t-1}\}"></div>
+  <div class="symbols"><div class="sym"><b>o_{t+1}</b>下一帧或下一小段视频</div><div class="sym"><b>H_t</b>到当前为止的观察、旧动作和旧条件</div><div class="sym"><b>a_t</b>此刻刚收到的新动作</div><div class="sym"><b>c_t</b>文字、声音、布局、相机轨迹等额外条件</div><div class="sym"><b>~ p</b>从可能未来的分布采样，不是唯一答案</div><div class="sym"><b>1:t</b>从第 1 步一直到第 t 步</div></div>
+  <div class="note"><strong>为什么当前动作不在 Ht 里？</strong>历史只记录已经发生的事；<code>a_t</code> 是现在刚下达、将影响 <code>o_{t+1}</code> 的控制，所以在条件栏单独写出。</div>
+</section>
+
+<section id="s2">
+  <h2><span class="n">SECTION 02</span><span>世界模型不是一个 DiT，而是一条六层系统链</span></h2>
+  <figure>
+    <figcaption><span>Fig 02 · 从操作到评测</span><b>骨干只在中间一层</b></figcaption>
+    <div class="system">
+      <div class="node interface"><b>01–02 · CONTROL</b><strong>界面 + 动作注入</strong><p>键鼠、文字、拖拽、相机轨迹、机器人动作 → token、调制或几何控制。</p></div><div class="arrow"></div>
+      <div class="node memory"><b>03–04 · WORLD</b><strong>状态记忆 + 视频主干</strong><p>历史帧、latent memory、显式 3D → VAE + Diffusion/DiT 或 AR 模型。</p></div><div class="arrow"></div>
+      <div class="node runtime"><b>05–06 · DELIVERY</b><strong>推理加速 + 评测</strong><p>蒸馏、cache、并行、量化 → 画质、动作、几何、记忆与延迟。</p></div>
+    </div>
+  </figure>
+  <figure>
+    <figcaption><span>Fig 03 · 三个互相拉扯的瓶颈</span><b>不能只优化一角</b></figcaption>
+    <div class="triad">
+      <div class="pillar control"><b>ACTION</b><strong>动作听不听</strong><p>新操作能否立即、精确地改变下一观察，而不是被历史画面淹没。</p></div>
+      <div class="pillar memory"><b>MEMORY</b><strong>世界记不记得</strong><p>离开再回来，物体、人物身份和空间布局是否仍然一致。</p></div>
+      <div class="pillar speed"><b>LATENCY</b><strong>反馈够不够快</strong><p>去噪步数、缓存、分辨率和硬件能否满足交互式反馈。</p></div>
+    </div>
+  </figure>
+</section>
+
+<section id="s3">
+  <h2><span class="n">SECTION 03</span><span>动作怎样进模型：不是所有控制都适合写成一句话</span></h2>
+  <figure>
+    <figcaption><span>Fig 04 · 四类动作注入</span><b>接口粒度要匹配任务</b></figcaption>
+    <div class="inject">
+      <div class="method"><b>01 · TOKEN</b><strong>与视觉 token 拼接</strong><p>统一、易扩展；但历史视觉太强时，动作 token 可能被当作弱提示。</p></div>
+      <div class="method"><b>02 · MODULATION</b><strong>缩放 / 平移特征</strong><p>由动作生成 <code>γ(a)</code> 与 <code>β(a)</code>，每层都改视觉特征。</p></div>
+      <div class="method"><b>03 · GEOMETRY</b><strong>相机与显式 3D</strong><p>按位姿先投影场景，再由生成模型补洞；精确但系统更重。</p></div>
+      <div class="method"><b>04 · TEXT</b><strong>cross-attention</strong><p>适合“改成黄昏”等高层语义，不适合 50 ms 一次的摇杆数值。</p></div>
+    </div>
+  </figure>
+  <p class="formula-purpose">动作调制的一般写法：</p>
+  <div class="formula" data-expr="h'=\gamma(a)\odot h+\beta(a)"></div>
+  <div class="symbols"><div class="sym"><b>h</b>当前视觉特征</div><div class="sym"><b>a</b>当前动作</div><div class="sym"><b>γ(a)</b>动作决定的逐通道缩放</div><div class="sym"><b>β(a)</b>动作决定的逐通道偏移</div><div class="sym"><b>⊙</b>对应位置逐元素相乘</div><div class="sym"><b>h′</b>已经写入动作信息的新特征</div></div>
+</section>
+
+<section id="s4">
+  <h2><span class="n">SECTION 04</span><span>长期一致性：从“带最近照片”到“维护一张世界地图”</span></h2>
+  <figure>
+    <figcaption><span>Fig 05 · 四级记忆路线</span><b>越显式，几何越稳；更新也越难</b></figcaption>
+    <div class="memory-ladder">
+      <div class="mem"><b>LEVEL 1</b><strong>历史帧</strong><p>把最近几帧与当前噪声拼接，像把近期照片摊在桌上。</p><p class="good">短期动作清楚</p><p class="bad">固定窗口，旧内容被挤走</p></div>
+      <div class="mem"><b>LEVEL 2</b><strong>latent memory<a class="jr" href="#g-05">05</a></strong><p>存视频 token、视角、时间戳与动作，按相似度检索。</p><p class="good">外观和动态丰富</p><p class="bad">容量增长，可能检索错</p></div>
+      <div class="mem"><b>LEVEL 3</b><strong>显式 3D memory</strong><p>存点云、Surfel<a class="jr" href="#g-06">06</a>、3DGS<a class="jr" href="#g-07">07</a>；按空间重叠找旧视角。</p><p class="good">重访地点几何更稳</p><p class="bad">动态物体难更新</p></div>
+      <div class="mem"><b>LEVEL 4</b><strong>直接重建世界</strong><p>维护可导航 3D 场景，再从新相机渲染和生成补洞。</p><p class="good">空间控制最直接</p><p class="bad">重建、模拟、渲染链更重</p></div>
+    </div>
+  </figure>
+  <p>RELIC 把短期未压缩 KV cache 与长期压缩空间 memory 分开；Spmem 把静态点图与动态参考帧分开；MosaicMem 混合显式几何和隐式视频记忆。没有一种存储同时免费获得几何、动态、无限容量和实时更新。</p>
+</section>
+
+<section id="s5">
+  <h2><span class="n">SECTION 05</span><span>Forcing 到底 force 什么：训练时拿哪种历史当上下文</span></h2>
+  <p>普通 Teacher Forcing 每步都给真历史，部署却只能看自己输出。小错回流并累积，这叫 exposure bias<a class="jr" href="#g-08">08</a>。各种 Forcing 方法主要在改变“训练时给过去帧什么”。</p>
+  <figure>
+    <figcaption><span>Fig 06 · Forcing 家族任务表</span><b>不是同一个算法换名字</b></figcaption>
+    <div class="forcing"><table>
+      <thead><tr><th>方法</th><th>训练历史</th><th>想解决什么</th><th>仍有什么问题</th></tr></thead>
+      <tbody>
+        <tr><td data-label="方法">Teacher Forcing</td><td data-label="训练历史">完全真实帧</td><td data-label="想解决什么">训练稳定</td><td data-label="剩余问题">训练与推理输入不一致</td></tr>
+        <tr><td data-label="方法">Diffusion Forcing</td><td data-label="训练历史">历史帧加入不同强度高斯噪声</td><td data-label="想解决什么">见过不完美上下文</td><td data-label="剩余问题">高斯噪声不像真实生成错误</td></tr>
+        <tr class="highlight"><td data-label="方法">Self Forcing</td><td data-label="训练历史">模型自己的 rollout</td><td data-label="想解决什么">输入最接近部署</td><td data-label="剩余问题">误差无界累积；显存和训练成本高</td></tr>
+        <tr><td data-label="方法">LIVE</td><td data-label="训练历史">向前 rollout，再反向恢复</td><td data-label="想解决什么">用 cycle consistency 约束漂移</td><td data-label="剩余问题">多一条恢复路径</td></tr>
+        <tr><td data-label="方法">Geometry Forcing</td><td data-label="训练历史">额外对齐预训练 3D 特征</td><td data-label="想解决什么">增强几何世界状态</td><td data-label="剩余问题">受几何 teacher 质量限制</td></tr>
+        <tr><td data-label="方法">Context Forcing</td><td data-label="训练历史">带长期 memory 的 student 自 rollout</td><td data-label="想解决什么">对齐长 student 与短 teacher</td><td data-label="剩余问题">训练链更复杂</td></tr>
+      </tbody>
+    </table></div>
+  </figure>
+  <p><a href="solaris-multiplayer-world-model.html">Solaris</a> 先用 Diffusion Forcing 把双向多人模型改成因果生成器，再用 Checkpointed Self Forcing 在自己的生成历史上训练。</p>
+</section>
+
+<section id="s6">
+  <h2><span class="n">SECTION 06</span><span>为什么记得越多，模型可能越不听新动作</span></h2>
+  <figure>
+    <figcaption><span>Fig 07 · 历史稳定性与即时响应的跷跷板</span><b>复制上一帧也能很“稳定”</b></figcaption>
+    <div class="balance">
+      <div class="side history"><h4>历史权重大</h4><p>场景、人物和运动连续；但突然左转时，模型可能继续沿旧方向生成。</p><p><strong>一致性高 · 响应弱</strong></p></div>
+      <div class="scale">TRADE-OFF</div>
+      <div class="side action"><h4>当前动作权重大</h4><p>按键立即生效；但画面容易跳变，旧物体和空间结构可能丢失。</p><p><strong>响应强 · 漂移风险高</strong></p></div>
+    </div>
+  </figure>
+  <p class="formula-purpose">只为解释旋钮的简化式，不是论文训练公式：</p>
+  <div class="formula" data-expr="h_{\mathrm{next}}=\lambda h_{\mathrm{history}}+(1-\lambda)h_{\mathrm{action}}"></div>
+  <p><code>λ</code> 越大越依赖历史，越小越听当前动作。Astra 给条件帧加随机噪声，故意削弱历史影响；Context Forcing 让带 memory 的 student 在自生成长轨迹上学习平衡。</p>
+  <div class="warn">因此只看 FID 会误判：几乎复制上一帧的模型可能非常“稳”，却完全没有执行动作。世界模型评测必须同时包含动作跟随。</div>
+</section>
+
+<section id="s7">
+  <h2><span class="n">SECTION 07</span><span>实时性从哪里来：少跑、复用、并行</span></h2>
+  <figure>
+    <figcaption><span>Fig 08 · 三类加速路线</span><b>FPS 必须连同硬件和分辨率读</b></figcaption>
+    <div class="speed">
+      <div class="speed-card"><b>DISTILL</b><strong>少步蒸馏<a class="jr" href="#g-09">09</a></strong><p>把双向、多步 teacher 迁移到因果、少步 student。GameNGen 报 50 FPS，但综述也指出画质下降。</p></div>
+      <div class="speed-card"><b>CACHE</b><strong>复用计算</strong><p>KV cache 复用历史 K/V；Yume 还跨去噪步复用中间 residual feature。省计算但占显存。</p></div>
+      <div class="speed-card"><b>OTHER</b><strong>并行 / 量化 / 剪枝</strong><p>并行解码、关键帧重建、少步采样量化和模型剪枝继续压低延迟。</p></div>
+    </div>
+  </figure>
+  <p>综述 Table 6 明确提醒：报告速度取决于模型大小、GPU、并行度和分辨率。Matrix-Game 3.0 的 720p / 40 FPS 与另一模型的 360p / 20 FPS 不是受控对比。</p>
+</section>
+
+<section id="s8">
+  <h2><span class="n">SECTION 08</span><span>评测地图：画质只是其中一格</span></h2>
+  <figure>
+    <figcaption><span>Fig 09 · 四种应用，四套重点</span><b>不能用一张排行榜包办</b></figcaption>
+    <div class="domains">
+      <div class="domain"><b>OPEN WORLD</b><strong>开放探索</strong><p>相机可控、3D 一致、离开后重访记忆。早期 benchmark 常只测视频质量。</p></div>
+      <div class="domain"><b>GAME ENGINE</b><strong>游戏</strong><p>动作空间、FPS、持续时长与 memory。速度必须注明硬件和分辨率。</p></div>
+      <div class="domain"><b>EMBODIED AI</b><strong>机器人</strong><p>动作跟随、物理交互和任务成功率。画面好看不等于机械臂抓取成功。</p></div>
+      <div class="domain"><b>DRIVING</b><strong>自动驾驶</strong><p>轨迹对齐、闭环安全、进度和舒适性。open-loop 图像指标不足以证明规划可靠。</p></div>
+    </div>
+  </figure>
+  <div class="metrics">
+    <div class="metric"><b>FID / FVD ↓</b><p>真实与生成图像/视频特征分布距离；不直接懂动作。</p></div>
+    <div class="metric"><b>ADE ↓</b><p>生成轨迹与条件轨迹对应时间点的平均位移误差。</p></div>
+    <div class="metric"><b>DTW ↓</b><p>允许非线性时间对齐后比较两条路径整体差异。</p></div>
+    <div class="metric"><b>ACTION ↑</b><p>新动作是否产生预期状态变化。</p></div>
+    <div class="metric"><b>3D CONSIST. ↑</b><p>换视角后空间结构是否保持。</p></div>
+    <div class="metric"><b>MEMORY ↑</b><p>离开再回来，旧对象与布局是否恢复。</p></div>
+    <div class="metric"><b>FPS / LATENCY</b><p>反馈速度；需同时报告硬件、分辨率和采样步数。</p></div>
+    <div class="metric"><b>SUCCESS ↑</b><p>机器人/驾驶策略是否真正完成闭环任务。</p></div>
+  </div>
+  <div class="note"><strong>综述表不是统一 leaderboard。</strong>各数字来自不同原论文，数据、任务、硬件和协议并不相同；它适合做能力地图，不适合据此宣布模型 A 全面胜过 B。</div>
+</section>
+
+<section id="s9">
+  <h2><span class="n">SECTION 09</span><span>研究趋势：沿通用性、动态性与感官三条轴扩张</span></h2>
+  <div class="trends">
+    <div class="trend"><b>AXIS 01</b><strong>专家 → 通用</strong><p>从一个游戏或驾驶域，走向多场景 foundation world model；动作语义统一和数据清洗随之更难。</p></div>
+    <div class="trend"><b>AXIS 02</b><strong>静态单人 → 动态多人</strong><p>不只让相机移动，还要维护对象变化、其他智能体行动和交互后果。</p></div>
+    <div class="trend"><b>AXIS 03</b><strong>视觉 → 多感官</strong><p>文字、声音、力、遥操作加入闭环；不同模态的控制频率和精度不同。</p></div>
+  </div>
+</section>
+
+<section id="s10">
+  <h2><span class="n">SECTION 10</span><span>五个未解难题：从数据一直到用户界面</span></h2>
+  <div class="future">
+    <div class="open"><b>01</b><strong>动作标注</strong><p>真实机器人与驾驶数据贵；latent action 又可能混入相机和外观偏差。</p></div>
+    <div class="open"><b>02</b><strong>反事实因果</strong><p>“看起来合理”不等于动作真的导致正确后果，安全场景尤其危险。</p></div>
+    <div class="open"><b>03</b><strong>小时级一致</strong><p>需要短期动作细节与长期地点、身份、世界状态的分层记忆。</p></div>
+    <div class="open"><b>04</b><strong>物理理解</strong><p>模仿像物理的运动，不等于懂刚体、软体、力与碰撞。</p></div>
+    <div class="open"><b>05</b><strong>直接操作<a class="jr" href="#g-10">10</a></strong><p>让对象可见、操作可逆、反馈即时，而不是每次靠长 prompt 描述。</p></div>
+  </div>
+</section>
+
+<section id="s11">
+  <h2><span class="n">SECTION 11</span><span>以后读任何新世界模型，先问这三句</span></h2>
+  <div class="check">
+    <div class="q"><b>QUESTION 01</b><strong>动作怎样进入？</strong><p>开场给一次还是每轮更新？文字、token、数值位姿还是显式渲染控制？</p></div>
+    <div class="q"><b>QUESTION 02</b><strong>历史存在哪里？</strong><p>最近帧、KV cache、latent memory、显式 3D，还是根本没有持久状态？</p></div>
+    <div class="q"><b>QUESTION 03</b><strong>速度怎样得到？</strong><p>少步蒸馏、缓存、并行、量化？报告是否同时给硬件、分辨率和端到端延迟？</p></div>
+  </div>
+  <p>再检查评测是否覆盖动作、记忆、几何、画质与闭环任务。若只给 FID/FVD，它仍更像“可控视频生成质量报告”，不足以单独证明世界模型能力。</p>
+</section>
+
+<section class="gloss">
+  <h2>术语落点</h2>
+  <ol>
+    <li id="g-01"><span class="term">world model</span>：根据当前观察与动作预测世界之后怎样变化的模型。</li>
+    <li id="g-02"><span class="term">POMDP</span>：智能体只能看到部分世界状态的决策过程；相机画面不等于完整世界。</li>
+    <li id="g-03"><span class="term">closed loop</span>：模型输出会影响下一动作或成为下一轮输入，错误也会反馈回来。</li>
+    <li id="g-04"><span class="term">one-shot / multi-shot</span>：条件一次给完，或生成途中可反复加入新动作。</li>
+    <li id="g-05"><span class="term">latent memory</span>：不保存原始像素，而保存编码后的历史视觉 token 与状态线索。</li>
+    <li id="g-06"><span class="term">Surfel</span>：带位置、法线、颜色等信息的局部表面元素，可用于索引历史视角。</li>
+    <li id="g-07"><span class="term">3DGS</span>：用许多带位置、形状、颜色与透明度的 3D 高斯表示场景并快速渲染。</li>
+    <li id="g-08"><span class="term">exposure bias</span>：训练总看真历史，推理却看自己的不完美输出，由此产生输入分布错位。</li>
+    <li id="g-09"><span class="term">distillation</span>：把慢而强的 teacher 能力迁移到少步、更快的 student。</li>
+    <li id="g-10"><span class="term">direct manipulation</span>：对象和动作可见，操作快速可逆，并立即得到反馈的交互原则。</li>
+  </ol>
+</section>
+
+<footer class="colophon"><span>Source · arXiv:2606.01164 v1</span><span><a href="https://arxiv.org/pdf/2606.01164">PDF</a> · <a href="https://github.com/liujiuming123/Awesome-Interactive-World-Model">Curated list</a> · <a href="solaris-multiplayer-world-model.html">Solaris case study</a></span></footer>
+</main>
+<script>
+document.addEventListener("DOMContentLoaded",()=>{
+  document.querySelectorAll("[data-expr]").forEach(el=>{
+    if(window.katex) katex.render(el.dataset.expr,el,{displayMode:true,throwOnError:false});
+  });
+});
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  var items={};
+  document.querySelectorAll('.gloss ol li[id^="g-"]').forEach(function(li){items[li.id]=li.innerHTML;});
+  if(!Object.keys(items).length)return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!items[id])return;
+      e.preventDefault();
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+items[id];
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+</body>
+</html>

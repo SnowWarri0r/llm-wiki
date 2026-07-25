@@ -42,6 +42,8 @@
 - [Generative Agents · Smallville](wiki/papers/generative-agents.md) — 给 LLM 加记忆流 + 反思 + 规划，25 个 agent 在虚拟小镇里自主生活
 - [MemGPT · LLMs as Operating Systems](wiki/papers/memgpt.md) — context 当 RAM、外部存储当硬盘，LLM 自己 function call 调度记忆
 - [Cosmos 3 · 把看懂、想象、行动装进一个世界模型](wiki/papers/cosmos-3.md) — 以“杯子放进托盘”贯穿五模态入口、MoT 双塔、联合注意力、任务 token 排列、rectified flow 手算、MRoPE 真实时间、数据清洗、Reasoner→Generator 训练接力（复制 QKV/MLP/Norm 当初始化，再换 latent、双向 mask、速度头和 MSE 把它训成去噪器）、真实 benchmark、四组消融与部署边界；统一的是架构和训练接口，不是一次前向或一套共享权重
+- [Solaris · 两个人怎样共享同一个生成世界](wiki/papers/solaris-multiplayer-world-model.md) — 两人 Minecraft 视频世界模型：12.64M 同步帧与两套动作；给 latent 加 player 维，动作按人独立、视觉 token 共享 attention；双向单人→双向多人→因果 Diffusion Forcing→Checkpointed Self Forcing，把滑窗反传显存 O(LtLs) 降到 O(Lt)。五项 FID 全优，但 Movement VLM 不及 frame concat，且仍无持久世界状态与速度报告。
+- [交互式视频世界模型综述 · 动作、记忆与实时反馈](wiki/papers/interactive-video-world-modeling-survey.md) — 不按 200+ 模型名排目录，而用同一条“界面→动作注入→记忆→生成→加速→评测”系统链串起来；历史帧、latent memory、显式 3D 与重建四级记忆，Teacher/Diffusion/Self/Geometry/Context Forcing 逐项对照，再用动作听不听、世界记不记、反馈快不快三问读任何新世界模型。
 - [Lumine · 从像素玩 3D 开放世界](wiki/papers/lumine.md) — VLM(Qwen2-VL)直接吃画面像素吐键鼠, 端到端打通原神5h主线零样本迁移; 动作即文本token + action chunking(5Hz看30Hz动) + hybrid thinking(该想才想); 2424h人类录像纯模仿零RL + W8A8实时
 - [ViT · An Image is Worth 16×16 Words](wiki/papers/vit.md) — 把图切成 16×16 patch 当 token，纯 Transformer 干视觉；CNN 在视觉的护城河被填平
 - [CLIP · Learning Transferable Visual Models](wiki/papers/clip.md) — 4 亿图文对对比学习, 图像和文本对齐到同一向量空间; DALL-E / SD / LLaVA 都靠它
