@@ -119,14 +119,16 @@ figcaption{display:flex;justify-content:space-between;gap:18px;margin-bottom:23p
 
 <section id="s1">
   <h2><span class="n">SECTION 01</span><span>定义：历史告诉模型“到了哪”，当前动作告诉它“往哪走”</span></h2>
-  <p>论文先用 POMDP<a class="jr" href="#g-02">02</a> 列出世界的五样东西：</p>
-  <div class="formula" data-expr="(\mathcal S,\mathcal A,\mathcal O,\mathcal T,\mathcal R)"></div>
+  <p>论文先用 POMDP<a class="jr" href="#g-02">02</a> 列出世界的五样东西。这个名字先不用背，五个字母只是一张清单：</p>
   <div class="symbols"><div class="sym"><b>S · state</b>完整世界状态，相机未必看得全</div><div class="sym"><b>A · action</b>前进、转向、抓取等动作</div><div class="sym"><b>O · observation</b>当前图像、深度、声音</div><div class="sym"><b>T · transition</b>世界怎样变到下一状态</div><div class="sym"><b>R · reward</b>结果有多好，供决策使用</div><div class="sym"><b>φ</b>视频世界模型的参数</div></div>
+  <div class="formula" data-expr="(\mathcal S,\mathcal A,\mathcal O,\mathcal T,\mathcal R)"></div>
+  <div class="symbols"><div class="sym"><b>o_{t+1}</b>下一帧或下一小段视频</div><div class="sym"><b>H_t</b>到当前为止的观察、旧动作和旧条件</div><div class="sym"><b>a_t</b>此刻刚收到的新动作</div><div class="sym"><b>c_t</b>文字、声音、布局、相机轨迹等额外条件</div><div class="sym"><b>pφ</b>模型给各种合理未来分配概率</div><div class="sym"><b>~</b>从可能未来中采样，不是唯一答案</div></div>
   <p class="formula-purpose">模型生成下一观察：</p>
   <div class="formula" data-expr="o_{t+1}\sim p_\phi(o_{t+1}\mid H_t,a_t,c_t)"></div>
+  <p>这里不用等号，是因为同样的历史和动作可能有多个合理未来：回头时窗帘可能向左摆，也可能向右摆。模型学习“各种下一帧分别有多大可能”，不是死记唯一答案。</p>
   <p class="formula-purpose">历史展开：</p>
   <div class="formula" data-expr="H_t=\{o_{1:t},a_{1:t-1},c_{1:t-1}\}"></div>
-  <div class="symbols"><div class="sym"><b>o_{t+1}</b>下一帧或下一小段视频</div><div class="sym"><b>H_t</b>到当前为止的观察、旧动作和旧条件</div><div class="sym"><b>a_t</b>此刻刚收到的新动作</div><div class="sym"><b>c_t</b>文字、声音、布局、相机轨迹等额外条件</div><div class="sym"><b>~ p</b>从可能未来的分布采样，不是唯一答案</div><div class="sym"><b>1:t</b>从第 1 步一直到第 t 步</div></div>
+  <p><code>1:t</code> 表示从第 1 步一直到第 <code>t</code> 步。</p>
   <div class="note"><strong>为什么当前动作不在 Ht 里？</strong>历史只记录已经发生的事；<code>a_t</code> 是现在刚下达、将影响 <code>o_{t+1}</code> 的控制，所以在条件栏单独写出。</div>
 </section>
 
@@ -161,9 +163,10 @@ figcaption{display:flex;justify-content:space-between;gap:18px;margin-bottom:23p
       <div class="method"><b>04 · TEXT</b><strong>cross-attention</strong><p>适合“改成黄昏”等高层语义，不适合 50 ms 一次的摇杆数值。</p></div>
     </div>
   </figure>
+  <div class="symbols"><div class="sym"><b>h</b>当前视觉特征</div><div class="sym"><b>a</b>当前动作</div><div class="sym"><b>γ(a)</b>动作决定的逐通道缩放</div><div class="sym"><b>β(a)</b>动作决定的逐通道偏移</div><div class="sym"><b>⊙</b>对应位置逐元素相乘</div><div class="sym"><b>h′</b>已经写入动作信息的新特征</div></div>
   <p class="formula-purpose">动作调制的一般写法：</p>
   <div class="formula" data-expr="h'=\gamma(a)\odot h+\beta(a)"></div>
-  <div class="symbols"><div class="sym"><b>h</b>当前视觉特征</div><div class="sym"><b>a</b>当前动作</div><div class="sym"><b>γ(a)</b>动作决定的逐通道缩放</div><div class="sym"><b>β(a)</b>动作决定的逐通道偏移</div><div class="sym"><b>⊙</b>对应位置逐元素相乘</div><div class="sym"><b>h′</b>已经写入动作信息的新特征</div></div>
+  <p>若 <code>h=[2,4]</code>、<code>γ(a)=[1.2,.5]</code>、<code>β(a)=[.1,−.2]</code>，则 <code>h′=[1.2×2+.1,.5×4−.2]=[2.5,1.8]</code>：动作放大第一维，同时压低第二维。</p>
 </section>
 
 <section id="s4">
@@ -177,6 +180,10 @@ figcaption{display:flex;justify-content:space-between;gap:18px;margin-bottom:23p
       <div class="mem"><b>LEVEL 4</b><strong>直接重建世界</strong><p>维护可导航 3D 场景，再从新相机渲染和生成补洞。</p><p class="good">空间控制最直接</p><p class="bad">重建、模拟、渲染链更重</p></div>
     </div>
   </figure>
+  <p>最简单的历史条件去噪器可记作：</p>
+  <div class="symbols"><div class="sym"><b>εθ</b>扩散去噪器输出的噪声或去噪方向，不是概率</div><div class="sym"><b>o_t</b>当前要生成的观察</div><div class="sym"><b>o_≤t−1</b>到上一时刻的历史观察</div><div class="sym"><b>a_≤t−1</b>到上一时刻的动作</div></div>
+  <div class="formula" data-expr="\epsilon_\theta(o_t\mid o_{\le t-1},a_{\le t-1})"></div>
+  <p>竖线只表示“生成当前观察时把历史当条件”；整条式子不是条件概率。最近帧很直观，但固定窗口会把更旧的世界状态挤出去。</p>
   <p>RELIC 把短期未压缩 KV cache 与长期压缩空间 memory 分开；Spmem 把静态点图与动态参考帧分开；MosaicMem 混合显式几何和隐式视频记忆。没有一种存储同时免费获得几何、动态、无限容量和实时更新。</p>
 </section>
 
@@ -210,9 +217,9 @@ figcaption{display:flex;justify-content:space-between;gap:18px;margin-bottom:23p
       <div class="side action"><h4>当前动作权重大</h4><p>按键立即生效；但画面容易跳变，旧物体和空间结构可能丢失。</p><p><strong>响应强 · 漂移风险高</strong></p></div>
     </div>
   </figure>
-  <p class="formula-purpose">只为解释旋钮的简化式，不是论文训练公式：</p>
+  <p class="formula-purpose">先定义教学旋钮 <code>λ∈[0,1]</code>：<code>λ</code> 是历史权重，<code>1−λ</code> 是当前动作权重。下面只是解释冲突，不是论文训练公式：</p>
   <div class="formula" data-expr="h_{\mathrm{next}}=\lambda h_{\mathrm{history}}+(1-\lambda)h_{\mathrm{action}}"></div>
-  <p><code>λ</code> 越大越依赖历史，越小越听当前动作。Astra 给条件帧加随机噪声，故意削弱历史影响；Context Forcing 让带 memory 的 student 在自生成长轨迹上学习平衡。</p>
+  <p><code>λ=.8</code> 时历史 / 动作各占 80% / 20%；降到 <code>.3</code> 后动作变强，旧场景也更容易被改写。Astra 给条件帧加随机噪声，故意削弱历史影响；Context Forcing 让带 memory 的 student 在自生成长轨迹上学习平衡。</p>
   <div class="warn">因此只看 FID 会误判：几乎复制上一帧的模型可能非常“稳”，却完全没有执行动作。世界模型评测必须同时包含动作跟随。</div>
 </section>
 

@@ -1113,3 +1113,11 @@ skill 更新:
 - 明确论文所谓 prediction entropy 实际是倒数第二层因果注意力熵，只是连续特征误差的代理；同时纠正正文把 `σ` 混叫 variance 的口径：公式里 `σ` 是标准差，方差是 `σ²`。
 - 补齐两阶段权重退火、Phase II 冻结、Entropy-AdaLN、上下文动态早停、ImageNet / NextStep 主表、五项消融、解码步数与 `σmax` 敏感性；保留无接受率、无分项延迟、无硬件与训练时长、代码仓库暂未公开内容等复现缺口。
 - 新增 speculative-decoding、causal-normalized-attention-entropy、entropy-parameterized-prior 三个 concept，并回接 AdaLN、EMA、高斯协方差、stopgrad、DMD 与对数。
+
+## [2026-07-24] audit | 用新版论文讲解标准复查近期九篇
+
+- 将 Claude 版论文讲解 skill 的新增细则合并进当前 `study-paper-ingest`：每节按前置引入、中文表达、公式讲解、行文逻辑、配图五维评分；任一项不超过 3 分必须返工并复评，同时保留现有更严格的公式顺序、running example、反例与证据边界规则。
+- 逐章复核 Qwen3-VL、Solaris、交互式世界模型综述、SenseFlow、U-Net、Drift-AR、DMD、DMD2 与 Drifting Models；完整评分和返工证据记录在 `quality-audits/2026-07-24-recent-papers.md`。
+- 对六篇低分页同步修订 Markdown 与 bespoke HTML：把符号定义移到公式之前，补齐公式“解决什么问题—怎样构造—为什么这样算”，并增加 MRoPE 旋转、on-policy KL、联合概率、动作调制、IDA/ISG、卷积尺寸、边界损失、熵先验与漂移更新等可复算数字例。
+- DMD、DMD2 与 Drifting Models 各节复评分均不低于 4，保留现状，不为制造改动而重写已经闭环的内容。
+- 九篇共 102 条 KaTeX 表达式强解析通过；HTML 重复 ID、页内锚点、本地链接、术语跳转和最终差异检查全部通过。

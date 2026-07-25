@@ -202,22 +202,23 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 <section id="dmd">
 <h2><span class="n">§ 02</span><span>先补 DMD 前置：fake 网络为什么存在</span></h2>
 <p>学生分布记作 <code>p_g(X_t)</code>，老师目标分布记作 <code>p_r(X_t)</code>。DMD 想缩小反向 KL：</p>
-<p class="formula-purpose">这条式子回答：学生在自己会生成的位置上，和老师分布差多少？</p>
-<div class="formula math" data-display="true">\min_{p_g}D_{\mathrm{KL}}(p_g\Vert p_r)=\mathbb E_{t,X_t\sim p_g}\left[\log p_g(X_t)-\log p_r(X_t)\right]</div>
 <div class="symbols">
   <div class="symbol"><code>X_t</code>学生干净 latent 加噪到时刻 <code>t</code> 后的随机变量。</div>
   <div class="symbol"><code>p_g / p_r</code>学生诱导分布 / 冻结老师代表的目标分布。</div>
   <div class="symbol"><code>D_KL</code>反向 KL；平均点来自学生，不是老师。</div>
   <div class="symbol"><code>E</code>不断更换时间与学生样本，再取平均。</div>
 </div>
+<p class="formula-purpose">这条式子回答：学生在自己会生成的位置上，和老师分布差多少？</p>
+<div class="formula math" data-display="true">\min_{p_g}D_{\mathrm{KL}}(p_g\Vert p_r)=\mathbb E_{t,X_t\sim p_g}\left[\log p_g(X_t)-\log p_r(X_t)\right]</div>
 <p>学生密度 <code>p_g</code> 不能直接算。DMD 于是训练一套 fake 网络 <code>p_f</code> 去追踪它，再比较 fake score 与 real score：</p>
+<div class="symbols"><div class="symbol"><code>θ</code>生成器参数，改变它会移动学生分布。</div><div class="symbol"><code>φ</code>fake 网络参数，负责让 <code>p_f</code> 追上 <code>p_g</code>。</div><div class="symbol"><code>minθ maxφ</code>外循环拉学生靠近老师，内循环先校准 fake 追踪器。</div></div>
 <div class="formula math" data-display="true">\min_\theta\max_\phi V(\theta,\phi)=\mathbb E_{t,X_t\sim p_g}\left[\log p_f(X_t)-\log p_r(X_t)\right]</div>
 <p><code>θ</code> 是生成器参数，<code>φ</code> 是 fake 网络参数。生成器每动一步，学生分布就变；fake 网络面对的是持续移动的靶。DMD2 用 <a class="jr" href="#g-03">TTUR</a> 让 fake 网络多更新几次。</p>
 </section>
 
 <section id="failure">
 <h2><span class="n">§ 03</span><span>真正的失稳点：内循环没追上，外循环就在优化错目标</span></h2>
-<p>在上式里加减同一个 <code>log p_g</code>：</p>
+<p>先回忆定义：<code>KL(p||q)=E_{X~p}[log p(X)−log q(X)]</code>。现在在上式里加上又减去同一个 <code>log p_g</code>，总值不变：</p>
 <div class="formula math" data-display="true">\begin{aligned}V(\theta,\phi)&=\mathbb E_{p_g}\left[(\log p_g-\log p_r)-(\log p_g-\log p_f)\right]\\&=D_{\mathrm{KL}}(p_g\Vert p_r)-D_{\mathrm{KL}}(p_g\Vert p_f)\end{aligned}</div>
 <p>第一行到第二行只是代回 KL 定义。固定生成器时，第一项不随 <code>φ</code> 变化；fake 网络最大化 <code>V</code>，等价于把第二项压到零。最优点 <code>p_f=p_g</code> 就叫 <a class="jr" href="#g-04">inner best response</a>。</p>
 <figure>
@@ -238,14 +239,14 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 
 <section id="ida">
 <h2><span class="n">§ 04</span><span>IDA：先把 fake 拉近，再继续做稠密去噪训练</span></h2>
-<p class="formula-purpose">这条式子回答：生成器刚更新后，怎样让 fake 网络立即跟进一小步？</p>
-<div class="formula math" data-display="true">\phi\leftarrow\lambda\phi+(1-\lambda)\theta,\qquad 0&lt;\lambda\le 1</div>
 <div class="symbols">
   <div class="symbol"><code>θ</code>刚完成一次更新的生成器参数张量。</div>
   <div class="symbol"><code>φ</code>更新前的 fake 网络参数张量。</div>
   <div class="symbol"><code>λ</code>保留多少旧 fake 参数；官方 SD3.5 Large 代码取 <code>.97</code>。</div>
   <div class="symbol"><code>1−λ</code>从生成器参数转入多少；这里是 3%。</div>
 </div>
+<p class="formula-purpose">这条式子回答：生成器刚更新后，怎样让 fake 网络立即跟进一小步？</p>
+<div class="formula math" data-display="true">\phi\leftarrow\lambda\phi+(1-\lambda)\theta,\qquad 0&lt;\lambda\le 1</div>
 <figure>
   <figcaption><span>Fig 03 · 一个参数的完整 IDA 更新</span><b>不是把 fake 覆盖成 generator</b></figcaption>
   <div class="ida-row">
@@ -256,7 +257,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
   <div class="calc">φnew = .97×1.500 + .03×2.000<br>     = 1.455 + .060<br>     = 1.515</div>
 </figure>
 <p>为什么能逐参数混合？生成器和 fake 网络都从同一个 teacher 复制，结构都是时间条件速度网络。生成器虽只在少数 <a class="jr" href="#g-08">anchor timestep</a> 上拿梯度，仍能在任意 <code>t</code> 前向。IDA 传递的是同一参数坐标里的小变化，不是把一种完全不同的“生成头”塞进 score 网络。</p>
-<p>附录在局部 Lipschitz、生成器步长趋零、速度差能控制 score 差与 KL 等假设下，得到 <code>E_t KL(pg||pf)≤ε</code>。这叫 <code>ε-best response</code>：不要求 fake 每轮精确追平，只要求追踪误差受控。它不是“权重接近必然等于分布相同”的无条件定理。</p>
+<p>附录在局部 Lipschitz、生成器步长趋零、速度差能控制 score 差与 KL 等假设下，得到 <code>E_t KL(pg||pf)≤ε</code>。这里 <code>ε≥0</code> 是允许的平均追踪误差上限，越接近 0，fake 越贴近学生。这叫 <code>ε-best response</code>：不要求 fake 每轮精确追平，只要求追踪误差受控。它不是“权重接近必然等于分布相同”的无条件定理。</p>
 </section>
 
 <section id="isg">
@@ -279,6 +280,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
   <div class="plain"><strong>并行的活跃路线：</strong>学生直接从 <code>.75→.50</code>，以速度 <code>-1</code> 得到 <code>.45</code>。误差只回传这条路线；<a class="jr" href="#g-09">stopgrad</a> 冻结目标值 <code>.65</code>。</div>
 </figure>
 <p class="formula-purpose">正式目标：让直接跨段结果贴近冻结的绕路目标。</p>
+<div class="symbols"><div class="symbol"><code>xτᵢ₋₁</code>活跃学生直接跨完整段的结果。</div><div class="symbol"><code>xtar</code>老师前半段 + 学生后半段造出的临时目标。</div><div class="symbol"><code>i</code>第几个 coarse interval。</div><div class="symbol"><code>stopgrad</code>保留目标数值，但不从目标支路反传。</div></div>
 <div class="formula math" data-display="true">\mathcal L_{\mathrm{ISG}}^{(i)}=\mathbb E_{\epsilon,t_{\mathrm{mid}}}\left[\left\|x_{\tau_{i-1}}-\operatorname{stopgrad}(x_{\mathrm{tar}})\right\|_2^2\right]</div>
 <div class="warning"><strong>论文 / 代码差异：</strong>论文 Eq.12 写平方 L2；官方 commit <code>fafc81b7</code> 实际使用 <code>sqrt(diff²+.001²)-.001</code> 的平滑绝对误差。SD3.5 代码还在段两端各留 50 个 index，并用 CFG=5 的老师走前半段。</div>
 </section>
@@ -294,10 +296,11 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
     <div class="vnode head"><b>TRAINABLE</b><strong>卷积判别头</strong><p>融合图像、参考、文字条件，输出真假 logits。</p></div>
   </div>
 </figure>
+<div class="symbols"><div class="symbol"><code>D(x)</code>判别头的实数 logit，越大越像真实图。</div><div class="symbol"><code>xreal / xfake</code>真实参考图 / 当前学生图。</div><div class="symbol"><code>max(0,·)</code>已经越过正确 margin 的样本不再受罚。</div></div>
 <p>判别器用 <a class="jr" href="#g-10">hinge loss</a>：</p>
 <div class="formula math" data-display="true">\mathcal L_D=\mathbb E_{\mathrm{real}}\max(0,1-D(x_{\mathrm{real}}))+\mathbb E_{\mathrm{fake}}\max(0,1+D(x_{\mathrm{fake}}))</div>
 <div class="calc">D(real)=.4  → max(0,1-.4)=.6<br>D(fake)=-.2 → max(0,1-.2)=.8<br>LD=.6+.8=1.4</div>
-<p>高噪声图不可靠，GAN 信号不能压过 DMD。生成器对抗项乘 <code>α_t²=(1-σ_t)²</code>：</p>
+<p>高噪声图不可靠，GAN 信号不能压过 DMD。先定义 <code>σ_t</code> 为噪声比例，<code>α_t=1−σ_t</code> 为干净信号比例；负号表示最小化损失会把学生图的判别评分推高：</p>
 <div class="formula math" data-display="true">\mathcal L_G^{\mathrm{adv}}=-\alpha_t^2\,\mathbb E[D(x_{\mathrm{fake}})],\qquad \alpha_t=1-\sigma_t</div>
 <div class="weights">
   <div class="weight-card"><b>HIGH NOISE</b><strong>σ=.8 → α²=.04</strong><p>图还很脏，GAN 只轻声提醒，主要听 DMD。</p></div>
@@ -308,6 +311,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 <section id="loop">
 <h2><span class="n">§ 07</span><span>一轮训练：三项 loss 和四次更新按什么顺序</span></h2>
 <p>每个小步先选一个 coarse anchor，再以 50% 概率从真实图前向加噪，或从纯噪声做 <a class="jr" href="#g-11">backward simulation</a>。生成器默认每 5 个小步更新一次。</p>
+<div class="symbols"><div class="symbol"><code>L_DMD</code>双 score 分布匹配项。</div><div class="symbol"><code>L_G^adv</code>VFM 判别器给生成器的对抗项。</div><div class="symbol"><code>L_ISG</code>段内引导项。</div><div class="symbol"><code>λG / λISG</code>控制后两项相对强度的超参数。</div></div>
 <p class="formula-purpose">生成器更新时，三项监督才合到一起。</p>
 <div class="formula math" data-display="true">\mathcal L_G=\mathcal L_{\mathrm{DMD}}+\lambda_G\mathcal L_G^{\mathrm{adv}}+\lambda_{\mathrm{ISG}}\mathcal L_{\mathrm{ISG}}</div>
 <figure>
