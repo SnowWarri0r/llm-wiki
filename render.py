@@ -15,6 +15,7 @@ use it).
 
 from __future__ import annotations
 
+import hashlib
 import html
 import re
 import sys
@@ -817,6 +818,11 @@ FILTER_JS = """
 FONTS_LINK = '<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">'
 
 
+def _css_ver() -> str:
+    """style.css 内容哈希，用作 ?v= 破缓存——改了 CSS 浏览器就会重新拉。"""
+    return hashlib.md5(CSS.encode("utf-8")).hexdigest()[:8]
+
+
 def _doc_head(title_tag: str, extra_css: str = "") -> str:
     return (
         '<!doctype html>\n<html lang="zh-CN">\n<head>\n<meta charset="utf-8" />\n'
@@ -825,7 +831,7 @@ def _doc_head(title_tag: str, extra_css: str = "") -> str:
         '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
         '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
         + FONTS_LINK + '\n'
-        '<link rel="stylesheet" href="style.css" />\n'
+        f'<link rel="stylesheet" href="style.css?v={_css_ver()}" />\n'
         f'<style>\n{extra_css}\n</style>\n</head>\n<body>\n<div class="page">\n'
     )
 
@@ -1161,7 +1167,7 @@ CONCEPT_PAGE_TEMPLATE = """<!doctype html>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../style.css" />
+<link rel="stylesheet" href="../style.css?v={css_ver}" />
 </head>
 <body>
 <div class="page concept" data-cat="{category}">
@@ -1318,6 +1324,7 @@ def render_concept_page(entry: Entry, chapter_nav_top: str = "", chapter_nav_bot
         backlinks_html=backlinks_html,
         chapter_nav_top=chapter_nav_top,
         chapter_nav_bottom=chapter_nav_bottom,
+        css_ver=_css_ver(),
     )
 
 
