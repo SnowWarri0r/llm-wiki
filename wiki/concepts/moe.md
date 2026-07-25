@@ -1,8 +1,8 @@
 ---
 name: moe
 type: concept
-sources: [interaction-models-tml, unlimited-ocr, cosmos-3]
-updated: 2026-05-20
+sources: [interaction-models-tml, unlimited-ocr, cosmos-3, qwen3-vl-report]
+updated: 2026-07-22
 ---
 
 # MoE · Mixture of Experts
