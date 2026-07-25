@@ -7,6 +7,32 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
 <link rel="stylesheet" href="../style.css?v=43080b49" />
 </head>
 <body>
@@ -41,10 +67,13 @@
 <h2>一句话</h2>
 <p>GRPO 保留 PPO 的“新旧概率比率 + clip”，但不再训练 critic；它对同一道题采样一组回答，用各回答相对组均值的得分作为 advantage。</p>
 <h2>它真正替换的是哪一块</h2>
-<p>PPO 通常用 critic <code>V(s)</code> 估计“写到这里，最终大概得多少分”，再从实际回报中减掉这个预期。GRPO 把这位过程预测员换成同题组内统计：</p>
-<pre><code class="language-text">PPO:  A_t ≈ return_t − V(s_t)          # V 是要训练的 critic
-GRPO: A_i = (R_i − mean(R_1...R_G)) / std(R_1...R_G)
-</code></pre>
+<p>PPO 通常用 critic <span class="tex math-inline" data-display="false">V(s)</span> 估计“写到这里，最终大概得多少分”，再从实际回报中减掉这个预期。GRPO 把这位过程预测员换成同题组内统计：</p>
+<div class="tex math-display" data-display="true">\begin{aligned}
+A_t^{\mathrm{PPO}} &amp;\approx \mathrm{return}_t-V(s_t) \\
+A_i^{\mathrm{GRPO}} &amp;=
+\frac{R_i-\operatorname{mean}(R_1,\ldots,R_G)}
+{\operatorname{std}(R_1,\ldots,R_G)}
+\end{aligned}</div>
 <ul>
 <li><code>G</code>：同一个 prompt 采样的回答数。</li>
 <li><code>R_i</code>：第 <code>i</code> 条完整回答的 reward。</li>
@@ -80,13 +109,14 @@ GRPO: A_i = (R_i − mean(R_1...R_G)) / std(R_1...R_G)
 <p>数学和代码有可验证答案时，reward 可直接来自规则，所以常常既没有 reward model，也没有 critic；主观审美、帮助性等任务仍可能需要 reward model。是否需要 reward model 由任务的打分方式决定，不是由 GRPO 这个名字决定。</p>
 <h2>完整目标没有消失</h2>
 <p>原始 outcome GRPO 的策略项仍是逐 token 的 PPO-Clip：</p>
-<pre><code class="language-text">ρ_i,t = π_θ(y_i,t | x,y_i,&lt;t) / π_old(y_i,t | x,y_i,&lt;t)
-
-L_i = (1/|y_i|) Σ_t min(
-        ρ_i,t A_i,
-        clip(ρ_i,t,1−ε,1+ε) A_i
-      )
-</code></pre>
+<div class="tex math-display" data-display="true">\rho_{i,t}=
+\frac{\pi_\theta(y_{i,t}\mid x,y_{i,&lt;t})}
+{\pi_{\mathrm{old}}(y_{i,t}\mid x,y_{i,&lt;t})}</div>
+<div class="tex math-display" data-display="true">L_i=\frac{1}{|y_i|}\sum_t
+\min\!\left(
+\rho_{i,t}A_i,
+\operatorname{clip}(\rho_{i,t},1-\varepsilon,1+\varepsilon)A_i
+\right)</div>
 <p><code>ρ_i,t</code> 表示新模型相对采样时的旧模型，把这个 token 的概率改了多少；<code>ε</code> 限制一次更新的有效幅度；<code>|y_i|</code> 是回答 token 数。DeepSeekMath 原始版本还直接在目标里加入相对 reference policy 的逐 token KL 惩罚。</p>
 <p>所以 GRPO 不是“只按 reward 做监督学习”，也不是把 PPO 整套推翻：<strong>它主要替换 advantage 的估计方式，并保留 policy ratio、clip 和可选 KL 约束。</strong></p>
 <h2>为什么省资源，但不是“白省”</h2>
@@ -109,6 +139,7 @@ L_i = (1/|y_i|) Σ_t min(
 <li><a href="../topics/ppo-grpo-gspo.html">ppo-grpo-gspo</a> · PPO、GRPO、Dr.GRPO、DAPO、GSPO 的统一公式与手算</li>
 <li><a href="../papers/ppo.html">ppo</a> · ratio 和 clip 的来源</li>
 <li><a href="../concepts/advantage-function.html">advantage-function</a> · baseline 为什么能降方差</li>
+<li><a href="../concepts/logarithms.html">logarithms</a> · GSPO 为什么把概率连乘改写成 log 求和</li>
 <li><a href="../concepts/rl-for-llm-people.html">rl-for-llm-people</a> · RL 基础术语</li>
 </ul>
 </article>
@@ -124,6 +155,19 @@ L_i = (1/|y_i|) Σ_t min(
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

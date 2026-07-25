@@ -335,6 +335,7 @@
 - [Modality Projector](wiki/concepts/modality-projector.md) — 两层 MLP 把冻结编码器特征翻译进 LLM 隐空间占位符, 小投影撬动大编码器
 
 ### 强化学习 / 对齐
+- [对数 · 把乘除变成加减](wiki/concepts/logarithms.md) — 从 log₂8=3 的指数定义讲起；外加内乘、外减内除、系数进指数、换底公式、不能拆 log(x+y)，再接回 GSPO 的 exp(mean(log ratio))
 - [PPO 家族总览](wiki/topics/ppo-grpo-gspo.md) — PPO→GRPO→Dr.GRPO/DAPO→GSPO；共同训练循环、统一公式与同一组数字手算
 - [RL 直觉打底](wiki/concepts/rl-for-llm-people.md) — 给懂 LLM 不懂 RL 的人: policy/rollout/advantage/KL/loss 走势全翻译成自回归术语 (含 loss 函数走势对照图)
 - [Policy Gradient](wiki/concepts/policy-gradient.md) — RL 的基础: 用 reward 当 loss 权重直接 gradient ascent, 步子大就崩

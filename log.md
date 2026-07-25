@@ -999,3 +999,9 @@ skill 更新:
 - 新增统一 topic，用同一道题四条回答和同一组 token 概率贯穿 PPO critic advantage、GRPO 组相对 advantage、Dr.GRPO 去偏、DAPO 四项长 CoT 配方与 GSPO 序列比率；所有公式逐项定义并说明每个分母、clip 和聚合操作为什么存在。
 - 重写 PPO / GRPO / GSPO，纠正“GRPO 显存近乎减半”“token 级比率因只采一次所以无效”“所有主流模型都用 PPO”等过度概括；补 reward model、critic、reference policy 的职责边界。
 - 新增 Dr.GRPO 与 DAPO concept，明确二者都处理逐回答长度归一化但缩放方式不同；记录 DAPO 的 0.2/0.28 非对称 clip、动态有效 batch 和截断软惩罚的适用边界。
+
+## [2026-07-22] visual+concept | 自动概念页接入 KaTeX + 对数运算补课
+
+- 自动渲染器支持显式 `\\(...\\)` 行内公式与 `\\[...\\]` 独立公式，并跳过代码块；只有真正含公式的页面才加载本地 KaTeX，避免把 `$NVDA` 一类普通文本误判成数学。
+- 新增 logarithms concept，从 `log₂8=3 ⇔ 2³=8` 的定义出发，推导外加内乘、外减内除、系数进指数、不可拆 `log(x+y)` 与换底公式，并用 `log₂10≈3.321928` 反算验证。
+- 将 PPO / GRPO / Dr.GRPO / DAPO / GSPO 核心目标和手算迁入 KaTeX；旧 concept 中被 Markdown 吃掉反斜杠的两处公式也恢复正确渲染。
