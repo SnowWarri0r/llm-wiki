@@ -173,7 +173,8 @@ figcaption b{color:var(--blue)}
     <div class="task-card segment reveal d3"><span class="tag">SEGMENTATION</span><h4>每个位置 → 一个类别</h4><div class="mini-img"><i class="cell"></i><i class="cell"></i><i></i><i></i><i></i><i class="cell"></i><i class="edge"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="task-out">5×5 类别 mask</div></div>
   </div>
 </figure>
-<p>“语义”表示同一类别共享一个编号；两只细胞都叫“细胞”。若还要给每只细胞独立编号，那是实例分割。原论文的网络先做逐像素分类，再通过边界权重帮助后续把粘连目标分开。</p>
+<p>“语义”表示同一类别共享一个编号——两只细胞都归为“细胞”这一类；真要给每只细胞单独编号（“细胞①、细胞②”），那是实例分割，U-Net 不做。</p>
+<p><b>那既然都叫“细胞”，怎么把挨在一起的两只分开？</b>关键是：这任务其实只有<strong>两类——细胞 / 背景（膜）</strong>（§04 尺寸账最后输出通道数正是 <code>2</code>）。两只细胞中间那条缝，会被判成“背景”。<a href="#loss">§07</a> 的边界加权就专门逼网络<strong>把这条窄缝画准</strong>；缝一画准，原本粘成一团的“细胞”像素就断开了，后面用连通域一数，自然成两只。所以“分开”是<strong>语义预测（把缝判成背景）+ 一步轻量后处理</strong>凑出来的，不是网络直接吐出实例编号——这也是为什么下一步要给那条缝十倍的损失权重。</p>
 </section>
 
 <section id="old">
