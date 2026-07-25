@@ -3,7 +3,7 @@ name: drifting-models
 type: paper
 source: https://arxiv.org/abs/2602.04770
 ingested: 2026-06-12
-updated: 2026-07-22
+updated: 2026-07-23
 authors: [Mingyang Deng, He Li, Tianhong Li, Yilun Du, Kaiming He]
 year: 2026
 ---
@@ -232,11 +232,35 @@ q_\theta(\cdot|c)=\alpha p_{data}(\cdot|c)-(\alpha-1)p_{data}(\cdot|\varnothing)
 
 这只是分布层面的外推表达，不能把右边逐点当成始终非负的普通混合分布。
 
-## 9. 模型怎样从噪声一次生成图像
+## 9. 这一章不是新算法：它只把生成器 `f_θ` 拆开
 
-前面一直把生成器缩写成 `x=f_θ(ε,c,α)`，这一节把黑盒拆开。它使用 DiT 风格的 Transformer，但不是按时间步反复去噪的 diffusion denoiser：输入里没有 diffusion timestep `t`，同一网络一次前向就直接输出最终 latent 或 RGB。
+前八节解释的是**怎样训练**生成器：特征网络和漂移场负责算“本轮输出该往哪改”。这一节换了一个问题：
 
-### 第一步：patchify，把两种输入都变成 256 个图像 token
+> 训练结束后，真正留下来的 `f_θ`，怎样把一份随机数变成图像？
+
+先划清边界：
+
+- **训练脚手架，最后删除**：真实图、生成图队列、冻结特征网络 `φ`、核权重和漂移 `V`。
+- **生成器 `f_θ`，训练后保留**：噪声和条件进入 DiT 风格 Transformer，一次前向输出最终 latent 或 RGB。
+
+所以 patch、条件 token、AdaLN 和 Transformer 都是 `f_θ` 内部零件，不是另一套漂移算法。输入里没有 diffusion timestep `t`，也没有“输出一点、重新加噪、再调用一次网络”的循环。
+
+“一次前向”也不等于“只有一层”。论文的 L 模型内部仍有 24 个 Transformer block。`1 NFE` 的意思是整套 `f_θ` 只调用一次；普通 100 步扩散则会把整套去噪网络调用 100 次。
+
+整条部署路径是：
+
+```text
+高斯噪声 ε + 32 个随机 style 索引 + 类别 c + guidance α
+  → patchify 与线性投影
+  → 加入 16 个条件 token，同时用 AdaLN 调节每一层
+  → 12 或 24 层 Transformer
+  → 输出头 + unpatchify
+  → 最终 latent 或 RGB
+```
+
+### 第一步：先选一条输出路线，latent 版和 pixel 版不是前后两站
+
+论文训练了两种**独立生成器**：
 
 **Latent 版：**
 
@@ -244,52 +268,110 @@ q_\theta(\cdot|c)=\alpha p_{data}(\cdot|c)-(\alpha-1)p_{data}(\cdot|\varnothing)
 - 按 `2×2` 切块，每块包含 `2×2×4=16` 个原始数。
 - 高、宽各得到 `32÷2=16` 块，所以一共 `16×16=256` 块。
 - 每个 16 维小块经线性投影，变成一个宽度为 `d` 的 token。
+- 最终输出 `32×32×4` latent，再由冻结的 [[kl-vae]] decoder 还原 RGB。
 
 **Pixel 版：**
 
 - 输入是 `256×256×3` 高斯噪声。
 - 按 `16×16` 切块，每块包含 `16×16×3=768` 个原始数。
 - 高、宽各得到 `256÷16=16` 块，同样一共 256 块。
-- 每个 768 维小块也经线性投影，变成宽度为 `d` 的 token。
+- 每个 768 维小块经线性投影，变成宽度为 `d` 的 token。
+- 最终直接输出 `256×256×3` RGB，不需要 VAE。
 
-[[patch-embedding]] 不是把一块图压成一个类别，而是把块内数值排成向量，再由线性层映射到 Transformer 的隐藏维度。两条路径的原始 patch 维度不同，投影后 token 形状相同，后面的骨架就能共用。
+两条路线在推理时二选一，不会先跑 latent 版再跑 pixel 版。patch 大小不同，是因为作者想让两条路线都形成 `16×16=256` 个图像 token，后面的注意力就处理同样数量的空间位置。
 
-### 第二步：构造条件，走 AdaLN 和 in-context 两条路
+### Patchify 到底做了什么
 
-模型使用三类条件：
+[[patch-embedding]] 只是把二维网格整理成 Transformer 能接收的序列，本身不生成任何东西。
 
-1. 类别标签的 embedding；
-2. 训练时抽样的 CFG 强度 `α`；
-3. 随机风格信息：从 64 个可学习向量组成的码本中随机抽 32 个索引，查到 32 个 style embedding 后**先求和，再加进条件向量**。
+取一个单通道 `4×4` 数字网格：
 
-这里最容易误读：32 个 style embedding **不是额外的 32 个序列 token**。合成后的条件向量走两条路：
+```text
+ 1   2   3   4
+ 5   6   7   8
+ 9  10  11  12
+13  14  15  16
+```
 
-- **[[adaptive-layernorm]]（AdaLN-zero）**：由条件向量产生每层的缩放、平移和残差门控，直接调节每个 Transformer block。
-- **in-context conditioning**：16 个可学习底座分别加上投影后的条件向量和位置编码，得到 16 个条件 token，再接到 256 个图像 token 前面。
+按 `2×2` 切块，按从左到右、从上到下排列：
 
-所以 Transformer 的真实序列长度是：
+```text
+P₁ = [ 1,  2,  5,  6]
+P₂ = [ 3,  4,  7,  8]
+P₃ = [ 9, 10, 13, 14]
+P₄ = [11, 12, 15, 16]
+```
+
+如果中间网络暂时不改这些数，unpatchify 按原位置放回四块，就会精确还原原来的 `4×4` 网格。真实模型的区别只在中间：Transformer 会把噪声 token 改写成图像 token。**切块和拼回只是接口，不是去噪算法。**
+
+### 第二步：条件为什么要进两次
+
+模型除了高斯噪声，还接收三类信息：
+
+1. 类别标签 `c`：例如 ImageNet 的“猫”“公交车”；
+2. CFG 强度 `α`：第八节推导的类别强调强度；
+3. 额外离散随机性：从 64 项可学习码本中随机抽 32 个索引，查出 32 个 style embedding 后求和。
+
+“style embedding”这个名字容易误导。它不是 32 个可以人工指定的风格标签，也不是额外的 32 个序列 token；论文把它当额外随机输入。消融中它把 FID 从 `8.86` 改到 `8.46`，有帮助，但不是主要机制。
+
+类别、`α` 和 style sum 合成条件向量，再走两条**并行入口**：
+
+- **[[adaptive-layernorm]]（AdaLN-zero）**：为每层产生缩放、平移和残差门控，告诉每个 block “这次按什么条件处理”。
+- **in-context conditioning**：把条件写进 16 个可学习槽位，接到图像 token 前面，让注意力能直接读取条件。
+
+所以 Transformer 的序列长度是：
 
 ```math
 16\ \text{个条件 / register token}+256\ \text{个图像 token}=272
 ```
 
-不是 `16+32+256`。论文在配置表中把前 16 个称为 register tokens，在正文中称为 learnable in-context tokens；它们是同一组 token 的两种叫法。
+不是 `16+32+256`。论文配置表把这 16 个槽位称为 register tokens，附录正文称为 learnable in-context tokens；这是同一组 token 的两种叫法。
 
-### 第三步：Transformer 一次处理，再 unpatchify
+AdaLN 管的是“每层怎样处理”，16 个条件 token 管的是“注意力能读到什么”。两条入口同时生效，不是先过 AdaLN 再变成 token。
 
-### 共同结构
-- B 规模：宽度 768、12 层，latent 版记作 B/2、pixel 版记作 B/16；L 规模：宽度 1024、24 层，对应 L/2 与 L/16。
-- 使用 [[swiglu]]、RoPE、RMSNorm、[[qk-rmsnorm]] 和 AdaLN-zero。
-- QK-Norm 控制注意力打分尺度，RoPE 提供 token 的位置关系，SwiGLU 是逐 token 的前馈变换，RMSNorm 稳定中间激活。
+### 第三步：拿 latent L/2 从头把形状算到尾
 
-Transformer 同时处理 16 个条件 token 和 256 个图像 token。输出时只把 256 个图像位置送入输出头：
+论文最强的 latent L/2 使用隐藏宽度 `1024`、24 个 Transformer block：
 
-- latent 版：每个位置映射回 16 个数，拼成 `32×32×4` latent，再由冻结的 [[kl-vae]] decoder 还原 `256×256×3` RGB。
-- pixel 版：每个位置映射回 768 个数，直接拼成 `256×256×3` RGB，不需要 VAE。
+```text
+输入：32×32×4 = 4096 个高斯随机数
 
-因此第 7 节的特征网络和漂移损失在生成器**外部**提供训练信号；第 9 节这些 Transformer 模块才是训练结束后会保留的生成器主体。推理时没有特征网络、真实样本、生成样本队列或时间步循环。
+patchify：
+每块 2×2×4 = 16 个数
+一共 16×16 = 256 块
+形状变成 256×16
 
-SOTA latent L/2 使用 200k step、约 1280 epoch、AdamW、学习率 `4e-4`、10k warmup。有效生成 batch 是 8192：每步 128 个类别，每类 64 个生成样本；正样本按类从队列/数据中取，另有全局无条件队列。项目 README 报告该规模使用 128 张 TPU v6e，说明“一步推理”没有消除训练成本，只是把成本前移。
+线性投影：
+每块从 16 维映射到 1024 维
+形状变成 256×1024
+
+加入条件 token：
+16 + 256 = 272
+形状变成 272×1024
+
+24 个 Transformer block：
+形状仍是 272×1024
+但 token 内容已经从随机表示改写成图像表示
+
+输出头：
+只保留 256 个图像位置
+每个位置从 1024 维映射回 16 个数
+形状变成 256×16 = 4096 个 latent 数
+
+unpatchify：
+拼回 32×32×4 latent
+
+冻结 VAE decoder：
+得到 256×256×3 RGB
+```
+
+这里首尾都是 4096 个 latent 数，不代表输出等于输入。Transformer 的 24 层已经把数值全部改写；shape 相同只表示“输入和输出都占同一张 latent 网格”。
+
+注意力让不同 patch 交换全局信息，类别条件也能影响每个位置。输出头再把每个隐藏向量还原成 patch 数值。[[qk-rmsnorm]] 控制注意力打分尺度，RoPE 提供 token 位置，[[swiglu]] 负责逐 token 的非线性变换，RMSNorm 稳住中间激活。这些都是生成器内部零件，不负责计算漂移。
+
+第 7 节的特征网络和漂移损失在生成器**外部**提供训练信号；第 9 节这些 Transformer 模块才是部署时会保留的主体。推理时没有特征网络、真实样本、生成样本队列、核矩阵或时间步循环。
+
+SOTA latent L/2 使用 200k step、约 1280 epoch、AdamW、学习率 `4e-4`、10k warmup。有效生成 batch 是 8192：每步 128 个类别，每类 64 个生成样本；正样本按类从队列或数据中取，另有全局无条件队列。项目 README 报告该规模使用 128 张 TPU v6e，说明“一步推理”没有消除训练成本，只是把成本前移。
 
 ## 10. 实验：论文真正证明了什么
 
