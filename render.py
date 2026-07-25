@@ -593,6 +593,62 @@ h2 .num {
   background: var(--paper-3);
   border-radius: 2px;
 }
+/* 书章节 上/下一章导航 */
+.chapter-nav {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+  align-items: stretch;
+  margin: 30px 0;
+}
+.chapter-nav.top { margin: 4px 0 34px; }
+.chapter-nav a, .chapter-nav span.disabled {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 12px 16px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--paper-card);
+  text-decoration: none;
+  font-family: 'Newsreader', 'Noto Serif SC', serif;
+  font-size: 14px;
+  color: var(--ink-2);
+  transition: all 0.15s;
+  min-width: 0;
+}
+.chapter-nav a:hover {
+  border-color: var(--brick);
+  background: var(--paper);
+  transform: translateY(-1px);
+}
+.chapter-nav .dir {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.chapter-nav a:hover .dir { color: var(--brick); }
+.chapter-nav .t {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.chapter-nav .prev { text-align: left; }
+.chapter-nav .next { text-align: right; }
+.chapter-nav .toc {
+  align-items: center;
+  text-align: center;
+  border-left: 3px solid var(--brick);
+}
+.chapter-nav span.disabled { opacity: 0.35; }
+@media (max-width: 640px) {
+  .chapter-nav { grid-template-columns: 1fr; }
+  .chapter-nav .next { text-align: left; }
+}
 
 /* === Missing wikilink === */
 a.wikilink-missing {
@@ -1114,11 +1170,11 @@ CONCEPT_PAGE_TEMPLATE = """<!doctype html>
   <span class="concept-badge cat-{cat_singular}">{cat_label}</span>
   <h1>{title}</h1>
 </header>
-
+{chapter_nav_top}
 <article class="concept-body">
 {body_html}
 </article>
-
+{chapter_nav_bottom}
 {backlinks_html}
 
 <div class="colophon">
@@ -1171,7 +1227,39 @@ def normalize_md(text: str) -> str:
     return "\n".join(out)
 
 
-def render_concept_page(entry: Entry) -> str:
+def build_chapter_nav(entry: Entry, book_chaps: dict, book_titles: dict):
+    """给书章节页生成 上一章 / 书目 / 下一章 导航（top 紧凑版 + bottom 版）。"""
+    if entry.category != "books" or entry.meta.get("type") != "chapter":
+        return "", ""
+    b = entry.meta.get("book")
+    chaps = book_chaps.get(b, [])
+    try:
+        idx = chaps.index(entry)
+    except ValueError:
+        return "", ""
+    prev_e = chaps[idx - 1] if idx > 0 else None
+    next_e = chaps[idx + 1] if idx < len(chaps) - 1 else None
+    ov = book_titles.get(b)
+
+    def cell(e, dir_label, cls):
+        if e is None:
+            return (f'<span class="disabled {cls}"><span class="dir">{dir_label}</span>'
+                    f'<span class="t">—</span></span>')
+        return (f'<a class="{cls}" href="{html.escape(e.slug)}.html">'
+                f'<span class="dir">{dir_label}</span>'
+                f'<span class="t">{html.escape(e.title)}</span></a>')
+
+    if ov is None:
+        toc = '<span class="disabled toc"><span class="dir">书目</span><span class="t">—</span></span>'
+    else:
+        toc = (f'<a class="toc" href="{html.escape(ov.slug)}.html">'
+               f'<span class="dir">书目 · Contents</span>'
+               f'<span class="t">{html.escape(ov.title)}</span></a>')
+    inner = cell(prev_e, "← 上一章", "prev") + toc + cell(next_e, "下一章 →", "next")
+    return f'<nav class="chapter-nav top">{inner}</nav>', f'<nav class="chapter-nav">{inner}</nav>'
+
+
+def render_concept_page(entry: Entry, chapter_nav_top: str = "", chapter_nav_bottom: str = "") -> str:
     md_path = WIKI / entry.category / f"{entry.slug}.md"
     text = md_path.read_text()
     _, body = parse_frontmatter(text)
@@ -1228,6 +1316,8 @@ def render_concept_page(entry: Entry) -> str:
         cat_label=cat_label,
         body_html=body_html,
         backlinks_html=backlinks_html,
+        chapter_nav_top=chapter_nav_top,
+        chapter_nav_bottom=chapter_nav_bottom,
     )
 
 
@@ -1280,6 +1370,18 @@ def main():
 
     SLUG_INDEX = build_slug_index(entries)
 
+    # 书章节顺序表：book slug → 按 chapter 号排好的章节列表 + 概览页
+    book_chaps: dict = {}
+    book_titles: dict = {}
+    for e in entries:
+        if e.category == "books":
+            if e.meta.get("type") == "chapter":
+                book_chaps.setdefault(e.meta.get("book"), []).append(e)
+            elif e.meta.get("type") == "book":
+                book_titles[e.slug] = e
+    for b in book_chaps:
+        book_chaps[b].sort(key=lambda e: e.meta.get("chapter", 0))
+
     # 1. Render auto pages for concepts / topics / threads / books
     #    Skip if a bespoke HTML already exists (allows hand-crafted topic pages)
     auto_rendered = 0
@@ -1290,7 +1392,8 @@ def main():
             out_path = out_dir / f"{e.slug}.html"
             if out_path.exists() and "<!-- bespoke -->" in out_path.read_text()[:200]:
                 continue
-            out_path.write_text(render_concept_page(e))
+            nav_top, nav_bottom = build_chapter_nav(e, book_chaps, book_titles)
+            out_path.write_text(render_concept_page(e, nav_top, nav_bottom))
             inject_nav_strip(out_path, e.category, e.slug)
             auto_rendered += 1
 
