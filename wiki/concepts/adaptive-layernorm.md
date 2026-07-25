@@ -1,8 +1,8 @@
 ---
 name: adaptive-layernorm
 type: concept
-sources: [dit, ltx-2, drifting-models]
-updated: 2026-07-17
+sources: [dit, ltx-2, drifting-models, drift-ar]
+updated: 2026-07-24
 ---
 
 # Adaptive LayerNorm · AdaLN / AdaLN-Zero · 自适应层归一化
@@ -77,8 +77,15 @@ x̂ = [-2, 2] / 2 = [-1, 1]              ← 现在均值0、方差1
 | adaLN | 条件算 γ/β 拧归一化 | 只动 norm 参数 | 25.21 |
 | **adaLN-Zero** | adaLN + 零初始化门控 α | 同上 | **19.47** ✓ |
 
+## Drift-AR 的 Entropy-AdaLN
+
+[[drift-ar]] 又提供了一个不同用法：条件不再只有扩散时间步和类别，还多了一张逐空间位置的熵图。低熵位置代表 AR 较确定，高熵位置代表解码器需要留出更大修正空间；Entropy-AdaLN 让这种差异进入解码器各层。
+
+论文只说明“增加 Entropy-AdaLN”，没有公开它怎样把 `h×w` 熵图投影成每层 `γ/β/门控` 的完整实现。普通 DiT 通常接一条全局条件向量，而这里是逐位置条件；两者接口不完全相同，不能直接把常见实现当成论文事实。
+
 ## 链接
 - [[dit]] · 提出 adaLN-Zero 的 paper
 - [[layernorm]] · 普通版：γ/β 固定
 - [[diffusion-transformer]] · adaLN 是它注入 t/c 的标准做法
 - [[resnet]] · "零初始化 → 恒等起点"同一个母题
+- [[drift-ar]] · 用 Entropy-AdaLN 把逐位置不确定性注入单步视觉解码器

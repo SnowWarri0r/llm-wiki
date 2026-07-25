@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Causal-normalized Attention Entropy · 给不同长度的注意力行统一量尺 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · causal-normalized-attention-entropy</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Causal-normalized Attention Entropy · 给不同长度的注意力行统一量尺</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>先算一行注意力有多分散，再除以这行可能达到的最大熵 <code>log r</code>，把不同上下文长度统一压到 <code>0～1</code>。</p>
+<h2>直觉</h2>
+<p>因果注意力第 <code>r</code> 行只能看前 <code>r</code> 个位置：</p>
+<ul>
+<li>第 2 行只有 2 个候选；</li>
+<li>第 100 行有 100 个候选。</li>
+</ul>
+<p>即使两行都“平均看所有候选”，第 100 行的原始熵也会天然更大。直接拿原始熵比较，就像拿“两题考试的满分 2 分”和“满分 100 分”直接比成绩。</p>
+<p>归一化的做法很直接：这一行得了多少熵，除以这一行的理论满分。均匀注意所有可见位置时得 <code>1</code>，只盯一个位置时接近 <code>0</code>。</p>
+<h2>怎么做的</h2>
+<p>第 <code>r</code> 行的归一化注意力熵是：</p>
+<div class="tex math-display" data-display="true">\mathcal E^{(r)}
+=-\frac{1}{\log r}
+\sum_{c=1}^{r}\Omega_{r,c}\log\Omega_{r,c}.</div>
+<ul>
+<li><code>r</code>：当前查询位置，也是这一行最多能看到的候选数；</li>
+<li><code>c</code>：被关注的位置编号；</li>
+<li><code>Ω_{r,c}</code>：softmax 后第 <code>r</code> 行分给第 <code>c</code> 个位置的注意力概率；</li>
+<li><code>Σ</code>：把这一行所有候选的贡献加起来；</li>
+<li><code>log</code>：自然对数；概率越接近 0，贡献按对数方式变化；</li>
+<li>前面的负号：因为 <code>0&lt;Ω≤1</code> 时 <code>log Ω≤0</code>，加负号后熵才是非负数；</li>
+<li><code>log r</code>：<code>r</code> 个候选完全均匀时的最大熵。</li>
+</ul>
+<p>第 1 行只有自己一个候选，熵必定是 0，而且 <code>log 1=0</code> 不能当分母，所以 <a href="../papers/drift-ar.html">drift-ar</a> 从 <code>r=2</code> 开始求和。</p>
+<h2>数字例子</h2>
+<p>先看为什么必须归一化：</p>
+<pre><code class="language-text">r=2，均匀注意 [0.5, 0.5]
+原始熵 = −2×0.5×log(0.5) = log 2
+归一化 = log 2 / log 2 = 1
+
+r=4，均匀注意 [0.25, 0.25, 0.25, 0.25]
+原始熵 = −4×0.25×log(0.25) = log 4
+归一化 = log 4 / log 4 = 1
+</code></pre>
+<p>上下文长度不同，但两行都在“平均看所有候选”，归一化后都得满分 <code>1</code>。</p>
+<p>再比较一条过度自信的草稿行和一条更分散的目标行：</p>
+<pre><code class="language-text">草稿注意力 = [0.85, 0.05, 0.05, 0.05]
+原始熵 = 0.5875
+归一化熵 = 0.5875 / log 4
+           = 0.5875 / 1.3863
+           ≈ 0.4238
+
+目标注意力 = [0.50, 0.20, 0.20, 0.10]
+原始熵 = 1.2206
+归一化熵 = 1.2206 / 1.3863
+           ≈ 0.8805
+</code></pre>
+<p>数字把“草稿模型过度集中”坐实了：它把 85% 注意力压在一个位置，归一化熵只有 <code>0.4238</code>。</p>
+<p><a href="../papers/drift-ar.html">drift-ar</a> 把总熵损失写成：</p>
+<div class="tex math-display" data-display="true">\mathcal L_{\text{entropy}}
+=-\frac1R\sum_{r=2}^{R}\mathcal E^{(r)}.</div>
+<p>最小化这个负数，等于推动每行的 <code>E</code> 变大。严格说，这条式子没有直接计算“草稿熵和目标熵的距离”；它是提高草稿熵，借此缓解两者错位。</p>
+<h2>代码出处</h2>
+<p><a href="../papers/drift-ar.html">drift-ar</a> Eq. (4)(5)，统计倒数第二层因果注意力图。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/speculative-decoding.html">speculative-decoding</a> · 熵过低时停止继续起草</li>
+<li><a href="../concepts/entropy-regularization.html">entropy-regularization</a> · 同样通过最小化负熵避免过早锁死，但作用对象不同</li>
+<li><a href="../concepts/softmax.html">softmax</a> · 注意力分数如何变成一行概率</li>
+<li><a href="../concepts/logarithms.html">logarithms</a> · <code>log r</code> 为什么是均匀分布的最大熵</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/drift-ar.html"><span class="cat">paper</span>Drift-AR · 同一种熵信号，两头加速视觉自回归</a></li><li><a href="../concepts/entropy-parameterized-prior.html"><span class="cat">concept</span>Entropy-parameterized Prior · 确定的位置少加噪，拿不准的位置多留余地</a></li><li><a href="../concepts/speculative-decoding.html"><span class="cat">concept</span>Speculative Decoding · 小模型先起草，大模型一次验一段</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/causal-normalized-attention-entropy.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

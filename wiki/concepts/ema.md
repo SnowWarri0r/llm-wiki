@@ -1,7 +1,7 @@
 ---
 name: ema
 type: concept
-sources: [dino, krea-2, senseflow]
+sources: [dino, krea-2, senseflow, drift-ar]
 updated: 2026-07-24
 ---
 
@@ -61,6 +61,7 @@ m 越接近 1，爬得越慢、越稳。
 - **[[batchnorm]]**：推理用的 running mean / var 是训练时的 EMA。
 - **Adam 优化器**：一阶动量 m_t、二阶 v_t **都是梯度的 EMA**（见 [[adam]]）。
 - **EMA 权重**：把训练后期的模型权重做 EMA 当最终 checkpoint，往往更稳更好。
+- **[[drift-ar]] 的推测解码阈值**：目标模型每次验证都会产生新的注意力熵，先用 `0.9·旧平均+0.1·新熵` 平滑，再乘 `γ=0.8` 作为动态停止线，避免某一块图像的瞬时熵把策略带偏。
 
 ## 代码出处
 - 一行：`avg = m * avg + (1 - m) * x`（或 `avg.mul_(m).add_(x, alpha=1-m)`）
@@ -71,3 +72,4 @@ m 越接近 1，爬得越慢、越稳。
 - [[senseflow]] · IDA 形式像 EMA，但混合的是两个职责不同、结构相同的网络
 - [[adam]] · 动量和方差都是梯度的 EMA
 - [[batchnorm]] · running 统计量是 EMA
+- [[drift-ar]] · 用目标注意力熵的 EMA 调整草稿停止阈值

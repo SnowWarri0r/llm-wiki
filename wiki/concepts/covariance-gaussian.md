@@ -1,8 +1,8 @@
 ---
 name: covariance-gaussian
 type: concept
-sources: []
-updated: 2026-06-18
+sources: [drift-ar]
+updated: 2026-07-24
 ---
 
 # 协方差 / 多元高斯 · 数据散成什么形状的椭圆
