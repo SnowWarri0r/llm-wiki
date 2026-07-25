@@ -47,6 +47,7 @@
 - [Cosmos 3 · 把看懂、想象、行动装进一个世界模型](wiki/papers/cosmos-3.md) — 以“杯子放进托盘”贯穿五模态入口、MoT 双塔、联合注意力、任务 token 排列、rectified flow 手算、MRoPE 真实时间、数据清洗、Reasoner→Generator 训练接力（复制 QKV/MLP/Norm 当初始化，再换 latent、双向 mask、速度头和 MSE 把它训成去噪器）、真实 benchmark、四组消融与部署边界；统一的是架构和训练接口，不是一次前向或一套共享权重
 - [Solaris · 两个人怎样共享同一个生成世界](wiki/papers/solaris-multiplayer-world-model.md) — 两人 Minecraft 视频世界模型：12.64M 同步帧与两套动作；给 latent 加 player 维，动作按人独立、视觉 token 共享 attention；双向单人→双向多人→因果 Diffusion Forcing→Checkpointed Self Forcing，把滑窗反传显存 O(LtLs) 降到 O(Lt)。五项 FID 全优，但 Movement VLM 不及 frame concat，且仍无持久世界状态与速度报告。
 - [交互式视频世界模型综述 · 动作、记忆与实时反馈](wiki/papers/interactive-video-world-modeling-survey.md) — 不按 200+ 模型名排目录，而用同一条“界面→动作注入→记忆→生成→加速→评测”系统链串起来；历史帧、latent memory、显式 3D 与重建四级记忆，Teacher/Diffusion/Self/Geometry/Context Forcing 逐项对照，再用动作听不听、世界记不记、反馈快不快三问读任何新世界模型。
+- [minWM · 把离线视频扩散改造成四步交互世界模型](wiki/papers/minwm.md) — 不是新造一枚 checkpoint，而是公开数据→PRoPE 相机控制→teacher-forcing AR→causal ODE/CD→asymmetric DMD 的完整改造流水线；Wan/HY 首帧 1.137s/3.446s，但口径排除 VAE 且不等于整段提速 200×。含 PRoPE 相对投影手算、三阶段公式、论文配方与脚本默认差异，以及当前已开放/TBD 边界。
 - [Lumine · 从像素玩 3D 开放世界](wiki/papers/lumine.md) — VLM(Qwen2-VL)直接吃画面像素吐键鼠, 端到端打通原神5h主线零样本迁移; 动作即文本token + action chunking(5Hz看30Hz动) + hybrid thinking(该想才想); 2424h人类录像纯模仿零RL + W8A8实时
 - [ViT · An Image is Worth 16×16 Words](wiki/papers/vit.md) — 把图切成 16×16 patch 当 token，纯 Transformer 干视觉；CNN 在视觉的护城河被填平
 - [CLIP · Learning Transferable Visual Models](wiki/papers/clip.md) — 4 亿图文对对比学习, 图像和文本对齐到同一向量空间; DALL-E / SD / LLaVA 都靠它
@@ -168,10 +169,13 @@
 - [Cross-Entropy 交叉熵](wiki/concepts/cross-entropy.md) — −log(你押对的概率)；one-hot时是"别答错"，软标签时整条分布去贴；最小化它=最小化KL
 - [EMA 指数滑动平均](wiki/concepts/ema.md) — 一行 `新=m·旧+(1−m)·新值`；磨平抖动追"更稳的自己"；DINO/BatchNorm/Adam 全在用
 - [Relative Position Encoding](wiki/concepts/relative-position-encoding.md) — 为什么"差几个位置"比"在第几个位置"好
+- [PRoPE · Projective RoPE](wiki/concepts/projective-rope.md) — 一部分 head 维度编码相机投影，另一部分保留 x/y RoPE，让跨帧 attention 直接依赖相对相机矩阵
 - [Transformer Architecture](wiki/concepts/transformer-architecture.md) — Encoder + Decoder 堆叠
 - [LayerNorm](wiki/concepts/layernorm.md) — 每个 token 内部归一化，序列模型比 BN 更顺手
 - [归一化家族 Normalization](wiki/concepts/normalization.md) — BN/LN/GN/RMSNorm 只差"对哪根轴求μ/σ"; 同一个2×4矩阵算三遍(按行LN/按列BN/分块GN)真数字例子 + 立方体图
 - [Residual + LayerNorm](wiki/concepts/residual-layernorm.md) — 现代 Transformer block 的稳定训练骨架
+- [视频扩散里的 Teacher Forcing](wiki/concepts/teacher-forcing-video-diffusion.md) — 训练喂真实历史、推理读自身历史；先学会因果续写，也留下 exposure bias
+- [Causal Consistency Distillation](wiki/concepts/causal-consistency-distillation.md) — 老师在线走一小步，学生与 EMA 目标在相邻噪声时刻保持一致，省掉离线 ODE 轨迹存储
 
 ### CNN 基础
 - [Convolution](wiki/concepts/convolution.md) — 小核滑遍全图、逐元素相乘求和；局部连接+权重共享，省参数又平移不变

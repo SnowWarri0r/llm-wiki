@@ -1,7 +1,7 @@
 ---
 name: autoregressive-vs-bidirectional-video-diffusion
 type: concept
-sources: [hierarchical-denoising-visual-reasoning, solaris-multiplayer-world-model, interactive-video-world-modeling-survey]
+sources: [hierarchical-denoising-visual-reasoning, solaris-multiplayer-world-model, interactive-video-world-modeling-survey, minwm]
 updated: 2026-07-24
 ---
 
@@ -29,6 +29,10 @@ HDR 在输出最终细节点之前，先生成粗时间层。它把“整段可�
 
 Solaris 先训练能整段联合去噪的双向多人 teacher，再把中间 checkpoint 改成只能读取过去的因果 student。student 用 6 个 latent frame 的滚动窗口生成，最后在自己生成的历史上做 Checkpointed Self Forcing。这里“双向质量高、因果可部署”的分工非常直接。
 
+## minWM 的 teacher → student 路线
+
+minWM 先把现成双向视频扩散模型训出相机控制，再用 teacher forcing 改成多步因果模型；随后用 causal ODE 或 causal consistency distillation 压成四步，最后让因果学生 self-rollout，并由双向 real/fake score 做 DMD。它把“高质量双向老师”和“低延迟因果学生”拆成一条可复现流水线。
+
 ## 链接
 
 - [[hierarchical-denoising-visual-reasoning]] · HDR 完整方案
@@ -36,3 +40,4 @@ Solaris 先训练能整段联合去噪的双向多人 teacher，再把中间 che
 - [[kv-cache]] · 流式复用的基础
 - [[solaris-multiplayer-world-model]] · 双向单人→双向多人→因果多人→Self Forcing
 - [[interactive-video-world-modeling-survey]] · 交互式世界模型为什么必须做因果 rollout
+- [[minwm]] · 从双向 T2V/TI2V 到四步因果世界模型的完整工程配方
