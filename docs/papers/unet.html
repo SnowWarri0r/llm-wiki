@@ -216,9 +216,9 @@ figcaption b{color:var(--blue)}
 <section id="size">
 <h2><span class="n">§ 04</span><span>572 为什么最后只剩 388：原版每次 3×3 卷积都会吃掉一圈</span></h2>
 <p>原版用不补边的 <a href="../concepts/convolution.html">valid convolution</a><a class="jr" href="#g-06">6</a>。步长 1、卷积核 3 时，输出边长是 `n−3+1=n−2`。连续两次就缩 4；池化再除以 2。</p>
+<div class="vars"><div class="var"><code>n_in / n_out</code>输入 / 输出边长。</div><div class="var"><code>k=3</code>卷积核边长。</div><div class="var"><code>p=0</code>原版不补边。</div><div class="var"><code>s=1</code>卷积每次滑一格。</div></div>
 <p class="formula-purpose">这条式子回答：一维输入经过卷积后还能落下多少个合法窗口。</p>
 <div class="formula math" data-display="true">n_{\mathrm{out}}=\left\lfloor\frac{n_{\mathrm{in}}+2p-k}{s}\right\rfloor+1</div>
-<div class="vars"><div class="var"><code>n_in / n_out</code>输入 / 输出边长。</div><div class="var"><code>k=3</code>卷积核边长。</div><div class="var"><code>p=0</code>原版不补边。</div><div class="var"><code>s=1</code>卷积每次滑一格。</div></div>
 <figure id="fig-size"><figcaption><span>Fig 04 · 原版完整尺寸账</span><b>572 IN → 388 OUT · 23 CONV LAYERS</b></figcaption>
   <div class="ledger reveal"><table>
     <thead><tr><th>位置</th><th>操作</th><th>空间边长</th><th>通道</th></tr></thead>
@@ -279,11 +279,11 @@ figcaption b{color:var(--blue)}
 <section id="loss">
 <h2><span class="n">§ 07</span><span>相邻细胞之间那条细缝，为什么要算十倍重</span></h2>
 <p class="lead">最后每个像素输出 `K` 个 logits，经<a href="../concepts/softmax.html">softmax</a><a class="jr" href="#g-10">10</a>变成概率，再用<a href="../concepts/weighted-pixelwise-cross-entropy.html">逐像素加权交叉熵</a><a class="jr" href="#g-11">11</a>训练。</p>
+<div class="vars"><div class="var"><code>Ω</code>所有输出像素位置。</div><div class="var"><code>ℓ(x)</code>位置 x 的真实类别。</div><div class="var"><code>p</code>模型给真实类别的概率。</div><div class="var"><code>w_c</code>类别平衡权重。</div><div class="var"><code>d₁,d₂</code>到最近、第二近细胞边界的距离。</div><div class="var"><code>w₀=10, σ≈5</code>原文的边界增强设置。</div></div>
 <p class="formula-purpose">总损失：每个像素的负对数概率，再乘该位置的重要权重。</p>
 <div class="formula math" data-display="true">\mathcal L=-\sum_{\mathbf x\in\Omega}w(\mathbf x)\log p_{\ell(\mathbf x)}(\mathbf x)</div>
 <p class="formula-purpose">权重图：离最近和第二近细胞边界都很近的位置，额外权重最高。</p>
 <div class="formula math" data-display="true">w(\mathbf x)=w_c(\mathbf x)+w_0\exp\left(-\frac{(d_1(\mathbf x)+d_2(\mathbf x))^2}{2\sigma^2}\right)</div>
-<div class="vars"><div class="var"><code>Ω</code>所有输出像素位置。</div><div class="var"><code>ℓ(x)</code>位置 x 的真实类别。</div><div class="var"><code>p</code>模型给真实类别的概率。</div><div class="var"><code>w_c</code>类别平衡权重。</div><div class="var"><code>d₁,d₂</code>到最近、第二近细胞边界的距离。</div><div class="var"><code>w₀=10, σ≈5</code>原文的边界增强设置。</div></div>
 <figure id="fig-loss"><figcaption><span>Fig 07 · 同样答错，关键窄缝更贵</span><b>P_TRUE=.119 · CE=2.127</b></figcaption>
   <div class="loss-grid">
     <div class="loss-card reveal"><span class="tag">普通背景</span><h4>面积大，容易学</h4><div class="num">w=1<br>loss=2.127</div></div>
@@ -308,7 +308,7 @@ figcaption b{color:var(--blue)}
 <p>图像与 mask 必须使用同一份形变，否则输入里的细胞挪了，答案还留在原位。论文还在编码器末端使用 dropout。</p>
 <h3>训练配方与初始化</h3>
 <div class="recipe"><div><b>DATA</b><span>EM 30 张 · PhC 35 张 · DIC 20 张</span></div><div><b>OPTIMIZER</b><span>Caffe SGD · batch 1 · momentum .99</span></div><div><b>HARDWARE</b><span>NVIDIA Titan 6 GB · 约 10 小时</span></div></div>
-<p class="formula-purpose">He 初始化：让 ReLU 网络各层信号方差别一路爆炸或消失。</p>
+<p class="formula-purpose">He 初始化：<code>N</code> 是一个输出位置接收的输入数，不是样本数；公式让 ReLU 网络各层信号方差别一路爆炸或消失。</p>
 <div class="formula math" data-display="true">\operatorname{std}(W)=\sqrt{\frac{2}{N}},\qquad N=3\times3\times64=576,\qquad \operatorname{std}\approx0.0589</div>
 <p><code>N</code> 是一个输出位置接收的输入数。`0.0589` 是高斯采样的标准差，不是把每个权重都设成这个数。</p>
 </section>
