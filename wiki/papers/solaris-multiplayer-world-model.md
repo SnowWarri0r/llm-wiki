@@ -161,7 +161,41 @@ Solaris 从 Matrix Game 2.0 的单人 DiT 改来：
 5. **首帧 cross-attention 仍按玩家独立。**每一路画面读取自己的初始条件。
 6. **其余模块跨玩家共享权重。**不是给每位玩家复制一整套 DiT。
 
-共享注意力的作用可以用一句话概括：玩家 A 放方块时，A 的动作先影响 A 的视觉表示；共享 attention 再让玩家 B 的视觉 token 读取这条变化，从而在 B 的视角中同步反映。
+### 3.4 “交错进同一个 self-attention”具体长什么样
+
+把每帧简化成 1 个 token，取 `P=2, T=2`，按时刻交错排成一条序列：
+
+```text
+序列位置   1       2       3       4
+token     P1·t1   P2·t1   P1·t2   P2·t2
+
+谁能读谁（因果卡在“时刻”这一级）
+P1·t1 → P1·t1, P2·t1
+P2·t1 → P1·t1, P2·t1
+P1·t2 → P1·t1, P2·t1, P1·t2, P2·t2
+P2·t2 → P1·t1, P2·t1, P1·t2, P2·t2
+```
+
+跨玩家那几格就是信息通道：同一时刻的两人互相可见（描述的是同一瞬间的世界），跨时刻只能往回看。
+
+拿火把走一遍：A 在 `t1` 按放置键 → 动作模块只把它注入 P1·t1（动作分玩家读，B 的通道里没有这个键）→ 共享 attention 里 P2·t1 读到 P1·t1，B 这一刻的表示带上“这里多了个火把” → 生成 `t2` 时 P2·t2 又能读回 P1·t1 / P2·t1，火把持续存在而不是闪一下。
+
+Frame concat 之所以不行：沿通道拼等于每个空间位置同时装 A 和 B 的像素，没有“这些 token 属于谁”的标签，也没有明确的读取通道。
+
+共享序列的代价（latent 取 16×16，一帧 256 token）：
+
+```text
+窗口 6 帧 × 2 玩家 × 256 = 3,072 token
+attention 矩阵 3,072² ≈ 944 万个分数
+单人同窗口 1,536 token，1,536² ≈ 236 万
+→ 多一个玩家 token 翻倍，注意力开销翻四倍
+```
+
+**论文只说“沿序列维交错”，没写明具体排列顺序。**上面按“时刻优先”排是最自然的读法，用于讲清机制；真实排法可能不同，但不影响“同一时刻互相可见、跨时刻只能回看”这个结论。
+
+`(B P) T D` 这个 reshape 的语义是把两维压成一维：2 局 × 2 人 → 4 条互不相干的样本各走各的，动作模块里玩家彻底隔离。跨玩家交流只发生在共享 attention 那一处。
+
+### 3.5 还不是显式世界状态
 
 这仍然不是显式 3D 状态。模型学到的是视频 token 间的统计关联，没有一张永久保存所有方块和玩家坐标的世界表。
 
@@ -186,7 +220,17 @@ Solaris 不直接让网络一次猜干净 latent，而是让它预测“沿一�
 \boldsymbol\epsilon\sim\mathcal N(0,I).
 \]
 
-从 `x` 沿直线走到 `ε`，整条路的速度不变：
+速度是多少？把上式对 `σ` 求一次导：
+
+\[
+\frac{\mathrm d\mathbf x_{\boldsymbol\sigma}}{\mathrm d\boldsymbol\sigma}
+=\frac{\mathrm d}{\mathrm d\boldsymbol\sigma}
+\big[(1-\boldsymbol\sigma)\mathbf x+\boldsymbol\sigma\boldsymbol\epsilon\big]
+=-\mathbf x+\boldsymbol\epsilon
+=\boldsymbol\epsilon-\mathbf x.
+\]
+
+逐项看：`(1−σ)x` 里 `x` 是常数，求导得 `−x`；`σε` 里 `ε` 是常数，求导得 `ε`。结果里**不含 `σ`**——走到路上任何一点速度都一样，这就是“直线”的数学含义，也是 flow matching 好学的原因：目标是个常量。
 
 \[
 \mathbf v^\star=\boldsymbol\epsilon-\mathbf x.
@@ -271,6 +315,8 @@ L=(-2.6-(-3))^2=.16.
 | 3 | Stage 2 的 60K 中间点 | 60K 步，因果 mask + Diffusion Forcing | 学会只读过去、维护滚动 cache |
 | 4 | Stage 3 student + Stage 2 120K teacher | Checkpointed Self Forcing | 让 student 适应自己生成的历史并蒸成少步 |
 
+**Stage 3 不是接在 Stage 2 终点，而是从它跑到 60K 时分叉出来的**，论文给的理由是省训练时间：60K 时复制一份改造成因果版，本体继续跑到 120K 收敛后当 teacher。所以 Stage 2 和 Stage 3 有一段是并行训的。
+
 Stage 3 的滑动窗口是 6 个 latent frame；Matrix Game 2.0 的 VAE 每个 latent 对应 4 个真实帧，因此最多看 24 个真实帧。它也限制了推理时滚动 [[kv-cache]] 的最大长度。
 
 训练配置中，前三阶段学习率均为 `1e-4`；Self Forcing 的 generator 为 `3e-6`、critic 为 `3e-7`。冻结的 3D VAE 贯穿所有阶段。论文实验依赖 TPU v5p，正文未给出完整训练算力成本。
@@ -279,7 +325,11 @@ Stage 3 的滑动窗口是 6 个 latent frame；Matrix Game 2.0 的 VAE 每个 l
 
 Teacher Forcing 训练因果模型时，上一帧来自数据集。部署后，上一帧却是模型自己生成的。一个小错误会进入下一步条件，再被继续放大，这叫 exposure bias。
 
-Self Forcing 的做法是：训练时就让 student 自己向前生成，再让高质量 teacher / distribution matching 纠正整段输出。于是 student 学到的输入分布更接近部署时真正遇到的输入。
+Self Forcing 的做法是：训练时就让 student 自己向前生成。于是 student 学到的输入分布更接近部署时真正遇到的输入。
+
+但这样一来“标准答案”就没了：student 滚在自己的历史上，走的这条轨迹数据集里不存在，没有任何一帧真值能逐像素比对。解法是换打分方式——**分布匹配**：不问“这一帧跟标准答案差多少”，改问“你生成的这一批整体看起来像不像 teacher 会生成的”，梯度往更像的方向推。好处是不需要配对真值，且 student 可以只用极少去噪步数（Stage 4 说的“蒸成少步”）。
+
+论文只写它优化 distribution matching loss，**没有点名是 DMD 还是 DMD2 的哪一版**，也没给 critic 结构。通用机理见 [[dmd-distillation]]。
 
 一次简化 rollout：
 
