@@ -76,7 +76,7 @@ code{overflow-wrap:anywhere;word-break:break-word}
 </nav>
 
 <h2 id="s1"><span class="sec">01 · WHY JOINT</span>先视频后配音，究竟少了什么</h2>
-<p class="lead">`T2V → V2A` 只能让声音服从已经定稿的画面；`T2A → A2V` 只能让画面服从已经定稿的声音。问题不是第二个模型不够强，而是第一步一旦交卷，另一模态再也改不回去。</p>
+<p class="lead"><code>T2V → V2A</code> 只能让声音服从已经定稿的画面；<code>T2A → A2V</code> 只能让画面服从已经定稿的声音。问题不是第二个模型不够强，而是第一步一旦交卷，另一模态再也改不回去。</p>
 <div class="figure" id="fig-01"><div class="figcap"><span>Fig 01 · 串行生成与联合生成</span><b>ONE-WAY vs TWO-WAY</b></div>
   <div class="two">
     <div class="panel v"><h3>串行：先交卷，再补另一科</h3><p>视频先定嘴型和碰撞时刻 → 音频只能追；或音频先定节奏 → 画面只能追。反馈箭头断掉。</p></div>
@@ -99,26 +99,26 @@ code{overflow-wrap:anywhere;word-break:break-word}
   <div class="arch-loop"><b>外层去噪循环</b><span>采样器决定当前噪声进度 σ 和这一步走多远 → 双流 DiT 同时预测视频 / 音频速度 → 更新两块 latent → 按设定的采样步数继续。<strong>48 层是一次模型前向的深度，不是 48 个采样步。</strong></span></div>
   <div class="arch-final"><span>RGB frames</span><b>+</b><span>24 kHz stereo waveform</span><strong>→ 合成为一段同步音视频</strong></div>
 </div>
-<p>这张总图对应后文的拼图：§03–05 拆一次双流前向，§06–07 拆文字条件，§08 拆两套 latent 编解码，§09–10 拆外层去噪与 guidance，§11 只处理<strong>视频 latent 的高分辨率生成路径</strong>。“shared depth”只表示两条流层数和交换位置对齐，不是共享参数。容量比 `14:5=2.8:1`，约 73.7% 参数给视频、26.3% 给音频；参数占比不等于 FLOPs 占比。</p>
+<p>这张总图对应后文的拼图：§03–05 拆一次双流前向，§06–07 拆文字条件，§08 拆两套 latent 编解码，§09–10 拆外层去噪与 guidance，§11 只处理<strong>视频 latent 的高分辨率生成路径</strong>。“shared depth”只表示两条流层数和交换位置对齐，不是共享参数。容量比 <code>14:5=2.8:1</code>，约 73.7% 参数给视频、26.3% 给音频；参数占比不等于 FLOPs 占比。</p>
 
 <h2 id="s3"><span class="sec">03 · ONE DUAL-STREAM BLOCK</span>一层里，先各自思考，再交换答案</h2>
 <div class="figure" id="fig-03"><div class="figcap"><span>Fig 03 · 每个 block 的四道工序</span><b>SELF → TEXT → A/V → FFN</b></div>
   <div class="blockflow"><div class="op"><b>① Self-Attention</b><span>视频内部建空间与运动；音频内部建语音、音乐、环境声的连续性。</span></div><div class="op"><b>② Text Cross-Attn</b><span>两条流分别读取为自己整理过的 prompt 条件。</span></div><div class="op"><b>③ A ↔ V Cross-Attn</b><span>沿共同时间轴双向取信息，是同步发生的位置。</span></div><div class="op"><b>④ FFN</b><span>每个 token 在通道维做非线性变换，再进下一层。</span></div></div>
 </div>
-<p>RMSNorm<a class="jr" href="#g-04">04</a> 穿插在各子层之前稳定尺度。当前官方实现还先保存交换前的 `video/audio` 快照：A→V 与 V→A 都读取同一份旧状态，第二个方向不会偷看到第一个方向刚写回的结果。这让一层内的双向交换保持对称。</p>
-<div class="note"><b>论文 vs 实现</b>论文正文没有列 block 数；当前官方 `ltx-core` README 与代码给出 48 层。本文把它标为实现补充，而不是伪装成论文表格里的公开训练配置。</div>
+<p>RMSNorm<a class="jr" href="#g-04">04</a> 穿插在各子层之前稳定尺度。当前官方实现还先保存交换前的 <code>video/audio</code> 快照：A→V 与 V→A 都读取同一份旧状态，第二个方向不会偷看到第一个方向刚写回的结果。这让一层内的双向交换保持对称。</p>
+<div class="note"><b>论文 vs 实现</b>论文正文没有列 block 数；当前官方 <code>ltx-core</code> README 与代码给出 48 层。本文把它标为实现补充，而不是伪装成论文表格里的公开训练配置。</div>
 
 <h2 id="s4"><span class="sec">04 · TEMPORAL ALIGNMENT</span>画面中的撞击，怎么查到同一刻的声音</h2>
 <p>视频 query 读取音频 K/V，就是 A→V；音频 query 读取视频 K/V，就是 V→A<a class="jr" href="#g-05">05</a>。</p>
 <div class="math"><div class="tex" data-display="true">A_{V\leftarrow A}=\operatorname{softmax}\!\left(\frac{Q_VK_A^\top}{\sqrt d}\right)V_A</div><div class="symbols"><b>Q_V</b><span>视频 token 提出的查询：我现在需要什么声音线索？</span><b>K_A</b><span>音频 token 的索引，用来与 query 比较。</span><b>V_A</b><span>匹配后真正取回的音频内容。</span><b>d</b><span>Q/K 的共同通道宽度；除以 √d 防止点积过大、softmax 过早饱和。</span></div></div>
 <div class="figure" id="fig-04"><div class="figcap"><span>Fig 04 · 同一时刻获得最高权重</span><b>TOY NUMBERS · NOT PAPER METRICS</b></div>
   <div class="timeline"><i class="impact"><b>0.40s · 杯子碰桌面</b></i><i class="tick" style="left:25%" data-t="0.36s"></i><i class="tick" style="left:50%" data-t="0.40s"></i><i class="tick" style="left:75%" data-t="0.44s"></i><div class="weight w1">.107</div><div class="weight w2">.787</div><div class="weight w3">.107</div></div>
-  <p><code>softmax([1,3,1])≈[.107,.787,.107]</code>。若三个音频 value 的碰撞强度为 `[.2,1,.1]`，加权输出约 `.819`。这只演示一次 attention 的算术。</p>
+  <p><code>softmax([1,3,1])≈[.107,.787,.107]</code>。若三个音频 value 的碰撞强度为 <code>[.2,1,.1]</code>，加权输出约 <code>.819</code>。这只演示一次 attention 的算术。</p>
 </div>
-<p>视频 self-attention 使用 3D RoPE<a class="jr" href="#g-06">06</a> 编码 `(x,y,time)`，音频 self-attention 使用 1D 时间 RoPE；跨模态时只保留时间。原因很朴素：声音没有画面里的 `x,y`。跨模态位置编码只负责“是不是同一刻”，该看嘴、车还是手仍由内容相似度决定。</p>
+<p>视频 self-attention 使用 3D RoPE<a class="jr" href="#g-06">06</a> 编码 <code>(x,y,time)</code>，音频 self-attention 使用 1D 时间 RoPE；跨模态时只保留时间。原因很朴素：声音没有画面里的 <code>x,y</code>。跨模态位置编码只负责“是不是同一刻”，该看嘴、车还是手仍由内容相似度决定。</p>
 
 <h2 id="s5"><span class="sec">05 · CROSS-MODALITY ADALN</span>自己的进度调制，对方的进度开门</h2>
-<p>联合生成时两条流可能噪声程度不同。V2A 甚至可以让给定视频保持干净 `σ_video=0`，只去噪音频。交叉注意力必须知道：谁现在更可靠<a class="jr" href="#g-07">07</a>。</p>
+<p>联合生成时两条流可能噪声程度不同。V2A 甚至可以让给定视频保持干净 <code>σ_video=0</code>，只去噪音频。交叉注意力必须知道：谁现在更可靠<a class="jr" href="#g-07">07</a>。</p>
 <div class="math"><div class="tex" data-display="true">h'_V=h_V+g(\sigma_A)\odot\operatorname{CrossAttn}\!\left(\operatorname{AdaLN}(h_V;\sigma_V),\operatorname{AdaLN}(h_A;\sigma_A)\right)</div><div class="symbols"><b>h_V,h_A</b><span>交换前的两条隐藏状态。</span><b>σ_V, σ_A</b><span>视频与音频当前噪声级别。</span><b>AdaLN</b><span>用本流 σ 算 scale/shift，先把自己整理到适合交换的尺度。</span><b>g(σ_A)</b><span>由对方噪声进度算出的写回门；⊙ 是逐通道相乘。</span></div></div>
 <div class="figure" id="fig-05"><div class="figcap"><span>Fig 05 · 两道控制不是同一件事</span><b>MODULATE SELF · GATE OTHER</b></div>
   <div class="gateflow">
@@ -135,7 +135,7 @@ code{overflow-wrap:anywhere;word-break:break-word}
 <div class="figure" id="fig-06"><div class="figcap"><span>Fig 06 · 多层特征先拼接，再投影</span><b>[B,T,D,L] → [B,T,D×L] → TARGET</b></div>
   <div class="features"><div><div class="layers"><i></i><i style="width:83%"></i><i style="width:66%"></i></div><div class="shape">3 LAYERS × 2 DIMS</div></div><div class="arr">→</div><div><div class="concat"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="shape">[1,0,0,2,3,1]</div></div><div class="arr">W</div><div><div class="outvec"><i></i><i></i></div><div class="shape">TOY OUTPUT [4,3]</div></div></div>
 </div>
-<p>玩具例中三层 2 维向量 `[1,0]、[0,2]、[3,1]` 拼成 6 维；若手写 W 只把第 1/5 维加到输出 1、把第 2/4/6 维加到输出 2，就得 `[4,3]`。真实 W 是稠密浮点矩阵。W 在短暂初始阶段与 LTX-2 一起用 diffusion MSE 训练，Gemma 始终冻结，随后 W 也冻结；论文没有给这个阶段的步数和学习率。</p>
+<p>玩具例中三层 2 维向量 <code>[1,0]、[0,2]、[3,1]</code> 拼成 6 维；若手写 W 只把第 1/5 维加到输出 1、把第 2/4/6 维加到输出 2，就得 <code>[4,3]</code>。真实 W 是稠密浮点矩阵。W 在短暂初始阶段与 LTX-2 一起用 diffusion MSE 训练，Gemma 始终冻结，随后 W 也冻结；论文没有给这个阶段的步数和学习率。</p>
 
 <h2 id="s7"><span class="sec">07 · THINKING TOKENS</span>名字像“思考”，代码里其实是可写寄存器</h2>
 <p>Gemma 是 causal decoder，原始 token 只能看左边。后接的 text connector<a class="jr" href="#g-09">09</a> 使用全双向 attention 重新混合整句；视频与音频各有一个 connector。padding 槽不再浪费，而由 learnable registers<a class="jr" href="#g-10">10</a> 替换。</p>
@@ -144,23 +144,23 @@ code{overflow-wrap:anywhere;word-break:break-word}
   <div class="visibility-flow"><div class="vis-card"><b>正文 token 可读取 register</b><span>每个词都能把 R1/R2/R3 当作额外上下文。</span></div><div class="biarrow"><strong class="horizontal">⇄</strong><strong class="vertical">⇅</strong><small>双向可见</small></div><div class="vis-card register"><b>register 可汇总整句</b><span>R1/R2/R3 能从全部正文 token 汇总信息。</span></div></div>
   <p class="vis-note"><b>一次同时更新：</b>8 个位置彼此可见；箭头不是“先 register、再正文”的执行顺序。</p>
 </div>
-<p>它们不是词，不会输出可读推理步骤。假设某个 register 对五个正文 token 的权重为 `[.10,.15,.45,.20,.10]`，正文的“碰撞相关度”为 `[0,0,1,.5,0]`，聚合值就是 `.45×1+.20×.5=.55`。这说明它能收集全句信号，不证明它学会了 reasoning。论文也没有 thinking-token 独立消融。</p>
+<p>它们不是词，不会输出可读推理步骤。假设某个 register 对五个正文 token 的权重为 <code>[.10,.15,.45,.20,.10]</code>，正文的“碰撞相关度”为 <code>[0,0,1,.5,0]</code>，聚合值就是 <code>.45×1+.20×.5=.55</code>。这说明它能收集全句信号，不证明它学会了 reasoning。论文也没有 thinking-token 独立消融。</p>
 
 <h2 id="s8"><span class="sec">08 · MODALITY-SPECIFIC LATENTS</span>视频压空间与时间，音频压时频结构</h2>
 <h3>视频：让 DiT 不必面对每个像素</h3>
-<p>当前官方实现给出的 causal Video VAE<a class="jr" href="#g-11">11</a> 形状是 `[B,3,F,H,W]→[B,128,F',H/32,W/32]`，`F'=1+(F-1)/8`。33 帧 512² 视频从 8,650,752 个像素位置变成 `5×16×16=1,280` 个 latent 位置，每个位置 128 维。6758× 是位置数缩减，不是文件压缩率。</p>
+<p>当前官方实现给出的 causal Video VAE<a class="jr" href="#g-11">11</a> 形状是 <code>[B,3,F,H,W]→[B,128,F',H/32,W/32]</code>，<code>F'=1+(F-1)/8</code>。33 帧 512² 视频从 8,650,752 个像素位置变成 <code>5×16×16=1,280</code> 个 latent 位置，每个位置 128 维。6758× 是位置数缩减，不是文件压缩率。</p>
 <h3>音频：先 mel，再压到约 25 token/s</h3>
 <div class="figure" id="fig-08"><div class="figcap"><span>Fig 08 · 立体声音频编解码链</span><b>16 kHz ANALYSIS → 24 kHz SYNTHESIS</b></div>
   <div class="codec"><div><b>stereo wave</b><span>输入重采样到 16 kHz</span></div><div><b>2× mel</b><span>左右声道各算时频图</span></div><div><b>Audio VAE</b><span>约 25 token/s<br>128 维</span></div><div><b>Flow DiT</b><span>在连续 latent 上生成</span></div><div><b>VAE decode</b><span>还原双声道 mel</span></div><div><b>HiFi-GAN</b><span>24 kHz stereo waveform</span></div></div>
 </div>
-<p>这里的 mel-spectrogram<a class="jr" href="#g-18">18</a> 是沿时间展示各频带能量的时频图。4 秒约 100 个音频 token，20 秒约 500 个。vocoder<a class="jr" href="#g-12">12</a> 只负责把频谱合成为相位连续、可播放的波形，不是又一轮语义去噪。当前代码形状 `[B,8,T/4,16]` 也解释了 128 维来自 `8×16`。</p>
+<p>这里的 mel-spectrogram<a class="jr" href="#g-18">18</a> 是沿时间展示各频带能量的时频图。4 秒约 100 个音频 token，20 秒约 500 个。vocoder<a class="jr" href="#g-12">12</a> 只负责把频谱合成为相位连续、可播放的波形，不是又一轮语义去噪。当前代码形状 <code>[B,8,T/4,16]</code> 也解释了 128 维来自 <code>8×16</code>。</p>
 
 <h2 id="s9"><span class="sec">09 · FLOW MATCHING</span>两条流训练时，究竟在预测什么<a class="jr" href="#g-16">16</a></h2>
 <div class="math"><div class="tex" data-display="true">x_\sigma=(1-\sigma)x_0+\sigma\epsilon,\qquad v^*=\epsilon-x_0,\qquad \mathcal L=\lVert v_\theta(x_\sigma,\sigma,c)-v^*\rVert_2^2</div><div class="symbols"><b>x₀</b><span>VAE 编码后的干净视频或音频 latent。</span><b>ε</b><span>与 latent 同形状的随机噪声。</span><b>σ</b><span>0 到 1 的插值位置；0 靠近数据，1 靠近噪声。</span><b>xσ</b><span>模型训练时看到的带噪 latent。</span><b>v*</b><span>直线路径的真实速度。由 dxσ/dσ 求导得到 ε−x₀。</span><b>vθ</b><span>双流 DiT 预测的速度。</span><b>‖·‖²₂</b><span>每一维误差先平方，再全部求和。</span></div></div>
 <p>补充材料只明确“video/audio latents 用 flow-matching velocity loss”。它没有披露两项如何加权、σ 如何采样、optimizer、batch 或训练步数。推理时从两条噪声 latent 出发，用 Euler 等求解器反向积分，最后各自由 VAE 解码。</p>
 
 <h2 id="s10"><span class="sec">10 · MODALITY-CFG</span>“符合文字”和“彼此同步”可以分开调</h2>
-<p>论文原式用 `t` 表示 text，容易和 diffusion timestep 混淆；这里改成 `c`。`m` 表示另一模态<a class="jr" href="#g-13">13</a>。</p>
+<p>论文原式用 <code>t</code> 表示 text，容易和 diffusion timestep 混淆；这里改成 <code>c</code>。<code>m</code> 表示另一模态<a class="jr" href="#g-13">13</a>。</p>
 <div class="math"><div class="tex" data-display="true">\widehat M=M(x,c,m)+s_{text}[M(x,c,m)-M(x,\varnothing,m)]+s_{cross}[M(x,c,m)-M(x,c,\varnothing)]</div><div class="symbols"><b>M(x,c,m)</b><span>文本与另一模态都给全的预测。</span><b>M(x,∅,m)</b><span>拿掉文本，用差值测文本造成的变化。</span><b>M(x,c,∅)</b><span>拿掉另一模态，用差值测跨模态造成的变化。</span><b>s_text</b><span>放大文本方向。</span><b>s_cross</b><span>放大音视频互相对齐的方向。</span></div></div>
 <div class="figure" id="fig-09"><div class="figcap"><span>Fig 09 · 三次预测拆出两条 guidance 方向</span><b>FULL · NO TEXT · NO CROSS</b></div>
   <div class="cfg"><div class="branch"><b>FULL</b><strong>2.0</strong><span>text ✓ · other modality ✓</span></div><div class="branch"><b>NO TEXT</b><strong>1.5</strong><span>text ∅ · other modality ✓<br>差值 = .5</span></div><div class="branch"><b>NO CROSS</b><strong>1.2</strong><span>text ✓ · other modality ∅<br>差值 = .8</span></div></div><div class="sum">VIDEO (3,3): 2 + 3×.5 + 3×.8 = 5.9<br>AUDIO (7,3): 2 + 7×.5 + 3×.8 = 7.9</div>
@@ -168,7 +168,7 @@ code{overflow-wrap:anywhere;word-break:break-word}
 <p>这份公式从<strong>完整条件输出</strong>出发，再加两条差值；标准 CFG<a class="jr" href="#g-14">14</a> 常从无条件输出出发，二者不能只看名称就互换 scale。论文没有给参数 sweep，因此音频 text scale=7 只是本报告配方，不是普适最佳值。</p>
 
 <h2 id="s11"><span class="sec">11 · FULL-HD WITHOUT FULL-FRAME VRAM</span>1080p 不是一次生成：先出全片草稿，再分块精修</h2>
-<p class="lead">这一节只讲<strong>高分辨率视频支路</strong>。video latent 是 VAE 压缩后的时空特征网格，不是 RGB 像素；tile 就是从这张 `(time, height, width)` 网格切出的一小块。MP 是“百万像素”，所以 0.5MP 约等于 50 万像素。</p>
+<p class="lead">这一节只讲<strong>高分辨率视频支路</strong>。video latent 是 VAE 压缩后的时空特征网格，不是 RGB 像素；tile 就是从这张 <code>(time, height, width)</code> 网格切出的一小块。MP 是“百万像素”，所以 0.5MP 约等于 50 万像素。</p>
 <div class="figure" id="fig-10"><div class="figcap"><span>Fig 10 · 从约 0.5MP base latent 到 Full-HD</span><b>WHOLE CLIP FIRST · UPSCALE · REFINE TILES · BLEND</b></div>
   <div class="hd-steps">
     <div class="hd-step base"><span class="hd-num">01</span><b>整段低分辨率生成</b><strong>约 0.5MP</strong><p>双流模型先看完整时空范围，定下构图、人物位置、运动轨迹和基础音视频同步。</p><small>输出：base video latent + audio latent</small></div>
