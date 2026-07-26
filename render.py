@@ -1067,6 +1067,7 @@ MATHIFY_BLOCK = MATHIFY_START + """
       if(/^[A-Z][A-Z0-9_]{3,}$/.test(s)) return false;                            // CONST_NAME
       if(/\\s/.test(s) && /^[A-Za-z\\s‖|,]+$/.test(s)) return false;              // "fake ‖ real" 词组
       if(/^(https?:|\\/|\\.\\/)/.test(s)) return false;                            // 路径/URL
+      if(/^<.*>$/.test(s)) return false;                                          // <eos> / <|zh|> 这类 token，不是数学
       // snake_case 且首段是多字母 = 代码变量名(no_grad / loss_dm / cross_entropy)，
       // 而数学下标的首段通常只有一个字母(p_fake / w_c / d_1)，予以保留
       if(/^[a-z][a-z0-9]+(_[a-z0-9]+)+$/.test(s)) return false;
@@ -1079,8 +1080,12 @@ MATHIFY_BLOCK = MATHIFY_START + """
       if(el.closest('pre')) return;               // 代码块原样保留
       var raw=(el.textContent||'').trim();
       if(!looksLikeMath(raw)) return;
+      // 已经是手写 LaTeX（含反斜杠命令）的，原样送 KaTeX，绝不让 toTex 再改写一遍——
+      // 否则同一条式子在「符号格子」和「.formula 公式」两条渲染路径上会长得不一样。
+      // toTex 那层启发式只服务于存量页里随手写的松散记号(θbase / p_fake / L_G^adv)。
+      var tex = raw.indexOf('\\\\') >= 0 ? raw : toTex(raw);
       try{
-        var html=katex.renderToString(toTex(raw),{throwOnError:true,displayMode:false});
+        var html=katex.renderToString(tex,{throwOnError:true,displayMode:false});
         el.innerHTML=html;
         el.dataset.mathified='1';
         el.classList.add('mathified');
@@ -1507,6 +1512,11 @@ def render_concept_page(entry: Entry, chapter_nav_top: str = "", chapter_nav_bot
         body,
         extensions=["fenced_code", "tables", "sane_lists", "attr_list"],
     )
+    # markdown 表格里 `a\|b` 的反斜杠是表格转义，不是内容的一部分；
+    # python-markdown 不会在 code span 里还原它，留着会被 mathify 当成 KaTeX 的 \| (‖)。
+    body_html = re.sub(r"(<code>)(.*?)(</code>)",
+                       lambda m: m.group(1) + m.group(2).replace("\\|", "|") + m.group(3),
+                       body_html, flags=re.S)
     body_html = restore_math(body_html, maths)
 
     # Build backlinks block
