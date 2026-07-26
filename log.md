@@ -1130,3 +1130,11 @@ skill 更新:
 - 三组数字例已复核：ODE 平方误差 `.20`、CD 损失 `.005`、DMD 梯度 `−.4 → θ=1.04`
 - 新增 `projective-rope`、`teacher-forcing-video-diffusion`、`causal-consistency-distillation` 三个概念页，并回链 DMD 与双向/因果视频扩散
 - 对照论文 TeX 与官方仓库 commit `df522a26`，单独记录论文训练配方、脚本默认值、VAE 排除口径和 README 的 TBD 项
+
+## [2026-07-26] ingest | Data-Forcing Distillation · 让 DMD 的老师重新看到真实视频
+
+- 新增 `wiki/papers/data-forcing-distillation.md` 与 bespoke `docs/papers/data-forcing-distillation.html`；不照论文目录复述，改按“反向 KL 漏模式 → 三套网络 → DMD 原路径 → teacher score discrepancy → 精确抵消 → 一行代码 → 成立条件 → 数据与实验”组织。
+- 用同一条主线解释 fake-score 始终读取学生视频、teacher 才按概率改读同条件真实视频；明确 DFD 不是把真实视频当随机噪声的逐像素标签，也不是从零取代 DMD2。
+- 补齐五组可复算数字：两格反向 KL `.693`、score 正则抵消 `−.40→−.10`、伪目标损失 `.500→.405`、共享噪声差 `.4`、理论误差上界 `.09`，所有公式都在代数前定义符号。
+- 覆盖 ViPE 96.6 万→30K 筛选、Wan T2V / Cosmos I2V / Self Forcing AR、GAN / 权重 / 预训练 / batch 消融、两步局限和社会风险；保留 teacher 多样性仍更高、AR 主要定性、batch 两列略降等反例。
+- 新增 `teacher-score-discrepancy` 概念页，并回接 `dmd-distillation`、`score-function` 与 `entropy-kl`；对照 arXiv v2 和官方代码 commit `7281906`，记录摘要 100–300 与正文残留 50–100，以及论文“DFD 不需 GAN”与当前 README 仍继承 GAN 权重 `.03` 的两处差异。

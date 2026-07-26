@@ -1,0 +1,524 @@
+<!doctype html>
+<!-- bespoke -->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Data-Forcing Distillation · 让 DMD 的老师重新看到真实视频</title>
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+:root{
+  --paper:#f0e9d6;--paper2:#e8e0c8;--card:#f8f2df;--white:#fffdf5;
+  --ink:#181410;--ink2:#3a3128;--muted:#706653;--rule:#b9ad92;
+  --deep:#173b56;--deep2:#285e75;--deepsoft:#c9dde3;
+  --teal:#087f8c;--tealsoft:#c5e8e7;--orange:#bd501f;--orangesoft:#f2d4c3;
+  --green:#476b3b;--greensoft:#d9e7cf;--gold:#9b6c08;--goldsoft:#efdfa7;
+  --night:#102638;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);scroll-behavior:smooth}
+body{font-family:"Noto Serif SC","Songti SC","STSong",Georgia,serif;font-size:18px;line-height:1.78;-webkit-font-smoothing:antialiased}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:20;opacity:.22;background-image:linear-gradient(rgba(23,59,86,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(23,59,86,.045) 1px,transparent 1px);background-size:28px 28px}
+.page{max-width:1240px;margin:auto;padding:58px 42px 120px;position:relative}
+.mast{display:flex;justify-content:space-between;gap:20px;border-top:4px double var(--ink);border-bottom:1px solid var(--rule);padding:12px 0;font:700 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.hero{padding:66px 0 58px;border-bottom:1px solid var(--rule)}
+.eyebrow,.secno,.tag,.mini,.figcap,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.eyebrow{font-size:12px;letter-spacing:3px;color:var(--teal);font-weight:800;text-transform:uppercase}
+h1{font-size:clamp(52px,8.2vw,108px);line-height:.9;letter-spacing:-.055em;margin:22px 0 20px;font-weight:800}
+h1 em{display:block;color:var(--teal);font-weight:500}
+.byline{font:600 12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);letter-spacing:.8px}
+.dek{font-size:clamp(21px,2.25vw,29px);line-height:1.48;max-width:910px;color:var(--ink2);margin:22px 0 0;font-style:italic}
+.tldr{margin:36px 0 0;background:var(--night);color:#f7f2e6;border-left:6px solid var(--teal);padding:24px 28px;box-shadow:9px 9px 0 rgba(23,59,86,.12)}
+.tldr .tag{display:block;color:#79d5d4;font-size:11px;letter-spacing:2px;font-weight:800;margin-bottom:5px}
+.tldr strong{color:#fff}
+section{padding-top:66px}
+h2{font-size:clamp(34px,4vw,50px);line-height:1.12;letter-spacing:-.03em;margin:0 0 24px}
+.secno{display:block;color:var(--teal);font-size:12px;letter-spacing:3px;margin-bottom:12px}
+h3{font-size:25px;line-height:1.35;margin:34px 0 10px}
+p{margin:12px 0;max-width:970px}
+strong{font-weight:800}
+a{color:var(--deep2);text-underline-offset:4px;text-decoration-thickness:1px}
+code{font:500 .86em/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;background:#fffaf0;border:1px solid var(--rule);padding:1px 5px;border-radius:3px}
+.lead{font-size:21px;color:var(--ink2);max-width:1000px}
+.note{margin:22px 0;padding:16px 20px;background:var(--white);border-left:4px solid var(--gold);max-width:1000px}
+.note .mini{font-size:10px;letter-spacing:2px;color:var(--gold);font-weight:800;text-transform:uppercase;display:block}
+.warn{border-color:var(--orange)}
+.warn .mini{color:var(--orange)}
+.formula{max-width:1000px;background:var(--night);color:white;padding:22px 18px;margin:20px 0;overflow-x:auto;border-left:5px solid var(--teal);text-align:center}
+.formula .katex{color:white;font-size:1.08em}
+.formula.wide .katex{font-size:.96em}
+.symbols{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:1000px;margin:16px 0}
+.symbol{background:var(--card);border:1px solid var(--rule);padding:14px 15px}
+.symbol b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--deep);font-size:14px}
+pre{max-width:1000px;overflow:auto;background:var(--night);color:#f4f0e7;padding:20px 22px;border-radius:2px;font:500 14px/1.72 ui-monospace,SFMono-Regular,Menlo,monospace}
+.hi{color:#83dfdc}.bad{color:#ff9e78}.good{color:#a6dfa1}.dim{color:#b7c5cc}
+figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.72);border:1px solid var(--rule);box-shadow:9px 9px 0 rgba(65,50,30,.08)}
+.figcap{display:flex;justify-content:space-between;gap:20px;font-size:11px;letter-spacing:1.4px;color:var(--muted);padding-bottom:14px;margin-bottom:22px;border-bottom:1px dashed var(--rule);text-transform:uppercase;font-weight:700}
+.figcap .n{color:var(--teal)}
+.flow5{display:grid;grid-template-columns:1fr 38px 1fr 38px 1fr 38px 1fr 38px 1fr;align-items:stretch}
+.box{border:2px solid var(--deep);background:var(--white);padding:18px;min-height:160px}
+.box .num{font:800 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--teal);letter-spacing:2px}
+.box h4{font-size:21px;margin:12px 0 6px;line-height:1.25}
+.box p{font-size:15px;line-height:1.55;margin:0;color:var(--ink2)}
+.box.teal{border-color:var(--teal);background:var(--tealsoft)}
+.box.green{border-color:var(--green);background:var(--greensoft)}
+.box.orange{border-color:var(--orange);background:var(--orangesoft)}
+.arrow{display:flex;align-items:center;justify-content:center;color:var(--orange);font:900 25px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.panel{border:1px solid var(--rule);background:var(--white);padding:21px}
+.panel h4{margin:0 0 14px;font-size:23px}
+.panel.badp{border-top:5px solid var(--orange)}
+.panel.goodp{border-top:5px solid var(--teal)}
+.islands{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin:18px 0}
+.island{min-height:150px;border-radius:50%;display:flex;align-items:center;justify-content:center;text-align:center;border:3px solid var(--deep2);background:var(--deepsoft);position:relative;font-weight:700}
+.island.missed{border-style:dashed;background:transparent;color:var(--muted)}
+.island.covered:after{content:"学生样本全在这里";position:absolute;bottom:-10px;background:var(--orange);color:#fff;padding:4px 10px;font:700 10px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace}
+.roles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.role{border:1px solid var(--rule);background:var(--white);padding:20px}
+.role .life{font:800 10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.role h4{font-size:22px;margin:12px 0 7px}
+.role p{font-size:15px;line-height:1.55;margin:0}
+.role.keep{border-top:6px solid var(--green)}.role.freeze{border-top:6px solid var(--deep)}.role.online{border-top:6px solid var(--orange)}
+.paths{display:grid;grid-template-columns:1fr 44px 1fr;gap:0;align-items:stretch}
+.path{border:2px solid var(--rule);background:var(--white);padding:20px}
+.path h4{margin:0 0 15px;font-size:24px}
+.pathline{display:grid;grid-template-columns:1fr;gap:9px}
+.node{border:1px solid var(--rule);padding:11px 12px;text-align:center;font:700 13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--card)}
+.node.real{border-color:var(--teal);background:var(--tealsoft)}
+.down{text-align:center;color:var(--orange);font-weight:900;line-height:1}
+.versus{display:flex;align-items:center;justify-content:center;font:900 18px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--orange)}
+.cancel{display:grid;grid-template-columns:1fr 44px 1fr 44px 1fr;align-items:stretch}
+.term{padding:18px;border:2px solid var(--rule);background:var(--white);text-align:center}
+.term b{display:block;font:800 12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--deep)}
+.term span{display:block;margin-top:9px;font-size:16px}
+.term.fade{text-decoration:line-through;color:var(--muted);opacity:.72;background:var(--paper2)}
+.op{display:flex;align-items:center;justify-content:center;color:var(--orange);font-size:28px;font-weight:900}
+.codechange{display:grid;grid-template-columns:1fr 44px 1fr;gap:0;align-items:stretch}
+.codecard{padding:18px;background:var(--night);color:white;border:3px solid var(--deep)}
+.codecard.new{border-color:var(--teal)}
+.codecard h4{margin:0 0 13px;color:#fff;font:800 13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+.codecard code{display:block;background:transparent;border:0;color:#fff;padding:0;white-space:normal}
+.shared{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.shared .lane{background:var(--white);border:1px solid var(--rule);padding:16px;text-align:center}
+.shared .same{grid-column:1/-1;background:var(--goldsoft);border:1px solid var(--gold);padding:12px;text-align:center;font-weight:800}
+.funnel{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.stage{min-height:170px;padding:15px;border:1px solid var(--rule);background:var(--white)}
+.stage b{display:block;font:800 12px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--teal)}
+.stage strong{font-size:23px;display:block;margin:10px 0 7px}
+.stage p{font-size:14px;line-height:1.5;margin:0}
+.metrics{width:100%;border-collapse:collapse;font-size:15px}
+.metrics th,.metrics td{padding:11px 10px;border-bottom:1px solid var(--rule);text-align:right}
+.metrics th:first-child,.metrics td:first-child{text-align:left}
+.metrics thead th{font:800 10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);text-transform:uppercase}
+.metrics tr.win{background:var(--tealsoft);font-weight:800}
+.metrics .teacher{color:var(--deep)}
+.task3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.task{background:var(--white);border:1px solid var(--rule);padding:20px}
+.task .tag{font-size:10px;letter-spacing:2px;color:var(--teal);font-weight:800}
+.task strong{font-size:22px;display:block;margin:9px 0}
+.task p{font-size:15px;line-height:1.55}
+.ablate{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.abl{background:var(--white);border-top:5px solid var(--deep);padding:17px}
+.abl b{font-size:19px;display:block}
+.abl .delta{font:800 23px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--teal);margin:13px 0}
+.abl p{font-size:14px;line-height:1.5}
+.limits{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.limit{padding:17px;background:var(--orangesoft);border:1px solid #c98362}
+.limit b{display:block;margin-bottom:7px}
+.jr{font:800 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;vertical-align:super;text-decoration:none;background:var(--goldsoft);border:1px solid var(--gold);color:var(--ink);padding:2px 5px;border-radius:3px;margin:0 2px}
+.jr:hover,.jr:focus{background:var(--gold);color:#fff;outline:2px solid var(--deep);outline-offset:2px}
+.gloss{margin-top:78px;padding-top:30px;border-top:3px double var(--ink)}
+.gloss h2{font-size:32px}
+.gloss ol{list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:0 24px;counter-reset:g}
+.gloss li{counter-increment:g;position:relative;padding:14px 10px 14px 48px;border-bottom:1px dashed var(--rule);font-size:15px}
+.gloss li:before{content:counter(g,decimal-leading-zero);position:absolute;left:4px;color:var(--teal);font:800 11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+.gloss li:target{background:var(--goldsoft);outline:2px solid var(--gold)}
+.gloss .termname{font-weight:800;color:var(--deep)}
+.sourcebox{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:22px}
+.sourcebox a{display:block;background:var(--night);color:#fff;padding:14px 16px;text-decoration:none;font:700 12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+.sourcebox a:hover,.sourcebox a:focus{background:var(--teal);outline:3px solid var(--deep)}
+.colophon{margin-top:70px;padding-top:18px;border-top:1px solid var(--rule);display:flex;justify-content:space-between;color:var(--muted);font:600 11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+@media(max-width:900px){
+  .flow5{grid-template-columns:1fr}.arrow{min-height:35px}.arrow:before{content:"↓"}.arrow{font-size:0}
+  .roles,.task3{grid-template-columns:1fr}.funnel{grid-template-columns:repeat(2,1fr)}.ablate{grid-template-columns:1fr 1fr}.limits{grid-template-columns:1fr}
+  .symbols{grid-template-columns:1fr 1fr}
+}
+@media(max-width:620px){
+  body{font-size:17px}.page{padding:36px 12px 80px}.mast{display:block}.mast span{display:block;margin:4px 0}
+  .hero{padding:45px 0 42px}h1{font-size:49px}.dek{font-size:20px}
+  section{padding-top:54px}h2{font-size:34px}
+  figure{padding:15px;margin-left:0;margin-right:0;box-shadow:5px 5px 0 rgba(65,50,30,.08)}
+  .figcap{display:block}.figcap span{display:block;margin:3px 0}
+  .twocol,.paths,.codechange,.shared{grid-template-columns:1fr}.versus{min-height:42px}.versus:before{content:"↓";font-size:22px}.versus{font-size:0}
+  .cancel{grid-template-columns:1fr}.op{min-height:36px;font-size:24px}.op.eq{font-size:0}.op.eq:before{content:"↓";font-size:22px}
+  .roles,.task3,.ablate,.symbols,.gloss ol,.sourcebox{grid-template-columns:1fr}
+  .funnel{grid-template-columns:1fr}.stage,.box{min-height:0}
+  .islands{gap:10px}.island{min-height:120px;font-size:15px}
+  .metrics{min-width:760px}.tablewrap{overflow-x:auto}
+  .formula{padding:18px 8px}.formula .katex{font-size:.82em}.formula.wide .katex{font-size:.67em}
+  .colophon{display:block}.colophon span{display:block;margin:6px 0}
+}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · data-forcing-distillation</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page">
+  <div class="mast"><span>Connectionism · Paper Field Notes</span><span>arXiv 2606.18478 v2 · 2026</span></div>
+  <header class="hero">
+    <div class="eyebrow">Distribution Matching · Few-Step Video</div>
+    <h1>Data-Forcing<em>Distillation.</em></h1>
+    <div class="byline">Siyi Chen · Shaowei Liu · Yixuan Jia · Zian Wang · Huan Ling · Qing Qu · Jun Gao</div>
+    <p class="dek">DMD 的老师一直只看学生自己的作品。DFD 做的事很小：偶尔让老师改看同条件的真实视频。小改动背后，是一项会和原梯度精确抵消的正则。</p>
+    <div class="tldr"><span class="tag">TL;DR</span><strong>DFD 是 DMD2 后面的短后训练。</strong>fake-score 仍看学生视频；冻结 teacher 按概率 <code>p</code> 改看真实视频。真实数据因此直接进入分布匹配梯度，而不是只通过 GAN 间接传话。推理时仍只留下四步学生。</div>
+  </header>
+
+  <section id="overview">
+    <span class="secno">§ 00 · COMPLETE MAP</span>
+    <h2>先拼完整：只在训练时多出一条真实数据支路</h2>
+    <p class="lead">如果只盯着那行 <code>teacher_data = data if rand() &lt; p else gen_data</code>，很难知道它为什么有效。先看一轮训练的五站数据流。</p>
+    <figure>
+      <figcaption class="figcap"><span>Fig 01 · DFD 一轮训练</span><span class="n">部署时只留第 1 站</span></figcaption>
+      <div class="flow5">
+        <div class="box green"><span class="num">01 / STUDENT</span><h4>四步学生出视频</h4><p><code>Gθ(z,c) → x̃</code><br>最终部署只保留它。</p></div><div class="arrow">→</div>
+        <div class="box"><span class="num">02 / NOISE</span><h4>共享 t 与 ε</h4><p>学生视频和真实视频走同一噪声尺度。</p></div><div class="arrow">→</div>
+        <div class="box orange"><span class="num">03 / FAKE SCORE</span><h4>始终看学生视频</h4><p>在线网络追踪学生当前生成分布。</p></div><div class="arrow">→</div>
+        <div class="box teal"><span class="num">04 / TEACHER</span><h4>按概率换输入</h4><p><code>1−p</code> 看学生；<code>p</code> 看同条件真实视频。</p></div><div class="arrow">→</div>
+        <div class="box green"><span class="num">05 / UPDATE</span><h4>score 差回传</h4><p>造冻结伪目标，只更新学生参数 <code>θ</code>。</p></div>
+      </div>
+    </figure>
+    <div class="note"><span class="mini">不变的部分</span>DFD 没有替换学生架构，也没有把真实视频当逐像素标签。teacher、fake-score、加噪和伪目标都来自 DMD2<a class="jr" href="#g-01">1</a>；变的只是 teacher 本轮读取哪条视频。</div>
+  </section>
+
+  <section id="problem">
+    <span class="secno">§ 01 · FAILURE MODE</span>
+    <h2>反向 KL 为什么看不见学生漏掉的花样</h2>
+    <p>DMD 最小化反向 KL<a class="jr" href="#g-02">2</a>。公式最值得盯住的不是 <code>log</code>，而是平均值按谁抽样：</p>
+    <div class="formula" data-expr="D_{\mathrm{KL}}(p_{\mathrm{fake}}\|p_{\mathrm{real}})=\mathbb E_{\tilde x\sim p_{\mathrm{fake}}}\left[\log\frac{p_{\mathrm{fake}}(\tilde x)}{p_{\mathrm{real}}(\tilde x)}\right]"></div>
+    <div class="symbols">
+      <div class="symbol"><b>p_fake</b><br>学生输出的概率分布。</div>
+      <div class="symbol"><b>p_real</b><br>老师代表的目标视频分布。</div>
+      <div class="symbol"><b>x̃ ~ p_fake</b><br>用于求平均的样本来自学生。</div>
+    </div>
+    <figure>
+      <figcaption class="figcap"><span>Fig 02 · 真实分布有两座岛，学生只到过一座</span><span class="n">没样本就没梯度</span></figcaption>
+      <div class="islands">
+        <div class="island covered">近景构图<br>真实概率 .50<br>学生概率 1.00</div>
+        <div class="island missed">远景构图<br>真实概率 .50<br>学生概率 0</div>
+      </div>
+      <pre>KL(Q||P) = 1×ln(1/.5) + 0×ln(0/.5)
+         = ln 2
+         ≈ .693</pre>
+    </figure>
+    <p>学生把“远景”彻底漏掉，反向 KL 仍只有有限代价，因为第二格前面乘着学生概率 <code>0</code>。这就是模式塌缩<a class="jr" href="#g-03">3</a>的根：训练只在学生到过的地方问路。</p>
+    <div class="note warn"><span class="mini">证据边界</span>这条采样逻辑直接解释“漏模式为什么没有信号”。论文还把视频过饱和归入反向 KL 的 mode-seeking 结果；实验支持 DFD 能缓解它，但过饱和不是上面两个格子的数学例子单独证明出来的。</div>
+  </section>
+
+  <section id="roles">
+    <span class="secno">§ 02 · THREE NETWORKS</span>
+    <h2>先分清三套网络，score 才不会像凭空出现</h2>
+    <p>扩散里的 score<a class="jr" href="#g-04">4</a>不是“视频得 82 分”，而是与视频 latent 同形状的修改方向：</p>
+    <div class="formula" data-expr="s_p(x)=\nabla_x\log p(x)"></div>
+    <p><code>p(x)</code> 是位置 <code>x</code> 附近的概率密度；<code>∇x</code> 对输入每个元素求梯度；结果指出怎样改动能最快走向高密度区域。</p>
+    <figure>
+      <figcaption class="figcap"><span>Fig 03 · 训练生命周期</span><span class="n">谁保留 · 谁冻结 · 谁追踪</span></figcaption>
+      <div class="roles">
+        <div class="role keep"><span class="life">最终保留</span><h4>学生 Gθ</h4><p>从噪声和条件生成视频；接收梯度；推理时唯一留下。</p></div>
+        <div class="role freeze"><span class="life">预训练后冻结</span><h4>real-score teacher</h4><p>先在真实视频上做普通扩散训练；DFD 阶段只提供目标分布方向。</p></div>
+        <div class="role online"><span class="life">训练中持续更新</span><h4>fake-score 网络</h4><p>用学生最新视频训练，追踪不断移动的 <code>p_fake</code><a class="jr" href="#g-05">5</a>。</p></div>
+      </div>
+    </figure>
+  </section>
+
+  <section id="dmd">
+    <span class="secno">§ 03 · DMD BASELINE</span>
+    <h2>原始 DMD：两套 score 都在学生视频的位置回答</h2>
+    <div class="formula" data-expr="\tilde x=G_\theta(z,c),\qquad \tilde x_t=\alpha_t\tilde x+\sigma_t\epsilon"></div>
+    <div class="symbols">
+      <div class="symbol"><b>z ~ N(0,I)</b><br>学生的随机输入。</div>
+      <div class="symbol"><b>c</b><br>文本、首帧或自回归历史条件。</div>
+      <div class="symbol"><b>t, αt, σt, ε</b><br>噪声时刻、信号比例、噪声比例和实际噪声。</div>
+    </div>
+    <div class="formula wide" data-expr="g_{\mathrm{DMD}}(\theta)=\mathbb E\left[\left(s_{\mathrm{fake}}(\tilde x_t\mid c,t)-s_{\mathrm{real}}(\tilde x_t\mid c,t)\right)J_\theta\right],\quad J_\theta=\nabla_\theta G_\theta(z,c)"></div>
+    <p><code>Jθ</code> 是生成器 Jacobian<a class="jr" href="#g-06">6</a>：它负责把“视频该怎样改”的方向传回参数。梯度下降会减去 <code>gDMD</code>，所以模型靠近 real score，同时避开学生已经堆得过密的位置。</p>
+    <figure>
+      <figcaption class="figcap"><span>Fig 04 · 原始 DMD 与 DFD 的唯一结构差异</span><span class="n">fake 分支从来没换</span></figcaption>
+      <div class="paths">
+        <div class="path"><h4>DMD</h4><div class="pathline"><div class="node">学生视频 x̃</div><div class="down">↓</div><div class="node">共享 t, ε 加噪</div><div class="down">↓</div><div class="node">fake-score 看 x̃t</div><div class="node">teacher 也看 x̃t</div></div></div>
+        <div class="versus">VS</div>
+        <div class="path"><h4>DFD 本轮</h4><div class="pathline"><div class="node">学生视频 x̃</div><div class="node real">同条件真实视频 x</div><div class="down">↓</div><div class="node">共享 t, ε 加噪</div><div class="down">↓</div><div class="node">fake-score 看 x̃t</div><div class="node real">teacher 改看 xt</div></div></div>
+      </div>
+    </figure>
+  </section>
+
+  <section id="discrepancy">
+    <span class="secno">§ 04 · CORE SIGNAL</span>
+    <h2>Teacher score discrepancy：同一位老师，两处回答之差</h2>
+    <div class="formula" data-expr="x\sim p_{\mathrm{real}}(\cdot\mid c),\qquad x_t=\alpha_tx+\sigma_t\epsilon"></div>
+    <p>竖线 <code>|c</code> 表示条件已经固定。文本是“海边奔跑的狗”，真实视频也要对应这条描述；I2V 时，真实视频必须匹配输入首帧。它不是随手抓一条无关视频。</p>
+    <div class="formula" data-expr="\Delta_{\mathrm{teacher}}=s_{\mathrm{real}}(x_t\mid c,t)-s_{\mathrm{real}}(\tilde x_t\mid c,t)"></div>
+    <p>第一项把真实数据的位置带进训练，第二项是 DMD 本来就在算的 teacher score。学生已经匹配真实分布时，两处样本同分布，这个差在期望上为零。详见 <a href="../concepts/teacher-score-discrepancy.html">teacher-score-discrepancy</a>。</p>
+  </section>
+
+  <section id="cancel">
+    <span class="secno">§ 05 · EXACT CANCELLATION</span>
+    <h2>为什么一项正则最后能化成一行输入替换</h2>
+    <p>DFD 先写成“原 DMD 梯度减去 teacher discrepancy”：</p>
+    <div class="formula" data-expr="g_{\mathrm{DFD}}=g_{\mathrm{DMD}}-\mathbb E[\Delta_{\mathrm{teacher}}J_\theta]"></div>
+    <figure>
+      <figcaption class="figcap"><span>Fig 05 · 展开后，中间两项精确抵消</span><span class="n">不是近似化简</span></figcaption>
+      <div class="cancel">
+        <div class="term"><b>FAKE / STUDENT</b><span>+ s<sub>fake</sub>(x̃<sub>t</sub>)</span></div><div class="op">−</div>
+        <div class="term fade"><b>TEACHER / STUDENT</b><span>s<sub>real</sub>(x̃<sub>t</sub>)</span></div><div class="op">+</div>
+        <div class="term fade"><b>REGULARIZER 展开</b><span>s<sub>real</sub>(x̃<sub>t</sub>)</span></div>
+      </div>
+      <div class="op eq">↓</div>
+      <div class="twocol"><div class="term"><b>保留</b><span>s<sub>fake</sub>(x̃<sub>t</sub>)</span></div><div class="term" style="border-color:var(--teal);background:var(--tealsoft)"><b>换成真实输入</b><span>− s<sub>real</sub>(x<sub>t</sub>)</span></div></div>
+    </figure>
+    <div class="formula wide" data-expr="\boxed{g_{\mathrm{DFD}}=\mathbb E\left[\left(s_{\mathrm{fake}}(\tilde x_t)-s_{\mathrm{real}}(x_t)\right)J_\theta\right]}"></div>
+    <pre>sfake(学生)=.2, sreal(学生)=1.0, sreal(真实)=.4, Jθ=.5
+
+gDMD     = (.2−1.0)×.5        = −.40
+Δteacher = .4−1.0             = −.60
+gDFD     = −.40−(−.60×.5)     = −.10
+
+短公式   = (.2−.4)×.5         = −.10  <span class="good">✓ 对上</span></pre>
+  </section>
+
+  <section id="code">
+    <span class="secno">§ 06 · ONE-LINE CHANGE</span>
+    <h2>代码改的是 teacher 输入，不是把真实视频拿去直接回归</h2>
+    <figure>
+      <figcaption class="figcap"><span>Fig 06 · 这一行前后的数据语义</span><span class="n">概率 p 才走 DFD</span></figcaption>
+      <div class="codechange">
+        <div class="codecard"><h4>ORIGINAL DMD</h4><code>teacher_data =<br>gen_data.detach()</code></div>
+        <div class="versus">→</div>
+        <div class="codecard new"><h4>DFD MIX</h4><code>teacher_data = data.detach()<br>if rand() &lt; p<br>else gen_data.detach()</code></div>
+      </div>
+    </figure>
+    <p>随后 fake-score 仍读取加噪学生视频，teacher 读取加噪后的 <code>teacher_data</code>。两者做差，再造伪目标：</p>
+    <pre>vsd_grad     = fake_score − teacher_score
+pseudo_target = gen_data − vsd_grad
+loss          = 1/2 · MSE(gen_data, <span class="hi">stopgrad(pseudo_target)</span>)</pre>
+    <p><code>stopgrad</code><a class="jr" href="#g-07">7</a>把右边钉成本轮固定目标，只准左边的学生输出移动。它不会冻结整套学生。</p>
+    <h3>从伪目标算到一次更新</h3>
+    <div class="formula" data-expr="w_{\mathrm{norm}}=\frac{1}{|gen-teacher|+10^{-6}}"></div>
+    <pre>gen=1.2, fake=.8, teacher=1.0
+wnorm ≈ 1/|1.2−1.0| = 5
+vsd_grad = (.8−1.0)×5 = −1.0
+target   = 1.2−(−1.0) = 2.2
+L        = 1/2×(1.2−2.2)² = .500
+dL/dgen  = −1.0
+
+学习率 .1：gennew=1.2−.1×(−1)=1.3
+旧靶验方向：Lnew=1/2×(1.3−2.2)²=.405  <span class="good">✓ 下降</span></pre>
+  </section>
+
+  <section id="assumption">
+    <span class="secno">§ 07 · VALIDITY CONDITION</span>
+    <h2>为什么共享噪声，为什么 DFD 必须放在 DMD2 后面</h2>
+    <figure>
+      <figcaption class="figcap"><span>Fig 07 · 两条支路共用随机量</span><span class="n">噪声项相减后消失</span></figcaption>
+      <div class="shared">
+        <div class="lane"><b>真实支路</b><br><code>xt=.8×2+.6×(−.5)=1.3</code></div>
+        <div class="lane"><b>学生支路</b><br><code>x̃t=.8×1.5+.6×(−.5)=.9</code></div>
+        <div class="same">xt−x̃t=.4=.8×(2−1.5)；共同的 σε 已抵消</div>
+      </div>
+    </figure>
+    <p>若两边各采一份噪声，差值里还会多出 <code>σ(εreal−εfake)</code>，teacher discrepancy 会混入无关波动。</p>
+    <p>论文进一步要求：固定条件后，真实样本与学生样本的平均平方距离不能太大。</p>
+    <div class="formula wide" data-expr="\mathbb E\left[\|x-G_\theta(z,c)\|_2^2\mid c\right]\le\delta(c)^2"></div>
+    <p>若 teacher score 是 <code>L(c,t)</code>-Lipschitz<a class="jr" href="#g-08">8</a>，生成器 Jacobian 最多放大 <code>B</code> 倍，则：</p>
+    <div class="formula wide" data-expr="\|g_{\mathrm{DFD}}-\nabla_\theta D_{\mathrm{KL}}\|_2^2\le B^2\alpha_t^2L(c,t)^2\delta(c)^2"></div>
+    <pre>B=.5, α=.8, L=1.5, δ=.5
+上界 = .5²×.8²×1.5²×.5²
+     = .09</pre>
+    <div class="note warn"><span class="mini">这就是 post-training 的理由</span>DFD 先要一名已经会生成合理视频的 DMD2 学生。跳过 DMD2、直接从 teacher 初始化时，真实与生成视频差得太远；论文训练 1400 次仍失败。DFD 是修复器，不是从零蒸馏器。</div>
+  </section>
+
+  <section id="mix">
+    <span class="secno">§ 08 · STOCHASTIC MIX</span>
+    <h2>默认一半 DMD、一半 DFD，但不是每轮都跑两遍</h2>
+    <div class="formula" data-expr="g(\theta)=(1-w)g_{\mathrm{DMD}}+wg_{\mathrm{DFD}}"></div>
+    <div class="formula" data-expr="\nabla_\theta\mathcal L=\begin{cases}g_{\mathrm{DFD}},&\text{概率 }p\\g_{\mathrm{DMD}},&\text{概率 }1-p\end{cases}"></div>
+    <p>当 <code>p=w</code>，随机二选一的长期平均等于加权和。若 <code>gDMD=−.4</code>、<code>gDFD=−.1</code>、<code>p=.5</code>，期望就是 <code>.5×(−.4)+.5×(−.1)=−.25</code>。论文默认 <code>p=.5</code>。</p>
+  </section>
+
+  <section id="data">
+    <span class="secno">§ 09 · DATA CURATION</span>
+    <h2>真实数据一旦进入主梯度，数据集就成了方向来源</h2>
+    <figure>
+      <figcaption class="figcap"><span>Fig 08 · 从 96.6 万条到 3 万条精选视频</span><span class="n">覆盖与质量同时控制</span></figcaption>
+      <div class="funnel">
+        <div class="stage"><b>01 / SOURCE</b><strong>≈966K</strong><p>ViPE 带描述视频。</p></div>
+        <div class="stage"><b>02 / CAPTION</b><strong>3 档</strong><p>Qwen3-VL 一次产长中短描述。</p></div>
+        <div class="stage"><b>03 / FEATURE</b><strong>512D</strong><p>均匀 3 帧，CLIP 平均并归一化。</p></div>
+        <div class="stage"><b>04 / CLUSTER</b><strong>K=1000</strong><p>FAISS K-means，50 次迭代。</p></div>
+        <div class="stage"><b>05 / REVIEW</b><strong>40→20</strong><p>每簇展开 40 条，人工挑 20 条。</p></div>
+        <div class="stage"><b>06 / PACK</b><strong>30K</strong><p>mixed-style；动画子集 20K；WebDataset<a class="jr" href="#g-12">12</a>。</p></div>
+      </div>
+    </figure>
+    <p>聚类不是装饰：直接随机抽样容易让大簇和近重复视频占满 batch。DFD 会沿参考数据的 score 学习，批次重复或条件错误，模型就会把这些偏差也学进去。</p>
+    <div class="note warn"><span class="mini">“real data” 不等于全部实拍</span>论文里的 <code>real</code> 是相对学生分布而言的参考数据。ViPE-Wild-1M 的源视频由 Wan2.1-14B 生成；DFD 证明的是“让参考数据直接进入梯度”有效，不能外推成只靠自然实拍视频恢复了真实世界分布。</div>
+  </section>
+
+  <section id="experiments">
+    <span class="secno">§ 10 · EVIDENCE</span>
+    <h2>质量、多样性、镜头运动必须分开看</h2>
+    <div class="task3">
+      <div class="task"><span class="tag">T2V · WAN 1.3B</span><strong>4 步 · 1120 条</strong><p>140 条提示词，每条 8 个种子。VBench<a class="jr" href="#g-11">11</a>看质量，CLIP / DINO<a class="jr" href="#g-10">10</a>看跨种子差异，ViPE 看镜头轨迹。</p></div>
+      <div class="task"><span class="tag">I2V · COSMOS 2B</span><strong>348 + 78 图</strong><p>检查首帧主体、背景与后续时间一致性；平均分超过 teacher。</p></div>
+      <div class="task"><span class="tag">AR · SELF FORCING</span><strong>定性证据</strong><p>长序列结构更稳，但论文没有与前两项同等级的主表数字。</p></div>
+    </div>
+    <h3>文生视频主表的关键列</h3>
+    <figure>
+      <figcaption class="figcap"><span>Table 01 · Wan2.1-1.3B</span><span class="n">全部越高越好</span></figcaption>
+      <div class="tablewrap"><table class="metrics">
+        <thead><tr><th>方法</th><th>VBench 平均</th><th>CLIP 多样性</th><th>DINO 多样性</th><th>镜头终点距离</th><th>镜头轨迹距离</th></tr></thead>
+        <tbody>
+          <tr class="teacher"><td>Teacher</td><td>.899</td><td>.178</td><td>.301</td><td>30.571</td><td>26.651</td></tr>
+          <tr><td>DMD2</td><td>.901</td><td>.120</td><td>.190</td><td>9.148</td><td>4.284</td></tr>
+          <tr><td>DP-DMD</td><td>.903</td><td>.126</td><td>.197</td><td>7.208</td><td>3.466</td></tr>
+          <tr class="win"><td>DFD</td><td>.906</td><td>.128</td><td>.205</td><td>18.513</td><td>19.256</td></tr>
+        </tbody>
+      </table></div>
+    </figure>
+    <p>DFD 是蒸馏模型里总体质量最好的一项，也显著恢复镜头轨迹差异；但视觉多样性和镜头终点距离仍没有追平 teacher。“超过 teacher”只适用于部分质量聚合指标，不等于每一列都领先。</p>
+    <h3>图生视频 VBench 平均分</h3>
+    <pre>Teacher  .9285
+DMD2     .9245
+DP-DMD   .8843
+DFD      <span class="good">.9303</span></pre>
+  </section>
+
+  <section id="ablation">
+    <span class="secno">§ 11 · ABLATIONS</span>
+    <h2>消融真正支持了什么</h2>
+    <div class="ablate">
+      <div class="abl"><b>去掉 GAN</b><div class="delta">.375→.500</div><p>动态程度提高；成像质量也提高，但闪烁与平滑略降。结论是“无一致收益”，不是全面更差。GAN<a class="jr" href="#g-09">9</a>可删。</p></div>
+      <div class="abl"><b>w=.5 vs 1</b><div class="delta">各有胜负</div><p>视觉差别小；默认半混合主要是更稳妥地保留 DMD 信号。</p></div>
+      <div class="abl"><b>batch 16→128</b><div class="delta">.9303→.9316</div><p>平均分涨，但两项背景指标微降；不能写成每列单调改善。</p></div>
+      <div class="abl"><b>无 DMD2 预训练</b><div class="delta">1400 次仍失败</div><p>最硬的负结果：学生离真实数据太远时，DFD 的方差信号不稳定。</p></div>
+    </div>
+  </section>
+
+  <section id="recipe">
+    <span class="secno">§ 12 · RECIPE & LIMITS</span>
+    <h2>训练账、版本差异和还没解决的问题</h2>
+    <div class="twocol">
+      <div class="panel goodp"><h4>Wan T2V</h4><p>81 帧 · 480p · batch 16<br>student / fake LR <code>1e−5</code><br>CFG 5.0 · 8×A100<br>DMD2 25K → DFD 100 次</p></div>
+      <div class="panel goodp"><h4>Cosmos I2V</h4><p>81 帧 · 480p · batch 16<br>student / fake LR <code>1e−5</code><br>CFG 3.0 · 16×A100<br>DMD2 25K → DFD 300 次</p></div>
+    </div>
+    <div class="note warn"><span class="mini">论文版本不一致</span>arXiv 摘要写 100–300 steps，正文 v2 §1 仍残留 50–100。表 4 与官方复现命令支持 100 / 300，本页按可复现配置记录。</div>
+    <div class="note"><span class="mini">代码默认值不等于论文配方</span>官方配置类里的 <code>gen_real_replace_prob</code> 默认是 <code>.25</code>；README 的 DFD 训练命令会显式覆盖为 <code>.5</code>。复现时应看最终命令，而不是只读配置类默认值。</div>
+    <div class="note warn"><span class="mini">论文说删 GAN，公开命令却没有关</span>论文表 4 把 DFD 的判别器学习率标成 N/A，并用消融说明 GAN 没有一致收益；但官方 commit <code>7281906</code> 的 README 命令没有覆盖 Wan / Cosmos 配置继承的 <code>gan_loss_weight_gen=.03</code>，还加载 discriminator。照当前命令运行会继续使用 GAN，除非显式把权重设为 0。</div>
+    <div class="limits">
+      <div class="limit"><b>≤2 步仍吃力</b>快动作模糊、脸部细节丢失，还可能塌成近乎静止。</div>
+      <div class="limit"><b>依赖高质量匹配数据</b>条件错、覆盖窄或重复多，真实数据支路也会给错方向。</div>
+      <div class="limit"><b>理论有前提</b>teacher score 平滑、Jacobian 有界，且真实/生成样本已经接近。</div>
+      <div class="limit"><b>多样性未追平老师</b>T2V 表里 teacher 的多样性与镜头终点距离仍更高。</div>
+      <div class="limit"><b>AR 证据主要定性</b>结构案例更稳，但缺少完整量化主表。</div>
+      <div class="limit"><b>安全风险仍在</b>加速也会扩大深伪和误导内容的产能；DFD 本身没有安全过滤。</div>
+    </div>
+    <h3>我的判断</h3>
+    <p>DFD 最漂亮的地方不是代码短，而是理论先找到一项能与 DMD 原梯度精确抵消的正则，才把复杂改动压成 teacher 输入的一行替换。它也说明“用真实数据”不是一句空话：真实样本进入哪一条梯度，决定它是 GAN 的间接意见、逐样本回归，还是分布匹配里的直接方向。</p>
+  </section>
+
+  <section class="gloss">
+    <span class="secno">REFERENCE · GLOSSARY</span>
+    <h2>术语与延伸阅读</h2>
+    <ol>
+      <li id="g-01"><span class="termname">DMD / DMD2</span> · 用 real / fake score 匹配生成分布；DMD2 补高频 fake 更新、GAN 和多步训练。<a href="../papers/dmd2.html">dmd2</a></li>
+      <li id="g-02"><span class="termname">Reverse KL</span> · `KL(pfake||preal)`，平均值按学生样本计算，因此偏向学生已经覆盖的模式。<a href="../concepts/entropy-kl.html">entropy-kl</a></li>
+      <li id="g-03"><span class="termname">Mode collapse</span> · 输入噪声不同，生成结果却集中在少数构图或运动模式。</li>
+      <li id="g-04"><span class="termname">Score function</span> · `∇x log p(x)`；不是分数，而是样本空间里的局部修改方向。<a href="../concepts/score-function.html">score-function</a></li>
+      <li id="g-05"><span class="termname">Fake-score network</span> · 在线去噪器，用学生最新输出训练，近似 `pfake` 的 score。</li>
+      <li id="g-06"><span class="termname">Jacobian</span> · 输出对参数的导数；把视频 latent 的修改方向通过链式法则传回模型参数。</li>
+      <li id="g-07"><span class="termname">Stop-gradient</span> · 前向保留数值，反向把该支路当常数。<a class="wikilink-missing" title="missing slug">stop-gradient</a></li>
+      <li id="g-08"><span class="termname">Lipschitz</span> · 输入变化多少，输出最多变化多少的上界；这里用来控制 teacher score 的放大倍数。</li>
+      <li id="g-09"><span class="termname">GAN</span> · 判别器在真假样本之间学习分类，再把对抗梯度传给生成器；论文说 DFD 可以删除它，但当前公开命令仍保留非零权重。</li>
+      <li id="g-10"><span class="termname">CLIP / DINO diversity</span> · 同提示词不同种子的视频先变成特征，再以成对余弦差异衡量视觉多样性。</li>
+      <li id="g-11"><span class="termname">VBench</span> · 视频生成评测套件；主体、背景、闪烁、运动、美学等分项不能互相替代。</li>
+      <li id="g-12"><span class="termname">WebDataset</span> · 把大规模样本打进 tar 分片，训练时顺序流式读取，减少海量小文件开销。</li>
+    </ol>
+    <div class="sourcebox">
+      <a href="https://arxiv.org/abs/2606.18478">论文 · arXiv v2 ↗</a>
+      <a href="https://github.com/csy2077/data-forcing-distillation">官方代码 · commit 7281906 ↗</a>
+      <a href="https://csy2077.github.io/dfd-project-page/">项目页 · 视频对比 ↗</a>
+    </div>
+  </section>
+
+  <footer class="colophon"><span>Ingested 2026-07-26 · Evidence checked against arXiv v2 and official code</span><span>DFD · Diversity / Fidelity / Few-Step Video</span></footer>
+</main>
+<script>
+document.addEventListener("DOMContentLoaded",()=>{
+  document.querySelectorAll(".formula[data-expr]").forEach(el=>{
+    if(!window.katex)return;
+    try{katex.render(el.dataset.expr,el,{displayMode:true,throwOnError:false,strict:false});}catch(_){}
+  });
+});
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  var items={};
+  document.querySelectorAll('.gloss ol li[id^="g-"]').forEach(function(li){items[li.id]=li.innerHTML;});
+  if(!Object.keys(items).length)return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!items[id])return;
+      e.preventDefault();
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+items[id];
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+</body>
+</html>
