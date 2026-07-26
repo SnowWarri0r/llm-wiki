@@ -1220,3 +1220,12 @@ skill 更新:
 - 顺带查出并修两个真 bug：① markdown 表格里 `` `a\|b` `` 的转义反斜杠 python-markdown 不会在 code span 里还原，留着被 mathify 当成 KaTeX 的 `\|`(‖)——Whisper 的 `<|zh|>` 渲染成 `<‖zh‖>`，rl-for-llm-people 的 `π(a\|s)` 渲染成 `π(a∥s)` 而同页邻居是正确的 `π(a∣s)`。在 md→html 之后加一道还原。② looksLikeMath 加规则：`<...>` 形状的是 token 不是数学，`<eos>` / `<|zh|>` 不再被当公式渲染。
 - senseflow §07 的 `D_KL` 格子被 CONST_NAME 规则误伤（保持灰底 code，与公式里的漂亮下标不一致），改写成 `D_{\mathrm{KL}}` 走 verbatim。
 - 最终验证：lint 80 页 0 ERROR；浏览器 iframe 实扫 22 个 paper（271 格）+ 12 个 concept（483 格），katex-error 全 0。
+
+## [2026-07-26] skill | 把这轮的验证纪律固化进 SKILL（7.2–7.5）
+
+- 7.2 验证必须做正向断言。血泪：mathify 注入的 JS 有个未闭合字符串 → 整块 IIFE SyntaxError 不执行 → 全站符号格子静默退回灰底 code，而 katex-error=0、lint 全绿、页面不崩。只查"有没有错"的检查看不见"功能压根没跑"。给了一段固定的验证片段（katexErr/unrendered 归零 + mathified/cells 正向对账 + skipped 逐条看），并写明 fetch() 不执行脚本、要验渲染必须真加载（iframe 要 await onload 后再等一拍，因为 mathify 是 setTimeout(run,0) 起的）。
+- 7.3 改共用代码路径时回归范围要算出来。先用脚本算清"哪些输入会真的改变行为"（这次是含反斜杠的 code，8243 个里只有 25 个唯一串），再逐个验；验证用的选择器必须从被改代码里复制、不许凭记忆重写——我第一次扫 concept 页漏了 .concept-body code，恰是风险最高那类，cells:0 等于白扫还以为过了。
+- 7.4 记两个本仓静默陷阱：render.py 注入块是 Python 非 raw 字符串，JS 里要一个反斜杠源码得写 4 个，写少了拼出未闭合字面量整块静默不执行；markdown 表格的 `\|` 是表格转义、code span 里不会自动还原。
+- 7.5 约定符号格子写规范 LaTeX（含反斜杠 → verbatim，与 .formula 逐字一致），散文里的 code 不在 mathify 作用域、要用 unicode 下标。
+- checklist 里那条"katex-error===0"换成跑 7.2 的正向断言片段。
+- 片段本身已 dogfood：在 senseflow 上逐字跑出 48/49、skipped 只有 SDXL；又人为把页面还原成"mathify 没跑"的故障态复验，旧式检查 katexErr 仍是 0（会放行），新式 mathified 0/49 一眼暴露。
