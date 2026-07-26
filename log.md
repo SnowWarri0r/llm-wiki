@@ -1138,3 +1138,12 @@ skill 更新:
 - 补齐五组可复算数字：两格反向 KL `.693`、score 正则抵消 `−.40→−.10`、伪目标损失 `.500→.405`、共享噪声差 `.4`、理论误差上界 `.09`，所有公式都在代数前定义符号。
 - 覆盖 ViPE 96.6 万→30K 筛选、Wan T2V / Cosmos I2V / Self Forcing AR、GAN / 权重 / 预训练 / batch 消融、两步局限和社会风险；保留 teacher 多样性仍更高、AR 主要定性、batch 两列略降等反例。
 - 新增 `teacher-score-discrepancy` 概念页，并回接 `dmd-distillation`、`score-function` 与 `entropy-kl`；对照 arXiv v2 和官方代码 commit `7281906`，记录摘要 100–300 与正文残留 50–100，以及论文“DFD 不需 GAN”与当前 README 仍继承 GAN 权重 `.03` 的两处差异。
+
+## [2026-07-26] revise | Solaris §07 Checkpointed Self Forcing 重写
+
+- 用户反馈第 7 章看不懂。原文只有一张显存对照图、一条 `X_in=[X_0,X_s]` 公式和一张没有读法的 mask 表；`L_s` / `L_t` 全章从未定义就出现在 figcaption 里。
+- 重写成四段递进：①先定义"激活"和"1 份帧激活"这个记账单位，说清显存到底被谁吃掉；②拆出两条相乘的轴（每帧多步去噪已被原版 Self Forcing 砍掉；滑窗重叠才是 Solaris 要解的），并在此处才引入 `L_s`/`L_t`/`N`；③第一遍缓存什么、两组值各自当"历史"还是"待办"；④第二遍为什么拼起来就能一次算完，并补上 gradient checkpointing 的类比解释"Checkpointed"这个名字。
+- 补可手算的显存账：`L_s=6, L_t=20` → 朴素 `20×6=120` 份 vs 两遍法 `2×20=40` 份；再把窗口放宽到 12 得 240 vs 40，坐实真正买到的是"显存不含 `L_s`"而不是那个固定倍数。
+- Fig 10 mask 补三行逐格读法：clean 行为什么全禁 noisy 列、N3 为什么读不到 C3（等于抄答案）、N4 为什么读不到 C1（窗口只有 3 而非因为是未来）。
+- 诚实标注：论文只说 teacher 上下文比 student 长，没给 `L_t` 帧数，也没有实测显存曲线；20 是示例值，`L_s=6` 才是论文配置。
+- `render.py` 的 mathify 选择器加 `.sym code`，本页三处符号表改写成 `<code>` 让 KaTeX 接管（此前 `x_t` / `x_<t` 直接以原样文本显示）。

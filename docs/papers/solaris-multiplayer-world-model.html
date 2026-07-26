@@ -37,7 +37,8 @@ section{padding-top:64px}
 h2{display:grid;grid-template-columns:68px 1fr;gap:18px;align-items:baseline;margin:0 0 22px;font-size:clamp(31px,4vw,47px);line-height:1.25;letter-spacing:-.035em}
 h2>span:last-child{min-width:0;overflow-wrap:anywhere}
 h2 .n{color:var(--cyan);font:500 11px/1.4 "DM Mono",monospace;letter-spacing:2px}
-h3{font-size:25px;line-height:1.45;margin:34px 0 12px}p{margin:12px 0}.lead{font-size:20px;color:#31414a}
+h3{font-size:25px;line-height:1.45;margin:34px 0 12px}
+section>ul{margin:14px 0;padding-left:23px}section>ul>li{margin:9px 0}p{margin:12px 0}.lead{font-size:20px;color:#31414a}
 a{color:var(--cyan);text-underline-offset:3px}
 code{background:var(--paper2);border:1px solid var(--line);padding:2px 5px;border-radius:3px;font:500 .86em/1.4 "DM Mono",monospace}
 .formula-purpose{margin-top:22px;color:var(--blue);font:700 17px/1.5 "Noto Sans SC",sans-serif}
@@ -166,7 +167,7 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
 
 <section id="s3">
   <h2><span class="n">SECTION 03</span><span>模型只改关键一处：玩家内独立处理，玩家间共享注意力</span></h2>
-  <div class="symbols"><div class="sym"><b>B</b>一批有几局</div><div class="sym"><b>P</b>每局玩家数，本文为 2</div><div class="sym"><b>T</b>时间位置数</div><div class="sym"><b>H / W / C</b>latent 高、宽、通道</div><div class="sym"><b>D</b>动作向量宽度</div></div>
+  <div class="symbols"><div class="sym"><b><code>B</code></b>一批有几局</div><div class="sym"><b><code>P</code></b>每局玩家数，本文为 2</div><div class="sym"><b><code>T</code></b>时间位置数</div><div class="sym"><b><code>H</code> / <code>W</code> / <code>C</code></b>latent 高、宽、通道</div><div class="sym"><b><code>D</code></b>动作向量宽度</div></div>
   <p class="formula-purpose">一批多人视频的形状：</p>
   <div class="formula" data-expr="\mathbf{x}\in\mathbb{R}^{B\times P\times T\times H\times W\times C},\qquad \mathbf{a}\in\mathbb{R}^{B\times P\times T\times D}"></div>
   <figure>
@@ -174,7 +175,7 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
     <div class="shape"><div class="dim"><b>B</b><span>一批有几局</span></div><div class="dim player"><b>P</b><span>每局几位玩家<br>本文 P=2</span></div><div class="dim"><b>T</b><span>时间位置</span></div><div class="dim"><b>H</b><span>latent 高</span></div><div class="dim"><b>W</b><span>latent 宽</span></div><div class="dim"><b>C</b><span>latent 通道</span></div></div>
   </figure>
   <p class="formula-purpose">整段视频的自回归概率：</p>
-  <div class="symbols"><div class="sym"><b>θ</b>Solaris 参数</div><div class="sym"><b>x_t</b>时刻 t 的联合画面</div><div class="sym"><b>x_&lt;t</b>此前联合画面</div><div class="sym"><b>a_&lt;t</b>此前玩家动作</div></div>
+  <div class="symbols"><div class="sym"><b><code>\theta</code></b>Solaris 参数</div><div class="sym"><b><code>x_t</code></b>时刻 t 的联合画面</div><div class="sym"><b><code>x_{&lt;t}</code></b>此前联合画面</div><div class="sym"><b><code>a_{&lt;t}</code></b>此前玩家动作</div></div>
   <div class="formula" data-expr="p_\theta(\mathbf{x})=\prod_{t=1}^{T}p_\theta(\mathbf{x}_t\mid \mathbf{x}_{<t},\mathbf{a}_{<t})"></div>
   <p>乘号来自概率的链式分解，不是假设各帧独立。若三步条件概率是 <code>.8、.6、.9</code>，这段特定视频的联合概率为 <code>.8×.6×.9=.432</code>；后两项都已经把之前发生的画面和动作当作条件。</p>
   <figure>
@@ -190,7 +191,7 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
 
 <section id="s4">
   <h2><span class="n">SECTION 04</span><span>Flow Matching：给半成品，预测回到干净数据的速度</span></h2>
-  <div class="symbols"><div class="sym"><b>x</b>真实双人视频 latent</div><div class="sym"><b>ε</b>同形状高斯噪声</div><div class="sym"><b>σ</b>噪声比例：0 干净，1 全噪声</div><div class="sym"><b>xσ</b>混合后的训练输入</div><div class="sym"><b>vθ</b>网络预测速度</div><div class="sym"><b>a</b>两位玩家动作</div></div>
+  <div class="symbols"><div class="sym"><b><code>x</code></b>真实双人视频 latent</div><div class="sym"><b><code>\epsilon</code></b>同形状高斯噪声</div><div class="sym"><b><code>\sigma</code></b>噪声比例：0 干净，1 全噪声</div><div class="sym"><b><code>x_\sigma</code></b>混合后的训练输入</div><div class="sym"><b><code>v_\theta</code></b>网络预测速度</div><div class="sym"><b><code>a</code></b>两位玩家动作</div></div>
   <p class="formula-purpose">先把真实 latent 和随机噪声按比例混合：</p>
   <div class="formula" data-expr="\mathbf{x}_{\boldsymbol{\sigma}}=(1-\boldsymbol{\sigma})\mathbf{x}+\boldsymbol{\sigma}\boldsymbol{\epsilon},\qquad \boldsymbol{\epsilon}\sim\mathcal{N}(0,I)"></div>
   <p class="formula-purpose">沿这条直线的正确速度是 <code>ε−x</code>，网络用平方误差拟合：</p>
@@ -238,19 +239,62 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
 
 <section id="s7">
   <h2><span class="n">SECTION 07</span><span>Checkpointed Self Forcing：第一遍缓存，第二遍只重算最后一步</span></h2>
+  <p class="lead">§06 讲的是 Self Forcing 为什么必要。这一节讲它为什么很贵，以及 Solaris 用什么办法把这笔账压下来。注意这一节从头到尾跟画质公式无关，只跟显存有关。</p>
+
+  <h3>一 · 先弄清楚显存是被什么吃掉的</h3>
+  <p>训练时占显存的大头不是权重，是<strong>激活</strong>。反向传播按链式法则从后往前乘，每乘一层都要用到这一层前向时算出的中间结果，所以前向过程中的每一个中间张量都得先攒着，等反向用完才能扔。一句话：<strong>凡是希望梯度能流过的前向计算，它的中间结果都要占着显存。</strong></p>
+  <p>下面统一用一个单位来算账：<strong>1 份帧激活</strong> = 一个 latent frame<a class="jr" href="#g-01">01</a> 走完整个 DiT<a class="jr" href="#g-02">02</a> 所留下的全部中间张量。</p>
+
+  <h3>二 · 有两条轴会把这个数乘大</h3>
+  <p><strong>轴一：每帧要去噪好几步。</strong>一帧不是一次前向就出来的，要反复去噪若干步。若每步都留梯度，一帧就占好几份激活。这条轴原版 Self Forcing 已经砍掉了：只在<strong>最后一个去噪步</strong>留梯度，前面几步一律 stop-gradient<a class="jr" href="#g-10">10</a>。所以本节之后每帧只算 1 份。</p>
+  <p><strong>轴二：滑窗互相重叠。</strong>这条是 Solaris 要解决的。因果 student 每生成一帧，都要把窗口里的 <code>Lₛ</code> 帧一起送进网络算一遍；下一帧再算一次，窗口往右挪一格。相邻两次前向有 <code>Lₛ−1</code> 帧是同一批帧，但它们是<strong>两次独立的前向</strong>，各留各的激活，谁也替不了谁。</p>
+  <div class="symbols">
+    <div class="sym"><b><code>L_s</code></b>student 一次能看的窗口长度。论文取 6 个 latent frame，即 24 个真实帧</div>
+    <div class="sym"><b><code>L_t</code></b>这一次要 rollout 出来的总长度，也就是长上下文 teacher 一次要评的长度</div>
+    <div class="sym"><b><code>N</code></b>rollout 出来的帧数，本节按 <code>N=L_t</code> 读</div>
+  </div>
   <figure>
-    <figcaption><span>Fig 09 · O(LtLs) → O(Lt)</span><b>停梯度只发生在第一遍</b></figcaption>
+    <figcaption><span>Fig 09 · 显存从 O(Lₜ·Lₛ) 降到 O(Lₜ)</span><b>停梯度只发生在第一遍</b></figcaption>
     <div class="memory">
-      <div class="memside"><h4>朴素滑窗</h4><div class="windows">[1 2 3 <span class="repeat">4 5 6</span>]<br>[2 3 4 <span class="repeat">5 6 7</span>]<br>[3 4 5 <span class="repeat">6 7 8</span>]</div><p>所有重叠窗口都保留激活，显存随 <code>Lt×Ls</code> 增长。</p></div>
+      <div class="memside"><h4>朴素滑窗</h4><div class="windows">[1 2 3 <span class="repeat">4 5 6</span>]<br>[2 3 4 <span class="repeat">5 6 7</span>]<br>[3 4 5 <span class="repeat">6 7 8</span>]</div><p>橙色是跟上一行重复的帧。重复归重复，每一行都是一次新的前向，激活都得留着，于是总量是<strong>行数 × 每行长度</strong>。</p></div>
       <div class="arrow"></div>
-      <div class="memside good"><h4>两遍法</h4><p><strong>A.</strong> stop-gradient<a class="jr" href="#g-10">10</a> rollout，缓存 clean estimate 与最终 noisy state。</p><p><strong>B.</strong> 拼成一个序列，并行重算所有帧的最后去噪步，再完整反传。</p><p>显存随 <code>Lt</code> 线性增长。</p></div>
+      <div class="memside good"><h4>两遍法</h4><p><strong>A.</strong> 先不留梯度地把整段跑完，只存两组存档值。</p><p><strong>B.</strong> 把存档值拼成<strong>一条</strong>序列，一次并行前向重算所有帧的最后去噪步，梯度只穿这一次。</p><p>再没有"行数 × 每行长度"，只剩一条序列。</p></div>
     </div>
   </figure>
-  <p class="formula-purpose">第二遍输入：</p>
+  <p class="formula-purpose">拿真实参数算一遍这笔账：</p>
+  <div class="calc">
+    <span class="hi">给定</span> Lₛ = 6（student 窗口），Lₜ = 20（这次要生成 20 帧）<br><br>
+    朴素滑窗：生成第 1 帧留 6 份，第 2 帧再留 6 份 …… 共 20 行<br>
+    &nbsp;&nbsp;总量 = 20 × 6 = <span class="ans">120 份</span><br><br>
+    两遍法：第一遍不留；第二遍一条序列 = 20 干净 + 20 带噪<br>
+    &nbsp;&nbsp;总量 = 2 × 20 = <span class="ans">40 份</span> &nbsp;→ 省 3 倍<br><br>
+    <span class="hi">关键不在这 3 倍，而在这 3 倍是从哪来的：</span><br>
+    把窗口放宽到 Lₛ = 12，朴素变成 20 × 12 = <span class="ans">240 份</span><br>
+    两遍法仍是 <span class="ans">40 份</span>，因为它<span class="hi">压根不含 Lₛ</span>&nbsp; → 省 6 倍
+  </div>
+  <p>所以这套方法真正买到的东西是：<strong>显存不再跟 student 的窗口长度挂钩。</strong>窗口想开多长开多长，显存只按生成了多少帧线性涨。这就是论文说的"把自回归 rollout 与反向传播解耦"。</p>
+
+  <h3>三 · 第一遍：只管生成，不留计算图</h3>
+  <p>照常自回归把 <code>N</code> 帧滚完，但全程关掉梯度。跑完只留两组值：</p>
+  <div class="two-view">
+    <div class="view"><h4><code>X₀</code> · 每帧的干净估计</h4><ol><li>就是 §04 那个 <code>x̂₀ = xσ − σ·vθ</code> 算出来的值。</li><li>它的用途是<strong>当历史</strong>：第 i 帧去噪时，看到的上文正是前面几帧的干净估计——推理时看到的也是这个，不是数据集真值。</li></ol></div>
+    <div class="event">两样缺一不可</div>
+    <div class="view"><h4><code>Xₛ</code> · 每帧被抽中的带噪状态</h4><ol><li>训练时给每帧独立抽一个噪声比例 <code>σ</code>（Diffusion Forcing<a class="jr" href="#g-05">05</a>），<code>Xₛ</code> 就是那一刻的带噪 latent。</li><li>它的用途是<strong>当待办</strong>：第二遍要重算的"最后一步去噪"，输入的就是它。</li></ol></div>
+  </div>
+  <p>两组值都做 stop-gradient。这不是说它们退出训练了——它们照样参与前向、照样影响损失，只是<strong>梯度不再往回穿第一遍那条又长又串行的生成链</strong>，于是那条链的激活可以当场丢掉。</p>
+
+  <h3>四 · 第二遍：把 N 次串行前向压成 1 次并行前向</h3>
+  <p class="formula-purpose">第二遍喂给网络的输入，是把两组存档值沿序列维拼在一起：</p>
   <div class="formula" data-expr="X_{\mathrm{in}}=[X_0,X_s]"></div>
-  <p><code>X₀</code> 是第一遍缓存的各帧干净估计，<code>Xs</code> 是抽中训练噪声时刻的状态。自定义 mask 防止并行计算偷看未来。</p>
+  <div class="symbols">
+    <div class="sym"><b><code>X_0</code></b><code>N</code> 帧干净估计排成的序列</div>
+    <div class="sym"><b><code>X_s</code></b><code>N</code> 帧带噪状态排成的序列</div>
+    <div class="sym"><b>方括号</b>沿序列维首尾相接，长度 <code>N \to 2N</code></div>
+  </div>
+  <p>为什么这样拼就能一次算完？因为"第 <code>i</code> 帧做最后一步去噪"这件事，输入只有两类东西：<strong>自己那份带噪状态</strong>，加上<strong>窗口内更早那几帧的干净估计</strong>。既然两类都在这条序列里了，只要用 mask 把每个带噪位置能看见的范围削回它当初的窗口，一次前向就同时复现了 <code>N</code> 个时间步各自的处境。</p>
+  <div class="note"><strong>"Checkpointed" 这个名字的来历：</strong>第一遍只留几个存档点（<code>X₀</code> 和 <code>Xₛ</code>），第二遍从存档点把要留梯度的那一小段重算一次。这跟 PyTorch 的 gradient checkpointing 是同一个思路——<strong>用重算换显存</strong>；区别只是存档点选在"帧"这个粒度上。</div>
   <figure>
-    <figcaption><span>Fig 10 · 教学用最小 mask</span><b>蓝：允许历史；橙：只看自己</b></figcaption>
+    <figcaption><span>Fig 10 · 教学用最小 mask（窗口取 3）</span><b>蓝：可读的历史；橙：只读自己</b></figcaption>
     <div class="mask"><div class="mask-grid">
       <div class="head">QUERY \ KEY</div><div class="head">C1</div><div class="head">C2</div><div class="head">C3</div><div class="head">C4</div><div class="head">N1</div><div class="head">N2</div><div class="head">N3</div><div class="head">N4</div>
       <div class="head">clean C3</div><div class="yes">✓</div><div class="yes">✓</div><div class="yes">✓</div><div class="no">—</div><div class="no">—</div><div class="no">—</div><div class="no">—</div><div class="no">—</div>
@@ -258,7 +302,15 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
       <div class="head">noisy N4</div><div class="no">—</div><div class="yes">✓</div><div class="yes">✓</div><div class="no">—</div><div class="no">—</div><div class="no">—</div><div class="no">—</div><div class="self">SELF</div>
     </div></div>
   </figure>
-  <div class="note"><strong>为什么还能训练：</strong>第一遍的缓存值 stop-gradient；第二遍重新计算的 Q/K/V 与输出有完整计算图。论文还允许梯度通过重算后的 KV 表示，这正是显存节省后新增的能力。</div>
+  <p><code>C1..C4</code> 是 <code>X₀</code> 的四帧干净估计，<code>N1..N4</code> 是 <code>Xₛ</code> 的四帧带噪状态；行是发问的 query，列是被读的 key，✓ 表示这一格允许读。逐行念一遍：</p>
+  <ul>
+    <li><strong>clean C3 那行</strong>：读 C1、C2 和自己，四个 N 列全是 —。干净帧是拿来<strong>当历史</strong>用的，它的表示必须对所有人一视同仁，不能被某一帧的噪声污染，否则就没法一次算完给大家复用。</li>
+    <li><strong>noisy N3 那行</strong>：读 C1、C2，加自己（橙色 SELF），<strong>但读不到 C3</strong>。C3 是第 3 帧的干净估计，正是这一步要往那儿去噪的目标；让 N3 看见 C3 等于把答案摆在卷子上。</li>
+    <li><strong>noisy N4 那行</strong>：读 C2、C3 加自己，<strong>读不到 C1</strong>。不是因为 C1 是未来，而是因为窗口只有 3 格——这张图里的 <code>Lₛ=3</code>，N4 的窗口是第 2、3、4 帧。论文实际用 6。</li>
+  </ul>
+  <p>把这三条规则合起来就是一句话：<strong>每个带噪帧只看得见自己，以及窗口内严格更早的干净帧。</strong>这正好等于它在第一遍串行 rollout 时真实看到的上下文，所以这次并行重算不是近似，是复刻。</p>
+  <div class="note"><strong>为什么这样还能训练：</strong>第一遍的缓存值确实被冻住了，但第二遍是<strong>重新算</strong>的——这一遍的 Q/K/V 和输出都挂着完整计算图，分布匹配损失的梯度顺着它回到参数上。省下显存后还多出一项原版 Self Forcing 做不了的事：梯度可以穿过重算出来的 KV 表示。§08 的消融会显示这一项明显改善 FID，同时压低几个动作跟随分数，不是白拿的。</div>
+  <div class="warn">论文只说 teacher 的上下文比 student 长，<strong>没有给出 <code>Lₜ</code> 的具体帧数</strong>，也没有报告实测显存曲线。上面的 20 帧是为算账取的示例值，<code>Lₛ=6</code> 才是论文给的真实配置。</div>
 </section>
 
 <section id="s8">
@@ -421,7 +473,7 @@ a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
       return true;
     }
 
-    var sel='.var code, .symbol code, .vars code, .symbol-grid code, .concept-body code';
+    var sel='.var code, .symbol code, .vars code, .symbol-grid code, .sym code, .concept-body code';
     document.querySelectorAll(sel).forEach(function(el){
       if(el.dataset.mathified) return;
       if(el.closest('pre')) return;               // 代码块原样保留
