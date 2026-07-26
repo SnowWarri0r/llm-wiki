@@ -687,7 +687,7 @@
 
 <p>2014-2017 有过几次尝试：Bahdanau attention（给 RNN decoder 加 attention 看 encoder 输出，仍是 RNN 主体）、ConvS2S / ByteNet（用空洞卷积把长程依赖压到 O(log N) 跳）。但都没真正解决"序列建模必须串行"的诅咒。</p>
 
-<p>这篇论文的标题就是答案：<strong>把 RNN 完全拿掉</strong>，纯 attention + FFN 堆出来的网络反而 work better。</p>
+<p>这篇论文的标题就是答案：<strong>把 RNN 完全拿掉</strong>，纯 attention + <a class="jr" href="#g-06">FFN<sup>6</sup></a> 堆出来的网络反而 work better。</p>
 
 <!-- ============ 02 ============ -->
 <h2 id="parallel"><span class="num">§ 02 · figure one</span>并行 vs 串行</h2>
@@ -754,7 +754,7 @@
 
 <p>这是整篇论文最核心、最值得脑子里跑一遍的部分。一句话：</p>
 
-<p class="lede">序列里每个 token，用 <strong><span style="color:var(--brick)">Q</span></strong>（"我在问什么"）、<strong><span style="color:var(--ochre)">K</span></strong>（"我能提供什么 key"）、<strong><span style="color:var(--deep)">V</span></strong>（"我能提供什么 value"）三个向量 —— 跟所有其他 token 的 K 算相似度，softmax 当权重，加权求和 V → 这个 token 的输出。</p>
+<p class="lede">序列里每个 token，用 <strong><span style="color:var(--brick)">Q</span></strong>（"我在问什么"）、<strong><span style="color:var(--ochre)">K</span></strong>（"我能提供什么 key"）、<strong><span style="color:var(--deep)">V</span></strong>（"我能提供什么 value"）三个向量 —— 跟所有其他 token 的 K 算相似度，<a class="jr" href="#g-03">softmax<sup>3</sup></a> 当权重，加权求和 V → 这个 token 的输出。</p>
 
 <p>下面把每一步显式展开。例句 <strong>"The cat sat on the mat"</strong>，query 选第 1 个（即 <code>cat</code>）：</p>
 
@@ -898,7 +898,7 @@ output = concat(head_out) @ W_O</code></pre>
 
 <p>Self-attention 有个让人尴尬的性质：<strong>对位置不敏感</strong>。把序列里 K 和 V 的行打乱，Q·K<sup>T</sup> 算出来的"行内分布"完全一样 —— 模型分不清 "dog bites man" 和 "man bites dog"。</p>
 
-<p>论文的招数：给每个位置加一个<strong>唯一的"位置向量"</strong>，跟 token embedding 直接相加。位置向量用 <strong>sin/cos 不同频率</strong>组成：</p>
+<p>论文的招数：给每个位置加一个<strong>唯一的"位置向量"</strong>，跟 token <a class="jr" href="#g-09">embedding<sup>9</sup></a> 直接相加。位置向量用 <strong>sin/cos 不同频率</strong>组成：</p>
 
 <pre><code>PE(pos, 2i)   = sin(pos / 10000^(2i / d_model))
 PE(pos, 2i+1) = cos(pos / 10000^(2i / d_model))
@@ -963,7 +963,7 @@ input = embedding(token) + PE(pos)</code></pre>
 <!-- ============ 06 ============ -->
 <h2 id="arch"><span class="num">§ 06 · the architecture</span>完整架构</h2>
 
-<p>把上面所有组件拼成完整网络。论文 base 版：<strong>Encoder 6 层 + Decoder 6 层</strong>。每一层都是"multi-head attention + position-wise FFN + residual + LayerNorm"的标准块。</p>
+<p>把上面所有组件拼成完整网络。论文 base 版：<strong>Encoder 6 层 + Decoder 6 层</strong>。每一层都是"multi-head attention + position-wise FFN + residual + <a class="jr" href="#g-07">LayerNorm<sup>7</sup></a>"的标准块。</p>
 
 <figure>
   <div class="fig-head">
@@ -1010,7 +1010,7 @@ input = embedding(token) + PE(pos)</code></pre>
     <button class="btn" onclick="resetArch()">reset</button>
   </div>
 
-  <figcaption><strong>左 Encoder</strong> 每层有两个子层：multi-head self-attention（看 source 序列）+ FFN。<strong>右 Decoder</strong> 多一个：先 masked self-attention（看自己 已经生成的 target 序列，不偷看未来）→ cross-attention（拿 Encoder 顶部输出当 K/V，Q 来自 decoder）→ FFN。每个子层都套着 residual + LayerNorm。<strong>橙色虚线</strong>提示 cross-attention 的信息流：encoder 编完整个 source，把 K/V 提供给 decoder 每一层。</figcaption>
+  <figcaption><strong>左 Encoder</strong> 每层有两个子层：multi-head self-attention（看 source 序列）+ FFN。<strong>右 Decoder</strong> 多一个：先 masked self-attention（看自己 已经生成的 target 序列，不偷看未来）→ cross-attention（拿 Encoder 顶部输出当 K/V，Q 来自 decoder）→ FFN。每个子层都套着 <a class="jr" href="#g-08">residual<sup>8</sup></a> + LayerNorm。<strong>橙色虚线</strong>提示 cross-attention 的信息流：encoder 编完整个 source，把 K/V 提供给 decoder 每一层。</figcaption>
 </figure>
 
 <h3><span class="small-num">06.1</span>每个子层里发生什么</h3>
@@ -1045,18 +1045,18 @@ input = embedding(token) + PE(pos)</code></pre>
     <tr><td class="num">2018</td><td>GPT-1（OpenAI）</td><td>纯 Decoder + causal mask · "decoder-only" 范式诞生</td></tr>
     <tr><td class="num">2018</td><td>BERT（Google）</td><td>纯 Encoder + Masked LM 训练</td></tr>
     <tr><td class="num">2019</td><td>GPT-2</td><td>Decoder-only 放大到 1.5B</td></tr>
-    <tr><td class="num">2020</td><td>GPT-3</td><td>175B 参数 · in-context learning emerge</td></tr>
+    <tr><td class="num">2020</td><td>GPT-3</td><td>175B 参数 · <a class="jr" href="#g-11">in-context learning<sup>11</sup></a> emerge</td></tr>
     <tr><td class="num">2020</td><td>Vision Transformer (ViT)</td><td>Transformer 跨界 CV，把图切 patch 当 token</td></tr>
     <tr><td class="num">2022</td><td>ChatGPT</td><td>Decoder-only + RLHF · 大众破圈</td></tr>
     <tr><td class="num">2023+</td><td>Claude / Gemini / Qwen / Llama</td><td>全是 decoder-only transformer 变种</td></tr>
   </tbody>
 </table>
 
-<p>Decoder-only 路线最后赢了 —— GPT 们证明：只要数据和参数够大，<strong>不需要 encoder + cross-attention 也能学好</strong>。<a href="../papers/fish-speech-s2-pro.html" target="_blank">fish-speech S2 Pro</a> 的 Dual-AR 也是 decoder-only；<a href="../papers/interaction-models-tml.html" target="_blank">TML interaction model</a> 也是。整个现代 LLM 圈基本上是这一篇的延长线。</p>
+<p>Decoder-only 路线最后赢了 —— GPT 们证明：只要数据和参数够大，<strong>不需要 encoder + cross-attention 也能学好</strong>。<a href="../papers/fish-speech-s2-pro.html" target="_blank">fish-speech S2 Pro</a> 的 Dual-AR 也是 <a class="jr" href="#g-12">decoder-only<sup>12</sup></a>；<a href="../papers/interaction-models-tml.html" target="_blank">TML interaction model</a> 也是。整个现代 LLM 圈基本上是这一篇的延长线。</p>
 
 <div class="note moss">
   <span class="label">原论文 BLEU 数字（次要但记下）</span>
-  <p>WMT 2014 En→De：<strong>BLEU 28.4</strong>（比当时 SOTA 高 2 分以上）；En→Fr：<strong>BLEU 41.8</strong>。训练 8 GPU 3.5 天。这些数字 2017 年很惊人但今天已经没人关心 —— transformer 真正的价值是它<strong>开辟了 scaling 的可能</strong>，不是这两个 BLEU。</p>
+  <p>WMT 2014 En→De：<strong><a class="jr" href="#g-10">BLEU<sup>10</sup></a> 28.4</strong>（比当时 SOTA 高 2 分以上）；En→Fr：<strong>BLEU 41.8</strong>。训练 8 GPU 3.5 天。这些数字 2017 年很惊人但今天已经没人关心 —— transformer 真正的价值是它<strong>开辟了 scaling 的可能</strong>，不是这两个 BLEU。</p>
 </div>
 
 <!-- ============ 08 ============ -->
@@ -1087,7 +1087,7 @@ input = embedding(token) + PE(pos)</code></pre>
 
 <div class="note">
   <span class="l">详细对比 · 三种架构</span>
-  <p>Encoder-Decoder / Decoder-Only / Encoder-Only 的训练和推理对比 + teacher forcing / causal mask / KV cache 全景 → <a href="../topics/training-vs-inference.html">训练 vs 推理 · 全景对比</a></p>
+  <p>Encoder-Decoder / Decoder-Only / Encoder-Only 的训练和推理对比 + teacher forcing / <a class="jr" href="#g-05">causal mask<sup>5</sup></a> / KV cache 全景 → <a href="../topics/training-vs-inference.html">训练 vs 推理 · 全景对比</a></p>
 </div>
 
 <!-- ============ glossary ============ -->
