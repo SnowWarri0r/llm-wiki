@@ -362,11 +362,7 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
   <h3>四 · 第二遍：把 N 次串行前向压成 1 次并行前向</h3>
   <p class="formula-purpose">第二遍喂给网络的输入，是把两组存档值沿序列维拼在一起：</p>
   <div class="formula" data-expr="X_{\mathrm{in}}=[X_0,X_s]"></div>
-  <div class="symbols">
-    <div class="sym"><b><code>X_0</code></b><code>N</code> 帧干净估计排成的序列</div>
-    <div class="sym"><b><code>X_s</code></b><code>N</code> 帧带噪状态排成的序列</div>
-    <div class="sym"><b>方括号</b>沿序列维首尾相接，长度 <code>N \to 2N</code></div>
-  </div>
+  <p>式子里<strong>没有新符号</strong>：<code>X₀</code> 和 <code>Xₛ</code> 就是上一步存下的那两组值，方括号表示<strong>沿序列维首尾相接</strong>——两组接成一条，序列长度从 <code>N</code> 变成 <code>2N</code>。</p>
   <p>为什么这样拼就能一次算完？因为"第 <code>i</code> 帧做最后一步去噪"这件事，输入只有两类东西：<strong>自己那份带噪状态</strong>，加上<strong>窗口内更早那几帧的干净估计</strong>。既然两类都在这条序列里了，只要用 mask 把每个带噪位置能看见的范围削回它当初的窗口，一次前向就同时复现了 <code>N</code> 个时间步各自的处境。</p>
   <div class="warn"><strong>别误会成"边算边传、所以不占显存"。</strong>反向传播的顺序是反的——要算前面层的梯度，得先有后面层的，所以第二遍的前向必须<strong>整个跑完</strong>才能开始反传，峰值就卡在前向结束那一刻。第二遍照样占显存，占的正是上面算的那 40 份；它是从 120 降到 40，<strong>不是降到 0</strong>。省下来的 80 份不是靠流式传播省的，而是第一遍那 120 份图<strong>从来没存在过</strong>。（分块反传、梯度累积这类"边算边放"的手法确实存在，FlashAttention 是典型，但那是在省一次前向<em>内部</em>的激活，跟这里省"要不要保留 N 条串行 rollout 的图"是两层问题，可以叠加；论文没提。）</div>
   <div class="note"><strong>"Checkpointed" 这个名字的来历：</strong>第一遍只留几个存档点（<code>X₀</code> 和 <code>Xₛ</code>），第二遍从存档点把要留梯度的那一小段重算一次。大方向跟 PyTorch 的 gradient checkpointing 一样——<strong>用重算换显存</strong>，存档点选在"帧"这个粒度上。</div>
