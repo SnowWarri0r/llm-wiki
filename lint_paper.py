@@ -234,6 +234,30 @@ def check_unmarked_sym_label(html, name, issues):
                        "（改成 <code class=\"m\"> 并写 LaTeX）"))
 
 
+# 早前那轮 unicode→LaTeX 批量迁移会把下标拆错：V_{p},q 渲染成 "V_p , q"，
+# Z_{1}:j 渲染成 "Z_1 : j"，还有 LaTeX 串里混进 unicode 下标（n_{x},nᵧ）。
+# 这几种都能编译成功，KaTeX 不报错，只是显示成另一个意思——只能靠模式扫。
+MATH_SRC = re.compile(r'<code class="m">(.*?)</code>|data-tex="([^"]*)"|data-expr="([^"]*)"', re.S)
+# 下标字母散落在三个 Unicode 区：₀-₉ 在 2080 区，ᵢᵥᵣᵤᵧᵦ 在 1d62 区（音标扩展），
+# ⱼ 单独在 2c7c。只写 2080 区会漏掉一半——nᵧ 就是这么躲过第一版的。
+UNI_IN_TEX = re.compile("[\u0370-\u03ff\u1d62-\u1d6a\u2070-\u207f\u2080-\u209c\u2c7c]")
+SUB_THEN_COLON = re.compile(r"_\{[^{}]{1,8}\}\s*:")
+
+
+def check_broken_subscript(html, name, issues):
+    """LaTeX 编得过、但下标拆错或混了 unicode —— KaTeX 不会报错，只会显示成别的意思。"""
+    for m in MATH_SRC.finditer(visible(html)):
+        t = html_mod.unescape(m.group(1) or m.group(2) or m.group(3) or "").strip()
+        if not t:
+            continue
+        if UNI_IN_TEX.search(t):     # code.m 里就该是 LaTeX，下标写 _x 不写 ₓ
+            issues.append(("ERROR", name,
+                           f"LaTeX 串里混了 unicode 数学字符: {t[:40]!r}（下标写成 _x，别用 ₓ）"))
+        if SUB_THEN_COLON.search(t):
+            issues.append(("ERROR", name,
+                           f"下标花括号后面跟冒号，多半是拆错了: {t[:40]!r}（Z_{{1}}:j 应为 Z_{{1:j}}）"))
+
+
 def check_glossary(html, name, issues):
     refs = set(re.findall(r'href="#(g-\d+)"', html))
     ids = set(re.findall(r'id="(g-\d+)"', html))
@@ -276,6 +300,7 @@ def lint(path):
     issues = []
     for fn in (check_define_before_use, check_figcaption_symbols, check_unmarked_math,
                check_unmarked_sym_label,
+               check_broken_subscript,
                check_glossary, check_markup, check_chat_context):
         fn(html, path.name, issues)
     return issues
