@@ -75,6 +75,7 @@
 - [HiDream-O1-Image · 像素级统一 Transformer](wiki/papers/hidream-o1.md) — 文生图反向操作: 无VAE像素空间扩散 + 文本编码器收进主干(Qwen3-VL) + 混合注意力 + O1推理agent先想后画; 8B 超更大模型
 - [Qwen-Image-2.0 · 生成与编辑统一](wiki/papers/qwen-image-2.md) — 20B MMDiT: 生成vs编辑=条件里塞不塞原图latent(Concat), 同backbone, 没点名天然照抄; frozen Qwen3-VL条件编码器 + VAE升16×(f16c64) + MSRoPE + DMD蒸馏4-NFE; 中文文字渲染 + 1K token直出信息图; LMArena中文#1
 - [SenseNova-Vision · 把整个视觉工具箱接进同一个生成接口](wiki/papers/sensenova-vision.md) — Bagel-7B-MoT不加task head:框/OCR/关键点/pose写文本,mask/depth/normal/point map生成图像,panoptic/GCG用颜色图例+mask混合输出;SN-VC-50M覆盖四大视觉族。结构化任务最强,稠密几何接近专家,分割/多视图仍有专用模型差距;640×480框、inverse-depth、RGB调色板、1.25m pose完整往返手算,并拆论文50K与当前repo 200K差异。
+- [GenCeption · 视频生成模型也能成为通用视觉骨干](wiki/papers/genception.md) — 不接任务大头，直接把 WAN 2.1 的 VAE+DiT 改成一次前向感知骨干：输入干净 latent、固定 t=0、速度输出取反；深度/法线/分割/DensePose 统一编码成三通道 [0,1] 视频，相机姿态拆成 raymap 两张"Rothko"图，只有稀疏关键点被迫另开 token 支路。7,500 段 RenderPeople+CMU+Blender 合成多标签视频。联合训练不整齐——前景分割受益、深度与相机姿态小幅回退、3D 关键点严重退化；代码截至 2026-07-26 仍 TBA。
 - [MeshFlow · 把"谁连谁"改写成连续数并行长出网格](wiki/papers/meshflow.md) — CVPR2026 Highlight 3D网格生成: 顶点摆哪是连续坐标(扩散擅长)、谁连谁是离散开关(扩散不擅长); 给每顶点挂"连边磁铁"边嵌入把连接改成连续量, 最后一步才切0/1连边、三边成环补面、法线定朝向; MeshVAE(TokenMerge把N压到N/4, 短query cross-attn回看全部顶点)+整流流DiT一次并行28步生成; 点云条件落32³粗体素+3D RoPE抹训练推理分布差; Toys4K CD/HD 2.33/4.23单物体~1.2s, 压缩比0.014(别人0.22-0.47)重建接近最优; 18×是单物体口径/主表2.2×
 - [PiD · 像素扩散解码器](wiki/papers/pid-pixel-diffusion.md) — NVIDIA 把 latent→像素的确定性 VAE 解码器换成条件像素扩散: 解码从"忠实还原"升级成"生成式补细节+顺手超分4×/8×"; sigma-aware adapter 吃半成品 latent 让 latent 扩散早停 + DMD2 蒸 4 步 + 通吃 VAE/语义 latent; 512²→2048² 1秒内
 - [DiffusionNFT · 扩散 RL 搬回前向过程](wiki/papers/diffusionnft.md) — 扩散在线RL(ICLR2026,SD3.5-M基座): 似然算不出没法直接GRPO,FlowGRPO把反向采样切多步MDP但锁死一阶SDE/偏离前向/CFG两模型; 洞察=前向加噪唯一、反向去噪无数→把RL搬到前向flow matching上; 奖励r切正负分布(π⁺∝r·π_old/π⁻∝(1−r)π_old),正负速度之差Δ=强化引导(CFG=它的离线版); 单模型隐式装正负(v±=(1∓β)v_old±βv_θ对称夹v_old),RL揉进监督损失L=E[r‖v⁺−v‖²+(1−r)‖v⁻−v‖²]; 免似然/任意solver/只存干净图; GenEval~1k步逼0.98比FlowGRPO快3–25×,CFG-free还超CFG
@@ -335,6 +336,7 @@
 - [可解码视觉表示](wiki/concepts/decodable-vision-representation.md) — 把框/深度/法线/点图编码成模型能生成、benchmark能确定还原的文本或图像;640×480框完整往返
 - [颜色图例掩码](wiki/concepts/color-legend-mask.md) — 文本绑定region↔RGB,图像铺像素;200色用最远点采样拉开,也暴露文字实例列表错误向mask传播
 - [相机位姿 Token 化](wiki/concepts/camera-pose-tokenization.md) — 四元数/单位平移方向×1000,厘米scale单独编码;u×scale/100还原米制平移
+- [Raymap · 每像素一条三维射线](wiki/concepts/raymap.md) — 相机内外参改写成像素对齐的连续图：每像素存射线起点+方向共六维，拆成两张三通道画面，于是"回归相机矩阵"变成"生成一张图"，绕开专用回归头
 - [多尺度训练](wiki/concepts/multi-scale-training.md) — 每10 batch在320–608间切输入尺寸;同一权重部署时按速度/精度换挡
 - [层级分类 · WordTree](wiki/concepts/hierarchical-classification.md) — 每层兄弟类做softmax,叶子概率沿路径相乘;让狗与细品种标签共存并合并检测/分类数据
 - [IOU · 交并比](wiki/concepts/iou-intersection-over-union.md) — 两个框重合度=交集÷并集∈[0,1]; 同时管住位置+大小+长宽比; 置信度目标/NMS去重/mAP命中判定都用它
@@ -343,6 +345,8 @@
 
 ### 多模态
 - [统一多模态生成](wiki/concepts/unified-multimodal-generation.md) — 不为每个视觉任务接head;稀疏答案走文本、稠密答案走图像、语义+像素走混合输出,任务由instruction指定
+- [生成转感知 · Generation to Perception](wiki/concepts/generation-to-perception.md) — 生成模型为还原像素已被迫学会纹理/几何/运动/语义；保留这套骨干，用有标签目标改造成深度/法线/分割预测器。关键是分清哪些来自预训练先验、哪些来自后训练适配
+- [RGB 任务表示](wiki/concepts/rgb-task-representation.md) — 不给每个任务重做输出头，先把答案编码成 [0,1] 三通道图，同一个 VAE decoder + 同一条 L2 就能通吃；代价是复杂度从 loss/head 搬到了 target formatter（深度要先做尺度归一化+对数压缩）
 - [Thinking Tokens / Registers](wiki/concepts/thinking-tokens.md) — 把 padding 槽换成全双向 connector 可读写的上下文寄存器；不是自然语言思维链
 - [Contrastive Learning](wiki/concepts/contrastive-learning.md) — 拉近正样本 + 推开负样本, in-batch negatives 白送 N²-N 个负例
 - [Zero-Shot Image Classification](wiki/concepts/zero-shot-image-classification.md) — 分类变成"哪句话最配这张图", 类别由文本定义
