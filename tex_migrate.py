@@ -164,6 +164,10 @@ def is_math(s: str) -> bool:
         return False
     if re.fullmatch(r"<.*>", s):                              # <eos> / <|zh|>
         return False
+    # 明摆着的 LaTeX：花括号下标/上标、反斜杠命令。x_{<t} 这种以前会漏，
+    # 因为下面那条只认"下划线后面紧跟字母数字"。
+    if re.search(r"[_^]\{", s) or re.search(r"\\[A-Za-z]", s):
+        return True
     if MATHY.search(s):
         return True
     return bool(re.search(r"[A-Za-z]_[A-Za-z0-9]", s))        # p_g / x_t

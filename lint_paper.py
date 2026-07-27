@@ -102,11 +102,16 @@ def symbol_defs(body):
     out = []
     for m in SYMBOL_CELL.finditer(body):
         inner = m.group(1)
-        hit = re.search(r"<(?:code|b)>(.*?)</(?:code|b)>", inner, re.S)
+        # 必须容许属性：标签迁到 <code class="m"> 之后，只认裸 <code> 会整片瞎掉，
+        # 然后退而把格子里随便一段文字（.45 这种数字）当成符号，满页误报。
+        hit = re.search(r"<(?:code|b)\b[^>]*>(.*?)</(?:code|b)>", inner, re.S)
         raw = hit.group(1) if hit else inner
         sym = re.sub(r"<[^>]+>", "", raw).strip()
         # 「目标」「① 换记号」这类中文标签不是符号
         if not sym or CJK.search(sym) or " " in sym:
+            continue
+        # 纯数字 / 小数不是符号
+        if re.fullmatch(r"[-+.\d]+", sym):
             continue
         # 单字母(B/P/T/x)在正文里到处都是，误报会淹掉信号，且本来不易出问题
         if len(sym.translate(SUB).replace("\\", "")) < 2:
@@ -203,6 +208,32 @@ def check_unmarked_math(html, name, issues):
                        f"裸 <code> 里的数学不会渲染: {t[:40]!r}（改成 <code class=\"m\"> 并写 LaTeX）"))
 
 
+# 符号格的标签常写成 <b>…</b>。LaTeX 或 unicode 数学摆在 <b> 里同样不会渲染，
+# 而上面那条只扫 <code>，整类都漏在外面（survey 的 o_{t+1} 就是这么活下来的）。
+SYM_LABEL = re.compile(
+    r'<div class="(?:sym|symbol|var|vars)[^"]*">\s*<(b|strong)>(?P<lab>.*?)</\1>', re.S)
+UNI_MATH = re.compile("[\u0370-\u03ff\u2080-\u209c\u2070-\u207f\u2211\u220f\u222b\u221a\u2248"
+                      "\u2260\u2264\u2265\u2297\u2299\u2207\u2212]")
+
+
+def check_unmarked_sym_label(html, name, issues):
+    """符号格的标签里塞了数学却没套 <code class="m"> = 原样把 LaTeX 源码显示出来。"""
+    for m in SYM_LABEL.finditer(visible(html)):
+        inner = m.group("lab")
+        if "<code" in inner:          # 里面已经有 code，交给 check_unmarked_math 判
+            continue
+        t = html_mod.unescape(re.sub(r"<[^>]+>", "", inner)).strip()
+        if not t or CJK.search(t):
+            continue
+        # 「S · state」这类标签里的 · 是分隔符不是乘号，抹掉再判，否则整排误报
+        probe = re.sub(r"\s[·|]\s", " ", t)
+        if not (_is_math(probe) or UNI_MATH.search(probe)):
+            continue
+        issues.append(("ERROR", name,
+                       f"符号格标签里的数学不会渲染: {t[:40]!r}"
+                       "（改成 <code class=\"m\"> 并写 LaTeX）"))
+
+
 def check_glossary(html, name, issues):
     refs = set(re.findall(r'href="#(g-\d+)"', html))
     ids = set(re.findall(r'id="(g-\d+)"', html))
@@ -244,6 +275,7 @@ def lint(path):
     html = strip_injected(path.read_text(encoding="utf-8"))
     issues = []
     for fn in (check_define_before_use, check_figcaption_symbols, check_unmarked_math,
+               check_unmarked_sym_label,
                check_glossary, check_markup, check_chat_context):
         fn(html, path.name, issues)
     return issues

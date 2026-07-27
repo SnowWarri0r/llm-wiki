@@ -211,21 +211,21 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
     <h3>训练时：沿直线从干净视频走向噪声</h3>
     <div class="formula" data-expr="x_t=(1-t)x_0+t\epsilon,\qquad 0\le t\le 1"></div>
     <div class="symbols">
-      <div class="symbol"><b>x₀</b><br>干净视频经 VAE 得到的 latent。</div>
-      <div class="symbol"><b>ε</b><br>与 <code class="m">x_{0}</code> 同形状的高斯噪声。</div>
+      <div class="symbol"><code class="m">x_0</code><br>干净视频经 VAE 得到的 latent。</div>
+      <div class="symbol"><code class="m">\epsilon</code><br>与 <code class="m">x_{0}</code> 同形状的高斯噪声。</div>
       <div class="symbol"><b>t</b><br>路径位置；<code>0</code> 是干净端，<code>1</code> 是噪声端。</div>
-      <div class="symbol"><b>xₜ</b><br>在时刻 <code>t</code> 的带噪 latent。</div>
-      <div class="symbol"><b>(1−t), t</b><br>干净信号和噪声各占多少。</div>
-      <div class="symbol"><b>0 ≤ t ≤ 1</b><br><code>t</code> 只在闭区间零到一内取值。</div>
+      <div class="symbol"><code class="m">x_t</code><br>在时刻 <code>t</code> 的带噪 latent。</div>
+      <div class="symbol"><code class="m">(1-t),\;t</code><br>干净信号和噪声各占多少。</div>
+      <div class="symbol"><code class="m">0\le t\le 1</code><br><code>t</code> 只在闭区间零到一内取值。</div>
     </div>
     <p>对 <code>t</code> 求导，直线路径的速度恒定：</p>
     <div class="formula" data-expr="\frac{d}{dt}\left[(1-t)x_0+t\epsilon\right]=\frac{d(1-t)}{dt}x_0+\frac{dt}{dt}\epsilon=-x_0+\epsilon"></div>
     <p><code class="m">x_0</code> 和 <code class="m">\epsilon</code> 在这次求导里都当常数；变化的只有 <code class="m">t</code>。因此 <code class="m">d(1-t)/dt=-1</code>，而 <code class="m">dt/dt=1</code>。两项合起来就是：</p>
     <div class="formula" data-expr="v^\*=\frac{dx_t}{dt}=\epsilon-x_0"></div>
     <div class="symbols">
-      <div class="symbol"><b>dxₜ/dt</b><br><code>t</code> 增加一点时，latent 怎样变化。</div>
+      <div class="symbol"><code class="m">\mathrm{d}x_t/\mathrm{d}t</code><br><code>t</code> 增加一点时，latent 怎样变化。</div>
       <div class="symbol"><b>v*</b><br>训练标签里的目标速度；星号不是乘法。</div>
-      <div class="symbol"><b>ε−x₀</b><br>从干净端指向噪声端的方向。</div>
+      <div class="symbol"><code class="m">\epsilon-x_0</code><br>从干净端指向噪声端的方向。</div>
     </div>
     <p>生成时恰好反着走：从 <code>t=1</code> 的噪声积分回 <code>t=0</code> 的视频。感知输入本来就是干净视频，因此 GenCeption 直接喂 <code class="m">x_{0}</code>，告诉 DiT 当前在干净端 <code>t=0</code>，只跑一次。</p>
 
@@ -324,18 +324,18 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
     <div class="formula" data-expr="L_2=\sum_j(\hat y_j-y_j)^2"></div>
     <div class="symbols">
       <div class="symbol"><b>j</b><br>输出向量或 latent 中的第 <code>j</code> 个元素。</div>
-      <div class="symbol"><b>ŷⱼ</b><br>模型在该位置的预测。</div>
-      <div class="symbol"><b>yⱼ</b><br>监督目标。</div>
-      <div class="symbol"><b>ŷⱼ−yⱼ</b><br>有正负号的预测误差。</div>
-      <div class="symbol"><b>(·)²</b><br>平方：消除符号，并更重罚大误差。</div>
-      <div class="symbol"><b>Σ</b><br>把所有元素的平方误差相加。</div>
+      <div class="symbol"><code class="m">\hat y_j</code><br>模型在该位置的预测。</div>
+      <div class="symbol"><code class="m">y_j</code><br>监督目标。</div>
+      <div class="symbol"><code class="m">\hat y_j-y_j</code><br>有正负号的预测误差。</div>
+      <div class="symbol"><code class="m">(\cdot)^2</code><br>平方：消除符号，并更重罚大误差。</div>
+      <div class="symbol"><code class="m">\Sigma</code><br>把所有元素的平方误差相加。</div>
     </div>
     <p>例如预测 <code>ŷ=[0.2,0.8]</code>、标签 <code>y=[0.3,0.6]</code>，求和式 L2 是 <code>0.01+0.04=0.05</code>。如果实现取均值则为 <code>0.025</code>；论文没有公开具体 reduction。</p>
 
     <h3>深度第一步：用场景中位数消掉整体尺度</h3>
     <div class="formula" data-expr="d_i=\frac{D_i}{m}"></div>
     <div class="symbols">
-      <div class="symbol"><b>Dᵢ</b><br>第 <code>i</code> 个像素的原始深度。</div>
+      <div class="symbol"><code class="m">D_i</code><br>第 <code>i</code> 个像素的原始深度。</div>
       <div class="symbol"><b>m</b><br>整段视频有效深度的中位数。</div>
       <div class="symbol"><code class="m">d_i</code>除掉整体尺度后的相对深度。</div>
     </div>
@@ -346,7 +346,7 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
     <div class="symbols">
       <div class="symbol"><b>d</b><br>中位数归一化后的非负深度。</div>
       <div class="symbol"><b>log(d+1)</b><br>自然对数；加一避免对零取对数。</div>
-      <div class="symbol"><b>α</b><br>缩放系数，调节近处与远处占用范围。</div>
+      <div class="symbol"><code class="m">\alpha</code><br>缩放系数，调节近处与远处占用范围。</div>
       <div class="symbol"><b>clip</b><br>低于零变零，高于一变一。</div>
       <div class="symbol"><b>d′</b><br>最终可复制为 RGB 的值。</div>
       <div class="symbol"><b>[0,1]</b><br>包括两个端点的数值区间。</div>
