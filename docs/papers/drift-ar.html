@@ -157,16 +157,34 @@ figcaption b{color:var(--amber)}
 
 <section id="old">
 <h2><span class="n">§ 00</span><span>旧系统为什么慢两遍</span></h2>
-<p class="lead">连续视觉 AR 混合模型<a class="jr" href="#g-02">2</a>不是“AR 或 diffusion”。它先用 AR 排好语义，再用 diffusion / flow 把连续特征做成高保真图像，两段都在花时间。</p>
+<p class="lead">先说它拿来干嘛：MAR、TransDiff、NextStep-1 这类模型画图质量已经很好，但<strong>生成一张 256×256 要 3 到 10 秒</strong>。Drift-AR 不是新模型，是一套<strong>套在这些现成模型外面的改装方案</strong>，把出图时间压到约五分之一，质量基本不掉。想把视觉 AR 真拿去做交互式产品的人才需要它——离线批量出图的场景，慢一点无所谓。</p>
+<p>慢在哪？因为这类模型把出图拆成了两段，<strong>两段各慢各的</strong>。</p>
 <figure>
   <figcaption><span>Fig 01 · 两只时钟一起走</span><b>AR 串行 + Decoder 迭代</b></figcaption>
   <div class="two-tax">
-    <div class="tax-card ar reveal"><span class="tag">CLOCK A · AUTOREGRESSIVE</span><h4>一个位置接一个位置</h4><div class="ticks"><i></i><i></i><i></i><i></i><i></i></div><p>第 5 个连续特征要等前 4 个，目标大模型难以一次并行写完。</p><div class="tax-result">R 个位置 · 串行依赖</div></div>
+    <div class="tax-card ar reveal"><span class="tag">CLOCK A · AUTOREGRESSIVE</span><h4>一个位置接一个位置</h4><div class="ticks"><i></i><i></i><i></i><i></i><i></i></div><p>第 5 个连续特征要等前 4 个算完才能开始，大模型没法一次并行写完。</p><div class="tax-result">R 个位置 · 串行依赖</div></div>
     <div class="flow-arrow reveal d2">→</div>
-    <div class="tax-card dec reveal d3"><span class="tag">CLOCK B · VISUAL DECODER</span><h4>同一张 latent 反复修</h4><div class="ticks red"><i></i><i></i><i></i><i></i><i></i></div><p>AR 特征出来以后，扩散 / flow 解码器仍要多次调用才能成图。</p><div class="tax-result">20 NFE · 20 次整网前向</div></div>
+    <div class="tax-card dec reveal d3"><span class="tag">CLOCK B · VISUAL DECODER</span><h4>同一张 latent 反复修</h4><div class="ticks red"><i></i><i></i><i></i><i></i><i></i></div><p>AR 特征出来以后，扩散 / flow 解码器还要来回擦二十次才成图。</p><div class="tax-result">20 NFE · 20 次整网前向</div></div>
   </div>
 </figure>
-<p><a class="jr" href="#g-01">1</a>连续空间避开离散码本的信息损失，却把系统拆成“语义排布 + 高保真合成”两段。只加推测解码，后半段还慢；只蒸馏解码器，前半段仍串行。</p>
+<div class="vars">
+  <div class="var"><strong>连续视觉 AR 混合模型</strong><a class="jr" href="#g-01">1</a> · 前半段用 Transformer 按顺序吐特征（像 GPT 写字，只是吐的不是词而是向量），后半段用扩散 / flow 把这些向量渲成图。</div>
+  <div class="var"><strong>NFE</strong><a class="jr" href="#g-16">16</a> · Number of Function Evaluations，画一张图<strong>整个网络被完整跑了几遍</strong>。20 NFE 就是 20 遍，这是后半段慢的直接来源。</div>
+</div>
+
+<h3>0.1 为什么非要用连续特征，不用离散 token</h3>
+<p>让 AR 直接吐离散图像 token 也行，但那需要一本<strong>码本</strong>——先把所有可能的图块聚成比如 16384 类，每个位置只能从这本册子里挑一个编号。挑好之后，原图块和册子上那一项之间的细微差别就永久丢了，颜色和纹理会被抹平。<a class="jr" href="#g-02">2</a>连续特征不挑册子，直接输出实数向量，信息不丢。代价是<strong>向量不是像素</strong>，还得再配一个视觉解码器把它渲出来——第二只时钟就是这么来的。</p>
+
+<h3>0.2 为什么两段不能各自单独治</h3>
+<p>现成的加速手段各治一头，单用都不够：</p>
+<div class="math-sheet">只上「推测解码」   ── 让小模型先猜、大模型批量验，治的是 <b>前半段</b>
+                        后半段那 20 次去噪一次没少
+
+只上「解码器蒸馏」 ── 把 20 步压成 1 步，治的是 <b>后半段</b>
+                        前半段仍然一个位置一个位置串着写
+
+两样都上           ── 也行，但那是两套互不相干的机制、两份训练成本</div>
+<p>Drift-AR 的主张是：这两头其实需要<strong>同一份信息</strong>——「模型对这个位置有多没把握」。前半段拿它决定草稿还值不值得往下写，后半段拿它决定这个位置该留多大的修正余地。一份信号，两头用。</p>
 </section>
 
 <section id="signal">
@@ -232,6 +250,7 @@ figcaption b{color:var(--amber)}
 <section id="map">
 <h2><span class="n">§ 02</span><span>完整拼图：同一种熵信号，控制两条线</span></h2>
 <p class="lead">左线负责把 AR 串行阶段跑快，右线负责把视觉解码压成一次前向。两条线复用同一种逐位置熵定义，但各自解决的瓶颈不同。</p>
+<p>下面这张图里会冒出十来个还没解释过的名字（Smooth L1、负熵损失、Entropy-AdaLN、1 NFE…）。<strong>这里不用看懂它们，只记顺序</strong>——每一格后面都有一节专门拆开。放这张图的唯一目的是：先知道总共有几步、哪一步在哪条线上，后面就不会读着读着不知道自己在哪儿。</p>
 <figure>
   <figcaption><span>Fig 03 · Drift-AR 总览</span><b>一个信号 · 两个执行阶段</b></figcaption>
   <div class="full-map">
@@ -255,36 +274,64 @@ figcaption b{color:var(--amber)}
     <div class="shared reveal d4"><b>“共用”指同一种定义和接口：</b>早停会比较草稿熵与目标熵，解码先验读取 AR 阶段的逐位置熵；不同位置、不同轮次当然不是同一个数。</div>
   </div>
 </figure>
-<p>这张总览先固定顺序。后面所有公式都只是把其中一个框拆开，不会突然再冒出第三条生成流程。</p>
+<p>两条线的分工可以这样记：<strong>左线管“少调用几次大模型”，右线管“少调用几次解码器”</strong>。§ 03–§ 05 走左线，§ 06–§ 07 走右线，§ 08 讲这两边怎么一起训。后面所有公式都只是把上图某一格拆开，不会再冒出第三条生成流程。</p>
 </section>
 
 <section id="draft">
 <h2><span class="n">§ 03</span><span>草稿模型先写，目标模型一次验一段</span></h2>
-<p class="lead"><a class="jr" href="#g-03">3</a>推测解码省时间的关键，不是“小模型取代大模型”，而是大模型能一次并行检查一段候选。最终留下的前缀仍由目标模型认可。</p>
+<p class="lead">这是左线的骨架。<a class="jr" href="#g-03">3</a>推测解码省时间的关键不是“小模型取代大模型”——最终留下的每个位置仍然要目标模型点头。它省的是<strong>大模型被调用的次数</strong>。</p>
+
+<h3>3.1 为什么“验一段”比“写一段”便宜</h3>
+<p>关键在于生成和验证的并行性不一样：</p>
+<div class="math-sheet">目标模型自己写 4 个位置：
+    写第 1 个 → 写第 2 个（要等第 1 个） → 第 3 个 → 第 4 个
+    <b>4 次前向</b>，没法压缩，因为后一个的输入依赖前一个的输出
+
+目标模型验 4 个候选：
+    4 个候选已经摆在那儿了，直接当成“已知的输入序列”整段喂进去
+    一次前向就能同时算出「在每个位置上我自己会写什么」
+    <b>1 次前向</b>
+
+差别只在一件事：<b>输入齐不齐</b>。生成时后面的输入还不存在，只能等；
+验证时输入全都有，attention 一次算完整段。</div>
+<p>所以只要草稿猜得够准，用 1 次大模型调用换来 3–4 个位置就是赚的。猜不准就白花草稿的算力——接受率决定了这笔账划不划算。</p>
 <figure>
   <figcaption><span>Fig 04 · Draft → Verify</span><b>最长合格前缀 = 3</b></figcaption>
   <div class="draft-flow">
-    <div class="pipe-card draft reveal"><span class="tag">DRAFT · CHEAP</span><h4>连续起草 4 个位置</h4><div class="tokens"><i>1</i><i>2</i><i>3</i><i>4</i></div><p>输入是已有连续特征，不再是离散 token ID。</p></div>
+    <div class="pipe-card draft reveal"><span class="tag">DRAFT · CHEAP</span><h4>连续起草 4 个位置</h4><div class="tokens"><i>1</i><i>2</i><i>3</i><i>4</i></div><p>6 层小模型，串行 4 次也很便宜。输入是已有连续特征，不再是离散 token ID。</p></div>
     <div class="flow-arrow reveal d2">→</div>
-    <div class="pipe-card target reveal d3"><span class="tag">TARGET · VERIFY ONCE</span><h4>一次并行检查整段</h4><div class="tokens"><i class="ok">✓</i><i class="ok">✓</i><i class="ok">✓</i><i class="bad">×</i></div><p>保留前 3 个，第 4 个及之后全部丢掉。</p></div>
+    <div class="pipe-card target reveal d3"><span class="tag">TARGET · VERIFY ONCE</span><h4>一次并行检查整段</h4><div class="tokens"><i class="ok">✓</i><i class="ok">✓</i><i class="ok">✓</i><i class="bad">×</i></div><p>前 3 个跟目标模型自己会写的够接近，第 4 个岔了。</p></div>
     <div class="flow-arrow reveal d4">→</div>
-    <div class="pipe-card reveal d5"><span class="tag">CONTINUE</span><h4>从第 4 位重新开始</h4><p>接受越长，目标模型摊到每个位置的成本越低；拒绝过多，草稿计算就白花。</p></div>
+    <div class="pipe-card reveal d5"><span class="tag">CONTINUE</span><h4>从第 4 位重新开始</h4><p>第 4 个及之后全丢掉，下一轮从这儿重起。接受越长，大模型摊到每个位置的成本越低。</p></div>
   </div>
 </figure>
-<div class="vars">
-  <div class="var"><code class="m">Z_{1:j}</code> · 已有的连续 AR 特征序列。</div><div class="var"><code class="m">F_{1:j}</code> · 目标模型相应位置的隐藏状态。</div>
-  <div class="var"><code class="m">z_{j+1}</code> · 目标模型给出的下一连续特征。</div><div class="var"><code>Smooth L1</code><a class="jr" href="#g-06">6</a> · 小误差平方精修，大误差线性限幅。</div>
-</div>
-<p class="formula-purpose">连续特征回归：草稿下一向量要靠近目标下一向量</p>
-<div class="formula"><span data-tex="\mathcal L_{\mathrm{reg}}=\operatorname{SmoothL1}\!\left(z_{j+1},\operatorname{DraftModel}(Z_{1:j},F_{1:j})\right)"></span></div>
-<div class="math-sheet"><b>标量手算</b>
-目标 z = 1.2，草稿 = 0.7，误差 = 0.5
-|误差| &lt; 1 → Smooth L1 = 0.5 × 0.5² = 0.125
 
-若误差 = 2：
-|误差| &gt; 1 → Smooth L1 = 2 − 0.5 = 1.5
-不会像 MSE 那样涨到 4。</div>
-<div class="warning"><b>复现缺口：</b>论文没有写连续特征在验证阶段用什么距离和容差判“匹配”，也没有报告平均接受长度。离散 EAGLE 的 token 验收规则不能直接当成连续向量规则。</div>
+<h3>3.2 草稿模型为什么要同时吃两份输入</h3>
+<p>这套做法搬自语言模型的 EAGLE：<strong>草稿模型不只看已经生成的内容，还要看目标模型算这些内容时的中间状态</strong>。原因是小模型自己那点容量，光看输出序列猜不准大模型下一步；但大模型的隐藏状态里已经含着“它接下来打算干嘛”的线索，把这份线索白送给草稿，它就好猜多了。</p>
+<div class="vars">
+  <div class="var"><code class="m">Z_{1:j}</code> · 到目前为止的连续 AR 特征序列，也就是<strong>已经写出来的内容</strong>。</div><div class="var"><code class="m">F_{1:j}</code> · 目标模型在这些位置上的隐藏状态，<strong>大模型的“内心活动”</strong>，验证时顺手就有。</div>
+  <div class="var"><code class="m">z_{j+1}</code> · 目标模型给出的下一个连续特征，也就是草稿要对齐的标准答案。</div><div class="var"><code class="m">j</code> · 当前已经生成到第几个位置。</div>
+</div>
+<p>EAGLE 原版还有一项离散 token 的分类交叉熵损失。连续视觉 AR 没有词表、没有 token 可分类，Drift-AR 把那一项<strong>直接删掉</strong>，只留回归：</p>
+<p class="formula-purpose">连续特征回归：草稿的下一个向量要靠近目标的下一个向量</p>
+<div class="formula"><span data-tex="\mathcal L_{\mathrm{reg}}=\operatorname{SmoothL1}\!\left(z_{j+1},\operatorname{DraftModel}(Z_{1:j},F_{1:j})\right)"></span></div>
+
+<h3>3.3 Smooth L1 到底是什么</h3>
+<p>它是 L1 和 L2 的缝合：<strong>误差小的时候当平方用，误差大的时候当绝对值用</strong>。写全了就是一个分段函数（<code class="m">e</code> 是误差，PyTorch 默认转折点 <code class="m">\beta=1</code>）：</p>
+<div class="formula"><span data-tex="\operatorname{SmoothL1}(e)=\begin{cases}\tfrac12 e^{2}, & |e|<1\\[2pt] |e|-\tfrac12, & |e|\ge 1\end{cases}"></span></div>
+<p>为什么要缝：纯平方（MSE）对大误差反应过激——误差 10 就罚 100，一个离群样本能把梯度拽飞；纯绝对值（L1）在误差趋近 0 时梯度不衰减，最后总在最优点附近来回蹦，收不干净。缝起来两头的毛病都躲掉了。<a class="jr" href="#g-06">6</a></p>
+<div class="math-sheet">目标 z = 1.2，草稿预测 0.7   →   误差 e = 0.5
+
+  |0.5| &lt; 1，走上半支：  0.5 × 0.5² = <b>0.125</b>
+
+换个大误差 e = 2：
+
+  |2| ≥ 1，走下半支：    2 − 0.5   = <b>1.5</b>
+  同样这个误差，MSE 会罚到 0.5×2² = <b>2.0</b>，L1 罚 2.0
+
+两支在转折点 |e|=1 处接得上：上半支 0.5×1² = 0.5，下半支 1 − 0.5 = 0.5。
+接得上才不会在那儿出现梯度跳变。</div>
+<div class="warning"><b>复现缺口：</b>论文没有写连续特征在验证阶段<strong>用什么距离、多大容差</strong>才算“匹配”——上面 Fig 04 里那三个 ✓ 和一个 ×，判据是什么并没有公开。也没有报告平均接受长度。离散 EAGLE 那套“token 完全相同才算通过”的规则不能直接搬到连续向量上，因为两个向量几乎不可能逐位相等。</div>
 </section>
 
 <section id="entropy">
@@ -436,17 +483,61 @@ figcaption b{color:var(--amber)}
 
 <section id="prior">
 <h2><span class="n">§ 06</span><span>右线：把熵变成高斯标准差</span></h2>
-<p class="lead">AR 已经给出每个位置的连续特征。Drift-AR 不再从统一噪声起步，而是让 AR 特征当高斯中心，熵决定这一位置要散多开。</p>
+<p class="lead">左线到此为止。右线要解决的是另一件事：视觉解码器该从哪儿起步。</p>
+
+<h3>6.1 起点从“一团纯噪声”改成“AR 特征附近”</h3>
+<p>常规扩散解码器的起点是一团纯高斯噪声，跟这张图长什么样毫无关系，所以要来回擦二十次才擦出形状。Drift-AR 把起点挪了：<strong>AR 已经算出每个位置的特征 <code class="m">z_{\mathrm{AR}}</code>，就拿它当高斯的中心</strong>，只在周围撒一点噪声。起点离终点近，一步就有希望走到。</p>
+<p>撒多大？这就轮到熵了。<strong>AR 有把握的位置（低熵）少撒一点，等于告诉解码器“这儿基本定了，别乱动”；没把握的位置（高熵）多撒一点，等于“这儿我拿不准，你自己发挥”。</strong>这就是同一份熵信号在右线的用法。</p>
 <div class="vars">
-  <div class="var"><code class="m">\mathcal E\in[0,1]</code> · 当前位置的归一化注意力熵。</div><div class="var"><code class="m">\sigma(\mathcal E)</code> · 标准差/噪声尺度，不是方差本身。</div>
-  <div class="var"><code class="m">\sigma_{\max}=.5</code> · 实验里的尺度上限。</div><div class="var"><code class="m">\tau_\sigma=2</code> · 映射曲线的弯曲程度。</div>
+  <div class="var"><code class="m">\mathcal E\in[0,1]</code> · 当前位置的归一化注意力熵，§ 04 算出来的那个数。</div>
+  <div class="var"><code class="m">\mathcal E_{\max}</code> · 熵的取值上限。§ 04 已经除过 <code class="m">\log r</code>，所以这里就是 <strong>1</strong>；它的作用是让 <code class="m">\sigma(\mathcal E_{\max})</code> 正好等于 <code class="m">\sigma_{\max}</code>。</div>
+  <div class="var"><code class="m">\sigma(\mathcal E)</code> · 这一位置的<strong>标准差</strong>（噪声尺度），不是方差。</div>
+  <div class="var"><code class="m">\sigma_{\max}=.5</code> · 尺度上限，熵拉满时撒多大。</div>
+  <div class="var"><code class="m">\tau_\sigma=2</code> · 映射曲线的弯曲程度，下面 6.3 专门讲它。</div>
+  <div class="var"><code class="m">\epsilon\sim\mathcal N(0,I)</code> · 标准高斯噪声，采样时乘上 <code class="m">\sigma</code> 才变成这一位置的实际抖动。</div>
 </div>
+
+<h3>6.2 熵 → 噪声尺度的那条式子</h3>
 <p class="formula-purpose">归一化熵 → 噪声尺度</p>
 <div class="formula"><span data-tex="\sigma(\mathcal E)=\sigma_{\max}\cdot\frac{\exp(\mathcal E/\tau_\sigma)-1}{\exp(\mathcal E_{\max}/\tau_\sigma)-1}"></span></div>
-<div class="vars"><div class="var"><code class="m">r</code> · 展开后的空间位置。</div><div class="var"><code class="m">z_{\mathrm{AR}}^{(r)}</code> · AR 特征，也是高斯均值。</div><div class="var"><code class="m">I</code> · 单位矩阵，各特征维先用同一尺度。</div><div class="var"><code>N(均值,协方差)</code> · 多元高斯；这里协方差是 <code class="m">\sigma^{2}I</code>。</div></div>
+<p>分数那部分是<strong>归一化到 0～1 的形状函数</strong>：熵为 0 时分子 <code class="m">\exp(0)-1=0</code>，整个 <code class="m">\sigma</code> 就是 0；熵拉满到 <code class="m">\mathcal E_{\max}=1</code> 时分子分母相等，分数是 1，<code class="m">\sigma</code> 正好等于 <code class="m">\sigma_{\max}=0.5</code>。<code class="m">\exp</code> 保证中间是单调上升的，两个端点被钉死，中间怎么弯由 <code class="m">\tau_\sigma</code> 说了算。</p>
+<p>把 § 04 那两个熵代进去（<code class="m">\exp(0.5)-1=0.64872</code> 是共用的分母）：</p>
+<div class="math-sheet">低熵样本 <b>E = 0.4238</b>
+    分子   exp(0.4238 / 2) − 1 = exp(0.2119) − 1 = 1.23603 − 1 = 0.23603
+    分数   0.23603 / 0.64872 = 0.36385
+    σ      0.5 × 0.36385 = <b>0.1819</b>
+
+高熵样本 <b>E = 0.8805</b>
+    分子   exp(0.8805 / 2) − 1 = exp(0.44025) − 1 = 1.55317 − 1 = 0.55317
+    分数   0.55317 / 0.64872 = 0.85271
+    σ      0.5 × 0.85271 = <b>0.4263</b>
+
+熵差 2.08 倍，噪声尺度差 2.34 倍 —— 比线性拉得更开。</div>
+
+<h3>6.3 为什么用 exp，不直接乘一下</h3>
+<p>最省事的映射是 <code class="m">\sigma=\sigma_{\max}\cdot\mathcal E</code>，一条直线。<code class="m">\exp</code> 版本和它两端完全重合（0 → 0，1 → 0.5），差别全在中间：</p>
+<div class="math-sheet">          直线 0.5×E      exp 版（τσ=2）    差
+E = 0.4238    0.2119          <b>0.1819</b>        低 14%
+E = 0.8805    0.4403          <b>0.4263</b>        低  3%
+
+这条曲线是<b>下凹</b>的：中低熵那一段被压得比直线更小，高熵段几乎追平。
+意思是——只有真的很不确定的位置才配拿到大噪声；
+中等不确定的位置，宁可少给点余地，别把 AR 已经定好的东西晃散。</div>
+<p><code class="m">\tau_\sigma</code> 控制压得多狠。同一个 <code class="m">\mathcal E=0.4238</code>：</p>
+<div class="math-sheet">τσ = 0.5   σ = 0.1044   弯得厉害，中低熵几乎不给噪声
+τσ = 2     σ = 0.1819   论文取值
+τσ = 10    σ = 0.2058   已经很接近直线的 0.2119 了
+
+τσ 越大越接近直线，越小越“只优待高熵位置”。</div>
+
+<h3>6.4 采样：把随机性挪到 ε 上</h3>
 <p class="formula-purpose">逐位置高斯与重参数采样<a class="jr" href="#g-09">9</a></p>
 <div class="formula"><span data-tex="q\!\left(x^{(r)}\mid z_{\mathrm{AR}}^{(r)},\mathcal E^{(r)}\right)=\mathcal N\!\left(z_{\mathrm{AR}}^{(r)},\sigma^2(\mathcal E^{(r)})I\right),\qquad x_0^{(r)}=z_{\mathrm{AR}}^{(r)}+\sigma(\mathcal E^{(r)})\epsilon"></span></div>
-<div class="warning"><b>论文这里的文字不够严谨：</b>它多次把 <code class="m">\sigma</code> 叫 variance，可高斯协方差写的是 <code class="m">\sigma^{2}I</code>，采样也乘 <code class="m">\sigma</code>。标准概率记号下，<code class="m">\sigma</code> 是标准差<a class="jr" href="#g-08">8</a>，真正方差是 <code class="m">\sigma^{2}</code>。多元高斯<a class="jr" href="#g-07">7</a>的 <code class="m">I</code> 表示各维先用同一尺度、互不相关。</div>
+<div class="vars">
+  <div class="var"><code class="m">r</code> · 展开成一维之后的空间位置编号。</div><div class="var"><code class="m">z_{\mathrm{AR}}^{(r)}</code> · 这个位置的 AR 特征，同时也是高斯的均值。</div>
+  <div class="var"><code class="m">I</code> · 单位矩阵；协方差写成 <code class="m">\sigma^2 I</code> 表示<strong>各特征维用同一个尺度、彼此不相关</strong>。</div><div class="var"><code class="m">x_0^{(r)}</code> · 采出来的起点，交给单步解码器（§ 07）。</div>
+</div>
+<p>左边那条是“这个位置的起点服从什么分布”，右边那条是“具体怎么把它采出来”。直接从分布里抽，梯度就断了；写成 <strong>中心 + σ×标准噪声</strong>，随机性全落在 <code class="m">\epsilon</code> 上，<code class="m">z_{\mathrm{AR}}</code> 和 <code class="m">\sigma</code> 都还挂在计算图上、能反传——这就是重参数化<a class="jr" href="#g-09">9</a>。</p>
 <figure>
   <figcaption><span>Fig 07 · 同一中心，不同散布</span><b>zAR=1.2 · ε=−.5</b></figcaption>
   <div class="sigma-grid">
@@ -454,12 +545,55 @@ figcaption b{color:var(--amber)}
     <div class="prior-card high reveal d2"><span class="tag">HIGH ENTROPY · E=.8805</span><h4>σ = .4263</h4><div class="cloud"><div class="axis"></div><div class="spread"></div><div class="mean"></div></div><div class="calc">x₀=1.2+.4263×(−.5)=<b>.9869</b></div></div>
   </div>
 </figure>
-<p>高熵位置离中心更远，获得更大的可修正范围。熵还会通过 Entropy-AdaLN<a class="jr" href="#g-14">14</a>进入解码器各层；论文没有公开逐位置熵图怎样投影成每层调制参数的代码细节。</p>
+<p>同一个中心 1.2、同一个抽到的噪声 −0.5，低熵位置只挪到 1.1090，高熵位置被推到 0.9869——<strong>离中心远了 2.3 倍，也就是给了解码器 2.3 倍的可修正范围</strong>。这个 0.9869 就是 § 07 那笔账的起点。</p>
+<div class="warning"><b>论文这里的文字不够严谨：</b>它多次把 <code class="m">\sigma</code> 叫 variance，可高斯协方差写的是 <code class="m">\sigma^{2}I</code>，采样也乘 <code class="m">\sigma</code>。标准概率记号下 <code class="m">\sigma</code> 是标准差<a class="jr" href="#g-08">8</a>，方差是 <code class="m">\sigma^{2}</code>，两者差一个平方——照着文字实现会把噪声开根号。多元高斯<a class="jr" href="#g-07">7</a>那个 <code class="m">I</code> 表示各维同尺度、互不相关。</div>
+<p>熵还会通过 Entropy-AdaLN<a class="jr" href="#g-14">14</a> 继续进入解码器的每一层，不只作用在起点上。不过论文没有公开逐位置熵图怎样投影成每层的调制参数，这部分无法核对。</p>
 </section>
 
 <section id="drift">
 <h2><span class="n">§ 07</span><span>单步解码器怎样学会一次修完</span></h2>
-<p class="lead">先验只给起点，真正把它改成图的是单步解码器。训练时，冻结特征编码器把真实图和生成图放进同一空间，再现场算吸引、排斥和净漂移。</p>
+<p class="lead">§ 06 只把起点摆好了，真正把起点改成图的是这一步。名字里的 “Drift” 就出在这儿——训练它用的不是老师蒸馏，而是一个叫<strong>核漂移</strong><a class="jr" href="#g-10">10</a>的东西。</p>
+
+<h3>7.1 没有老师，靠什么知道该往哪改</h3>
+<p>常规的少步蒸馏要一个多步老师，学生照抄老师每一步。Drift-AR 不用老师，改成直接对着<strong>一批真实样本</strong>学，办法很朴素：</p>
+<div class="math-sheet">把当前生成的这张图，和一批真实图、一批别的生成图，
+统统丢进同一个特征空间里当成点。然后对生成点问两个问题：
+
+  ① 附近的<b>真实</b>点在哪个方向？   →  往那边挪一点   （吸引 V⁺）
+  ② 附近的<b>其它生成</b>点在哪儿？  →  别往那边扎堆   （排斥 V⁻）
+
+两股合起来就是这一轮该走的方向：V = V⁺ − V⁻</div>
+<p>为什么还要排斥？只有吸引的话，所有生成样本会一起涌向真实样本最密集的那几个点，多样性塌掉——生成一百张全长一个样。减掉指向“自己人”的方向，相当于让生成分布<strong>摊开去覆盖真实分布，而不是挤在它的高峰上</strong>。</p>
+<p>这也是反对称<a class="jr" href="#g-11">11</a>的来处：吸引和排斥用的是同一套算法，只是换了数据源。生成分布真的追上真实分布时，两股一模一样、相减为零，训练自动停。反过来的 <code class="m">V=0\Rightarrow p=q</code> 不能只靠反对称推出来。这套骨架来自 <a href="../papers/drifting-models.html">Drifting Models</a>，Drift-AR 没有重新发明它，只是给它换了一个由 AR 熵决定的起点。</p>
+
+<h3>7.2 核漂移的式子：邻居按远近投票</h3>
+<p>“附近的点在哪个方向”要落成算式。做法是给每个候选邻居一个<strong>权重</strong>，越近权重越大，然后把“指向它的位移”按权重加权平均：</p>
+<div class="formula"><span data-tex="V_p^{+}(x)=\frac{1}{Z_p}\,\mathbb E_{y^{+}\sim p}\big[k(x,y^{+})\,(y^{+}-x)\big],\qquad V_{p,q}(x)=V_p^{+}(x)-V_q^{-}(x)"></span></div>
+<div class="vars">
+  <div class="var"><code class="m">x</code> · 当前生成样本在特征空间里的位置。</div><div class="var"><code class="m">y^{+}\sim p,\;\; y^{-}\sim q</code> · 分别从真实分布和当前生成分布抽到的邻居。</div>
+  <div class="var"><code class="m">y-x</code> · 从我指向那个邻居的位移向量，也就是“往那边挪”的方向。</div><div class="var"><code class="m">k(x,y)</code> · 相似度权重，越近越大。</div>
+  <div class="var"><code class="m">Z_p=\mathbb E_p[k(x,y^{+})]</code> · 权重之和，除掉它是为了让权重加起来为 1，步长不随样本个数变。</div><div class="var"><code class="m">V_q^{-}</code> · 同一套算法换成生成邻居；总式把它减掉，效果就是远离生成团块。</div>
+</div>
+<p>核函数取的是<strong>距离越远、权重指数级衰减</strong>：</p>
+<div class="formula"><span data-tex="k(x,y)=\exp\!\left(-\frac{\lVert x-y\rVert_2}{\tau}\right)"></span></div>
+<p><code class="m">\tau</code> 是温度，管“多近才算邻居”：<code class="m">\tau</code> 小只有贴得很近的点说得上话，<code class="m">\tau</code> 大远处的点也能参与。§ 10 配方里那个 <code class="m">\tau\in\{.02,.05,.2\}</code> 就是它——论文<strong>三个尺度同时用</strong>，各算一份漂移再相加，等于同时照顾局部细节和整体轮廓。</p>
+<p>拿 § 06 那个高熵起点 <code class="m">x=0.9869</code> 试一下，假设附近有两个真实邻居 1.6 和 1.2：</p>
+<div class="math-sheet">τ = 0.2（只看很近的）
+    到 1.6 的距离 0.6131  →  k = exp(−0.6131/0.2) = 0.04661
+    到 1.2 的距离 0.2131  →  k = exp(−0.2131/0.2) = 0.34459
+    归一化                    w = 0.1192、0.8808
+    V⁺ = 0.1192×(1.6−0.9869) + 0.8808×(1.2−0.9869) = <b>0.2608</b>
+                              近邻 1.2 拿走了 88% 的话语权
+
+τ = 2（远处也算数）
+    k = 0.73597、0.89893   →   w = 0.4502、0.5498
+    V⁺ = 0.4502×0.6131 + 0.5498×0.2131 = <b>0.3932</b>
+                              远处的 1.6 说得上话了，被拉得更远
+
+同一批邻居，τ 变一下方向就变了。这就是为什么要多尺度一起上。</div>
+
+<h3>7.3 把漂移变成一个能反传的损失</h3>
+<p>算出了方向，还得让解码器真的朝那儿走。做法是：<strong>把“当前位置 + 漂移”当成这一轮的临时靶子，冻住它，让当前输出去够它</strong>。</p>
 <figure>
   <figcaption><span>Fig 08 · 训练数据流</span><b>训练脚手架最后全部删除</b></figcaption>
   <div class="drift-flow">
@@ -472,28 +606,39 @@ figcaption b{color:var(--amber)}
   <div class="force-strip reveal d5"><div class="plus">V⁺ · 吸向真实</div><div class="minus">−V⁻ · 离开生成团块</div><div class="net">V = V⁺ − V⁻</div></div>
 </figure>
 <div class="vars">
-  <div class="var"><code class="m">\phi</code><a class="jr" href="#g-13">13</a> · 冻结特征编码器；权重不更新，梯度仍能穿过输入。</div><div class="var"><code class="m">V_{p,q}</code><a class="jr" href="#g-10">10</a> · 真实分布 <code class="m">p</code> 与当前生成分布 <code class="m">q</code> 算出的核漂移。</div>
-  <div class="var"><code>stopgrad</code><a class="jr" href="#g-12">12</a> · 右侧只当本轮固定目标。</div><div class="var"><code class="m">\|\cdot\|_2^2</code> · 特征逐项作差、平方后求和。</div>
+  <div class="var"><code class="m">\phi</code><a class="jr" href="#g-13">13</a> · 冻结特征编码器。为什么需要它：像素空间里“近”没有意义——同一只猫平移几格，像素差异巨大。先映射到语义特征空间，“邻居”才是真邻居。权重不更新，但梯度仍能穿过它传回解码器。</div>
+  <div class="var"><code class="m">\hat x</code> · 解码器这一次前向吐出的图像 latent。</div>
+  <div class="var"><code class="m">\operatorname{stopgrad}</code><a class="jr" href="#g-12">12</a> · 前向照常取数值，反向当常数。</div><div class="var"><code class="m">\|\cdot\|_2^2</code> · 特征逐项作差、平方、求和。</div>
 </div>
-<p class="formula-purpose">当前特征朝冻结临时目标移动</p>
+<p class="formula-purpose">当前特征朝冻结的临时目标移动</p>
 <div class="formula"><span data-tex="\mathcal L_{\mathrm{drift}}=\mathbb E\left[\left\|\phi(\hat x)-\operatorname{stopgrad}\!\left(\phi(\hat x)+V_{p,q}(\phi(\hat x))\right)\right\|_2^2\right]"></span></div>
-<div class="math-sheet"><b>把上一节的高熵样本继续算到更新</b>
-x₀=.9869，缩小版解码器 x̂=w·x₀，当前 w=1
-x̂=.9869
+<p>括号里 <code class="m">\phi(\hat x)</code> 出现了两次，看着像会抵消成 <code class="m">\|V\|^2</code>——<strong>不会</strong>，因为右边那个被 <code class="m">\operatorname{stopgrad}</code> 冻住了。前向算数值时两边确实抵消，损失数值就等于 <code class="m">\|V\|^2</code>；但反向时右边是常数，梯度只从左边那个 <code class="m">\phi(\hat x)</code> 流回解码器。<strong>没有 stopgrad 的话，模型会发现“把 V 算小”比“真的走过去”更省事</strong>，直接去改邻居关系而不是改图。</p>
 
-真实邻居 y⁺=1.6，生成邻居 y⁻=.8
-V⁺=1.6−.9869=.6131
-V⁻=.8−.9869=−.1869
-V=V⁺−V⁻=.6131−(−.1869)=+.8
+<h3>7.4 一路算到参数更新</h3>
+<p>接着 § 06 的高熵起点往下走。为了能手算，把解码器缩成一个标量乘法 <code class="m">\hat x=w\,x_0</code>，并且假设特征空间里正负邻居各只有一个——这时核权重归一化后都是 1，<code class="m">V^{+}</code> 就退化成 7.2 那个式子里的单项：</p>
+<div class="math-sheet">起点 x₀ = .9869（§ 06 高熵样本），当前 w = 1
+    x̂ = 1 × .9869 = .9869
 
-冻结目标 = stopgrad(.9869+.8)=1.7869
-L=(.9869−1.7869)²=.64
+邻居：真实 y⁺ = 1.6，生成 y⁻ = .8（各一个，权重都是 1）
+    V⁺ = 1.6 − .9869 = +.6131        吸向真实
+    V⁻ = .8  − .9869 = −.1869        指向生成团块
+    V  = V⁺ − V⁻ = .6131 − (−.1869) = <b>+.8</b>
+         减掉一个负数变成加 —— 生成团块在左边，所以再往右推一把
 
-dL/dw=2(.9869−1.7869)×.9869≈−1.5790
-w_new=1−.1×(−1.5790)=1.1579
-x̂_new=1.1579×.9869≈1.1427
-旧靶验方向：L_new=(1.1427−1.7869)²≈.4150  ✓</div>
-<p>损失确实下降，输出朝本轮目标移动。下一轮会重新采样、重算 <code class="m">q</code> 和 <code class="m">V</code>，不会永久追这一个旧靶。反对称<a class="jr" href="#g-11">11</a>保证 <code class="m">p=q</code> 时漂移为零；它不自动证明反过来的 <code class="m">V=0\Rightarrow p=q</code>。</p>
+本轮冻结的靶子
+    target = stopgrad(.9869 + .8) = 1.7869
+    L = (.9869 − 1.7869)² = (−.8)² = <b>.64</b>
+
+对 w 求梯度（链式：dL/dw = dL/dx̂ · dx̂/dw，而 dx̂/dw = x₀）
+    dL/dw = 2 × (.9869 − 1.7869) × .9869 = 2 × (−.8) × .9869 = <b>−1.5790</b>
+
+梯度下降，学习率 .1
+    w_new = 1 − .1 × (−1.5790) = <b>1.1579</b>
+    x̂_new = 1.1579 × .9869 = <b>1.1427</b>
+
+拿旧靶子验一下方向对不对
+    L_new = (1.1427 − 1.7869)² = <b>.4150</b>  &lt;  .64   ✓ 确实在降</div>
+<p>下一轮会重新采样、重算 <code class="m">q</code> 和 <code class="m">V</code>，靶子跟着动，不会永远追这一个旧靶。所以 stopgrad 冻的只是“本轮”，不是“永久”。</p>
 </section>
 
 <section id="schedule">
@@ -602,7 +747,7 @@ x̂_new=1.1579×.9869≈1.1427
   </tbody>
 </table></div>
 <p>原 diffusion 直接减到一步，FID 崩到 <code>14.72</code>；Drift-AR 的目标从训练开始就是一次前向，所以一步仍到 <code>1.57</code>。这不代表 DMD 原理上必须多步：原始 DMD<a class="jr" href="#g-18">18</a>同样能训练一步学生，区别在于老师 score 蒸馏和直接样本核漂移。</p>
-<h3>σmax 也不能无限加大</h3>
+<h3><code class="m">\sigma_{\max}</code> 也不能无限加大</h3>
 <div class="table-wrap"><table><thead><tr><th>σmax</th><th>.1</th><th>.3</th><th>.5</th><th>.7</th><th>1.0</th></tr></thead><tbody><tr><td>FID↓</td><td>1.68</td><td>1.58</td><td><b>1.57</b></td><td><b>1.57</b></td><td>1.64</td></tr><tr><td>IS↑</td><td>292.7</td><td>296.5</td><td><b>298.1</b></td><td>296.3</td><td>293.1</td></tr></tbody></table></div>
 <p>太小几乎缩成一个点，没有覆盖面；太大撒得太开，一步修不回来。<code class="m">\sigma_{\max}</code> 是修正范围上限，不是越大越有创造力。</p>
 </section>
