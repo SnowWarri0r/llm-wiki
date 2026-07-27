@@ -572,6 +572,11 @@ a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
 </script>
 <style>
 code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
 .var code.mathified,.symbol code.mathified{color:#7e2e20}
 /* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
    块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
