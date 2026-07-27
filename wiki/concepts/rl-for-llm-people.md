@@ -23,7 +23,7 @@ PPO / RLHF 那几页默认读者已经有 RL 脑回路。但 RL 跟监督学习�
 |---|---|
 | state `s` | 目前为止的 token 串 (prompt + 已生成部分) |
 | action `a` | 下一个 token |
-| policy `π(a\|s)` | 模型最后那层 softmax 输出的分布 |
+| policy \(\pi(a\mid s)\) | 模型最后那层 softmax 输出的分布 |
 | 更新 policy | 调权重, 让这个分布变形 |
 
 举个具体的。state = `"今天天气真"`, 模型输出下一个 token 的分布:

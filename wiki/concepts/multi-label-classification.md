@@ -17,7 +17,7 @@ Softmax 像单选题，所有类别争夺总和为 1 的概率；多标签分类
 
 ## 怎么做的
 
-对每个类别 logit <code>z_k</code> 独立计算：
+对每个类别 logit <code class="m">z_k</code> 独立计算：
 
 ~~~text
 p_k = sigmoid(z_k)
@@ -25,7 +25,7 @@ loss_k = -[y_k·ln(p_k) + (1-y_k)·ln(1-p_k)]
 总分类损失 = 所有类别 loss_k 相加
 ~~~
 
-<code>y_k</code> 可以同时有多个 1，因此类别间不需要归一化到总和 1。
+<code class="m">y_k</code> 可以同时有多个 1，因此类别间不需要归一化到总和 1。
 
 ## 数字例子
 
