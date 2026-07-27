@@ -1239,3 +1239,9 @@ skill 更新:
 - 保留了不整齐的结果：联合训练下前景分割受益，深度和相机姿态小幅回退，新增 token 的 3D 关键点严重退化——统一框架可行，但"尽量不改预训练接口"是有边界的。"一个 loss"也不是免费的，复杂度从 loss/head 搬到了 target formatter。
 - 诚实标注：项目页代码截至 2026-07-26 仍 TBA；论文未公开深度映射系数 α 的取值规则、梯度裁剪/丢弃阈值、任务混合比例和 L2 的 reduction 方式。"世界模型"那部分主要是定性图，不足以支撑通用物理因果的结论。
 - 收尾（本次补齐）：index.md 加 1 篇 paper + 3 个 concept 入口；`generation-to-perception` 与 `rgb-task-representation` 的 sources 已声称含 sensenova-vision，但那篇 md 里并没有反向引用，补上两处 `[[...]]` 让 ER 图闭合；genception.md 两处中英文之间漏的空格一并修掉。
+
+## [2026-07-26] revise | sensenova-vision 补两个概念链接，并划清与「可解码视觉表示」的分界
+
+- 上一条只修了 md 侧的反向引用（让 backlinks 生效）；bespoke 页那侧还没跟上，而这页的惯例是 md wikilink 与页内 concept 链接一一对应。
+- 在 §01「统一的不是 backbone，是答案出口」补一段，同时链三个相邻概念并说清各管一头：`rgb-task-representation`（把稠密答案编码成三通道图，同一个 VAE decoder + 同一条 loss 通吃）、`generation-to-perception`（本来为了画得像才训练的生成通路被接去回答"看到了什么"）、`decodable-vision-representation`（产出来的东西能不能按确定规则还原成 benchmark 打得了分的框/点/深度值）。前两个回答"能不能用同一套通路把答案生成出来"，后一个回答"生成出来的还算不算数"。
+- 现在 sensenova-vision 的 md wikilink 与 bespoke concept 链接完全一致（10 个，差集为空）。
