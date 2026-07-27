@@ -41,7 +41,8 @@ section{padding-top:62px}
 h2{display:grid;grid-template-columns:72px 1fr;gap:16px;align-items:baseline;font-size:clamp(30px,4vw,46px);line-height:1.22;letter-spacing:-.03em;margin:0 0 22px}
 h2 .n{font:500 11px/1.3 "DM Mono",monospace;letter-spacing:2px;color:var(--cyan)}
 h3{font-size:25px;line-height:1.4;margin:34px 0 12px}
-p{margin:12px 0}.lead{font-size:20px;color:var(--ink2)}
+p{margin:12px 0}
+section>ul{margin:12px 0;padding-left:24px}section>ul>li{margin:7px 0}.lead{font-size:20px;color:var(--ink2)}
 a{color:var(--cyan);text-underline-offset:3px}
 code{font:500 .86em/1.4 "DM Mono",monospace;background:var(--paper2);border:1px solid var(--rule);padding:2px 5px;border-radius:3px}
 .jr{font:500 9px/1 "DM Mono",monospace;vertical-align:super;text-decoration:none;background:var(--gold2);border:1px solid var(--gold);color:var(--navy);padding:2px 5px;border-radius:10px;margin:0 2px}
@@ -210,10 +211,28 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 </div>
 <p class="formula-purpose">这条式子回答：学生在自己会生成的位置上，和老师分布差多少？</p>
 <div class="formula math" data-display="true">\min_{p_g}D_{\mathrm{KL}}(p_g\Vert p_r)=\mathbb E_{t,X_t\sim p_g}\left[\log p_g(X_t)-\log p_r(X_t)\right]</div>
-<p>学生密度 <code>p_g</code> 不能直接算。DMD 于是训练一套 fake 网络 <code>p_f</code> 去追踪它，再比较 fake score 与 real score：</p>
-<div class="symbols"><div class="symbol"><code>θ</code>生成器参数，改变它会移动学生分布。</div><div class="symbol"><code>φ</code>fake 网络参数，负责让 <code>p_f</code> 追上 <code>p_g</code>。</div><div class="symbol"><code>\min_\theta\ \max_\phi</code>外循环拉学生靠近老师，内循环先校准 fake 追踪器。</div></div>
+<p>问题出在 <code>log p_g</code> 这一项：学生的密度<strong>根本算不出来</strong>。学生是个生成器，你能从它采样，但拿不到它在某点的概率值。DMD 的办法是<strong>找个替身</strong>——训练一套 fake 网络 <code>p_f</code> 专门去追踪 <code>p_g</code>，然后把上式里算不动的 <code>log p_g</code> 换成能算的 <code>log p_f</code>：</p>
+<div class="symbols" style="grid-template-columns:repeat(3,1fr)">
+  <div class="symbol"><code>\theta</code>生成器参数，改变它会移动学生分布。</div>
+  <div class="symbol"><code>\phi</code>fake 网络参数，负责让 <code>p_f</code> 追上 <code>p_g</code>。</div>
+  <div class="symbol"><code>V(\theta,\phi)</code>这场博弈的<strong>价值函数</strong>：一个标量，两方朝相反方向拉它。</div>
+</div>
 <div class="formula math" data-display="true">\min_\theta\max_\phi V(\theta,\phi)=\mathbb E_{t,X_t\sim p_g}\left[\log p_f(X_t)-\log p_r(X_t)\right]</div>
-<p><code>θ</code> 是生成器参数，<code>φ</code> 是 fake 网络参数。生成器每动一步，学生分布就变；fake 网络面对的是持续移动的靶。DMD2 用 <a class="jr" href="#g-03">TTUR</a> 让 fake 网络多更新几次。</p>
+<p class="formula-purpose">这条式子跟上一条只差一个字母，但读法完全变了，逐处对一遍：</p>
+<div class="calc">
+上一条  min<sub>p_g</sub>  E[ log p_g − log p_r ]&nbsp;&nbsp;<span class="hi">← 对着分布本身求最小，理想写法</span><br>
+这一条  min<sub>θ</sub> max<sub>φ</sub>  E[ log p_f − log p_r ]&nbsp;&nbsp;<span class="hi">← p_g 换成 p_f，min 落到真能调的参数 θ 上</span><br><br>
+换掉的那一项就是全部代价：<span class="ans">p_f 追得准不准，直接决定这条式子还算不算数</span>
+</div>
+<h3>V 是什么：不是损失，是一场博弈的"分数"</h3>
+<p>平时见到的 loss 是<strong>所有人一起往小里压</strong>。<code>V</code> 不是——它是<strong>价值函数</strong>（value function），博弈论里两方共用的那一个标量分数：</p>
+<ul>
+  <li><strong>生成器（调 <code>θ</code>）想让它小。</strong>小意味着学生分布离老师近。</li>
+  <li><strong>fake 网络（调 <code>φ</code>）想让它大。</strong>这一条最反直觉——下面解释。</li>
+</ul>
+<p>为什么 fake 要<strong>最大化</strong>？因为 <code>V</code> 里只有 <code>log p_f</code> 这一项归它管，而 <code>p_f</code> 是概率密度：把 <code>log p_f(X_t)</code> 在<strong>学生采样点上</strong>顶高，就是让 <code>p_f</code> 把概率质量堆到学生真正会去的地方——这正是"追上学生"的数学写法。所以"最大化"不是跟生成器作对，是在<strong>把自己校准到学生身上</strong>。</p>
+<p>这也是 <code>min_θ max_φ</code> 里外两层的分工：<strong>内层先把尺子校准，外层才用这把尺子去挪学生。</strong>尺子没校准就挪，挪的方向就是错的——那正是 <a href="#failure">§03</a> 要展开的失稳点。到那里会把 <code>V</code> 拆成 <code>KL(目标) − KL(追踪误差)</code> 两块，这个"分数"到底在数什么就完全落地了。</p>
+<p>另一个麻烦：生成器每动一步，学生分布就变，fake 网络面对的是<strong>持续移动的靶</strong>。DMD2 用 <a class="jr" href="#g-03">TTUR</a> 让 fake 网络多更新几次，SenseFlow 发现在 8B / 12B 上这还不够。</p>
 </section>
 
 <section id="failure">
