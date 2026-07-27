@@ -1,8 +1,8 @@
 ---
 name: classifier-free-guidance
 type: concept
-sources: [ideogram-4, flux-1, diffusionnft, viitorvoice, ltx-2, drifting-models, dmd]
-updated: 2026-07-22
+sources: [ideogram-4, flux-1, diffusionnft, viitorvoice, ltx-2, drifting-models, dmd, diffusion-unet]
+updated: 2026-07-27
 ---
 
 # Classifier-Free Guidance · CFG
@@ -36,6 +36,7 @@ z_next = euler_step(z_t, v, t)          # flow matching 积分一步
 ```
 
 ## 链接
+- [[diffusion-unet]] · Stable Diffusion 时代条件 / 无条件两次 U-Net 前向怎样进入采样循环
 - [[ideogram-4]] · 非对称 CFG + polish tail
 - [[ltx-2]] · 把文本 guidance 与跨模态 guidance 拆成两个 scale
 - [[modality-aware-cfg]] · 音视频双条件版本的完整公式与手算

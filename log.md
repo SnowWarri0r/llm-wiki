@@ -1300,3 +1300,10 @@ skill 更新:
 - 这个回归是被 §7.2 的正向断言抓到的：katex-error 是 0、lint 也全绿，只有"分子 180 / 分母 181 对不上"暴露了它。要是只查报错就漏过去了。
 - 全站现在 <pre> 外 0 处未标记；41 页浏览器实测 779 个 code.m + 337 个 tex 节点全部渲染、0 error。
 - SKILL 同步清理：§4 那段描述旧 mathify"自动识别符号表 code"的说明已经是假的（Phase C 删掉了那层），改成指向 §7.5；§7.2 的验证片段换成新语义（数 code.m / .tex，并列出 bareMathLeft 供逐条看）；文件布局补上 tex_migrate.py 和 fix_gloss_orphans.py；glossary 那条手敲 diff 命令改成"lint_paper.py 已覆盖"。
+
+## [2026-07-27] ingest | diffusion-unet
+
+- 新增独立的 Diffusion U-Net 架构精读，不再把 2015 分割 U-Net 与 DDPM / ADM / LDM 的去噪器混在一页。
+- 用同一组标量走通加噪、噪声预测损失与干净样本恢复；逐一定义公式参数，并补 GroupNorm、时间嵌入、AdaGN、skip concat、self/cross-attention 与 scheduler 的职责。
+- 以 Stable Diffusion v1 官方配置核对 64×64×4 latent、320/640/1280/1280 通道与 attention 下采样率；用 ADM 消融区分证据与架构惯例。
+- 新增 GroupNorm、扩散时间条件、噪声预测目标三个概念页，并与经典 U-Net、DiT、CFG、cross-attention 双向链接。

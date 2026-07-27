@@ -1,8 +1,8 @@
 ---
 name: diffusion-transformer
 type: concept
-sources: [ideogram-4, qwen-image-2, mrt, stable-diffusion-3-5, flux-1, cosmos-3, dit, krea-2, omnieraser, meshflow, ltx-2, drifting-models, solaris-multiplayer-world-model, interactive-video-world-modeling-survey]
-updated: 2026-07-24
+sources: [ideogram-4, qwen-image-2, mrt, stable-diffusion-3-5, flux-1, cosmos-3, dit, krea-2, omnieraser, meshflow, ltx-2, drifting-models, solaris-multiplayer-world-model, interactive-video-world-modeling-survey, diffusion-unet]
+updated: 2026-07-27
 ---
 
 # Diffusion Transformer · DiT
@@ -37,6 +37,7 @@ for block in layers:                       # 34 层
 
 ## 链接
 - [[dit]] · 原始论文精装页：adaLN-Zero、架构 vs 目标、scaling law
+- [[diffusion-unet]] · DiT 接替之前那套去噪骨架的完整解剖
 - [[adaptive-layernorm]] · 时间步 t 怎么注进每层(adaLN-Zero)
 - [[swiglu]] · 现代 DiT 家族的 FFN(原版 DiT 用 GELU)
 - [[mmdit]] · 双流多模态 DiT(文字图像同序列、各自权重)，本页"双流"那支的专页

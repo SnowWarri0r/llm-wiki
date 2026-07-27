@@ -1,0 +1,233 @@
+<!doctype html>
+<!-- bespoke -->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Diffusion U-Net · 一次去噪到底经过了什么</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&amp;family=Noto+Sans+SC:wght@400;500;600;700&amp;family=Noto+Serif+SC:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+:root{--paper:#f2ead8;--paper2:#fbf6e8;--ink:#17130f;--ink2:#44392d;--muted:#756a58;--rule:#b8aa8f;--navy:#13283f;--ochre:#a96413;--ochre2:#efd8ac;--blue:#13798b;--blue2:#c9e3e2;--green:#3f755d;--green2:#d0e3d5;--red:#b53d27;--red2:#efd0c5;--white:#fffdf8}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font-family:"Noto Serif SC",serif;font-size:18px;line-height:1.78}body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:99;opacity:.45;background-image:linear-gradient(rgba(19,40,63,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(19,40,63,.035) 1px,transparent 1px);background-size:38px 38px}
+.page{width:min(1180px,calc(100% - 48px));margin:auto;padding:46px 0 110px}.mast{border-top:4px double var(--ink);border-bottom:1px solid var(--rule);padding:12px 0;display:flex;justify-content:space-between;gap:16px;font:500 11px/1.4 "DM Mono",monospace;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted)}.hero{padding:58px 0 38px;border-bottom:1px solid var(--rule)}.eyebrow{display:flex;align-items:center;gap:14px;color:var(--ochre);font:500 12px/1.2 "DM Mono",monospace;letter-spacing:2.5px;text-transform:uppercase}.eyebrow:after{content:"";height:1px;background:var(--rule);flex:1}h1{font-size:clamp(58px,9vw,116px);line-height:.89;letter-spacing:-.065em;margin:25px 0 20px;font-weight:900}h1 em{color:var(--ochre);font-style:italic}.byline{font:500 12px/1.6 "DM Mono",monospace;letter-spacing:.7px;color:var(--muted)}.dek{font-size:clamp(21px,2.6vw,31px);line-height:1.5;max-width:980px;color:var(--ink2);margin:24px 0 0}
+.tldr{margin:34px 0;background:var(--navy);color:var(--white);border-left:7px solid var(--ochre);padding:24px 28px;display:grid;grid-template-columns:110px 1fr;gap:20px}.tldr b{font:500 11px/1.4 "DM Mono",monospace;letter-spacing:2px;color:#f7c976}.tldr p{margin:0;font-size:19px}.toc{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--rule);margin:30px 0 0}.toc a{padding:13px 14px;color:var(--ink2);text-decoration:none;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);font:500 12px/1.45 "Noto Sans SC",sans-serif}.toc a:nth-child(4n){border-right:0}.toc a:nth-last-child(-n+4){border-bottom:0}.toc a:hover,.toc a:focus{background:var(--ochre);color:white;outline:0}
+section{padding-top:58px}h2{display:grid;grid-template-columns:72px 1fr;gap:16px;align-items:baseline;font-size:clamp(30px,4vw,46px);line-height:1.22;letter-spacing:-.03em;margin:0 0 22px}h2 .n{font:500 11px/1.3 "DM Mono",monospace;letter-spacing:2px;color:var(--ochre)}h3{font-size:25px;line-height:1.4;margin:34px 0 12px}p{margin:12px 0}.lead{font-size:20px;color:var(--ink2)}a{color:var(--blue);text-underline-offset:3px}code{font:500 .86em/1.4 "DM Mono",monospace;background:var(--paper2);border:1px solid var(--rule);padding:2px 5px;border-radius:3px}.jr{font:500 9px/1 "DM Mono",monospace;vertical-align:super;text-decoration:none;background:var(--ochre2);border:1px solid var(--ochre);color:var(--navy);padding:2px 5px;border-radius:10px;margin:0 2px}.jr:hover,.jr:focus{background:var(--navy);color:white}
+.formula-purpose{font-family:"Noto Sans SC",sans-serif;font-weight:700;color:var(--navy);margin-top:22px}.formula{background:var(--navy);color:white;border-left:6px solid var(--ochre);padding:24px 20px;margin:12px 0 18px;overflow-x:auto;text-align:center}.formula .katex{color:white;font-size:1.12em}.symbol-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:14px 0}.symbol{background:var(--paper2);border:1px solid var(--rule);padding:12px 14px;font:400 15px/1.6 "Noto Sans SC",sans-serif}.symbol>code.m:first-child{display:block;width:max-content;margin-bottom:6px;color:var(--ochre);font-weight:700}.note,.warning,.plain{padding:16px 19px;margin:18px 0;font-family:"Noto Sans SC",sans-serif;font-size:16px}.note{background:var(--blue2);border-left:4px solid var(--blue)}.warning{background:var(--red2);border-left:4px solid var(--red)}.plain{background:var(--paper2);border:1px solid var(--rule)}
+figure{margin:32px 0;padding:28px;background:rgba(251,246,232,.84);border:1px solid var(--rule);box-shadow:10px 10px 0 rgba(19,40,63,.06)}figcaption{display:flex;justify-content:space-between;gap:16px;border-bottom:1px dashed var(--rule);padding-bottom:12px;margin-bottom:22px;font:500 11px/1.5 "DM Mono",monospace;letter-spacing:1.25px;text-transform:uppercase;color:var(--muted)}figcaption span:first-child{color:var(--ochre)}figcaption b{color:var(--red)}.arrow{display:grid;place-items:center;color:var(--ochre);font:700 25px/1 "DM Mono",monospace;min-width:32px}.arrow:before{content:"→"}
+.overview{display:grid;grid-template-columns:1fr 36px .7fr 36px 1.25fr 36px .9fr 36px .8fr;gap:5px;align-items:stretch}.node{background:white;border:1px solid var(--rule);padding:15px 12px;text-align:center;min-height:138px;display:flex;flex-direction:column;justify-content:center}.node b{font:700 11px/1.35 "DM Mono",monospace;color:var(--ochre);letter-spacing:.6px}.node strong{display:block;font-size:20px;margin:8px 0}.node small{font:400 12px/1.5 "Noto Sans SC",sans-serif;color:var(--muted)}.node.input{border-top:5px solid var(--red)}.node.cond{border-top:5px solid var(--ochre)}.node.net{border-top:5px solid var(--blue)}.node.out{border-top:5px solid var(--green)}.node.step{border-top:5px solid var(--navy)}.loop{margin-top:12px;background:var(--navy);color:white;padding:12px 16px;text-align:center;font:500 13px/1.6 "Noto Sans SC",sans-serif}.loop b{color:#f7c976}
+.compare{display:grid;grid-template-columns:1fr 56px 1fr;gap:12px;align-items:stretch}.panel{border:1px solid var(--rule);background:white;padding:20px}.panel h4{margin:0 0 12px;font-size:22px}.panel ul{margin:0;padding-left:20px;font:400 15px/1.75 "Noto Sans SC",sans-serif}.panel.old{border-top:6px solid var(--green)}.panel.new{border-top:6px solid var(--ochre)}
+.calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.calc-step{background:white;border:1px solid var(--rule);padding:16px;min-height:178px}.calc-step b{display:block;color:var(--ochre);font:700 11px/1.4 "DM Mono",monospace}.calc-step strong{display:block;font-size:22px;margin:11px 0}.calc-step p{font:400 13px/1.58 "Noto Sans SC",sans-serif;margin:0}
+.arch{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;align-items:end}.stage{background:white;border:1px solid var(--rule);padding:12px 7px;text-align:center;font:500 11px/1.55 "DM Mono",monospace}.stage strong{display:block;color:var(--navy);font-size:14px;margin-bottom:6px}.stage small{display:block;color:var(--muted);font-size:9px}.stage.e1{min-height:122px;border-top:5px solid var(--red)}.stage.e2{min-height:150px;border-top:5px solid var(--red)}.stage.e3{min-height:178px;border-top:5px solid var(--red)}.stage.mid{min-height:205px;border-top:5px solid var(--ochre)}.stage.d3{min-height:178px;border-top:5px solid var(--blue)}.stage.d2{min-height:150px;border-top:5px solid var(--blue)}.stage.d1{min-height:122px;border-top:5px solid var(--blue)}.skip-row{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-top:8px}.skip{font:500 10px/1.4 "DM Mono",monospace;text-align:center;color:var(--green);border-top:3px solid var(--green);padding-top:5px}.skip.s1{grid-column:1/8}.skip.s2{grid-column:2/7}.skip.s3{grid-column:3/6}
+.resblock{display:grid;grid-template-columns:1fr 34px 1fr 34px 1.15fr 34px 1fr;gap:7px;align-items:stretch}.rnode{background:white;border:1px solid var(--rule);padding:15px 10px;text-align:center;min-height:145px}.rnode b{display:block;color:var(--ochre);font:700 11px/1.3 "DM Mono",monospace}.rnode strong{display:block;font-size:18px;margin:8px 0}.rnode p{font:400 12px/1.5 "Noto Sans SC",sans-serif;margin:0}.rnode.mod{background:var(--ochre2);border-color:var(--ochre)}.residual{margin-top:10px;border:2px solid var(--green);color:var(--green);padding:8px;text-align:center;font:600 13px/1.5 "Noto Sans SC",sans-serif}
+.time-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.time-card{padding:18px;border:1px solid var(--rule);background:white}.time-card b{font:700 11px/1.3 "DM Mono",monospace;color:var(--ochre)}.time-card strong{display:block;font-size:20px;margin:9px 0}.time-card p{font:400 14px/1.6 "Noto Sans SC",sans-serif}
+.skip-demo{display:grid;grid-template-columns:1fr 44px 1fr 44px 1.25fr;gap:8px;align-items:stretch}.tensor{padding:17px;background:white;border:1px solid var(--rule);text-align:center}.tensor b{font:700 11px/1.4 "DM Mono",monospace;color:var(--ochre)}.tensor strong{display:block;font-size:21px;margin:9px 0}.tensor p{font:400 13px/1.5 "Noto Sans SC",sans-serif}.tensor.merge{background:var(--green2);border-color:var(--green)}
+.attn-cost{display:grid;grid-template-columns:1fr 1fr;gap:12px}.cost{background:white;border:1px solid var(--rule);padding:20px}.cost b{font:700 11px/1.4 "DM Mono",monospace;color:var(--ochre)}.cost strong{display:block;font:700 28px/1.25 "DM Mono",monospace;color:var(--navy);margin:8px 0}.cost p{font:400 14px/1.55 "Noto Sans SC",sans-serif}.cost.good{background:var(--green2);border-color:var(--green)}
+.cross{display:grid;grid-template-columns:1fr 44px 1.2fr 44px 1fr;gap:8px;align-items:stretch}.cross-node{padding:18px;background:white;border:1px solid var(--rule);text-align:center;min-height:150px}.cross-node b{font:700 11px/1.4 "DM Mono",monospace;color:var(--ochre)}.cross-node strong{display:block;font-size:20px;margin:9px 0}.cross-node p{font:400 13px/1.55 "Noto Sans SC",sans-serif}.cross-node.mix{background:var(--blue2);border-color:var(--blue)}
+.train-sample{display:grid;grid-template-columns:1fr 1fr;gap:14px}.lane{background:white;border:1px solid var(--rule);padding:20px}.lane h4{font-size:22px;margin:0 0 13px}.lane.train{border-top:6px solid var(--ochre)}.lane.sample{border-top:6px solid var(--blue)}.lane ol{margin:0;padding-left:23px;font:400 14px/1.75 "Noto Sans SC",sans-serif}
+.table-wrap{overflow-x:auto}.scroll-hint{display:none;color:var(--muted);font:500 10px/1.4 "DM Mono",monospace;margin-bottom:6px}table{width:100%;border-collapse:collapse;min-width:720px;font:400 14px/1.5 "Noto Sans SC",sans-serif;background:white}th,td{border-bottom:1px solid var(--rule);padding:12px 13px;text-align:left;vertical-align:top}th{background:var(--navy);color:white;font:500 11px/1.4 "DM Mono",monospace;letter-spacing:.6px}td.num{text-align:right;font-family:"DM Mono",monospace}.goodrow td{background:var(--green2)}.badrow td{background:var(--red2)}
+.limits{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.limit{padding:17px;border:1px solid var(--rule);background:white}.limit b{display:block;color:var(--red);font:700 12px/1.4 "DM Mono",monospace;margin-bottom:7px}.limit p{font:400 14px/1.55 "Noto Sans SC",sans-serif}
+.gloss{margin-top:70px;padding-top:30px;border-top:3px double var(--ink)}.gloss h2{grid-template-columns:1fr;font-size:30px}.gloss ol{list-style:none;padding:0;counter-reset:g}.gloss li{counter-increment:g;position:relative;padding:13px 12px 13px 55px;border-bottom:1px dashed var(--rule);font:400 15px/1.6 "Noto Sans SC",sans-serif}.gloss li:before{content:counter(g,decimal-leading-zero);position:absolute;left:8px;top:14px;color:var(--ochre);font:500 11px/1.5 "DM Mono",monospace}.gloss li:target{background:var(--ochre2)}.gloss .term{font-weight:700;color:var(--navy)}.sources{font:400 14px/1.7 "Noto Sans SC",sans-serif}.sources li{margin-bottom:7px}.colophon{margin-top:60px;padding-top:16px;border-top:1px solid var(--rule);display:flex;justify-content:space-between;color:var(--muted);font:500 11px/1.5 "DM Mono",monospace}
+@media(max-width:900px){.toc{grid-template-columns:repeat(2,1fr)}.toc a:nth-child(4n){border-right:1px solid var(--rule)}.toc a:nth-child(2n){border-right:0}.toc a:nth-last-child(-n+4){border-bottom:1px solid var(--rule)}.toc a:nth-last-child(-n+2){border-bottom:0}.overview{grid-template-columns:1fr 28px .8fr 28px 1.2fr}.overview .o4{grid-column:1}.overview .a4{grid-column:2}.overview .o5{grid-column:3}.calc-grid{grid-template-columns:1fr 1fr}.arch{grid-template-columns:repeat(4,1fr)}.arch .d3{grid-column:2}.arch .d2{grid-column:3}.arch .d1{grid-column:4}.skip-row{display:none}}
+@media(max-width:620px){body{font-size:16px}.page{width:min(100% - 24px,1180px);padding-top:22px}.mast{font-size:9px}.hero{padding-top:38px}h1{font-size:55px}.tldr{grid-template-columns:1fr;gap:7px;padding:20px}section{padding-top:44px}h2{grid-template-columns:1fr;gap:5px}.symbol-grid,.calc-grid,.time-grid,.attn-cost,.train-sample,.limits{grid-template-columns:1fr}figure{padding:17px 13px;margin:25px 0;box-shadow:5px 5px 0 rgba(19,40,63,.06)}figcaption{display:block}figcaption b{display:block;margin-top:5px}.overview,.compare,.resblock,.skip-demo,.cross{grid-template-columns:1fr}.overview .o4,.overview .a4,.overview .o5,.arch .d3,.arch .d2,.arch .d1{grid-column:auto}.arrow{min-height:30px;font-size:0}.arrow:before{content:"↓";font-size:24px}.arch{grid-template-columns:1fr 1fr}.stage{min-height:116px!important}.scroll-hint{display:block}.colophon{display:block}.colophon span{display:block;margin-top:7px}}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · diffusion-unet</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page">
+<header class="mast"><span>Connectionism · Architecture Deep Dive</span><span>DDPM → ADM → LDM / Stable Diffusion</span></header>
+<section class="hero" style="padding-top:58px"><div class="eyebrow">Diffusion Architecture · Field Notes</div><h1>Diffusion<br><em>U-Net.</em></h1><div class="byline">Jonathan Ho et al. · Alex Nichol &amp; Prafulla Dhariwal · Robin Rombach et al. · 2020–2022</div><p class="dek">它不是“给经典 U-Net 喂一张噪声图”这么简单。同一套权重要在纯噪声、模糊轮廓和细节收尾三个阶段做不同工作，还要接收文字、保住空间位置，最后只输出<strong>这一步该去掉什么</strong>。这一页把整台机器拆开，再用同一组数字从训练走到恢复。</p></section>
+<div class="tldr"><b>TL;DR</b><p>扩散 U-Net 每次接收带噪图或 latent、时间步和条件，经过多尺度 ResBlock、skip connection 与 attention，输出一张同尺寸的噪声图或速度图。<strong>U-Net 只给方向；scheduler 才负责走到下一步。</strong>采样时二者循环配合，直到噪声变成图像。</p></div>
+<nav class="toc" aria-label="目录"><a href="#s0">00 · 全流程总览</a><a href="#s1">01 · 和经典 U-Net 的差别</a><a href="#s2">02 · 训练样本怎样造</a><a href="#s3">03 · 尺寸与通道地图</a><a href="#s4">04 · ResBlock 拆解</a><a href="#s5">05 · 时间步怎样进网络</a><a href="#s6">06 · skip 到底传什么</a><a href="#s7">07 · 为什么需要 attention</a><a href="#s8">08 · 文字怎样进入</a><a href="#s9">09 · 训练与采样</a><a href="#s10">10 · 消融与证据</a><a href="#s11">11 · U-Net 到 DiT</a></nav>
+
+<section id="s0"><h2><span class="n">00 / MAP</span><span>先把完整拼图摆出来</span></h2><p class="lead">一次调用只走中间这一横排。真正的“生成”来自它被反复调用：状态更新后，新的 <code class="m">x_{t-1}</code> 又回到最左边。</p>
+<figure><figcaption><span>Fig 01 · 一次去噪调用的职责边界</span><b>网络预测，采样器更新</b></figcaption><div class="overview"><div class="node input"><b>NOISY STATE</b><strong>带噪 latent</strong><small>形状例如 64×64×4</small></div><div class="arrow"></div><div class="node cond"><b>CONDITION</b><strong>时刻 + 文字</strong><small>现在多吵；想画什么</small></div><div class="arrow"></div><div class="node net"><b>DIFFUSION U-NET</b><strong>多尺度去噪器</strong><small>ResBlock + skip + attention</small></div><div class="arrow a4"></div><div class="node out o4"><b>PREDICTION</b><strong>噪声 / 速度</strong><small>与输入 latent 同形状</small></div><div class="arrow"></div><div class="node step o5"><b>SCHEDULER</b><strong>走一步</strong><small>得到下一状态</small></div></div><div class="loop"><b>采样循环：</b>下一状态回到左端；每一步都重新调用同一套 U-Net 权重，但时间条件不同。</div></figure>
+<p>三件东西别混：<strong>扩散过程</strong>规定怎样加噪、训练目标是什么；<strong>U-Net</strong>是学会预测的神经网络；<strong>扩散时刻</strong><a class="jr" href="#g-01">01</a>告诉它当前噪声有多重；<strong>scheduler</strong><a class="jr" href="#g-13">13</a>把网络输出换成下一步状态。换 DDIM、Euler 或 DPM-Solver，常常是在换最后一件，不是在重训一套 U-Net。</p></section>
+
+<section id="s1"><h2><span class="n">01 / FAMILY</span><span>经典 U-Net 留下骨架，扩散模型换了工作</span></h2>
+<figure><figcaption><span>Fig 02 · 同样是 U 形，输入、模块和答案都变了</span><b>不是原版网络直接搬家</b></figcaption><div class="compare"><div class="panel old"><h4>2015 分割 U-Net</h4><ul><li>输入：干净医学图像</li><li>块：普通卷积 + 激活</li><li>条件：没有扩散时间步</li><li>输出：每个像素属于什么类别</li><li>一次前向得到分割结果</li></ul></div><div class="arrow"></div><div class="panel new"><h4>2020–22 扩散 U-Net</h4><ul><li>输入：带噪图像或 VAE latent<a class="jr" href="#g-11">11</a></li><li>块：带时间条件的 ResBlock</li><li>条件：时间步、类别或文字</li><li>输出：噪声、干净样本或速度</li><li>采样时反复前向很多次</li></ul></div></div></figure>
+<p>真正保留下来的，是“压缩空间尺寸来理解全局，再放大恢复位置，并把同尺度细节横向送过去”这套组织方式。DDPM 在此基础上加入 GroupNorm<a class="jr" href="#g-03">03</a>、正弦时间嵌入和 self-attention；ADM 把条件调制与注意力做得更稳；LDM 又把计算搬进 latent，并用 cross-attention 接文字。块内那条短捷径属于 ResBlock<a class="jr" href="#g-05">05</a>，不要和跨越整个 U 形的 skip 混为一谈。</p></section>
+
+<section id="s2"><h2><span class="n">02 / TRAINING PAIR</span><span>老师答案不是人工标注，而是我们刚加进去的噪声</span></h2>
+<p>训练前先拿干净样本 <code class="m">x_0</code>，随机抽一个时间步 <code class="m">t</code> 和一份高斯噪声 <code class="m">\epsilon</code>。用已知公式把噪声混进去，得到网络输入 <code class="m">x_t</code>。因为噪声是我们亲手抽的，它天然就是监督答案；每个时刻的混合比例由噪声日程<a class="jr" href="#g-02">02</a>预先规定。</p>
+<div class="symbol-grid"><div class="symbol"><code class="m">x_0</code>干净图像或干净 latent；下标 0 表示轨迹起点。</div><div class="symbol"><code class="m">t</code>随机抽到的噪声时刻；越靠后通常越接近纯噪声。</div><div class="symbol"><code class="m">\bar{\alpha}_t</code>到时刻 <code class="m">t</code>还保留多少原信号；由 noise schedule 预先给定。</div><div class="symbol"><code class="m">\epsilon</code>本次随机采样的标准高斯噪声，也是最常见的训练目标。</div><div class="symbol"><code class="m">x_t</code>混合后的带噪输入，形状与 <code class="m">x_0</code>完全相同。</div><div class="symbol"><code class="m">\sqrt{\cdot}</code>用标准差而不是方差缩放，使两部分方差按预定比例相加。</div></div>
+<p class="formula-purpose">前向加噪：把干净信号和噪声按当前时刻的比例混合</p><div class="formula" data-display="true">x_t=\sqrt{\bar{\alpha}_t}\,x_0+\sqrt{1-\bar{\alpha}_t}\,\epsilon</div>
+<p class="formula-purpose">噪声预测损失：网络猜的噪声与真实噪声逐元素比较</p><div class="formula" data-display="true">L_\epsilon=\mathbb{E}_{x_0,t,\epsilon}\!\left[\left\lVert\epsilon-\epsilon_\theta(x_t,t,c)\right\rVert_2^2\right]</div>
+<div class="symbol-grid"><div class="symbol"><code class="m">\epsilon_\theta</code>参数为 <code class="m">\theta</code> 的 U-Net；输入带噪状态、时刻和可选条件 <code class="m">c</code>。</div><div class="symbol"><code class="m">\lVert\cdot\rVert_2^2</code>所有位置误差平方后相加；标量例子里就是普通平方。</div><div class="symbol"><code class="m">\mathbb{E}</code>对许多图、时刻和噪声取平均；一次小批训练只是在估计这个平均值。</div><div class="symbol"><code class="m">c</code>可选条件；可为类别、文字 token，也可为空条件。</div></div>
+<figure><figcaption><span>Fig 03 · 同一组数字走完加噪、预测、损失与恢复</span><b>先列公式，再代数字</b></figcaption><div class="calc-grid"><div class="calc-step"><b>01 / 已知</b><strong>干净值 2</strong><p><code class="m">x_0=2</code>，<code class="m">\bar{\alpha}_t=0.64</code>，噪声 <code class="m">\epsilon=-0.5</code>。</p></div><div class="calc-step"><b>02 / 加噪</b><strong>得到 1.3</strong><p><code class="m">x_t=0.8\times2+0.6\times(-0.5)=1.3</code>。</p></div><div class="calc-step"><b>03 / 网络猜</b><strong>预测 −0.3</strong><p>真实噪声是 −0.5；当前少猜了 0.2。</p></div><div class="calc-step"><b>04 / 损失</b><strong>误差 0.04</strong><p><code class="m">(-0.3-(-0.5))^2=0.2^2=0.04</code>。</p></div></div></figure>
+<div class="note"><strong>为什么不是让网络直接输出最终图？</strong> 预测我们刚加进去的噪声，老师答案精确、无限生成，而且每个噪声强度都能制造训练对。预测 <code class="m">x_0</code> 或速度 <code class="m">v</code> 也可行；那是目标参数化<a class="jr" href="#g-12">12</a>的变化，不要求把 U-Net 骨架推倒重来。</div></section>
+
+<section id="s3"><h2><span class="n">03 / TENSOR MAP</span><span>以 Stable Diffusion v1 为例，把尺寸账走一遍</span></h2><p>512×512 RGB 图先经 VAE 压缩 8 倍，变成 64×64×4 latent。官方配置的基础通道数是 320，通道倍率是 <code>[1,2,4,4]</code>，因此四个尺度分别是 320、640、1280、1280 通道。</p>
+<figure><figcaption><span>Fig 04 · U 形主干的空间尺寸与通道</span><b>下去看全局，上来还位置</b></figcaption><div class="arch"><div class="stage e1"><strong>64×64</strong>320 ch<small>高分辨率细节</small></div><div class="stage e2"><strong>32×32</strong>640 ch<small>下采样 ×2</small></div><div class="stage e3"><strong>16×16</strong>1280 ch<small>下采样 ×4</small></div><div class="stage mid"><strong>8×8</strong>1280 ch<small>瓶颈 / 全局</small></div><div class="stage d3"><strong>16×16</strong>1280 ch<small>与左侧 concat</small></div><div class="stage d2"><strong>32×32</strong>640 ch<small>与左侧 concat</small></div><div class="stage d1"><strong>64×64</strong>320 ch<small>输出回 4 ch</small></div></div><div class="skip-row"><div class="skip s1">64×64 skip</div><div class="skip s2">32×32 skip</div><div class="skip s3">16×16 skip</div></div></figure>
+<p>每个尺度有两个 ResBlock。配置里的 <code>attention_resolutions</code> = [4, 2, 1] 很容易读反：这里列的是相对 64×64 latent 的<strong>下采样倍率</strong>，所以实际 attention 位于 16×16、32×32、64×64。Stable Diffusion v1 的 U-Net 约 860M 参数；它比经典分割 U-Net 大得多。</p></section>
+
+<section id="s4"><h2><span class="n">04 / RESBLOCK</span><span>一块里同时做空间处理、时间调制与安全回退</span></h2><p>guided-diffusion 的典型块先用 GroupNorm + SiLU<a class="jr" href="#g-04">04</a> + 卷积处理空间特征，再把时间向量投影成缩放和偏移，最后经零初始化卷积写回残差支路。</p>
+<figure><figcaption><span>Fig 05 · 条件残差块的真实数据流</span><b>时间不是直接拼到图上</b></figcaption><div class="resblock"><div class="rnode"><b>INPUT</b><strong>空间特征</strong><p>例如 32×32×640</p></div><div class="arrow"></div><div class="rnode"><b>SPATIAL</b><strong>GN → SiLU → Conv</strong><p>规范数值，提局部模式</p></div><div class="arrow"></div><div class="rnode mod"><b>TIME MODULATION</b><strong>scale + shift</strong><p>时刻向量决定当前怎样改特征</p></div><div class="arrow"></div><div class="rnode"><b>WRITE BACK</b><strong>SiLU → Conv → Add</strong><p>和捷径分支相加</p></div></div><div class="residual">残差捷径：输入可直接绕过复杂变换；新分支开局接近 0 时，整块先近似恒等映射。</div></figure>
+<p class="formula-purpose">AdaGN<a class="jr" href="#g-10">10</a> / scale-shift normalization：让同一份特征随时刻改变处理方式</p><div class="formula" data-display="true">h'=(1+s_t)\odot\operatorname{GN}(h)+b_t</div>
+<div class="symbol-grid"><div class="symbol"><code class="m">h</code>这一 ResBlock 的中间空间特征。</div><div class="symbol"><code class="m">\operatorname{GN}(h)</code>GroupNorm 后的特征；按单样本、分组统计，不依赖 batch 大小。</div><div class="symbol"><code class="m">s_t</code>由时间嵌入生成的逐通道缩放；代码用 <code class="m">1+s_t</code>，让零缩放表示“不改变”。</div><div class="symbol"><code class="m">b_t</code>由时间嵌入生成的逐通道平移。</div><div class="symbol"><code class="m">\odot</code>逐元素相乘；每个通道用自己的缩放值。</div><div class="symbol"><code class="m">h'</code>经过当前时刻调制、准备继续卷积的特征。</div></div>
+<p>两数例子：若 <code class="m">h=[1,3]</code>，均值 2、标准差 1，则 GN 后为 <code class="m">[-1,1]</code>。当前时刻给出 <code class="m">s_t=0.5</code>、<code class="m">b_t=0.2</code>，于是 <code class="m">h'=1.5[-1,1]+0.2=[-1.3,1.7]</code>。换一个时刻，空间输入不变，缩放和平移也会变。</p><div class="plain"><strong>SiLU 是什么？</strong> <code class="m">\operatorname{SiLU}(x)=x\,\sigma(x)</code>，其中 <code class="m">\sigma(x)=1/(1+e^{-x})</code>。它像一道平滑的门：正数大多通过，负数不是一刀切为 0，而是保留少量连续信号。</div></section>
+
+<section id="s5"><h2><span class="n">05 / TIME</span><span>为什么一套权重能应付不同噪声强度</span></h2><p>如果不告诉网络时间步，同一个数值模式可能既代表“纯噪声里偶然出现的边”，也代表“末期图像里该保留的真边”。DDPM 把离散时刻做成时间嵌入<a class="jr" href="#g-06">06</a>：编码成一串不同频率的正弦 / 余弦，再过 MLP，送进每个 ResBlock。</p>
+<p class="formula-purpose">正弦时间编码的一对分量</p><div class="formula" data-display="true">\operatorname{emb}_{2i}(t)=\sin(t\,\omega_i),\qquad \operatorname{emb}_{2i+1}(t)=\cos(t\,\omega_i)</div>
+<div class="symbol-grid"><div class="symbol"><code class="m">t</code>当前扩散时刻；可为离散步编号或连续噪声时间。</div><div class="symbol"><code class="m">i</code>频率编号；每个编号生成一对 sin / cos 分量。</div><div class="symbol"><code class="m">\omega_i</code>第 <code class="m">i</code> 个预设频率；不同频率同时刻画粗、细时间差。</div><div class="symbol"><code class="m">\operatorname{emb}(t)</code>时间向量；过 MLP 后投影成各 ResBlock 需要的通道数。</div></div>
+<figure><figcaption><span>Fig 06 · 同一网络在三段轨迹里的不同工作</span><b>权重共享，行为由时间条件切换</b></figcaption><div class="time-grid"><div class="time-card"><b>HIGH NOISE</b><strong>先搭大结构</strong><p>输入近似雪花屏；模型主要决定物体、视角与构图。</p></div><div class="time-card"><b>MID NOISE</b><strong>补形状与关系</strong><p>轮廓已出现；模型修正部件、姿态和相对位置。</p></div><div class="time-card"><b>LOW NOISE</b><strong>收纹理和边缘</strong><p>主体已稳定；模型处理毛发、材质和微小噪点。</p></div></div></figure>
+<p>最小玩具例子只取一个频率 <code class="m">\omega_0=1</code>：<code class="m">t=0</code> 得 <code class="m">[\sin 0,\cos 0]=[0,1]</code>；<code class="m">t=\pi</code> 得 <code class="m">[0,-1]</code>。真实模型维度更高，但目的相同：给不同时间一个平滑、可区分的身份证。</p></section>
+
+<section id="s6"><h2><span class="n">06 / SKIP</span><span>skip 传的不是“答案”，而是同尺度的定位线索</span></h2><p>下采样越深，网络越懂“这是一只猫”，却越难记住胡须准确落在哪个像素。skip connection<a class="jr" href="#g-09">09</a>把编码器同尺度特征缓存下来，在解码器恢复到相同高宽时按通道拼接。</p>
+<figure><figcaption><span>Fig 07 · concat 的尺寸账</span><b>高宽必须相同，通道数相加</b></figcaption><div class="skip-demo"><div class="tensor"><b>ENCODER SKIP</b><strong>32×32×640</strong><p>较早层留下的位置和纹理</p></div><div class="arrow"></div><div class="tensor"><b>DECODER</b><strong>32×32×640</strong><p>从瓶颈上采样回来的语义</p></div><div class="arrow"></div><div class="tensor merge"><b>CONCAT</b><strong>32×32×1280</strong><p>沿通道维拼接，再由 ResBlock 融合</p></div></div></figure>
+<p>它对反复去噪尤其合适：每一步都要输出与输入同尺寸的像素 / latent 修正。如果所有高分辨率信息都被迫穿过 8×8 瓶颈，细节得先压扁再凭空还原；skip 给了更短的保真路线。注意它和 ResBlock 的 residual add 不同：<strong>U-Net skip 常用 concat，ResBlock 捷径常用 add</strong>。</p></section>
+
+<section id="s7"><h2><span class="n">07 / SELF-ATTENTION</span><span>卷积看附近，attention 让远处位置直接对话</span></h2><p>卷积通过一层层堆叠扩大感受野；self-attention<a class="jr" href="#g-07">07</a>则让任意两个位置一步交换信息。它有利于让左右眼一致、重复窗户对齐、远处物体遵守同一构图，但代价随位置数的平方增长。</p>
+<figure><figcaption><span>Fig 08 · 为什么早期 DDPM 只在低分辨率做 attention</span><b>边长缩 4 倍，权重格子少 256 倍</b></figcaption><div class="attn-cost"><div class="cost"><b>64×64 FEATURE MAP</b><strong>16,777,216</strong><p><code class="m">N=4096</code> 个位置；attention 矩阵有 <code class="m">N^2=4096^2</code> 个格子。</p></div><div class="cost good"><b>16×16 FEATURE MAP</b><strong>65,536</strong><p><code class="m">N=256</code>；矩阵只有 <code class="m">256^2</code> 个格子，正好小 256 倍。</p></div></div></figure>
+<p>所以 DDPM 的 256×256 模型在 16×16 插一次全局 attention。ADM 用更系统的消融，把 attention 扩到 32×32、16×16、8×8，并采用多头。Stable Diffusion v1 算在 64×64 latent 上，空间已经比 512×512 像素小 8 倍，因此能在更多尺度加入 spatial transformer。</p></section>
+
+<section id="s8"><h2><span class="n">08 / CROSS-ATTENTION</span><span>文字不是贴在图旁边，而是被每个图像位置主动查询</span></h2><p>LDM 把 U-Net 的图像特征摊成位置 token，做 Query；文字编码器输出做 Key / Value。某个图像位置先问“哪些词和我最相关”，再按权重取回对应的文字信息。</p>
+<div class="symbol-grid"><div class="symbol"><code class="m">Q</code>Query；来自图像 U-Net 当前层的空间位置。</div><div class="symbol"><code class="m">K</code>Key；来自文字 token，用于计算每个词与该位置的匹配度。</div><div class="symbol"><code class="m">V</code>Value；真正按权重取回并写入图像位置的文字内容。</div><div class="symbol"><code class="m">d</code>每个 attention head 的向量维度；除以 <code class="m">\sqrt d</code>避免点积随维度变大而过分尖锐。</div><div class="symbol"><code class="m">K^\top</code>Key 矩阵转置，使每个图像 Query 能与所有文字 Key 做点积。</div><div class="symbol"><code class="m">\operatorname{softmax}</code>把一排匹配分数转成和为 1 的非负权重。</div></div>
+<p class="formula-purpose">缩放点积注意力</p><div class="formula" data-display="true">\operatorname{Attn}(Q,K,V)=\operatorname{softmax}\!\left(\frac{QK^\top}{\sqrt{d}}\right)V</div>
+<figure><figcaption><span>Fig 09 · 一个图像位置怎样选择“猫”而不是“天空”</span><b>权重来自匹配，内容来自 Value</b></figcaption><div class="cross"><div class="cross-node"><b>IMAGE QUERY</b><strong>[1, 0]</strong><p>某个疑似猫脸的位置</p></div><div class="arrow"></div><div class="cross-node mix"><b>TEXT KEYS</b><strong>猫 [1,0] · 天空 [0,1]</strong><p>点积得 [1,0]；softmax 后约 [0.731,0.269]</p></div><div class="arrow"></div><div class="cross-node"><b>WEIGHTED VALUE</b><strong>73.1% 猫</strong><p>再混入 26.9% 天空信息</p></div></div></figure>
+<p>这不是说真实模型真的只有两个词或二维向量，而是把一笔账缩小了。关键方向要记牢：<strong>图像位置发问，文字 token 提供可检索的键和要写回的内容。</strong>self-attention 是图像位置彼此交流；cross-attention<a class="jr" href="#g-08">08</a>是图像去查外部条件。</p></section>
+
+<section id="s9"><h2><span class="n">09 / LOOP</span><span>训练只抽一个时刻，采样才把许多时刻串起来</span></h2><div class="train-sample"><div class="lane train"><h4>训练：一次随机抽题</h4><ol><li>取干净样本 <code class="m">x_0</code></li><li>随机抽时刻 <code class="m">t</code> 与噪声 <code class="m">\epsilon</code></li><li>直接算出 <code class="m">x_t</code></li><li>U-Net 前向一次，算 MSE</li><li>反向传播更新参数</li></ol></div><div class="lane sample"><h4>采样：沿时间轴连续答题</h4><ol><li>从纯噪声 <code class="m">x_T</code> 开始</li><li>U-Net 预测当前噪声 / 速度</li><li>scheduler 算出下一状态</li><li>换新时刻，再调用同一 U-Net</li><li>重复直到得到 <code class="m">x_0</code></li></ol></div></div>
+<p class="formula-purpose">由预测噪声反推当前干净样本估计</p><div class="formula" data-display="true">\hat{x}_0=\frac{x_t-\sqrt{1-\bar{\alpha}_t}\,\hat{\epsilon}}{\sqrt{\bar{\alpha}_t}}</div>
+<div class="symbol-grid"><div class="symbol"><code class="m">\hat{\epsilon}</code>U-Net 对本次噪声的预测；帽子表示估计值。</div><div class="symbol"><code class="m">\hat{x}_0</code>根据当前状态和预测噪声反推出的干净样本估计。</div><div class="symbol"><code class="m">x_t</code>当前带噪状态；不是网络最终要显示的图片。</div><div class="symbol"><code class="m">\bar{\alpha}_t</code>仍是该时刻的保真比例；与训练加噪公式使用同一套 schedule。</div></div>
+<p>沿用 §02：<code class="m">x_t=1.3</code>、<code class="m">\bar{\alpha}_t=0.64</code>。若网络猜 <code class="m">\hat{\epsilon}=-0.3</code>，则 <code class="m">\hat{x}_0=(1.3-0.6\times(-0.3))/0.8=1.85</code>；若猜对 <code class="m">-0.5</code>，就恢复到原值 2。</p><div class="warning"><strong>U-Net 不自己决定步长。</strong> 它给出局部方向或噪声估计；scheduler 决定用多大的步、是否加入随机性。classifier-free guidance<a class="jr" href="#g-14">14</a>则在同一时刻组合有条件与无条件预测，放大提示词造成的差值。</div></section>
+
+<section id="s10"><h2><span class="n">10 / EVIDENCE</span><span>哪些结构改造有论文证据，哪些只是家族习惯</span></h2><p>ADM 在 ImageNet 128×128 上做了逐项结构消融。表里的“组合改进”不是把单项数字机械相加，而是把一组改造一起训练后的实测差值。</p><div class="scroll-hint">← 左右滑动查看完整表格 →</div><div class="table-wrap"><table><thead><tr><th>设置</th><th>700K step FID</th><th>1200K step FID</th><th>该证据说明什么</th></tr></thead><tbody><tr><td>ADM baseline</td><td class="num">15.33</td><td class="num">13.21</td><td>作为结构消融起点</td></tr><tr class="goodrow"><td>组合架构改进</td><td class="num">−3.14 → 约 12.19</td><td class="num">−3.00 → 约 10.21</td><td>多头、多尺度 attention 与残差上下采样组合有效</td></tr><tr class="badrow"><td>残差输出除以 <code class="m">\sqrt{2}</code></td><td class="num">+0.16</td><td class="num">+0.25</td><td>一个看似稳训练的改法在该设置下反而变差</td></tr><tr class="goodrow"><td>AdaGN</td><td class="num" colspan="2">13.06 vs 普通相加 + GN 的 15.08</td><td>用条件调制归一化，比只把条件向量加进去更有效</td></tr></tbody></table></div>
+<p>DDPM 原始实现则提供了谱系起点：GroupNorm 贯穿网络、共享权重处理所有时刻、用 Transformer 同款正弦时间嵌入，256×256 模型有 6 个分辨率、每层 2 个残差块，并在 16×16 做 self-attention。LDM 的关键变化是把去噪搬进感知压缩后的 latent，再用 cross-attention 接通文字。</p><div class="note"><strong>边界要说清：</strong>“扩散 U-Net”不是一张由某篇论文固定下来的唯一结构图。DDPM、ADM、LDM、Stable Diffusion XL 在通道数、attention 尺度、目标参数化和条件模块上都不同。本页画的是可追溯的共同主干，并对 Stable Diffusion v1 的尺寸另行点名。</div></section>
+
+<section id="s11"><h2><span class="n">11 / AFTERLIFE</span><span>DiT 换掉了骨架，没有换掉扩散任务</span></h2><div class="scroll-hint">← 左右滑动查看完整表格 →</div><div class="table-wrap"><table><thead><tr><th>维度</th><th>Diffusion U-Net</th><th>DiT</th><th>不变的部分</th></tr></thead><tbody><tr><td>基本单元</td><td>卷积 ResBlock + 多尺度上下采样</td><td>Transformer block + patch token</td><td>都接收带噪状态、时间与条件</td></tr><tr><td>空间组织</td><td>显式 U 形层级与 concat skip</td><td>多数原版 DiT 保持同一 token 尺度</td><td>都输出与输入状态对应的张量</td></tr><tr><td>条件注入</td><td>AdaGN、cross-attention</td><td>adaLN-Zero、joint attention 等</td><td>时间条件仍告诉网络轨迹位置</td></tr><tr><td>训练目标</td><td>可预测 <code class="m">\epsilon</code>、<code class="m">x_0</code> 或 <code class="m">v</code></td><td>同样可预测这些目标</td><td>架构和目标是两个独立旋钮</td></tr></tbody></table></div>
+<p>因此“DiT 取代 U-Net”只是在说预测器换了架构。扩散 / flow matching<a class="jr" href="#g-15">15</a>规定训练目标与采样轨迹，U-Net / DiT 负责拟合那个目标。你完全可以用 U-Net 预测速度，也可以用 DiT 预测噪声。</p><div class="limits"><div class="limit"><b>LIMIT 01</b><p>U 形多尺度很适合图像，但卷积局部偏置可能限制大规模模型的 scaling。</p></div><div class="limit"><b>LIMIT 02</b><p>高分辨率 attention 昂贵；latent diffusion 缓解了计算，却把细节上限部分交给 VAE。</p></div><div class="limit"><b>LIMIT 03</b><p>反复调用同一大网络仍慢；蒸馏、缓存和少步求解器解决的是循环成本，不是单个 U-Net 块。</p></div></div></section>
+
+<section class="gloss" aria-labelledby="gloss-title"><h2 id="gloss-title">术语就地补课</h2><ol>
+<li id="g-01"><span class="term">Diffusion timestep · 扩散时刻</span>：表示当前状态处在“几乎纯噪声”到“几乎干净”的哪一段，不是网络层编号。</li>
+<li id="g-02"><span class="term">Noise schedule · 噪声日程</span>：预先规定各时刻保留多少原信号、加入多少噪声的一组系数。</li>
+<li id="g-03"><span class="term">GroupNorm</span>：在单个样本内部按通道分组做归一化，不依赖 batch 统计；适合显存受限的小 batch 生成训练。详见 <a href="../concepts/group-normalization.html">GroupNorm</a>。</li>
+<li id="g-04"><span class="term">SiLU</span>：<code class="m">x\sigma(x)</code>，又常叫 Swish；是一种平滑、非单调的激活函数。</li>
+<li id="g-05"><span class="term">ResBlock</span>：主变换之外保留一条输入捷径并相加；复杂分支学不到有用变化时，至少容易退回恒等映射。</li>
+<li id="g-06"><span class="term">Timestep embedding</span>：把标量时间步编码成高维向量，再投影给每个 ResBlock。详见 <a href="../concepts/diffusion-timestep-conditioning.html">时间条件</a>。</li>
+<li id="g-07"><span class="term">Self-attention</span>：同一组图像位置互相做 Q/K/V；用来建立远距离空间关系。</li>
+<li id="g-08"><span class="term">Cross-attention</span>：一组 token 发 Query，另一组提供 Key/Value；LDM 里图像位置查询文字。详见 <a href="../concepts/cross-attention.html">cross-attention</a>。</li>
+<li id="g-09"><span class="term">Skip concat</span>：编码器与解码器同尺度特征沿通道维拼接；高宽不变、通道相加。详见 <a href="../concepts/skip-connection.html">skip connection</a>。</li>
+<li id="g-10"><span class="term">AdaGN / scale-shift norm</span>：条件向量不只相加，而是生成归一化后的缩放和平移，让每个时刻改写通道行为。</li>
+<li id="g-11"><span class="term">VAE latent</span>：图像经编码器压缩后的连续特征；Stable Diffusion v1 把 512×512 图压到 64×64×4，再在这里去噪。</li>
+<li id="g-12"><span class="term">Parameterization</span>：网络输出目标的定义；常见为噪声 <code class="m">\epsilon</code>、干净样本 <code class="m">x_0</code> 或速度 <code class="m">v</code>。</li>
+<li id="g-13"><span class="term">Scheduler / sampler</span>：读取网络预测和当前状态，按选定数值规则算下一状态；DDPM、DDIM、Euler、DPM-Solver 属于这一层。</li>
+<li id="g-14"><span class="term">Classifier-Free Guidance</span>：组合有条件与无条件输出，放大条件造成的方向差。详见 <a href="../concepts/classifier-free-guidance.html">CFG</a>。</li>
+<li id="g-15"><span class="term">DiT</span>：用 Transformer 取代扩散 U-Net 的预测骨架；并不自动等于 flow matching。详见 <a href="dit.html">DiT 精读</a>。</li>
+</ol></section>
+<section><h2><span class="n">SOURCES</span><span>原始材料与实现锚点</span></h2><ul class="sources"><li><a href="https://arxiv.org/abs/2006.11239">DDPM · Denoising Diffusion Probabilistic Models</a>：U-Net、GroupNorm、时间嵌入与 16×16 attention 的谱系起点。</li><li><a href="https://arxiv.org/abs/2105.05233">ADM · Diffusion Models Beat GANs on Image Synthesis</a>：架构消融、AdaGN、多尺度 attention 与残差上下采样。</li><li><a href="https://github.com/openai/guided-diffusion/blob/main/guided_diffusion/unet.py">guided-diffusion 官方 U-Net 实现</a>：ResBlock、scale-shift norm、AttentionBlock 的代码依据。</li><li><a href="https://arxiv.org/abs/2112.10752">LDM · High-Resolution Image Synthesis with Latent Diffusion Models</a>：latent diffusion 与文字 cross-attention。</li><li><a href="https://github.com/CompVis/stable-diffusion/blob/main/configs/stable-diffusion/v1-inference.yaml">Stable Diffusion v1 官方配置</a>：4 通道 latent、基础通道 320、倍率与 attention 下采样率。</li></ul></section>
+<footer class="colophon"><span>Architecture Guide / Diffusion U-Net</span><span>Scope / DDPM → ADM → LDM · verified 2026-07-27</span></footer>
+</main>
+<script>window.addEventListener("DOMContentLoaded",function(){if(!window.katex)return;document.querySelectorAll(".formula").forEach(function(el){try{katex.render(el.textContent.trim(),el,{displayMode:true,throwOnError:false,strict:false});}catch(e){}});});</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  var items={};
+  document.querySelectorAll('.gloss ol li[id^="g-"]').forEach(function(li){items[li.id]=li.innerHTML;});
+  if(!Object.keys(items).length)return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!items[id])return;
+      e.preventDefault();
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+items[id];
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>
