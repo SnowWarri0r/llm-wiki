@@ -164,7 +164,7 @@ figure.play .rl-svg .grow { transform: scaleX(1); }
 <p>关键分寸是<strong>必要非充分</strong><a class="jr" href="#g-10">10</a>：重建对<strong>不</strong>保证答案对（记住了题不代表算对），但重建错<strong>一定</strong>丢了信息。所以它是个<strong>过滤器</strong>——在作答前把"已经从原问题漂移"的潜在状态拦下、拽回，而不是去证明答案正确。重建损失用对<strong>原问题 token</strong> 的<a class="jr" href="#g-05">掩码交叉熵</a>（模板/padding/格式不算，只算真问题词）。</p>
 
 <h2><span class="num">§ 03</span>可微思考：别硬选 token，取期望嵌入</h2>
-<p>要让重建损失能<strong>反传回去调参</strong>，潜在那步就不能"硬选一个 token"——argmax 是台阶函数、不可导，梯度断在那里。ReLAT 用连续松弛（<a href="../concepts/differentiable-thought-representation.html">differentiable-thought-representation</a>）<a class="jr" href="#g-03">3</a>：对词表 logits 做 <a href="../concepts/softmax.html">softmax</a> 得分布 α，再算<strong>期望嵌入</strong> <code>ê = αᵀ W_emb</code>（各 token 嵌入按 α 的加权混合）。这样潜在向量留在嵌入空间、又对 logits 可微。</p>
+<p>要让重建损失能<strong>反传回去调参</strong>，潜在那步就不能"硬选一个 token"——argmax 是台阶函数、不可导，梯度断在那里。ReLAT 用连续松弛（<a href="../concepts/differentiable-thought-representation.html">differentiable-thought-representation</a>）<a class="jr" href="#g-03">3</a>：对词表 logits 做 <a href="../concepts/softmax.html">softmax</a> 得分布 α，再算<strong>期望嵌入</strong> <code class="m">ê =\alpha^{T} W_{\mathrm{emb}}</code>（各 token 嵌入按 α 的加权混合）。这样潜在向量留在嵌入空间、又对 logits 可微。</p>
 
 <figure id="fig-diff">
   <figcaption><span>Fig 02 · logits → softmax α → 期望嵌入（可微）</span><span class="fnum">DIFFERENTIABLE THOUGHT</span></figcaption>

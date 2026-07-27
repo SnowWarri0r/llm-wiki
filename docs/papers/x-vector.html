@@ -187,7 +187,7 @@ figure.play .xv-svg .grow { transform: scaleX(1); }
 
 <h2><span class="num">§ 03</span>TDNN：每层多看一点，三层看到 15 帧</h2>
 <p>池化之前，逐帧特征谁来抽？答案是 <strong>TDNN（时延网络）</strong><a class="jr" href="#g-03">3</a>。一帧语音只有 10 毫秒，单看一帧什么都听不出来，得看一小段上下文。但又不想像 RNN 那样一帧一帧串着算（慢、难并行）。TDNN 的办法：<strong>每层只看局部几帧，但一层叠一层，越上层一个输出帧间接看到的原始帧越多</strong>——就是卷在时间轴上的感受野<a class="jr" href="#g-04">4</a>。</p>
-<p>而且它<strong>跳着看</strong>（膨胀）：x-vector 第 3 层看的是 <code>{t−3, t, t+3}</code>，隔 3 帧取一个。这样少算很多帧，却能把感受野撑得很大——只用 3 层就把上下文铺到 15 帧（约 150 毫秒），足够刻画音素级声学。等价于现在说的 dilated conv1d。</p>
+<p>而且它<strong>跳着看</strong>（膨胀）：x-vector 第 3 层看的是 <code class="m">{t-3,t,t+3}</code>，隔 3 帧取一个。这样少算很多帧，却能把感受野撑得很大——只用 3 层就把上下文铺到 15 帧（约 150 毫秒），足够刻画音素级声学。等价于现在说的 dilated conv1d。</p>
 
 <figure id="fig-tdnn">
   <figcaption><span>Fig 02 · 感受野逐层张开 5 → 9 → 15</span><span class="fnum">TDNN 膨胀上下文</span></figcaption>

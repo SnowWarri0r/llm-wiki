@@ -250,12 +250,12 @@ figure.play .vt-svg .grow { transform: scaleY(1); }
 <p>同一句“今天下雨了”可以快说、慢说、升调、降调。文字只规定内容，没有规定唯一波形。<a href="../concepts/conditional-vae.html">条件 VAE</a><a class="jr" href="#g-02">2</a>用潜变量 z 承载这次录音里的音色、音高、节奏和细节：后验看真实线性谱给 z，解码器从 z 还原波形；推理时没有录音，只能从文本先验取 z。</p>
 
 <div class="var-grid">
-  <div class="var-card"><code>x_lin</code> · 真实语音的线性频谱<a class="jr" href="#g-14">14</a>，后验编码器的输入。</div>
-  <div class="var-card"><code>qφ(z|x_lin)</code> · 看过真实声音的后验<a class="jr" href="#g-03">3</a>，知道“这一次怎样说”。</div>
-  <div class="var-card"><code>c_text</code> · 文本编码器输出的音素条件。</div>
-  <div class="var-card"><code>pθ(z|c_text)</code> · 只看文字的先验<a class="jr" href="#g-04">4</a>，推理时真正负责采样。</div>
+  <div class="var-card"><code class="m">x_{\mathrm{lin}}</code> · 真实语音的线性频谱<a class="jr" href="#g-14">14</a>，后验编码器的输入。</div>
+  <div class="var-card"><code class="m">q_\phi (z|x_{\mathrm{lin}})</code> · 看过真实声音的后验<a class="jr" href="#g-03">3</a>，知道“这一次怎样说”。</div>
+  <div class="var-card"><code class="m">c_{\mathrm{text}}</code> · 文本编码器输出的音素条件。</div>
+  <div class="var-card"><code class="m">p_\theta (z|c_{\mathrm{text}})</code> · 只看文字的先验<a class="jr" href="#g-04">4</a>，推理时真正负责采样。</div>
   <div class="var-card"><code>G(z)</code> · 波形解码器，把潜变量还原成声音。</div>
-  <div class="var-card"><code>ε</code> · 标准高斯噪声，让同一分布可以采出不同样本。</div>
+  <div class="var-card"><code class="m">\epsilon</code> · 标准高斯噪声，让同一分布可以采出不同样本。</div>
 </div>
 
 <div class="math-board loss">
@@ -271,7 +271,7 @@ z &= \mu_q+\sigma_q\odot\varepsilon \\[4pt]
 \end{aligned}</div>
   <div class="math-caption"><strong>绿色</strong>管波形能否还原；<strong>金色</strong>管训练时的后验能否与推理时的文本先验接上。</div>
 </div>
-<p><code>⊙</code> 是逐元素相乘。重参数化把随机性放进 ε，让梯度仍能回到均值 μ<sub>q</sub> 与标准差 σ<sub>q</sub>。重建项逐格比较真实 mel 与生成波形的 mel；KL 则逼文本先验覆盖后验常出现的声音。</p>
+<p><code class="m">\odot</code> 是逐元素相乘。重参数化把随机性放进 ε，让梯度仍能回到均值 μ<sub>q</sub> 与标准差 σ<sub>q</sub>。重建项逐格比较真实 mel 与生成波形的 mel；KL 则逼文本先验覆盖后验常出现的声音。</p>
 
 <figure id="fig-cvae">
   <figcaption><span>FIG 04 · 后验从音频得 z；先验从文本得 z；KL 逼两者接得上</span><span class="fnum">CONDITIONAL VAE</span></figcaption>
@@ -368,7 +368,7 @@ z=1.5 → z<sub>p</sub>=<span class="cyan">3.5</span>；逆变换 3.5−2=<span 
 
 <h2 id="s5"><span class="num">§ 05</span>MAS：三枚音素，怎样占满五帧声音</h2>
 
-<p>训练数据通常只有整句文字和整段录音，没有逐帧标签。MAS<a class="jr" href="#g-07">7</a>先计算每个“音素 i—帧 j”的匹配分数 <code>s(i,j)=log p(z_j|c_i)</code>：这帧潜变量放在这个音素的先验下，概率越高，分数越大。合法路径必须单调、不跳音素，并覆盖全部帧。</p>
+<p>训练数据通常只有整句文字和整段录音，没有逐帧标签。MAS<a class="jr" href="#g-07">7</a>先计算每个“音素 i—帧 j”的匹配分数 <code class="m">s(i,j)=\log p(z_j|c_i)</code>：这帧潜变量放在这个音素的先验下，概率越高，分数越大。合法路径必须单调、不跳音素，并覆盖全部帧。</p>
 
 <figure id="fig-mas">
   <figcaption><span>FIG 06 · 在 N×T 打分表上用 DP 找单调阶梯路径（3 音素对齐 8 帧）</span><span class="fnum">MONOTONIC ALIGN</span></figcaption>
@@ -423,7 +423,7 @@ z=1.5 → z<sub>p</sub>=<span class="cyan">3.5</span>；逆变换 3.5−2=<span 
 音素 C　 0　　0　　1　　3　　5<br><br>
 B 在帧2的累计分是 4+2=6；走到帧3：继续 B 得 6+4=<span class="dim">10</span>；从 A 切来得 7+4=<span class="gold">11</span> → 选 11<br>
 回溯：A,A,B,C,C；总分 4+3+4+3+5=<span class="green">19</span>；时长=[2,1,2]</div>
-<p>递推只有两种合法来路：<code>Q(i,j−1)</code> 是继续当前音素，<code>Q(i−1,j−1)</code> 是从上一个音素切过来。MAS 得到的每音素帧数也正好成为时长预测器的训练答案。</p>
+<p>递推只有两种合法来路：<code class="m">Q(i,j-1)</code> 是继续当前音素，<code class="m">Q(i-1,j-1)</code> 是从上一个音素切过来。MAS 得到的每音素帧数也正好成为时长预测器的训练答案。</p>
 
 <h2 id="s6"><span class="num">§ 06</span>随机时长：随机到底从哪来</h2>
 
@@ -436,12 +436,12 @@ B 在帧2的累计分是 4+2=6；走到帧3：继续 B 得 6+4=<span class="dim"
   <div class="sdp-lanes">
     <div class="sdp-lane train-lane">
       <b>训练 · 已知正确时长 d</b>
-      <p><code>qφ</code> 同时看文字和 MAS 答案，再采出 <code>u、ν</code>。整数时长由此变成两行连续数，Flow 才能计算它的概率。</p>
+      <p><code class="m">q_\phi</code> 同时看文字和 MAS 答案，再采出 <code>u、ν</code>。整数时长由此变成两行连续数，Flow 才能计算它的概率。</p>
       <div class="pipe">d=[2,4,3]<br>u=[.2,.6,.1] → d−u=[1.8,3.4,2.9]<br>ν=[.5,−.7,.2] → 与 d−u 拼接</div>
     </div>
     <div class="sdp-lane infer-lane">
       <b>推理 · 没有正确时长 d</b>
-      <p>推理时不再使用 <code>qφ</code>。文本保持不变，重新抽一份高斯噪声 <code>e</code>，再把时长 Flow 倒着走，最后将连续时长取整。</p>
+      <p>推理时不再使用 <code class="m">q_\phi</code>。文本保持不变，重新抽一份高斯噪声 <code>e</code>，再把时长 Flow 倒着走，最后将连续时长取整。</p>
       <div class="pipe">e∼N(0,I) → inverse Flow → log w<br>→ exp → w → ceil(w) → 整数帧数</div>
     </div>
   </div>
@@ -455,7 +455,7 @@ B 在帧2的累计分是 4+2=6；走到帧3：继续 B 得 6+4=<span class="dim"
     <div class="sdp-step latent"><b>自检</b><strong>ceil(d−u)=d</strong><span>[1.8,3.4,2.9] 仍还原成 [2,4,3]</span></div>
   </div>
 
-  <p>去量化变量 <code>u</code><a class="jr" href="#g-09">9</a> 与 <code>d</code> 同形状，每项限制在 <code>[0,1)</code>；所以 <code>d−u</code> 虽然变成了小数，向上取整后仍是原标签。增广变量 <code>ν</code><a class="jr" href="#g-10">10</a> 也与 <code>d</code> 同形状。它只帮 Flow 表示更复杂的分布，最后不会作为时长输出。</p>
+  <p>去量化变量 <code>u</code><a class="jr" href="#g-09">9</a> 与 <code>d</code> 同形状，每项限制在 <code>[0,1)</code>；所以 <code class="m">d-u</code> 虽然变成了小数，向上取整后仍是原标签。增广变量 <code class="m">\nu</code><a class="jr" href="#g-10">10</a> 也与 <code>d</code> 同形状。它只帮 Flow 表示更复杂的分布，最后不会作为时长输出。</p>
 
   <h3>先学会读 qφ(u,ν | d,c_text)，再看公式</h3>
   <p>不用先会“联合条件分布”这个名词。把竖线 <code>|</code><a class="jr" href="#g-19">19</a> 直接读成“<strong>已知</strong>”：竖线右边是抽样前已经知道的信息，左边是这次要抽出的东西。</p>
@@ -485,10 +485,10 @@ u=[.2,.6,.1]，ν=[.5,−.7,.2]
 不是把 u、ν、d、c_text 四项相乘。</pre></div>
 
   <h3>公式路线图：先拼回整数概率，再谈下界</h3>
-  <p>我们真正想算的是 <code>log pθ(d|c_text)</code>。<code>pθ</code> 只看文本，训练和推理都用；<code>qφ</code> 能看文本和正确时长，只负责训练时抽 <code>u、ν</code>。</p>
+  <p>我们真正想算的是 <code class="m">\log p_\theta (d|c_{\mathrm{text}})</code>。<code class="m">p_\theta</code> 只看文本，训练和推理都用；<code class="m">q_\phi</code> 能看文本和正确时长，只负责训练时抽 <code>u、ν</code>。</p>
 
   <h3>① pθ(d−u,ν|c_text) 从哪来</h3>
-  <p>先只看一个音素，并令正确时长 <code>d=2</code>。Flow 不能直接给整数点 2 算概率，它处理的是连续数。所有满足 <code>1&lt;w≤2</code> 的连续时长，向上取整后都是 2；而区间里的任何 <code>w</code> 都能写成 <code>w=2−u</code>，其中 <code>0≤u&lt;1</code>。</p>
+  <p>先只看一个音素，并令正确时长 <code>d=2</code>。Flow 不能直接给整数点 2 算概率，它处理的是连续数。所有满足 <code class="m">1&lt;w\le 2</code> 的连续时长，向上取整后都是 2；而区间里的任何 <code>w</code> 都能写成 <code class="m">w=2-u</code>，其中 <code class="m">0\le u&lt;1</code>。</p>
 
   <div class="calc-check"><strong>同一个整数 d=2，有无数个连续代表</strong><pre>u=.2 → w=2−.2=1.8 → ceil(1.8)=2
 u=.7 → w=2−.7=1.3 → ceil(1.3)=2
@@ -496,9 +496,9 @@ u=.7 → w=2−.7=1.3 → ceil(1.3)=2
 d−u 不是新标签；它是在整数 d 对应的区间里，
 选出的一个连续位置。</pre></div>
 
-  <p><code>ν</code>（希腊字母 nu，不是英文 v）也是连续辅助变量，最终不会输出。要得到整数 <code>d</code> 的总概率，就得把所有 <code>u</code> 对应的连续位置、以及所有 <code>ν</code> 全部加起来。这里其实做了两步，不能只扔出最后一行：先把连续时长 <code>w</code> 换成 <code>u=d−w</code>，再把二维区域里的密度全部加起来。</p>
+  <p><code class="m">\nu</code>（希腊字母 nu，不是英文 v）也是连续辅助变量，最终不会输出。要得到整数 <code>d</code> 的总概率，就得把所有 <code>u</code> 对应的连续位置、以及所有 <code class="m">\nu</code> 全部加起来。这里其实做了两步，不能只扔出最后一行：先把连续时长 <code>w</code> 换成 <code class="m">u=d-w</code>，再把二维区域里的密度全部加起来。</p>
 
-  <div class="note"><span class="l">先认清 g</span><code>g(w,ν)</code> 只是 <code>pθ(w,ν|c_text)</code> 的临时简称，不是新变量。后者表示：文本条件 <code>c_text</code> 已经固定时，连续变量 <code>w、ν</code> 在这一点的联合概率密度。竖线右边的条件从第一行起就藏在 <code>g</code> 里。</div>
+  <div class="note"><span class="l">先认清 g</span><code class="m">g(w,\nu )</code> 只是 <code class="m">p_\theta (w,\nu |c_{\mathrm{text}})</code> 的临时简称，不是新变量。后者表示：文本条件 <code class="m">c_{\mathrm{text}}</code> 已经固定时，连续变量 <code>w、ν</code> 在这一点的联合概率密度。竖线右边的条件从第一行起就藏在 <code>g</code> 里。</div>
 
   <div class="math-board">
     <div class="math-label">Step 1A · w 换成 u：上下限为什么变成 0 到 1</div>
@@ -525,12 +525,12 @@ g(2-u,\nu)&\overset{g\text{ 的定义}}{=}p_\theta\!\left(2-u,\nu\mid c\right) \
 P_2&=\int_0^1\!\int_{\mathbb R}p_\theta\!\left(2-u,\nu\mid c\right)\,d\nu\,du
 \end{aligned}</div>
     <div class="math-caption math-caption-ledger">
-      <div class="caption-row swap"><strong>换元与展开是两件事</strong><span><code>w→2−u</code> 是换元；<code>g→pθ(...|c_text)</code> 只是把第一行定义的简称重新展开。</span></div>
+      <div class="caption-row swap"><strong>换元与展开是两件事</strong><span><code class="m">w\to 2-u</code> 是换元；<code class="m">g\to p_\theta (...|c_{\mathrm{text}})</code> 只是把第一行定义的简称重新展开。</span></div>
       <div class="caption-row sign"><strong>负号没有消失</strong><span><code>w</code> 从 1 走到 2 时，<code>u</code> 反而从 1 走到 0；把反向上下限调回 0→1，正好再贡献一个负号，两者抵消。因为 <code>|dw/du|=1</code>，这里没有额外缩放系数。</span></div>
     </div>
   </div>
 
-  <p>内层积分先固定一个 <code>u</code>，把这一列所有 <code>ν</code> 加完；外层积分再把 <code>u∈[0,1)</code> 的所有列加完。也可以反过来先加 <code>u</code>、再加 <code>ν</code>，因为两次覆盖的都是同一个笛卡尔积区域 <code>[0,1)×ℝ</code>，而概率密度处处非负。非负量怎么分行、分列求和，总和都一样；连续版本叫 Tonelli 定理。</p>
+  <p>内层积分先固定一个 <code>u</code>，把这一列所有 <code class="m">\nu</code> 加完；外层积分再把 <code class="m">u\in [0,1)</code> 的所有列加完。也可以反过来先加 <code>u</code>、再加 <code class="m">\nu</code>，因为两次覆盖的都是同一个笛卡尔积区域 <code class="m">[0,1)\times ℝ</code>，而概率密度处处非负。非负量怎么分行、分列求和，总和都一样；连续版本叫 Tonelli 定理。</p>
 
   <div class="math-board">
     <div class="math-label">Step 1B · 为什么可以交换两层积分</div>
@@ -557,7 +557,7 @@ u≥.5          .03   .07
 先固定 u、加 ν：(.04+.06)+(.03+.07)=.20
 先固定 ν、加 u：(.04+.03)+(.06+.07)=.20  ✓</pre></div>
 
-  <p>对向量时长 <code>d∈ℕᵀ</code> 也是同一件事，只是积分区域变成 <code>[0,1)ᵀ×ℝᵀ</code>。为了不再暗中交换顺序，后面统一写成：</p>
+  <p>对向量时长 <code class="m">d\in ℕ^{T}</code> 也是同一件事，只是积分区域变成 <code class="m">[0,1)^{T}\times ℝ^{T}</code>。为了不再暗中交换顺序，后面统一写成：</p>
 
   <div class="math-board">
     <div class="math-label">Step 1C · 向量时长的完整写法</div>
@@ -570,13 +570,13 @@ P_d&\equiv p_\theta\!\left(d\mid c_{\mathrm{text}}\right) \\
 h(u,\nu)&\equiv p_\theta\!\left(d-u,\nu\mid c_{\mathrm{text}}\right) \\[3pt]
 P_d&=\int_{[0,1)^T}\!\int_{\mathbb R^T}h(u,\nu)\,d\nu\,du
 \end{aligned}</div>
-    <div class="math-caption"><strong>青色部分</strong>是 Flow 给一个连续代表 <code>[d−u,ν]</code> 算出的密度；两层积分把所有连续代表的密度加回整数时长 <code>d</code> 的概率。</div>
+    <div class="math-caption"><strong>青色部分</strong>是 Flow 给一个连续代表 <code class="m">[d-u,\nu ]</code> 算出的密度；两层积分把所有连续代表的密度加回整数时长 <code>d</code> 的概率。</div>
   </div>
 
-  <p>所以 <code>pθ(d−u,ν|c_text)</code> 不是凭空加进去的。它来自变量替换 <code>w=d−u</code>；两层积分则是在同一个区域内把所有 <code>[d−u,ν]</code> 的概率密度加起来。</p>
+  <p>所以 <code class="m">p_\theta (d-u,\nu |c_{\mathrm{text}})</code> 不是凭空加进去的。它来自变量替换 <code class="m">w=d-u</code>；两层积分则是在同一个区域内把所有 <code class="m">[d-u,\nu ]</code> 的概率密度加起来。</p>
 
   <h3>② 为什么要除以 qφ</h3>
-  <p>上面的积分维度很高，无法枚举所有 <code>u、ν</code>。VITS 便让 <code>qφ</code> 挑几组值得计算的样本。但 <code>qφ</code> 不是均匀抽样：某些区域抽得多，某些区域抽得少。直接平均 <code>pθ</code>，抽得多的区域就会被重复多算。</p>
+  <p>上面的积分维度很高，无法枚举所有 <code>u、ν</code>。VITS 便让 <code class="m">q_\phi</code> 挑几组值得计算的样本。但 <code class="m">q_\phi</code> 不是均匀抽样：某些区域抽得多，某些区域抽得少。直接平均 <code class="m">p_\theta</code>，抽得多的区域就会被重复多算。</p>
 
   <div class="math-board">
     <div class="math-label">Step 2 · 乘除同一个 q，积分没有改变</div>
@@ -623,7 +623,7 @@ p_\theta(d\mid c_{\mathrm{text}})&=\mathbb E_q\!\left[\frac pq\right]
     <div class="math-keyline"><span class="eq">= · 仍是同一个量</span><span class="ineq">≥ · Jensen，只在这里变成下界</span><span class="corr">−log q · 来自 log(p/q)</span></div>
   </div>
 
-  <p>因此，<code>−log qφ(...)</code> 不是额外添加的惩罚项。完整来路是：用 <code>q</code> 抽样时必须用 <code>p/q</code> 校正；<code>p/q</code> 放进 <code>log</code>，便自然变成 <code>log p−log q</code>。</p>
+  <p>因此，<code class="m">-\log q_\phi (...)</code> 不是额外添加的惩罚项。完整来路是：用 <code>q</code> 抽样时必须用 <code>p/q</code> 校正；<code>p/q</code> 放进 <code>log</code>，便自然变成 <code class="m">\log p-\log q</code>。</p>
 
   <h3>把三步合起来，才是论文公式</h3>
   <div class="math-board bound">
@@ -674,7 +674,7 @@ E_q[p/q] = .75×.16 + .25×.32
 
 −1.609 ≥ −1.659  ✓ 下界没有超过左边</pre></div>
 
-  <p>如果 <code>q</code> 学得更准，把 A、B 的抽样率改成 <code>.12/.20=.60</code> 和 <code>.08/.20=.40</code>，那么两边的 <code>p/q</code> 都等于 <code>.20</code>，下界正好等于 <code>log .20=−1.609</code>。这也解释了为什么 <code>qφ</code> 需要训练：它越能找准哪些 <code>u、ν</code> 真正重要，下界就越紧。论文最后取下界的负数作为 <code>L_dur</code>，继续沿用“损失越小越好”的训练方式。</p>
+  <p>如果 <code>q</code> 学得更准，把 A、B 的抽样率改成 <code>.12/.20=.60</code> 和 <code>.08/.20=.40</code>，那么两边的 <code>p/q</code> 都等于 <code>.20</code>，下界正好等于 <code class="m">\log .20=-1.609</code>。这也解释了为什么 <code class="m">q_\phi</code> 需要训练：它越能找准哪些 <code>u、ν</code> 真正重要，下界就越紧。论文最后取下界的负数作为 <code class="m">L_{\mathrm{dur}}</code>，继续沿用“损失越小越好”的训练方式。</p>
 
   <h3>推理路线：真正让每次时长不同的是高斯噪声</h3>
   <div class="math-dark"><span class="gold">噪声 A</span> → log w=[.59,.92,.69]<br>
@@ -685,7 +685,7 @@ E_q[p/q] = .75×.16 + .25×.32
   → ceil(w)=<span class="green">[3,4,3]</span><br><br>
   <span class="dim">文字不变，只换一份高斯噪声，最后的时长就可能不同。这里的数字只用于走通计算。</span></div>
 
-  <p>官方实现先让 SDP 输出 <code>log w</code>，再计算 <code>w=exp(log w)×length_scale</code>，最后执行 <code>ceil(w)</code>。<code>noise_scale_w</code> 控制每次采样能偏离多远，<code>length_scale</code> 则把整句话统一拉长或缩短。SDP 接收文本表示时还会做 stop-gradient：时长损失只更新时长预测器，不继续传回文本编码器。</p>
+  <p>官方实现先让 SDP 输出 <code>log w</code>，再计算 <code class="m">w=\exp (\log w)\times length_{\mathrm{scale}}</code>，最后执行 <code>ceil(w)</code>。<code>noise_scale_w</code> 控制每次采样能偏离多远，<code>length_scale</code> 则把整句话统一拉长或缩短。SDP 接收文本表示时还会做 stop-gradient：时长损失只更新时长预测器，不继续传回文本编码器。</p>
 </figure>
 
 <figure id="fig-sdp">
@@ -754,7 +754,7 @@ E_q[p/q] = .75×.16 + .25×.32
 
 <div class="gan-rounds">
   <div class="gan-round d-round"><b>第一回合 · 只更新 D</b><p>假设 <code>D(y)=0.8</code>、<code>D(G(z))=0.3</code>：</p><p><code>L_adv(D)=(.8−1)²+.3²=.04+.09=.13</code></p><p>第一项让真声分数靠近 1；第二项让假声分数靠近 0。此时 <code>G(z)</code> 会 detach，不更新 G。</p></div>
-  <div class="gan-round g-round"><b>第二回合 · 固定 D，只更新 G</b><p>仍从假声分数 <code>0.3</code> 出发：</p><p><code>L_adv(G)=(.3−1)²=.49</code></p><p>若 G 改进后让固定的 D 打出 <code>0.7</code>，损失便降成 <code>(.7−1)²=.09</code>。</p></div>
+  <div class="gan-round g-round"><b>第二回合 · 固定 D，只更新 G</b><p>仍从假声分数 <code>0.3</code> 出发：</p><p><code>L_adv(G)=(.3−1)²=.49</code></p><p>若 G 改进后让固定的 D 打出 <code>0.7</code>，损失便降成 <code class="m">(.7-1)^{2}=.09</code>。</p></div>
 </div>
 
 <p>这两个目标并不冲突，因为每一步更新的网络不同：先练 <code>D</code> 分辨真假，再固定 <code>D</code> 训练 <code>G</code>。两个步骤交替进行。</p>
@@ -820,7 +820,7 @@ L_fm(G) = .5 + .3 = .8</pre></div>
   <div class="recipe">
     <div class="recipe-card"><h4>DATA</h4><p><strong>LJ Speech</strong><br>13,100 段 · 约 24h · 单人<br>12,500 / 100 / 500</p><p><strong>VCTK</strong><br>约 44,000 段 · 44h · 109 人<br>43,470 / 100 / 500</p></div>
     <div class="recipe-card"><h4>PREPROCESS</h4><p>文本 → IPA 音素<br>音素间插 blank token</p><p>STFT: FFT / window / hop<br><code>1024 / 1024 / 256</code></p><p>重建损失：80 维 mel</p></div>
-    <div class="recipe-card"><h4>OPTIMIZE</h4><p>AdamW · β₁=.8 · β₂=.99<br>weight decay .01</p><p>初始 LR <code>2e−4</code><br>4×V100 · mixed precision<br>最多 800k steps</p></div>
+    <div class="recipe-card"><h4>OPTIMIZE</h4><p>AdamW · β₁=.8 · β₂=.99<br>weight decay .01</p><p>初始 LR <code class="m">2e-4</code><br>4×V100 · mixed precision<br>最多 800k steps</p></div>
   </div>
   <div class="note"><span class="l">省显存的关键</span>不是每次把整段 latent 都解码，而是随机截 32 帧，只生成对应短波形片段；判别与 mel 重建也在这段上算。</div>
 </figure>
@@ -845,7 +845,7 @@ L_fm(G) = .5 + .3 = .8</pre></div>
   <tr><td>VITS(DDP)</td><td>2005.03</td><td>×90.93</td></tr>
 </table>
 
-<div class="note"><span class="l">×67.12 实时是什么</span>生成 1 秒语音约需 <code>1 / 67.12 ≈ 0.015</code> 秒，不是把音频播放速度调成 67 倍。SDP 更慢一些，但主体仍是非自回归<a class="jr" href="#g-15">15</a>并行生成。</div>
+<div class="note"><span class="l">×67.12 实时是什么</span>生成 1 秒语音约需 <code class="m">1 / 67.12 \approx 0.015</code> 秒，不是把音频播放速度调成 67 倍。SDP 更慢一些，但主体仍是非自回归<a class="jr" href="#g-15">15</a>并行生成。</div>
 <p>VCTK 多说话人实验中，VITS 与真人 MOS<a class="jr" href="#g-16">16</a> 都是 <strong>4.38</strong>（置信区间分别 ±0.06、±0.07），微调后的 Glow-TTS 两段系统为 3.82。但 CMOS<a class="jr" href="#g-17">17</a> 仍显示听众小幅偏好真人：LJ Speech 为 <strong>−0.106</strong>，VCTK 为 <strong>−0.262</strong>。准确结论是“主观质量非常接近真人”，而不是“已经证明听不出差别”。</p>
 
 <h2 id="s11"><span class="num">§ 11</span>消融：什么真的关键，什么只是小幅加分</h2>
@@ -910,7 +910,7 @@ L_fm(G) = .5 + .3 = .8</pre></div>
     <li id="g-18"><span class="term"><a href="../concepts/flow-matching.html">Flow Matching 对比</a></span> · 都叫 Flow，但 VITS 用离散可逆层和精确似然；Flow Matching 学连续时间速度场。</li>
     <li id="g-19"><span class="term">条件符号 |</span> · 把 <code>q(a,b|c,d)</code> 读成“已经知道 c、d 时，a、b 会怎样取值”。竖线左边是要描述或抽取的量，右边是已经给定的条件；逗号是在列清单，不是乘号。</li>
     <li id="g-20"><span class="term">重要性采样校正</span> · 不按均匀方式抽样时，用 <code>p/q</code> 抵消 q 的抽样偏重：q 抽得越频繁，每份样本就除得越小，因此 <code>E_q[p/q]</code> 仍等于对 p 的完整积分。</li>
-    <li id="g-21"><span class="term">Jensen 不等式</span> · 对数函数向下弯，所以 <code>log E[r] ≥ E[log r]</code>。VITS 把 <code>r=p/q</code> 代进去，才从严格相等变成可训练的下界。</li>
+    <li id="g-21"><span class="term">Jensen 不等式</span> · 对数函数向下弯，所以 <code class="m">\log E[r] \ge E[\log r]</code>。VITS 把 <code>r=p/q</code> 代进去，才从严格相等变成可训练的下界。</li>
   </ol>
 </div>
 

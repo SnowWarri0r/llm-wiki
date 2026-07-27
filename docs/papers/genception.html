@@ -210,7 +210,7 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
     <div class="formula" data-expr="x_t=(1-t)x_0+t\epsilon,\qquad 0\le t\le 1"></div>
     <div class="symbols">
       <div class="symbol"><b>x₀</b><br>干净视频经 VAE 得到的 latent。</div>
-      <div class="symbol"><b>ε</b><br>与 <code>x₀</code> 同形状的高斯噪声。</div>
+      <div class="symbol"><b>ε</b><br>与 <code class="m">x_{0}</code> 同形状的高斯噪声。</div>
       <div class="symbol"><b>t</b><br>路径位置；<code>0</code> 是干净端，<code>1</code> 是噪声端。</div>
       <div class="symbol"><b>xₜ</b><br>在时刻 <code>t</code> 的带噪 latent。</div>
       <div class="symbol"><b>(1−t), t</b><br>干净信号和噪声各占多少。</div>
@@ -223,11 +223,11 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
       <div class="symbol"><b>v*</b><br>训练标签里的目标速度；星号不是乘法。</div>
       <div class="symbol"><b>ε−x₀</b><br>从干净端指向噪声端的方向。</div>
     </div>
-    <p>生成时恰好反着走：从 <code>t=1</code> 的噪声积分回 <code>t=0</code> 的视频。感知输入本来就是干净视频，因此 GenCeption 直接喂 <code>x₀</code>，告诉 DiT 当前在干净端 <code>t=0</code>，只跑一次。</p>
+    <p>生成时恰好反着走：从 <code>t=1</code> 的噪声积分回 <code>t=0</code> 的视频。感知输入本来就是干净视频，因此 GenCeption 直接喂 <code class="m">x_{0}</code>，告诉 DiT 当前在干净端 <code>t=0</code>，只跑一次。</p>
 
     <h3>取反：只翻转方向，不会把噪声凭空删掉</h3>
     <div class="formula" data-expr="-v^\*=x_0-\epsilon"></div>
-    <p>原速度指向噪声，负速度指回干净端。论文的原话是它与目标视频 latent “更接近”，并在实验上加快收敛、改善表现；论文没有说 <code>−v</code> 就精确等于目标。</p>
+    <p>原速度指向噪声，负速度指回干净端。论文的原话是它与目标视频 latent “更接近”，并在实验上加快收敛、改善表现；论文没有说 <code class="m">-v</code> 就精确等于目标。</p>
     <figure>
       <figcaption class="figcap"><span>Fig 03 · 一个标量沿整流流直线移动</span><span class="n">仅用于解释符号，不是实际网络维数</span></figcaption>
       <pre><span class="dim">给定：</span>x₀ = 2，ε = −1，t = .25
@@ -259,13 +259,13 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
 
     <h3>六维相机射线为什么能变成一张三通道图</h3>
     <p>这里的 raymap<a class="jr" href="#g-08">8</a>是每个像素对应的相机射线场，不是把相机矩阵直接涂成彩色。详见 <a href="../concepts/raymap.html">raymap</a>。</p>
-    <p>每个像素对应一条三维射线：三维起点 <code>o=(oₓ,oᵧ,o_z)</code> 加三维方向 <code>d=(dₓ,dᵧ,d_z)</code>，合计六个数。论文的 “Rothko” 表示没有把六个数硬压成三个，而是让画面不同区域承担不同含义。</p>
+    <p>每个像素对应一条三维射线：三维起点 <code class="m">o=(o_{x},oᵧ,o_z)</code> 加三维方向 <code class="m">d=(d_{x},dᵧ,d_z)</code>，合计六个数。论文的 “Rothko” 表示没有把六个数硬压成三个，而是让画面不同区域承担不同含义。</p>
     <figure>
       <figcaption class="figcap"><span>Fig 05 · Rothko raymap 的空间打包</span><span class="n">中心存起点，外围存方向</span></figcaption>
       <div class="ray">
         <div class="six">
-          <div class="raypart"><strong>射线起点 o</strong><span>3 通道<br><code>oₓ, oᵧ, o_z</code></span></div>
-          <div class="raypart"><strong>射线方向 d</strong><span>3 通道<br><code>dₓ, dᵧ, d_z</code></span></div>
+          <div class="raypart"><strong>射线起点 o</strong><span>3 通道<br><code class="m">o_{x},oᵧ,o_z</code></span></div>
+          <div class="raypart"><strong>射线方向 d</strong><span>3 通道<br><code class="m">d_{x},dᵧ,d_z</code></span></div>
         </div>
         <div class="arrow">→</div>
         <div class="pack"><div class="center">中心矩形<br>起点 RGB</div><span style="position:absolute;opacity:0">外围存方向 RGB</span></div>
@@ -283,7 +283,7 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
       <div class="tokenline">
         <div class="tokenbox"><h4><code>T</code> 个 token</h4><p>第 1 个问第 1 帧，第 2 个问第 2 帧，直到第 <code>T</code> 帧。</p></div><div class="arrow">→</div>
         <div class="tokenbox"><h4>同一个 DiT</h4><p>查询 token 与视频 latent 互相注意，并使用原生 3D RoPE<a class="jr" href="#g-07">7</a> 标记时空位置。</p></div><div class="arrow">→</div>
-        <div class="tokenbox"><h4><code>T × K</code> 输出</h4><p>MLP 为每帧输出 <code>K</code> 个数，例如所有关节的 3D 坐标。</p></div>
+        <div class="tokenbox"><h4><code class="m">T \times K</code> 输出</h4><p>MLP 为每帧输出 <code>K</code> 个数，例如所有关节的 3D 坐标。</p></div>
       </div>
     </figure>
     <div class="symbols">
@@ -380,10 +380,10 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
         <tbody><tr><td>1.3B</td><td>5.92 秒</td><td>13.6</td><td>0.96 秒</td><td>15.3 GB</td></tr><tr><td>14B</td><td>10.03 秒</td><td>8.0</td><td>5.11 秒</td><td>42.8 GB</td></tr></tbody>
       </table></div>
     </figure>
-    <p>小模型的 DiT 只占 <code>0.96/5.92≈16%</code> 总时间，VAE 和文本编码等外围成本反而更显眼。论文还报告文本编码器约 10 GB、VAE 约 0.25 GB，可卸载到系统内存，但会牺牲速度。</p>
+    <p>小模型的 DiT 只占 <code class="m">0.96/5.92\approx 16%</code> 总时间，VAE 和文本编码等外围成本反而更显眼。论文还报告文本编码器约 10 GB、VAE 约 0.25 GB，可卸载到系统内存，但会牺牲速度。</p>
 
     <h3>对照二：同一深度数据下，生成预训练明显更强</h3>
-    <p><code>AbsRel</code> 是平均绝对相对深度误差，越低越好；<code>δ1</code> 是预测与真值的比值落在 <code>1/1.25</code> 到 <code>1.25</code> 内的像素比例，越高越好。</p>
+    <p><code>AbsRel</code> 是平均绝对相对深度误差，越低越好；<code class="m">\delta 1</code> 是预测与真值的比值落在 <code>1/1.25</code> 到 <code>1.25</code> 内的像素比例，越高越好。</p>
     <div class="formula wide" data-expr="\operatorname{AbsRel}=\frac{1}{N}\sum_{i=1}^{N}\frac{|\hat d_i-d_i|}{d_i}"></div>
     <div class="symbols">
       <div class="symbol"><b>N</b><br>参与评估的有效像素数。</div>
@@ -433,7 +433,7 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
       <div class="limit"><b>稀疏任务不统一</b><p>新增 token 偏离预训练接口，3D 关键点联合训练失败。</p></div>
       <div class="limit"><b>一次前向仍不便宜</b><p>14B 处理 81 帧约 10 秒，只是省掉迭代采样。</p></div>
       <div class="limit"><b>合成数据仍偏人体</b><p>800 个人体资产和 200 段动作不能代表开放世界全部外观与运动。</p></div>
-      <div class="limit"><b>关键超参未公开</b><p><code>α</code>、梯度阈值、任务混合比例和 L2 reduction 都缺失。</p></div>
+      <div class="limit"><b>关键超参未公开</b><p><code class="m">\alpha</code>、梯度阈值、任务混合比例和 L2 reduction 都缺失。</p></div>
       <div class="limit"><b>代码尚未放出</b><p>截至 2026-07-26，项目页仍写 Code TBA，复现边界要保留。</p></div>
     </div>
     <div class="note goodnote"><span class="mini">我的结论</span>GenCeption 最可信的贡献不是已经造出“万能视觉大脑”，而是给出一条可操作路线：生成预训练负责大规模学世界，后训练尽量沿用原输出接口，把视觉任务改写为生成模型熟悉的连续目标。它的负结果又提醒我们，统一的关键不是任务越多越好，而是新任务能否用预训练模型熟悉的语言表达。</div>

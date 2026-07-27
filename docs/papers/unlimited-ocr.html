@@ -122,7 +122,7 @@ figure.play .uo-svg .draw { stroke-dashoffset: 0; }
 
 <div class="tldr">
   <span class="label">TL;DR</span>
-  <p>拿 LLM 当 OCR 解码器有个硬伤：输出越长，<a class="jr" href="#g-04">KV cache</a> 越堆越大、生成越来越慢，所以现有模型只能一页一图 for-loop 跑。Unlimited OCR 以 <a class="jr" href="#g-09">DeepSeek-OCR</a> 为底，只改一件事——把解码器里<strong>所有</strong>注意力层换成 <a class="jr" href="#g-01">R-SWA（Reference Sliding Window Attention）</a>：每个生成 token 只看「<strong>全部原图（视觉 token，全局可见）</strong> + <strong>刚写的最近 128 个字（滑窗）</strong>」，早期输出滑出窗口就淘汰。于是 KV cache 恒定为 <code>L_m + n</code>，不随输出长度涨。配上 <a class="jr" href="#g-03">DeepEncoder</a> 把一页压成 256 个视觉 token，两头一夹——几十页文档一次前向解析完，还顺手把 OmniDocBench 从 87 涨到 <strong>93.23</strong>。</p>
+  <p>拿 LLM 当 OCR 解码器有个硬伤：输出越长，<a class="jr" href="#g-04">KV cache</a> 越堆越大、生成越来越慢，所以现有模型只能一页一图 for-loop 跑。Unlimited OCR 以 <a class="jr" href="#g-09">DeepSeek-OCR</a> 为底，只改一件事——把解码器里<strong>所有</strong>注意力层换成 <a class="jr" href="#g-01">R-SWA（Reference Sliding Window Attention）</a>：每个生成 token 只看「<strong>全部原图（视觉 token，全局可见）</strong> + <strong>刚写的最近 128 个字（滑窗）</strong>」，早期输出滑出窗口就淘汰。于是 KV cache 恒定为 <code class="m">L_m +n</code>，不随输出长度涨。配上 <a class="jr" href="#g-03">DeepEncoder</a> 把一页压成 256 个视觉 token，两头一夹——几十页文档一次前向解析完，还顺手把 OmniDocBench 从 87 涨到 <strong>93.23</strong>。</p>
 </div>
 
 <h2><span class="num">§ 01</span>LLM 当解码器的甜头与代价</h2>
@@ -256,7 +256,7 @@ figure.play .uo-svg .draw { stroke-dashoffset: 0; }
 </figure>
 
 <h2><span class="num">§ 05</span>恒定 KV cache：unlimited 的底气</h2>
-<p>这一步是全部收益的来源。标准 MHA 的 KV cache = <code>L_m + T</code>，随生成长度 T 线性涨；R-SWA 永远只留"前缀 L_m + 最近 n"，即 <code>L_m + n</code>，<strong>封顶不动</strong><a class="jr" href="#g-05">5</a>。算个账：前缀 L_m=300、n=128，解码一本书 T=10000——MHA 要 10300，R-SWA 只要 428，<strong>省 96%</strong>。T 拉到十万，MHA 跟着涨，R-SWA 还是 428。显存和每步算力都恒定，所以几十页一次过、速度不掉。</p>
+<p>这一步是全部收益的来源。标准 MHA 的 KV cache = <code class="m">L_m +T</code>，随生成长度 T 线性涨；R-SWA 永远只留"前缀 L_m + 最近 n"，即 <code class="m">L_m +n</code>，<strong>封顶不动</strong><a class="jr" href="#g-05">5</a>。算个账：前缀 L_m=300、n=128，解码一本书 T=10000——MHA 要 10300，R-SWA 只要 428，<strong>省 96%</strong>。T 拉到十万，MHA 跟着涨，R-SWA 还是 428。显存和每步算力都恒定，所以几十页一次过、速度不掉。</p>
 
 <figure id="fig-kv">
   <figcaption><span>Fig 04 · KV cache:线性爆炸 vs 封顶不动</span><span class="fnum">L_m=300 · n=128</span></figcaption>

@@ -304,7 +304,7 @@ figure.play .ig-rev.d5 { transition-delay: 1.35s; }
 <!-- §04 -->
 <h2><span class="num">§ 04</span>训练目标 · flow matching + 非对称 CFG</h2>
 
-<p>训练目标是 <strong>flow matching</strong><a class="jr" href="#g-06">6</a>：DiT 学一个<strong>速度场</strong> <code>v(z_t, t)</code>，定义一条从纯噪声到干净 latent 的 ODE。采样时 Euler 把这条 ODE 积出来（12/20/48 步），噪声 schedule 随分辨率自适应。详见 <a href="../concepts/flow-matching.html">flow-matching</a>。</p>
+<p>训练目标是 <strong>flow matching</strong><a class="jr" href="#g-06">6</a>：DiT 学一个<strong>速度场</strong> <code class="m">v(z_t,t)</code>，定义一条从纯噪声到干净 latent 的 ODE。采样时 Euler 把这条 ODE 积出来（12/20/48 步），噪声 schedule 随分辨率自适应。详见 <a href="../concepts/flow-matching.html">flow-matching</a>。</p>
 
 <p>采样的引导用 <strong>非对称 CFG</strong><a class="jr" href="#g-07">7</a>。标准 CFG 同一步算两遍——带 prompt 的条件支、不带的无条件支——把差值放大逼模型听话。Ideogram 4 的"非对称"在于：无条件支<strong>把文本 token 整个丢掉</strong>（只跑图像 token），而不是换成 padding。单流架构天然能这么做。</p>
 
@@ -392,7 +392,7 @@ v = v_uncond + w · (v_cond − v_uncond)   # 放大差值</pre>
   </svg>
 </figure>
 
-<p>训练同样是两条路。自回归是 teacher forcing + 预测下一个 token + cross-entropy。Ideogram 是 <strong>flow matching</strong>：拿真图经 VAE 压成干净 latent <code>z₁</code>，配随机噪声 <code>z₀</code> 和随机时刻 <code>t</code>，插值 <code>z_t=(1−t)z₀+t·z₁</code>，让 DiT 预测速度 <code>v=z₁−z₀</code>，MSE loss。<strong>没有 causal mask、没有 teacher forcing、没有"预测下一个"</strong>——所有 patch 双向互看、一次性算 loss。那张自回归前向图正好对照：<a href="../concepts/next-token-forward-pass.html">next-token-forward-pass</a>。</p>
+<p>训练同样是两条路。自回归是 teacher forcing + 预测下一个 token + cross-entropy。Ideogram 是 <strong>flow matching</strong>：拿真图经 VAE 压成干净 latent <code class="m">z_{1}</code>，配随机噪声 <code class="m">z_{0}</code> 和随机时刻 <code>t</code>，插值 <code class="m">z_t=(1-t)z_{0}+t\cdot z_{1}</code>，让 DiT 预测速度 <code class="m">v=z_{1}-z_{0}</code>，MSE loss。<strong>没有 causal mask、没有 teacher forcing、没有"预测下一个"</strong>——所有 patch 双向互看、一次性算 loss。那张自回归前向图正好对照：<a href="../concepts/next-token-forward-pass.html">next-token-forward-pass</a>。</p>
 
 
 <!-- §06 -->

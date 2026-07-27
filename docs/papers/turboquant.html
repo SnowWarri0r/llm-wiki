@@ -121,7 +121,7 @@ figure.play .tq-svg .draw { stroke-dashoffset: 0; }
 
 <div class="tldr">
   <span class="label">TL;DR</span>
-  <p>KV cache 压缩和向量检索都要<strong>在线 / data-oblivious</strong> 量化:向量边生成边压,没法先扫全量数据算统计再定格子<a class="jr" href="#g-01">1</a>。TurboQuant 的招:<strong>先随机旋转</strong>——单位向量旋转后每个坐标服从固定已知的集中 Beta 分布(挤在 <code>±1/√d</code> 附近)、且高维<strong>近独立</strong><a class="jr" href="#g-02">2</a>,于是<strong>离线就能设计好一个最优标量量化器、在线只旋转+套</strong>,不看数据<a class="jr" href="#g-03">3</a>。各坐标各自最优复合起来 ≈ 向量最优,逼近信息论下界只差 <strong>≈2.7×</strong><a class="jr" href="#g-05">5</a>。再补一手:<strong>MSE 最优量化器会让内积估计有偏</strong>,后接 1-bit <a href="../concepts/quantized-jl.html">QJL</a> 残差纠成无偏<a class="jr" href="#g-06">6</a>。<a href="../concepts/kv-cache.html">KV</a> 上 3.5-bit 无损、2.5-bit 微降,<strong>≥6× 省内存、H100 attention 快 8×</strong><a class="jr" href="#g-11">11</a>。</p>
+  <p>KV cache 压缩和向量检索都要<strong>在线 / data-oblivious</strong> 量化:向量边生成边压,没法先扫全量数据算统计再定格子<a class="jr" href="#g-01">1</a>。TurboQuant 的招:<strong>先随机旋转</strong>——单位向量旋转后每个坐标服从固定已知的集中 Beta 分布(挤在 <code class="m">±1/\sqrt{d}</code> 附近)、且高维<strong>近独立</strong><a class="jr" href="#g-02">2</a>,于是<strong>离线就能设计好一个最优标量量化器、在线只旋转+套</strong>,不看数据<a class="jr" href="#g-03">3</a>。各坐标各自最优复合起来 ≈ 向量最优,逼近信息论下界只差 <strong>≈2.7×</strong><a class="jr" href="#g-05">5</a>。再补一手:<strong>MSE 最优量化器会让内积估计有偏</strong>,后接 1-bit <a href="../concepts/quantized-jl.html">QJL</a> 残差纠成无偏<a class="jr" href="#g-06">6</a>。<a href="../concepts/kv-cache.html">KV</a> 上 3.5-bit 无损、2.5-bit 微降,<strong>≥6× 省内存、H100 attention 快 8×</strong><a class="jr" href="#g-11">11</a>。</p>
 </div>
 
 <figure id="fig-throughline">
@@ -215,15 +215,15 @@ figure.play .tq-svg .draw { stroke-dashoffset: 0; }
 </figure>
 
 <h3>数字例子 · 旋转后坐标全挤到 ±1/√d</h3>
-<p>单位向量(长度 1)随机旋转后,每个坐标平方 <code>x_i²</code> 服从 <code>Beta(1/2,(d−1)/2)</code>,期望 <code>E[x_i²]=1/d</code>,所以典型幅度 ≈ <code>1/√d</code>——维度越高,所有坐标越挤在这层薄壳里:</p>
+<p>单位向量(长度 1)随机旋转后,每个坐标平方 <code class="m">x_i^{2}</code> 服从 <code class="m">\mathrm{Beta}(1/2,(d-1)/2)</code>,期望 <code class="m">E[x_i^{2}]=1/d</code>,所以典型幅度 ≈ <code class="m">1/\sqrt{d}</code>——维度越高,所有坐标越挤在这层薄壳里:</p>
 <pre class="eq">d=4:    每坐标 ~ ±1/√4  = ±0.5     例:旋后 [0.5,−0.5,0.5,−0.5]，长度 √(4·0.25)=1 ✓
 d=100:  每坐标 ~ ±1/√100= ±0.1     每个都在 0.1 上下,同一个窄分布
 d=1000: 每坐标 ~ ±0.0316           越高维越集中</pre>
-<p>✓ 旋转前坐标可能一个 0.98、其余≈0(能量堆一处,量化器不知道堆哪);旋转后<strong>每个坐标都是同一个窄分布</strong>,<code>E[x_i²]=1/d</code> 是拿到手就能算的常数、不看任何数据——一个离线预制的量化器对所有坐标、所有输入都好使。</p>
+<p>✓ 旋转前坐标可能一个 0.98、其余≈0(能量堆一处,量化器不知道堆哪);旋转后<strong>每个坐标都是同一个窄分布</strong>,<code class="m">E[x_i^{2}]=1/d</code> 是拿到手就能算的常数、不看任何数据——一个离线预制的量化器对所有坐标、所有输入都好使。</p>
 
 <h3>为什么坐标平方服从 Beta,均值为什么正好 1/d</h3>
-<p><strong>先说 Beta 是什么</strong>:它专门描述"一个 0~1 之间的占比"。两个形状旋钮 <code>Beta(a,b)</code>,均值 = <code>a/(a+b)</code>;<strong>a 小、b 大时,占比挤在 0 附近</strong>。代入 <code>Beta(1/2,(d−1)/2)</code>:均值 = <code>(1/2)/(d/2) = 1/d</code>——期望 1/d 就这么直接算出来。</p>
-<p><strong>为什么坐标平方是个"占比"</strong>:随机旋转单位向量 = 在单位球面上均匀撒一个点。而均匀撒点的标准造法是"每个坐标各抽一个高斯数,再把整个向量缩放到长度 1",于是 <code>x_i² = g_i² / (所有 g² 之和)</code>——就是<strong>第 i 个坐标占总能量的份额</strong>。总能量固定是 1(单位向量),所以每个 <code>x_i²</code> 必然落在 0~1、是个占比 → 天然是 Beta。参数里的 <code>1/2</code> 对应分子"这一个坐标"、<code>(d−1)/2</code> 对应"其余 d−1 个坐标"。</p>
+<p><strong>先说 Beta 是什么</strong>:它专门描述"一个 0~1 之间的占比"。两个形状旋钮 <code>Beta(a,b)</code>,均值 = <code>a/(a+b)</code>;<strong>a 小、b 大时,占比挤在 0 附近</strong>。代入 <code class="m">\mathrm{Beta}(1/2,(d-1)/2)</code>:均值 = <code>(1/2)/(d/2) = 1/d</code>——期望 1/d 就这么直接算出来。</p>
+<p><strong>为什么坐标平方是个"占比"</strong>:随机旋转单位向量 = 在单位球面上均匀撒一个点。而均匀撒点的标准造法是"每个坐标各抽一个高斯数,再把整个向量缩放到长度 1",于是 <code>x_i² = g_i² / (所有 g² 之和)</code>——就是<strong>第 i 个坐标占总能量的份额</strong>。总能量固定是 1(单位向量),所以每个 <code class="m">x_i^{2}</code> 必然落在 0~1、是个占比 → 天然是 Beta。参数里的 <code>1/2</code> 对应分子"这一个坐标"、<code class="m">(d-1)/2</code> 对应"其余 d−1 个坐标"。</p>
 <p><strong>均值 1/d 还有个更快的对称论证</strong>:d 个坐标地位完全对称,它们的平方<strong>加起来恒等于 1</strong>(单位向量),d 份平均分 → 每份 <code>1/d</code>,根本不用 Beta 也能看出来。</p>
 
 <pre class="eq">d=4,抽到 g=[2,1,0,1]：总能量 = 2²+1²+0²+1² = 6
@@ -262,14 +262,14 @@ x_i² = g_i²/6 → [0.667, 0.167, 0, 0.167]，加起来 = 1 ✓（这一次坐�
 </figure>
 
 <h3>再往下一层:参数为什么是"半个每维"(½)</h3>
-<p><code>Beta(1/2,(d−1)/2)</code> 的两个数,其实就是"<strong>1 个坐标</strong>"和"<strong>其余 d−1 个坐标</strong>"——因为<strong>每个平方高斯恰好贡献 ½ 的形状</strong>。要解释的就是:为什么一个坐标算<strong>半个</strong>。</p>
-<p><strong>Beta 的第一个参数 a 管的是"0 附近的形状"</strong>:密度在 0 附近长得像 <code>x^(a−1)</code>。a=1 是平的,<strong>a=½ → x^(−1/2) = 1/√x,一根在 0 处炸起来的尖峰</strong>(就是上面那张图里 0 处那根)。这根尖峰来自"<strong>平方</strong>"这个动作本身。</p>
-<p>一个高斯值 <code>g</code> 通常靠近 0(钟形堆在 0)。令 <code>y=g²</code>,关键是<strong>同样等宽的一段 g,平方后落到的 y 区间越靠近 0 越窄</strong>(宽度正比于 √y):</p>
+<p><code class="m">\mathrm{Beta}(1/2,(d-1)/2)</code> 的两个数,其实就是"<strong>1 个坐标</strong>"和"<strong>其余 d−1 个坐标</strong>"——因为<strong>每个平方高斯恰好贡献 ½ 的形状</strong>。要解释的就是:为什么一个坐标算<strong>半个</strong>。</p>
+<p><strong>Beta 的第一个参数 a 管的是"0 附近的形状"</strong>:密度在 0 附近长得像 <code class="m">x^(a-1)</code>。a=1 是平的,<strong>a=½ → x^(−1/2) = 1/√x,一根在 0 处炸起来的尖峰</strong>(就是上面那张图里 0 处那根)。这根尖峰来自"<strong>平方</strong>"这个动作本身。</p>
+<p>一个高斯值 <code>g</code> 通常靠近 0(钟形堆在 0)。令 <code class="m">y=g^{2}</code>,关键是<strong>同样等宽的一段 g,平方后落到的 y 区间越靠近 0 越窄</strong>(宽度正比于 √y):</p>
 <pre class="eq">g∈[0.1,0.2] → y∈[0.01,0.04]  宽 0.03
 g∈[0.5,0.6] → y∈[0.25,0.36]  宽 0.11
 g∈[1.0,1.1] → y∈[1.00,1.21]  宽 0.21
 同样多的概率,挤进越窄的 y 段 → 密度(概率÷宽度)在 0 附近越高 → 密度 ∝ 1/√y</pre>
-<p>指数 <code>−½</code> 就对应形状参数 <code>a=½</code>——<strong>这个 ½ 就是"平方一个高斯"留下的签名</strong>。再加上"<strong>独立的平方高斯相加时,形状参数直接相加</strong>"(½ 一个个累起来),就得到:1 个坐标 ½、其余 d−1 个 (d−1)/2、全体 d 个 d/2。那个 ½ 在算均值时上下约掉,只剩干净的 <code>1/d</code>。</p>
+<p>指数 <code class="m">- ½</code> 就对应形状参数 <code>a=½</code>——<strong>这个 ½ 就是"平方一个高斯"留下的签名</strong>。再加上"<strong>独立的平方高斯相加时,形状参数直接相加</strong>"(½ 一个个累起来),就得到:1 个坐标 ½、其余 d−1 个 (d−1)/2、全体 d 个 d/2。那个 ½ 在算均值时上下约掉,只剩干净的 <code>1/d</code>。</p>
 
 <figure id="fig-half">
   <figcaption><span>FIG 04 · 平方把等宽 g 段压到 0 附近 → 密度 1/√y 尖峰 = 形状参数 ½</span><span class="fnum">WHY 1/2 · HALF PER DIM</span></figcaption>
@@ -348,7 +348,7 @@ g∈[1.0,1.1] → y∈[1.00,1.21]  宽 0.21
 
 <p>量化有两种"好":<strong>MSE 好</strong>(压得像原样)和<strong>内积无偏</strong>(拿压完的向量算点积,平均不偏)。麻烦是:<strong>MSE 最优的量化器,内积估计往往系统性偏小</strong>——量化误差跟向量结构相关,不是随机噪声,是每次都往同方向偏,<strong>加再多样本也纠不掉</strong><a class="jr" href="#g-06">6</a>。检索 / attention 靠内积排序,系统偏差会歪掉排名。</p>
 
-<p>TurboQuant 两阶段各管一段:阶段 1 用 MSE 量化器压主体(低失真);阶段 2 对<strong>残差</strong> <code>r=x−x̂</code> 做 <strong>1-bit <a href="../concepts/quantized-jl.html">QJL</a></strong>(符号随机投影,内积<strong>无偏</strong>)<a class="jr" href="#g-07">7</a>,把那点系统偏差换成能被平均掉的方差。</p>
+<p>TurboQuant 两阶段各管一段:阶段 1 用 MSE 量化器压主体(低失真);阶段 2 对<strong>残差</strong> <code class="m">r=x-\hat{x}</code> 做 <strong>1-bit <a href="../concepts/quantized-jl.html">QJL</a></strong>(符号随机投影,内积<strong>无偏</strong>)<a class="jr" href="#g-07">7</a>,把那点系统偏差换成能被平均掉的方差。</p>
 
 <figure id="fig-twostage">
   <figcaption><span>FIG 06 · MSE-only 系统偏小(纠不掉)→ QJL 残差补回无偏</span><span class="fnum">MSE + QJL</span></figcaption>
@@ -441,7 +441,7 @@ g∈[1.0,1.1] → y∈[1.00,1.21]  宽 0.21
   <h2>引用 / 术语表</h2>
   <ol>
     <li id="g-01"><span class="term">在线 / data-oblivious 量化</span> · 向量边来边压,拿不到全量数据统计再定量化格子(<a href="../concepts/kv-cache.html">KV cache</a>、检索索引都是)。对比离线可先扫数据看清分布。</li>
-    <li id="g-02"><span class="term"><a href="../concepts/random-rotation-quantization.html">随机旋转 → 分布已知</a></span> · 乘随机正交矩阵旋转(长度不变),单位向量每坐标平方服从 <code>Beta(1/2,(d−1)/2)</code>、挤在 ±1/√d 附近,分布固定已知且高维近独立。</li>
+    <li id="g-02"><span class="term"><a href="../concepts/random-rotation-quantization.html">随机旋转 → 分布已知</a></span> · 乘随机正交矩阵旋转(长度不变),单位向量每坐标平方服从 <code class="m">\mathrm{Beta}(1/2,(d-1)/2)</code>、挤在 ±1/√d 附近,分布固定已知且高维近独立。</li>
     <li id="g-03"><span class="term">离线预制 · 在线套用</span> · 分布已知 → 离线设计好最优标量量化器;在线只旋转+套,零数据依赖。旋转的价值=把未知变已知,不是压更狠。</li>
     <li id="g-04"><span class="term">高维近独立 → 每坐标各自最优</span> · 旋转后不同坐标近独立,不必解"整向量最优",每坐标用一维最优标量量化(<a href="../concepts/bin-quantization.html">bin 量化</a>最优版)复合即可。</li>
     <li id="g-05"><span class="term">≈2.7× 信息论下界</span> · 论文给出任何量化器的失真理论极限,TurboQuant 在所有 bit 宽/维度下只差一个小常数(≈2.7×)。</li>

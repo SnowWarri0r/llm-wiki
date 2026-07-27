@@ -122,7 +122,7 @@ figure.play .os-svg .draw.d4 { transition-delay: 1.00s; }
 
 <div class="tldr">
   <span class="label">TL;DR</span>
-  <p><strong>ODE</strong><a class="jr" href="#g-01">1</a>：<code>dx/dt = f(x,t)</code>——"现在在哪，就决定下一步往哪走多快"，跟着<strong>速度场（风场）</strong>积分出唯一轨迹，<strong>确定</strong>（同起点→同一条路）。<strong>SDE</strong><a class="jr" href="#g-02">2</a>：<code>dx = f·dt + g·dW</code>——ODE 再加一项<strong>每瞬间的随机踹</strong>（<strong>dW</strong><a class="jr" href="#g-03">3</a> 布朗运动），<strong>随机</strong>（同起点→每次不同→一团落点）。两项分别叫<strong>drift（漂移，确定推力）</strong>和 <strong>diffusion（扩散，噪声）</strong>。关键桥<a class="jr" href="#g-04">4</a>：每个扩散 SDE 都配一个<strong>概率流 ODE</strong>，两者每一刻的<strong>分布完全相同</strong>——SDE 追一个抖动的<u>个体</u>，ODE 追整团密度的<u>平滑水流</u>，同一团云。落点：<a href="flow-matching.html">flow-matching</a> = 纯 ODE；diffusion = SDE（也能当 ODE 跑 → DDIM<a class="jr" href="#g-08">8</a> 少步快采）。数值解：ODE 用 <strong>Euler</strong>，SDE 用 <strong>Euler–Maruyama</strong><a class="jr" href="#g-06">6</a>，噪声乘 <strong>√dt 不是 dt</strong><a class="jr" href="#g-07">7</a>。</p>
+  <p><strong>ODE</strong><a class="jr" href="#g-01">1</a>：<code>dx/dt = f(x,t)</code>——"现在在哪，就决定下一步往哪走多快"，跟着<strong>速度场（风场）</strong>积分出唯一轨迹，<strong>确定</strong>（同起点→同一条路）。<strong>SDE</strong><a class="jr" href="#g-02">2</a>：<code class="m">dx =f\cdot dt +g\cdot dW</code>——ODE 再加一项<strong>每瞬间的随机踹</strong>（<strong>dW</strong><a class="jr" href="#g-03">3</a> 布朗运动），<strong>随机</strong>（同起点→每次不同→一团落点）。两项分别叫<strong>drift（漂移，确定推力）</strong>和 <strong>diffusion（扩散，噪声）</strong>。关键桥<a class="jr" href="#g-04">4</a>：每个扩散 SDE 都配一个<strong>概率流 ODE</strong>，两者每一刻的<strong>分布完全相同</strong>——SDE 追一个抖动的<u>个体</u>，ODE 追整团密度的<u>平滑水流</u>，同一团云。落点：<a href="flow-matching.html">flow-matching</a> = 纯 ODE；diffusion = SDE（也能当 ODE 跑 → DDIM<a class="jr" href="#g-08">8</a> 少步快采）。数值解：ODE 用 <strong>Euler</strong>，SDE 用 <strong>Euler–Maruyama</strong><a class="jr" href="#g-06">6</a>，噪声乘 <strong>√dt 不是 dt</strong><a class="jr" href="#g-07">7</a>。</p>
 </div>
 
 
@@ -273,12 +273,12 @@ figure.play .os-svg .draw.d4 { transition-delay: 1.00s; }
 
 <div class="note">
   <span class="l">设定（两边共用）</span>
-  <p>取一个最简单的 drift：<code>f(x) = −x</code>（把值往 0 拉，像去噪——离 0 越远拉得越狠）。步长 <code>dt = 0.5</code>，噪声强度 <code>g = 2</code>，所以 <code>√dt = √0.5 ≈ 0.707</code>。两边都从 <strong>x = 10</strong> 出发。</p>
+  <p>取一个最简单的 drift：<code class="m">f(x) = -x</code>（把值往 0 拉，像去噪——离 0 越远拉得越狠）。步长 <code>dt = 0.5</code>，噪声强度 <code>g = 2</code>，所以 <code class="m">\sqrt{d}t =\sqrt{0}.5 \approx 0.707</code>。两边都从 <strong>x = 10</strong> 出发。</p>
 </div>
 
-<h3>① ODE → Euler：每步 <code>x += f(x)·dt</code></h3>
+<h3>① ODE → Euler：每步 <code class="m">x +=f(x)\cdot dt</code></h3>
 
-<p>没有噪声，每步就是"当前位置 + 速度×步长"。<code>f(x)·dt = (−x)(0.5)</code>，等于每步把 x <strong>砍掉一半</strong>：</p>
+<p>没有噪声，每步就是"当前位置 + 速度×步长"。<code class="m">f(x)\cdot dt = (-x)(0.5)</code>，等于每步把 x <strong>砍掉一半</strong>：</p>
 
 <table class="spec">
   <tr><th>步</th><th>当前 x</th><th>drift = f(x)·dt = −x·0.5</th><th>新 x</th></tr>
@@ -290,9 +290,9 @@ figure.play .os-svg .draw.d4 { transition-delay: 1.00s; }
 
 <p><strong>关键：这张表是写死的。</strong>跑 1 次、跑 1 万次，第一步永远 10→5、第二步永远 →2.5。确定，没有"运气"。</p>
 
-<h3>② SDE → Euler–Maruyama：<code>x += f·dt + √dt·g·z</code></h3>
+<h3>② SDE → Euler–Maruyama：<code class="m">x +=f\cdot dt +\sqrt{d}t\cdot g\cdot z</code></h3>
 
-<p>多一项噪声：<code>√dt·g·z = 0.707×2×z = 1.414·z</code>，其中 <code>z</code> 是每步现抽的标准正态随机数 <code>N(0,1)</code>。<strong>同样从 10 出发，抽到的 z 不同，路就不同</strong>。跑两次看看：</p>
+<p>多一项噪声：<code class="m">\sqrt{d}t\cdot g\cdot z =0.707\times 2\times z =1.414\cdot z</code>，其中 <code>z</code> 是每步现抽的标准正态随机数 <code>N(0,1)</code>。<strong>同样从 10 出发，抽到的 z 不同，路就不同</strong>。跑两次看看：</p>
 
 <table class="spec">
   <tr><th>跑 A · 步</th><th>起点 x</th><th>drift −x·0.5</th><th>这步抽到 z → 噪声 1.414·z</th><th>新 x</th></tr>
@@ -367,11 +367,11 @@ figure.play .os-svg .draw.d4 { transition-delay: 1.00s; }
   <h2>引用 / 术语表</h2>
   <ol>
     <li id="g-01"><span class="term">ODE · 常微分方程</span> · <code>dx/dt=f(x,t)</code>。给定起点 + 速度场，轨迹<strong>唯一确定</strong>。类比：风场里放颗弹珠顺箭头滑。flow-matching 的采样就是解它。</li>
-    <li id="g-02"><span class="term">SDE · 随机微分方程</span> · <code>dx=f·dt+g·dW</code>。ODE 加一项每瞬间的随机踹，结果<strong>随机</strong>。同起点跑两次两条路。扩散模型的前向/反向都是它。</li>
+    <li id="g-02"><span class="term">SDE · 随机微分方程</span> · <code class="m">dx=f\cdot dt+g\cdot dW</code>。ODE 加一项每瞬间的随机踹，结果<strong>随机</strong>。同起点跑两次两条路。扩散模型的前向/反向都是它。</li>
     <li id="g-03"><span class="term">drift / diffusion / dW</span> · drift=确定推力（同 ODE）；diffusion=噪声强度 g；dW=布朗运动/维纳过程，一串微小高斯抖动。</li>
     <li id="g-04"><span class="term">概率流 ODE（桥）</span> · Song 2021：每个扩散 SDE 配一个 ODE，两者每一刻<strong>边际分布相同</strong>。SDE 追抖动个体、ODE 追密度水流，同一团云。</li>
-    <li id="g-05"><span class="term">score 函数</span> · <code>∇log p_t(x)</code>，"概率密度上升最快的方向"。SDE/扩散学它来构造反向漂移；对照 flow-matching 直接学速度场。</li>
-    <li id="g-06"><span class="term">Euler / Euler–Maruyama</span> · 数值解法。ODE：<code>x+=f·dt</code>。SDE：<code>x+=f·dt+√dt·g·z</code>（z∼N(0,1)）。后者多了随机项。</li>
+    <li id="g-05"><span class="term">score 函数</span> · <code class="m">\nabla \log p_t(x)</code>，"概率密度上升最快的方向"。SDE/扩散学它来构造反向漂移；对照 flow-matching 直接学速度场。</li>
+    <li id="g-06"><span class="term">Euler / Euler–Maruyama</span> · 数值解法。ODE：<code class="m">x+=f\cdot dt</code>。SDE：<code class="m">x+=f\cdot dt+\sqrt{d}t\cdot g\cdot z</code>（z∼N(0,1)）。后者多了随机项。</li>
     <li id="g-07"><span class="term">√dt 缩放</span> · 噪声项乘 √dt 而非 dt。源于随机游走"按 √时间扩散"：步长砍半，drift 贡献砍半但噪声只缩 1/√2。SDE 要更小步才算准。</li>
     <li id="g-08"><span class="term">DDIM</span> · 把训练好的扩散模型当概率流 ODE 来确定性采样，少步、可复现、可做 latent 插值。即"扩散借 ODE 的速度"。</li>
   </ol>

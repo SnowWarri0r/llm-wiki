@@ -196,8 +196,8 @@ p{margin:13px 0}.lead{font-size:20px;line-height:1.68;color:var(--ink-2)}
       <div class="hash-step"><small>STEP 04</small><b>按中位数变 0/1</b><span>系数高于中位数记 1，否则记 0；比较两串 bit 的汉明距离。</span></div>
     </div>
     <div class="bit-demo">
-      <div class="bit-box"><b>中位数怎么变成 bit</b><code>[80,22,15,9] · median=18.5 → 1100</code><p>80、22 高于 18.5，所以是 1；15、9 不高于，所以是 0。</p></div>
-      <div class="bit-box"><b>两张图怎么比较</b><code>10110010<br>10100010 · Hamming distance=1</code><p>只有第 4 位不同，指纹很接近。距离小到多少算重复，要由业务阈值决定。</p></div>
+      <div class="bit-box"><b>中位数怎么变成 bit</b><code class="m">[80,22,15,9] \cdot median=18.5 \to 1100</code><p>80、22 高于 18.5，所以是 1；15、9 不高于，所以是 0。</p></div>
+      <div class="bit-box"><b>两张图怎么比较</b><code class="m">1011001010100010 \cdot Hamming distance=1</code><p>只有第 4 位不同，指纹很接近。距离小到多少算重复，要由业务阈值决定。</p></div>
     </div>
   </div>
   <h3>DCT：不再逐个记像素，改为记录不同尺度的明暗变化</h3>
@@ -244,8 +244,8 @@ p{margin:13px 0}.lead{font-size:20px;line-height:1.68;color:var(--ink-2)}
       <div class="kernel"><b>常见离散核</b><pre> 0   1   0
  1  -4   1
  0   1   0</pre></div>
-      <div class="lap-case"><b>周围和中心都是 50</b><code>4×50 − 4×50 = 0</code><span>没有局部变化，Laplacian 不响应。</span></div>
-      <div class="lap-case"><b>中心突然变成 200</b><code>4×50 − 4×200 = −600</code><span>绝对值很大，说明这里有强烈边缘、细纹理或孤立噪点。</span></div>
+      <div class="lap-case"><b>周围和中心都是 50</b><code class="m">4\times 50 -4\times 50 =0</code><span>没有局部变化，Laplacian 不响应。</span></div>
+      <div class="lap-case"><b>中心突然变成 200</b><code class="m">4\times 50 -4\times 200 = -600</code><span>绝对值很大，说明这里有强烈边缘、细纹理或孤立噪点。</span></div>
     </div>
     <p class="evidence-note">工程上会汇总整张响应图的绝对值、方差或分位数。数值极高可能是噪声或纹理过密，极低常见于过度模糊或大片纯色；但正常物体边缘也会高，所以它只能当便宜的初筛信号。Krea 只说用 Laplacian 过滤极端纹理和噪声，没有公开具体核、汇总方式与阈值。</p>
   </div>
@@ -325,7 +325,7 @@ p{margin:13px 0}.lead{font-size:20px;line-height:1.68;color:var(--ink-2)}
   <div class="callout warn"><span class="label">容易画错的一点</span><p>报告汇总表把 Qwen Image VAE 与 FLUX 2 VAE 都列进最终实践，但正文说的是<strong>早期放大模型先用 Qwen Image VAE，较大模型后来采用 FLUX 2 VAE</strong>。不是一次前向把两套 VAE 串起来。</p></div>
 
   <h2 id="s5"><span class="sec">05 · Rectified flow</span>模型到底在预测什么？先把一条直线学会</h2>
-  <p>报告只用一句话写过：最终模型用标准 rectified-flow loss 和 <code>v</code> 参数化。下面把这句话展开。按最常见的记号，先在真实图像 latent <code>x₀</code> 和随机噪声 <code>ε</code> 之间连一条直线：</p>
+  <p>报告只用一句话写过：最终模型用标准 rectified-flow loss 和 <code>v</code> 参数化。下面把这句话展开。按最常见的记号，先在真实图像 latent <code class="m">x_{0}</code> 和随机噪声 <code class="m">\epsilon</code> 之间连一条直线：</p>
   <div class="math-board">
     <span class="math-label">Step 1 · 在图像与噪声之间取一个中间点</span>
     <div class="tex" data-display="true">x_t=(1-t)x_0+t\varepsilon</div>
@@ -345,7 +345,7 @@ p{margin:13px 0}.lead{font-size:20px;line-height:1.68;color:var(--ink-2)}
       <div class="step"><b>目标</b><span>v*=ε−x₀<br>=−1−2<br>=−3</span></div>
       <div class="step"><b>损失</b><span>若 v̂=−2.6<br>L=(−2.6+3)²<br>=.16</span></div>
     </div>
-    <p><code>v̂</code> 读作“v hat”，帽子表示估计值；这里就是 <code>vθ(xₜ,t,c)</code> 的数值。模型预测得比目标“向左少了一点”，梯度就把 −2.6 往 −3 推。推理时从噪声端出发，按模型给出的反方向多次积分，最后回到图片。</p>
+    <p><code>v̂</code> 读作“v hat”，帽子表示估计值；这里就是 <code class="m">v_\theta (x_{t},t,c)</code> 的数值。模型预测得比目标“向左少了一点”，梯度就把 −2.6 往 −3 推。推理时从噪声端出发，按模型给出的反方向多次积分，最后回到图片。</p>
   </div>
   <p>这套公式是标准 rectified flow 的解释，不是 Krea 独创。Krea 的贡献在于用什么架构、数据和后训练把这条速度场训得更宽、更稳、更可控。</p>
 
@@ -387,10 +387,10 @@ p{margin:13px 0}.lead{font-size:20px;line-height:1.68;color:var(--ink-2)}
     <div class="math-key"><b>c</b><span>两张图共用的 prompt。</span><b>y<sub>w</sub> / y<sub>l</sub></b><span>偏好图 winner 与落选图 loser；w、l 只是英文缩写。</span><b>pθ(y | c)</b><span>当前模型在已知条件 c 时生成 y 的条件似然；竖线 | 读作“在已知……的条件下”。</span><b>θ / ref</b><span>θ 是当前模型的可训练参数；ref 是冻结参考模型，不参加这一步更新。</span><b>log</b><span>自然对数。它把似然的除法变成减法；值越大或越不负，模型越偏向该图。</span><b>Δ</b><span>读作“差值”。Δθ 与 Δref 分别是当前模型和参考模型眼里的 winner−loser 差距。</span><b>β &gt; 0</b><span>人为设置的偏好强度系数，不是学习率；负责放大或缩小差距变化。</span><b>σ(z)</b><span>sigmoid：1/(1+e<sup>−z</sup>)。z 是输入的差距分数，e≈2.718 是自然指数的底数；输出落在 0–1。</span><b>−log(·)</b><span>把“越接近 1 越好”改成要最小化的损失；−log(1)=0。</span><b>L<sub>DPO</sub></b><span>最终要最小化的标量损失。</span></div>
     <p class="notation-note"><strong>整句翻译：</strong>先算当前模型比参考模型多偏爱 winner 多少，再把这个改善映射成 0–1 的成功程度；改善越大，损失越接近 0。</p>
   </div>
-  <p>关键是：这个式子只看差值，不单独检查 winner 自己有没有变得更可能。假设参考模型对两张图的 log-likelihood 都是 −2，因此 <code>Δref=0</code>：</p>
+  <p>关键是：这个式子只看差值，不单独检查 winner 自己有没有变得更可能。假设参考模型对两张图的 log-likelihood 都是 −2，因此 <code class="m">\Delta_{\mathrm{ref}}=0</code>：</p>
   <div class="dpo-compare">
-    <article class="dpo-case good"><b>直觉上好的更新</b><code>winner: −2 → −1.5<br>loser: −2 → −3.0<br>Δθ = 1.5</code><p>赢家上升，输家下降。若 β=1，loss≈0.201。</p></article>
-    <article class="dpo-case lazy"><b>DPO 也会喜欢的“偷懒更新”</b><code>winner: −2 → −2.5<br>loser: −2 → −4.5<br>Δθ = 2.0</code><p>两张都下降，但输家降得更多。差距更大，loss≈0.127，反而更低。</p></article>
+    <article class="dpo-case good"><b>直觉上好的更新</b><code class="m">winner: -2 \to -1.5loser: -2 \to -3.0\Delta \theta =1.5</code><p>赢家上升，输家下降。若 β=1，loss≈0.201。</p></article>
+    <article class="dpo-case lazy"><b>DPO 也会喜欢的“偷懒更新”</b><code class="m">winner: -2 \to -2.5loser: -2 \to -4.5\Delta \theta =2.0</code><p>两张都下降，但输家降得更多。差距更大，loss≈0.127，反而更低。</p></article>
   </div>
   <p>Krea 在多种偏好数据混合上观察到这种 policy divergence：winner 与 loser 的似然同时下降，只是速度不同。如果两张图都不如当前模型分布，这未必坏；可偏好集不总满足这个前提。模型还会远离预训练分布，后续出现高频伪影。</p>
   <div class="callout warn"><span class="label">STPO 的披露边界</span><p>报告只说 STPO <strong>修改了原始 DPO 公式，并加入一个辅助损失来减轻 divergence</strong>。它没有给全称、完整公式、辅助项形式或消融。因此我们能准确解释“它要修什么”，但不能把“限制 winner 绝对似然”“加某种 KL”之类猜测写成 STPO 的真实公式。</p></div>

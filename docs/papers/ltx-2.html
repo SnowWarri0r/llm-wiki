@@ -76,7 +76,7 @@ code{overflow-wrap:anywhere;word-break:break-word}
 </nav>
 
 <h2 id="s1"><span class="sec">01 · WHY JOINT</span>先视频后配音，究竟少了什么</h2>
-<p class="lead"><code>T2V → V2A</code> 只能让声音服从已经定稿的画面；<code>T2A → A2V</code> 只能让画面服从已经定稿的声音。问题不是第二个模型不够强，而是第一步一旦交卷，另一模态再也改不回去。</p>
+<p class="lead"><code class="m">T2V \to V2A</code> 只能让声音服从已经定稿的画面；<code class="m">T2A \to A2V</code> 只能让画面服从已经定稿的声音。问题不是第二个模型不够强，而是第一步一旦交卷，另一模态再也改不回去。</p>
 <div class="figure" id="fig-01"><div class="figcap"><span>Fig 01 · 串行生成与联合生成</span><b>ONE-WAY vs TWO-WAY</b></div>
   <div class="two">
     <div class="panel v"><h3>串行：先交卷，再补另一科</h3><p>视频先定嘴型和碰撞时刻 → 音频只能追；或音频先定节奏 → 画面只能追。反馈箭头断掉。</p></div>
@@ -113,17 +113,17 @@ code{overflow-wrap:anywhere;word-break:break-word}
 <div class="math"><div class="tex" data-display="true">A_{V\leftarrow A}=\operatorname{softmax}\!\left(\frac{Q_VK_A^\top}{\sqrt d}\right)V_A</div><div class="symbols"><b>Q_V</b><span>视频 token 提出的查询：我现在需要什么声音线索？</span><b>K_A</b><span>音频 token 的索引，用来与 query 比较。</span><b>V_A</b><span>匹配后真正取回的音频内容。</span><b>d</b><span>Q/K 的共同通道宽度；除以 √d 防止点积过大、softmax 过早饱和。</span></div></div>
 <div class="figure" id="fig-04"><div class="figcap"><span>Fig 04 · 同一时刻获得最高权重</span><b>TOY NUMBERS · NOT PAPER METRICS</b></div>
   <div class="timeline"><i class="impact"><b>0.40s · 杯子碰桌面</b></i><i class="tick" style="left:25%" data-t="0.36s"></i><i class="tick" style="left:50%" data-t="0.40s"></i><i class="tick" style="left:75%" data-t="0.44s"></i><div class="weight w1">.107</div><div class="weight w2">.787</div><div class="weight w3">.107</div></div>
-  <p><code>softmax([1,3,1])≈[.107,.787,.107]</code>。若三个音频 value 的碰撞强度为 <code>[.2,1,.1]</code>，加权输出约 <code>.819</code>。这只演示一次 attention 的算术。</p>
+  <p><code class="m">\operatorname{softmax}([1,3,1])\approx [.107,.787,.107]</code>。若三个音频 value 的碰撞强度为 <code>[.2,1,.1]</code>，加权输出约 <code>.819</code>。这只演示一次 attention 的算术。</p>
 </div>
 <p>视频 self-attention 使用 3D RoPE<a class="jr" href="#g-06">06</a> 编码 <code>(x,y,time)</code>，音频 self-attention 使用 1D 时间 RoPE；跨模态时只保留时间。原因很朴素：声音没有画面里的 <code>x,y</code>。跨模态位置编码只负责“是不是同一刻”，该看嘴、车还是手仍由内容相似度决定。</p>
 
 <h2 id="s5"><span class="sec">05 · CROSS-MODALITY ADALN</span>自己的进度调制，对方的进度开门</h2>
-<p>联合生成时两条流可能噪声程度不同。V2A 甚至可以让给定视频保持干净 <code>σ_video=0</code>，只去噪音频。交叉注意力必须知道：谁现在更可靠<a class="jr" href="#g-07">07</a>。</p>
+<p>联合生成时两条流可能噪声程度不同。V2A 甚至可以让给定视频保持干净 <code class="m">\sigma_{\mathrm{video}}=0</code>，只去噪音频。交叉注意力必须知道：谁现在更可靠<a class="jr" href="#g-07">07</a>。</p>
 <div class="math"><div class="tex" data-display="true">h'_V=h_V+g(\sigma_A)\odot\operatorname{CrossAttn}\!\left(\operatorname{AdaLN}(h_V;\sigma_V),\operatorname{AdaLN}(h_A;\sigma_A)\right)</div><div class="symbols"><b>h_V,h_A</b><span>交换前的两条隐藏状态。</span><b>σ_V, σ_A</b><span>视频与音频当前噪声级别。</span><b>AdaLN</b><span>用本流 σ 算 scale/shift，先把自己整理到适合交换的尺度。</span><b>g(σ_A)</b><span>由对方噪声进度算出的写回门；⊙ 是逐通道相乘。</span></div></div>
 <div class="figure" id="fig-05"><div class="figcap"><span>Fig 05 · 两道控制不是同一件事</span><b>MODULATE SELF · GATE OTHER</b></div>
   <div class="gateflow">
-    <div class="gate-card content"><span class="tag v">① 算交换内容 C</span><h3>两边先按各自的噪声进度整理特征</h3><p>以音频写入视频（A→V）为例：</p><div class="gate-lane v"><b>视频侧</b><span><code>AdaLN(h<sub>V</sub>; σ<sub>V</sub>)</code> → 查询 <code>Q<sub>V</sub></code></span></div><div class="gate-lane a"><b>音频侧</b><span><code>AdaLN(h<sub>A</sub>; σ<sub>A</sub>)</code> → 索引与内容 <code>K<sub>A</sub>, V<sub>A</sub></code></span></div><div class="gate-output">CrossAttn(Q<sub>V</sub>, K<sub>A</sub>, V<sub>A</sub>) → <strong>C：准备写回的视频修正量</strong></div></div>
-    <div class="gate-card control"><span class="tag a">② 算写回系数 G</span><h3>再看对方这轮有多可信</h3><p>同一个音频噪声进度 <code>σ<sub>A</sub></code> 另走一条支路，经过门函数 <code>g</code> 变成逐通道的写回系数。</p><div class="gate-lane a"><b>音频侧</b><span><code>σ<sub>A</sub></code> → <code>g(σ<sub>A</sub>)</code> → <code>G</code></span></div><div class="meter"><i style="width:46%;background:var(--audio)"></i></div><div class="gate-output"><strong>G：每个通道分别采纳多少音频信息</strong></div></div>
+    <div class="gate-card content"><span class="tag v">① 算交换内容 C</span><h3>两边先按各自的噪声进度整理特征</h3><p>以音频写入视频（A→V）为例：</p><div class="gate-lane v"><b>视频侧</b><span><code class="m">AdaLN(hV; \sigma V)</code> → 查询 <code>Q<sub>V</sub></code></span></div><div class="gate-lane a"><b>音频侧</b><span><code class="m">AdaLN(hA; \sigma A)</code> → 索引与内容 <code>K<sub>A</sub>, V<sub>A</sub></code></span></div><div class="gate-output">CrossAttn(Q<sub>V</sub>, K<sub>A</sub>, V<sub>A</sub>) → <strong>C：准备写回的视频修正量</strong></div></div>
+    <div class="gate-card control"><span class="tag a">② 算写回系数 G</span><h3>再看对方这轮有多可信</h3><p>同一个音频噪声进度 <code class="m">\sigma A</code> 另走一条支路，经过门函数 <code>g</code> 变成逐通道的写回系数。</p><div class="gate-lane a"><b>音频侧</b><span><code class="m">\sigma A</code> → <code class="m">g(\sigma A)</code> → <code>G</code></span></div><div class="meter"><i style="width:46%;background:var(--audio)"></i></div><div class="gate-output"><strong>G：每个通道分别采纳多少音频信息</strong></div></div>
     <div class="gate-result"><div class="term-box"><b>C</b><span>交叉注意力算出的“写什么”</span></div><div class="times">×</div><div class="term-box"><b>G</b><span>门函数算出的“各通道写多少”</span></div><div class="gate-equation">最后逐通道相乘，再加回原特征：h′<sub>V</sub> = h<sub>V</sub> + G × C</div></div>
   </div>
 </div>
@@ -144,16 +144,16 @@ code{overflow-wrap:anywhere;word-break:break-word}
   <div class="visibility-flow"><div class="vis-card"><b>正文 token 可读取 register</b><span>每个词都能把 R1/R2/R3 当作额外上下文。</span></div><div class="biarrow"><strong class="horizontal">⇄</strong><strong class="vertical">⇅</strong><small>双向可见</small></div><div class="vis-card register"><b>register 可汇总整句</b><span>R1/R2/R3 能从全部正文 token 汇总信息。</span></div></div>
   <p class="vis-note"><b>一次同时更新：</b>8 个位置彼此可见；箭头不是“先 register、再正文”的执行顺序。</p>
 </div>
-<p>它们不是词，不会输出可读推理步骤。假设某个 register 对五个正文 token 的权重为 <code>[.10,.15,.45,.20,.10]</code>，正文的“碰撞相关度”为 <code>[0,0,1,.5,0]</code>，聚合值就是 <code>.45×1+.20×.5=.55</code>。这说明它能收集全句信号，不证明它学会了 reasoning。论文也没有 thinking-token 独立消融。</p>
+<p>它们不是词，不会输出可读推理步骤。假设某个 register 对五个正文 token 的权重为 <code>[.10,.15,.45,.20,.10]</code>，正文的“碰撞相关度”为 <code>[0,0,1,.5,0]</code>，聚合值就是 <code class="m">.45\times 1+.20\times .5=.55</code>。这说明它能收集全句信号，不证明它学会了 reasoning。论文也没有 thinking-token 独立消融。</p>
 
 <h2 id="s8"><span class="sec">08 · MODALITY-SPECIFIC LATENTS</span>视频压空间与时间，音频压时频结构</h2>
 <h3>视频：让 DiT 不必面对每个像素</h3>
-<p>当前官方实现给出的 causal Video VAE<a class="jr" href="#g-11">11</a> 形状是 <code>[B,3,F,H,W]→[B,128,F',H/32,W/32]</code>，<code>F'=1+(F-1)/8</code>。33 帧 512² 视频从 8,650,752 个像素位置变成 <code>5×16×16=1,280</code> 个 latent 位置，每个位置 128 维。6758× 是位置数缩减，不是文件压缩率。</p>
+<p>当前官方实现给出的 causal Video VAE<a class="jr" href="#g-11">11</a> 形状是 <code class="m">[B,3,F,H,W]\to [B,128,F',H/32,W/32]</code>，<code>F'=1+(F-1)/8</code>。33 帧 512² 视频从 8,650,752 个像素位置变成 <code class="m">5\times 16\times 16=1,280</code> 个 latent 位置，每个位置 128 维。6758× 是位置数缩减，不是文件压缩率。</p>
 <h3>音频：先 mel，再压到约 25 token/s</h3>
 <div class="figure" id="fig-08"><div class="figcap"><span>Fig 08 · 立体声音频编解码链</span><b>16 kHz ANALYSIS → 24 kHz SYNTHESIS</b></div>
   <div class="codec"><div><b>stereo wave</b><span>输入重采样到 16 kHz</span></div><div><b>2× mel</b><span>左右声道各算时频图</span></div><div><b>Audio VAE</b><span>约 25 token/s<br>128 维</span></div><div><b>Flow DiT</b><span>在连续 latent 上生成</span></div><div><b>VAE decode</b><span>还原双声道 mel</span></div><div><b>HiFi-GAN</b><span>24 kHz stereo waveform</span></div></div>
 </div>
-<p>这里的 mel-spectrogram<a class="jr" href="#g-18">18</a> 是沿时间展示各频带能量的时频图。4 秒约 100 个音频 token，20 秒约 500 个。vocoder<a class="jr" href="#g-12">12</a> 只负责把频谱合成为相位连续、可播放的波形，不是又一轮语义去噪。当前代码形状 <code>[B,8,T/4,16]</code> 也解释了 128 维来自 <code>8×16</code>。</p>
+<p>这里的 mel-spectrogram<a class="jr" href="#g-18">18</a> 是沿时间展示各频带能量的时频图。4 秒约 100 个音频 token，20 秒约 500 个。vocoder<a class="jr" href="#g-12">12</a> 只负责把频谱合成为相位连续、可播放的波形，不是又一轮语义去噪。当前代码形状 <code>[B,8,T/4,16]</code> 也解释了 128 维来自 <code class="m">8\times 16</code>。</p>
 
 <h2 id="s9"><span class="sec">09 · FLOW MATCHING</span>两条流训练时，究竟在预测什么<a class="jr" href="#g-16">16</a></h2>
 <div class="math"><div class="tex" data-display="true">x_\sigma=(1-\sigma)x_0+\sigma\epsilon,\qquad v^*=\epsilon-x_0,\qquad \mathcal L=\lVert v_\theta(x_\sigma,\sigma,c)-v^*\rVert_2^2</div><div class="symbols"><b>x₀</b><span>VAE 编码后的干净视频或音频 latent。</span><b>ε</b><span>与 latent 同形状的随机噪声。</span><b>σ</b><span>0 到 1 的插值位置；0 靠近数据，1 靠近噪声。</span><b>xσ</b><span>模型训练时看到的带噪 latent。</span><b>v*</b><span>直线路径的真实速度。由 dxσ/dσ 求导得到 ε−x₀。</span><b>vθ</b><span>双流 DiT 预测的速度。</span><b>‖·‖²₂</b><span>每一维误差先平方，再全部求和。</span></div></div>
@@ -187,7 +187,7 @@ code{overflow-wrap:anywhere;word-break:break-word}
 
 <h2 id="s12"><span class="sec">12 · EXPERIMENTS & EVIDENCE</span>速度数字很硬，质量结论证据偏薄</h2>
 <div class="figure" id="fig-11"><div class="figcap"><span>Fig 11 · 单张 H100 每个 diffusion step</span><b>121 FRAMES · 720P · EULER 1 STEP · CFG=1</b></div>
-  <div class="speed"><div class="speedcard"><b>22.30 s</b><div class="bar"></div><span>Wan 2.2-14B · video only</span></div><div class="speedcard fast"><b>1.22 s</b><div class="bar"></div><span>LTX-2 19B · audio + video</span></div></div><p><code>22.30 ÷ 1.22 = 18.28×</code>，约 18× 的算术成立。但两者 VAE、token 数、Transformer 和 kernel 都不同，这不是“只改双流”的单变量消融。</p>
+  <div class="speed"><div class="speedcard"><b>22.30 s</b><div class="bar"></div><span>Wan 2.2-14B · video only</span></div><div class="speedcard fast"><b>1.22 s</b><div class="bar"></div><span>LTX-2 19B · audio + video</span></div></div><p><code class="m">22.30 ÷ 1.22 =18.28\times</code>，约 18× 的算术成立。但两者 VAE、token 数、Transformer 和 kernel 都不同，这不是“只改双流”的单变量消融。</p>
 </div>
 <div class="evidence"><div class="evrow"><b>主张</b><span>报告给出的证据</span><span class="level">证据强度</span></div><div class="evrow"><b>每步约 18×</b><span>公开 Table 1，硬件、帧数、分辨率、solver 与 CFG 均给出；仍不是同架构对照。</span><span class="level h">较强</span></div><div class="evrow"><b>视频公开榜前列</b><span>称 2025-11-06 Artificial Analysis I2V #3、T2V #4；未列分数，榜单会变化。</span><span class="level m">中等</span></div><div class="evrow"><b>优于 Ovi、可比闭源</b><span>内部人评没有 prompt、样本数、参与者、胜率、置信区间或原始表。</span><span class="level l">较弱</span></div><div class="evrow"><b>thinking tokens 有效</b><span>没有独立消融，无法与全层特征、双向 connector 拆开归因。</span><span class="level l">未证明</span></div></div>
 

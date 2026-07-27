@@ -206,7 +206,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
   </div>
 </figure>
 <h3>先用一个数算清两套 score 在做什么</h3>
-<p>把整张 latent 缩成一个数。学生输出 <code>x=1.2</code>，取 <code>α=.8、σ=.6、ε=−.5</code>，所以 <code>xₜ=.8×1.2+.6×(−.5)=.66</code>。冻结老师预测干净值 <code>μreal=1.5</code>，fake 网络预测 <code>μfake=.9</code>。</p>
+<p>把整张 latent 缩成一个数。学生输出 <code>x=1.2</code>，取 <code>α=.8、σ=.6、ε=−.5</code>，所以 <code class="m">x_{t}=.8\times 1.2+.6\times (- .5)=.66</code>。冻结老师预测干净值 <code class="m">\mu_{\mathrm{real}}=1.5</code>，fake 网络预测 <code class="m">\mu_{\mathrm{fake}}=.9</code>。</p>
 <p class="formula-purpose">两套去噪预测，都靠这条式子换算成“当前该往哪个方向改”。</p>
 <div class="formula math" data-display="true">s(x_t,t)=-\frac{x_t-\alpha\mu(x_t,t)}{\sigma^2}</div>
 <div class="score-sheet">
@@ -243,23 +243,23 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 
 <section id="baseline">
 <h2><span class="n">§ 02</span><span>原始 DMD 为什么还绑着昂贵的配对稳定器</span></h2>
-<p>DMD 不要求同一份噪声一步步复刻老师的采样轨迹，而是直接比学生和目标的整体输出分布<a class="jr" href="#g-01">1</a>。学生先生成 <code>x=Gθ(z)</code>，再给它加噪：</p>
+<p>DMD 不要求同一份噪声一步步复刻老师的采样轨迹，而是直接比学生和目标的整体输出分布<a class="jr" href="#g-01">1</a>。学生先生成 <code class="m">x=G_\theta (z)</code>，再给它加噪：</p>
 <p class="formula-purpose">前向扩散：把学生这张干净图，加噪到第 t 个噪声档位。</p>
 <div class="formula math" data-display="true">x_t=F(x,t)=\alpha_t x+\sigma_t\epsilon,\qquad \epsilon\sim\mathcal N(0,\mathbf I)</div>
 <div class="symbol-grid">
-  <div class="symbol"><code>x=Gθ(z)</code>学生由高斯噪声 z 生成的干净图或 latent。</div><div class="symbol"><code>t</code>本轮随机抽到的扩散时刻，决定加多少噪声。</div>
-  <div class="symbol"><code>αt / σt</code>噪声日程给的两个系数：一个管保留多少原信号，一个管掺进多少噪声。</div><div class="symbol"><code>ε~N(0,I)</code>与 x 同形状、各维独立且方差为 1 的高斯噪声。</div>
+  <div class="symbol"><code class="m">x=G_\theta (z)</code>学生由高斯噪声 z 生成的干净图或 latent。</div><div class="symbol"><code>t</code>本轮随机抽到的扩散时刻，决定加多少噪声。</div>
+  <div class="symbol"><code class="m">\alpha t / \sigma t</code>噪声日程给的两个系数：一个管保留多少原信号，一个管掺进多少噪声。</div><div class="symbol"><code class="m">\epsilon ~N(0,I)</code>与 x 同形状、各维独立且方差为 1 的高斯噪声。</div>
 </div>
 <p>两套去噪器把干净预测换成 score<a class="jr" href="#g-02">2</a>：</p>
 <div class="formula math" data-display="true">s(x_t,t)=\nabla_{x_t}\log p_t(x_t)=-\frac{x_t-\alpha_t\mu(x_t,t)}{\sigma_t^2}</div>
-<p class="formula-note">为什么是这个式子：给定干净图，加噪后的 <code>xₜ</code> 是个高斯（均值 <code>αx</code>、方差 <code>σ²</code>），score 就是它对数密度的坡度 <code>−(xₜ−αx)/σ²</code>，把 <code>x</code> 换成去噪估计 <code>μ</code> 即得；逐步推导见 <a href="dmd.html">DMD</a>。</p>
+<p class="formula-note">为什么是这个式子：给定干净图，加噪后的 <code class="m">x_{t}</code> 是个高斯（均值 <code class="m">\alpha x</code>、方差 <code class="m">\sigma^{2}</code>），score 就是它对数密度的坡度 <code class="m">- (x_{t}-\alpha x)/\sigma^{2}</code>，把 <code>x</code> 换成去噪估计 <code class="m">\mu</code> 即得；逐步推导见 <a href="dmd.html">DMD</a>。</p>
 <div class="symbol-grid">
-  <div class="symbol"><code>pt(xt)</code>第 t 个噪声尺度下，xt 附近的概率密度。</div><div class="symbol"><code>μ(xt,t)</code>扩散去噪器预测的干净样本。</div>
-  <div class="symbol"><code>∇xt log pt</code>对带噪输入逐元素求导；得到“往哪改”的方向张量。</div><div class="symbol"><code>σt²</code>当前噪声方差，把不同噪声尺度的残差换到对应单位。</div>
+  <div class="symbol"><code>pt(xt)</code>第 t 个噪声尺度下，xt 附近的概率密度。</div><div class="symbol"><code class="m">\mu (xt,t)</code>扩散去噪器预测的干净样本。</div>
+  <div class="symbol"><code class="m">\nabla xt \log pt</code>对带噪输入逐元素求导；得到“往哪改”的方向张量。</div><div class="symbol"><code class="m">\sigma t^{2}</code>当前噪声方差，把不同噪声尺度的残差换到对应单位。</div>
 </div>
 <p class="formula-purpose">DMD 梯度：同一带噪位置上，用学生分布 score 减目标分布 score。</p>
 <div class="formula math" data-display="true">\begin{aligned}\nabla_\theta\mathcal L_{\rm DMD}&=\mathbb E_t\!\Bigl[\left(s_{\rm fake}(x_t,t)-s_{\rm real}(x_t,t)\right)\\[-2pt]&\qquad\cdot\frac{\partial G_\theta(z)}{\partial\theta}\Bigr]\end{aligned}</div>
-<p>为什么梯度正好是两套 score 之差？因为目标是缩小学生分布到目标分布的<strong>反向 KL</strong>，对它求导时会冒出一项「<code>p_fake</code> 自己也随 θ 变」的东西，但它对整批样本一平均恒等于 0（总概率永远是 1），于是只剩 <code>s_fake−s_real</code> 乘生成器那截导数。梯度下降再取一次负号，最终效果就是：学生图被引力吸向 <code>sreal</code>（更真），同时被斥力推离自己已经扎堆的那些画法。逐步推导见 <a href="dmd.html">DMD</a>。</p>
+<p>为什么梯度正好是两套 score 之差？因为目标是缩小学生分布到目标分布的<strong>反向 KL</strong>，对它求导时会冒出一项「<code class="m">p_{\mathrm{fake}}</code> 自己也随 θ 变」的东西，但它对整批样本一平均恒等于 0（总概率永远是 1），于是只剩 <code>s_fake−s_real</code> 乘生成器那截导数。梯度下降再取一次负号，最终效果就是：学生图被引力吸向 <code>sreal</code>（更真），同时被斥力推离自己已经扎堆的那些画法。逐步推导见 <a href="dmd.html">DMD</a>。</p>
 <p class="formula-purpose">原来那根稳定绳：同一份噪声 z，要去逼近老师多步跑出来的那张指定图 y。</p>
 <div class="formula math" data-display="true">\mathcal L_{\rm reg}=\mathbb E_{(z,y)}\!\left[d\!\left(G_\theta(z),y\right)\right]</div>
 <figure><figcaption><span>Fig 02 · 配对回归的两笔账</span><b>拴住了路径，也压低了天花板</b></figcaption>
@@ -274,7 +274,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 <div class="formula math" data-display="true">\mathcal L_G=\mathcal L_{\rm DMD}+\lambda_{\rm GAN}\mathcal L_G^{\rm GAN}</div>
 <div class="symbol-grid">
   <div class="symbol"><code>LDMD</code>双 score 提供的分布匹配方向；老师仍在。</div><div class="symbol"><code>LGGAN</code>学生图通过真假分类器得到的非饱和 GAN 损失。</div>
-  <div class="symbol"><code>λGAN</code>两项的相对权重；不同骨干配方不同，不是固定常数。</div><div class="symbol"><code>消失的 Lreg</code>逐噪声配对约束和它所需的大规模离线老师数据。</div>
+  <div class="symbol"><code class="m">\lambda GAN</code>两项的相对权重；不同骨干配方不同，不是固定常数。</div><div class="symbol"><code>消失的 Lreg</code>逐噪声配对约束和它所需的大规模离线老师数据。</div>
 </div>
 <figure><figcaption><span>Fig 03 · 三类变化</span><b>老师没有被删</b></figcaption>
   <div class="cards">
@@ -289,7 +289,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 
 <section id="ttur">
 <h2><span class="n">§ 04</span><span>TTUR：移动靶没追准，生成器就不该继续跑</span></h2>
-<p class="lead"><code>μfake</code> 学的是学生当前分布；学生每更新一次，这个目标分布就移动一次。1:1 更新时，它常常拿着上一版地图给下一版学生指路。</p>
+<p class="lead"><code class="m">\mu_{\mathrm{fake}}</code> 学的是学生当前分布；学生每更新一次，这个目标分布就移动一次。1:1 更新时，它常常拿着上一版地图给下一版学生指路。</p>
 <figure><figcaption><span>Fig 04 · 5:1 是更新频率，不是公式里的乘数</span><b>五次辅助更新，一次生成器更新</b></figcaption>
   <div class="ttur">
     <div class="head">一组小步</div><div class="head">01</div><div class="head">02</div><div class="head">03</div><div class="head">04</div><div class="head">05</div>
@@ -326,25 +326,25 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 <h3>第 1 步 · 鉴定器吐的那个数 a 是什么</h3>
 <p>先把主角认清：鉴定器就是个真假打分器，喂它一张（加过噪的）图，它吐一个数 <code>a</code>（行话叫 logit）。<code>a</code> 只有一层意思——<strong>越大越「像真」，越小越「像假」</strong>，可正可负，本身还不是概率。要变成「我觉得这是真图的概率」，套一个 sigmoid 压进 0~1：</p>
 <div class="formula math" data-display="true">D(x)=\sigma(a)=\frac{1}{1+e^{-a}}</div>
-<p>对一下直觉：<code>a=0→D=.5</code>（拿不准）；<code>a=1.2→D≈.77</code>（挺像真）；<code>a=−.7→D≈.33</code>（偏假）。后面两条损失，翻来覆去只在说一句话——<strong>把该大的 a 顶大、该小的 a 压小</strong>。</p>
+<p>对一下直觉：<code class="m">a=0\to D=.5</code>（拿不准）；<code class="m">a=1.2\to D\approx .77</code>（挺像真）；<code class="m">a=- .7\to D\approx .33</code>（偏假）。后面两条损失，翻来覆去只在说一句话——<strong>把该大的 a 顶大、该小的 a 压小</strong>。</p>
 
 <h3>第 2 步 · 鉴定器的损失：就是最普通的二分类</h3>
-<p>鉴定器要做的事一句话：<strong>真图给高概率，假图给低概率</strong>。这就是最普通的二分类，损失取负对数似然（猜对了损失小，猜错了损失大）。真图项要 <code>D(real)→1</code>，写作 <code>−log D(real)</code>；假图项要 <code>D(fake)→0</code>，写作 <code>−log(1−D(fake))</code>。</p>
-<p>把 <code>D=σ(a)</code> 代进去，这两项各自缩成一个 <code>softplus</code>（记 <code>softplus(u)=log(1+eᵘ)</code>）。别跳步，一步步看真图项：<code>σ(a)=1/(1+e⁻ᵃ)</code>，取负对数正好把分式翻上来——<code>−log σ(a)=−log[1/(1+e⁻ᵃ)]=log(1+e⁻ᵃ)=softplus(−a)</code>。假图项同理：<code>1−σ(a)=e⁻ᵃ/(1+e⁻ᵃ)</code>，<code>−log(1−σ(a))=a+log(1+e⁻ᵃ)=log(1+eᵃ)=softplus(a)</code>。所以：</p>
+<p>鉴定器要做的事一句话：<strong>真图给高概率，假图给低概率</strong>。这就是最普通的二分类，损失取负对数似然（猜对了损失小，猜错了损失大）。真图项要 <code class="m">D(real)\to 1</code>，写作 <code class="m">-\log D(real)</code>；假图项要 <code class="m">D(fake)\to 0</code>，写作 <code class="m">-\log (1-D(fake))</code>。</p>
+<p>把 <code class="m">D=\sigma (a)</code> 代进去，这两项各自缩成一个 <code>softplus</code>（记 <code>softplus(u)=log(1+eᵘ)</code>）。别跳步，一步步看真图项：<code class="m">\sigma (a)=1/(1+e^{-}ᵃ)</code>，取负对数正好把分式翻上来——<code class="m">-\log \sigma (a)=-\log [1/(1+e^{-}ᵃ)]=\log (1+e^{-}ᵃ)=\operatorname{softplus}(-a)</code>。假图项同理：<code class="m">1-\sigma (a)=e^{-}ᵃ/(1+e^{-}ᵃ)</code>，<code class="m">-\log (1-\sigma (a))=a+\log (1+e^{-}ᵃ)=\log (1+eᵃ)=\operatorname{softplus}(a)</code>。所以：</p>
 <div class="formula math" data-display="true">\mathcal L_D=\mathbb E_{\rm real}\big[\underbrace{\operatorname{softplus}(-a_{\rm real})}_{-\log D(\mathrm{real})}\big]+\mathbb E_{\rm fake}\big[\underbrace{\operatorname{softplus}(a_{\rm fake})}_{-\log(1-D(\mathrm{fake}))}\big]</div>
-<p>现在符号有意义了：<code>softplus(−a_real)</code> 要变小 ⟺ <code>a_real</code> 要变大（真图判得更真）；<code>softplus(a_fake)</code> 要变小 ⟺ <code>a_fake</code> 要变小（假图判得更假）。这正是图里那句「真图 a 顶大、假图 a 压小」。</p>
+<p>现在符号有意义了：<code>softplus(−a_real)</code> 要变小 ⟺ <code class="m">a_{\mathrm{real}}</code> 要变大（真图判得更真）；<code>softplus(a_fake)</code> 要变小 ⟺ <code class="m">a_{\mathrm{fake}}</code> 要变小（假图判得更假）。这正是图里那句「真图 a 顶大、假图 a 压小」。</p>
 
 <h3>第 3 步 · 生成器的损失：把假图的 a 顶上去</h3>
-<p>轮到学生（生成器），目标和鉴定器正相反：<strong>想骗过鉴定器，让自己的假图也被判成真</strong>，即 <code>D(fake)→1</code>。于是最小化 <code>−log D(fake)</code>，同样缩成一个 softplus：</p>
+<p>轮到学生（生成器），目标和鉴定器正相反：<strong>想骗过鉴定器，让自己的假图也被判成真</strong>，即 <code class="m">D(fake)\to 1</code>。于是最小化 <code class="m">-\log D(fake)</code>，同样缩成一个 softplus：</p>
 <div class="formula math" data-display="true">\mathcal L_G^{\rm GAN}=\mathbb E_{\rm fake}\big[\operatorname{softplus}(-a_{\rm fake})\big]=-\mathbb E_{\rm fake}\big[\log D(x_{\rm fake})\big]</div>
-<p>关键就在这个符号对着拧：学生这项是 <code>softplus(−a_fake)</code>（要 <code>a_fake</code> 大），鉴定器那项是 <code>softplus(a_fake)</code>（要 <code>a_fake</code> 小）——同一个数，一个想顶上去、一个想压下来，这就是「对抗」。至于<b>「非饱和」</b>：这里用 <code>−log D</code>，而不是 GAN 原版的 <code>log(1−D)</code>。原版在学生画得还烂（<code>D</code> 接近 0）时梯度几乎为 0，学生学不动；换成 <code>−log D</code>，越被识破梯度越大，学生反而更使劲。</p>
+<p>关键就在这个符号对着拧：学生这项是 <code>softplus(−a_fake)</code>（要 <code class="m">a_{\mathrm{fake}}</code> 大），鉴定器那项是 <code>softplus(a_fake)</code>（要 <code class="m">a_{\mathrm{fake}}</code> 小）——同一个数，一个想顶上去、一个想压下来，这就是「对抗」。至于<b>「非饱和」</b>：这里用 <code class="m">-\log D</code>，而不是 GAN 原版的 <code class="m">\log (1-D)</code>。原版在学生画得还烂（<code>D</code> 接近 0）时梯度几乎为 0，学生学不动；换成 <code class="m">-\log D</code>，越被识破梯度越大，学生反而更使劲。</p>
 <div class="symbol-grid">
-  <div class="symbol"><code>a_real / a_fake</code>鉴定器对真实图 / 学生图吐的那个数（logit）。</div><div class="symbol"><code>D(x)=σ(a)</code>套 sigmoid，把 a 压成“像真图”的概率。</div>
-  <div class="symbol"><code>softplus(u)=log(1+eᵘ)</code><code>−log σ</code> 的等价写法，数值更稳。</div><div class="symbol"><code>E_real / E_fake</code>分别对真实图、学生图一个 batch 求平均。</div>
+  <div class="symbol"><code>a_real / a_fake</code>鉴定器对真实图 / 学生图吐的那个数（logit）。</div><div class="symbol"><code class="m">D(x)=\sigma (a)</code>套 sigmoid，把 a 压成“像真图”的概率。</div>
+  <div class="symbol"><code>softplus(u)=log(1+eᵘ)</code><code class="m">-\log \sigma</code> 的等价写法，数值更稳。</div><div class="symbol"><code>E_real / E_fake</code>分别对真实图、学生图一个 batch 求平均。</div>
 </div>
 
 <h3>把一组 a 真正代进去</h3>
-<p>取 <code>a_real=1.2</code>、<code>a_fake=−.7</code>。先换成概率看这一版鉴定器：真图 <code>D=.77</code>、假图 <code>D=.33</code>，判得还行。</p>
+<p>取 <code class="m">a_{\mathrm{real}}=1.2</code>、<code class="m">a_{\mathrm{fake}}=- .7</code>。先换成概率看这一版鉴定器：真图 <code>D=.77</code>、假图 <code>D=.33</code>，判得还行。</p>
 <div class="score-sheet">
   <div class="score-cell label">鉴定器·真图项 = −log D(real)</div><div class="score-cell">softplus(−1.2) ≈ .263</div>
   <div class="score-cell label">鉴定器·假图项 = −log(1−D(fake))</div><div class="score-cell">softplus(−.7) ≈ .403</div>
@@ -374,7 +374,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 <div class="formula math" data-display="true">x_{t_{i+1}}=\alpha_{t_{i+1}}\hat x_{t_i}+\sigma_{t_{i+1}}\epsilon_i,\qquad \epsilon_i\sim\mathcal N(0,\mathbf I)</div>
 <div class="symbol-grid">
   <div class="symbol"><code>N / ti</code>总步数与第 i 次调用的时间条件。</div><div class="symbol"><code>xti</code>当前收到的带噪 latent。</div>
-  <div class="symbol"><code>x̂ti</code>当前一步对干净 latent 的预测。</div><div class="symbol"><code>εi</code>当前步后重新采样的新噪声。</div>
+  <div class="symbol"><code>x̂ti</code>当前一步对干净 latent 的预测。</div><div class="symbol"><code class="m">\epsilon i</code>当前步后重新采样的新噪声。</div>
 </div>
 <figure><figcaption><span>Fig 07 · SDXL 四步时间表</span><b>999 → 749 → 499 → 249</b></figcaption>
   <div class="step-flow">
@@ -393,7 +393,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 <div class="formula math" data-display="true">\begin{aligned}x_t^{\rm train}&=\alpha_t x_{\rm real}+\sigma_t\epsilon,\\x_{t_{i+1}}^{\rm infer}&=\alpha_{t_{i+1}}G_\theta(x_{t_i}^{\rm infer},t_i)+\sigma_{t_{i+1}}\epsilon_i\end{aligned}</div>
 <figure><figcaption><span>Fig 08 · 一维数字例</span><b>同一时刻，训练看 1.043，推理收 −.077</b></figcaption>
   <div class="mismatch">
-    <div class="side train"><h4>传统训练 · 真实图加噪</h4><p><code>xreal=2.0</code>，<code>α=.7</code>，<code>σ=.714</code>，<code>ε=−.5</code></p><div class="calc">x₇₄₉(train)<br>= .7×2.0 + .714×(−.5)<br>= 1.400 − .357<br>= 1.043</div></div>
+    <div class="side train"><h4>传统训练 · 真实图加噪</h4><p><code>xreal=2.0</code>，<code class="m">\alpha =.7</code>，<code class="m">\sigma =.714</code>，<code class="m">\epsilon =- .5</code></p><div class="calc">x₇₄₉(train)<br>= .7×2.0 + .714×(−.5)<br>= 1.400 − .357<br>= 1.043</div></div>
     <div class="side infer"><h4>真实推理 · 学生输出加噪</h4><p>第一步学生只预测 <code>x̂999=.4</code>，其余数相同。</p><div class="calc">x₇₄₉(infer)<br>= .7×.4 + .714×(−.5)<br>= .280 − .357<br>= −.077</div></div>
   </div>
   <div class="gap-result">输入差距：1.043 − (−.077) = 1.120</div>
@@ -404,7 +404,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 <section id="backsim">
 <h2><span class="n">§ 09</span><span>Backward simulation：训练时先用当前学生真的跑到目标步</span></h2>
 <div class="plain"><b>名字先拆开：</b>backward 指扩散的反向生成方向——从高噪声往干净图走；它不是反向传播，也不是把已经生成的图倒放。simulation 表示前面几步只负责模拟推理、造出后续训练真正会遇到的输入。</div>
-<p>官方实现为每个 batch 随机抽目标步 <code>k∈{0,…,N−1}</code>。前面 <code>k−1</code> 步在 <code>no_grad</code> 里模拟推理，只负责造输入；当前第 <code>k</code> 步才保留梯度并接受 DMD + GAN 监督。</p>
+<p>官方实现为每个 batch 随机抽目标步 <code class="m">k\in {0,…,N-1}</code>。前面 <code class="m">k-1</code> 步在 <code>no_grad</code> 里模拟推理，只负责造输入；当前第 <code>k</code> 步才保留梯度并接受 DMD + GAN 监督。</p>
 <figure><figcaption><span>Fig 09 · 训练第 3 步时的真实数据流</span><b>前两步造输入，第三步才反传</b></figcaption>
   <div class="sim-flow">
     <div class="sim-node"><b>01 · START</b><p>采纯噪声 x999</p></div><div class="flow-arrow">→</div>
@@ -470,7 +470,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
     <tr class="bad"><td>SDXL</td><td>1 步</td><td>5e−7 · 5:1 · t=399</td><td>同上 + 10K 配对短预热</td><td>25K · 约 60h</td></tr>
   </tbody></table></div>
 </figure>
-<p>GAN 生成器权重在 ImageNet 为 <code>3×10⁻³</code>，SD v1.5 为 <code>10⁻³</code>，官方 SDXL 脚本为 <code>5×10⁻³</code>。论文附录与公开脚本应分别标明，不能用一个数字覆盖所有骨干。</p>
+<p>GAN 生成器权重在 ImageNet 为 <code class="m">3\times 10^{-3}</code>，SD v1.5 为 <code class="m">10^{-3}</code>，官方 SDXL 脚本为 <code class="m">5\times 10^{-3}</code>。论文附录与公开脚本应分别标明，不能用一个数字覆盖所有骨干。</p>
 </section>
 
 <section id="results">

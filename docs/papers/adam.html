@@ -115,14 +115,14 @@ figure.play .ad-rev.d6 { transition-delay: 1.65s; }
 
 <div class="tldr">
   <span class="label">TL;DR</span>
-  <p>Adam = ADAptive Moment estimation，给梯度记<strong>两个 <a href="../concepts/ema.html">EMA</a></strong>：一阶动量 <strong>m</strong><a class="jr" href="#g-01">1</a>（梯度的 EMA，记<strong>方向</strong>、抹平抖动）和二阶 <strong>v</strong><a class="jr" href="#g-02">2</a>（梯度平方的 EMA，记<strong>大小</strong>）。更新量 = <code>lr · m̂ / (√v̂ + ε)</code>——分子是平滑方向，分母按"最近梯度多大"把步长归一化 → <strong>每个参数自己的自适应学习率</strong><a class="jr" href="#g-03">3</a>。因为 m、v 从 0 起步早期偏小，再除 <code>(1−β^t)</code> 做 <strong>bias correction</strong><a class="jr" href="#g-04">4</a>。默认 β1=0.9、β2=0.999、ε=1e-8。= <strong>动量</strong>（抹抖）+ <strong>RMSprop</strong>（自适应步长）合体，几乎不用调参就稳，是 Transformer/LLM 的默认优化器（常用 <strong>AdamW</strong><a class="jr" href="#g-05">5</a>）。</p>
+  <p>Adam = ADAptive Moment estimation，给梯度记<strong>两个 <a href="../concepts/ema.html">EMA</a></strong>：一阶动量 <strong>m</strong><a class="jr" href="#g-01">1</a>（梯度的 EMA，记<strong>方向</strong>、抹平抖动）和二阶 <strong>v</strong><a class="jr" href="#g-02">2</a>（梯度平方的 EMA，记<strong>大小</strong>）。更新量 = <code class="m">lr \cdot \hat{m} / (\sqrt{\hat{v}} +\epsilon )</code>——分子是平滑方向，分母按"最近梯度多大"把步长归一化 → <strong>每个参数自己的自适应学习率</strong><a class="jr" href="#g-03">3</a>。因为 m、v 从 0 起步早期偏小，再除 <code class="m">(1-\beta^t)</code> 做 <strong>bias correction</strong><a class="jr" href="#g-04">4</a>。默认 β1=0.9、β2=0.999、ε=1e-8。= <strong>动量</strong>（抹抖）+ <strong>RMSprop</strong>（自适应步长）合体，几乎不用调参就稳，是 Transformer/LLM 的默认优化器（常用 <strong>AdamW</strong><a class="jr" href="#g-05">5</a>）。</p>
 </div>
 
 
 <!-- §01 -->
 <h2><span class="num">§ 01</span>SGD 为什么抖 / 慢</h2>
 
-<p>普通 SGD：<code>θ ← θ − lr · g</code>，一个<strong>全局学习率</strong>对所有参数一视同仁。问题出在 loss 地形常常是"<strong>窄沟</strong>"——某些方向陡（一动就过头）、某些方向平（要走很远）。同一个 lr：陡方向<strong>横着来回弹</strong>，平方向<strong>爬得龟速</strong>。</p>
+<p>普通 SGD：<code class="m">\theta ← \theta -lr \cdot g</code>，一个<strong>全局学习率</strong>对所有参数一视同仁。问题出在 loss 地形常常是"<strong>窄沟</strong>"——某些方向陡（一动就过头）、某些方向平（要走很远）。同一个 lr：陡方向<strong>横着来回弹</strong>，平方向<strong>爬得龟速</strong>。</p>
 
 <figure id="fig-sgd" class="fig-sgd">
   <figcaption>
@@ -220,7 +220,7 @@ figure.play .ad-rev.d6 { transition-delay: 1.65s; }
   </svg>
 </figure>
 
-<p>"大的变小、小的变大"换个角度才直观：<strong>每个参数都除以"它自己平时的梯度大小"，于是全被归到同一档</strong>。魔法在于分子 <code>m̂ ≈ g</code>、分母 <code>√v̂ ≈ |g|</code>，一除把梯度自己的大小约掉：<code>步 ≈ lr·m̂/√v̂ ≈ lr·(±1)</code>——步子大小跟梯度多大<strong>无关</strong>，只剩方向。举两个参数：</p>
+<p>"大的变小、小的变大"换个角度才直观：<strong>每个参数都除以"它自己平时的梯度大小"，于是全被归到同一档</strong>。魔法在于分子 <code class="m">\hat{m} \approx g</code>、分母 <code class="m">\sqrt{\hat{v}} \approx |g|</code>，一除把梯度自己的大小约掉：<code>步 ≈ lr·m̂/√v̂ ≈ lr·(±1)</code>——步子大小跟梯度多大<strong>无关</strong>，只剩方向。举两个参数：</p>
 
 <table class="spec">
   <tr><th></th><th>参数 A（陡）</th><th>参数 B（平）</th></tr>
@@ -236,7 +236,7 @@ figure.play .ad-rev.d6 { transition-delay: 1.65s; }
 <!-- §04 -->
 <h2><span class="num">§ 04</span>Adam = 两者合 + bias correction</h2>
 
-<p>Adam 就是把这两个 EMA <strong>合起来</strong>：分子用动量 <code>m̂</code>（平滑方向）、分母用 <code>√v̂</code>（最近大小）。还有一道修正：m、v 都<strong>从 0 起步</strong>，头几步被"0 的旧值"往下拖、偏小，所以各除一个 <code>(1−β^t)</code> 把它<strong>补回来</strong>（t 大了这项 →1，自动消失）。</p>
+<p>Adam 就是把这两个 EMA <strong>合起来</strong>：分子用动量 <code>m̂</code>（平滑方向）、分母用 <code class="m">\sqrt{\hat{v}}</code>（最近大小）。还有一道修正：m、v 都<strong>从 0 起步</strong>，头几步被"0 的旧值"往下拖、偏小，所以各除一个 <code class="m">(1-\beta^t)</code> 把它<strong>补回来</strong>（t 大了这项 →1，自动消失）。</p>
 
 <figure id="fig-adam" class="fig-adam">
   <figcaption>

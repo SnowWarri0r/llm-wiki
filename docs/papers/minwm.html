@@ -158,7 +158,7 @@ figcaption span:first-child{color:var(--teal)}figcaption b{color:var(--orange)}
 
 <section id="s2">
   <h2><span class="n">SECTION 02</span><span>数据先讲真话：pose 错了，模型就不知道该信画面还是信动作</span></h2>
-  <p>每帧都要附相机内参<a class="jr" href="#g-04">04</a> <code>Kᵢ</code> 与 world-to-camera 外参<a class="jr" href="#g-05">05</a> <code>Tᵢᶜʷ</code>。若视频明明向右摇，估计 pose 却写成向左，监督就是矛盾的。</p>
+  <p>每帧都要附相机内参<a class="jr" href="#g-04">04</a> <code class="m">K_{i}</code> 与 world-to-camera 外参<a class="jr" href="#g-05">05</a> <code class="m">T_{i}ᶜʷ</code>。若视频明明向右摇，估计 pose 却写成向左，监督就是矛盾的。</p>
   <figure id="fig-03">
     <figcaption><span>Fig 03 · 三种相机轨迹来源</span><b>论文只证明当前设置下的结果</b></figcaption>
     <div class="data3">
@@ -189,14 +189,14 @@ figcaption span:first-child{color:var(--teal)}figcaption b{color:var(--orange)}
   <figure id="fig-04">
     <figcaption><span>Fig 04 · 绝对相机输入，留下相对关系</span><b>不是显式 3D 重建</b></figcaption>
     <div class="prope">
-      <div class="cam"><h4>Frame 1 · 相机不动</h4><p><code>K₁=I</code>，<code>T₁ᶜʷ=I</code></p><div class="matrix">P̃₁ = identity<br>位置 (x₁,y₁) 另走 2D RoPE</div><div class="splitbar"><div class="pose">相机块</div><div class="xy">x / y 块</div></div></div>
+      <div class="cam"><h4>Frame 1 · 相机不动</h4><p><code class="m">K_{1}=I</code>，<code class="m">T_{1}ᶜʷ=I</code></p><div class="matrix">P̃₁ = identity<br>位置 (x₁,y₁) 另走 2D RoPE</div><div class="splitbar"><div class="pose">相机块</div><div class="xy">x / y 块</div></div></div>
       <div class="relative">P̃₁P̃₂⁻¹</div>
-      <div class="cam"><h4>Frame 2 · 世界 x 方向 +1</h4><p>world-to-camera 外参含 <code>−1</code> 平移；求逆后，相对项出现 <code>+1</code>。</p><div class="matrix">[1 0 0 1]<br>[0 1 0 0]<br>[0 0 1 0]<br>[0 0 0 1]</div><div class="splitbar"><div class="pose">相对位移 +1</div><div class="xy">画面坐标</div></div></div>
+      <div class="cam"><h4>Frame 2 · 世界 x 方向 +1</h4><p>world-to-camera 外参含 <code class="m">-1</code> 平移；求逆后，相对项出现 <code>+1</code>。</p><div class="matrix">[1 0 0 1]<br>[0 1 0 0]<br>[0 0 1 0]<br>[0 0 0 1]</div><div class="splitbar"><div class="pose">相对位移 +1</div><div class="xy">画面坐标</div></div></div>
     </div>
   </figure>
   <p>论文写成 GTA attention 形式：</p>
   <div class="formula wide" data-expr="\operatorname{Attn}_{\mathrm{PRoPE}}(Q,K,V)=D\odot\operatorname{Attn}(D^\top\odot Q,D^{-1}\odot K,D^{-1}\odot V)"></div>
-  <p><code>⊙</code> 在这里表示把分块线性变换施加到对应特征，不是普通标量逐元素乘。Q/K 交互中留下 <code>P̃ᵢ₁P̃ᵢ₂⁻¹</code>，所以 attention 能直接依赖相对相机。</p>
+  <p><code class="m">\odot</code> 在这里表示把分块线性变换施加到对应特征，不是普通标量逐元素乘。Q/K 交互中留下 <code class="m">\tilde{P}_{i1}\tilde{P}_{i2}^{-1}</code>，所以 attention 能直接依赖相对相机。</p>
   <div class="boundary"><strong>论文公式 vs 当前代码：</strong>官方实现保留普通 RoPE attention，并增加独立 PRoPE 路径，再用零初始化投影逐渐加回主干。训练开始时新分支输出为零，原模型不会被随机相机分支突然打乱。</div>
 </section>
 
@@ -220,7 +220,7 @@ figcaption span:first-child{color:var(--teal)}figcaption b{color:var(--orange)}
     <div class="fork">
       <div class="route ode"><h4>2a · Causal ODE</h4><p>慢速因果老师先跑 PF-ODE<a class="jr" href="#g-08">08</a>，把许多中间 latent 存盘。学生之后读取这些固定作业，直接回归干净 chunk。</p><p><strong>成本：</strong>先采样、再存储；训练监督简单。</p></div>
       <div class="or">OR<br>二选一</div>
-      <div class="route cd"><h4>2b · Causal CD</h4><p>训练现场让老师从 <code>t</code> 走一小步到 <code>t−Δt</code>，要求当前学生与 EMA<a class="jr" href="#g-10">10</a> 学生给出一致结果。</p><p><strong>成本：</strong>省轨迹磁盘；每步多跑老师与 EMA 目标。</p></div>
+      <div class="route cd"><h4>2b · Causal CD</h4><p>训练现场让老师从 <code>t</code> 走一小步到 <code class="m">t-\Delta t</code>，要求当前学生与 EMA<a class="jr" href="#g-10">10</a> 学生给出一致结果。</p><p><strong>成本：</strong>省轨迹磁盘；每步多跑老师与 EMA 目标。</p></div>
     </div>
   </figure>
   <h3>5.1 ODE 回归公式：从中间状态直接猜干净 chunk</h3>

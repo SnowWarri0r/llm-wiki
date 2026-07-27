@@ -183,7 +183,7 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
   <p class="formula-purpose">整段视频的自回归概率：</p>
   <div class="symbols"><div class="sym"><b><code>\theta</code></b>Solaris 参数</div><div class="sym"><b><code>x_t</code></b>时刻 t 的联合画面</div><div class="sym"><b><code>x_{&lt;t}</code></b>此前联合画面</div><div class="sym"><b><code>a_{&lt;t}</code></b>此前玩家动作</div></div>
   <div class="formula" data-expr="p_\theta(\mathbf{x})=\prod_{t=1}^{T}p_\theta(\mathbf{x}_t\mid \mathbf{x}_{<t},\mathbf{a}_{<t})"></div>
-  <p>乘号来自概率的链式分解，不是假设各帧独立。若三步条件概率是 <code>.8、.6、.9</code>，这段特定视频的联合概率为 <code>.8×.6×.9=.432</code>；后两项都已经把之前发生的画面和动作当作条件。</p>
+  <p>乘号来自概率的链式分解，不是假设各帧独立。若三步条件概率是 <code>.8、.6、.9</code>，这段特定视频的联合概率为 <code class="m">.8\times .6\times .9=.432</code>；后两项都已经把之前发生的画面和动作当作条件。</p>
   <figure>
     <figcaption><span>Fig 05 · Multiplayer attention</span><b>共享的是视觉交流，不是动作</b></figcaption>
     <div class="attn">
@@ -230,13 +230,13 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
   <div class="symbols"><div class="sym"><b><code>x</code></b>真实双人视频 latent</div><div class="sym"><b><code>\epsilon</code></b>同形状高斯噪声</div><div class="sym"><b><code>\sigma</code></b>噪声比例：0 干净，1 全噪声</div><div class="sym"><b><code>x_\sigma</code></b>混合后的训练输入</div><div class="sym"><b><code>v_\theta</code></b>网络预测速度</div><div class="sym"><b><code>a</code></b>两位玩家动作</div></div>
   <p class="formula-purpose">先把真实 latent 和随机噪声按比例混合：</p>
   <div class="formula" data-expr="\mathbf{x}_{\boldsymbol{\sigma}}=(1-\boldsymbol{\sigma})\mathbf{x}+\boldsymbol{\sigma}\boldsymbol{\epsilon},\qquad \boldsymbol{\epsilon}\sim\mathcal{N}(0,I)"></div>
-  <p>这条式子把 <code>σ</code> 当成"走了多远"：<code>σ=0</code> 停在真实 latent，<code>σ=1</code> 停在纯噪声，中间是一条把两端连起来的直线。</p>
-  <p class="formula-purpose">那"速度"是多少？把上式对 <code>σ</code> 求一次导就有了：</p>
+  <p>这条式子把 <code class="m">\sigma</code> 当成"走了多远"：<code class="m">\sigma =0</code> 停在真实 latent，<code class="m">\sigma =1</code> 停在纯噪声，中间是一条把两端连起来的直线。</p>
+  <p class="formula-purpose">那"速度"是多少？把上式对 <code class="m">\sigma</code> 求一次导就有了：</p>
   <div class="formula" data-expr="\frac{\mathrm{d}\mathbf{x}_{\boldsymbol{\sigma}}}{\mathrm{d}\boldsymbol{\sigma}}=\frac{\mathrm{d}}{\mathrm{d}\boldsymbol{\sigma}}\big[(1-\boldsymbol{\sigma})\mathbf{x}+\boldsymbol{\sigma}\boldsymbol{\epsilon}\big]=-\mathbf{x}+\boldsymbol{\epsilon}=\boldsymbol{\epsilon}-\mathbf{x}"></div>
-  <p>逐项看：<code>(1-σ)x</code> 里 <code>x</code> 是常数，对 <code>σ</code> 求导得 <code>−x</code>；<code>σε</code> 里 <code>ε</code> 是常数，求导得 <code>ε</code>。结果 <code>ε−x</code> <strong>里面不含 <code>σ</code></strong>——不管走到路上哪一点，速度都一样。这正是"直线"这个词的数学含义，也是 flow matching 比一般扩散好学的原因：要拟合的目标是一个常量，不随时刻乱变。</p>
+  <p>逐项看：<code class="m">(1-\sigma )x</code> 里 <code>x</code> 是常数，对 <code class="m">\sigma</code> 求导得 <code class="m">-x</code>；<code class="m">\sigma \epsilon</code> 里 <code class="m">\epsilon</code> 是常数，求导得 <code class="m">\epsilon</code>。结果 <code class="m">\epsilon -x</code> <strong>里面不含 <code class="m">\sigma</code></strong>——不管走到路上哪一点，速度都一样。这正是"直线"这个词的数学含义，也是 flow matching 比一般扩散好学的原因：要拟合的目标是一个常量，不随时刻乱变。</p>
   <p class="formula-purpose">于是网络的任务就是拿平方误差去逼近这个速度：</p>
   <div class="formula" data-expr="\mathcal{L}_\theta=\mathbb{E}\left[\left\|v_\theta(\mathbf{x}_{\boldsymbol{\sigma}},\boldsymbol{\sigma},\mathbf{a})-(\boldsymbol{\epsilon}-\mathbf{x})\right\|_2^2\right]"></div>
-  <p><code>‖e‖₂²</code> 不是两个 2 挤在一起：先看<strong>下标</strong>的 2，它说明这是 L2 范数（各分量平方和再开根）；再看<strong>上标</strong>的 2，是把范数整体再平方，正好把根号消掉。所以 <code>‖e‖₂²=Σᵢeᵢ²</code>：每个速度误差平方后相加。用平方而不是绝对值，是因为正负误差不会互相抵消，而且偏得越远惩罚增长越快。</p>
+  <p><code class="m">\| e\| _{2}^{2}</code> 不是两个 2 挤在一起：先看<strong>下标</strong>的 2，它说明这是 L2 范数（各分量平方和再开根）；再看<strong>上标</strong>的 2，是把范数整体再平方，正好把根号消掉。所以 <code class="m">\| e\| _{2}^{2}=\Sigma_{i}e_{i}^{2}</code>：每个速度误差平方后相加。用平方而不是绝对值，是因为正负误差不会互相抵消，而且偏得越远惩罚增长越快。</p>
   <figure>
     <figcaption><span>Fig 06 · 一个数算到还原结果</span><b>公式、代入、答案不跳步</b></figcaption>
     <div class="calc">
@@ -276,7 +276,7 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
     <figcaption><span>Fig 08 · 历史从哪里来</span><b>真值历史 ≠ 自己的历史</b></figcaption>
     <div class="mismatch">
       <div class="side train"><h4>普通因果训练</h4><p><strong>每一步看数据集真帧。</strong></p><p>输入始终干净，上一帧的小错不会进入下一步。</p><code>GT₁ → 预测₂；GT₂ → 预测₃</code></div>
-      <div class="side test"><h4>真实部署</h4><p><strong>每一步看自己的输出。</strong></p><p>第 2 帧的误差会成为第 3 帧条件，再继续累积。</p><code>x̂₁ → x̂₂ → x̂₃ → …</code></div>
+      <div class="side test"><h4>真实部署</h4><p><strong>每一步看自己的输出。</strong></p><p>第 2 帧的误差会成为第 3 帧条件，再继续累积。</p><code class="m">\hat{x}_{1} \to \hat{x}_{2} \to \hat{x}_{3} \to …</code></div>
     </div>
   </figure>
   <p>Self Forcing 的做法就是把右边那一列搬到训练里：让 student 训练时就用自己生成的历史往前滚，于是它学到的输入分布跟部署时真正会遇到的对得上。</p>
@@ -302,7 +302,7 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
     <div class="sym"><b><code>L_t</code></b>这一次要 rollout 出来的总长度，也就是长上下文 teacher 一次要评的长度</div>
     <div class="sym"><b><code>N</code></b>rollout 出来的帧数，本节按 <code>N=L_t</code> 读</div>
   </div>
-  <p><strong>轴二：滑窗互相重叠。</strong>这条是 Solaris 要解决的。因果 student 每生成一帧，都要把窗口里的 <code>Lₛ</code> 帧一起送进网络算一遍；下一帧再算一次，窗口往右挪一格。相邻两次前向有 <code>Lₛ−1</code> 帧是同一批帧，但它们是<strong>两次独立的前向</strong>，各留各的激活，谁也替不了谁。</p>
+  <p><strong>轴二：滑窗互相重叠。</strong>这条是 Solaris 要解决的。因果 student 每生成一帧，都要把窗口里的 <code class="m">L_{s}</code> 帧一起送进网络算一遍；下一帧再算一次，窗口往右挪一格。相邻两次前向有 <code class="m">L_{s}-1</code> 帧是同一批帧，但它们是<strong>两次独立的前向</strong>，各留各的激活，谁也替不了谁。</p>
   <p>光这么说还看不出钱花在哪。<strong>换个角度数：不数"每一步留了几份"，改数"同一帧被留了几次"。</strong>盯住第 3 帧看它什么时候出现、什么时候滑走：</p>
   <div class="calc">
     生成第 3 帧 → 窗口 [1 2 <span class="ans">3</span>]&nbsp;&nbsp;<span class="hi">← 历史还不够，窗口没填满</span><br>
@@ -315,8 +315,8 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
     <span class="hi">第 3 帧出现在第 3~8 步，一共</span> <span class="ans">6</span> <span class="hi">个窗口，正好是 Lₛ。</span>
   </div>
   <p>关键在于：<strong>这 6 次不是同一份激活被引用 6 回，是 6 次各自独立的前向。</strong>每一次，第 3 帧的 token 都要重新算 Q/K/V、重新过每一层 MLP、重新过每个 norm，留下一份<strong>全新的</strong>中间结果。6 份都挂在各自的计算图上，谁也替不了谁，所以 6 份都得占着显存到反传结束。</p>
-  <p>每帧 ×<code>Lₛ</code>、一共 <code>Lₜ</code> 帧——这就是 <code>Lₜ×Lₛ</code> 的来历。</p>
-  <div class="note"><strong>那 KV cache 呢，不就是为了避免重算历史帧吗？</strong>推理时是，训练时不是。KV cache 成立的前提是把历史帧的 K/V 当成<strong>已经算好的常量</strong>读进来；可一旦你要梯度穿过它们，它们就不是常量，而是参数的函数。于是只剩三条路：①留住生成它们的那条链——那是整条串行 rollout 的图，比重算还贵；②每个窗口里重算一遍——这就是上面那 <code>Lₛ</code> 份；③干脆不要那条梯度，对 KV 停梯度——<strong>原版 Self Forcing 选的正是这条</strong>。Solaris 想把第 ③ 条拿回来（§08 的消融显示那条梯度让五项 FID 都改善），所以只能在 ① 和 ② 里挑，两条都贵。这才是它非得另想办法不可的原因。</div>
+  <p>每帧 ×<code class="m">L_{s}</code>、一共 <code class="m">L_{t}</code> 帧——这就是 <code class="m">L_{t}\times L_{s}</code> 的来历。</p>
+  <div class="note"><strong>那 KV cache 呢，不就是为了避免重算历史帧吗？</strong>推理时是，训练时不是。KV cache 成立的前提是把历史帧的 K/V 当成<strong>已经算好的常量</strong>读进来；可一旦你要梯度穿过它们，它们就不是常量，而是参数的函数。于是只剩三条路：①留住生成它们的那条链——那是整条串行 rollout 的图，比重算还贵；②每个窗口里重算一遍——这就是上面那 <code class="m">L_{s}</code> 份；③干脆不要那条梯度，对 KV 停梯度——<strong>原版 Self Forcing 选的正是这条</strong>。Solaris 想把第 ③ 条拿回来（§08 的消融显示那条梯度让五项 FID 都改善），所以只能在 ① 和 ② 里挑，两条都贵。这才是它非得另想办法不可的原因。</div>
   <figure>
     <figcaption><span>Fig 09 · 显存从 O(Lₜ·Lₛ) 降到 O(Lₜ)</span><b>停梯度只发生在第一遍</b></figcaption>
     <div class="memory">
@@ -347,29 +347,29 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
     <span class="hi">拉长 Lₛ，只有朴素那边涨，倍数跟着 Lₛ 走（趋近 Lₛ/2）。</span>
   </div>
   <p>所以这套方法真正买到的东西是：<strong>显存不再跟 student 的窗口长度挂钩。</strong>窗口想开多长开多长，显存只按生成了多少帧线性涨。这就是论文说的"把自回归 rollout 与反向传播解耦"。</p>
-  <div class="note"><strong>为什么论文写 <code>O(Lₜ·Lₛ)</code> 而不是 105：</strong>大 O 记的是增长形状，不是精确值。<code>20×6=120</code> 是上界——它假设每一步窗口都是满的，但开头 5 步还没攒够历史。精确值 105 比上界小一点，形状一样。</div>
+  <div class="note"><strong>为什么论文写 <code class="m">O(L_{t}\cdot L_{s})</code> 而不是 105：</strong>大 O 记的是增长形状，不是精确值。<code class="m">20\times 6=120</code> 是上界——它假设每一步窗口都是满的，但开头 5 步还没攒够历史。精确值 105 比上界小一点，形状一样。</div>
 
   <h3>三 · 第一遍：只管生成，不留计算图</h3>
   <p>照常自回归把 <code>N</code> 帧滚完，但全程关掉梯度。跑完只留两组值：</p>
   <div class="two-view">
-    <div class="view"><h4><code>X₀</code> · 每帧的干净估计</h4><ol><li>就是 §04 那个 <code>x̂₀ = xσ − σ·vθ</code> 算出来的值。</li><li>它的用途是<strong>当历史</strong>：第 i 帧去噪时，看到的上文正是前面几帧的干净估计——推理时看到的也是这个，不是数据集真值。</li></ol></div>
+    <div class="view"><h4><code class="m">X_{0}</code> · 每帧的干净估计</h4><ol><li>就是 §04 那个 <code class="m">\hat{x}_{0} =x_\sigma -\sigma \cdot v_\theta</code> 算出来的值。</li><li>它的用途是<strong>当历史</strong>：第 i 帧去噪时，看到的上文正是前面几帧的干净估计——推理时看到的也是这个，不是数据集真值。</li></ol></div>
     <div class="event">两样缺一不可</div>
-    <div class="view"><h4><code>Xₛ</code> · 每帧被抽中的带噪状态</h4><ol><li>训练时给每帧独立抽一个噪声比例 <code>σ</code>（Diffusion Forcing<a class="jr" href="#g-05">05</a>），<code>Xₛ</code> 就是那一刻的带噪 latent。</li><li>它的用途是<strong>当待办</strong>：第二遍要重算的"最后一步去噪"，输入的就是它。</li></ol></div>
+    <div class="view"><h4><code class="m">X_{s}</code> · 每帧被抽中的带噪状态</h4><ol><li>训练时给每帧独立抽一个噪声比例 <code class="m">\sigma</code>（Diffusion Forcing<a class="jr" href="#g-05">05</a>），<code class="m">X_{s}</code> 就是那一刻的带噪 latent。</li><li>它的用途是<strong>当待办</strong>：第二遍要重算的"最后一步去噪"，输入的就是它。</li></ol></div>
   </div>
   <p>两组值都做 stop-gradient。这不是说它们退出训练了——它们照样参与前向、照样影响损失，只是<strong>梯度不再往回穿第一遍那条又长又串行的生成链</strong>。准确地说，那条链的激活不是"建了再丢"，而是<strong>从来没建过</strong>：整个第一遍是在 no-grad 下跑的，框架根本不去记录中间结果。</p>
-  <div class="note"><strong>这里要分清一件事：存一个值 ≠ 存一条计算图。</strong><code>X₀</code> 和 <code>Xₛ</code> 当然也占显存，<code>2N</code> 个 frame 张量跑不掉。但那是 <code>2N</code> 个<strong>张量</strong>；而一条计算图是这一帧穿过 DiT <strong>每一层</strong>留下的全部中间结果——每个 attention 的分数矩阵、每个 MLP 的隐层、每个 norm 的输入，有多少层就翻多少倍。所以"缓存几十份值"才换得掉"保留上百份图"，两边的单位根本不是一回事。</div>
+  <div class="note"><strong>这里要分清一件事：存一个值 ≠ 存一条计算图。</strong><code class="m">X_{0}</code> 和 <code class="m">X_{s}</code> 当然也占显存，<code>2N</code> 个 frame 张量跑不掉。但那是 <code>2N</code> 个<strong>张量</strong>；而一条计算图是这一帧穿过 DiT <strong>每一层</strong>留下的全部中间结果——每个 attention 的分数矩阵、每个 MLP 的隐层、每个 norm 的输入，有多少层就翻多少倍。所以"缓存几十份值"才换得掉"保留上百份图"，两边的单位根本不是一回事。</div>
 
   <h3>四 · 第二遍：把 N 次串行前向压成 1 次并行前向</h3>
   <p class="formula-purpose">第二遍喂给网络的输入，是把两组存档值沿序列维拼在一起：</p>
   <div class="formula" data-expr="X_{\mathrm{in}}=[X_0,X_s]"></div>
-  <p>式子里<strong>没有新符号</strong>：<code>X₀</code> 和 <code>Xₛ</code> 就是上一步存下的那两组值，方括号表示<strong>沿序列维首尾相接</strong>——两组接成一条，序列长度从 <code>N</code> 变成 <code>2N</code>。</p>
+  <p>式子里<strong>没有新符号</strong>：<code class="m">X_{0}</code> 和 <code class="m">X_{s}</code> 就是上一步存下的那两组值，方括号表示<strong>沿序列维首尾相接</strong>——两组接成一条，序列长度从 <code>N</code> 变成 <code>2N</code>。</p>
   <p>为什么这样拼就能一次算完？因为"第 <code>i</code> 帧做最后一步去噪"这件事，输入只有两类东西：<strong>自己那份带噪状态</strong>，加上<strong>窗口内更早那几帧的干净估计</strong>。既然两类都在这条序列里了，只要用 mask 把每个带噪位置能看见的范围削回它当初的窗口，一次前向就同时复现了 <code>N</code> 个时间步各自的处境。</p>
   <div class="warn"><strong>别误会成"边算边传、所以不占显存"。</strong>反向传播的顺序是反的——要算前面层的梯度，得先有后面层的，所以第二遍的前向必须<strong>整个跑完</strong>才能开始反传，峰值就卡在前向结束那一刻。第二遍照样占显存，占的正是上面算的那 40 份；它是从 120 降到 40，<strong>不是降到 0</strong>。省下来的 80 份不是靠流式传播省的，而是第一遍那 120 份图<strong>从来没存在过</strong>。（分块反传、梯度累积这类"边算边放"的手法确实存在，FlashAttention 是典型，但那是在省一次前向<em>内部</em>的激活，跟这里省"要不要保留 N 条串行 rollout 的图"是两层问题，可以叠加；论文没提。）</div>
-  <div class="note"><strong>"Checkpointed" 这个名字的来历：</strong>第一遍只留几个存档点（<code>X₀</code> 和 <code>Xₛ</code>），第二遍从存档点把要留梯度的那一小段重算一次。大方向跟 PyTorch 的 gradient checkpointing 一样——<strong>用重算换显存</strong>，存档点选在"帧"这个粒度上。</div>
+  <div class="note"><strong>"Checkpointed" 这个名字的来历：</strong>第一遍只留几个存档点（<code class="m">X_{0}</code> 和 <code class="m">X_{s}</code>），第二遍从存档点把要留梯度的那一小段重算一次。大方向跟 PyTorch 的 gradient checkpointing 一样——<strong>用重算换显存</strong>，存档点选在"帧"这个粒度上。</div>
   <h3>但它不只是"时间换空间"</h3>
   <p><strong>一 · 重算的不是同一段计算，是改写过的。</strong>vanilla gradient checkpointing 把丢掉的那段<strong>原样再跑一遍</strong>：同一份代码、同一个顺序，所以不需要任何额外设计。这里的第二遍不是重放第一遍那 <code>N</code> 次串行前向，而是把它<strong>改写成 1 次并行前向</strong>。正因为形式变了，才必须专门造下面那张 mask 去复刻每一帧当初的处境——结果等价，算法不同。</p>
   <p><strong>二 · 它买到的不只是"同样的结果 + 更少显存"。</strong>原版 Self Forcing 对缓存的 KV 停梯度，不是不想要那条梯度，是<strong>要不起</strong>。显存压下来之后这条路才走得通，于是多出一项原来做不到的事（细节见本节末尾）。所以这不是在同一条时间—空间曲线上滑动，是换到了另一条曲线上，而新曲线上还有它自己的取舍。</p>
-  <p><strong>三 · 换来的"空间"不是固定倍数</strong>，是把 <code>Lₛ</code> 从式子里消掉了——上面那笔账算的就是这件事。</p>
+  <p><strong>三 · 换来的"空间"不是固定倍数</strong>，是把 <code class="m">L_{s}</code> 从式子里消掉了——上面那笔账算的就是这件事。</p>
   <p>至于"多花了多少时间"，<strong>论文没给</strong>，而且方向不像直觉那么显然：第二遍的序列长 <code>2N</code>，注意力是平方项，FLOPs 未必比 <code>N</code> 次小窗口便宜；但它是一次并行前向，硬件利用率远高于 <code>N</code> 次串行小前向，wall-clock 反而可能更好看。既没有显存曲线也没有速度表，只能说"多跑了一遍"，说不出多几成。</p>
   <figure>
     <figcaption><span>Fig 10 · 教学用最小 mask（窗口取 3）</span><b>蓝：可读的历史；橙：只读自己</b></figcaption>
@@ -380,24 +380,24 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
       <div class="head">noisy N4</div><div class="no">—</div><div class="yes">✓</div><div class="yes">✓</div><div class="no">—</div><div class="no">—</div><div class="no">—</div><div class="no">—</div><div class="self">SELF</div>
     </div></div>
   </figure>
-  <p><code>C1..C4</code> 是 <code>X₀</code> 的四帧干净估计，<code>N1..N4</code> 是 <code>Xₛ</code> 的四帧带噪状态；行是发问的 query，列是被读的 key，✓ 表示这一格允许读。逐行念一遍：</p>
+  <p><code>C1..C4</code> 是 <code class="m">X_{0}</code> 的四帧干净估计，<code>N1..N4</code> 是 <code class="m">X_{s}</code> 的四帧带噪状态；行是发问的 query，列是被读的 key，✓ 表示这一格允许读。逐行念一遍：</p>
   <ul>
     <li><strong>clean C3 那行</strong>：读 C1、C2 和自己，四个 N 列全是 —。干净帧是拿来<strong>当历史</strong>用的，它的表示必须对所有人一视同仁，不能被某一帧的噪声污染，否则就没法一次算完给大家复用。</li>
     <li><strong>noisy N3 那行</strong>：读 C1、C2，加自己（橙色 SELF），<strong>但读不到 C3</strong>。C3 是第 3 帧的干净估计，正是这一步要往那儿去噪的目标；让 N3 看见 C3 等于把答案摆在卷子上。</li>
-    <li><strong>noisy N4 那行</strong>：读 C2、C3 加自己，<strong>读不到 C1</strong>。不是因为 C1 是未来，而是因为窗口只有 3 格——这张图里的 <code>Lₛ=3</code>，N4 的窗口是第 2、3、4 帧。论文实际用 6。</li>
+    <li><strong>noisy N4 那行</strong>：读 C2、C3 加自己，<strong>读不到 C1</strong>。不是因为 C1 是未来，而是因为窗口只有 3 格——这张图里的 <code class="m">L_{s}=3</code>，N4 的窗口是第 2、3、4 帧。论文实际用 6。</li>
   </ul>
   <p>把这三条规则合起来就是一句话：<strong>每个带噪帧只看得见自己，以及窗口内严格更早的干净帧。</strong>这正好等于它在第一遍串行 rollout 时真实看到的上下文，所以这次并行重算不是近似，是复刻。</p>
-  <h3>回头看：<code>Lₛ</code> 到底是在哪一步消失的</h3>
-  <p>盯住上表的 <code>C2</code> 那一列——<code>N3</code> 和 <code>N4</code> 都在读它（真实配置里是 <code>Lₛ</code> 个 noisy query 都在读它）。但 <code>C2</code> 在这条序列里<strong>只算了一份</strong>。</p>
+  <h3>回头看：<code class="m">L_{s}</code> 到底是在哪一步消失的</h3>
+  <p>盯住上表的 <code>C2</code> 那一列——<code>N3</code> 和 <code>N4</code> 都在读它（真实配置里是 <code class="m">L_{s}</code> 个 noisy query 都在读它）。但 <code>C2</code> 在这条序列里<strong>只算了一份</strong>。</p>
   <div class="calc">
     <span class="hi">串行时</span>&nbsp; 第 3 帧被<span class="ans">重算 6 遍</span>，每遍服务 1 个时间步<br>
     <span class="hi">并行时</span>&nbsp; 第 3 帧<span class="ans">算 1 遍</span>，同时服务 6 个 query<br><br>
     同样是"第 3 帧要给 6 个时间步当上下文"这件事，<br>
     一个花 6 份激活，一个花 1 份。
   </div>
-  <p>所以 <code>Lₛ</code> 不是被什么技巧"优化掉"的，是<strong>重复计算被合并了</strong>——它本来就是同一份东西被算了 <code>Lₛ</code> 遍，摊平成一条序列之后自然只剩一份。二 里那条"轴二"说的"各留各的激活，谁也替不了谁"，在并行版里变成了"一份大家一起用"。</p>
+  <p>所以 <code class="m">L_{s}</code> 不是被什么技巧"优化掉"的，是<strong>重复计算被合并了</strong>——它本来就是同一份东西被算了 <code class="m">L_{s}</code> 遍，摊平成一条序列之后自然只剩一份。二 里那条"轴二"说的"各留各的激活，谁也替不了谁"，在并行版里变成了"一份大家一起用"。</p>
   <div class="note"><strong>为什么这样还能训练：</strong>第一遍的缓存值确实被冻住了，但第二遍是<strong>重新算</strong>的——这一遍的 Q/K/V 和输出都挂着完整计算图，分布匹配损失的梯度顺着它回到参数上。省下显存后还多出一项原版 Self Forcing 做不了的事：梯度可以穿过重算出来的 KV 表示。§08 的消融会显示这一项明显改善 FID，同时压低几个动作跟随分数，不是白拿的。</div>
-  <div class="warn">论文只说 teacher 的上下文比 student 长，<strong>没有给出 <code>Lₜ</code> 的具体帧数</strong>，也没有报告实测显存曲线。上面的 20 帧是为算账取的示例值，<code>Lₛ=6</code> 才是论文给的真实配置。</div>
+  <div class="warn">论文只说 teacher 的上下文比 student 长，<strong>没有给出 <code class="m">L_{t}</code> 的具体帧数</strong>，也没有报告实测显存曲线。上面的 20 帧是为算账取的示例值，<code class="m">L_{s}=6</code> 才是论文给的真实配置。</div>
 </section>
 
 <section id="s8">

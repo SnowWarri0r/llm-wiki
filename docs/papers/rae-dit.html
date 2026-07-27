@@ -119,7 +119,7 @@ figure.play .ra-svg .draw { stroke-dashoffset: 0; }
 
 <div class="tldr">
   <span class="label">TL;DR</span>
-  <p>RAE(Representation Autoencoder)把扩散的 latent 从 <a href="../concepts/kl-vae.html">VAE 压缩 latent</a> 换成<strong>冻结表征编码器的高维语义 latent</strong><a class="jr" href="#g-01">1</a>:编码器用 <strong>frozen <a href="../concepts/dino.html">SigLIP-2 / DINOv2</a></strong>(256 token×1152 维),<strong>只训一个轻量解码器</strong>还原像素<a class="jr" href="#g-02">2</a>;扩散(<a href="../concepts/diffusion-transformer.html">DiT</a> + <a href="flow-matching.html">flow matching</a>)直接在这个"已看懂图"的空间里跑。一个**必须**的技术:<strong>维度相关噪声调度</strong>(高维 latent 要按 <code>α=√(m/n)</code> 移时间步,去掉 GenEval 49.6→23.6)<a class="jr" href="#g-03">3</a>。规模放大后<strong>配方反而简化</strong>:宽 diffusion head、噪声增强解码都变得没必要<a class="jr" href="#g-04">4</a>。结果:比 FLUX VAE 基线<strong>收敛快 4.0×</strong>;VAE 微调 64 epoch 过拟合崩、<strong>RAE 稳到 256</strong>;0.5B→9.8B 全程 RAE>VAE<a class="jr" href="#g-05">5</a>。</p>
+  <p>RAE(Representation Autoencoder)把扩散的 latent 从 <a href="../concepts/kl-vae.html">VAE 压缩 latent</a> 换成<strong>冻结表征编码器的高维语义 latent</strong><a class="jr" href="#g-01">1</a>:编码器用 <strong>frozen <a href="../concepts/dino.html">SigLIP-2 / DINOv2</a></strong>(256 token×1152 维),<strong>只训一个轻量解码器</strong>还原像素<a class="jr" href="#g-02">2</a>;扩散(<a href="../concepts/diffusion-transformer.html">DiT</a> + <a href="flow-matching.html">flow matching</a>)直接在这个"已看懂图"的空间里跑。一个**必须**的技术:<strong>维度相关噪声调度</strong>(高维 latent 要按 <code class="m">\alpha =\sqrt{m/n}</code> 移时间步,去掉 GenEval 49.6→23.6)<a class="jr" href="#g-03">3</a>。规模放大后<strong>配方反而简化</strong>:宽 diffusion head、噪声增强解码都变得没必要<a class="jr" href="#g-04">4</a>。结果:比 FLUX VAE 基线<strong>收敛快 4.0×</strong>;VAE 微调 64 epoch 过拟合崩、<strong>RAE 稳到 256</strong>;0.5B→9.8B 全程 RAE>VAE<a class="jr" href="#g-05">5</a>。</p>
 </div>
 
 
@@ -219,14 +219,14 @@ figure.play .ra-svg .draw { stroke-dashoffset: 0; }
 <p>先把两个比值钉死,后面就不晕:<strong>高维 m=294,912、低维 n=4096,所以 m/n=72(大)、n/m=1/72(小),互为倒数</strong>。规律:凡说"白捡 / 全局变大"用 <code>m/n</code>(=72);凡说"逐维 SNR 要补偿、压回去"用 <code>n/m</code>(=1/72)。它俩描述的是<em>互为倒数的两件事</em>(白捡多少 ↔ 还回多少),不是同一个量自相矛盾。</p>
 <p>再说因果,容易讲反:<strong>不是</strong>"先拍脑袋选了 α=√(m/n),碰巧逐维 SNR 变成原来的 1/72"。真实链条是反的——<strong>先定下"逐维 SNR 要压回原来的 n/m(=1/72)"这个目标,再反解出 α 正好是 √(m/n)</strong>。所以 n/m 是<strong>推出来的目标</strong>、α 是<strong>为命中它定义出来的</strong>,两个都不是凑的。分两步看。</p>
 
-<p><strong>① 目标里的 n/m 哪来的:高维"白捡" 72 倍(=m/n)有效信噪比。</strong> 想象干净信号的某个全局/语义量是同一个值 <code>s</code>,摊在每个维度上,每维各挂一份独立噪声、方差 <code>σ²</code>。要把 <code>s</code> 估出来,最优做法是跨维度平均——维度越多,噪声被平均掉得越狠:</p>
+<p><strong>① 目标里的 n/m 哪来的:高维"白捡" 72 倍(=m/n)有效信噪比。</strong> 想象干净信号的某个全局/语义量是同一个值 <code>s</code>,摊在每个维度上,每维各挂一份独立噪声、方差 <code class="m">\sigma^{2}</code>。要把 <code>s</code> 估出来,最优做法是跨维度平均——维度越多,噪声被平均掉得越狠:</p>
 <pre class="eq">n 维：平均 n 个噪声维 → 噪声方差 σ²/n → 全局 SNR = s²/(σ²/n) = n·s²/σ²
 m 维：平均 m 个噪声维 → 噪声方差 σ²/m → 全局 SNR = m·s²/σ²
 
 m 维 / n 维 = (m·s²/σ²)/(n·s²/σ²) = m/n = 72   ← 同样的每维噪声,高维白捡 72 倍有效 SNR</pre>
 <p>也就是说:啥都没做,光是把 latent 从 n 维换到 m 维,去噪任务的全局信噪比就<strong>白大了 72 倍(=m/n)</strong>。要让高维的去噪难度跟 n 维参考一样(否则模型在高维偷懒、长期欠噪、学不到东西),就得主动把逐维 SNR <strong>压回原来的 1/72(=n/m)</strong>抵消。目标就此钉死:<code>SNR_每维(t_m) = (n/m)·SNR_每维(t_n)</code>。</p>
 
-<p><strong>② 为什么开根号、不是直接拿 m/n 当 α:因为 SNR 是平方量。</strong> flow matching 的加噪是 <code>x_t=(1−t)x+tε</code>,<strong>逐维信噪比</strong> <code>SNR(t)=((1−t)/t)²</code>(信号系数²÷噪声系数²)。想让这个<em>平方</em>量变成原来的 n/m,里头的幅度比 <code>(1−t)/t</code> 只能变 <code>√(n/m)</code>(平方之后才是 n/m)。把"幅度比要缩的倍数"记成 <code>1/α</code>,于是 <strong>α=√(m/n)</strong>——√ 纯粹来自"SNR 是幅度的平方"。</p>
+<p><strong>② 为什么开根号、不是直接拿 m/n 当 α:因为 SNR 是平方量。</strong> flow matching 的加噪是 <code class="m">x_t=(1-t)x+t_\epsilon</code>,<strong>逐维信噪比</strong> <code class="m">SNR(t)=((1-t)/t)^{2}</code>(信号系数²÷噪声系数²)。想让这个<em>平方</em>量变成原来的 n/m,里头的幅度比 <code class="m">(1-t)/t</code> 只能变 <code class="m">\sqrt{n/m}</code>(平方之后才是 n/m)。把"幅度比要缩的倍数"记成 <code class="m">1/\alpha</code>,于是 <strong>α=√(m/n)</strong>——√ 纯粹来自"SNR 是幅度的平方"。</p>
 
 <p>动机讲完了。下面是<strong>验算</strong>(方向跟动机相反:假设 α=√(m/n) 和移位公式,代进去确认逐维 SNR 真的精确变成原来的 n/m(=1/72)。两个方向互为充要):</p>
 <pre class="eq">记 D = 1+(α−1)·t_n ，移位公式：t_m = α·t_n / D
@@ -247,7 +247,7 @@ m 维 / n 维 = (m·s²/σ²)/(n·s²/σ²) = m/n = 72   ← 同样的每维噪�
 
 ⑤ 因为 α = √(m/n) ⟹ α² = m/n ⟹ 1/α² = n/m：
    ⟹ SNR(t_m) = (n/m)·SNR(t_n)</pre>
-<p>验算闭环:step ⑤ 落回 <code>SNR(t_m)=(n/m)·SNR(t_n)</code>,跟 ① 钉下的目标一字不差。所以这个 shift 把逐维信噪比<strong>在每个 t 上都精确压到原来的 1/72(=n/m)</strong>,刚好抵消高维白捡的那 72 倍(=m/n),让"有效去噪难度"跨维度对齐。</p>
+<p>验算闭环:step ⑤ 落回 <code class="m">SNR(t_m)=(n/m)\cdot SNR(t_n)</code>,跟 ① 钉下的目标一字不差。所以这个 shift 把逐维信噪比<strong>在每个 t 上都精确压到原来的 1/72(=n/m)</strong>,刚好抵消高维白捡的那 72 倍(=m/n),让"有效去噪难度"跨维度对齐。</p>
 
 <pre class="eq">m = N×d = 256×1152 = 294,912    n = 4096    α = √(m/n) = √72 ≈ 8.49
 移位 t_m = α·t_n /(1+(α−1)·t_n)：
@@ -255,7 +255,7 @@ m 维 / n 维 = (m·s²/σ²)/(n·s²/σ²) = m/n = 72   ← 同样的每维噪�
   t_n=0.5 → t_m=0.895    逐维 SNR  1.00  → 0.0139    (÷72)
   t_n=0.8 → t_m=0.971    逐维 SNR  0.063 → 0.00087   (÷72)
 每个 t 都精确 ÷72，即 ×(n/m) = ×(1/72) ✓</pre>
-<p>✓ 自检:名义"中点" <code>t=0.5</code>(逐维 SNR=1)在这个 294,912 维 latent 里,其实要用到 <code>t≈0.9</code> 那么多的噪声(SNR≈0.014)才对得上"等效难度"。这是论文里<strong>唯一不能省</strong>的技术:加了 GenEval 49.6 / DPG-Bench 76.8,去掉直接掉到 <strong>23.6 / 54.8</strong>(腰斩)。公式本身出自 Zheng et al. 的 logit-SNR 时间移位,RAE 把移位量 α 锚到了维度比。</p>
+<p>✓ 自检:名义"中点" <code>t=0.5</code>(逐维 SNR=1)在这个 294,912 维 latent 里,其实要用到 <code class="m">t\approx 0.9</code> 那么多的噪声(SNR≈0.014)才对得上"等效难度"。这是论文里<strong>唯一不能省</strong>的技术:加了 GenEval 49.6 / DPG-Bench 76.8,去掉直接掉到 <strong>23.6 / 54.8</strong>(腰斩)。公式本身出自 Zheng et al. 的 logit-SNR 时间移位,RAE 把移位量 α 锚到了维度比。</p>
 
 
 <!-- §04 -->
@@ -310,7 +310,7 @@ m 维 / n 维 = (m·s²/σ²)/(n·s²/σ²) = m/n = 72   ← 同样的每维噪�
   <ol>
     <li id="g-01"><span class="term"><a href="../concepts/representation-autoencoder.html">Representation Autoencoder · RAE</a></span> · 冻结预训练表征编码器(SigLIP-2/DINOv2)当 encoder + 只训轻量 decoder 还原像素;扩散在这个高维语义 latent 里跑。对照 <a href="../concepts/kl-vae.html">VAE</a> 的低维压缩 latent。</li>
     <li id="g-02"><span class="term">只训解码器</span> · 编码器冻结不动(已含语义),只训一个轻量解码器把 256×1152 的语义 embedding 还原成像素,损失 = L1 + LPIPS + Gram + 对抗,7300 万图(网络+合成+文字渲染)。</li>
-    <li id="g-03"><span class="term">维度相关噪声调度</span> · 高维 latent 加同样噪声相对腐蚀更小,须按 <code>α=√(m/n)</code> 把时间步往"更多噪声"挪,补回信噪比。唯一不能省:去掉 GenEval 49.6→23.6。</li>
+    <li id="g-03"><span class="term">维度相关噪声调度</span> · 高维 latent 加同样噪声相对腐蚀更小,须按 <code class="m">\alpha =\sqrt{m/n}</code> 把时间步往"更多噪声"挪,补回信噪比。唯一不能省:去掉 GenEval 49.6→23.6。</li>
     <li id="g-04"><span class="term">scale 后配方简化</span> · 宽 diffusion head(小模型 +11.2,&gt;2.4B 没用)、噪声增强解码(只早期正则)放大后都没必要。模型越大,recipe 越简单。</li>
     <li id="g-05"><span class="term">RAE &gt; VAE 的实证</span> · 比 FLUX VAE 收敛快 4.0×(GenEval)/4.6×(DPG);VAE 微调 64 epoch 过拟合崩、RAE 稳到 256;0.5B→9.8B 全程 RAE 赢、差距随规模变大。</li>
   </ol>
