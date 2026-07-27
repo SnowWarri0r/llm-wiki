@@ -48,6 +48,8 @@ GREEK = {
 # 首次使用与符号格子相隔多少字符以内算"就地定义"（约一两句话）
 INPLACE_TOLERANCE = 500
 
+PROSE_TIGHT = re.compile(r"^[A-Za-z\u0370-\u03ff](_\{?[A-Za-z0-9]{1,5}\}?)*(\^\{?[A-Za-z0-9]{1,3}\}?)*(\(.*\))?$")
+
 CJK = re.compile(r"[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]")
 SMART_QUOTE_ATTR = re.compile("\\w+=[\u201c\u201d\u2018\u2019]")
 
@@ -181,8 +183,14 @@ def check_raw_latex_in_prose(html, name, issues):
     for m in re.finditer(r'<(?:div|span|li|section)[^>]*class="[^"]*\b(?:sym|symbol|var|vars|symbol-grid|concept-body)\b[^"]*"[^>]*>', body):
         depth_end = body.find("</div>", m.end())
         scoped.append((m.start(), depth_end if depth_end > 0 else m.end()))
+    # 注意这里只匹配裸 <code>：<code class="m"> 是作者显式声明的数学，mathify 会渲染它，
+    # 允许写 LaTeX。这个豁免是有意的，别把正则放宽成 <code[^>]*>。
     for m in re.finditer(r"<code>(.*?)</code>", body, re.S):
         if any(a <= m.start() < b for a, b in scoped):
+            continue
+        # 形状够紧的（p_g / A_i / D(x)）散文 code 现在也会被 mathify 渲染，同样允许
+        raw = re.sub(r"<[^>]+>", "", m.group(1)).strip()
+        if PROSE_TIGHT.match(raw) and re.search(r"[_^(]", raw):
             continue
         t = re.sub(r"<[^>]+>", "", m.group(1))
         if re.search(r"\\[a-zA-Z]{2,}", t):
