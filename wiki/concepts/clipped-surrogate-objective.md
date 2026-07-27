@@ -32,7 +32,7 @@ r_t(θ) = π_new(a_t | s_t) / π_old(a_t | s_t)
 L_CLIP = E_t [ min( r_t · A_t,  clip(r_t, 1-ε, 1+ε) · A_t ) ]
 ```
 
-其中 `A_t` 是 [[advantage-function]] (这个 action 比 baseline 好多少)。\(\epsilon\) 通常 0.2.
+其中 \(A_t\) 是 [[advantage-function]] (这个 action 比 baseline 好多少)。\(\epsilon\) 通常 0.2.
 
 读这个公式的两个关键点:
 

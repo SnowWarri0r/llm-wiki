@@ -66,14 +66,14 @@ L_{\mathrm{PPO}}=\mathbb E_t\!\left[
 每个符号：
 
 - `x`：prompt，例如题目 \(17 \times 6\)。
-- `y_t`：回答的第 `t` 个 token；`y_<t` 是它前面的 token。
+- \(y_t\)：回答的第 `t` 个 token；`y_<t` 是它前面的 token。
 - \(\pi_{\mathrm{old}}(...)\)：旧策略生成这个 token 时给它的概率。
 - \(\pi_\theta (...)\)：正在更新的新策略现在给同一个 token 的概率。
 - \(\rho_t\)：重要性比率。\(\rho_t =1.1\) 表示新模型把这个 token 的概率提高了 10%；`0.9` 表示降低了 10%。
-- `A_t`：advantage，表示这个 token 所在的动作比基线预期好多少。
+- \(A_t\)：advantage，表示这个 token 所在的动作比基线预期好多少。
 - \(\epsilon\)：clip 宽度，常见示意值是 `0.2`，对应区间 `[0.8, 1.2]`。
 - `min`：在“原始更新收益”和“截断后的收益”里取更保守的一项。
-- `E_t`：对采样到的时间步 / token 求平均。
+- \(E_t\)：对采样到的时间步 / token 求平均。
 
 为什么需要 \(\rho_t\)？回答由 \(\pi_{\mathrm{old}}\) 采样，但梯度更新的是 \(\pi_\theta\)。新旧模型已经不完全一样，\(\rho_t\) 用来修正这点差异。为什么再 clip？同一批回答会训练多个 epoch；如果某个 token 概率已经从 `0.1` 涨到 `0.3`，比率是 `3`，继续按三倍力度奖励它很容易把策略推坏。clip 让超出边界后的额外变化不再带来收益。
 
@@ -93,7 +93,7 @@ critic 不是 reward model：reward model / 规则验证器负责给已完成的
 
 ## GRPO：不用 critic，同一道题内部互比
 
-对一个 prompt 采样 `G` 条回答，reward 为 `R_1 ... R_G`。原始 GRPO 的 outcome advantage 是：
+对一个 prompt 采样 `G` 条回答，reward 为 \(R_1 ... R_G\)。原始 GRPO 的 outcome advantage 是：
 
 \[
 A_i=\frac{R_i-\operatorname{mean}(R_1,\ldots,R_G)}
@@ -102,10 +102,10 @@ A_i=\frac{R_i-\operatorname{mean}(R_1,\ldots,R_G)}
 
 - `i`：组内第 `i` 条回答。
 - `G`：同一道题采样的回答数。
-- `R_i`：第 `i` 条完整回答的 reward。
+- \(R_i\)：第 `i` 条完整回答的 reward。
 - `mean`：这组回答的平均分，充当 baseline。
 - `std`：组内 reward 的标准差，把不同题的 advantage 缩到相近尺度。
-- `A_i`：整条回答的组相对 advantage；在 outcome supervision 下，同一回答的所有 token 共用它。
+- \(A_i\)：整条回答的组相对 advantage；在 outcome supervision 下，同一回答的所有 token 共用它。
 
 固定例子：四条回答 reward 是 `[1, 1, 0, 0]`。组均值是 `0.5`，总体标准差是 `0.5`，所以 advantage 是：
 
@@ -134,7 +134,7 @@ A&=\left[\frac{1-0.5}{0.5},\frac{1-0.5}{0.5},
 
 设 \(\epsilon =0.2\)，clip 区间为 `[0.8, 1.2]`。
 
-**PPO：**假设 critic 算出的 `A_t` 都简化为 `0.6`。前 3 个 token 的比率没越界；第 4 个 token 的 `1.25` 超过上界。对正 advantage，四项贡献是：
+**PPO：**假设 critic 算出的 \(A_t\) 都简化为 `0.6`。前 3 个 token 的比率没越界；第 4 个 token 的 `1.25` 超过上界。对正 advantage，四项贡献是：
 
 \[
 \begin{aligned}
@@ -193,7 +193,7 @@ A_i^{\mathrm{Dr}}=R_i-\operatorname{mean}(R_1,\ldots,R_G)
 L_i=\frac1{|y_i|}\sum_t\ell_{i,t}
 \]
 
-`|y_i|` 是第 `i` 条回答的 token 数。4-token 回答里每个 token 占整条目标的 `1/4`；8-token 回答里每个 token 只占 `1/8`。因此好长回答中的推理 token 被摊薄；坏长回答中的错误 token 也被摊薄。论文观察到后者会让错误回答越写越长。
+\(|y_i|\) 是第 `i` 条回答的 token 数。4-token 回答里每个 token 占整条目标的 `1/4`；8-token 回答里每个 token 只占 `1/8`。因此好长回答中的推理 token 被摊薄；坏长回答中的错误 token 也被摊薄。论文观察到后者会让错误回答越写越长。
 
 Dr.GRPO 把分母换成训练期间固定的生成上限 `M`：
 
@@ -245,10 +245,10 @@ s_i(\theta)
 \end{aligned}
 \]
 
-- `s_i`：第 `i` 条回答唯一的序列级重要性比率。
+- \(s_i\)：第 `i` 条回答唯一的序列级重要性比率。
 - \(\pi (y_i|x)\)：整条回答的似然，等于各 token 条件概率连乘。
-- `|y_i|`：回答长度。
-- `1/|y_i|` 次方：把连乘比率变成平均每 token 的尺度；否则序列越长，乘积越容易指数级趋近 0 或无穷大。
+- \(|y_i|\)：回答长度。
+- \(1/|y_i|\) 次方：把连乘比率变成平均每 token 的尺度；否则序列越长，乘积越容易指数级趋近 0 或无穷大。
 
 GSPO 目标为：
 
@@ -262,7 +262,7 @@ s_iA_i,
 \right]
 \]
 
-`A_i` 仍可使用 GRPO 的组相对 advantage。真正改变的是：一条回答只算一个 `s_i`，整条一起 clip、一起放大或缩小。Qwen 团队报告它比 GRPO 更稳定，尤其能稳定 MoE 模型 RL；其解释包括序列 reward 与 token clip 的粒度错位，以及训练、推理引擎或 MoE 路由造成的 token 概率差异。
+\(A_i\) 仍可使用 GRPO 的组相对 advantage。真正改变的是：一条回答只算一个 \(s_i\)，整条一起 clip、一起放大或缩小。Qwen 团队报告它比 GRPO 更稳定，尤其能稳定 MoE 模型 RL；其解释包括序列 reward 与 token clip 的粒度错位，以及训练、推理引擎或 MoE 路由造成的 token 概率差异。
 
 ## 这些算法不是一条“越来越先进”的排行榜
 

@@ -295,7 +295,7 @@ svg text{font-family:"IBM Plex Mono",monospace}
   <p class="fig-note">比较时所有框中心临时对齐，只看宽高。2×2 的 IOU 最高，因此它负责学习这个物体；官方 Darknet 代码就是先由真值中心求格子 (i,j)，再遍历 anchor 记录 best_n。</p>
 </figure>
 
-<div class="note"><span class="label">真实值 vs 手算值</span>上图的 5 个小整数专门用于手算。官方 VOC 配置的真实 anchor 是 (1.3221,1.73145)、(3.19275,4.00944)、(5.05587,8.09892)、(9.47112,4.84053)、(11.2364,10.0071)，单位同样是网格。聚类决定“全局有哪 5 种模板”；匹配决定“当前物体由其中哪一种负责”。下节的 <code>(p_w,p_h)</code> 就是刚胜出的 <strong>(2,2)</strong>。</div>
+<div class="note"><span class="label">真实值 vs 手算值</span>上图的 5 个小整数专门用于手算。官方 VOC 配置的真实 anchor 是 (1.3221,1.73145)、(3.19275,4.00944)、(5.05587,8.09892)、(9.47112,4.84053)、(11.2364,10.0071)，单位同样是网格。聚类决定“全局有哪 5 种模板”；匹配决定“当前物体由其中哪一种负责”。下节的 <code class="m">(p_w,p_h)</code> 就是刚胜出的 <strong>(2,2)</strong>。</div>
 
 <h2><span class="num">§ 03 / Coordinates</span>中心加护栏，宽高用倍数</h2>
 <p class="note"><span class="label">换成大白话</span>网络不报框的绝对坐标，只报两件小事：<strong>① 物体在负责格子里偏左偏右、偏上偏下多少（0~1 的小数）；② 比起选中的尺码，要放大还是缩小几倍</strong>。就像描述一个人："站在第 4 列第 5 行那格、格子里靠右一点、身材比 L 码再宽 1.5 倍"——位置说小数、尺寸说倍数。</p>
@@ -331,7 +331,7 @@ svg text{font-family:"IBM Plex Mono",monospace}
 <div class="why-grid">
   <div class="why-card"><b>中心：限制在本格</b><code class="m">\sigma (t)</code> 永远在 0 与 1 之间；加上整数格坐标后，中心只能在负责格内。网络只学一个局部小数，不会在初始化时让 anchor 满图乱飞。</div>
   <div class="why-card"><b>尺寸：表达相对倍率</b><code>exp(t)</code> 永远为正。<code>t=0</code> 保持 anchor，<code>t=ln2</code> 放大两倍，<code class="m">t=-ln2</code> 缩小一半；放大与缩小在 log 空间互为正负。</div>
-  <div class="why-card"><b>物体性：变成分数</b><code>t_o</code> 是无界 logit，<code class="m">\sigma (t_o)</code> 才落在 0–1。论文定义为 Pr(object)×IOU；正样本的 Pr(object)=1，所以目标是当前 IOU。官方 VOC 配置也设 <code>rescore=1</code>。</div>
+  <div class="why-card"><b>物体性：变成分数</b><code class="m">t_o</code> 是无界 logit，<code class="m">\sigma (t_o)</code> 才落在 0–1。论文定义为 Pr(object)×IOU；正样本的 Pr(object)=1，所以目标是当前 IOU。官方 VOC 配置也设 <code>rescore=1</code>。</div>
 </div>
 
 <p>所以完整分工是：<strong>真值中心选格子，形状 IOU 选 anchor，sigmoid 解码格内位置，指数解码相对尺寸，stride 把网格单位换回像素</strong>。论文把“新骨干 + 维度先验 + 直接位置预测”合成一个消融台阶：69.6 → 74.4，这 4.8 不能全算给某一个组件。</p>
@@ -589,92 +589,29 @@ a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
 <!-- gloss-popover:end -->
 <!-- mathify:start -->
 <script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
 (function(){
   function run(){
     if(!window.katex) return;
-    var GREEK={'θ':'\\theta','σ':'\\sigma','α':'\\alpha','μ':'\\mu','ε':'\\epsilon',
-      'φ':'\\phi','ψ':'\\psi','γ':'\\gamma','λ':'\\lambda','ω':'\\omega','τ':'\\tau',
-      'β':'\\beta','δ':'\\delta','ρ':'\\rho','π':'\\pi','η':'\\eta','ζ':'\\zeta',
-      'Ω':'\\Omega','Σ':'\\sum','Δ':'\\Delta','Φ':'\\Phi','Ψ':'\\Psi','Θ':'\\Theta',
-      'ℓ':'\\ell','∇':'\\nabla','∈':'\\in','≈':'\\approx','≠':'\\neq','≤':'\\le',
-      '≥':'\\ge','×':'\\times','·':'\\cdot','−':'-','∼':'\\sim','→':'\\to',
-      '⟺':'\\iff','⇒':'\\Rightarrow','‖':'\\|','∫':'\\int','∂':'\\partial',
-      '√':'\\sqrt','∞':'\\infty','⊕':'\\oplus','∝':'\\propto'};
-    var SUB={'₀':'0','₁':'1','₂':'2','₃':'3','₄':'4','₅':'5','₆':'6','₇':'7','₈':'8','₉':'9',
-      'ₜ':'t','ₓ':'x','ᵢ':'i','ⱼ':'j','ₙ':'n','ₖ':'k','ₐ':'a','ₑ':'e','ₒ':'o','ₚ':'p','ₛ':'s'};
-    var SUP={'⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','ⁿ':'n','ᵀ':'T'};
-    var WORDS=['fake','real','base','cfg','cond','uncond','data','reg','pseudo','denoise',
-      'train','infer','new','old','out','in','tot','max','min','avg','ref','KL','GAN','DMD',
-      'DM','MSE','LPIPS','FID','CE','sg','stopgrad'];
-
-    function toTex(s){
-      var t=s;
-      // unicode 上下标 → LaTeX
-      t=t.replace(/[\u2080-\u2089\u2093\u209c\u1d62\u2c7c\u2099\u2096\u2090\u2091\u2092\u209a\u209b]/g,
-        function(c){ return SUB[c]!==undefined ? '_{'+SUB[c]+'}' : c; });
-      t=t.replace(/[\u00b2\u00b3\u00b9\u2070\u2074\u2075\u207f\u1d40]/g,
-        function(c){ return SUP[c]!==undefined ? '^{'+SUP[c]+'}' : c; });
-      // 希腊字母与运算符
-      t=t.replace(/[\u0370-\u03ff\u2100-\u22ff\u2190-\u21ff\u2212]/g,
-        function(c){ return GREEK[c]!==undefined ? GREEK[c]+' ' : c; });
-      // 多字母下标/上标 → \mathrm{}。上标这条不能漏：LaTeX 里 ^adv 是
-      // "^a 后面跟正文 dv"，语法完全合法，KaTeX 不报错却渲染成 L^a dv。
-      t=t.replace(/([_^])\{?([A-Za-z]{2,})\}?/g, function(m,op,w){
-        return WORDS.indexOf(w)>=0 || w.length>1 ? op+'{\\mathrm{'+w+'}}' : m; });
-      // 希腊字母后"紧贴"单词(θbase) → 变下标。这里只吃 1 个空格：那是上面
-      // 希腊替换自己加的分隔符。原文里真有空格(θ max)说明作者本就当两个记号，
-      // 再吞就会把函数名 max 吃成 θ 的下标（senseflow 的 "minθ maxφ" 正是这么坏的）。
-      t=t.replace(/(\\[a-zA-Z]+) ([a-z]{2,})\b/g, function(m,g,w){
-        return WORDS.indexOf(w)>=0 ? g+'_{\\mathrm{'+w+'}}' : m; });
-      // 常见函数名
-      t=t.replace(/\b(exp|log|ln|max|min|sin|cos|det|dim)\b/g,'\\$1 ');
-      return t;
-    }
-
-    function looksLikeMath(s){
-      if(!s || s.length>44) return false;
-      if(/[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/.test(s)) return false; // 中日韩
-      if(/[\[\]"'`]/.test(s)) return false;                                     // 索引/字符串=代码
-      if(/^[A-Z][A-Z0-9_]{3,}$/.test(s)) return false;                            // CONST_NAME
-      if(/\s/.test(s) && /^[A-Za-z\s‖|,]+$/.test(s)) return false;              // "fake ‖ real" 词组
-      if(/^(https?:|\/|\.\/)/.test(s)) return false;                            // 路径/URL
-      if(/^<.*>$/.test(s)) return false;                                          // <eos> / <|zh|> 这类 token，不是数学
-      // snake_case 且首段是多字母 = 代码变量名(no_grad / loss_dm / cross_entropy)，
-      // 而数学下标的首段通常只有一个字母(p_fake / w_c / d_1)，予以保留
-      if(/^[a-z][a-z0-9]+(_[a-z0-9]+)+$/.test(s)) return false;
-      return true;
-    }
-
-    // 散文里的 <code> 用更严的形状判定：单个字母 + 下标/上标/括号参数。
-    // 散文不像符号格子那样"里面基本都是数学"，混着 commit hash(fafc81b7)、
-    // 版本号(1e-5)、命令行开关(--apply)，所以这里宁可漏也不能误伤。
-    // 光秃秃一个字母(A / N)不渲染——它可能只是"选项 A"。
-    var TIGHT=/^[A-Za-z\u0370-\u03ff](_\{?[A-Za-z0-9]{1,5}\}?)*(\^\{?[A-Za-z0-9]{1,3}\}?)*(\(.*\))?$/;
-    function proseIsMath(s){ return TIGHT.test(s) && /[_^(]/.test(s); }
-
-    var CELL='.var code, .symbol code, .vars code, .symbol-grid code, .sym code, .concept-body code';
-    var cells=[].slice.call(document.querySelectorAll(CELL));
-    // code.m = 作者显式声明"这是数学"，任何位置都渲染，不受形状限制
-    var opt=[].slice.call(document.querySelectorAll('code.m'));
-    var prose=[].slice.call(document.querySelectorAll('code')).filter(function(el){
-      return cells.indexOf(el)<0 && opt.indexOf(el)<0 && proseIsMath((el.textContent||'').trim());
-    });
-
-    cells.concat(opt).concat(prose).forEach(function(el){
+    document.querySelectorAll('code.m').forEach(function(el){
       if(el.dataset.mathified) return;
-      if(el.closest('pre')) return;               // 代码块原样保留
-      var raw=(el.textContent||'').trim();
-      if(!el.classList.contains('m') && !looksLikeMath(raw)) return;
-      // 已经是手写 LaTeX（含反斜杠命令）的，原样送 KaTeX，绝不让 toTex 再改写一遍——
-      // 否则同一条式子在「符号格子」和「.formula 公式」两条渲染路径上会长得不一样。
-      // toTex 那层启发式只服务于存量页里随手写的松散记号(θbase / p_fake / L_G^adv)。
-      var tex = raw.indexOf('\\') >= 0 ? raw : toTex(raw);
+      if(el.closest('pre')) return;
       try{
-        var html=katex.renderToString(tex,{throwOnError:true,displayMode:false});
-        el.innerHTML=html;
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
         el.dataset.mathified='1';
         el.classList.add('mathified');
-      }catch(e){ /* 转换不了就保持原来的 code 样子 */ }
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
     });
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
@@ -684,9 +621,8 @@ a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
 <style>
 code.mathified{border:none;background:none;padding:0;font-size:1em}
 .var code.mathified,.symbol code.mathified{color:#7e2e20}
-/* 符号格子里「开头那个 code 是标签、要单独成行」的样式(.symbol code{display:block})
-   会连说明文字里的行内 code 一起顶成块级，读起来像莫名其妙的断行。
-   只有第一个 code 该是块级，后面的一律恢复行内。 */
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
 .sym code:not(:first-child),.symbol code:not(:first-child),
 .var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
 </style>

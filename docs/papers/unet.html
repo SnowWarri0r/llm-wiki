@@ -291,12 +291,12 @@ figcaption b{color:var(--blue)}
 <h3>第 2 步 · 权重 w(x) 怎么造：一份打底 + 一份给缝的加急</h3>
 <p>权重由两块加起来，各管一件事：</p>
 <div class="formula math" data-display="true">w(\mathbf x)=\underbrace{w_c(\mathbf x)}_{\text{打底：拉平类别数量}}+\underbrace{w_0\exp\left(-\frac{(d_1(\mathbf x)+d_2(\mathbf x))^2}{2\sigma^2}\right)}_{\text{加急：越靠近两细胞之间的缝越大}}</div>
-<div class="vars"><div class="var"><code>w_c(x)</code>类别平衡权重。背景像素远多于细胞，不拉平的话网络"全猜背景"就能拿高分。</div><div class="var"><code class="m">d_{1}(x)</code>x 到<b>最近</b>那个细胞边界的距离。</div><div class="var"><code class="m">d_{2}(x)</code>x 到<b>第二近</b>那个细胞边界的距离（也就是另一只细胞）。</div><div class="var"><code class="m">w_{0}=10</code>加急项最多能加多少；原文取 10。</div><div class="var"><code class="m">\sigma \approx 5</code>控制"多近算近"，单位是像素。</div><div class="var"><code class="m">\exp (-\cdot )</code>把距离换成 0~1 的衰减：距离 0 时值为 1，越远越快趋近 0。</div></div>
+<div class="vars"><div class="var"><code class="m">w_c(x)</code>类别平衡权重。背景像素远多于细胞，不拉平的话网络"全猜背景"就能拿高分。</div><div class="var"><code class="m">d_{1}(x)</code>x 到<b>最近</b>那个细胞边界的距离。</div><div class="var"><code class="m">d_{2}(x)</code>x 到<b>第二近</b>那个细胞边界的距离（也就是另一只细胞）。</div><div class="var"><code class="m">w_{0}=10</code>加急项最多能加多少；原文取 10。</div><div class="var"><code class="m">\sigma \approx 5</code>控制"多近算近"，单位是像素。</div><div class="var"><code class="m">\exp (-\cdot )</code>把距离换成 0~1 的衰减：距离 0 时值为 1，越远越快趋近 0。</div></div>
 <p><b>为什么是 <code class="m">d_{1}+d_{2}</code>，而不是只看 <code class="m">d_{1}</code>？</b>这是整条式子的精髓。只看最近距离 <code class="m">d_{1}</code> 的话，<strong>每一个细胞的外圈都会被加急</strong>——但孤零零一只细胞的边界并不难画，不值这个钱。要 <code class="m">d_{1}</code> 和 <code class="m">d_{2}</code> <strong>同时都小</strong>，才说明这个像素<b>左右两边各有一只细胞、它正卡在两只中间的窄缝里</b>——这才是真正要下猛药的地方。两个距离相加再一起罚，就实现了"两边都得近"这个条件：只要有一边远，和就大，加急立刻衰减掉。</p>
 <p><b>为什么套 <code class="m">\exp (- (\cdot )^{2}/2\sigma^{2})</code>？</b>因为需要一个<strong>平滑衰减</strong>而不是硬开关。要是写成"距离小于 3 就加 10、否则加 0"，权重图会出现硬边、训练不稳。高斯这个形状让权重从缝中心往外<b>柔和地滑下去</b>，<code class="m">\sigma</code> 就是滑多快的旋钮。</p>
 
 <h3>第 3 步 · 代数字：看权重怎么随距离掉下去</h3>
-<p>取原文的 <code>w₀=10、σ=5</code>，<code>w_c</code> 按 1 打底。先算最要紧的那种像素（正卡在缝里，两边各 1 像素）：</p>
+<p>取原文的 <code>w₀=10、σ=5</code>，<code class="m">w_c</code> 按 1 打底。先算最要紧的那种像素（正卡在缝里，两边各 1 像素）：</p>
 <div class="formula math" data-display="true">\begin{aligned}(d_1+d_2)^2&=(1+1)^2=4\\ 2\sigma^2&=2\times5^2=50\\ \exp(-4/50)&=\exp(-0.08)=0.9231\\ w&=1+10\times0.9231=\mathbf{10.231}\end{aligned}</div>
 <p>再把像素往细胞外面挪，看加急项怎么自己退场：</p>
 <div class="table-wrap"><table>
@@ -458,92 +458,29 @@ a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
 <!-- gloss-popover:end -->
 <!-- mathify:start -->
 <script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
 (function(){
   function run(){
     if(!window.katex) return;
-    var GREEK={'θ':'\\theta','σ':'\\sigma','α':'\\alpha','μ':'\\mu','ε':'\\epsilon',
-      'φ':'\\phi','ψ':'\\psi','γ':'\\gamma','λ':'\\lambda','ω':'\\omega','τ':'\\tau',
-      'β':'\\beta','δ':'\\delta','ρ':'\\rho','π':'\\pi','η':'\\eta','ζ':'\\zeta',
-      'Ω':'\\Omega','Σ':'\\sum','Δ':'\\Delta','Φ':'\\Phi','Ψ':'\\Psi','Θ':'\\Theta',
-      'ℓ':'\\ell','∇':'\\nabla','∈':'\\in','≈':'\\approx','≠':'\\neq','≤':'\\le',
-      '≥':'\\ge','×':'\\times','·':'\\cdot','−':'-','∼':'\\sim','→':'\\to',
-      '⟺':'\\iff','⇒':'\\Rightarrow','‖':'\\|','∫':'\\int','∂':'\\partial',
-      '√':'\\sqrt','∞':'\\infty','⊕':'\\oplus','∝':'\\propto'};
-    var SUB={'₀':'0','₁':'1','₂':'2','₃':'3','₄':'4','₅':'5','₆':'6','₇':'7','₈':'8','₉':'9',
-      'ₜ':'t','ₓ':'x','ᵢ':'i','ⱼ':'j','ₙ':'n','ₖ':'k','ₐ':'a','ₑ':'e','ₒ':'o','ₚ':'p','ₛ':'s'};
-    var SUP={'⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','ⁿ':'n','ᵀ':'T'};
-    var WORDS=['fake','real','base','cfg','cond','uncond','data','reg','pseudo','denoise',
-      'train','infer','new','old','out','in','tot','max','min','avg','ref','KL','GAN','DMD',
-      'DM','MSE','LPIPS','FID','CE','sg','stopgrad'];
-
-    function toTex(s){
-      var t=s;
-      // unicode 上下标 → LaTeX
-      t=t.replace(/[\u2080-\u2089\u2093\u209c\u1d62\u2c7c\u2099\u2096\u2090\u2091\u2092\u209a\u209b]/g,
-        function(c){ return SUB[c]!==undefined ? '_{'+SUB[c]+'}' : c; });
-      t=t.replace(/[\u00b2\u00b3\u00b9\u2070\u2074\u2075\u207f\u1d40]/g,
-        function(c){ return SUP[c]!==undefined ? '^{'+SUP[c]+'}' : c; });
-      // 希腊字母与运算符
-      t=t.replace(/[\u0370-\u03ff\u2100-\u22ff\u2190-\u21ff\u2212]/g,
-        function(c){ return GREEK[c]!==undefined ? GREEK[c]+' ' : c; });
-      // 多字母下标/上标 → \mathrm{}。上标这条不能漏：LaTeX 里 ^adv 是
-      // "^a 后面跟正文 dv"，语法完全合法，KaTeX 不报错却渲染成 L^a dv。
-      t=t.replace(/([_^])\{?([A-Za-z]{2,})\}?/g, function(m,op,w){
-        return WORDS.indexOf(w)>=0 || w.length>1 ? op+'{\\mathrm{'+w+'}}' : m; });
-      // 希腊字母后"紧贴"单词(θbase) → 变下标。这里只吃 1 个空格：那是上面
-      // 希腊替换自己加的分隔符。原文里真有空格(θ max)说明作者本就当两个记号，
-      // 再吞就会把函数名 max 吃成 θ 的下标（senseflow 的 "minθ maxφ" 正是这么坏的）。
-      t=t.replace(/(\\[a-zA-Z]+) ([a-z]{2,})\b/g, function(m,g,w){
-        return WORDS.indexOf(w)>=0 ? g+'_{\\mathrm{'+w+'}}' : m; });
-      // 常见函数名
-      t=t.replace(/\b(exp|log|ln|max|min|sin|cos|det|dim)\b/g,'\\$1 ');
-      return t;
-    }
-
-    function looksLikeMath(s){
-      if(!s || s.length>44) return false;
-      if(/[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/.test(s)) return false; // 中日韩
-      if(/[\[\]"'`]/.test(s)) return false;                                     // 索引/字符串=代码
-      if(/^[A-Z][A-Z0-9_]{3,}$/.test(s)) return false;                            // CONST_NAME
-      if(/\s/.test(s) && /^[A-Za-z\s‖|,]+$/.test(s)) return false;              // "fake ‖ real" 词组
-      if(/^(https?:|\/|\.\/)/.test(s)) return false;                            // 路径/URL
-      if(/^<.*>$/.test(s)) return false;                                          // <eos> / <|zh|> 这类 token，不是数学
-      // snake_case 且首段是多字母 = 代码变量名(no_grad / loss_dm / cross_entropy)，
-      // 而数学下标的首段通常只有一个字母(p_fake / w_c / d_1)，予以保留
-      if(/^[a-z][a-z0-9]+(_[a-z0-9]+)+$/.test(s)) return false;
-      return true;
-    }
-
-    // 散文里的 <code> 用更严的形状判定：单个字母 + 下标/上标/括号参数。
-    // 散文不像符号格子那样"里面基本都是数学"，混着 commit hash(fafc81b7)、
-    // 版本号(1e-5)、命令行开关(--apply)，所以这里宁可漏也不能误伤。
-    // 光秃秃一个字母(A / N)不渲染——它可能只是"选项 A"。
-    var TIGHT=/^[A-Za-z\u0370-\u03ff](_\{?[A-Za-z0-9]{1,5}\}?)*(\^\{?[A-Za-z0-9]{1,3}\}?)*(\(.*\))?$/;
-    function proseIsMath(s){ return TIGHT.test(s) && /[_^(]/.test(s); }
-
-    var CELL='.var code, .symbol code, .vars code, .symbol-grid code, .sym code, .concept-body code';
-    var cells=[].slice.call(document.querySelectorAll(CELL));
-    // code.m = 作者显式声明"这是数学"，任何位置都渲染，不受形状限制
-    var opt=[].slice.call(document.querySelectorAll('code.m'));
-    var prose=[].slice.call(document.querySelectorAll('code')).filter(function(el){
-      return cells.indexOf(el)<0 && opt.indexOf(el)<0 && proseIsMath((el.textContent||'').trim());
-    });
-
-    cells.concat(opt).concat(prose).forEach(function(el){
+    document.querySelectorAll('code.m').forEach(function(el){
       if(el.dataset.mathified) return;
-      if(el.closest('pre')) return;               // 代码块原样保留
-      var raw=(el.textContent||'').trim();
-      if(!el.classList.contains('m') && !looksLikeMath(raw)) return;
-      // 已经是手写 LaTeX（含反斜杠命令）的，原样送 KaTeX，绝不让 toTex 再改写一遍——
-      // 否则同一条式子在「符号格子」和「.formula 公式」两条渲染路径上会长得不一样。
-      // toTex 那层启发式只服务于存量页里随手写的松散记号(θbase / p_fake / L_G^adv)。
-      var tex = raw.indexOf('\\') >= 0 ? raw : toTex(raw);
+      if(el.closest('pre')) return;
       try{
-        var html=katex.renderToString(tex,{throwOnError:true,displayMode:false});
-        el.innerHTML=html;
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
         el.dataset.mathified='1';
         el.classList.add('mathified');
-      }catch(e){ /* 转换不了就保持原来的 code 样子 */ }
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
     });
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
@@ -553,9 +490,8 @@ a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
 <style>
 code.mathified{border:none;background:none;padding:0;font-size:1em}
 .var code.mathified,.symbol code.mathified{color:#7e2e20}
-/* 符号格子里「开头那个 code 是标签、要单独成行」的样式(.symbol code{display:block})
-   会连说明文字里的行内 code 一起顶成块级，读起来像莫名其妙的断行。
-   只有第一个 code 该是块级，后面的一律恢复行内。 */
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
 .sym code:not(:first-child),.symbol code:not(:first-child),
 .var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
 </style>

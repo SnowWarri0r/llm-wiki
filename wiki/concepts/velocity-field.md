@@ -66,7 +66,7 @@ N 取多少？OT 直线路径下理论 1 步够，实际 4-20 步达到 diffusio
 
 ## 跟 score 的对比
 Diffusion 学 score: \(s_t(x) =\nabla \log p_t(x)\) —— 概率密度的对数梯度。
-Flow matching 学 velocity: `v_t(x)` —— 直接的"该往哪走"。
+Flow matching 学 velocity: \(v_t(x)\) —— 直接的"该往哪走"。
 
 两者关系：在某些 path 下（如 VP-SDE），velocity 跟 score 有简单线性关系。所以 diffusion 可以视作 flow matching 的特例 —— 但训练目标的<strong>直观度</strong>差异巨大。
 

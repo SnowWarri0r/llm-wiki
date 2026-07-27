@@ -26,9 +26,9 @@ self-attention 只能在同一模态内部找关系：画面知道杯子碰桌�
 A_{V\leftarrow A}=\operatorname{softmax}\left(\frac{Q_VK_A^\top}{\sqrt d}\right)V_A
 \]
 
-- `Q_V`：视频 token 提出的查询；
-- `K_A`：音频 token 的检索索引；
-- `V_A`：匹配后真正取回的音频内容；
+- \(Q_V\)：视频 token 提出的查询；
+- \(K_A\)：音频 token 的检索索引；
+- \(V_A\)：匹配后真正取回的音频内容；
 - `d`：query/key 的共同宽度；
 - \(\sqrt{d}\)：控制点积分布，避免 softmax 太尖；
 - 反方向把 V/A 交换即可。

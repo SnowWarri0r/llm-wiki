@@ -95,7 +95,7 @@ attention 里的 \(Q \cdot K^{T}\) 是 [seq, d] @ [d, seq] = [seq, seq] —— �
 \(f: ℝᵈ \to ℝᵏ\) = "f 把 d 维向量映射到 k 维"。
 
 ### `argmin` / `argmax`
-`argmin_x f(x)` = "让 f 最小的那个 x"。训练 loss 是 \(argmin_\theta L(\theta )\)。
+\(argmin_x f(x)\) = "让 f 最小的那个 x"。训练 loss 是 \(argmin_\theta L(\theta )\)。
 
 ## 微分方程相关
 

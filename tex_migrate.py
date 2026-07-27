@@ -149,7 +149,10 @@ def is_math(s: str) -> bool:
         return False
     if re.match(r"^[A-Za-z_][A-Za-z0-9_]*\(", s) and re.search(r"_[A-Za-z]{2,}", s):
         return False                                          # 带下划线的函数调用
-    if re.fullmatch(r"[A-Z][A-Z0-9_]{3,}", s):                # CONST_NAME
+    # CONST_NAME，但首段得有 2 个以上字符——D_KL / L_CLIP 是数学不是常量名
+    if re.fullmatch(r"[A-Z]{2,}[A-Z0-9_]*", s) and "_" in s:
+        return False
+    if re.fullmatch(r"[A-Z][A-Z0-9]{3,}", s):
         return False
     if re.match(r"^(https?:|/|\./|--)", s):                   # 路径 / URL / 命令行开关
         return False
@@ -214,8 +217,8 @@ def main():
                 if "\\" in raw or not is_math(raw):
                     continue
                 tex = to_tex(raw)
-                if tex == raw:
-                    continue
+                # 即便转换后文本没变（p_g / A_i 本来就是合法 LaTeX），也要打标记：
+                # Phase C 会删掉运行时那层"猜哪个 code 是数学"，没标记就不再渲染。
                 edits.append((m.start(), m.end(),
                               '<code class="m">' + H.escape(tex, quote=False) + "</code>"))
             if not edits:

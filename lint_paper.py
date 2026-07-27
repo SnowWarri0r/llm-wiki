@@ -18,11 +18,19 @@ solaris §07 的 Lₛ/Lₜ 就是这么两次躲过人工 review 的。凡是能
 ERROR = 机械可判、没有解释空间，必须清零。
 WARN  = 启发式，可能误报，要人眼看一下再决定。
 """
+import html as html_mod
+import importlib.util
 import re
 import sys
 from pathlib import Path
 
 DOCS = Path(__file__).parent / "docs" / "papers"
+
+# 复用迁移脚本里的"这是不是数学"判定，保证 linter 与 tex_migrate 永远同一套规则
+_spec = importlib.util.spec_from_file_location("_tm", Path(__file__).parent / "tex_migrate.py")
+_tm = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_tm)
+_is_math = _tm.is_math
 
 # render.py 注入的整块内容，体检前摘掉（用等长空格替换以保持偏移量）
 INJECTED = [
@@ -49,6 +57,8 @@ GREEK = {
 INPLACE_TOLERANCE = 500
 
 PROSE_TIGHT = re.compile(r"^[A-Za-z\u0370-\u03ff](_\{?[A-Za-z0-9]{1,5}\}?)*(\^\{?[A-Za-z0-9]{1,3}\}?)*(\(.*\))?$")
+
+MATH_UNICODE = re.compile("[\\u2080-\\u209c\\u2070-\\u207f\\u0370-\\u03ff\\u2200-\\u22ff\\u2190-\\u21ff\\u2212\\u2016]")
 
 CJK = re.compile(r"[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]")
 SMART_QUOTE_ATTR = re.compile("\\w+=[\u201c\u201d\u2018\u2019]")
@@ -173,30 +183,24 @@ def check_figcaption_symbols(html, name, issues):
             issues.append(("WARN", name, f"figcaption 出现符号 {tok!r}，此前无符号格子定义: {flat}"))
 
 
-def check_raw_latex_in_prose(html, name, issues):
-    """散文里的 <code> 不在 mathify 作用域内，写 LaTeX 命令必然原样显示成裸的
-    `\theta` / `\log p_f`。这条纯机械可判：作用域外的 code 只要含反斜杠命令就是 bug。
-    （SKILL 7.5 写过这条约定，但连写两页都当场违反，所以搬进脚本。）"""
+def check_unmarked_math(html, name, issues):
+    """裸 <code> 里出现数学 = 不会被渲染。
+
+    Phase C 之后 mathify 只认 <code class="m">，运行时那层"猜哪个 code 是数学"已删掉，
+    没打标记的数学不再有兜底，直接显示成灰底的 p_g / \theta / xₜ。
+
+    判定**直接复用 tex_migrate.is_math**，不在这里另写一份——这个仓库这轮踩过太多次
+    "两处各写一套规则然后悄悄分叉"了。<pre> 里的不算。"""
     body = visible(html)
-    # mathify 作用域：这些容器里的 code 会被渲染，其余都是散文
-    scoped = []
-    for m in re.finditer(r'<(?:div|span|li|section)[^>]*class="[^"]*\b(?:sym|symbol|var|vars|symbol-grid|concept-body)\b[^"]*"[^>]*>', body):
-        depth_end = body.find("</div>", m.end())
-        scoped.append((m.start(), depth_end if depth_end > 0 else m.end()))
-    # 注意这里只匹配裸 <code>：<code class="m"> 是作者显式声明的数学，mathify 会渲染它，
-    # 允许写 LaTeX。这个豁免是有意的，别把正则放宽成 <code[^>]*>。
+    pre = [(m.start(), m.end()) for m in re.finditer(r"<pre\b.*?</pre>", body, re.S)]
     for m in re.finditer(r"<code>(.*?)</code>", body, re.S):
-        if any(a <= m.start() < b for a, b in scoped):
+        if any(a <= m.start() < b for a, b in pre):
             continue
-        # 形状够紧的（p_g / A_i / D(x)）散文 code 现在也会被 mathify 渲染，同样允许
-        raw = re.sub(r"<[^>]+>", "", m.group(1)).strip()
-        if PROSE_TIGHT.match(raw) and re.search(r"[_^(]", raw):
+        t = html_mod.unescape(re.sub(r"<[^>]+>", "", m.group(1))).strip()
+        if not _is_math(t):
             continue
-        t = re.sub(r"<[^>]+>", "", m.group(1))
-        if re.search(r"\\[a-zA-Z]{2,}", t):
-            issues.append(("ERROR", name,
-                           f"散文里的 <code> 含 LaTeX 命令，会原样显示成裸反斜杠: {t.strip()[:40]!r}"
-                           f"（散文不走 mathify，改写成 unicode：θ / σ / xₜ / log p_f）"))
+        issues.append(("ERROR", name,
+                       f"裸 <code> 里的数学不会渲染: {t[:40]!r}（改成 <code class=\"m\"> 并写 LaTeX）"))
 
 
 def check_glossary(html, name, issues):
@@ -239,7 +243,7 @@ def check_chat_context(html, name, issues):
 def lint(path):
     html = strip_injected(path.read_text(encoding="utf-8"))
     issues = []
-    for fn in (check_define_before_use, check_figcaption_symbols, check_raw_latex_in_prose,
+    for fn in (check_define_before_use, check_figcaption_symbols, check_unmarked_math,
                check_glossary, check_markup, check_chat_context):
         fn(html, path.name, issues)
     return issues
