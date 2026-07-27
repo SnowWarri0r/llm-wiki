@@ -71,13 +71,13 @@
 <ul>
 <li><code>p(x, t)</code> = 这街区在 t 时刻有多少人（人口密度）</li>
 <li><code>v(x, t)</code> = 这街区里人们走动的平均方向和速度（风场 / 速度场）</li>
-<li><code>p · v</code> = 流量（多少人 × 多快走）</li>
+<li><span class="tex math-inline" data-display="false">p \cdot v</span> = 流量（多少人 × 多快走）</li>
 </ul>
 <p>街区的人口怎么变？只能靠走进来和走出去。每一秒变多少：</p>
 <pre><code>人口变化率 = (进来的人) − (走掉的人)
           = 净流入
 </code></pre>
-<p>把"净流出"取个名字叫 <code>∇·(p·v)</code>（散度 · divergence），把"人口变化率"叫 <code>∂p/∂t</code>，等式就是：</p>
+<p>把"净流出"取个名字叫 <span class="tex math-inline" data-display="false">\nabla \cdot (p\cdot v)</span>（散度 · divergence），把"人口变化率"叫 <span class="tex math-inline" data-display="false">\partial p/\partial t</span>，等式就是：</p>
 <pre><code>∂p/∂t + ∇·(p·v) = 0
 ←─────→   ←─────────→
 密度变化率   净流出率
@@ -85,25 +85,25 @@
 <p>挪到一边：<strong>∂p/∂t = -净流出 = 净流入</strong>。</p>
 <p>就这。整个连续性方程其实在说一句废话：<strong>你这点多了多少人 = 走进来的人 − 走出去的人</strong>。因为人不会从空气里凭空蹦出来。把"人"换成水分子、电荷、粒子云、概率质量，结构完全一样。</p>
 <h2>三个图像化的例子</h2>
-<p>把 <code>∇·(p·v)</code> 取 0 / 正 / 负 拆开看：</p>
+<p>把 <span class="tex math-inline" data-display="false">\nabla \cdot (p\cdot v)</span> 取 0 / 正 / 负 拆开看：</p>
 <p><strong>例 1 · 流过</strong></p>
 <pre><code>→ → → → →
 → → → → →
 → → → → →
 </code></pre>
-<p>所有粒子向右等速走。你站在中间任一点：左来的 = 右走的，净流出 = 0，所以 <code>∂p/∂t = 0</code>。粒子在流，但你这点密度不变。</p>
+<p>所有粒子向右等速走。你站在中间任一点：左来的 = 右走的，净流出 = 0，所以 <span class="tex math-inline" data-display="false">\partial p/\partial t =0</span>。粒子在流，但你这点密度不变。</p>
 <p><strong>例 2 · 发散（喷泉中心）</strong></p>
 <pre><code>↖   ↑   ↗
 ←       →
 ↙   ↓   ↘
 </code></pre>
-<p>所有方向都在往外流。净流出 &gt; 0 → <code>∂p/∂t &lt; 0</code> → 这点密度下降（粒子从你脚下散开）。</p>
+<p>所有方向都在往外流。净流出 &gt; 0 → <span class="tex math-inline" data-display="false">\partial p/\partial t &lt; 0</span> → 这点密度下降（粒子从你脚下散开）。</p>
 <p><strong>例 3 · 汇聚（黑洞中心）</strong></p>
 <pre><code>↘   ↓   ↙
 →       ←
 ↗   ↑   ↖
 </code></pre>
-<p>所有方向都在往里流。净流出 &lt; 0 → <code>∂p/∂t &gt; 0</code> → 这点密度上升（粒子往这点汇聚）。</p>
+<p>所有方向都在往里流。净流出 &lt; 0 → <span class="tex math-inline" data-display="false">\partial p/\partial t &gt; 0</span> → 这点密度上升（粒子往这点汇聚）。</p>
 <p>这三种就是散度取 0 / 正 / 负 的物理直觉。</p>
 <h2>跟 flow matching 的关系</h2>
 <p><a href="../concepts/flow-matching.html">flow-matching</a> 要做的事：给一族 <a href="../concepts/probability-path.html">probability-path</a>（每个时刻一份分布 <code>p_t</code>），找出对应的 <a href="../concepts/velocity-field.html">velocity-field</a> <code>v_t</code>，让粒子沿 <code>v_t</code> 流动时，密度演化正好就是 <code>p_t</code>。</p>
@@ -130,12 +130,12 @@ for t in timesteps:
 
 # 任意时刻 p_t 的密度 = 这点附近的粒子数密度
 </code></pre>
-<p>连续性方程就是这段代码的<strong>连续极限</strong>。粒子数永远 N 个不变 → 总概率守恒。某点密度变化 = 这步走进来的粒子 − 走出去的粒子 → <code>∂p/∂t = -∇·(p·v)</code>。</p>
+<p>连续性方程就是这段代码的<strong>连续极限</strong>。粒子数永远 N 个不变 → 总概率守恒。某点密度变化 = 这步走进来的粒子 − 走出去的粒子 → <span class="tex math-inline" data-display="false">\partial p/\partial t = -\nabla \cdot (p\cdot v)</span>。</p>
 <h2>符号速查</h2>
 <ul>
-<li><code>∂p/∂t</code> · 偏导数：密度怎么随时间变（位置不动，只让 t 动）</li>
-<li><code>∇·</code> · 散度（div）：一个向量场在某点"净流出 / 汇聚"的程度</li>
-<li><code>p·v</code> · 概率流（probability flux）：密度 × 速度，方向是 v 的方向</li>
+<li><span class="tex math-inline" data-display="false">\partial p/\partial t</span> · 偏导数：密度怎么随时间变（位置不动，只让 t 动）</li>
+<li><span class="tex math-inline" data-display="false">\nabla \cdot</span> · 散度（div）：一个向量场在某点"净流出 / 汇聚"的程度</li>
+<li><span class="tex math-inline" data-display="false">p\cdot v</span> · 概率流（probability flux）：密度 × 速度，方向是 v 的方向</li>
 <li>完整字典：<a href="../concepts/math-symbols.html">math-symbols</a></li>
 </ul>
 <h2>链接</h2>
@@ -158,6 +158,19 @@ for t in timesteps:
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

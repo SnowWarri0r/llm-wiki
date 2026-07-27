@@ -86,7 +86,7 @@
 <p><strong>一个隐藏前提</strong>: 熵奖励要起作用, <strong>奖励的数值尺度得正常</strong>。如果环境给的 reward 是几百上千, 那一点点熵奖励会被<strong>淹没</strong>, 熵照样秒崩。所以实战里熵正则常和<strong>奖励归一化</strong>(把 reward 压到 ±1 尺度)配套用 —— 尺度不对, 调熵也白搭。</p>
 <p>这套思想往大了讲叫<strong>最大熵强化学习</strong> (maximum entropy RL): 在追高分的同时尽量保持策略多样性, 代表算法是 SAC。<code>ent_coef</code> 是它最朴素的一个旋钮。</p>
 <h2>代码出处</h2>
-<p>stable-baselines3 <code>ppo.py</code>: <code>entropy_loss = -th.mean(entropy)</code>, 再 <code>loss = policy_loss + ent_coef * entropy_loss + vf_coef * value_loss</code>。默认 <code>ent_coef=0.0</code>(图像任务常手动调到 0.01)。日志里的 <code>entropy_loss</code> 就是当前熵的相反数, 看它有没有过早塌到 0。</p>
+<p>stable-baselines3 <code>ppo.py</code>: <code>entropy_loss = -th.mean(entropy)</code>, 再 <code>loss = policy_loss + ent_coef * entropy_loss + vf_coef * value_loss</code>。默认 <span class="tex math-inline" data-display="false">ent_{\mathrm{coef}}=0.0</span>(图像任务常手动调到 0.01)。日志里的 <code>entropy_loss</code> 就是当前熵的相反数, 看它有没有过早塌到 0。</p>
 <h2>链接</h2>
 <ul>
 <li><a href="../concepts/actor-critic.html">actor-critic</a> · 这一项加在 actor 的 loss 上</li>
@@ -106,6 +106,19 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

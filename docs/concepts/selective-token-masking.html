@@ -84,7 +84,7 @@ text→layers     ⚙噪声   ⚙噪声   ⚙噪声       全噪声 → 从文�
 image→layers    🔒给定   ⚙噪声   ⚙噪声       只给平图 → 拆成层(分割+补全)
 layers→layers   🔒给定   🔒给定   🔒已有/⚙新层  给若干层 → 加一层/改一层
 </code></pre>
-<p>✓ 自检：三行用的是<strong>同一个 20B 模型</strong>，差别只在"哪几格是 🔒、哪几格是 ⚙"。<code>image→layers</code> 把合成图设 clean、其余 noisy，模型就在"看着这张平图"的条件下把图层 token 去噪出来——等于学会了"看平图、拆图层"。这比"每个任务训一个网络"省得多，且三任务互相之间还能借力（<a href="../papers/mrt.html">mrt</a> 实测多任务联训几乎不掉点）。</p>
+<p>✓ 自检：三行用的是<strong>同一个 20B 模型</strong>，差别只在"哪几格是 🔒、哪几格是 ⚙"。<span class="tex math-inline" data-display="false">image\to layers</span> 把合成图设 clean、其余 noisy，模型就在"看着这张平图"的条件下把图层 token 去噪出来——等于学会了"看平图、拆图层"。这比"每个任务训一个网络"省得多，且三任务互相之间还能借力（<a href="../papers/mrt.html">mrt</a> 实测多任务联训几乎不掉点）。</p>
 <h2>跟别的"遮一部分"的关系</h2>
 <ul>
 <li>是 <a href="../papers/qwen-image-2.html">qwen-image-2</a>"编辑=把原图 latent 拼进条件"的<strong>推广</strong>：那里只能把"一整张原图"当条件，这里<strong>任意子集 token 都能当 clean 条件</strong>。</li>
@@ -111,6 +111,19 @@ layers→layers   🔒给定   🔒给定   🔒已有/⚙新层  给若干层 �
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

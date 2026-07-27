@@ -259,5 +259,5 @@ s=\exp\left(\frac14\sum_{t=1}^{4}\ln\rho_t\right)
 - [[math-symbols]] · 其他常见论文符号
 - [[gspo]] · `exp(mean(log ratio))` 的实际用途
 - [[perplexity]] · 平均负对数概率为什么再取 exp
-- [[cross-entropy]] · `−log p` 为什么惩罚低概率答案
+- [[cross-entropy]] · \(-\log p\) 为什么惩罚低概率答案
 - [[softmax]] · 指数函数怎样把 logits 变成概率

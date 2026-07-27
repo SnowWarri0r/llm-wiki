@@ -34,10 +34,10 @@ updated: 2026-05-28
 ```
 
 读法:
-- `J(θ)` 是目标 (期望总 reward)
-- `∇ J(θ)` 是参数 θ 该怎么调
-- `π(a_t | s_t; θ)` 是策略, 你给状态它给 action 概率分布
-- `∇ log π(...)` 是 log 概率的梯度 (跟分类的 cross-entropy 是同一个 trick)
+- \(J(\theta )\) 是目标 (期望总 reward)
+- \(\nabla J(\theta )\) 是参数 θ 该怎么调
+- \(\pi (a_t | s_t; \theta )\) 是策略, 你给状态它给 action 概率分布
+- \(\nabla \log \pi (...)\) 是 log 概率的梯度 (跟分类的 cross-entropy 是同一个 trick)
 - `R_t` 是这一步之后的总 reward
 
 **意译**: "在状态 s_t 选了 a_t 之后总收益是 R_t, 就把 'log P(选 a_t)' 朝 R_t 的方向推"。R_t 高 → 推大概率, R_t 低 → 推小概率。
@@ -80,7 +80,7 @@ optimizer.step()
 
 | 监督学习 | 策略梯度 |
 |---|---|
-| `loss = -log p(true_label)` | `loss = -log π(action) × return` |
+| \(loss = -\log p(true_{\mathrm{label}})\) | \(loss = -\log \pi (action) \times return\) |
 | label 来自人工标注 | "label"是自己采样的 action, "权重"是 reward |
 | 每个样本权重相同 | 每个 (s, a) 样本权重 = 该回合的 return |
 | 数据 i.i.d. 随机收集 | 数据是 policy 自己生成的 → 数据分布跟着 policy 变 |

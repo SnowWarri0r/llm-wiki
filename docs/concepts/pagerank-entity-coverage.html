@@ -83,7 +83,7 @@
 <li><strong>不连通</strong>：图分成互不相连的几块，有些页永远访问不到 → rank 恒为 0。</li>
 </ul>
 <p><strong>瞬移就是给每一步装个逃生舱</strong>：每步有 1−d 概率不点链接、随机跳到全网任意页。死胡同被弹出去、陷阱关不住你（概率能漏回外面）、每页都够得着。</p>
-<p>直觉记 d=0.85：把它当<strong>"会腻的冲浪者"</strong>——真人点链接点着点着就腻了，关掉去搜个新词（=瞬移）。d=0.85 即"85% 再点一条、15% 腻了跳走"，平均点 <code>1/(1−d)≈6~7</code> 条就跳一次，贴近真人习惯。d 太大（0.99）→ 陷阱化解慢、收敛慢；d 太小（0.5）→ 瞬移太频繁，链接结构的信号被冲淡、排不出高下。</p>
+<p>直觉记 d=0.85：把它当<strong>"会腻的冲浪者"</strong>——真人点链接点着点着就腻了，关掉去搜个新词（=瞬移）。d=0.85 即"85% 再点一条、15% 腻了跳走"，平均点 <span class="tex math-inline" data-display="false">1/(1-d)\approx 6~7</span> 条就跳一次，贴近真人习惯。d 太大（0.99）→ 陷阱化解慢、收敛慢；d 太小（0.5）→ 瞬移太频繁，链接结构的信号被冲淡、排不出高下。</p>
 <p>更深一层：PageRank 是 <a href="../concepts/markov-chain.html">markov-chain</a> 的平稳分布，而"平稳分布存在且唯一、幂迭代必收敛"要求这条链<strong>遍历得到每个状态、不困在子集、不周期打转</strong>（ergodic）。瞬移让任意页一步能到任意页，正好满足这个前提——所以它不只是工程补丁，更<strong>在数学上保证这个数算得出、且只有一个解</strong>。</p>
 <h2>数字例子 · 4 个页面</h2>
 <p>A→B→C→A 构成一个环，D→A（D 谁都没指向它）。<code>d=0.85, N=4</code>，floor=(1−0.85)/4=<strong>0.0375</strong>。</p>
@@ -119,6 +119,19 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

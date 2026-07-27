@@ -28,7 +28,7 @@ A_i^{\mathrm{GRPO}} &=
 - `mean` / `std`：这组 reward 的均值和标准差。
 - `A_i`：第 `i` 条回答的组相对 advantage。结果奖励场景下，这条回答的所有 token 共用它。
 
-固定例子：四条回答 reward 为 `[1,1,0,0]`，均值 `.5`、总体标准差 `.5`，所以 `A=[1,1,−1,−1]`。前两条的 token 概率整体往上推，后两条往下压。若四条全是 `1` 或全是 `0`，中心化后全为 `0`，这组没有策略梯度。
+固定例子：四条回答 reward 为 `[1,1,0,0]`，均值 `.5`、总体标准差 `.5`，所以 \(A=[1,1,-1,-1]\)。前两条的 token 概率整体往上推，后两条往下压。若四条全是 `1` 或全是 `0`，中心化后全为 `0`，这组没有策略梯度。
 
 ## reward model 和 critic 不是一回事
 
@@ -57,7 +57,7 @@ L_i=\frac{1}{|y_i|}\sum_t
 \right)
 \]
 
-`ρ_i,t` 表示新模型相对采样时的旧模型，把这个 token 的概率改了多少；`ε` 限制一次更新的有效幅度；`|y_i|` 是回答 token 数。DeepSeekMath 原始版本还直接在目标里加入相对 reference policy 的逐 token KL 惩罚。
+\(\rho_i,t\) 表示新模型相对采样时的旧模型，把这个 token 的概率改了多少；\(\epsilon\) 限制一次更新的有效幅度；`|y_i|` 是回答 token 数。DeepSeekMath 原始版本还直接在目标里加入相对 reference policy 的逐 token KL 惩罚。
 
 所以 GRPO 不是“只按 reward 做监督学习”，也不是把 PPO 整套推翻：**它主要替换 advantage 的估计方式，并保留 policy ratio、clip 和可选 KL 约束。**
 

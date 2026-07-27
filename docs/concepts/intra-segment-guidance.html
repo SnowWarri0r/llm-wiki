@@ -70,12 +70,12 @@
 <p>四步生成器只在四个 coarse timestep 上接受监督。例如 SD 3.5 Large 使用 <code>{.25,.5,.75,1.0}</code>。但老师在相邻时间点上的重建能力并不平滑：SenseFlow 测得的一步重建误差会局部振荡，尤其在高噪声的 <code>.8–1.0</code> 区间。</p>
 <p>所以一个手工选中的 anchor 可能恰好落在老师不可靠的位置；而两个 anchor 之间的大量时间点完全没有直接把信息送给学生。</p>
 <h2>三条路线</h2>
-<p>设当前段是 <code>τ_i→τ_{i-1}</code>：</p>
+<p>设当前段是 <span class="tex math-inline" data-display="false">\tau_i\to \tau_{i-1}</span>：</p>
 <ol>
-<li>随机抽 <code>t_mid∈(τ_{i-1},τ_i)</code>；</li>
-<li>冻结老师，从 <code>x_{τ_i}</code> 走到 <code>x_{t_mid}</code>；</li>
-<li>冻结这条目标支路里的学生，从 <code>x_{t_mid}</code> 再走到 <code>x_tar</code>；</li>
-<li>活跃的学生从 <code>x_{τ_i}</code> 直接一步走到 <code>x_{τ_{i-1}}</code>；</li>
+<li>随机抽 <span class="tex math-inline" data-display="false">t_{\mathrm{mid}}\in (\tau_{i-1},\tau_i)</span>；</li>
+<li>冻结老师，从 <span class="tex math-inline" data-display="false">x_{\tau_i}</span> 走到 <code>x_{t_mid}</code>；</li>
+<li>冻结这条目标支路里的学生，从 <code>x_{t_mid}</code> 再走到 <span class="tex math-inline" data-display="false">x_{\mathrm{tar}}</span>；</li>
+<li>活跃的学生从 <span class="tex math-inline" data-display="false">x_{\tau_i}</span> 直接一步走到 <span class="tex math-inline" data-display="false">x_{\tau_{i-1}}</span>；</li>
 <li>让直接结果贴近 <code>stopgrad(x_tar)</code>。</li>
 </ol>
 <p>正式目标是：</p>
@@ -88,11 +88,11 @@ x_{\tau_{i-1}}-\operatorname{stopgrad}(x_{\mathrm{tar}})
 \right].</div>
 <ul>
 <li><code>i</code>：当前是哪一段；</li>
-<li><code>τ_i</code>：这段的高噪声端；</li>
-<li><code>τ_{i-1}</code>：这段的低噪声端；</li>
-<li><code>t_mid</code>：段内随机采样的中间时刻；</li>
-<li><code>x_{τ_{i-1}}</code>：学生直接跨完整段得到的结果；</li>
-<li><code>x_tar</code>：老师走前半段、学生走后半段得到的目标；</li>
+<li><span class="tex math-inline" data-display="false">\tau_i</span>：这段的高噪声端；</li>
+<li><span class="tex math-inline" data-display="false">\tau_{i-1}</span>：这段的低噪声端；</li>
+<li><span class="tex math-inline" data-display="false">t_{\mathrm{mid}}</span>：段内随机采样的中间时刻；</li>
+<li><span class="tex math-inline" data-display="false">x_{\tau_{i-1}}</span>：学生直接跨完整段得到的结果；</li>
+<li><span class="tex math-inline" data-display="false">x_{\mathrm{tar}}</span>：老师走前半段、学生走后半段得到的目标；</li>
 <li><code>stopgrad</code>：目标数值参与比较，但目标支路不接收梯度；</li>
 <li><code>E</code>：不断更换噪声和中间时刻后取平均。</li>
 </ul>
@@ -112,16 +112,16 @@ xdirect = .20 + (.50-.75)×(-1.0)
 
 LISG = (.45-.65)² = .04
 </code></pre>
-<p>反向传播只推动直接路线的 <code>.45</code> 靠近冻结目标 <code>.65</code>。下次训练会重新采 <code>t_mid</code>，于是同一个 anchor 逐渐吸收整段里不同位置的信息。</p>
+<p>反向传播只推动直接路线的 <code>.45</code> 靠近冻结目标 <code>.65</code>。下次训练会重新采 <span class="tex math-inline" data-display="false">t_{\mathrm{mid}}</span>，于是同一个 anchor 逐渐吸收整段里不同位置的信息。</p>
 <h2>一个容易误读的地方</h2>
-<p><code>x_tar</code> 不是“老师独自跑完整段”的答案。老师只走 <code>τ_i→t_mid</code>，后半段仍由学生完成，只是这条目标支路被 <code>no_grad / stopgrad</code> 冻结。这样既把老师的局部行为带进来，又避免要求学生严格复刻老师完整轨迹。</p>
+<p><span class="tex math-inline" data-display="false">x_{\mathrm{tar}}</span> 不是“老师独自跑完整段”的答案。老师只走 <span class="tex math-inline" data-display="false">\tau_i\to t_{\mathrm{mid}}</span>，后半段仍由学生完成，只是这条目标支路被 <span class="tex math-inline" data-display="false">no_{\mathrm{grad}} / \operatorname{stopgrad}</span> 冻结。这样既把老师的局部行为带进来，又避免要求学生严格复刻老师完整轨迹。</p>
 <p>论文公式写平方 L2；2026-07-24 检查到的官方代码 commit <code>fafc81b7</code> 使用平滑绝对误差：</p>
 <div class="tex math-display" data-display="true">\sqrt{(x_{\mathrm{direct}}-x_{\mathrm{tar}})^2+10^{-6}}-10^{-3}.</div>
 <p>它在误差很小时平滑，在误差很大时更接近绝对值，对异常大误差没有平方损失那么敏感。</p>
 <h2>链接</h2>
 <ul>
 <li><a href="../papers/senseflow.html">senseflow</a> · ISG 在完整 SenseFlow 训练循环里的位置</li>
-<li><a href="../concepts/flow-matching.html">flow-matching</a> · <code>x_next=x+Δt·v</code> 的速度场更新</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · <span class="tex math-inline" data-display="false">x_{\mathrm{next}}=x+\Delta t\cdot v</span> 的速度场更新</li>
 <li><a href="../papers/dmd2.html">dmd2</a> · backward simulation 解决的是训练输入与少步推理输入错位，和 ISG 的职责不同</li>
 </ul>
 </article>

@@ -20,7 +20,7 @@ Mel spectrogram 做<strong>降维 + 人耳化</strong>：
 - 取每个 Mel band 的能量
 - 取对数（log）让动态范围合理
 
-结果：<strong>`[80 mel bands × N frames]`</strong>，10 秒音频 → 80 × 1000 ≈ 80000 个浮点数，<strong>压缩 2 倍</strong>，更结构化。
+结果：<strong>\([80 mel bands \times N frames]\)</strong>，10 秒音频 → 80 × 1000 ≈ 80000 个浮点数，<strong>压缩 2 倍</strong>，更结构化。
 
 每个 cell 是 "这一帧（10ms 左右）这个频段（如 1.2kHz 附近）的 log 能量"。
 
@@ -93,7 +93,7 @@ Mel spectrogram 做<strong>降维 + 人耳化</strong>：
 4. **Mel 三角滤波器组**（← Fbank 名字由来）— 在频率轴上摆一排**三角形滤波器**（~80 或 128 个），按 Mel 刻度排：低频处密、高频处疏（贴人耳）。每个三角把它覆盖那段功率谱**加权求和成一个数** → 几百个 FFT bin 塌成 80/128 个 Mel band 能量。<em>（像一排漏斗，各收集自己那段频率的能量。）</em>
 5. **取 log** — 每个滤波器能量取对数（响度是对数感知 + 压动态范围）。
 
-每帧 → 一列 80/128 维 log-mel 能量；沿时间堆 → `[n_mels × T]` = **Fbank**。
+每帧 → 一列 80/128 维 log-mel 能量；沿时间堆 → \([n_{\mathrm{mels}} \times T]\) = **Fbank**。
 
 ## 为什么用 Mel 而不是 Hz
 人耳对频率是<strong>对数感知</strong>：100Hz → 200Hz 跟 1000Hz → 2000Hz 听起来都是"高了一个八度"。Mel scale 把 Hz 转成感知一致的轴。
@@ -120,7 +120,7 @@ mel(f) = 2595 · log10(1 + f / 700)
 现代 speech LLM 几乎都用 log-mel 输入。raw waveform 太长且不结构化。
 
 ## dMel 在这之上做什么
-log-mel 仍是连续值（浮点）。dMel 把每个 cell 按 16 bin 量化 → 整张 spectrogram 变成 `[80 × N]` 的 bin index 矩阵 → 每个 index 是 token。送 LLM。
+log-mel 仍是连续值（浮点）。dMel 把每个 cell 按 16 bin 量化 → 整张 spectrogram 变成 \([80 \times N]\) 的 bin index 矩阵 → 每个 index 是 token。送 LLM。
 
 ## 链接
 - [[dmel]] · 用它的论文

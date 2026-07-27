@@ -69,8 +69,8 @@
 <h2>直觉</h2>
 <p>扩散模型每一步要预测"往哪个方向去噪"。问题：光按 prompt 算一遍，模型对 prompt 的"听话程度"不够。CFG（Ho &amp; Salimans 2022）的招很贼：</p>
 <ul>
-<li><strong>条件支</strong>：带着 prompt 算一个方向 <code>v_cond</code></li>
-<li><strong>无条件支</strong>：不给 prompt 算一个方向 <code>v_uncond</code></li>
+<li><strong>条件支</strong>：带着 prompt 算一个方向 <span class="tex math-inline" data-display="false">v_{\mathrm{cond}}</span></li>
+<li><strong>无条件支</strong>：不给 prompt 算一个方向 <span class="tex math-inline" data-display="false">v_{\mathrm{uncond}}</span></li>
 <li><strong>放大差值</strong>：<code>v = v_uncond + w · (v_cond − v_uncond)</code>，<code>w</code> 是 guidance scale</li>
 </ul>
 <p><code>v_cond − v_uncond</code> 就是"因为有了 prompt 而多走的那部分"。把它乘 <code>w</code>（常 7 左右）放大，模型就更贴 prompt。代价是 <code>w</code> 太大画面会过饱和、失真。</p>
@@ -109,6 +109,19 @@ z_next = euler_step(z_t, v, t)          # flow matching 积分一步
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

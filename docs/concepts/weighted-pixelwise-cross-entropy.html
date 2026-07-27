@@ -73,12 +73,12 @@
 <pre><code class="language-text">L = - Σ_{x∈Ω} w(x) log p_{l(x)}(x)
 </code></pre>
 <ul>
-<li><code>Ω</code>：所有输出像素的位置集合；</li>
+<li><span class="tex math-inline" data-display="false">\Omega</span>：所有输出像素的位置集合；</li>
 <li><code>x</code>：其中一个像素坐标；</li>
 <li><code>l(x)</code>：该像素真实类别；</li>
 <li><code>p_{l(x)}(x)</code>：模型给真实类别的概率；</li>
 <li><code>w(x)</code>：这个像素的权重；</li>
-<li><code>Σ</code>：把所有像素的损失相加；</li>
+<li><span class="tex math-inline" data-display="false">\Sigma</span>：把所有像素的损失相加；</li>
 <li><code>-log</code>：正确概率越小，惩罚越大。</li>
 </ul>
 <h2>U-Net 的边界权重</h2>
@@ -88,7 +88,7 @@
 <li><code>w_c</code> 平衡类别数量；</li>
 <li><code>d_1,d_2</code> 分别是到最近、第二近细胞边界的距离；</li>
 <li>两者都小，说明像素夹在两个细胞之间；</li>
-<li>原文取 <code>w_0=10, σ≈5 px</code>。</li>
+<li>原文取 <span class="tex math-inline" data-display="false">w_0=10,\sigma \approx 5 px</span>。</li>
 </ul>
 <h2>数字例子</h2>
 <p>取一个夹在两只细胞间的背景像素：</p>
@@ -111,7 +111,7 @@ w = 1 + 10×exp(-(1+1)²/(2×5²))
 </code></pre>
 <p>预测变好，损失从 <code>21.76</code> 降到 <code>1.08</code>，方向正确。</p>
 <h2>易混点</h2>
-<p>原论文 Eq. (1) 印成正的 <code>Σw log p</code>。若把它当“要最小化的 loss”，方向会反；实际等价做法是最大化这条加权对数似然，或最小化带负号的交叉熵。现代框架采用后者。</p>
+<p>原论文 Eq. (1) 印成正的 <span class="tex math-inline" data-display="false">\Sigma w \log p</span>。若把它当“要最小化的 loss”，方向会反；实际等价做法是最大化这条加权对数似然，或最小化带负号的交叉熵。现代框架采用后者。</p>
 <h2>代码出处</h2>
 <ul>
 <li>PyTorch 可先用 <code>F.cross_entropy(..., reduction="none")</code> 得到逐像素损失，再乘位置权重图</li>
@@ -120,7 +120,7 @@ w = 1 + 10×exp(-(1+1)²/(2×5²))
 <h2>链接</h2>
 <ul>
 <li><a href="../papers/unet.html">unet</a> · 原论文用它分开相邻细胞</li>
-<li><a href="../concepts/cross-entropy.html">cross-entropy</a> · 基础的 <code>-log p_true</code></li>
+<li><a href="../concepts/cross-entropy.html">cross-entropy</a> · 基础的 <span class="tex math-inline" data-display="false">-\log p_{\mathrm{true}}</span></li>
 <li><a href="../concepts/softmax.html">softmax</a> · 产生每个像素的类别概率</li>
 <li><a href="../concepts/semantic-segmentation.html">semantic-segmentation</a> · 损失作用于哪张输出图</li>
 </ul>
@@ -137,6 +137,19 @@ w = 1 + 10×exp(-(1+1)²/(2×5²))
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

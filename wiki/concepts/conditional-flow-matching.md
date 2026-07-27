@@ -20,7 +20,7 @@ Conditional Flow Matching 退一步：训练时先抽一对 `(noise, data)`，�
 2. 随机采样时间 `t`
 3. 用路径公式得到中间点 `x_t`
 4. 目标速度通常近似为从 `x0` 指向 `x1` 的方向
-5. 模型输入 `(x_t, t, condition)`，回归速度
+5. 模型输入 \((x_t,t,condition)\)，回归速度
 
 ## 代码出处
 Flow Matching 论文的核心训练目标；TML 用它解释音频输出 head 的选择。

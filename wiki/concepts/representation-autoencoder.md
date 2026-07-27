@@ -35,7 +35,7 @@ RAE 的观察:**已经有一堆"看懂图"的模型**([[dino]]v2、SigLIP,自监
 - **越大越赢**:0.5B→9.8B 全程 RAE>VAE,差距随规模变大。
 
 ## 一个必须的代价:维度相关噪声调度
-语义 latent 维度 `m=N×d` 远大于 VAE。高维里加同样噪声相对腐蚀更小,所以**时间步要按 `α=√(m/n)` 往"更多噪声"挪**,补回信噪比。去掉它性能腰斩(GenEval 49.6→23.6)。这是 RAE 唯一不能省的技术;反倒是宽 diffusion head、噪声增强解码这些小模型补丁,放大后都没必要。
+语义 latent 维度 \(m=N\times d\) 远大于 VAE。高维里加同样噪声相对腐蚀更小,所以**时间步要按 \(\alpha =\sqrt{m/n}\) 往"更多噪声"挪**,补回信噪比。去掉它性能腰斩(GenEval 49.6→23.6)。这是 RAE 唯一不能省的技术;反倒是宽 diffusion head、噪声增强解码这些小模型补丁,放大后都没必要。
 
 ## 代码出处 / 来源
 - [[rae-dit]] · Scaling T2I Diffusion Transformers with Representation Autoencoders(arXiv 2601.16208)

@@ -76,7 +76,7 @@
 <li><span class="tex math-inline" data-display="false">\pi_{\mathrm{old}}</span>：采样这条回答时的旧策略；<span class="tex math-inline" data-display="false">\pi_\theta</span> 是参数为 <span class="tex math-inline" data-display="false">\theta</span> 的待更新策略。</li>
 <li><span class="tex math-inline" data-display="false">\rho_{i,t}</span>：新概率除以旧概率。它等于 1 表示没变，1.1 表示新模型把该 token 的概率提高了 10%。</li>
 </ul>
-<p>然后每个 <code>ρ_i,t</code> 各自 clip。于是同一条好回答里，某些 token 可能按 <code>1.2</code> 奖励，另一些按 <code>0.8</code> 或未截断值更新。若训练和推理引擎精度不同，或 MoE 路由让局部 log-prob 更敏感，个别 token 的比率波动会改变 clip 决策。</p>
+<p>然后每个 <span class="tex math-inline" data-display="false">\rho_i,t</span> 各自 clip。于是同一条好回答里，某些 token 可能按 <code>1.2</code> 奖励，另一些按 <code>0.8</code> 或未截断值更新。若训练和推理引擎精度不同，或 MoE 路由让局部 log-prob 更敏感，个别 token 的比率波动会改变 clip 决策。</p>
 <p>GSPO 的思路是：既然奖惩对象是一条回答，就让更新幅度也属于整条回答。</p>
 <h2>序列比率公式逐项拆开</h2>
 <div class="tex math-display" data-display="true">\begin{aligned}
@@ -87,11 +87,11 @@ s_i(\theta)
 \end{aligned}</div>
 <ul>
 <li><code>y_i</code>：同一 prompt 的第 <code>i</code> 条完整回答。</li>
-<li><code>π(y_i|x)</code>：整条回答的似然，即各 token 条件概率连乘。</li>
+<li><span class="tex math-inline" data-display="false">\pi (y_i|x)</span>：整条回答的似然，即各 token 条件概率连乘。</li>
 <li><code>s_i</code>：这条回答唯一的序列级重要性比率。</li>
 <li><code>|y_i|</code>：回答 token 数。</li>
 <li><code>1/|y_i|</code>：长度归一；把连乘后的总比率拉回“平均每 token”尺度。</li>
-<li><code>exp(mean(log ρ))</code>：与上式完全等价，也是 token 比率的几何平均，数值计算时更稳定。</li>
+<li><span class="tex math-inline" data-display="false">\exp (mean(\log \rho ))</span>：与上式完全等价，也是 token 比率的几何平均，数值计算时更稳定。</li>
 </ul>
 <p>GSPO 最大化：</p>
 <div class="tex math-display" data-display="true">L=\mathbb E\!\left[

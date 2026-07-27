@@ -77,7 +77,7 @@
 </code></pre>
 <p>中间那个 <code>P(x_next | x_now)</code> 叫<strong>转移核</strong>——"站这儿，下一步会去哪"的规则。整条链 = 反复套用这条规则。</p>
 <h2>高斯转移 · 下一步不是一个点，是一团钟形雾</h2>
-<p>普通链下一步可能是个确定位置。<strong>高斯</strong>马尔可夫链是说：每步的转移核是个<strong>正态分布（钟形）</strong>——给定 <code>x_now</code>，下一步 <code>x_next</code> 从一团<strong>钟形雾</strong>里抽：</p>
+<p>普通链下一步可能是个确定位置。<strong>高斯</strong>马尔可夫链是说：每步的转移核是个<strong>正态分布（钟形）</strong>——给定 <span class="tex math-inline" data-display="false">x_{\mathrm{now}}</span>，下一步 <span class="tex math-inline" data-display="false">x_{\mathrm{next}}</span> 从一团<strong>钟形雾</strong>里抽：</p>
 <ul>
 <li>雾的<strong>中心（均值 μ）</strong>= "该往哪挪"（扩散里是模型猜的）</li>
 <li>雾的<strong>胖瘦（协方差 σ²）</strong>= 这步有多少不确定 / 噪声</li>
@@ -125,8 +125,8 @@
 <p>关键细节（<a href="../papers/diffusion-opd.html">diffusion-opd</a> 靠它）：<strong>每步雾的胖瘦 σ_t 是提前定好的 noise schedule 说了算，模型只决定雾心 μ 往哪瞄</strong>。于是学生、老师两个模型，<strong>雾一样胖、只是雾心瞄的地方不同</strong> → 才有 <a href="../concepts/closed-form-kl.html">closed-form-kl</a>（同协方差高斯 KL=均值差²）。</p>
 <h2>代码出处</h2>
 <ul>
-<li>概念性：任何 DDPM 实现的 <code>p_sample</code> 循环——每步 <code>x = μ_θ(x, t) + σ_t · z</code>（z~N(0,1)），就是一次高斯转移</li>
-<li><a href="../papers/ode-sde.html">ode-sde</a> 的 Euler–Maruyama 一步 <code>x += f·dt + √dt·g·z</code> 是它的连续时间版</li>
+<li>概念性：任何 DDPM 实现的 <span class="tex math-inline" data-display="false">p_{\mathrm{sample}}</span> 循环——每步 <span class="tex math-inline" data-display="false">x =\mu_\theta (x,t) +\sigma_t \cdot z</span>（z~N(0,1)），就是一次高斯转移</li>
+<li><a href="../papers/ode-sde.html">ode-sde</a> 的 Euler–Maruyama 一步 <span class="tex math-inline" data-display="false">x +=f\cdot dt +\sqrt{d}t\cdot g\cdot z</span> 是它的连续时间版</li>
 </ul>
 <h2>链接</h2>
 <ul>
@@ -147,6 +147,19 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

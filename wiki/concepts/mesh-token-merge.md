@@ -40,7 +40,7 @@ q1 = 0.25×(1+2+3+4) = 2.5
 q2 = 0.25×(5+6+7+8) = 6.5
 ~~~
 
-于是 8 个 token 先变成 2 个 query。真实模型不是算平均，而是学习 `4D→D` 的矩阵；随后 2 个 query 还会 cross-attention 原始 8 个 token，把被压扁的细节重新捞回来。
+于是 8 个 token 先变成 2 个 query。真实模型不是算平均，而是学习 \(4D\to D\) 的矩阵；随后 2 个 query 还会 cross-attention 原始 8 个 token，把被压扁的细节重新捞回来。
 
 TokenSplit 反过来。假设两个 latent 各有 4 个通道：
 

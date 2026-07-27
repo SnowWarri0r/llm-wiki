@@ -122,7 +122,7 @@ def forward(self, x):
     return [base_out + adapter(x) for adapter in self.adapters]  # 8 层 = 共享 + 各自低秩增量
 ```
 
-最后一行就是 LoRA 的式子 `W·x + (B·A)·x`：8 层共用主体 `W`，每层只学一个瘦 `768→256→vocab` 的增量。模型在赌 **8 层的"hidden→码"映射大体相同、差异是低秩的**。输入侧 `TalkerEmbedding` 对称：每层"共享表 + 低秩 adapter"查嵌入，再**对 8 层求平均**塌成一帧一个向量喂回自回归。
+最后一行就是 LoRA 的式子 \(W\cdot x + (B\cdot A)\cdot x\)：8 层共用主体 `W`，每层只学一个瘦 \(768\to 256\to vocab\) 的增量。模型在赌 **8 层的"hidden→码"映射大体相同、差异是低秩的**。输入侧 `TalkerEmbedding` 对称：每层"共享表 + 低秩 adapter"查嵌入，再**对 8 层求平均**塌成一帧一个向量喂回自回归。
 
 为什么省 + 为什么稳：
 

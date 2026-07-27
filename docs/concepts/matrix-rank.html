@@ -88,7 +88,7 @@
 </code></pre>
 <p>当 <code>r ≪ d,k</code>,右边参数少得多。这就是<strong>低秩分解</strong>——也正是:</p>
 <ul>
-<li><strong><a href="../concepts/lora.html">lora</a></strong>:微调的增量 <code>ΔW</code> 被假设低秩,直接训 <code>B·A</code>(秩 r=16 之类),省上百倍参数。</li>
+<li><strong><a href="../concepts/lora.html">lora</a></strong>:微调的增量 <span class="tex math-inline" data-display="false">\Delta W</span> 被假设低秩,直接训 <span class="tex math-inline" data-display="false">B\cdot A</span>(秩 r=16 之类),省上百倍参数。</li>
 <li><strong>SVD / PCA</strong>:任何矩阵都能拆成 <code>r</code> 个"秩 1 块"按强度(奇异值 σ)排序相加;<strong>只保留最强的前几个 σ、丢掉长尾</strong>,就是有损压缩(图像压缩、降维、embedding 都这套)。</li>
 </ul>
 <figure style="margin:26px 0; padding:22px; background:#eef1f5; border:1px solid #aab4c4; border-radius:4px;">
@@ -135,7 +135,7 @@
 
 <h2>为什么模型里"秩"常很关键</h2>
 <ul>
-<li><strong>微调改动是低秩的</strong>:让一个大模型适应某个任务/画风,往往只在<strong>少数几个方向</strong>上微调——改动量 <code>ΔW</code> 天然接近低秩,所以 <a href="../concepts/lora.html">lora</a> 用秩 16 的小增量就够。</li>
+<li><strong>微调改动是低秩的</strong>:让一个大模型适应某个任务/画风,往往只在<strong>少数几个方向</strong>上微调——改动量 <span class="tex math-inline" data-display="false">\Delta W</span> 天然接近低秩,所以 <a href="../concepts/lora.html">lora</a> 用秩 16 的小增量就够。</li>
 <li><strong>注意力的低秩瓶颈</strong>:多头注意力把 Q/K 投到<strong>更小的 head 维</strong>再算分数,等于人为给注意力矩阵<strong>加了个秩上限</strong>——既省算又当正则。</li>
 <li><strong>embedding / 表示</strong>:把高维 one-hot 压成低维稠密向量,本质是"真实信息是低秩的,没必要用满维"。</li>
 <li><strong>秩亏 = 信息丢失</strong>:如果某层权重秩塌到很低(rank collapse),它就把多样的输入挤进很窄的子空间,表达力垮掉——训练里要警惕。</li>
@@ -168,6 +168,19 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

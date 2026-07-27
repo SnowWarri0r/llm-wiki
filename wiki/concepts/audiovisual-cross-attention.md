@@ -17,8 +17,8 @@ self-attention 只能在同一模态内部找关系：画面知道杯子碰桌�
 
 双向很重要：
 
-- `audio → video`：语音音素、节拍和撞击声可以修正嘴型、动作时机；
-- `video → audio`：说话人、碰撞物、房间和镜头可以修正音源、音色、Foley 与混响。
+- \(audio \to video\)：语音音素、节拍和撞击声可以修正嘴型、动作时机；
+- \(video \to audio\)：说话人、碰撞物、房间和镜头可以修正音源、音色、Foley 与混响。
 
 ## 怎么做的
 
@@ -30,7 +30,7 @@ A_{V\leftarrow A}=\operatorname{softmax}\left(\frac{Q_VK_A^\top}{\sqrt d}\right)
 - `K_A`：音频 token 的检索索引；
 - `V_A`：匹配后真正取回的音频内容；
 - `d`：query/key 的共同宽度；
-- `√d`：控制点积分布，避免 softmax 太尖；
+- \(\sqrt{d}\)：控制点积分布，避免 softmax 太尖；
 - 反方向把 V/A 交换即可。
 
 LTX-2 在跨模态 Q/K 上只使用 1D 时间 RoPE。声音没有画面 `x,y`，所以跨模态先回答“是不是同一时刻”，空间位置由视频内容特征自行决定。

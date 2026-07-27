@@ -69,7 +69,7 @@ hum  ×1  →  h u m
 
 第3轮:  "hug s"=2  "hu m"=1  → 合并 "hug s" → hugs
 ```
-学到的合并规则(按顺序):`h+u→hu`、`hu+g→hug`、`hug+s→hugs`。**结果**:
+学到的合并规则(按顺序):\(h+u\to hu\)、\(hu+g\to hug\)、\(hug+s\to hugs\)。**结果**:
 - `hug` → **1 个 token**(高频,合成了)
 - `hugs` → **1 个 token**
 - `hum` → `hu` + `m` **2 个 token**(低频,没合全,拆着)

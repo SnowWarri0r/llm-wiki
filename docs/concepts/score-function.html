@@ -86,7 +86,7 @@
 <tbody>
 <tr>
 <td>原始清晰照片</td>
-<td>真实训练样本 <code>x₀</code></td>
+<td>真实训练样本 <span class="tex math-inline" data-display="false">x_{0}</span></td>
 </tr>
 <tr>
 <td>破坏程度</td>
@@ -94,11 +94,11 @@
 </tr>
 <tr>
 <td>店里生成的雪花</td>
-<td>高斯噪声 <code>ε</code></td>
+<td>高斯噪声 <span class="tex math-inline" data-display="false">\epsilon</span></td>
 </tr>
 <tr>
 <td>盖上雪花的照片</td>
-<td>带噪样本 <code>xₜ</code></td>
+<td>带噪样本 <span class="tex math-inline" data-display="false">x_{t}</span></td>
 </tr>
 <tr>
 <td>学徒</td>
@@ -106,11 +106,11 @@
 </tr>
 <tr>
 <td>猜出的雪花</td>
-<td><code>ε̂θ(xₜ,t)</code></td>
+<td><span class="tex math-inline" data-display="false">\hat{\epsilon}\theta (x_{t},t)</span></td>
 </tr>
 <tr>
 <td>标准答案</td>
-<td>当初亲手加进去的 <code>ε</code></td>
+<td>当初亲手加进去的 <span class="tex math-inline" data-display="false">\epsilon</span></td>
 </tr>
 </tbody>
 </table>
@@ -124,28 +124,28 @@
 <li>应该减小，那里就是负数；</li>
 <li>绝对值越大，说明这一方向的局部坡度越陡。</li>
 </ul>
-<p>如果 <code>x</code> 是一个 <code>4×64×64</code> latent，score 也是 <code>4×64×64</code>。可以把它理解成给这 16,384 个数各写一条“小修多少”的批注。</p>
+<p>如果 <code>x</code> 是一个 <span class="tex math-inline" data-display="false">4\times 64\times 64</span> latent，score 也是 <span class="tex math-inline" data-display="false">4\times 64\times 64</span>。可以把它理解成给这 16,384 个数各写一条“小修多少”的批注。</p>
 <p>公式中的各项：</p>
 <ul>
 <li><code>x</code>：当前样本，可以是一张图或图像 latent；</li>
 <li><code>p(x)</code>：目标数据在 <code>x</code> 附近的概率密度；</li>
 <li><code>log</code>：对概率密度取对数；</li>
-<li><code>∇ₓ</code>：逐个改变 <code>x</code> 的每个元素，找出 <code>log p(x)</code> 上升最快的方向；</li>
+<li><span class="tex math-inline" data-display="false">\nabla_{x}</span>：逐个改变 <code>x</code> 的每个元素，找出 <code>log p(x)</code> 上升最快的方向；</li>
 <li><code>s_p(x)</code>：最终得到的方向张量。</li>
 </ul>
 <h2>Real-score 网络到底怎么训练</h2>
-<p>从真实数据抽一张干净图 <code>x₀</code>，再采噪声时刻 <code>t</code> 和高斯噪声 <code>ε</code>：</p>
+<p>从真实数据抽一张干净图 <span class="tex math-inline" data-display="false">x_{0}</span>，再采噪声时刻 <code>t</code> 和高斯噪声 <span class="tex math-inline" data-display="false">\epsilon</span>：</p>
 <div class="tex math-display" data-display="true">\begin{aligned}
 x_t&amp;=\alpha_t x_0+\sigma_t\epsilon,\\
 \epsilon&amp;\sim\mathcal N(0,I)
 \end{aligned}</div>
 <ul>
-<li><code>αₜ</code>：这一时刻还保留多少原图；</li>
-<li><code>σₜ</code>：这一时刻加入多少噪声；</li>
-<li><code>ε</code>：程序自己采样的噪声，形状与图片相同；</li>
-<li><code>xₜ</code>：交给网络的带噪图片。</li>
+<li><span class="tex math-inline" data-display="false">\alpha_{t}</span>：这一时刻还保留多少原图；</li>
+<li><span class="tex math-inline" data-display="false">\sigma_{t}</span>：这一时刻加入多少噪声；</li>
+<li><span class="tex math-inline" data-display="false">\epsilon</span>：程序自己采样的噪声，形状与图片相同；</li>
+<li><span class="tex math-inline" data-display="false">x_{t}</span>：交给网络的带噪图片。</li>
 </ul>
-<p>网络看见 <code>xₜ</code> 和 <code>t</code>，预测当初加入的噪声：</p>
+<p>网络看见 <span class="tex math-inline" data-display="false">x_{t}</span> 和 <code>t</code>，预测当初加入的噪声：</p>
 <div class="tex math-display" data-display="true">\widehat\epsilon_\psi=\epsilon_\psi(x_t,t)</div>
 <p>再用均方误差训练：</p>
 <div class="tex math-display" data-display="true">\begin{aligned}
@@ -155,10 +155,10 @@ x_t&amp;=\alpha_t x_0+\sigma_t\epsilon,\\
 \Bigr]
 \end{aligned}</div>
 <ul>
-<li><code>ψ</code>：real-score 网络的参数；</li>
-<li><code>εψ(xₜ,t)</code>：网络猜出的噪声；</li>
-<li><code>ε</code>：程序真正加进去的噪声；</li>
-<li><code>‖a-b‖₂²</code>：对应元素作差、平方，再求和或平均；</li>
+<li><span class="tex math-inline" data-display="false">\psi</span>：real-score 网络的参数；</li>
+<li><span class="tex math-inline" data-display="false">\epsilon \psi (x_{t},t)</span>：网络猜出的噪声；</li>
+<li><span class="tex math-inline" data-display="false">\epsilon</span>：程序真正加进去的噪声；</li>
+<li><span class="tex math-inline" data-display="false">\| a-b\| _{2}^{2}</span>：对应元素作差、平方，再求和或平均；</li>
 <li><code>E</code>：不断换真实图、噪声时刻和噪声，最后取平均。</li>
 </ul>
 <p>训练目标说白了就是：</p>
@@ -167,7 +167,7 @@ x_t&amp;=\alpha_t x_0+\sigma_t\epsilon,\\
 </blockquote>
 <p>网络练熟以后，可以把预测噪声换成 score：</p>
 <div class="tex math-display" data-display="true">s_\psi(x_t,t)\approx-\frac{\epsilon_\psi(x_t,t)}{\sigma_t}</div>
-<p>负号的原因也很直接：<code>ε</code> 是刚才“加坏”的方向；要回到更像干净数据的区域，就要朝相反方向改。再除以 <code>σₜ</code>，是把不同破坏程度换到可比较的尺度。</p>
+<p>负号的原因也很直接：<span class="tex math-inline" data-display="false">\epsilon</span> 是刚才“加坏”的方向；要回到更像干净数据的区域，就要朝相反方向改。再除以 <span class="tex math-inline" data-display="false">\sigma_{t}</span>，是把不同破坏程度换到可比较的尺度。</p>
 <h2>一组数字从加噪算到 real score</h2>
 <p>为了能手算，把整张 latent 缩成一个数。取：</p>
 <pre><code class="language-text">真实干净值 x₀ = 1.5
@@ -181,7 +181,7 @@ x_t&amp;=\alpha_t x_0+\sigma_t\epsilon,\\
    = 1.2 - 0.54
    = 0.66
 </code></pre>
-<p>第二步，网络看见的只有 <code>xₜ=0.66</code> 和噪声时刻。假设刚开始预测 <code>ε̂=-0.3</code>：</p>
+<p>第二步，网络看见的只有 <span class="tex math-inline" data-display="false">x_{t}=0.66</span> 和噪声时刻。假设刚开始预测 <span class="tex math-inline" data-display="false">\hat{\epsilon}=-0.3</span>：</p>
 <pre><code class="language-text">L = (ε̂-ε)²
   = [-0.3-(-0.9)]²
   = 0.6²
@@ -196,7 +196,7 @@ x_t&amp;=\alpha_t x_0+\sigma_t\epsilon,\\
   = 1.5
 </code></pre>
 <p><code>s=+1.5</code> 表示：站在当前带噪位置 <code>0.66</code>，目标分布给出的局部修改方向朝右。</p>
-<p>同一件事也可以让网络直接预测干净值 <code>μ(xₜ,t)</code>。两种写法可以互换：</p>
+<p>同一件事也可以让网络直接预测干净值 <span class="tex math-inline" data-display="false">\mu (x_{t},t)</span>。两种写法可以互换：</p>
 <div class="tex math-display" data-display="true">s(x_t,t)
 =-\frac{x_t-\alpha_t\mu(x_t,t)}{\sigma_t^2}</div>
 <p>把 <code>xₜ=.66、α=.8、μ=1.5、σ=.6</code> 代入：</p>
@@ -204,7 +204,7 @@ x_t&amp;=\alpha_t x_0+\sigma_t\epsilon,\\
   = -(-0.54)/0.36
   = 1.5
 </code></pre>
-<p>结果和 <code>-ε̂/σ</code> 完全一致。DMD 论文主要使用这种“预测干净图，再换算 score”的记法。</p>
+<p>结果和 <span class="tex math-inline" data-display="false">-\hat{\epsilon}/\sigma</span> 完全一致。DMD 论文主要使用这种“预测干净图，再换算 score”的记法。</p>
 <h2>放回 DMD：real 与 fake 两套网络差在哪</h2>
 <p>两套网络的结构可以相同，差别在训练数据和更新时间：</p>
 <table>
@@ -217,18 +217,18 @@ x_t&amp;=\alpha_t x_0+\sigma_t\epsilon,\\
 </thead>
 <tbody>
 <tr>
-<td><code>μ_real</code></td>
+<td><span class="tex math-inline" data-display="false">\mu_{\mathrm{real}}</span></td>
 <td>真实训练图片</td>
 <td>DMD 开始前已经训练好；DMD 中冻结</td>
 </tr>
 <tr>
-<td><code>μ_fake</code></td>
+<td><span class="tex math-inline" data-display="false">\mu_{\mathrm{fake}}</span></td>
 <td>学生刚生成的图片</td>
 <td>DMD 训练期间持续更新</td>
 </tr>
 </tbody>
 </table>
-<p>DMD 把同一个学生带噪样本 <code>xₜ</code> 同时交给两套网络：</p>
+<p>DMD 把同一个学生带噪样本 <span class="tex math-inline" data-display="false">x_{t}</span> 同时交给两套网络：</p>
 <ul>
 <li>real score 说：如果这里属于真实图分布，应该往哪改；</li>
 <li>fake score 说：如果这里属于学生当前分布，应该往哪改。</li>
@@ -258,11 +258,11 @@ Drifting：
 <p>这部分可以放到第二遍再看。核心恒等式是：</p>
 <div class="tex math-display" data-display="true">\nabla_x\log p(x)=\frac{\nabla_xp(x)}{p(x)}</div>
 <p>它看的是概率密度的<strong>相对变化</strong>。高维图片的 <code>p(x)</code> 往往小得无法直接计算，取对数也能把连乘变成相加。</p>
-<p>扩散模型并不需要先算出完整的 <code>p(x)</code>；上面的加噪训练直接学到了 <code>∇ₓlog pₜ(x)</code> 这根局部方向。</p>
+<p>扩散模型并不需要先算出完整的 <code>p(x)</code>；上面的加噪训练直接学到了 <span class="tex math-inline" data-display="false">\nabla_{x}\log p_{t}(x)</span> 这根局部方向。</p>
 <h2>一个容易混淆的同名术语</h2>
 <p>统计学还会把下面这项叫 score：</p>
 <div class="tex math-display" data-display="true">\nabla_\theta\log p_\theta(x)</div>
-<p>它是对模型参数 <code>θ</code> 求导。扩散模型通常说的是：</p>
+<p>它是对模型参数 <span class="tex math-inline" data-display="false">\theta</span> 求导。扩散模型通常说的是：</p>
 <div class="tex math-display" data-display="true">\nabla_x\log p(x)</div>
 <p>也就是对样本 <code>x</code> 求导。一个回答“参数怎么改”，另一个回答“当前图片怎么改”，不能混用。</p>
 <h2>链接</h2>
@@ -271,7 +271,7 @@ Drifting：
 <li><a href="../papers/drifting-models.html">drifting-models</a> · 不训练 score 老师，怎样从样本邻居直接算漂移</li>
 <li><a href="../concepts/flow-matching.html">flow-matching</a> · 不学 score，改学连续时间速度</li>
 <li><a href="../concepts/velocity-field.html">velocity-field</a> · 每个时间和位置对应的速度向量</li>
-<li><a href="../concepts/math-symbols.html">math-symbols</a> · <code>∇</code>、<code>log</code>、期望与范数的符号速查</li>
+<li><a href="../concepts/math-symbols.html">math-symbols</a> · <span class="tex math-inline" data-display="false">\nabla</span>、<code>log</code>、期望与范数的符号速查</li>
 <li><a href="../papers/ode-sde.html">ode-sde</a> · score 怎样进入反向 SDE</li>
 </ul>
 </article>

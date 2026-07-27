@@ -35,7 +35,7 @@ minimind-o 的两个 projector 都是**两层 MLP**，只改维度、对齐分�
 
 ## Qwen3-VL 的 merger 还顺便减少 token
 
-假设视觉编码器输出 `12×16=192` 个特征。Qwen3-VL 每次把相邻 `2×2=4` 个特征拼起来，再经两层 MLP 映射到 LLM hidden size：
+假设视觉编码器输出 \(12\times 16=192\) 个特征。Qwen3-VL 每次把相邻 \(2\times 2=4\) 个特征拼起来，再经两层 MLP 映射到 LLM hidden size：
 
 ```text
 12×16 个视觉特征 → 6×8 = 48 个视觉 token

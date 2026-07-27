@@ -67,7 +67,7 @@
 <h2>一句话</h2>
 <p>把 AR 特征当高斯中心，再用逐位置熵决定噪声尺度：越确定越贴近中心，越拿不准越让初始样本散开。</p>
 <h2>直觉</h2>
-<p>连续视觉 AR 已经给每个位置预测了一个特征 <code>z_AR</code>。传统视觉解码器常从统一高斯噪声出发，没有利用“这个位置到底有多确定”。</p>
+<p>连续视觉 AR 已经给每个位置预测了一个特征 <span class="tex math-inline" data-display="false">z_{\mathrm{AR}}</span>。传统视觉解码器常从统一高斯噪声出发，没有利用“这个位置到底有多确定”。</p>
 <p><a href="../papers/drift-ar.html">drift-ar</a> 改成逐位置发预算：</p>
 <ul>
 <li>平滑天空、空墙之类容易位置：熵低，初始值紧贴 AR 预测；</li>
@@ -75,17 +75,17 @@
 </ul>
 <p>这里的“先验”不是关于世界的哲学信念，而是视觉解码器前向之前，初始 latent 按什么分布采样。</p>
 <h2>怎么做的</h2>
-<p>先把归一化熵 <code>E∈[0,1]</code> 映射成噪声尺度：</p>
+<p>先把归一化熵 <span class="tex math-inline" data-display="false">E\in [0,1]</span> 映射成噪声尺度：</p>
 <div class="tex math-display" data-display="true">\sigma(\mathcal E)
 =\sigma_{\max}\cdot
 \frac{\exp(\mathcal E/\tau_\sigma)-1}
 {\exp(\mathcal E_{\max}/\tau_\sigma)-1}.</div>
 <ul>
 <li><code>E</code>：当前空间位置的归一化注意力熵；</li>
-<li><code>σ(E)</code>：这个位置的标准差，也就是噪声尺度；</li>
-<li><code>σ_max</code>：最大允许噪声尺度；</li>
-<li><code>τ_σ</code>：曲线弯曲程度；它决定噪声随熵增长得多快；</li>
-<li><code>E_max</code>：拿来归一化的熵上限；</li>
+<li><span class="tex math-inline" data-display="false">\sigma (E)</span>：这个位置的标准差，也就是噪声尺度；</li>
+<li><span class="tex math-inline" data-display="false">\sigma_{\mathrm{\max }}</span>：最大允许噪声尺度；</li>
+<li><span class="tex math-inline" data-display="false">\tau_\sigma</span>：曲线弯曲程度；它决定噪声随熵增长得多快；</li>
+<li><span class="tex math-inline" data-display="false">E_{\mathrm{\max }}</span>：拿来归一化的熵上限；</li>
 <li><code>exp</code>：指数函数，保证映射单调且非负。</li>
 </ul>
 <p>然后构造逐位置高斯：</p>
@@ -99,9 +99,9 @@ z_{\text{AR}}^{(r)},
 =z_{\text{AR}}^{(r)}
 +\sigma(\mathcal E^{(r)})\epsilon,
 \qquad \epsilon\sim\mathcal N(0,I).</div>
-<p>论文正文常把 <code>σ</code> 叫 variance，但公式的协方差是 <code>σ²I</code>，采样又是 <code>σ·ε</code>。按标准概率记号，<code>σ</code> 应理解成<strong>标准差/噪声尺度</strong>，真正方差是 <code>σ²</code>。</p>
+<p>论文正文常把 <span class="tex math-inline" data-display="false">\sigma</span> 叫 variance，但公式的协方差是 <span class="tex math-inline" data-display="false">\sigma^{2}I</span>，采样又是 <span class="tex math-inline" data-display="false">\sigma \cdot \epsilon</span>。按标准概率记号，<span class="tex math-inline" data-display="false">\sigma</span> 应理解成<strong>标准差/噪声尺度</strong>，真正方差是 <span class="tex math-inline" data-display="false">\sigma^{2}</span>。</p>
 <h2>数字例子</h2>
-<p>为了能手算，取论文实验参数 <code>σ_max=0.5、τ_σ=2</code>，并把 <code>E_max</code> 简化成 <code>1</code>。上一页算出的两种熵是：</p>
+<p>为了能手算，取论文实验参数 <code>σ_max=0.5、τ_σ=2</code>，并把 <span class="tex math-inline" data-display="false">E_{\mathrm{\max }}</span> 简化成 <code>1</code>。上一页算出的两种熵是：</p>
 <pre><code class="language-text">过度自信草稿：E = 0.4238
 较分散目标：  E = 0.8805
 </code></pre>
@@ -114,7 +114,7 @@ z_{\text{AR}}^{(r)},
 = 0.5 × (exp(0.8805/2)−1) / (exp(1/2)−1)
 ≈ 0.4263
 </code></pre>
-<p>设 AR 中心 <code>z_AR=1.2</code>，这次抽到标准高斯噪声 <code>ε=−0.5</code>：</p>
+<p>设 AR 中心 <span class="tex math-inline" data-display="false">z_{\mathrm{AR}}=1.2</span>，这次抽到标准高斯噪声 <span class="tex math-inline" data-display="false">\epsilon =-0.5</span>：</p>
 <pre><code class="language-text">低熵尺度：
 x₀ = 1.2 + 0.1819×(−0.5)
    ≈ 1.1090
@@ -127,13 +127,13 @@ x₀ = 1.2 + 0.4263×(−0.5)
 <pre><code class="language-text">|1.1090−1.2| = 0.0910
 |0.9869−1.2| = 0.2131
 </code></pre>
-<p>同一份噪声下，高熵位置离 AR 中心更远，确实获得了更大的可修正范围。真实训练的 <code>E_max</code> 来自训练熵统计，并不固定等于 1；这里取 1 只为把归一化区间完整手算一遍。</p>
+<p>同一份噪声下，高熵位置离 AR 中心更远，确实获得了更大的可修正范围。真实训练的 <span class="tex math-inline" data-display="false">E_{\mathrm{\max }}</span> 来自训练熵统计，并不固定等于 1；这里取 1 只为把归一化区间完整手算一遍。</p>
 <h2>代码出处</h2>
 <p><a href="../papers/drift-ar.html">drift-ar</a> Eq. (6)(7)。截至 2026-07-24，论文指向的官方仓库尚未公开实现文件。</p>
 <h2>链接</h2>
 <ul>
 <li><a href="../concepts/causal-normalized-attention-entropy.html">causal-normalized-attention-entropy</a> · <code>E</code> 从哪来</li>
-<li><a href="../concepts/covariance-gaussian.html">covariance-gaussian</a> · <code>N(μ,σ²I)</code> 的中心和散布分别控制什么</li>
+<li><a href="../concepts/covariance-gaussian.html">covariance-gaussian</a> · <span class="tex math-inline" data-display="false">N(\mu ,\sigma^{2}I)</span> 的中心和散布分别控制什么</li>
 <li><a href="../concepts/adaptive-layernorm.html">adaptive-layernorm</a> · 熵图还会作为条件注入单步解码器</li>
 <li><a href="../papers/drifting-models.html">drifting-models</a> · 这份先验随后怎样被单步漂移解码器修正</li>
 </ul>

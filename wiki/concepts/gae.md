@@ -35,7 +35,7 @@ GAE = **把未来所有惊讶加起来, 但越远的越打折**:
 优势 = δ_当前 + (γλ)·δ_下一步 + (γλ)²·δ_下下步 + ...
 ```
 
-那个打折率是 `γ × λ` 相乘。比如 γ=0.99、λ=0.95 → 每往未来一步, 权重乘 0.94:
+那个打折率是 \(\gamma \times \lambda\) 相乘。比如 γ=0.99、λ=0.95 → 每往未来一步, 权重乘 0.94:
 
 ```
 当前步 1.00 → +1步 0.94 → +2步 0.88 → +5步 0.73 → +10步 0.54 → +20步 0.29 ...
@@ -55,7 +55,7 @@ GAE = **把未来所有惊讶加起来, 但越远的越打折**:
 
 ## 代码出处
 
-stable-baselines3 `buffers.py` 的 `compute_returns_and_advantage`: 从后往前累加 `last_gae = delta + gamma * gae_lambda * last_gae`, 正是上面那条递推。`gae_lambda=0.95`、`gamma=0.99` 是默认。
+stable-baselines3 `buffers.py` 的 `compute_returns_and_advantage`: 从后往前累加 `last_gae = delta + gamma * gae_lambda * last_gae`, 正是上面那条递推。\(gae_{\mathrm{lambda}}=0.95\)、`gamma=0.99` 是默认。
 
 ## 链接
 - [[advantage-function]] · GAE 是估计它的标配方法

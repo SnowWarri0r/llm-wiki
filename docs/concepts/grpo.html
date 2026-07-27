@@ -80,7 +80,7 @@ A_i^{\mathrm{GRPO}} &amp;=
 <li><code>mean</code> / <code>std</code>：这组 reward 的均值和标准差。</li>
 <li><code>A_i</code>：第 <code>i</code> 条回答的组相对 advantage。结果奖励场景下，这条回答的所有 token 共用它。</li>
 </ul>
-<p>固定例子：四条回答 reward 为 <code>[1,1,0,0]</code>，均值 <code>.5</code>、总体标准差 <code>.5</code>，所以 <code>A=[1,1,−1,−1]</code>。前两条的 token 概率整体往上推，后两条往下压。若四条全是 <code>1</code> 或全是 <code>0</code>，中心化后全为 <code>0</code>，这组没有策略梯度。</p>
+<p>固定例子：四条回答 reward 为 <code>[1,1,0,0]</code>，均值 <code>.5</code>、总体标准差 <code>.5</code>，所以 <span class="tex math-inline" data-display="false">A=[1,1,-1,-1]</span>。前两条的 token 概率整体往上推，后两条往下压。若四条全是 <code>1</code> 或全是 <code>0</code>，中心化后全为 <code>0</code>，这组没有策略梯度。</p>
 <h2>reward model 和 critic 不是一回事</h2>
 <table>
 <thead>
@@ -117,7 +117,7 @@ A_i^{\mathrm{GRPO}} &amp;=
 \rho_{i,t}A_i,
 \operatorname{clip}(\rho_{i,t},1-\varepsilon,1+\varepsilon)A_i
 \right)</div>
-<p><code>ρ_i,t</code> 表示新模型相对采样时的旧模型，把这个 token 的概率改了多少；<code>ε</code> 限制一次更新的有效幅度；<code>|y_i|</code> 是回答 token 数。DeepSeekMath 原始版本还直接在目标里加入相对 reference policy 的逐 token KL 惩罚。</p>
+<p><span class="tex math-inline" data-display="false">\rho_i,t</span> 表示新模型相对采样时的旧模型，把这个 token 的概率改了多少；<span class="tex math-inline" data-display="false">\epsilon</span> 限制一次更新的有效幅度；<code>|y_i|</code> 是回答 token 数。DeepSeekMath 原始版本还直接在目标里加入相对 reference policy 的逐 token KL 惩罚。</p>
 <p>所以 GRPO 不是“只按 reward 做监督学习”，也不是把 PPO 整套推翻：<strong>它主要替换 advantage 的估计方式，并保留 policy ratio、clip 和可选 KL 约束。</strong></p>
 <h2>为什么省资源，但不是“白省”</h2>
 <p>省掉与 policy 规模相近的 critic，可减少模型参数、优化器状态和前后向计算。但代价是每个 prompt 要采 <code>G</code> 条回答；生成很长时，rollout 本身可能成为主要成本。实际节省多少取决于并行、模型共享、序列长度和训练框架，不能笼统写成“显存减半”。</p>

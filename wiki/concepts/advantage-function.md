@@ -27,7 +27,7 @@ loss = -log π(a_t) × R_t
 
 更糟的是: 如果环境 reward 偏移 (比如所有 reward 都加 100), policy gradient 会变得离谱:
 
-- Raw return 偏移后: `loss = -log π(a) × (R + 100)` —— 100 这个偏移把所有 action 都强推, 不管好坏
+- Raw return 偏移后: \(loss = -\log \pi (a) \times (R +100)\) —— 100 这个偏移把所有 action 都强推, 不管好坏
 
 ## Advantage = 这步比平均好多少
 

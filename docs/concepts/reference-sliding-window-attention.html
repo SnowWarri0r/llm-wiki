@@ -84,9 +84,9 @@ KV cache 当成一个容量 L_m + n 的队列:
    每生成一个新 token → 淘汰队列里第 (L_m+1) 个(最老的那个输出 token)
    → 前缀那段 L_m 永远留着,输出那段恒为 n
 </code></pre>
-<p>所以 KV cache 大小 = <code>L_m + min(n, T)</code> ≤ <code>L_m + n</code>，<strong>不随生成长度 T 增长</strong>。标准 MHA 则是 <code>L_m + T</code>，线性涨到爆。</p>
+<p>所以 KV cache 大小 = <span class="tex math-inline" data-display="false">L_m +\min (n,T)</span> ≤ <span class="tex math-inline" data-display="false">L_m +n</span>，<strong>不随生成长度 T 增长</strong>。标准 MHA 则是 <span class="tex math-inline" data-display="false">L_m +T</span>，线性涨到爆。</p>
 <h2>数字例子</h2>
-<p>设前缀 <code>L_m = 300</code>（视觉 token + prompt），滑窗 <code>n = 128</code>。解码一本几十页的书，输出 <code>T = 10000</code> 个 token：</p>
+<p>设前缀 <span class="tex math-inline" data-display="false">L_m =300</span>（视觉 token + prompt），滑窗 <code>n = 128</code>。解码一本几十页的书，输出 <code>T = 10000</code> 个 token：</p>
 <pre><code>标准 MHA  cache = L_m + T   = 300 + 10000 = 10300
 R-SWA     cache = L_m + n   = 300 + 128   = 428
 ─────────────────────────────────────────────────
@@ -145,6 +145,19 @@ R-SWA     cache = L_m + n   = 300 + 128   = 428
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

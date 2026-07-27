@@ -103,11 +103,11 @@
 <h2>哪里都在用</h2>
 <ul>
 <li><strong><a href="../papers/dino.html">dino</a></strong>：teacher 权重 = EMA(student 权重)（momentum encoder，追一个更稳的自己）；centering 的 c = EMA(teacher 输出均值)。</li>
-<li><strong><a href="../papers/senseflow.html">senseflow</a> 的 IDA</strong>：公式同样是 <code>φ←λφ+(1−λ)θ</code>，但不是模型追自己的历史。<code>φ</code> 属于 fake 网络，<code>θ</code> 属于刚更新的生成器；这次插值负责把学生在稀疏 anchor 上的新变化软传给 fake 网络，fake 随后仍用自己的稠密时间步去噪损失继续训练。</li>
+<li><strong><a href="../papers/senseflow.html">senseflow</a> 的 IDA</strong>：公式同样是 <span class="tex math-inline" data-display="false">\phi ←\lambda \phi +(1-\lambda )\theta</span>，但不是模型追自己的历史。<span class="tex math-inline" data-display="false">\phi</span> 属于 fake 网络，<span class="tex math-inline" data-display="false">\theta</span> 属于刚更新的生成器；这次插值负责把学生在稀疏 anchor 上的新变化软传给 fake 网络，fake 随后仍用自己的稠密时间步去噪损失继续训练。</li>
 <li><strong><a href="../concepts/batchnorm.html">batchnorm</a></strong>：推理用的 running mean / var 是训练时的 EMA。</li>
 <li><strong>Adam 优化器</strong>：一阶动量 m_t、二阶 v_t <strong>都是梯度的 EMA</strong>（见 <a href="../papers/adam.html">adam</a>）。</li>
 <li><strong>EMA 权重</strong>：把训练后期的模型权重做 EMA 当最终 checkpoint，往往更稳更好。</li>
-<li><strong><a href="../papers/drift-ar.html">drift-ar</a> 的推测解码阈值</strong>：目标模型每次验证都会产生新的注意力熵，先用 <code>0.9·旧平均+0.1·新熵</code> 平滑，再乘 <code>γ=0.8</code> 作为动态停止线，避免某一块图像的瞬时熵把策略带偏。</li>
+<li><strong><a href="../papers/drift-ar.html">drift-ar</a> 的推测解码阈值</strong>：目标模型每次验证都会产生新的注意力熵，先用 <code>0.9·旧平均+0.1·新熵</code> 平滑，再乘 <span class="tex math-inline" data-display="false">\gamma =0.8</span> 作为动态停止线，避免某一块图像的瞬时熵把策略带偏。</li>
 </ul>
 <h2>代码出处</h2>
 <ul>
@@ -135,6 +135,19 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

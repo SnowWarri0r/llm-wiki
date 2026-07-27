@@ -84,7 +84,7 @@ def residual_block(x):
     out = bn(out)
     return relu(out + x)   # 关键：+ x 这条快车道
 </code></pre>
-<p>如果 <code>out.shape</code> 跟 <code>x.shape</code> 不同（比如 stride=2 或通道变了），加一条 1×1 conv 的投影 <code>W·x</code>，论文叫 projection shortcut。</p>
+<p>如果 <code>out.shape</code> 跟 <code>x.shape</code> 不同（比如 stride=2 或通道变了），加一条 1×1 conv 的投影 <span class="tex math-inline" data-display="false">W\cdot x</span>，论文叫 projection shortcut。</p>
 <h2>在 Transformer 里</h2>
 <p>完全同款，只是 F 换成 attention/FFN：</p>
 <pre><code class="language-python">def transformer_sublayer(x, sublayer):
@@ -94,7 +94,7 @@ def residual_block(x):
 <h2>后续变种</h2>
 <ul>
 <li><strong>DenseNet</strong>：不是 <code>+</code>，是 <code>concat</code>（沿通道方向拼），更激进</li>
-<li><strong>Highway Network</strong>：早于 ResNet，用 gate <code>T(x)·F(x) + (1-T(x))·x</code> 控制比例。ResNet 等于把 T 固定成 0.5</li>
+<li><strong>Highway Network</strong>：早于 ResNet，用 gate <span class="tex math-inline" data-display="false">T(x)\cdot F(x) + (1-T(x))\cdot x</span> 控制比例。ResNet 等于把 T 固定成 0.5</li>
 <li><strong>Pre-activation ResNet (Identity Mappings)</strong>：原版是 <code>relu(F(x) + x)</code>，改成 <code>F(x) + x</code> 不过 relu，BN 和 ReLU 挪到 F 内部 → 训得更稳</li>
 </ul>
 <h2>链接</h2>
@@ -119,6 +119,19 @@ def residual_block(x):
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {
