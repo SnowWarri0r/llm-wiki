@@ -287,13 +287,55 @@ figcaption b{color:var(--amber)}
 
 <section id="entropy">
 <h2><span class="n">§ 04</span><span>熵公式：为什么要除以 log r</span></h2>
-<p class="lead">因果注意力<a class="jr" href="#g-05">5</a>第 <code class="m">r</code> 行只能看前 <code class="m">r</code> 个位置。第 4 行比第 2 行候选更多，原始熵天然更大；除以各自满分 <code class="m">\log r</code>，才有同一把 <code>0～1</code> 量尺。</p>
+<p class="lead">§ 01 说了熵是“把一行摊得多开压成一个数”。这一节把那个数真的算出来，并回答标题那个问题：为什么算完还要再除一道。</p>
+
+<h3>4.1 先把式子里三个 r 分清</h3>
+<p>公式里 <code class="m">r</code> 出现在三个位置，看着像三样东西，其实是同一个数——只是被用了三次：</p>
+<div class="math-sheet">正在写第 <b>r</b> 个位置        →  上标 <b>(r)</b>：这是第 r 行的熵
+因果 mask 让它只能看前 <b>r</b> 个  →  求和 c 从 1 到 <b>r</b>
+所以这一行正好有 <b>r</b> 个候选     →  满分是 log <b>r</b>
+
+「第几行」「能看几个」「有几个候选」在因果 attention 里是同一个数，
+所以三处都写 r。</div>
 <div class="vars">
-  <div class="var"><code class="m">r</code> · 当前查询位置，也是这一行最多能看的位置数。</div><div class="var"><code class="m">c</code> · 被关注的位置编号。</div>
-  <div class="var"><code class="m">\Omega_{r,c}</code> · softmax 后的注意力概率，整行加起来为 1。</div><div class="var"><code class="m">\log r</code> · <code class="m">r</code> 个候选完全均匀时的最大熵。</div>
+  <div class="var"><code class="m">r</code> · 当前查询位置，也是这一行能看到的位置数。</div><div class="var"><code class="m">c</code> · 被关注的那个位置的编号，从 1 数到 <code class="m">r</code>。</div>
+  <div class="var"><code class="m">\Omega_{r,c}</code> · 第 <code class="m">r</code> 行第 <code class="m">c</code> 列那个注意力概率，就是 § 01 那张表里的一格；整行加起来为 1。</div><div class="var"><code class="m">\log r</code> · 这一行完全均匀时能取到的最大熵，也就是“满分”。</div>
 </div>
 <p class="formula-purpose">一行注意力分得有多散</p>
 <div class="formula"><span data-tex="\mathcal E_{\mathrm{entropy}}^{(r)}=-\frac{1}{\log r}\sum_{c=1}^{r}\Omega_{r,c}\log\Omega_{r,c}"></span></div>
+
+<h3>4.2 那个负号是干什么的</h3>
+<p>先看求和里面那一项 <code class="m">\Omega\log\Omega</code>。注意力概率都在 0 和 1 之间，而<strong>小于 1 的数取对数是负的</strong>——所以每一项都是负数，整个求和也是负数。前面那个负号只做一件事：<strong>把它翻正</strong>。熵是个非负的量，不加这个负号就全是负数了。</p>
+<p>为什么“概率 × 它的对数”加起来能衡量摊开程度？看两个极端就够了：某一格是 1 时，<code class="m">\log 1=0</code>，这一项贡献 0，其余格子是 0 概率也不贡献——总和 0，最集中。反过来越平均，每格的概率越小、对数的绝对值越大，加起来就越大。<strong>概率小 = 意外程度高</strong>，熵就是把整行的意外程度按概率加权平均。</p>
+<p>拿 § 01 那张表最后一行 <code class="m">[.85,.05,.05,.05]</code> 逐项算一遍（下面的 <code class="m">\log</code> 都取自然对数）：</p>
+<div class="math-sheet">   c=1   .85 × ln(.85)  = .85 × (−0.16252) = −0.13814
+   c=2   .05 × ln(.05)  = .05 × (−2.99573) = −0.14979
+   c=3   .05 × ln(.05)  =                    −0.14979
+   c=4   .05 × ln(.05)  =                    −0.14979
+                                   求和  = <b>−0.58750</b>
+   前面的负号翻正            H = <b>0.58750</b>
+
+对照另一行 [.50, .20, .20, .10]：
+   .5×ln.5 = −0.34657   .2×ln.2 = −0.32189（两项）   .1×ln.1 = −0.23026
+   求和 = −1.22061   →   H = <b>1.22061</b>
+
+摊得越开，H 越大。这一步还没除，所以这个 H 叫「生熵」。</div>
+
+<h3>4.3 为什么还要除以 log r</h3>
+<p>因为 <strong>H 会被“这行有几格”带偏</strong>。格子多的行，就算注意力其实挺集中，H 也天然更大。极端到什么程度？下面这组对比里，<strong>除之前和除之后的排序是反的</strong>：</p>
+<div class="math-sheet">A · 两格的行  [.85, .15]        B · 四格的行  [.85, .05, .05, .05]
+   生熵 H = 0.42271               生熵 H = 0.58750
+                                         ↑ B 的 H 更大，看着“更散”
+
+各自除以自己的满分：
+   A: 0.42271 / ln 2 = 0.42271/0.69315 = <b>0.6098</b>
+   B: 0.58750 / ln 4 = 0.58750/1.38629 = <b>0.4238</b>
+                                         ↑ 反过来了，A 才是更散的那个
+
+两行都把 .85 押在第一格，但 A 只有 2 格可选、B 有 4 格。
+同样押 .85，在选项少的时候其实更接近“摊平”。
+除以满分问的是「相对自己的上限，散到了几成」，这才是可比的量。</div>
+<p>顺带一个常见疑问：<code class="m">\log</code> 取自然对数还是以 10 为底？<strong>不影响结果。</strong>换底相当于给分子分母同乘一个常数，比值不动——上面 B 换成 <code class="m">\log_{10}</code>，生熵变成 0.25515、满分变成 0.60206，一除仍然是 0.4238。只有中间那个 H 会随底数变。</p>
 <figure>
   <figcaption><span>Fig 05 · 四位置手算</span><b>0.4238 vs 0.8805</b></figcaption>
   <div class="entropy-compare">
@@ -301,10 +343,18 @@ figcaption b{color:var(--amber)}
     <div class="entropy-card high reveal d2"><span class="tag">TARGET · MORE DISTRIBUTED</span><h4>[.50, .20, .20, .10]</h4><div class="matrix"><div class="cell">.50</div><div class="cell">.20</div><div class="cell">.20</div><div class="cell">.10</div></div><p><code class="m">H=1.2206</code> · <code class="m">\mathcal E=1.2206/\log 4=.8805</code></p><div class="meter"><i></i></div></div>
   </div>
 </figure>
-<p>第 1 行只有自己一个候选，熵必定为 0，而且 <code class="m">\log 1=0</code> 不能当分母，所以求和从 <code class="m">r=2</code> 开始。</p>
-<p class="formula-purpose">总损失：最小化负熵，也就是把熵推高</p>
+<p>这两张卡就是全篇后面反复出现的那两个数：<strong>0.4238 是“过度自信”的样本，0.8805 是“摊得开”的样本</strong>。§ 06 会拿它们直接换算成噪声尺度。</p>
+
+<h3>4.4 为什么从第 2 行开始数</h3>
+<p>第 1 行只有一个候选（自己），概率必定是 1，生熵必定是 0。更要命的是它的满分 <code class="m">\log 1=0</code>——除以 0 会炸。这一行本来也没有信息量可言，所以求和直接从 <code class="m">r=2</code> 起。</p>
+
+<h3>4.5 损失里为什么又有一个负号</h3>
+<p>把每一行的熵平均起来，前面再加个负号，就是训练用的损失：</p>
+<p class="formula-purpose">总损失：最小化负熵，等价于把熵推高</p>
 <div class="formula"><span data-tex="\mathcal L_{\mathrm{entropy}}=-\frac1R\sum_{r=2}^{R}\mathcal E_{\mathrm{entropy}}^{(r)}"></span></div>
-<div class="warning"><b>论文措辞比公式更强：</b>它称这一步“对齐草稿与目标熵”，可式子里没有目标熵，也没有二者的距离。公式实际做的是提高草稿注意力熵，缓解过度自信。详见 <a href="../concepts/causal-normalized-attention-entropy.html">归一化注意力熵</a>。</div>
+<p>这里的负号和 4.2 那个是两回事，别混。4.2 的负号是<strong>熵定义自带的</strong>，用来把负数翻正；这里的负号是<strong>优化方向</strong>：训练总是往损失变小的方向走，想让熵变大，就把“负的熵”当损失。熵从 0.42 涨到 0.60，损失就从 −0.42 掉到 −0.60，确实在下降。</p>
+<p>那为什么要主动把草稿模型的熵推高？因为草稿模型只有 6 层，容量小，很容易学成<strong>不管什么位置都一口咬定</strong>——注意力全押一格，熵接近 0，看起来胸有成竹，实际是塌了。推高熵是在拦这件事。至于低熵到底是“真容易”还是“假自信”，光看熵分不出来，§ 05 的动态阈值就是干这个的。</p>
+<div class="warning"><b>论文措辞比公式更强：</b>它称这一步“对齐草稿与目标熵”，可式子里既没有目标熵，也没有二者的距离——只有草稿自己的熵。公式实际做的是<strong>单方面提高草稿注意力熵</strong>。真正把草稿熵和目标熵放在一起比的是 § 05 的停止条件，不是这条损失。详见 <a href="../concepts/causal-normalized-attention-entropy.html">归一化注意力熵</a>。</div>
 </section>
 
 <section id="stop">
