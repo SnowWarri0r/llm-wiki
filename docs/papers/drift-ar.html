@@ -401,7 +401,23 @@ figcaption b{color:var(--amber)}
 <p>把每一行的熵平均起来，前面再加个负号，就是训练用的损失：</p>
 <p class="formula-purpose">总损失：最小化负熵，等价于把熵推高</p>
 <div class="formula"><span data-tex="\mathcal L_{\mathrm{entropy}}=-\frac1R\sum_{r=2}^{R}\mathcal E_{\mathrm{entropy}}^{(r)}"></span></div>
-<p>这里的负号和 4.2 那个是两回事，别混。4.2 的负号是<strong>熵定义自带的</strong>，用来把负数翻正；这里的负号是<strong>优化方向</strong>：训练总是往损失变小的方向走，想让熵变大，就把“负的熵”当损失。熵从 0.42 涨到 0.60，损失就从 −0.42 掉到 −0.60，确实在下降。</p>
+<p>这里的负号和 4.2 那个是两回事，别混。<strong>4.2 的负号是熵定义自带的</strong>，用来把一堆负数翻正；<strong>这里的负号是优化方向</strong>。优化器只会往损失变小的方向走，而我们想让熵变大——那就把符号翻过来喂给它。「最大化 <code class="m">X</code>」和「最小化 <code class="m">-X</code>」是同一件事，这是优化里最标准的一个转换，梯度上升和梯度下降本来也只差一个负号。</p>
+<div class="warning"><b>损失是负的，没问题：</b>「损失最小是 0」只是 MSE、交叉熵这些<strong>恰好非负</strong>的损失给人的印象，不是规定。优化器看的是梯度、是往哪边挪能让这个数变小，它不关心正负。这一项 <code class="m">\mathcal L_{\mathrm{entropy}}=-\overline{\mathcal E}</code>，而熵在 0～1 之间，所以它<strong>天生就落在 −1 到 0</strong>，从头到尾都是负的。</div>
+<p>负数比大小最容易看反，摊到数轴上就没歧义了：</p>
+<div class="math-sheet">         −1       −0.60   −0.42         0
+    ─────┼──────────┼───────┼───────────┼────→  损失
+                    ↑       ↑
+              熵=0.60 时  熵=0.42 时
+                 的损失     的损失
+
+越往<b>左</b>越小。熵从 0.42 涨到 0.60，损失从 −0.42 挪到 −0.60，
+是往左走 —— <b>数值变小了，尽管绝对值变大了</b>。这两件事别混。
+
+另外记住：损失的绝对数值不说明任何事。你不能说 L=−0.6 比另一个
+损失函数的 L=0.6「更好」，两者量的不是同一回事。
+只有同一个损失自己前后比，才有意义。</div>
+<p>它也不是单独用的。§ 08 会看到总损失是 <code class="m">\alpha(\mathcal L_{\mathrm{reg}}+\mathcal L_{\mathrm{entropy}})+(1-\alpha)\mathcal L_{\mathrm{drift}}</code>：<code class="m">\mathcal L_{\mathrm{reg}}</code> 是非负的「罚」，<code class="m">\mathcal L_{\mathrm{entropy}}</code> 是负的「奖」，两者加起来一起往下走，效果就是<strong>一边逼草稿预测得更准，一边拦着它别过度自信</strong>。</p>
+<div class="note"><strong>顺带回收 § 04.3 那个伏笔：</strong>一个<strong>能无限变负</strong>的损失项是危险的——模型会发现光刷这一项就能让总损失一直降，索性把别的任务放掉。这里不会，因为熵已经除过 <code class="m">\log r</code>、上限锁死在 1，所以 <code class="m">\mathcal L_{\mathrm{entropy}}\ge -1</code>，<strong>有底</strong>。要是直接用没归一化的生熵（上限是 <code class="m">\log r</code>，序列越长越大），这一项就能一路往下掉，钻空子的路就通了。归一化不只是为了「可比」，也是为了「有界」。</div>
 <p>那为什么要主动把草稿模型的熵推高？因为草稿模型只有 6 层，容量小，很容易学成<strong>不管什么位置都一口咬定</strong>——注意力全押一格，熵接近 0，看起来胸有成竹，实际是塌了。推高熵是在拦这件事。至于低熵到底是“真容易”还是“假自信”，光看熵分不出来，§ 05 的动态阈值就是干这个的。</p>
 <div class="warning"><b>论文措辞比公式更强：</b>它称这一步“对齐草稿与目标熵”，可式子里既没有目标熵，也没有二者的距离——只有草稿自己的熵。公式实际做的是<strong>单方面提高草稿注意力熵</strong>。真正把草稿熵和目标熵放在一起比的是 § 05 的停止条件，不是这条损失。详见 <a href="../concepts/causal-normalized-attention-entropy.html">归一化注意力熵</a>。</div>
 </section>
