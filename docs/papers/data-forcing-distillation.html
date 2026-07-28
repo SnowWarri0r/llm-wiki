@@ -32,6 +32,7 @@ h1 em{display:block;color:var(--teal);font-weight:500}
 .tldr{margin:36px 0 0;background:var(--night);color:#f7f2e6;border-left:6px solid var(--teal);padding:24px 28px;box-shadow:9px 9px 0 rgba(23,59,86,.12)}
 .tldr .tag{display:block;color:#79d5d4;font-size:11px;letter-spacing:2px;font-weight:800;margin-bottom:5px}
 .tldr strong{color:#fff}
+.tldr code:not(.mathified){background:#f7c976;border-color:#f7c976;color:#15283f;font-weight:750}
 section{padding-top:66px}
 h2{font-size:clamp(34px,4vw,50px);line-height:1.12;letter-spacing:-.03em;margin:0 0 24px}
 .secno{display:block;color:var(--teal);font-size:12px;letter-spacing:3px;margin-bottom:12px}
@@ -201,7 +202,7 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.72);border:1px so
       <figcaption class="figcap"><span>Fig 01 · DFD 一轮训练</span><span class="n">部署时只留第 1 站</span></figcaption>
       <div class="flow5">
         <div class="box green"><span class="num">01 / STUDENT</span><h4>四步学生出视频</h4><p><code class="m">G_\theta (z,c) \to \tilde{x}</code><br>最终部署只保留它。</p></div><div class="arrow">→</div>
-        <div class="box"><span class="num">02 / NOISE</span><h4>共享 t 与 ε</h4><p>学生视频和真实视频走同一噪声尺度。</p></div><div class="arrow">→</div>
+        <div class="box"><span class="num">02 / NOISE</span><h4>共享随机量</h4><p>两条视频支路使用同一噪声时刻和同一份高斯噪声。</p></div><div class="arrow">→</div>
         <div class="box orange"><span class="num">03 / FAKE SCORE</span><h4>始终看学生视频</h4><p>在线网络追踪学生当前生成分布。</p></div><div class="arrow">→</div>
         <div class="box teal"><span class="num">04 / TEACHER</span><h4>按概率换输入</h4><p><code class="m">1-p</code> 看学生；<code>p</code> 看同条件真实视频。</p></div><div class="arrow">→</div>
         <div class="box green"><span class="num">05 / UPDATE</span><h4>score 差回传</h4><p>造冻结伪目标，只更新学生参数 <code class="m">\theta</code>。</p></div>
@@ -243,12 +244,20 @@ q 越接近 0，整项越接近 0；不是 ln(0) 本身等于 0。</pre>
     <h2>先分清三套网络，score 才不会像凭空出现</h2>
     <p>扩散里的 score<a class="jr" href="#g-04">4</a>不是“视频得 82 分”，而是与视频 latent 同形状的修改方向：</p>
     <div class="formula" data-expr="s_p(x)=\nabla_x\log p(x)"></div>
+    <div class="symbols">
+      <div class="symbol"><code class="m">s_p(x)</code>分布 <code class="m">p</code> 在位置 <code class="m">x</code> 给出的 score。</div>
+      <div class="symbol"><code class="m">p(x)</code>样本 <code class="m">x</code> 附近的概率密度；不是分类置信度。</div>
+      <div class="symbol"><code class="m">\log p(x)</code>把概率密度取自然对数，便于把乘法关系变成加法关系。</div>
+      <div class="symbol"><code class="m">\nabla_x</code>对输入 <code class="m">x</code> 的每个元素求偏导，得到同形状的方向场。</div>
+    </div>
     <p><code class="m">p(x)</code> 是位置 <code class="m">x</code> 附近的概率密度；<code class="m">\nabla_x</code> 表示“对输入 <code class="m">x</code> 的每个元素求梯度”。结果和视频 latent 同形状：每个位置都有一个“往哪改更像数据”的方向。</p>
     <p>这两套 score 网络都不是临时凭空造出来的。它们先做同一类扩散训练，只是训练数据不同：</p>
     <div class="formula wide" data-expr="x_t=\alpha_t x+\sigma_t\epsilon,\qquad \mathcal L_{\mathrm{score}}=\mathbb E\left[\left\|f_\phi(x_t,c,t)-y_t^\*\right\|_2^2\right]"></div>
     <div class="symbols">
       <div class="symbol"><code class="m">x</code>teacher 用真实视频；fake-score 用学生刚生成的视频。</div>
-      <div class="symbol"><code class="m">\alpha_t/\sigma_t/\epsilon</code>保留多少原视频、加入多少高斯噪声，以及本次噪声。</div>
+      <div class="symbol"><code class="m">\alpha_t</code>时刻 <code class="m">t</code> 还保留多少原视频信号。</div>
+      <div class="symbol"><code class="m">\sigma_t</code>时刻 <code class="m">t</code> 要混入多少噪声。</div>
+      <div class="symbol"><code class="m">\epsilon</code>本次实际采到的标准高斯噪声。</div>
       <div class="symbol"><code class="m">f_\phi</code>正在训练的扩散网络；<code class="m">\phi</code> 是它的参数。</div>
       <div class="symbol"><code class="m">c,\ t</code>文本或首帧条件，以及当前噪声时刻。</div>
       <div class="symbol"><code class="m">y_t^{*}</code>该 backbone 原本使用的扩散标签，例如噪声或速度；星号表示目标，不是乘法。</div>
@@ -275,8 +284,8 @@ xt = .8×2 + .6×(−.5)
     <h2>原始 DMD：两套 score 都在学生视频的位置回答</h2>
     <div class="formula" data-expr="\tilde x=G_\theta(z,c),\qquad \tilde x_t=\alpha_t\tilde x+\sigma_t\epsilon"></div>
     <div class="symbols">
-      <div class="symbol"><b>z ~ N(0,I)</b><br>学生的随机输入。</div>
-      <div class="symbol"><b>c</b><br>文本、首帧或自回归历史条件。</div>
+      <div class="symbol"><code class="m">z\sim\mathcal N(0,I)</code>学生的随机输入。</div>
+      <div class="symbol"><code class="m">c</code>文本、首帧或自回归历史条件。</div>
       <div class="symbol"><code class="m">t,\alpha_t,\sigma_t,\epsilon</code>噪声时刻、信号比例、噪声比例和实际噪声。</div>
     </div>
     <div class="formula wide" data-expr="g_{\mathrm{DMD}}(\theta)=\mathbb E\left[\left(s_{\mathrm{fake}}(\tilde x_t\mid c,t)-s_{\mathrm{real}}(\tilde x_t\mid c,t)\right)J_\theta\right],\quad J_\theta=\nabla_\theta G_\theta(z,c)"></div>
@@ -393,6 +402,14 @@ dL/dgen  = −1.0
       <div class="symbol"><code class="m">\|\cdot\|_2^2</code>各分量平方后求和，表示整体误差大小。</div>
       <div class="symbol"><b>左边</b><br>DFD 近似梯度与理想 KL 梯度之间的差。</div>
     </div>
+    <h3>四个因子不是突然乘出来的</h3>
+    <p><strong>第一步，只看两条带噪输入相差多少。</strong>因为两边共用同一个 <code class="m">\epsilon</code>，噪声项相减后正好消失：</p>
+    <div class="formula wide" data-expr="x_t-\tilde{x}_t=(\alpha_t x+\sigma_t\epsilon)-(\alpha_t\tilde{x}+\sigma_t\epsilon)=\alpha_t(x-\tilde{x})"></div>
+    <p><strong>第二步，把输入距离换成 teacher score 的距离。</strong><code class="m">L(c,t)</code>-Lipschitz 的定义就是：输入相差一份，score 最多相差 <code class="m">L(c,t)</code> 份。</p>
+    <div class="formula wide" data-expr="\left\|s_{\mathrm{real}}(x_t)-s_{\mathrm{real}}(\tilde{x}_t)\right\|_2\le L(c,t)\left\|x_t-\tilde{x}_t\right\|_2=\alpha_tL(c,t)\left\|x-\tilde{x}\right\|_2"></div>
+    <p><strong>第三步，把视频空间的误差传回学生参数。</strong>乘上生成器 Jacobian 后，长度最多再被放大 <code class="m">B</code> 倍：</p>
+    <div class="formula wide" data-expr="\left\|\bigl(s_{\mathrm{real}}(x_t)-s_{\mathrm{real}}(\tilde{x}_t)\bigr)J_\theta\right\|_2\le B\alpha_tL(c,t)\left\|x-\tilde{x}\right\|_2"></div>
+    <p><strong>第四步，两边平方再求平均。</strong>由前面的数据距离假设 <code class="m">\mathbb E[\|x-\tilde{x}\|_2^2\mid c]\le\delta(c)^2</code>，右边最后就得到四个平方因子的乘积：</p>
     <div class="formula wide" data-expr="\|g_{\mathrm{DFD}}-\nabla_\theta D_{\mathrm{KL}}\|_2^2\le B^2\alpha_t^2L(c,t)^2\delta(c)^2"></div>
     <p>这条上界像四级扩音器：学生与真实数据先差 <code class="m">\delta</code>；teacher 的方向变化把它放大 <code class="m">L</code> 倍；加噪只留下 <code class="m">\alpha_t</code> 份信号；最后 Jacobian 再放大 <code class="m">B</code> 倍。任一环很大，DFD 的近似就可能偏；学生已经靠 DMD2 走近真实数据时，最关键的 <code class="m">\delta</code> 才足够小。</p>
     <pre>B=.5, α=.8, L=1.5, δ=.5
@@ -501,7 +518,7 @@ DFD      <span class="good">.9303</span></pre>
       <li id="g-04"><span class="termname">Score function</span> · <code class="m">\nabla_x\log p(x)</code>；不是分数，而是样本空间里的局部修改方向。<a href="../concepts/score-function.html">score-function</a></li>
       <li id="g-05"><span class="termname">Fake-score network</span> · 在线去噪器，用学生最新输出训练，近似 <code>pfake</code> 的 score。</li>
       <li id="g-06"><span class="termname">Jacobian</span> · 输出对参数的导数；把视频 latent 的修改方向通过链式法则传回模型参数。</li>
-      <li id="g-07"><span class="termname">Stop-gradient</span> · 前向保留数值，反向把该支路当常数。<a class="wikilink-missing" title="missing slug">stop-gradient</a></li>
+      <li id="g-07"><span class="termname">Stop-gradient</span> · 前向保留数值，反向把该支路当常数；它只切断这条支路的梯度，不会冻结整套学生。</li>
       <li id="g-08"><span class="termname">Lipschitz</span> · 输入变化多少，输出最多变化多少的上界；这里用来控制 teacher score 的放大倍数。</li>
       <li id="g-09"><span class="termname">GAN</span> · 判别器在真假样本之间学习分类，再把对抗梯度传给生成器；论文说 DFD 可以删除它，但当前公开命令仍保留非零权重。</li>
       <li id="g-10"><span class="termname">CLIP / DINO diversity</span> · 同提示词不同种子的视频先变成特征，再以成对余弦差异衡量视觉多样性。</li>
