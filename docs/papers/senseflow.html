@@ -329,16 +329,16 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 <h3>四 · 一组数字从头算到尾</h3>
 <p>取 <code class="m">\tau_{i}=.75</code>、随机抽到 <code class="m">t_{\mathrm{mid}}=.60</code>、<code class="m">\tau_{i-1}=.50</code>，段首的值 <code>x=.20</code>。三段速度都由各自的网络前向算出，这里直接给定：</p>
 <div class="calc">路线 A 前半段 · 老师走 · 不回传<br>
-&nbsp;&nbsp;Δt = .60 − .75 = <b>−.15</b>，老师速度 = −2.0<br>
-&nbsp;&nbsp;中间点 = .20 + (−.15)×(−2.0) = .20 + .30 = <b>.50</b><br><br>
+&nbsp;&nbsp;Δt = .60 − .75 = <b>−.15</b>，老师速度 <code class="m">v_{\mathrm{real}}</code> = −2.0<br>
+&nbsp;&nbsp;中间点 <code class="m">x_{\mathrm{mid}}</code> = .20 + (−.15)×(−2.0) = .20 + .30 = <b>.50</b><br><br>
 路线 A 后半段 · 学生走 · 不回传<br>
-&nbsp;&nbsp;Δt = .50 − .60 = <b>−.10</b>，学生速度 = −1.5<br>
-&nbsp;&nbsp;目标点 = .50 + (−.10)×(−1.5) = .50 + .15 = <b>.65</b><br><br>
+&nbsp;&nbsp;Δt = .50 − .60 = <b>−.10</b>，学生速度 <code class="m">v_G</code> = −1.5<br>
+&nbsp;&nbsp;目标点 <code class="m">x_{\mathrm{tar}}</code> = .50 + (−.10)×(−1.5) = .50 + .15 = <b>.65</b><br><br>
 路线 B · 学生一步跨完 · 回传<br>
-&nbsp;&nbsp;Δt = .50 − .75 = <b>−.25</b>，学生速度 = −1.0<br>
-&nbsp;&nbsp;直达点 = .20 + (−.25)×(−1.0) = .20 + .25 = <b>.45</b><br><br>
+&nbsp;&nbsp;Δt = .50 − .75 = <b>−.25</b>，学生速度 <code class="m">v_G</code> = −1.0<br>
+&nbsp;&nbsp;直达点 <code class="m">x_{\mathrm{direct}}</code> = .20 + (−.25)×(−1.0) = .20 + .25 = <b>.45</b><br><br>
 损失<br>
-&nbsp;&nbsp;L = (直达点 − 目标点)² = (.45 − .65)² = (−.20)² = <b>.04</b></div>
+&nbsp;&nbsp;L = (<code class="m">x_{\mathrm{direct}}</code> − <code class="m">x_{\mathrm{tar}}</code>)² = (.45 − .65)² = (−.20)² = <b>.04</b></div>
 <p><strong>自检：</strong>两条路都是从 <code>t=.75</code> 出发、到 <code>t=.50</code> 结束，各自的 <code class="m">\Delta t</code> 加起来也对得上（<code class="m">- .15 + - .10 = - .25</code>）。差别只在 A 中途换了一次速度、B 一路用一个速度——<strong>这个差就是段内信息</strong>。</p>
 <figure>
   <figcaption><span>Fig 04 · 段内引导的两条路线</span><b>目标支路也含学生，不是老师独跑全程</b></figcaption>
@@ -513,9 +513,9 @@ a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
 </style>
 <script>
 (function(){
-  var items={};
-  document.querySelectorAll('.gloss ol li[id^="g-"]').forEach(function(li){items[li.id]=li.innerHTML;});
-  if(!Object.keys(items).length)return;
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
   var pop=document.createElement('div');pop.className='jr-pop';
   pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
   document.body.appendChild(pop);
@@ -525,9 +525,10 @@ a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
   document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
     a.addEventListener('click',function(e){
       var id=a.getAttribute('href').slice(1);
-      if(!items[id])return;
+      if(!document.getElementById(id))return;
       e.preventDefault();
-      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+items[id];
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
       pop.classList.add('show');
       if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
     });

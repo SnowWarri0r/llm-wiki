@@ -552,7 +552,7 @@ L = 2 × (.93 − 1.00)²
     <div class="sym"><code class="m">\partial\widetilde{x}/\partial\theta</code>参数变化一点时，学生视频怎样跟着变</div><div class="sym"><code class="m">\mathbb E[\cdot]</code>对噪声时刻和样本求平均</div><div class="sym"><b>最外面的 −</b>把“真实方向减学生方向”换成 KL 对参数的梯度</div>
   </div>
   <p>如果只有 <code class="m">s_{\mathrm{real}}</code>，学生会一股脑挤向老师认为常见的位置；减掉 <code class="m">s_{\mathrm{fake}}</code>，等于扣除学生自己已经堆得很密的方向。两者相等时差值为零，学生匹配目标后这股力会自己停下。</p>
-  <div class="calc">real score = 1.2　fake score = .4　∂x̃/∂θ = .5<br>gradient = −(1.2−.4)×.5 = <span class="ans">−.4</span><br>θ=1, lr=.1 → 新 θ = 1−.1×(−.4) = <span class="ans">1.04</span></div>
+  <div class="calc"><code class="m">s_{\mathrm{real}}</code> = 1.2　<code class="m">s_{\mathrm{fake}}</code> = .4　∂x̃/∂θ = .5<br>gradient = −(1.2−.4)×.5 = <span class="ans">−.4</span><br>θ=1, lr=.1 → <code class="m">\theta_{\mathrm{new}}</code> = 1−.1×(−.4) = <span class="ans">1.04</span></div>
   <p>这个例子里 <code class="m">\partial\tilde{x}/\partial\theta=.5&gt;0</code>，所以参数增大时输出也朝正方向移动。梯度下降减去负梯度，<code class="m">\theta</code> 从 1 增到 1.04，正好沿 <code class="m">s_{\mathrm{real}}-s_{\mathrm{fake}}=.8</code> 指向的方向走。</p>
   <div class="note"><strong>相机条件不能只给学生：</strong>real/fake score 也必须看到同一轨迹。否则质量老师可能把画面推向“更像视频但不再服从当前镜头”的方向。</div>
 </section>
@@ -686,9 +686,9 @@ a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
 </style>
 <script>
 (function(){
-  var items={};
-  document.querySelectorAll('.gloss ol li[id^="g-"]').forEach(function(li){items[li.id]=li.innerHTML;});
-  if(!Object.keys(items).length)return;
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
   var pop=document.createElement('div');pop.className='jr-pop';
   pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
   document.body.appendChild(pop);
@@ -698,9 +698,10 @@ a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
   document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
     a.addEventListener('click',function(e){
       var id=a.getAttribute('href').slice(1);
-      if(!items[id])return;
+      if(!document.getElementById(id))return;
       e.preventDefault();
-      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+items[id];
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
       pop.classList.add('show');
       if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
     });

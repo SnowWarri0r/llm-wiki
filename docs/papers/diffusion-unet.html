@@ -162,9 +162,9 @@ a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
 </style>
 <script>
 (function(){
-  var items={};
-  document.querySelectorAll('.gloss ol li[id^="g-"]').forEach(function(li){items[li.id]=li.innerHTML;});
-  if(!Object.keys(items).length)return;
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
   var pop=document.createElement('div');pop.className='jr-pop';
   pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
   document.body.appendChild(pop);
@@ -174,9 +174,10 @@ a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
   document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
     a.addEventListener('click',function(e){
       var id=a.getAttribute('href').slice(1);
-      if(!items[id])return;
+      if(!document.getElementById(id))return;
       e.preventDefault();
-      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+items[id];
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
       pop.classList.add('show');
       if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
     });
