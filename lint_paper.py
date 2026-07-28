@@ -305,6 +305,21 @@ def check_ledger_pseudo_latex(html, name, issues):
                            "（包成 <code class=\"m\"> 写 LaTeX；实测 KaTeX 不会破坏等宽列对齐）"))
 
 
+# html / body 上的 overflow-x:hidden 会把它们变成滚动容器，从而废掉后代的
+# position:sticky —— 顶部那条 wiki-nav 就不吸顶了，而且不报任何错。
+# overflow-x:clip 同样挡横向溢出，但不创建滚动容器，sticky 照常工作。
+OVERFLOW_HIDDEN = re.compile(
+    r'(?<![\w.\-#])(html|body)\s*\{[^}]*overflow-x\s*:\s*hidden', re.I)
+
+
+def check_sticky_nav_killer(html, name, issues):
+    """html/body 的 overflow-x:hidden 会静默废掉 sticky 导航。"""
+    for m in OVERFLOW_HIDDEN.finditer(html):
+        issues.append(("ERROR", name,
+                       f"{m.group(1)} 上的 overflow-x:hidden 会让顶部 nav 不再吸顶"
+                       "（改成 overflow-x:clip，同样挡横向溢出但不创建滚动容器）"))
+
+
 def check_glossary(html, name, issues):
     refs = set(re.findall(r'href="#(g-\d+)"', html))
     ids = set(re.findall(r'id="(g-\d+)"', html))
@@ -350,6 +365,7 @@ def lint(path):
                check_broken_subscript,
                check_split_sym_label,
                check_ledger_pseudo_latex,
+               check_sticky_nav_killer,
                check_glossary, check_markup, check_chat_context):
         fn(html, path.name, issues)
     return issues
