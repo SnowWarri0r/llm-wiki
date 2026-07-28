@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css?v=43080b49" />
+<link href="vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="vendor/katex/katex.min.js"></script>
 <style>
 
 .catcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; margin: 18px 0 8px; }
@@ -54,13 +56,13 @@
 <a class="tl-row" href="papers/sana-video-2.html"><span class="tl-date">2026-07-28</span><span class="tl-cat">paper</span><span class="tl-title">SANA-Video 2.0 · 用三层“速写”加一层“精查”生成长视频</span><span class="tl-hook">大多数层用近似线性成本的 attention 跑得快，每四层插一层 softmax 恢复精确的 token-to-token 关系，再用分块残差路由把这些高质量特征带到更深层。</span></a>
 <a class="tl-row" href="concepts/block-attention-residuals.html"><span class="tl-date">2026-07-28</span><span class="tl-cat">concept</span><span class="tl-title">Block Attention Residuals · 让深层 token 按需翻早先的块摘要</span><span class="tl-hook">每若干层冻结一份残差块摘要；后续层不是只接上一层，而是让每个 token 用 softmax 在输入、旧块和当前 partial sum 之间挑一份加权组合。</span></a>
 <a class="tl-row" href="concepts/content-aware-flow-shift.html"><span class="tl-date">2026-07-28</span><span class="tl-cat">concept</span><span class="tl-title">Content-Aware Flow Shift · 不同视频多练不同噪声段</span><span class="tl-hook">flow matching 仍学习同一个目标，但抽时间步时根据视频质量、运动或 token 数改变概率密度，把训练预算放到更有用的难度区间。</span></a>
-<a class="tl-row" href="concepts/diffusion-timestep-conditioning.html"><span class="tl-date">2026-07-28</span><span class="tl-cat">concept</span><span class="tl-title">Diffusion Timestep Conditioning · 告诉去噪网络“现在噪到哪一步”</span><span class="tl-hook">同一个去噪网络要处理从纯噪声到近乎干净的所有状态；先把时刻 \(t\) 编成向量，再送进每个 block，让网络随噪声强度切换工作方式。</span></a>
-<a class="tl-row" href="concepts/ema.html"><span class="tl-date">2026-07-28</span><span class="tl-cat">concept</span><span class="tl-title">EMA · 指数滑动平均 · 一行就够</span><span class="tl-hook">一行更新规则 `新 = m·旧 + (1−m)·新值`，一个数原地滚 —— 把抖动磨平、追出一条更稳的&quot;趋势线&quot;，不用存任何历史。</span></a>
-<a class="tl-row" href="concepts/flow-matching.html"><span class="tl-date">2026-07-28</span><span class="tl-cat">concept</span><span class="tl-title">Flow Matching · 流匹配</span><span class="tl-hook">不直接一次猜出目标数据，而是学一个**速度场**，从噪声出发沿场积分若干步到图像、视频或音频。</span></a>
+<a class="tl-row" href="concepts/diffusion-timestep-conditioning.html"><span class="tl-date">2026-07-28</span><span class="tl-cat">concept</span><span class="tl-title">Diffusion Timestep Conditioning · 告诉去噪网络“现在噪到哪一步”</span><span class="tl-hook">同一个去噪网络要处理从纯噪声到近乎干净的所有状态；先把时刻 <span class="tex" data-display="false">t</span> 编成向量，再送进每个 block，让网络随噪声强度切换工作方式。</span></a>
+<a class="tl-row" href="concepts/ema.html"><span class="tl-date">2026-07-28</span><span class="tl-cat">concept</span><span class="tl-title">EMA · 指数滑动平均 · 一行就够</span><span class="tl-hook">一行更新规则 <code>新 = m·旧 + (1−m)·新值</code>，一个数原地滚 —— 把抖动磨平、追出一条更稳的&quot;趋势线&quot;，不用存任何历史。</span></a>
+<a class="tl-row" href="concepts/flow-matching.html"><span class="tl-date">2026-07-28</span><span class="tl-cat">concept</span><span class="tl-title">Flow Matching · 流匹配</span><span class="tl-hook">不直接一次猜出目标数据，而是学一个<strong>速度场</strong>，从噪声出发沿场积分若干步到图像、视频或音频。</span></a>
 <a class="tl-row" href="concepts/gated-linear-attention.html"><span class="tl-date">2026-07-28</span><span class="tl-cat">concept</span><span class="tl-title">Gated Linear Attention · 把所有 token 先写进固定大小的公共状态</span><span class="tl-hook">不为每个 query 保存一整行 softmax 权重，而把 key/value 先汇总进固定大小状态，再让每个 query 读取；序列成本接近线性，但细粒度 token-to-token 关系会被压缩。</span></a>
 <a class="tl-row" href="concepts/hybrid-linear-softmax-attention.html"><span class="tl-date">2026-07-28</span><span class="tl-cat">concept</span><span class="tl-title">Hybrid Linear–Softmax Attention · 大多数层做摘要，少数层逐一核对</span><span class="tl-hook">按固定节奏混排线性 attention 与完整 softmax attention：前者承担长序列的大部分计算，后者周期性恢复每个 query 对每个 token 的独立关系。</span></a>
-<a class="tl-row" href="concepts/quantization.html"><span class="tl-date">2026-07-28</span><span class="tl-cat">concept</span><span class="tl-title">量化 · WxAy · 用更少比特存数字和算</span><span class="tl-hook">用**更少的比特**存权重、做计算，省显存 + 提速度。命名 **WxAy** = 权重 x 位、激活 y 位;**W8A8**(都 8 位)能让矩阵乘直接跑在 INT8 上、吞吐翻倍,但激活的&quot;离群值&quot;会坑精度,要靠 SmoothQuant 之类的招。</span></a>
-<a class="tl-row" href="papers/diffusion-unet.html"><span class="tl-date">2026-07-27</span><span class="tl-cat">paper</span><span class="tl-title">Diffusion U-Net · 同一张网，反复回答“这一步该擦掉什么”</span><span class="tl-hook">**扩散 U-Net 每次接收带噪图或 latent、噪声时刻和条件，经过多尺度残差块与注意力，输出一张同尺寸的噪声或速度图；采样器拿这个输出走一步，再把新状态喂回来。**</span></a>
+<a class="tl-row" href="concepts/quantization.html"><span class="tl-date">2026-07-28</span><span class="tl-cat">concept</span><span class="tl-title">量化 · WxAy · 用更少比特存数字和算</span><span class="tl-hook">用<strong>更少的比特</strong>存权重、做计算，省显存 + 提速度。命名 <strong>WxAy</strong> = 权重 x 位、激活 y 位;<strong>W8A8</strong>(都 8 位)能让矩阵乘直接跑在 INT8 上、吞吐翻倍,但激活的&quot;离群值&quot;会坑精度,要靠 SmoothQuant 之类的招。</span></a>
+<a class="tl-row" href="papers/diffusion-unet.html"><span class="tl-date">2026-07-27</span><span class="tl-cat">paper</span><span class="tl-title">Diffusion U-Net · 同一张网，反复回答“这一步该擦掉什么”</span><span class="tl-hook"><strong>扩散 U-Net 每次接收带噪图或 latent、噪声时刻和条件，经过多尺度残差块与注意力，输出一张同尺寸的噪声或速度图；采样器拿这个输出走一步，再把新状态喂回来。</strong></span></a>
 <a class="tl-row" href="concepts/classifier-free-guidance.html"><span class="tl-date">2026-07-27</span><span class="tl-cat">concept</span><span class="tl-title">Classifier-Free Guidance · CFG</span><span class="tl-hook">让模型同一步算两遍 —— 一遍看着 prompt、一遍蒙着眼，再把&quot;看着 prompt 多走的那部分&quot;放大，逼它更听话。</span></a>
 <a class="tl-row" href="concepts/cross-attention.html"><span class="tl-date">2026-07-27</span><span class="tl-cat">concept</span><span class="tl-title">Cross-Attention · 交叉注意力</span><span class="tl-hook">Decoder 用自己的 Query，去查 Encoder 输出的 Key/Value，让生成过程能看见输入序列。</span></a>
 <a class="tl-row" href="concepts/diffusion-transformer.html"><span class="tl-date">2026-07-27</span><span class="tl-cat">concept</span><span class="tl-title">Diffusion Transformer · DiT</span><span class="tl-hook">把扩散模型里那个老 U-Net 换成 Transformer —— 图像切成 latent token，像处理一串 token 一样去噪。</span></a>
@@ -71,5 +73,18 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 </body>
 </html>
