@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Residual + LayerNorm · Concept</title>
+<title>Gated Linear Attention · 把所有 token 先写进固定大小的公共状态 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,50 +53,67 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · residual-layernorm</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · gated-linear-attention</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Residual + LayerNorm</h1>
+  <h1>Gated Linear Attention · 把所有 token 先写进固定大小的公共状态</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>Transformer block 里每个子层都配 <code>x + sublayer(x)</code> 和 <a href="../concepts/layernorm.html">layernorm</a>，让深层网络既能传梯度又能稳住激活尺度。</p>
-<h2>直觉</h2>
-<p><a href="../concepts/residual-connection.html">residual-connection</a> 给信息一条直达高速路，LayerNorm 给每个 token 做尺度整理。一个负责"别学坏了还能走原路"，一个负责"每层输出别越跑越飘"。</p>
-<p>没有这对组合，Transformer 堆到几十层、上百层会非常难训。</p>
-<h2>怎么做的</h2>
-<p>常见有两种摆法：</p>
+<p>不为每个 query 保存一整行 softmax 权重，而把 key/value 先汇总进固定大小状态，再让每个 query 读取；序列成本接近线性，但细粒度 token-to-token 关系会被压缩。</p>
+<h2>从普通 attention 看差别</h2>
+<p>普通 attention：</p>
+<div class="tex math-display" data-display="true">O=\operatorname{softmax}(QK^\top)V.</div>
+<p>先形成 <span class="tex math-inline" data-display="false">N\times N</span> 关系表。线性注意力选择可分解的非负特征映射 <span class="tex math-inline" data-display="false">\phi</span>，交换乘法顺序：</p>
+<div class="tex math-display" data-display="true">O=\phi(Q)\left(\phi(K)^\top V\right).</div>
+<p>括号里先算出固定大小的状态。SANA-Video 2.0 还给写入和输出各加一扇门：</p>
+<div class="tex math-display" data-display="true">S=\sum_n v_n(\beta_n k_n)^\top.</div>
 <ul>
-<li><strong>Post-LN</strong>：<code>LayerNorm(x + Sublayer(x))</code>，原始 Transformer 用法</li>
-<li><strong>Pre-LN</strong>：<code>x + Sublayer(LayerNorm(x))</code>，后来的大模型更常见，深层训练更稳</li>
+<li><span class="tex math-inline" data-display="false">\beta_n</span>：第 <span class="tex math-inline" data-display="false">n</span> 个 token 写多少。</li>
+<li><span class="tex math-inline" data-display="false">S</span>：所有 token 共用的一份摘要。</li>
+<li>输出 gate：第 <span class="tex math-inline" data-display="false">j</span> 个 token 从摘要读出的内容保留多少。</li>
 </ul>
-<p>直觉上 Pre-LN 让 residual 主干更干净，梯度更容易沿着 identity path 往回走。</p>
-<h2>代码出处</h2>
-<p>Transformer 原论文 block；现代 GPT/BERT 系列实现都有对应变体。</p>
+<h2>为什么会有秩瓶颈</h2>
+<p>若 head 维度 <span class="tex math-inline" data-display="false">d=128</span>，无论有 1,000 还是 100,000 个 token，状态都只有 <span class="tex math-inline" data-display="false">128\times128</span>，秩最高 128。完整 softmax 关系表则可以表达更多彼此独立的 token 关系。</p>
+<p>所以它像“先把整场会议写成纪要再回答问题”：读得快、存得少，但不保证保住每一个人与每一个时刻的精确对应。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../concepts/layernorm.html">layernorm</a> · 归一化组件</li>
-<li><a href="../concepts/residual-connection.html">residual-connection</a> · 残差组件</li>
-<li><a href="../concepts/transformer-architecture.html">transformer-architecture</a> · block 结构</li>
+<li><a href="../papers/sana-video-2.html">sana-video-2</a> · 三层 gated linear + 一层 softmax 的视频生成落地。</li>
+<li><a href="../concepts/hybrid-linear-softmax-attention.html">hybrid-linear-softmax-attention</a> · 用周期性 softmax 补精细关系。</li>
+<li><a href="../concepts/self-attention.html">self-attention</a> · 完整两两注意力。</li>
+<li><a href="../concepts/flash-attention.html">flash-attention</a> · 不改 softmax attention 结果的 IO 优化。</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 4 处</span>
-  <ul><li><a href="../papers/attention-is-all-you-need.html"><span class="cat">paper</span>Attention Is All You Need · Transformer 始祖</a></li><li><a href="../concepts/block-attention-residuals.html"><span class="cat">concept</span>Block Attention Residuals · 让深层 token 按需翻早先的块摘要</a></li><li><a href="../concepts/layernorm.html"><span class="cat">concept</span>LayerNorm · 层归一化</a></li><li><a href="../concepts/transformer-architecture.html"><span class="cat">concept</span>Transformer Architecture · 整体架构</a></li></ul>
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/sana-video-2.html"><span class="cat">paper</span>SANA-Video 2.0 · 用三层“速写”加一层“精查”生成长视频</a></li><li><a href="../concepts/hybrid-linear-softmax-attention.html"><span class="cat">concept</span>Hybrid Linear–Softmax Attention · 大多数层做摘要，少数层逐一核对</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/residual-layernorm.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/gated-linear-attention.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

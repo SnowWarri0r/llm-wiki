@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Residual + LayerNorm · Concept</title>
+<title>Content-Aware Flow Shift · 不同视频多练不同噪声段 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,50 +53,64 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · residual-layernorm</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · content-aware-flow-shift</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Residual + LayerNorm</h1>
+  <h1>Content-Aware Flow Shift · 不同视频多练不同噪声段</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>Transformer block 里每个子层都配 <code>x + sublayer(x)</code> 和 <a href="../concepts/layernorm.html">layernorm</a>，让深层网络既能传梯度又能稳住激活尺度。</p>
-<h2>直觉</h2>
-<p><a href="../concepts/residual-connection.html">residual-connection</a> 给信息一条直达高速路，LayerNorm 给每个 token 做尺度整理。一个负责"别学坏了还能走原路"，一个负责"每层输出别越跑越飘"。</p>
-<p>没有这对组合，Transformer 堆到几十层、上百层会非常难训。</p>
-<h2>怎么做的</h2>
-<p>常见有两种摆法：</p>
+<p>flow matching 仍学习同一个目标，但抽时间步时根据视频质量、运动或 token 数改变概率密度，把训练预算放到更有用的难度区间。</p>
+<h2>shift 的公式</h2>
+<p>给时间步的 logit 加 <span class="tex math-inline" data-display="false">\log s</span>：</p>
+<div class="tex math-display" data-display="true">\operatorname{logit}(t_s)=\operatorname{logit}(t)+\log s,</div>
+<p>等价于：</p>
+<div class="tex math-display" data-display="true">t_s=\frac{st}{1+(s-1)t}.</div>
+<p>若原中位数 <span class="tex math-inline" data-display="false">t=0.5</span>，shift 3 后是 0.75；shift <span class="tex math-inline" data-display="false">1/3</span> 后是 0.25。</p>
+<h2>SANA-Video 2.0 怎样用</h2>
 <ul>
-<li><strong>Post-LN</strong>：<code>LayerNorm(x + Sublayer(x))</code>，原始 Transformer 用法</li>
-<li><strong>Pre-LN</strong>：<code>x + Sublayer(LayerNorm(x))</code>，后来的大模型更常见，深层训练更稳</li>
+<li>预训练：高运动、非最高画质 clip 偏向高噪声；高画质、非高运动 clip 偏向低噪声。</li>
+<li>continual / SFT：关闭内容分支，按 latent token 数把 shift 从 3 调到 6。</li>
+<li>目标函数没换；改变的是哪些 <span class="tex math-inline" data-display="false">t</span> 更常被抽到。</li>
 </ul>
-<p>直觉上 Pre-LN 让 residual 主干更干净，梯度更容易沿着 identity path 往回走。</p>
-<h2>代码出处</h2>
-<p>Transformer 原论文 block；现代 GPT/BERT 系列实现都有对应变体。</p>
+<p>不要把它理解成“高质量视频只学细节、运动视频完全不学细节”。概率密度只是倾斜，没有删除其余时间步。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../concepts/layernorm.html">layernorm</a> · 归一化组件</li>
-<li><a href="../concepts/residual-connection.html">residual-connection</a> · 残差组件</li>
-<li><a href="../concepts/transformer-architecture.html">transformer-architecture</a> · block 结构</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · 被重新分配训练时间步的基础目标。</li>
+<li><a href="../concepts/diffusion-timestep-conditioning.html">diffusion-timestep-conditioning</a> · 网络怎样知道当前噪声等级。</li>
+<li><a href="../papers/sana-video-2.html">sana-video-2</a> · 阈值、阶段和验证分桶。</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 4 处</span>
-  <ul><li><a href="../papers/attention-is-all-you-need.html"><span class="cat">paper</span>Attention Is All You Need · Transformer 始祖</a></li><li><a href="../concepts/block-attention-residuals.html"><span class="cat">concept</span>Block Attention Residuals · 让深层 token 按需翻早先的块摘要</a></li><li><a href="../concepts/layernorm.html"><span class="cat">concept</span>LayerNorm · 层归一化</a></li><li><a href="../concepts/transformer-architecture.html"><span class="cat">concept</span>Transformer Architecture · 整体架构</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/sana-video-2.html"><span class="cat">paper</span>SANA-Video 2.0 · 用三层“速写”加一层“精查”生成长视频</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/residual-layernorm.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/content-aware-flow-shift.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

@@ -1,0 +1,622 @@
+<!doctype html>
+<!-- bespoke -->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SANA-Video 2.0 · 三层速写，一层精查</title>
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+:root{
+  --paper:#f1ead7;--paper2:#e8dfc5;--card:#fbf6e8;--ink:#171512;--ink2:#423c31;
+  --muted:#716957;--rule:#b9ad91;--navy:#112f45;--blue:#155f7a;--cyan:#1695a5;
+  --cyansoft:#cce9e7;--lime:#9dcc3c;--limesoft:#e5efbd;--orange:#c65525;
+  --orangesoft:#f2d1be;--gold:#a87812;--goldsoft:#f1dfa7;--night:#10283a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);scroll-behavior:smooth}
+body{font-family:"Noto Serif SC","Songti SC","STSong",Georgia,serif;font-size:18px;line-height:1.78;-webkit-font-smoothing:antialiased}
+body:before{content:"";position:fixed;inset:0;z-index:20;pointer-events:none;opacity:.22;background-image:linear-gradient(rgba(17,47,69,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(17,47,69,.05) 1px,transparent 1px);background-size:30px 30px}
+.page{max-width:1280px;margin:auto;padding:58px 42px 120px;position:relative}
+.mast{display:flex;justify-content:space-between;gap:18px;border-top:4px double var(--ink);border-bottom:1px solid var(--rule);padding:12px 0;font:800 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+.hero{padding:68px 0 60px;border-bottom:1px solid var(--rule)}
+.eyebrow,.secno,.tag,.mono,.figcap{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.eyebrow{font-size:12px;letter-spacing:3px;color:var(--cyan);font-weight:900}
+h1{font-size:clamp(54px,8vw,108px);line-height:.9;letter-spacing:-.06em;margin:24px 0 18px;font-weight:850;max-width:1160px}
+h1 em{display:block;color:var(--cyan);font-weight:500}
+.dek{font-size:clamp(21px,2.2vw,29px);line-height:1.48;color:var(--ink2);font-style:italic;max-width:980px}
+.meta{font:700 11px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);letter-spacing:.8px;margin-top:22px}
+.tldr{max-width:1040px;margin-top:34px;background:var(--night);color:#f8f4e7;border-left:6px solid var(--lime);padding:23px 28px;box-shadow:9px 9px 0 rgba(17,47,69,.12)}
+.tldr .tag{display:block;color:#cfe987;font-size:11px;letter-spacing:2px;font-weight:900}
+.tldr code{color:var(--night);background:var(--limesoft);border-color:var(--lime);font-weight:800}
+section{padding-top:68px}
+h2{font-size:clamp(34px,4vw,50px);line-height:1.12;letter-spacing:-.03em;margin:0 0 24px}
+h3{font-size:26px;line-height:1.35;margin:34px 0 10px}
+.secno{display:block;font-size:12px;letter-spacing:3px;color:var(--cyan);font-weight:900;margin-bottom:12px}
+p{max-width:1010px;margin:12px 0}
+.lead{font-size:21px;color:var(--ink2)}
+strong{font-weight:850}
+a{color:var(--blue);text-underline-offset:4px}
+code{font:500 .86em/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;background:#fffaf0;border:1px solid var(--rule);padding:1px 5px;border-radius:3px}
+.note{max-width:1030px;background:var(--card);border-left:5px solid var(--gold);padding:17px 20px;margin:22px 0}
+.note.warn{border-color:var(--orange);background:var(--orangesoft)}
+.note .tag{font-size:10px;letter-spacing:2px;color:var(--gold);font-weight:900;display:block}
+.note.warn .tag{color:var(--orange)}
+.formula{max-width:1040px;background:var(--night);color:#fff;padding:22px 18px;margin:20px 0;overflow-x:auto;text-align:center;border-left:5px solid var(--lime)}
+.formula .katex{color:#fff;font-size:1.08em}
+.formula.wide .katex{font-size:.91em}
+.symbols{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:1040px;margin:16px 0}
+.symbol{background:var(--card);border:1px solid var(--rule);padding:14px 15px;font-size:15px;line-height:1.55}
+.symbol code.m{color:var(--blue);font-weight:800}
+figure{margin:34px 0;padding:27px;background:rgba(255,253,245,.72);border:1px solid var(--rule);box-shadow:9px 9px 0 rgba(65,50,30,.08)}
+.figcap{display:flex;justify-content:space-between;gap:18px;padding-bottom:14px;margin-bottom:22px;border-bottom:1px dashed var(--rule);font-size:11px;letter-spacing:1.4px;color:var(--muted);text-transform:uppercase;font-weight:800}
+.figcap .n{color:var(--cyan)}
+.flow{display:grid;grid-template-columns:1fr 38px 1fr 38px 1fr 38px 1fr;align-items:stretch}
+.box{min-width:0;border:2px solid var(--navy);background:var(--card);padding:18px;min-height:160px}
+.box.cyan{border-color:var(--cyan);background:var(--cyansoft)}
+.box.lime{border-color:#72991f;background:var(--limesoft)}
+.box.orange{border-color:var(--orange);background:var(--orangesoft)}
+.box .tag{font-size:10px;letter-spacing:2px;color:var(--cyan);font-weight:900}
+.box h4{font-size:22px;line-height:1.25;margin:11px 0 7px}
+.box p{font-size:15px;line-height:1.55;margin:0;color:var(--ink2)}
+.arrow{display:flex;align-items:center;justify-content:center;color:var(--orange);font:900 27px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+.arch{display:grid;grid-template-columns:1fr;gap:10px}
+.archrow{display:grid;grid-template-columns:170px 1fr;gap:14px;align-items:stretch}
+.archlabel{background:var(--navy);color:#fff;display:flex;align-items:center;padding:14px 18px;font:800 12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:1px}
+.archbody{border:1px solid var(--rule);background:var(--card);padding:14px 18px}
+.cycle{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}
+.layer{min-height:76px;border:2px solid var(--blue);display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--cyansoft);font:900 13px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;text-align:center}
+.layer.s{border-color:var(--orange);background:var(--orangesoft)}
+.layer small{font-size:9px;color:var(--muted);letter-spacing:.5px}
+.brace{margin-top:8px;border:2px solid var(--gold);border-top:0;padding:8px;text-align:center;font:800 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--gold)}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.panel{background:var(--card);border:1px solid var(--rule);padding:20px}
+.panel h4{font-size:24px;margin:0 0 12px}
+.panel.linear{border-top:6px solid var(--cyan)}.panel.softmax{border-top:6px solid var(--orange)}
+.matrix{display:grid;grid-template-columns:repeat(4,48px);grid-auto-rows:42px;gap:4px;justify-content:center;margin:18px 0}
+.cell{display:flex;align-items:center;justify-content:center;background:var(--cyansoft);border:1px solid var(--blue);font:800 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+.cell.hot{background:var(--orangesoft);border-color:var(--orange)}
+.state{width:150px;height:150px;display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin:18px auto}
+.state .cell{font-size:16px}
+.router{display:grid;grid-template-columns:1fr 46px 1.15fr;align-items:center;gap:0}
+.sources{display:grid;gap:8px}
+.source{border:2px solid var(--blue);background:var(--card);padding:13px 15px;display:flex;justify-content:space-between;gap:15px}
+.source b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--blue)}
+.mix{border:3px solid var(--cyan);background:var(--cyansoft);padding:20px}
+.weightrow{display:grid;grid-template-columns:54px 1fr 54px;gap:9px;align-items:center;margin:10px 0;font:800 12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+.bar{height:16px;background:#d8d2c4}.bar i{display:block;height:100%;background:var(--cyan)}
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.step{background:var(--card);border:1px solid var(--rule);padding:15px;min-height:150px}
+.step b{font:900 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--cyan);letter-spacing:1px}
+.step strong{display:block;font-size:23px;margin:10px 0 6px}
+.step p{font-size:14px;line-height:1.5;margin:0}
+.axis{position:relative;padding:52px 20px 22px;margin:16px 0}
+.line{height:5px;background:linear-gradient(90deg,var(--cyan),var(--gold),var(--orange));position:relative}
+.tick{position:absolute;top:-25px;transform:translateX(-50%);text-align:center;font:800 11px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace}
+.tick:after{content:"";display:block;width:2px;height:28px;background:var(--ink);margin:4px auto 0}
+.badge{display:inline-block;padding:3px 9px;background:var(--limesoft);border:1px solid #789b27;font:800 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{padding:11px 10px;border-bottom:1px solid var(--rule);text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{font:800 10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);text-transform:uppercase}
+tr.win{background:var(--limesoft);font-weight:800}
+.evidence{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.ev{background:var(--card);border-top:5px solid var(--cyan);padding:17px}
+.ev .big{font:900 28px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--blue);display:block;margin:8px 0}
+.ev p{font-size:14px;line-height:1.5;margin:0}
+.stack{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.stackitem{padding:17px;background:var(--card);border:1px solid var(--rule)}
+.stackitem .num{font:900 24px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--cyan)}
+.stackitem h4{font-size:19px;margin:9px 0 5px}.stackitem p{font-size:14px;line-height:1.5;margin:0}
+.limits{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.limit{padding:17px;background:var(--orangesoft);border:1px solid #ce8a67;font-size:15px}
+.limit b{display:block;margin-bottom:6px}
+.jr{font:900 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;vertical-align:super;text-decoration:none;background:var(--goldsoft);border:1px solid var(--gold);color:var(--ink);padding:2px 5px;border-radius:3px;margin:0 2px}
+.jr:hover,.jr:focus{background:var(--gold);color:#fff;outline:2px solid var(--navy);outline-offset:2px}
+.gloss{margin-top:80px;padding-top:32px;border-top:3px double var(--ink)}
+.gloss h2{font-size:33px}
+.gloss ol{list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:0 24px;counter-reset:g}
+.gloss li{counter-increment:g;position:relative;padding:14px 10px 14px 48px;border-bottom:1px dashed var(--rule);font-size:15px}
+.gloss li:before{content:counter(g,decimal-leading-zero);position:absolute;left:4px;color:var(--cyan);font:900 11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+.gloss li:target{background:var(--goldsoft);outline:2px solid var(--gold)}
+.termname{font-weight:850;color:var(--navy)}
+.sourcebox{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:23px}
+.sourcebox a{display:block;background:var(--night);color:#fff;text-decoration:none;padding:15px;font:800 12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}
+.sourcebox a:hover{background:var(--cyan)}
+.colophon{margin-top:64px;border-top:4px double var(--ink);padding-top:14px;display:flex;justify-content:space-between;gap:20px;font:700 10px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);letter-spacing:1px}
+@media(max-width:900px){
+  .page{padding:36px 22px 90px}.flow{grid-template-columns:1fr}.flow>.arrow{min-height:36px;transform:rotate(90deg)}
+  .compare,.symbols,.gloss ol{grid-template-columns:1fr}.router{grid-template-columns:1fr}.router>.arrow{min-height:44px;transform:rotate(90deg)}
+  .evidence,.stack{grid-template-columns:1fr 1fr}.steps{grid-template-columns:1fr 1fr}.limits{grid-template-columns:1fr 1fr}
+  .archrow{grid-template-columns:1fr}.archlabel{min-height:48px}.cycle{grid-template-columns:repeat(4,1fr)}
+  .sourcebox{grid-template-columns:1fr 1fr}
+}
+@media(max-width:560px){
+  body{font-size:17px}.page{padding:28px 14px 72px}h1{font-size:48px}.mast{font-size:9px}.hero{padding:48px 0}
+  figure{padding:17px;margin:27px 0;box-shadow:5px 5px 0 rgba(65,50,30,.08)}
+  .evidence,.stack,.steps,.limits,.sourcebox{grid-template-columns:1fr}.cycle{grid-template-columns:repeat(2,1fr)}
+  .figcap{display:block}.figcap span{display:block;margin-top:5px}
+  table{font-size:12px}th,td{padding:8px 5px}.formula .katex{font-size:.9em}
+}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · sana-video-2</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page">
+  <header class="mast"><span>NVIDIA · arXiv 2607.21553</span><span>13 pages · 9 figures · 5 main tables</span></header>
+  <section class="hero">
+    <div class="eyebrow">SANA-VIDEO 2.0 · DEEP DIVE</div>
+    <h1>三层速写，<em>一层精查</em></h1>
+    <p class="dek">视频越长，所有 token 两两见面的 softmax attention 越贵；但把全片压成一份线性状态，又会揉掉细节。这篇论文不在两端二选一，而是让便宜层负责赶路、精确层定期校正，再让深层按需翻旧笔记。</p>
+    <div class="meta">JUNSONG CHEN ET AL. · NVIDIA · 2026-07-23 · INGESTED 2026-07-28</div>
+    <div class="tldr"><span class="tag">一句话</span><strong>大多数层用近似 <code>O(N)</code> 的线性注意力，每四层插一层完整 softmax；Block AttnRes 再把每 8 层的旧摘要按 token 路由回来。</strong></div>
+  </section>
+
+  <section id="map">
+    <span class="secno">00 · 先拼完整模型</span>
+    <h2>从提示词和噪声，到一段视频</h2>
+    <p class="lead">先别急着看 AttnRes 公式。整条生成链只有四个大站：压缩视频空间、编码文字、反复预测速度、解码回像素。论文的两个架构创新都在中间的 Video DiT 主干里。</p>
+    <figure>
+      <figcaption class="figcap"><span class="n">FIG 01 · END-TO-END MAP</span><span>训练与推理共用同一骨架</span></figcaption>
+      <div class="flow">
+        <div class="box"><span class="tag">INPUT</span><h4>噪声 latent + 文本</h4><p>LTX-VAE 定义视频 latent 空间；Gemma-2-2B-IT 给出最多 300 个文本 token。</p></div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="box cyan"><span class="tag">BACKBONE</span><h4>Hybrid Video DiT<a class="jr" href="#g-01">01</a></h4><p>3 层 linear<a class="jr" href="#g-02">02</a> + 1 层 softmax 循环；每层另有 cross-attention 与 SwiGLU FFN。</p></div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="box lime"><span class="tag">DEPTH MEMORY</span><h4>Block AttnRes</h4><p>每 8 层存摘要；当前 token 决定该从输入、旧块还是当前 partial sum 取多少。</p></div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="box orange"><span class="tag">OUTPUT</span><h4>速度 → solver → 视频</h4><p>约 40 次速度预测把噪声走回干净 latent；VAE decoder 还原像素帧。</p></div>
+      </div>
+    </figure>
+    <div class="arch">
+      <div class="archrow"><div class="archlabel">5B / 14B</div><div class="archbody">32 层 × 宽 2,560 / 40 层 × 宽 4,096；参数约 4.5B / 14.247B。</div></div>
+      <div class="archrow"><div class="archlabel">TOKEN MIXING</div><div class="archbody">5B：24 个 linear 层 + 8 个 softmax anchor；14B：30 + 10。两种 attention 使用不同 head 维度、独立 RoPE 和 gate。</div></div>
+      <div class="archrow"><div class="archlabel">CONDITIONING</div><div class="archbody">文本每层走 cross-attention；时间步仍通过 AdaLN<a class="jr" href="#g-08">08</a>进入每个 DiT block。router 自己不再额外接时间投影。</div></div>
+    </div>
+  </section>
+
+  <section id="cost">
+    <span class="secno">01 · 为什么 softmax 贵</span>
+    <h2>一万个人互相打分，表就有一亿格</h2>
+    <div class="symbols">
+      <div class="symbol"><code class="m">N</code> · 视频 latent token 数；分辨率、帧数、时长都会推高它。</div>
+      <div class="symbol"><code class="m">Q,K,V\in\mathbb R^{N\times d_h}</code> · query / key / value。</div>
+      <div class="symbol"><code class="m">d_h</code> · 一个 attention head 的通道维度。</div>
+      <div class="symbol"><code class="m">A\in\mathbb R^{N\times N}</code> · 当前 token 对每个 token 的独立权重表。</div>
+      <div class="symbol"><code class="m">O</code> · 用 <code class="m">A</code> 加权 <code class="m">V</code> 后的输出。</div>
+      <div class="symbol"><code class="m">\sqrt{d_h}</code> · 控制点积尺度，避免 softmax 过早饱和。</div>
+    </div>
+    <div class="formula" data-expr="A=\operatorname{softmax}\!\left(\frac{QK^\top}{\sqrt{d_h}}\right),\qquad O=AV"></div>
+    <p>token 从 1,000 增到 10,000，不是多算十倍关系，而是从一百万格变成一亿格。FlashAttention<a class="jr" href="#g-03">03</a>能避免完整关系表反复落入显存，却没有把数学里的两两比较删掉。</p>
+    <div class="note"><span class="tag">实测，不是复杂度口号</span>在论文的编译后、各自最佳 kernel、关闭 AttnRes 的主干对照里，720p / 24fps 拉到 60 秒时，全 softmax 比 25% softmax 混合主干慢 <strong>3.17×</strong>。</div>
+  </section>
+
+  <section id="linear">
+    <span class="secno">02 · 线性注意力到底省在哪</span>
+    <h2>先写公共纪要，再让每个 token 来查</h2>
+    <div class="symbols">
+      <div class="symbol"><code class="m">n</code> · 被写入公共状态的 token 编号。</div>
+      <div class="symbol"><code class="m">v_n</code> · 第 <code class="m">n</code> 个 token 的 value。</div>
+      <div class="symbol"><code class="m">k_n^r</code> · 经 RoPE<a class="jr" href="#g-05">05</a>旋转、带位置关系的 key。</div>
+      <div class="symbol"><code class="m">\beta_n</code> · 写入 gate；决定 token 贡献多少。</div>
+      <div class="symbol"><code class="m">S\in\mathbb R^{d_h\times d_h}</code> · 所有 token 合成的固定大小状态。</div>
+      <div class="symbol"><code class="m">r</code> · 表示已应用 rotary position embedding，不是幂。</div>
+    </div>
+    <div class="formula" data-expr="S=\sum_{n=1}^{N}v_n\!\left(\beta_n k_n^r\right)^\top"></div>
+    <div class="symbols">
+      <div class="symbol"><code class="m">j</code> · 正在读取状态的 query token。</div>
+      <div class="symbol"><code class="m">\phi</code> · 本式取 ReLU，作为非负特征映射。</div>
+      <div class="symbol"><code class="m">\varepsilon</code> · 防止分母为零的小常数。</div>
+      <div class="symbol"><code class="m">g_j</code> · 输出 gate；sigmoid 后落在 0 到 1。</div>
+      <div class="symbol"><code class="m">\odot</code> · 对应通道逐元素相乘。</div>
+      <div class="symbol"><code class="m">W_o</code> · 把多头结果投影回模型宽度。</div>
+    </div>
+    <div class="formula wide" data-expr="o_j=W_o\!\left[\operatorname{RMSNorm}\!\left(\frac{Sq_j^r}{\sum_{n=1}^{N}\phi(k_n)^\top\phi(q_j)+\varepsilon}\right)\odot\sigma(g_j)\right]"></div>
+    <figure>
+      <figcaption class="figcap"><span class="n">FIG 02 · 两种“看全片”</span><span>关系表 vs 固定状态</span></figcaption>
+      <div class="compare">
+        <div class="panel softmax">
+          <h4>Softmax · 每次逐一问</h4>
+          <div class="matrix" aria-label="4 by 4 attention map">
+            <div class="cell hot">.55</div><div class="cell">.15</div><div class="cell">.20</div><div class="cell">.10</div>
+            <div class="cell">.10</div><div class="cell hot">.62</div><div class="cell">.08</div><div class="cell">.20</div>
+            <div class="cell">.25</div><div class="cell">.10</div><div class="cell hot">.55</div><div class="cell">.10</div>
+            <div class="cell">.15</div><div class="cell">.25</div><div class="cell">.15</div><div class="cell hot">.45</div>
+          </div>
+          <p>四个 query 各保留四个独立关系；真实视频会是 <code class="m">N\times N</code>。</p>
+        </div>
+        <div class="panel linear">
+          <h4>Linear · 先合成公共状态</h4>
+          <div class="state" aria-label="2 by 2 linear state">
+            <div class="cell">3.2</div><div class="cell">1.1</div><div class="cell">.7</div><div class="cell">2.4</div>
+          </div>
+          <p>无论有多少 token，都压进 <code class="m">d\times d</code>；读得快，但原来是谁贡献哪一项已被混合。</p>
+        </div>
+      </div>
+    </figure>
+    <p>关键交换是先算 <code class="m">\phi(K)^\top V</code>，再乘 <code class="m">\phi(Q)</code>。不再生成 <code class="m">N\times N</code> 中间关系表，长序列计算接近随 <code class="m">N</code> 线性增长。</p>
+    <div class="note warn"><span class="tag">省掉的正是可能丢掉的</span>若 head 维度是 128，状态矩阵的秩<a class="jr" href="#g-06">06</a>最高 128；即使视频有十万 token，它仍只有这么多独立方向。像把几千人的会议压成一页纪要：主题还在，但“谁在第几帧碰到什么”更容易被揉掉。</div>
+  </section>
+
+  <section id="hybrid">
+    <span class="secno">03 · 核心一：3:1 hybrid attention</span>
+    <h2>三层赶路，第四层重新逐一核对</h2>
+    <figure>
+      <figcaption class="figcap"><span class="n">FIG 03 · 一个 8 层块</span><span>两个完整的 3:1 周期</span></figcaption>
+      <div class="cycle">
+        <div class="layer">L1<small>LINEAR</small></div><div class="layer">L2<small>LINEAR</small></div><div class="layer">L3<small>LINEAR</small></div><div class="layer s">S4<small>SOFTMAX</small></div>
+        <div class="layer">L5<small>LINEAR</small></div><div class="layer">L6<small>LINEAR</small></div><div class="layer">L7<small>LINEAR</small></div><div class="layer s">S8<small>SOFTMAX</small></div>
+      </div>
+      <div class="brace">BLOCK SUMMARY b₁ · 完成后冻结，供后续块读取</div>
+    </figure>
+    <p>softmax anchor<a class="jr" href="#g-04">04</a>不是“给线性结果乘个校准系数”。它是一整层完整 attention，当前每个 query 会重新对所有 token 计算独立权重；输出随后再进入下一轮三层线性 attention。</p>
+    <table>
+      <thead><tr><th>softmax 比例</th><th>代理验证 loss ↓</th><th>该怎么读</th></tr></thead>
+      <tbody>
+        <tr><td>0%</td><td>0.955</td><td>纯线性最弱，没有周期性精查</td></tr>
+        <tr><td>14.3%</td><td>0.914</td><td>只放 4 个 anchor 已明显补回</td></tr>
+        <tr class="win"><td>25%</td><td>0.905</td><td>论文选择的质量—速度拐点</td></tr>
+        <tr><td>50%</td><td>0.897</td><td>loss 最低；1080p 延迟却比 25% 高 1.29×</td></tr>
+        <tr><td>100%</td><td>0.945</td><td>在这组固定宽深短实验里也不如混合</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><span class="tag">证据边界</span>25% 不是理论最优，更不是所有视频模型的常数。它来自 256p、81 帧、10K steps 的架构搜索代理模型；作者选择的是 Pareto knee<a class="jr" href="#g-07">07</a>，不是最低验证 loss。</div>
+  </section>
+
+  <section id="attnres">
+    <span class="secno">04 · 核心二：Block AttnRes</span>
+    <h2>别只接上一层，让 token 自己翻旧笔记</h2>
+    <p>普通残差只有 <code class="m">h_l=h_{l-1}+f_l(h_{l-1})</code>。深层想用早先 softmax anchor 形成的精确关系，只能指望它一路不被稀释。Block AttnRes<a class="jr" href="#g-09">09</a>每 8 层冻结一份摘要，让后续 token 直接读取。</p>
+    <div class="symbols">
+      <div class="symbol"><code class="m">x</code> · 当前某一个时空 token；不是整条视频共用一路由。</div>
+      <div class="symbol"><code class="m">V_l</code> · 输入 <code class="m">b_0</code>、已完成块 <code class="m">b_i</code>、当前部分和 <code class="m">p_l</code> 的集合。</div>
+      <div class="symbol"><code class="m">v_i(x)</code> · 来源 <code class="m">i</code> 在 token <code class="m">x</code> 处的特征。</div>
+      <div class="symbol"><code class="m">w^{(\tau)}</code> · 共享 query；attention 与 FFN 分支各一份。</div>
+      <div class="symbol"><code class="m">\tau</code> · 当前是 attention 前路由，还是 FFN 前路由。</div>
+      <div class="symbol"><code class="m">\alpha_{i\to l}^{(\tau)}(x)</code> · 来源权重；对 <code class="m">i</code> 求和为 1。</div>
+    </div>
+    <div class="formula wide" data-expr="h_l(x)=\sum_{v_i\in V_l}\alpha_{i\to l}^{(\tau)}(x)v_i(x),\qquad \alpha_{i\to l}^{(\tau)}(x)=\operatorname{softmax}_i\!\left[(w^{(\tau)})^\top\operatorname{RMSNorm}(v_i(x))\right]"></div>
+    <figure>
+      <figcaption class="figcap"><span class="n">FIG 04 · 第 17 层某个 token 的一次路由</span><span>箭头只占独立列，不压文字</span></figcaption>
+      <div class="router">
+        <div class="sources">
+          <div class="source"><b>b₀ · 输入</b><span>值 2</span></div>
+          <div class="source"><b>b₁ · 块 1</b><span>值 5</span></div>
+          <div class="source"><b>b₂ · 块 2</b><span>值 8</span></div>
+        </div>
+        <div class="arrow" aria-hidden="true">→</div>
+        <div class="mix">
+          <strong>logits [0, 1, 2] → softmax</strong>
+          <div class="weightrow"><span>b₀</span><div class="bar"><i style="width:9%"></i></div><span>.090</span></div>
+          <div class="weightrow"><span>b₁</span><div class="bar"><i style="width:24.5%"></i></div><span>.245</span></div>
+          <div class="weightrow"><span>b₂</span><div class="bar"><i style="width:66.5%"></i></div><span>.665</span></div>
+          <div class="formula" data-expr="h_{17}=.090(2)+.245(5)+.665(8)\approx6.73"></div>
+        </div>
+      </div>
+    </figure>
+    <p>query 虽然跨层共享，来源特征却随 token、层和时间步改变，所以不是所有位置都拿同一组权重。论文最深块里，完成块合计获得 attention / FFN 路由质量的 56% / 50%；最近完成块约拿 26%，更早两块约 15% 和 14%。</p>
+    <h3>为什么 router 不直接吃时间步</h3>
+    <p>最初版本另加 <code class="m">\phi_\tau(t)</code>，最终删除。不是模型不需要 <code class="m">t</code>：AdaLN 仍把时间步写进每个来源特征。额外 offset 跨 21 个时间步的平均余弦相似度 0.979，变化部分只有常量部分范数的 13%；把它换成均值或错位时间，loss 最多只变 0.0002。</p>
+    <h3>为什么每 8 层存一次</h3>
+    <div class="formula" data-expr="O(NLd)\quad\longrightarrow\quad O\!\left(N\left\lceil\frac{L}{S}\right\rceil d\right),\qquad S=8"></div>
+    <p>逐层存历史改成逐块存，历史激活约少 8 倍。<code class="m">S=4,8,16</code> 的短实验 loss 几乎相同；选 8 是工程折中：一块恰好放两个 3:1 周期，又比 16 层块多保留几份中间深度摘要。</p>
+  </section>
+
+  <section id="flow">
+    <span class="secno">05 · 训练底座：Flow Matching</span>
+    <h2>给带噪视频，预测它沿直线怎么变化</h2>
+    <div class="formula" data-expr="z_t=(1-t)z+t\epsilon,\qquad v^\star=\epsilon-z"></div>
+    <div class="symbols">
+      <div class="symbol"><code class="m">z</code> · 干净视频 latent。</div>
+      <div class="symbol"><code class="m">\epsilon\sim\mathcal N(0,I)</code> · 与 latent 同形状的高斯噪声。</div>
+      <div class="symbol"><code class="m">t\in[0,1]</code> · 噪声进度；0 干净，1 全噪声。</div>
+      <div class="symbol"><code class="m">z_t</code> · 模型实际读取的带噪 latent。</div>
+      <div class="symbol"><code class="m">v^\star</code> · 从干净点指向噪声点的目标速度。</div>
+      <div class="symbol"><code class="m">c</code> · Gemma 提供的文本条件。</div>
+    </div>
+    <div class="formula wide" data-expr="\mathcal L_{\mathrm{FM}}=\mathbb E_{z,\epsilon,t,c}\!\left[\left\|v_\theta(z_t,t,c)-(\epsilon-z)\right\|_2^2\right]"></div>
+    <p><code class="m">v_\theta</code> 是模型预测；<code class="m">\theta</code> 是可训练参数；<code class="m">\|\cdot\|_2^2</code> 是逐元素误差平方后汇总；外层期望表示换视频、噪声、时间步和文本后取平均。</p>
+    <figure>
+      <figcaption class="figcap"><span class="n">FIG 05 · 一组数字从头算到 loss</span><span>沿用同一个标量例子</span></figcaption>
+      <div class="steps">
+        <div class="step"><b>01 · DATA</b><strong>z = 2</strong><p>把真实视频 latent 缩成一个数。</p></div>
+        <div class="step"><b>02 · NOISE</b><strong>ε = −1</strong><p>本轮抽到的高斯噪声。</p></div>
+        <div class="step"><b>03 · MIX</b><strong>t = .25</strong><p><code class="m">z_t=.75(2)+.25(-1)=1.25</code></p></div>
+        <div class="step"><b>04 · TARGET</b><strong>v* = −3</strong><p><code class="m">\epsilon-z=-1-2</code></p></div>
+        <div class="step"><b>05 · LOSS</b><strong>.36</strong><p>若预测 −2.4：<code class="m">[-2.4-(-3)]^2=.36</code></p></div>
+      </div>
+    </figure>
+    <div class="note"><span class="tag">方向别读反</span>训练插值写成干净 <code class="m">t=0</code> → 噪声 <code class="m">t=1</code>；生成时从噪声端开始，solver<a class="jr" href="#g-10">10</a>沿反方向积分回干净视频。</div>
+  </section>
+
+  <section id="timestep">
+    <span class="secno">06 · 时间步课程</span>
+    <h2>动得好和画得好，不必总做同一档练习</h2>
+    <p>预训练的 TQD<a class="jr" href="#g-11">11</a>不改 flow loss，只改变哪些 <code class="m">t</code> 更常被抽到。高运动但非最高画质的 clip 偏向高噪声，练全局运动与结构；高画质但非高运动的 clip 偏向低噪声，练细节恢复；两者都高或都不高时不偏移。</p>
+    <div class="formula" data-expr="\operatorname{logit}(t_s)=\operatorname{logit}(t)+\log s\qquad\Longleftrightarrow\qquad t_s=\frac{st}{1+(s-1)t}"></div>
+    <div class="symbols">
+      <div class="symbol"><code class="m">t</code> · 原始 logit-normal 时间步。</div>
+      <div class="symbol"><code class="m">s</code> · flow shift；大于 1 偏向高噪声。</div>
+      <div class="symbol"><code class="m">t_s</code> · shift 后真正送进训练的时间步。</div>
+    </div>
+    <figure>
+      <figcaption class="figcap"><span class="n">FIG 06 · 同一个 .5 被推向两侧</span><span>概率倾斜，不是删掉其他时间步</span></figcaption>
+      <div class="axis">
+        <div class="line">
+          <div class="tick" style="left:25%"><span>.25</span><strong>shift ⅓</strong></div>
+          <div class="tick" style="left:50%"><span>.50</span><strong>base</strong></div>
+          <div class="tick" style="left:75%"><span>.75</span><strong>shift 3</strong></div>
+        </div>
+      </div>
+      <p><code class="m">t=.5,s=3</code>：<code class="m">t_s=3(.5)/[1+2(.5)]=.75</code>。取 <code class="m">s=1/3</code> 则变成 .25。</p>
+    </figure>
+    <p>continual training 起关闭 TQD，改按 latent token 数把 shift 从 3 对数线性升到 6。更长、更高分辨率的视频多练高噪声段。预训练与 continual 另开 Self-Flow<a class="jr" href="#g-12">12</a>特征蒸馏；SFT 关闭 Self-Flow，但权重 EMA<a class="jr" href="#g-13">13</a>始终保留。</p>
+  </section>
+
+  <section id="data">
+    <span class="secno">07 · 数据与课程</span>
+    <h2>不是用一个“美学分”把素材从头筛到尾</h2>
+    <div class="stack">
+      <div class="stackitem"><span class="num">30M</span><h4>Pre-train</h4><p>480p / 5s；TQD + Self-Flow；覆盖优先。</p></div>
+      <div class="stackitem"><span class="num">10M</span><h4>Continual</h4><p>480→720p、5→8s；提高画质和运动门槛。</p></div>
+      <div class="stackitem"><span class="num">10⁴</span><h4>SFT</h4><p>最可信 720p / 8s 子集；标准 flow matching。</p></div>
+      <div class="stackitem"><span class="num">DPO+RL</span><h4>Post-train</h4><p>离线偏好对，再用在线图像奖励补风格与质量。</p></div>
+    </div>
+    <p>素材先做解码检查、镜头切分、黑边/字幕清理，再沿<strong>画质、运动、色彩、文图一致性、镜头完整性</strong>分别打分。运动不并入一个总美学分，防止数据池最后全是“很干净，但几乎不动”的视频。caption 逐步补到主体、动作、相机运动、场景、光照、交互与时间演化。</p>
+  </section>
+
+  <section id="monitor">
+    <span class="secno">08 · 为什么分十桶验证</span>
+    <h2>一个均值，会把低噪声进步和高噪声退步搅在一起</h2>
+    <p>loss 沿噪声轴相差约 3 倍。作者把 1000 个离散时间步分成十桶；不同 checkpoint 固定复用同一批 100 个 clip、文本、噪声与时间步，让每个整数时间步恰好出现一次。</p>
+    <div class="evidence">
+      <div class="ev"><span class="big">−6.42%</span><p>十桶宏平均 MSE 改善。</p></div>
+      <div class="ev"><span class="big">−11.44%</span><p>低噪声段最大改善。</p></div>
+      <div class="ev"><span class="big">+1.16%</span><p>高噪声段反而回退。</p></div>
+      <div class="ev"><span class="big">2.27×</span><p>相同 100 次预算下，变化估计标准差降低。</p></div>
+    </div>
+    <div class="note warn"><span class="tag">别把监控统计当 loss</span>十桶平均只用于看 checkpoint，不反向传播。VBench 82.68→83.29 只有四个观察点，论文也只作描述，不声称已证明相关性。</div>
+  </section>
+
+  <section id="post">
+    <span class="secno">09 · 偏好后训练</span>
+    <h2>离线 DPO 与在线 ReFL，解决的不是同一步</h2>
+    <h3>Diffusion-DPO：同一 prompt 的好视频应比坏视频更容易解释</h3>
+    <div class="symbols">
+      <div class="symbol"><code class="m">x^+,x^-</code> · Gemini 离线选出的 preferred / rejected 视频。</div>
+      <div class="symbol"><code class="m">\phi</code> · 当前策略 <code class="m">\theta</code> 或冻结参考模型 <code class="m">\theta_{\rm ref}</code>。</div>
+      <div class="symbol"><code class="m">D</code> · latent 元素数；把平方误差取平均。</div>
+      <div class="symbol"><code class="m">e_\phi^\pm</code> · 模型对好 / 坏视频的 flow prediction error。</div>
+      <div class="symbol"><code class="m">\Delta_\phi</code> · 坏视频误差比好视频大多少。</div>
+      <div class="symbol"><code class="m">t,\epsilon</code> · 一对视频共享，避免腐蚀强度不同污染比较。</div>
+    </div>
+    <div class="formula wide" data-expr="e_\phi^\pm=\frac1D\left\|v_\phi(x_t^\pm,t,c)-(\epsilon-x^\pm)\right\|_2^2,\qquad \Delta_\phi=e_\phi^- - e_\phi^+"></div>
+    <div class="formula wide" data-expr="\mathcal L=-\mathbb E\!\left[w\log\sigma\!\left(\beta(\Delta_\theta-\Delta_{\theta_{\rm ref}})\right)\right]+\lambda\mathbb E[e_\theta^+]"></div>
+    <p><code class="m">w</code> 来自裁判分差，<code class="m">\beta</code> 控制偏好强度，<code class="m">\lambda</code> 控制 preferred flow regularizer。第一项要求策略比参考模型更会区分好坏；第二项防止模型只顾拉差距、忘掉生成目标。</p>
+    <h3>ReFL：当前模型先生成，再让三位裁判回传奖励</h3>
+    <p>rollout 无梯度走到随机步骤，预测干净 latent，解码首帧 / 中帧 / 尾帧。HPSv3++、DeQA-Score、UniPercept<a class="jr" href="#g-14">14</a>按 4:4:1 合成奖励；梯度只穿当前模型评估和 decoder，不反传完整采样轨迹。400 iteration 三条训练 reward 都上升，但这不等于独立人评已全面胜出。</p>
+  </section>
+
+  <section id="evidence">
+    <span class="secno">10 · 实验到底证明了什么</span>
+    <h2>最终质量、机制证据、系统速度分三张账</h2>
+    <h3>结果账</h3>
+    <table>
+      <thead><tr><th>模型</th><th>参数</th><th>VBench Total ↑</th><th>Quality ↑</th><th>Semantic ↑</th></tr></thead>
+      <tbody>
+        <tr><td>Wan 2.2</td><td>A14B</td><td>84.23</td><td>85.42</td><td>79.50</td></tr>
+        <tr><td>Bernini-R</td><td>14B</td><td>84.64</td><td>85.18</td><td>82.49</td></tr>
+        <tr class="win"><td>SANA-Video 2.0</td><td>5B</td><td>84.30</td><td>85.61</td><td>79.05</td></tr>
+      </tbody>
+    </table>
+    <p>5B 在 480×832、81 帧、40 步时，单 H100 完整生成 13.2s；匹配 shape / steps / device 的 Bernini-R 是 421s。它的 Quality 是表中最高，但 Total 与 Semantic 并非第一。</p>
+    <h3>AttnRes 账：最终 MSE 近乎打平，机制干预更有信息</h3>
+    <div class="evidence">
+      <div class="ev"><span class="big">.48547→.48506</span><p>晚期 held-out MSE；差距很窄，作者不据此声称质量大涨。</p></div>
+      <div class="ev"><span class="big">+11.7%</span><p>同 checkpoint 开启 AttnRes 后，深层线性状态平均有效秩。</p></div>
+      <div class="ev"><span class="big">22 / 24</span><p>线性层中，有效秩不下降的层数。</p></div>
+      <div class="ev"><span class="big">−82~91%</span><p>在块入口删掉旧块来源后的有效秩跌幅。</p></div>
+    </div>
+    <div class="formula wide" data-expr="r_{\mathrm{eff}}(S)=\exp\!\left(-\sum_i p_i\log p_i\right),\qquad p_i=\frac{\sigma_i(S)}{\sum_j\sigma_j(S)}"></div>
+    <div class="symbols">
+      <div class="symbol"><code class="m">\sigma_i(S)</code> · 状态矩阵第 <code class="m">i</code> 个奇异值。</div>
+      <div class="symbol"><code class="m">p_i</code> · 该奇异方向占全部奇异值之和的比例。</div>
+      <div class="symbol"><code class="m">r_{\rm eff}</code> · 信息均匀分布在多少个方向；不是简单数非零项。</div>
+    </div>
+    <p>若奇异值为 <code class="m">[3,1]</code>，则 <code class="m">p=[.75,.25]</code>，代入得到 <code class="m">r_{\rm eff}\approx1.75</code>。第二方向虽然非零，但只承载四分之一，因此有效秩小于 2。</p>
+  </section>
+
+  <section id="deploy">
+    <span class="secno">11 · 部署与量化</span>
+    <h2>保持计算、少算几步、稀疏近似：三件事别混在一起</h2>
+    <table>
+      <thead><tr><th>B200 · 720p / 8s</th><th>NFE</th><th>延迟</th><th>相对各自 baseline</th></tr></thead>
+      <tbody>
+        <tr><td>Baseline</td><td>50</td><td>62.65s</td><td>1.00×</td></tr>
+        <tr><td>+ kernel / execution</td><td>50</td><td>30.74s</td><td>2.04×</td></tr>
+        <tr><td>+ diffusion cache</td><td>33</td><td>20.89s</td><td>3.00×</td></tr>
+        <tr class="win"><td>+ sparse softmax anchors</td><td>33</td><td>17.52s</td><td>3.58×</td></tr>
+      </tbody>
+    </table>
+    <p>kernel fusion 保持数学计算；cache 把 50 次评估减到 33 次；稀疏 softmax 也引入近似。Sol-Engine<a class="jr" href="#g-15">15</a>是部署栈，不是混合注意力的训练贡献。</p>
+    <h3>QAT：模型小了很多，为什么只快 5.8%</h3>
+    <div class="evidence">
+      <div class="ev"><span class="big">−67.9%</span><p>静态存储 8.94→2.87GB。</p></div>
+      <div class="ev"><span class="big">−56.9%</span><p>peak memory 10.74→4.63GB。</p></div>
+      <div class="ev"><span class="big">+0.03</span><p>QAT 相对 BF16 的 VBench Total 差值。</p></div>
+      <div class="ev"><span class="big">+5.8%</span><p>GB200 单次 backbone forward 加速。</p></div>
+    </div>
+    <p>当前只把 linear GEMM 做 MXFP4 weight / MXFP8 activation QAT<a class="jr" href="#g-16">16</a>；这些 GEMM 原本只占 BF16 runtime 的 16.2%，linear 与 softmax attention operator 仍是 BF16。省存储很多、延迟只小降并不矛盾。</p>
+  </section>
+
+  <section id="limits">
+    <span class="secno">12 · 结论与边界</span>
+    <h2>论文最强的地方，是把“为何快”拆得足够干净</h2>
+    <div class="limits">
+      <div class="limit"><b>25% 不是普适常数</b>来自特定代理模型、分辨率和 10K-step 搜索。</div>
+      <div class="limit"><b>AttnRes 不是显著涨分按钮</b>最终 MSE 很接近，强证据在秩恢复与跨块干预。</div>
+      <div class="limit"><b>VBench 口径不完全齐</b>基线来源、帧数、CFG、checkpoint 不都相同。</div>
+      <div class="limit"><b>加速数字不能任意相乘</b>主干、编译、cache、稀疏和量化改变的对象不同。</div>
+      <div class="limit"><b>在线 RL 证据有限</b>主要是训练 reward 与四组定性比较。</div>
+      <div class="limit"><b>数据无法完整复现</b>公开了筛选轴与部分阈值，但语料本身是 in-house。</div>
+    </div>
+    <h3>真正值得带走的三句话</h3>
+    <p><span class="badge">01</span> 线性 attention 的快，来自把所有 token 先写进固定状态；这一步也正是精细关系可能丢失的地方。</p>
+    <p><span class="badge">02</span> softmax anchor 负责周期性恢复 token-to-token 关系，Block AttnRes 负责让这些表示不必只靠相邻层接力。</p>
+    <p><span class="badge">03</span> 一篇系统论文里的“3×”可能分别来自算法、kernel 或少算步数；只有同条件完整计时才能放进同一条链。</p>
+  </section>
+
+  <section class="gloss">
+    <span class="secno">REFERENCE · GLOSSARY</span>
+    <h2>术语与直接入口</h2>
+    <ol>
+      <li id="g-01"><span class="termname">Video DiT</span> · 把视频 latent 切成 token，用 Transformer 预测扩散 / flow 速度。<a href="../concepts/diffusion-transformer.html">diffusion-transformer</a></li>
+      <li id="g-02"><span class="termname">Linear Attention</span> · 交换乘法顺序，把 <code class="m">N\times N</code> 关系压进固定状态；快，但有表示秩瓶颈。<a href="../concepts/gated-linear-attention.html">gated-linear-attention</a></li>
+      <li id="g-03"><span class="termname">FlashAttention</span> · softmax attention 的精确 IO 优化；不生成完整 HBM 中间矩阵，但仍算同一套两两关系。<a href="../concepts/flash-attention.html">flash-attention</a></li>
+      <li id="g-04"><span class="termname">Softmax Anchor</span> · 混合主干中周期出现的完整 softmax attention 层，用来恢复独立 token 关系。<a href="../concepts/hybrid-linear-softmax-attention.html">hybrid attention</a></li>
+      <li id="g-05"><span class="termname">RoPE</span> · 旋转 query / key，使点积带相对位置。linear 与 softmax head 维度不同，因此分别应用。<a href="../concepts/rotary-position-embedding.html">RoPE</a></li>
+      <li id="g-06"><span class="termname">Rank / Effective Rank</span> · 矩阵能承载多少独立方向；effective rank 还考虑每个奇异方向实际占比。</li>
+      <li id="g-07"><span class="termname">Pareto Knee</span> · 再多付很多成本只能换少量收益的折点；不是单项指标的最优点。</li>
+      <li id="g-08"><span class="termname">AdaLN</span> · 用时间 / 文本条件生成 scale、shift 与 gate，调制每个 DiT block 的 LayerNorm。<a href="../concepts/adaptive-layernorm.html">adaptive-layernorm</a></li>
+      <li id="g-09"><span class="termname">Block AttnRes</span> · 每 8 层保存摘要，让后层按 token 在旧深度来源之间 softmax 路由。<a href="../concepts/block-attention-residuals.html">block-attention-residuals</a></li>
+      <li id="g-10"><span class="termname">Flow Solver / NFE</span> · 数值积分模型速度场；NFE 是模型前向评估次数，不一定等于所有实现里的“step”写法。</li>
+      <li id="g-11"><span class="termname">TQD / Flow Shift</span> · 按内容与 token 数改变时间步采样密度，不改变 flow-matching 目标。<a href="../concepts/content-aware-flow-shift.html">content-aware-flow-shift</a></li>
+      <li id="g-12"><span class="termname">Self-Flow</span> · 预训练 / continual 的辅助特征蒸馏与双时间步条件；所有 token 仍参与主 loss。</li>
+      <li id="g-13"><span class="termname">EMA</span> · 用指数滑动平均保存更平稳的一份模型权重；本论文贯穿到 SFT。<a href="../concepts/ema.html">EMA</a></li>
+      <li id="g-14"><span class="termname">ReFL Rewards</span> · HPSv3++ 看偏好与文本 / 美学，DeQA 看无参考画质，UniPercept 补美学、质量、结构纹理维度。</li>
+      <li id="g-15"><span class="termname">Sol-Engine</span> · NVIDIA 部署栈；本页表中依次包含 kernel 优化、diffusion cache 与 anchor 稀疏 attention。</li>
+      <li id="g-16"><span class="termname">QAT / PTQ</span> · 量化感知训练 / 训练后量化；前者在低精度误差存在时继续训练。<a href="../concepts/quantization.html">quantization</a></li>
+    </ol>
+    <div class="sourcebox">
+      <a href="https://arxiv.org/abs/2607.21553">ARXIV · ABSTRACT ↗</a>
+      <a href="https://arxiv.org/pdf/2607.21553">PAPER · PDF ↗</a>
+      <a href="https://nvlabs.github.io/Sana/Video2/">PROJECT · VIDEOS ↗</a>
+      <a href="https://github.com/NVlabs/Sana">CODE · NVLABS ↗</a>
+    </div>
+  </section>
+  <footer class="colophon"><span>Ingested 2026-07-28 · arXiv v1 + official project</span><span>Hybrid Attention / AttnRes / Flow / Deployment</span></footer>
+</main>
+<script>
+document.addEventListener("DOMContentLoaded",()=>{
+  document.querySelectorAll(".formula[data-expr]").forEach(el=>{
+    if(!window.katex)return;
+    try{katex.render(el.dataset.expr,el,{displayMode:true,throwOnError:false,strict:false});}catch(_){}
+  });
+});
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!document.getElementById(id))return;
+      e.preventDefault();
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>
