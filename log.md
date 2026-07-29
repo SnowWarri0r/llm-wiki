@@ -1315,3 +1315,11 @@ skill 更新:
 - 对 gated linear attention、router、flow matching、flow shift、Diffusion-DPO 与有效秩逐符号解释；验证 3-source softmax 混合得到 6.7256、奇异值 `[3,1]` 的有效秩为 1.7548。
 - 分开记录质量、机制和系统证据：25% 是代理实验的 Pareto knee；AttnRes MSE 近乎打平，主要证据是深层有效秩 +11.7% 和块入口删除旧来源后 −82%～91%；Sol-Engine 的 kernel / cache / sparsity 不与架构 speedup 混乘。
 - 新增四个概念页：gated-linear-attention、hybrid-linear-softmax-attention、block-attention-residuals、content-aware-flow-shift。
+
+## [2026-07-29] ingest | Wonder · Video World Model Done Better
+
+- 新增 Wonder 论文精读与 bespoke HTML；不沿论文目录平铺，而按“完整系统 → 控制 → 记忆 → 蒸馏 → 镜头漂移 → 实时运行 → 证据边界”组织，让四个问题和四组解法能拼成一张完整图。
+- 用同一组数字走通像素投影、I2V/V2V 统一输入、历史 top-k 选块、Sparse Context Forcing mask、三学生四步接力和相对 softplus 控制损失；公式先定义每个符号，再代数。
+- 完整录入 I2V/V2V 结果，并保留论文表格核算异常：Wonder I2V 五个已打印画质分项的均值约为 .8564，与表内 Avg .8558 不一致；没有原始评测文件时不擅自改论文数字。
+- 把 16 FPS / 0.5 秒标成项目页口径，并明确缺少分辨率、推理 GPU、卡数、显存和测速细节；把“本轮 active attention 近似固定”与“完整历史 KV 存储仍增长”分开。
+- 新增四个概念页：pixel-space-coordinate-field、sparse-context-forcing、mixture-of-students、gan-control-regularization；DMD 与 sparse attention 旧概念页补 Wonder 来源。

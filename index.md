@@ -49,6 +49,7 @@
 - [MemGPT · LLMs as Operating Systems](wiki/papers/memgpt.md) — context 当 RAM、外部存储当硬盘，LLM 自己 function call 调度记忆
 - [Cosmos 3 · 把看懂、想象、行动装进一个世界模型](wiki/papers/cosmos-3.md) — 以“杯子放进托盘”贯穿五模态入口、MoT 双塔、联合注意力、任务 token 排列、rectified flow 手算、MRoPE 真实时间、数据清洗、Reasoner→Generator 训练接力（复制 QKV/MLP/Norm 当初始化，再换 latent、双向 mask、速度头和 MSE 把它训成去噪器）、真实 benchmark、四组消融与部署边界；统一的是架构和训练接口，不是一次前向或一套共享权重
 - [Solaris · 两个人怎样共享同一个生成世界](wiki/papers/solaris-multiplayer-world-model.md) — 两人 Minecraft 视频世界模型：12.64M 同步帧与两套动作；给 latent 加 player 维，动作按人独立、视觉 token 共享 attention；双向单人→双向多人→因果 Diffusion Forcing→Checkpointed Self Forcing，把滑窗反传显存 O(LtLs) 降到 O(Lt)。五项 FID 全优，但 Movement VLM 不及 frame concat，且仍无持久世界状态与速度报告。
+- [Wonder · 把图片或视频变成能实时移动相机的生成世界](wiki/papers/wonder-video-world-model.md) — Adobe/JHU 基于 Wan2.1-I2V-14B，把 6-DoF 轨迹渲染成像素坐标场；完整保存历史 KV、摘要检索 sink/top-k/recent，训练时用 Sparse Context Forcing 适应稀疏输入；三个 14B student 接力四步去噪，低频控制 GAN 抑制相机漂移。项目页报告 16 FPS，但 v1 无消融、无完整测速口径，I2V Avg 还存在可复核的表格不一致。
 - [交互式视频世界模型综述 · 动作、记忆与实时反馈](wiki/papers/interactive-video-world-modeling-survey.md) — 不按 200+ 模型名排目录，而用同一条“界面→动作注入→记忆→生成→加速→评测”系统链串起来；历史帧、latent memory、显式 3D 与重建四级记忆，Teacher/Diffusion/Self/Geometry/Context Forcing 逐项对照，再用动作听不听、世界记不记、反馈快不快三问读任何新世界模型。
 - [minWM · 把离线视频扩散改造成四步交互世界模型](wiki/papers/minwm.md) — 不是新造一枚 checkpoint，而是公开数据→PRoPE 相机控制→teacher-forcing AR→causal ODE/CD→asymmetric DMD 的完整改造流水线；Wan/HY 首帧 1.137s/3.446s，但口径排除 VAE 且不等于整段提速 200×。含 PRoPE 相对投影手算、三阶段公式、论文配方与脚本默认差异，以及当前已开放/TBD 边界。
 - [Lumine · 从像素玩 3D 开放世界](wiki/papers/lumine.md) — VLM(Qwen2-VL)直接吃画面像素吐键鼠, 端到端打通原神5h主线零样本迁移; 动作即文本token + action chunking(5Hz看30Hz动) + hybrid thinking(该想才想); 2424h人类录像纯模仿零RL + W8A8实时
@@ -358,6 +359,10 @@
 - [Mixture-of-Transformers · MoT](wiki/concepts/mixture-of-transformers.md) — 每层两套权重(塔): AR token走reasoner塔(理解/因果)、扩散token走generator塔(生成/双向),按模态/任务路由+联合注意力对齐; vs MoE(FFN专家为省算力)/unified-transformer(单套权重); Cosmos 3 发动机
 - [World Foundation Model · WFM](wiki/concepts/world-foundation-model.md) — 学"世界接下来怎么变"的大模型,给当前+动作能模拟未来; 当Physical AI训练场/合成数据工厂/策略评估; vs视频生成(要符合物理+可动作控制)
 - [Physical AI · 具身智能](wiki/concepts/physical-ai.md) — 在真实世界感知-推理-行动的AI(机器人/自驾),动作后果不可逆+理解与生成耦合,主要靠仿真/合成数据训(sim2real)
+- [Pixel-Space Coordinate Field](wiki/concepts/pixel-space-coordinate-field.md) — 不只把相机位姿塞成六个数；在人工 3D 格点与无限远环境球里先渲染出平移视差和旋转方向，再把控制视频与场景 latent 拼给 DiT
+- [Sparse Context Forcing](wiki/concepts/sparse-context-forcing.md) — 历史完整 KV 全保留，池化摘要只负责检索；训练阶段随机断开可选远端边，让学生提前适应推理时只读 sink、top-k 与 recent
+- [Mixture of Students](wiki/concepts/mixture-of-students.md) — 四次网络调用不变，把粗结构、结构修正和细节收尾固定分给三套 student；增大阶段容量，也付出三套 14B 权重的显存
+- [GAN Control Regularization](wiki/concepts/gan-control-regularization.md) — 给真实与 student rollout 加同一噪声，从冻结 teacher 的跨层低频特征判断相机是否走偏，专门补 DMD 容易忽略的整体镜头控制
 
 ### Omni / 语音交互
 - [Thinker–Talker](wiki/concepts/thinker-talker.md) — 想的(语义文本)和说的(渲染音频codes)分两路解耦; Talker 吃 Thinker 中间层条件

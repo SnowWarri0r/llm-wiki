@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Camera Pose Tokenization · 相机位姿 Token 化 · Concept</title>
+<title>Pixel-Space Coordinate Field · 把相机轨迹画成控制视频 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,61 +53,99 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · camera-pose-tokenization</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · pixel-space-coordinate-field</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Camera Pose Tokenization · 相机位姿 Token 化</h1>
+  <h1>Pixel-Space Coordinate Field · 把相机轨迹画成控制视频</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>把旋转四元数、平移方向和厘米尺度量化成 <code>[-1000,1000]</code> 的专用 token，让语言解码器像写结构化文本一样写相机位姿，再按确定公式还原成米制平移。</p>
-<h2>表示拆分</h2>
-<p>相对位姿分成三块：</p>
+<p>不要只把相机位姿塞成几个数字；先渲染一段彩色 3D 网格，让模型直接看见平移、旋转和视差会怎样移动像素。</p>
+<h2>直觉</h2>
+<p>相机外参能准确记录“向右 1 米、向左转 15 度”，但视频 DiT 还得从这几个数字学会每个像素该往哪动。重建输入点云再换机位渲染，像素提示很强，可一旦走到相机没拍过的区域，点云背后就是空洞。</p>
+<p>Wonder 在一个与输入内容无关的合成相机空间里放两样东西：</p>
 <ul>
-<li><code>q=(qx,qy,qz,qw)</code>：单位四元数，表示旋转；</li>
-<li><code>u=(ux,uy,uz)</code>：单位方向向量，只说明往哪移动；</li>
-<li><span class="tex math-inline" data-display="false">s_{\mathrm{cm}}</span>：移动尺度，单位厘米，范围 1–1000，对应 0.01–10m。</li>
+<li>密集 3D lattice：相机平移时，近处格点移动多、远处移动少，给出尺度与视差；</li>
+<li>无限远彩色环境球：相机旋转时颜色图案跟着变，给出朝向。</li>
 </ul>
-<p>四元数与方向分量都乘 1000 并取专用数值 token；<code>&lt;1&gt;</code> 在 scale 字段里表示 1cm。边界标签 <code>&lt;frame&gt; / &lt;quat&gt; / &lt;offset&gt; / &lt;scale&gt;</code> 负责结构。</p>
-<h2>完整数字例</h2>
-<p>第二帧相对第一帧不旋转，向 <code>(0.6,0,0.8)</code> 方向移动 <code>1.25m</code>：</p>
-<pre><code class="language-text">q = (0,0,0,1)           → &lt;0&gt;&lt;0&gt;&lt;0&gt;&lt;1000&gt;
-u = (0.6,0,0.8)         → &lt;600&gt;&lt;0&gt;&lt;800&gt;
-s = 1.25m = 125cm       → &lt;125&gt;
+<p>它不承诺恢复真实场景几何，只负责把目标相机轨迹翻译成一段与输出像素一一对齐的控制视频。</p>
+<h2>怎么做的</h2>
+<pre><code class="language-text">6-DoF 目标相机轨迹
+    ↓
+OpenGL 渲染合成格架 + 环境球
+    ↓
+每个目标时刻一张控制帧
+    ↓
+Video VAE 编成 camera latent
+    ↓
+与带噪场景 latent 沿通道拼接 → DiT
+</code></pre>
+<p>这叫“半显式”：比单个 pose embedding 更直观，比输入场景的点云重建更自由。格架永远存在，所以走出原视野仍有控制提示。</p>
+<h2>数字例子</h2>
+<p>用最简单的小孔投影 <span class="tex math-inline" data-display="false">u=fX/Z</span> 看平移。<span class="tex math-inline" data-display="false">f</span> 是焦距，<span class="tex math-inline" data-display="false">X</span> 是点相对相机的横向坐标，<span class="tex math-inline" data-display="false">Z</span> 是深度，<span class="tex math-inline" data-display="false">u</span> 是屏幕横坐标。</p>
+<p>取 <span class="tex math-inline" data-display="false">f=100</span>：</p>
+<pre><code class="language-text">远点：(X,Z)=(2,4) → u=100×2/4=50
+相机右移 1 → 相对 X=1 → u'=100×1/4=25
+屏幕位移：25−50=−25
 
-&lt;frame&gt;&lt;quat&gt;&lt;0&gt;&lt;0&gt;&lt;0&gt;&lt;1000&gt;&lt;/quat&gt;
-&lt;offset&gt;&lt;600&gt;&lt;0&gt;&lt;800&gt;&lt;/offset&gt;&lt;scale&gt;&lt;125&gt;&lt;/scale&gt;&lt;/frame&gt;
+近点：(X,Z)=(2,2) → u=100
+相机右移 1 → u'=50
+屏幕位移：50−100=−50
 </code></pre>
-<p>解码先除以 1000：<code>u=(0.6,0,0.8)</code>。再把厘米转米：</p>
-<pre><code class="language-text">t = u × s_cm / 100
-  = (0.6,0,0.8) × 125 / 100
-  = (0.75,0,1.00) m
-</code></pre>
-<p>自检：方向长度 <span class="tex math-inline" data-display="false">\sqrt{0.6^{2}+0.8^{2}}=1</span>；平移长度 <span class="tex math-inline" data-display="false">\sqrt{0.75^{2}+1^{2}}=1.25m</span>，与 scale 一致。</p>
-<h2>为什么不直接输出三个平移数</h2>
-<p>方向和尺度拆开后，方向永远落在 <code>[-1,1]</code>，能复用固定 <code>[-1000,1000]</code> 量化表；尺度则用厘米 token 覆盖 1cm–10m。代价是自回归解码必须同时保证四元数归一、方向单位长度和标签格式正确，模型生成的整数也不天然满足几何约束。</p>
-<h2>工程证据</h2>
-<p>论文为相机位姿复用基础模型词表最后 2,009 项：2,001 个数值 token 加 8 个结构 token。官方当前源码的解析器将 <code>&lt;quat&gt;</code> 与 <code>&lt;offset&gt;</code> 整数除以 1000，再按 <span class="tex math-inline" data-display="false">translation =offset \times scale / 100</span> 还原米制平移。</p>
+<p>相机同样右移 1，近点在屏幕上移动 50，远点只移动 25。这种“近快远慢”的格线变形就是视差，模型不用从六个外参数字里重新发明它。</p>
+<p>自检：把相机移回原位，两点的相对 <span class="tex math-inline" data-display="false">X</span> 恢复 2，投影也回到 50 和 100。</p>
+<h2>跟位姿 embedding / 点云重渲染对照</h2>
+<table>
+<thead>
+<tr>
+<th>控制表示</th>
+<th style="text-align: right;">像素对齐</th>
+<th style="text-align: right;">走出原视野</th>
+<th style="text-align: right;">外部重建依赖</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>pose / ray embedding</td>
+<td style="text-align: right;">弱或间接</td>
+<td style="text-align: right;">可以</td>
+<td style="text-align: right;">低</td>
+</tr>
+<tr>
+<td>输入点云重渲染</td>
+<td style="text-align: right;">强</td>
+<td style="text-align: right;">空洞</td>
+<td style="text-align: right;">高</td>
+</tr>
+<tr>
+<td>Pixel-Space Coordinate Field</td>
+<td style="text-align: right;">强</td>
+<td style="text-align: right;">仍有合成格架</td>
+<td style="text-align: right;">只需轻量 renderer</td>
+</tr>
+</tbody>
+</table>
 <h2>链接</h2>
 <ul>
-<li><a href="../concepts/decodable-vision-representation.html">decodable-vision-representation</a> · 连续视觉量如何进入生成接口</li>
-<li><a href="../concepts/tokenization.html">tokenization</a> · 连续值量化成离散符号的通用取舍</li>
-<li><a href="../papers/sensenova-vision.html">sensenova-vision</a> · 多视图 point map 与 pose 的统一训练</li>
+<li><a href="../papers/wonder-video-world-model.html">wonder-video-world-model</a> · 提出这套相机控制表示</li>
+<li><a href="../concepts/camera-pose-tokenization.html">camera-pose-tokenization</a> · 对照：把连续位姿写成离散 token</li>
+<li><a href="../concepts/video-vae.html">video-vae</a> · 控制帧与场景帧共用的视频 latent 接口</li>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · 最终读取像素对齐控制的主干</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 5 处</span>
-  <ul><li><a href="../papers/sensenova-vision.html"><span class="cat">paper</span>SenseNova-Vision · 不接任务专用头，怎样让一个模型同时写框、画深度、生成 mask</a></li><li><a href="../concepts/decodable-vision-representation.html"><span class="cat">concept</span>Decodable Vision Representation · 可解码视觉表示</a></li><li><a href="../concepts/pixel-space-coordinate-field.html"><span class="cat">concept</span>Pixel-Space Coordinate Field · 把相机轨迹画成控制视频</a></li><li><a href="../concepts/projective-rope.html"><span class="cat">concept</span>PRoPE · 把相机几何写进注意力</a></li><li><a href="../concepts/raymap.html"><span class="cat">concept</span>Raymap · 用每个像素的一条三维射线表示相机</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/wonder-video-world-model.html"><span class="cat">paper</span>Wonder · 把图片或视频变成能实时移动相机的生成世界</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/camera-pose-tokenization.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/pixel-space-coordinate-field.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 

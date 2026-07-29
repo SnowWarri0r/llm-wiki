@@ -1,8 +1,8 @@
 ---
 name: dmd-distillation
 type: concept
-sources: [dmd, dmd2, data-forcing-distillation, senseflow, qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2, drifting-models, drift-ar, minwm]
-updated: 2026-07-26
+sources: [dmd, dmd2, data-forcing-distillation, senseflow, qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2, drifting-models, drift-ar, minwm, wonder-video-world-model]
+updated: 2026-07-29
 ---
 
 # DMD 蒸馏 · 匹配整批图像，不逐步临摹老师

@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Camera Pose Tokenization · 相机位姿 Token 化 · Concept</title>
+<title>GAN Control Regularization · 让判别器专门盯住相机有没有走偏 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,61 +53,78 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · camera-pose-tokenization</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · gan-control-regularization</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Camera Pose Tokenization · 相机位姿 Token 化</h1>
+  <h1>GAN Control Regularization · 让判别器专门盯住相机有没有走偏</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>把旋转四元数、平移方向和厘米尺度量化成 <code>[-1000,1000]</code> 的专用 token，让语言解码器像写结构化文本一样写相机位姿，再按确定公式还原成米制平移。</p>
-<h2>表示拆分</h2>
-<p>相对位姿分成三块：</p>
+<p>DMD 主要修局部纹理，Wonder 再用冻结 teacher 的低频特征比较真实轨迹与学生 rollout，给相机布局单独补一股梯度。</p>
+<h2>直觉</h2>
+<p>四步因果 student 每次只偏一点，滚几十个 chunk 后相机可能飞得过快、方向跑偏，最后整幅图糊掉。标准 DMD 的 score 差更容易盯到边缘和纹理；逐像素 L2 虽能拽回轨迹，却会把未知区域平均得模糊。</p>
+<p>Wonder 把真实 latent 和 student latent 加同一份高噪声，送进同一个冻结 camera-conditioned teacher。它不直接判“哪张图更真”，而是比较 teacher 从浅层到中层的低频特征变化是否像一条听话的相机轨迹。</p>
+<h2>怎么做的</h2>
+<p>同噪声扰动：</p>
+<div class="tex math-display" data-display="true">z_\tau^r=\alpha_\tau z_0+\sigma_\tau\epsilon,\qquad
+z_\tau^f=\alpha_\tau\hat z_0+\sigma_\tau\epsilon.</div>
 <ul>
-<li><code>q=(qx,qy,qz,qw)</code>：单位四元数，表示旋转；</li>
-<li><code>u=(ux,uy,uz)</code>：单位方向向量，只说明往哪移动；</li>
-<li><span class="tex math-inline" data-display="false">s_{\mathrm{cm}}</span>：移动尺度，单位厘米，范围 1–1000，对应 0.01–10m。</li>
+<li><span class="tex math-inline" data-display="false">z_0</span>：真实视频 latent。</li>
+<li><span class="tex math-inline" data-display="false">\hat z_0</span>：student rollout latent。</li>
+<li><span class="tex math-inline" data-display="false">r/f</span>：real / fake 标签，不是指数。</li>
+<li><span class="tex math-inline" data-display="false">\epsilon</span>：两支共享的高斯噪声。</li>
 </ul>
-<p>四元数与方向分量都乘 1000 并取专用数值 token；<code>&lt;1&gt;</code> 在 scale 字段里表示 1cm。边界标签 <code>&lt;frame&gt; / &lt;quat&gt; / &lt;offset&gt; / &lt;scale&gt;</code> 负责结构。</p>
-<h2>完整数字例</h2>
-<p>第二帧相对第一帧不旋转，向 <code>(0.6,0,0.8)</code> 方向移动 <code>1.25m</code>：</p>
-<pre><code class="language-text">q = (0,0,0,1)           → &lt;0&gt;&lt;0&gt;&lt;0&gt;&lt;1000&gt;
-u = (0.6,0,0.8)         → &lt;600&gt;&lt;0&gt;&lt;800&gt;
-s = 1.25m = 125cm       → &lt;125&gt;
+<p>冻结 teacher 取第 1 层和三个中层特征；线性投影到同空间后相减，再用 stride convolution 压低高频：</p>
+<div class="tex math-display" data-display="true">\Delta F_{M_i}^x=
+\psi_i\big(\eta_i(F_{M_i}^x)-\eta_1(F_1^x)\big).</div>
+<p>register token cross-attend 这些低频图，汇总成相机一致性 logit <span class="tex math-inline" data-display="false">d^x</span>。最后用相对 softplus：</p>
+<div class="tex math-display" data-display="true">L_D=\operatorname{softplus}(d^f-d^r),\qquad
+L_G=\operatorname{softplus}(d^r-d^f).</div>
+<p><span class="tex math-inline" data-display="false">\operatorname{softplus}(x)=\log(1+e^x)</span>。判别器希望 real 分数高于 fake；生成器希望 fake 追上 real。</p>
+<h2>数字例子</h2>
+<p>先看共享噪声为什么重要。取 <span class="tex math-inline" data-display="false">\alpha=.2,\sigma=.98,\epsilon=.5,z_0=2,\hat z_0=1</span>：</p>
+<pre><code class="language-text">z_r = .2×2 + .98×.5 = .89
+z_f = .2×1 + .98×.5 = .69
+差值 = .20
 
-&lt;frame&gt;&lt;quat&gt;&lt;0&gt;&lt;0&gt;&lt;0&gt;&lt;1000&gt;&lt;/quat&gt;
-&lt;offset&gt;&lt;600&gt;&lt;0&gt;&lt;800&gt;&lt;/offset&gt;&lt;scale&gt;&lt;125&gt;&lt;/scale&gt;&lt;/frame&gt;
+直接代数：
+z_r−z_f = α(z_0−z_hat_0) + σ(ε−ε)
+        = .2×(2−1) + 0
+        = .20
 </code></pre>
-<p>解码先除以 1000：<code>u=(0.6,0,0.8)</code>。再把厘米转米：</p>
-<pre><code class="language-text">t = u × s_cm / 100
-  = (0.6,0,0.8) × 125 / 100
-  = (0.75,0,1.00) m
+<p>同一份噪声会在差值里抵消，比较仍落在 real/fake 的信号差上。</p>
+<p>再算生成器损失。若 <span class="tex math-inline" data-display="false">d^r=1.2,d^f=.3</span>：</p>
+<pre><code class="language-text">L_G = log(1+exp(1.2−.3))
+    = log(1+exp(.9))
+    ≈ 1.241
 </code></pre>
-<p>自检：方向长度 <span class="tex math-inline" data-display="false">\sqrt{0.6^{2}+0.8^{2}}=1</span>；平移长度 <span class="tex math-inline" data-display="false">\sqrt{0.75^{2}+1^{2}}=1.25m</span>，与 scale 一致。</p>
-<h2>为什么不直接输出三个平移数</h2>
-<p>方向和尺度拆开后，方向永远落在 <code>[-1,1]</code>，能复用固定 <code>[-1000,1000]</code> 量化表；尺度则用厘米 token 覆盖 1cm–10m。代价是自回归解码必须同时保证四元数归一、方向单位长度和标签格式正确，模型生成的整数也不天然满足几何约束。</p>
-<h2>工程证据</h2>
-<p>论文为相机位姿复用基础模型词表最后 2,009 项：2,001 个数值 token 加 8 个结构 token。官方当前源码的解析器将 <code>&lt;quat&gt;</code> 与 <code>&lt;offset&gt;</code> 整数除以 1000，再按 <span class="tex math-inline" data-display="false">translation =offset \times scale / 100</span> 还原米制平移。</p>
+<p>student 改好后 <span class="tex math-inline" data-display="false">d^f</span> 升到 1.0：</p>
+<pre><code class="language-text">L_G = log(1+exp(.2)) ≈ .798
+</code></pre>
+<p>损失下降，说明 fake 的相机一致性分数追近 real。自检：<span class="tex math-inline" data-display="false">d^f=d^r</span> 时 <span class="tex math-inline" data-display="false">L_G=\log 2\approx.693</span>，相对差为 0。</p>
+<h2>边界</h2>
+<p>“低频 = 相机”是有针对性的工程代理，不是定理。高噪声、跨层差与 stride conv 共同压纹理，但也可能保留与物体大运动相关的低频变化。论文没有单独消融这项损失，也没公开高噪声范围、层号、卷积配置和权重。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../concepts/decodable-vision-representation.html">decodable-vision-representation</a> · 连续视觉量如何进入生成接口</li>
-<li><a href="../concepts/tokenization.html">tokenization</a> · 连续值量化成离散符号的通用取舍</li>
-<li><a href="../papers/sensenova-vision.html">sensenova-vision</a> · 多视图 point map 与 pose 的统一训练</li>
+<li><a href="../papers/wonder-video-world-model.html">wonder-video-world-model</a> · 提出这项控制正则</li>
+<li><a href="../concepts/dmd-distillation.html">dmd-distillation</a> · 主分布匹配损失</li>
+<li><a href="../papers/dmd2.html">dmd2</a> · 对照：DMD2 的 GAN 更偏高频真实感</li>
+<li><a href="../concepts/gradient-backprop.html">gradient-backprop</a> · 生成器与判别器怎样收到相反目标</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 5 处</span>
-  <ul><li><a href="../papers/sensenova-vision.html"><span class="cat">paper</span>SenseNova-Vision · 不接任务专用头，怎样让一个模型同时写框、画深度、生成 mask</a></li><li><a href="../concepts/decodable-vision-representation.html"><span class="cat">concept</span>Decodable Vision Representation · 可解码视觉表示</a></li><li><a href="../concepts/pixel-space-coordinate-field.html"><span class="cat">concept</span>Pixel-Space Coordinate Field · 把相机轨迹画成控制视频</a></li><li><a href="../concepts/projective-rope.html"><span class="cat">concept</span>PRoPE · 把相机几何写进注意力</a></li><li><a href="../concepts/raymap.html"><span class="cat">concept</span>Raymap · 用每个像素的一条三维射线表示相机</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/wonder-video-world-model.html"><span class="cat">paper</span>Wonder · 把图片或视频变成能实时移动相机的生成世界</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/camera-pose-tokenization.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/gan-control-regularization.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
