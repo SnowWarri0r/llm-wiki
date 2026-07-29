@@ -302,11 +302,44 @@ xt = .8×2 + .6×(−.5)
 
     <h3>网络吐出来的不是 score，还得换一步</h3>
     <p>这一点容易被跳过：<strong>扩散网络的输出并不是 score</strong>，它预测的是 <code class="m">y_t^{*}</code>（噪声、速度，看 backbone 而定）。score 要再换算一次。以最常见的「预测噪声」为例，换算式来自加噪定义本身：</p>
-    <div class="formula" data-expr="p_t(x_t\mid x)=\mathcal N(\alpha_t x,\ \sigma_t^2 I)\;\Longrightarrow\; \nabla_{x_t}\log p_t(x_t\mid x)=-\frac{x_t-\alpha_t x}{\sigma_t^{2}}=-\frac{\epsilon}{\sigma_t}"></div>
-    <p>逐步读：高斯的对数密度对自变量求导，得到 <code class="m">-(x_t-\text{均值})/\text{方差}</code>；而 <code class="m">x_t-\alpha_t x</code> 按加噪定义正好等于 <code class="m">\sigma_t\epsilon</code>，约掉一个 <code class="m">\sigma_t</code> 就剩 <code class="m">-\epsilon/\sigma_t</code>。网络给出的是对 <code class="m">\epsilon</code> 的估计 <code class="m">\hat\epsilon</code>，于是：</p>
-    <pre>接着上面那个例子：σ=.6，网络这一步估出 ε̂ = −.5
+    <p><strong>换算的起点是这一行，它凭什么成立要先讲清：</strong></p>
+    <div class="formula" data-expr="p_t(x_t\mid x)=\mathcal N(\alpha_t x,\ \sigma_t^2 I)"></div>
+    <div class="symbols">
+      <div class="symbol"><code class="m">p_t(x_t\mid x)</code>竖线读作「在 <code class="m">x</code> 已知的前提下」：钉住某一条具体视频，看它在时刻 <code class="m">t</code> 加噪后会落在哪。</div>
+      <div class="symbol"><code class="m">\mathcal N(\mu,\Sigma)</code>高斯分布，前一格是均值 <code class="m">\mu</code>，后一格是协方差 <code class="m">\Sigma</code>。</div>
+      <div class="symbol"><code class="m">I</code>单位矩阵。出现在协方差那一格，意思是各分量独立、抖动幅度一样。</div>
+    </div>
+    <p>三步就能推出来，全部来自上面那条加噪定义 <code class="m">x_t=\alpha_t x+\sigma_t\epsilon</code>：</p>
+    <p><strong>① 除了 <code class="m">\epsilon</code>，右边全是常数。</strong><code class="m">\alpha_t,\sigma_t</code> 是事先排好的调度表，<code class="m">x</code> 被条件钉住了——所谓「给定 <code class="m">x</code>」就是把它当固定数值看。整个式子里唯一还在随机的只有 <code class="m">\epsilon</code>。</p>
+    <p><strong>② 高斯乘常数、加常数，还是高斯。</strong><code class="m">\epsilon\sim\mathcal N(0,I)</code> 是一团标准噪声；乘 <code class="m">\sigma_t</code> 是按比例放大缩小，加 <code class="m">\alpha_t x</code> 是整体平移。钟形还是钟形，只是换了位置和胖瘦。</p>
+    <p><strong>③ 均值和方差直接算。</strong>均值：<code class="m">\mathbb E[x_t]=\alpha_t x+\sigma_t\,\mathbb E[\epsilon]=\alpha_t x</code>，因为 <code class="m">\mathbb E[\epsilon]=0</code>。方差：乘一个常数，方差要乘这个常数的<strong>平方</strong>，所以 <code class="m">\mathrm{Var}(\sigma_t\epsilon)=\sigma_t^2\cdot I=\sigma_t^2I</code>；平移不改变方差。两格填进去就是那一行。</p>
+    <pre>延续上面的数：x=2, α=.8, σ=.6
 
-s = −ε̂ / σ = −(−.5) / .6 = <b>+.8333</b>
+  均值   = .8 × 2 = 1.6
+  标准差 = .6      → 方差 .36
+  所以 p_t(x_t|x) 就是「中心在 1.6、标准差 .6」的那根钟形曲线
+
+刚才采到 ε=−.5 得出的 x_t=1.3，只是这根曲线上的<b>一个样本点</b>，不是分布本身。
+换一次 ε 就落到别处：ε=+1 → .8×2+.6×1 = 2.2。
+
+I 那一格在管什么（换成两维才看得出来）：x=[2, −1]
+  均值   = [1.6, −.8]
+  协方差 = .36 × [[1,0],[0,1]] = [[.36,   0],
+                                 [  0, .36]]
+           对角线两个数相等 → 每个分量抖得一样多
+           非对角是 0       → 分量之间不相关，噪声各自独立地加</pre>
+    <div class="note"><strong>反过来看更能体会这个条件有多关键。</strong>把条件去掉，<code class="m">p_t(x_t)</code>（不指定是哪条视频）是全体真实视频各自加噪后的钟形曲线叠在一起——一团没有闭式表达的东西，score 只能拿网络去拟合。<strong>给定 <code class="m">x</code> 之后它才退化成一根干净的高斯</strong>，score 才能像下面这样手写出来。这也正是扩散训练能有监督标签的原因：单条样本的那一步是算得出来的。</div>
+    <p>有了这根高斯，score 就是纯代数了。高斯的密度取对数以后是个二次式，跟 <code class="m">x_t</code> 无关的部分归到常数里，求导时直接消失：</p>
+    <div class="formula" data-expr="\log p_t(x_t\mid x)=-\frac{\|x_t-\alpha_t x\|_2^2}{2\sigma_t^{2}}+\mathrm{const}"></div>
+    <p>对 <code class="m">x_t</code> 求导：外层 <code class="m">-1/(2\sigma_t^2)</code> 是常数拎着不动，里层平方求导给出 <code class="m">2(x_t-\alpha_t x)</code>，一个 2 上下约掉——</p>
+    <div class="formula" data-expr="\nabla_{x_t}\log p_t(x_t\mid x)=-\frac{x_t-\alpha_t x}{\sigma_t^{2}}"></div>
+    <p>最后把加噪定义代回去。<code class="m">x_t-\alpha_t x</code> 按定义本来就等于 <code class="m">\sigma_t\epsilon</code>，分子分母各约掉一个 <code class="m">\sigma_t</code>：</p>
+    <div class="formula" data-expr="-\frac{x_t-\alpha_t x}{\sigma_t^{2}}=-\frac{\sigma_t\epsilon}{\sigma_t^{2}}=-\frac{\epsilon}{\sigma_t}"></div>
+    <p>这一步的意义是把 score 换成了网络真正会输出的东西：网络给出的是对 <code class="m">\epsilon</code> 的估计 <code class="m">\hat\epsilon</code>，代进去就得到可以直接算的 <code class="m">s=-\hat\epsilon/\sigma_t</code>。</p>
+    <pre>接着上面那个例子：x_t=1.3，α_t x=1.6，σ=.6，网络这一步估出 ε̂ = −.5
+
+按均值算：s = −(1.3 − 1.6) / .36 = .3 / .36 = <b>+.8333</b>
+按噪声算：s = −ε̂ / σ = −(−.5) / .6         = <b>+.8333</b>   ✓ 两条路对上了
 
 正号说明「往正方向改更像数据」—— 因为噪声把它往负方向拽了 .3，
 score 就指回来。这个 +.8333 才是后面 g_DMD 里 s_real / s_fake 的那种量。</pre>
