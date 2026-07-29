@@ -69,6 +69,7 @@
 <h2>直觉 · RVQ 的 8 层不该排成 8 倍长队</h2>
 <p><a href="../concepts/rvq-codec.html">rvq-codec</a> 把每帧音频量化成<strong>多层 code</strong>（Mimi 是 8 层：第 1 层粗轮廓，往后逐层补残差细节）。一秒 12.5 帧、每帧 8 层 → 如果像普通自回归那样一个 code 一个 code 地吐，序列瞬间变 8 倍长，又慢又难训。</p>
 <p>MTP 的办法：<strong>每个解码步一次预测多层</strong>（模型在每个位置有多个输出头 / 一个能出多路的结构）。这样序列长度回到"每步一列"，不膨胀。但有个坑：RVQ 的层是<strong>残差依赖</strong>的（第 k 层量化前 k−1 层的残差），直接同帧 8 层一起吐会丢掉这个依赖——所以真正用起来要配<strong>延迟错位</strong>（下一节）。</p>
+<p>DuplexOmni 走的是 Qwen3-Omni 的另一种 MTP 组织：Talker 先自回归预测当前帧的 layer-0 codec token，MTP 再以 Talker 隐状态和 layer-0 为条件，预测其余残差 codebook。公开 checkpoint 是 16 组 code，因此一帧是 1 个主码 + 15 个残差码。它和下面 minimind-o 的 8 层 delay pattern 不能直接画等号。</p>
 <h2>关键 · 阶梯并行（delay pattern）· 依赖斜着保住</h2>
 <p>要点先说清：<strong>纯"同帧 8 层一起吐"会丢残差依赖</strong>，那是裸近似。真正用的是<strong>延迟错位</strong>——把第 k 层在时间轴上往后挪 k−1 帧，于是每个解码步吐的是一条<strong>对角线</strong>（不同帧的不同层）。</p>
 <figure style="margin:26px 0; padding:22px; background:#eef2f7; border:1px solid #9fb3c8; border-radius:4px;">
@@ -229,12 +230,13 @@ def forward(self, x):
 <li><a href="../concepts/thinker-talker.html">thinker-talker</a> · Talker 用 MTP 渲染 codes</li>
 <li><a href="../concepts/dual-ar.html">dual-ar</a> · fish-speech 处理多码本的另一种结构</li>
 <li><a href="../papers/minimind-o.html">minimind-o</a> · 用 MTP 的 0.1B Omni</li>
+<li><a href="../papers/duplexomni.html">duplexomni</a> · layer-0 自回归 + 15 层残差码 MTP</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 3 处</span>
-  <ul><li><a href="../papers/minimind-o.html"><span class="cat">paper</span>MiniMind-O · 0.1B 端到端 Omni</a></li><li><a href="../concepts/forced-alignment.html"><span class="cat">concept</span>Forced Alignment · 强制对齐 · 把已知文字钉到时间轴上</a></li><li><a href="../concepts/thinker-talker.html"><span class="cat">concept</span>Thinker–Talker · 想的和说的分两条路</a></li></ul>
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/duplexomni.html"><span class="cat">paper</span>DuplexOmni · 边听边说时，后台还能继续想</a></li><li><a href="../papers/minimind-o.html"><span class="cat">paper</span>MiniMind-O · 0.1B 端到端 Omni</a></li><li><a href="../concepts/forced-alignment.html"><span class="cat">concept</span>Forced Alignment · 强制对齐 · 把已知文字钉到时间轴上</a></li><li><a href="../concepts/thinker-talker.html"><span class="cat">concept</span>Thinker–Talker · 想的和说的分两条路</a></li></ul>
 </div>
 
 <div class="colophon">
