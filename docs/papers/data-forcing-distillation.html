@@ -362,8 +362,32 @@ I 那一格在管什么（换成两维才看得出来）：x=[2, −1]
            对角线两个数相等 → 每个分量抖得一样多
            非对角是 0       → 分量之间不相关，噪声各自独立地加</pre>
     <div class="note"><strong>反过来看更能体会这个条件有多关键。</strong>把条件去掉，<code class="m">p_t(x_t)</code>（不指定是哪条视频）是全体真实视频各自加噪后的钟形曲线叠在一起——一团没有闭式表达的东西，score 只能拿网络去拟合。<strong>给定 <code class="m">x</code> 之后它才退化成一根干净的高斯</strong>，score 才能像下面这样手写出来。这也正是扩散训练能有监督标签的原因：单条样本的那一步是算得出来的。</div>
-    <p>有了这根高斯，score 就是纯代数了。高斯的密度取对数以后是个二次式，跟 <code class="m">x_t</code> 无关的部分归到常数里，求导时直接消失：</p>
-    <div class="formula" data-expr="\log p_t(x_t\mid x)=-\frac{\|x_t-\alpha_t x\|_2^2}{2\sigma_t^{2}}+\mathrm{const}"></div>
+    <p>有了这根高斯，score 就是纯代数了。但要求导得先把<strong>密度本体</strong>写出来——「高斯」这三个字对应的就是这个式子：</p>
+    <div class="formula wide" data-expr="p_t(x_t\mid x)=\frac{1}{(2\pi\sigma_t^{2})^{d/2}}\exp\!\left(-\frac{\|x_t-\alpha_t x\|_2^2}{2\sigma_t^{2}}\right)"></div>
+    <div class="symbols">
+      <div class="symbol"><code class="m">\exp(u)</code>就是 <code class="m">e^u</code>。高斯的形状全在这个指数里。</div>
+      <div class="symbol"><code class="m">\|x_t-\alpha_t x\|_2^2</code>先算 L2 范数（各分量平方和再开根），再整体平方——根号被平方消掉，剩下的就是「离中心多远」的平方和。</div>
+      <div class="symbol"><code class="m">d</code>latent 的分量个数。<code class="m">(2\pi\sigma_t^{2})^{d/2}</code> 只是把曲线下面积压成 1 的归一化系数，里面没有 <code class="m">x_t</code>。</div>
+    </div>
+    <p>形状为什么长这样：钟形的定义就是<strong>离中心越远，密度按距离的平方指数衰减</strong>。<code class="m">\sigma_t</code> 越大，分母越大，同样的距离被罚得越轻，曲线就越胖。前面那个系数不参与形状，它只管把总面积压成 1。</p>
+    <p>取对数只用两条规则：<code class="m">\log(AB)=\log A+\log B</code>（乘变加）、<code class="m">\log e^{u}=u</code>（<code class="m">\log</code> 和 <code class="m">\exp</code> 互为反函数，直接抵消）。套上去：</p>
+    <div class="formula wide" data-expr="\begin{aligned}\log p_t(x_t\mid x)&=\log\frac{1}{(2\pi\sigma_t^{2})^{d/2}}+\log\exp\!\left(-\frac{\|x_t-\alpha_t x\|_2^2}{2\sigma_t^{2}}\right)&&\text{乘变加}\\[2pt]&=-\frac{d}{2}\log(2\pi\sigma_t^{2})\;-\;\frac{\|x_t-\alpha_t x\|_2^2}{2\sigma_t^{2}}&&\log\exp\ \text{抵消}\\[2pt]&=-\frac{\|x_t-\alpha_t x\|_2^2}{2\sigma_t^{2}}+\mathrm{const}&&\text{第一项不含 }x_t\end{aligned}"></div>
+    <p><strong>「二次式」指的就是剩下这一项</strong>：把范数展开，<code class="m">x_t</code> 的最高次数是 2。一维代进数字最清楚：</p>
+    <pre>σ=.6 → 2σ² = .72，α_t x = 1.6
+
+−(x_t − 1.6)² / .72
+  = −(x_t² − 3.2·x_t + 2.56) / .72          ← 括号展开
+  = −1.3889·x_t² + 4.4444·x_t − 3.5556      ← 这就是「二次式」：x_t 的最高次是 2
+
+const 那一项 = −(1/2)·ln(2π × .36) = ln(1/1.504) = −.4081，里面没有 x_t
+
+代两个点把整根曲线验一下（.6649 = 1/(√(2π)×.6)，就是那个归一化系数）：
+  x_t=1.3： 密度 = .6649 × exp(−.09/.72) = .6649 × .8825 = .5868
+            ln .5868 = <b>−.5331</b> = −.4081（const）+ (−.125)（二次项）  ✓
+  x_t=2.2： 密度 = .6649 × exp(−.36/.72) = .6649 × .6065 = .4033
+            ln .4033 = <b>−.9081</b> = −.4081（const）+ (−.500)（二次项）  ✓
+
+两个点的 const 一模一样，变的只有二次项 —— 所以下一步求导时它整块消失。</pre>
     <p>对 <code class="m">x_t</code> 求导：外层 <code class="m">-1/(2\sigma_t^2)</code> 是常数拎着不动，里层平方求导给出 <code class="m">2(x_t-\alpha_t x)</code>，一个 2 上下约掉——</p>
     <div class="formula" data-expr="\nabla_{x_t}\log p_t(x_t\mid x)=-\frac{x_t-\alpha_t x}{\sigma_t^{2}}"></div>
     <p>最后把加噪定义代回去。<code class="m">x_t-\alpha_t x</code> 按定义本来就等于 <code class="m">\sigma_t\epsilon</code>，分子分母各约掉一个 <code class="m">\sigma_t</code>：</p>
