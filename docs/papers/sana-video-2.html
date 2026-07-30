@@ -39,6 +39,9 @@ p{max-width:1010px;margin:12px 0}
 strong{font-weight:850}
 a{color:var(--blue);text-underline-offset:4px}
 code{font:500 .86em/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;background:#fffaf0;border:1px solid var(--rule);padding:1px 5px;border-radius:3px}
+pre{max-width:1030px;overflow-x:auto;background:var(--night);color:#f4efe0;border-left:5px solid var(--cyan);padding:19px 22px;margin:20px 0;font:500 14px/1.74 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre}
+pre b{color:var(--lime);font-weight:800}
+pre i{color:var(--goldsoft);font-style:normal}
 .note{max-width:1030px;background:var(--card);border-left:5px solid var(--gold);padding:17px 20px;margin:22px 0}
 .note.warn{border-color:var(--orange);background:var(--orangesoft)}
 .note .tag{font-size:10px;letter-spacing:2px;color:var(--gold);font-weight:900;display:block}
@@ -91,10 +94,13 @@ figure{margin:34px 0;padding:27px;background:rgba(255,253,245,.72);border:1px so
 .step b{font:900 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--cyan);letter-spacing:1px}
 .step strong{display:block;font-size:23px;margin:10px 0 6px}
 .step p{font-size:14px;line-height:1.5;margin:0}
-.axis{position:relative;padding:52px 20px 22px;margin:16px 0}
+.axis{position:relative;padding:78px 20px 22px;margin:16px 0}
 .line{height:5px;background:linear-gradient(90deg,var(--cyan),var(--gold),var(--orange));position:relative}
-.tick{position:absolute;top:-25px;transform:translateX(-50%);text-align:center;font:800 11px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace}
+.tick{position:absolute;top:-58px;transform:translateX(-50%);text-align:center;font:800 11px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace}
 .tick:after{content:"";display:block;width:2px;height:28px;background:var(--ink);margin:4px auto 0}
+/* 刻度里是「数值 + 说明」两行，不写这条会挤成 ".25shift ⅓" */
+.tick span,.tick strong{display:block;white-space:nowrap}
+.tick strong{color:var(--blue);font-weight:800}
 .badge{display:inline-block;padding:3px 9px;background:var(--limesoft);border:1px solid #789b27;font:800 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
 table{width:100%;border-collapse:collapse;font-size:15px}
 th,td{padding:11px 10px;border-bottom:1px solid var(--rule);text-align:right}
@@ -207,7 +213,26 @@ tr.win{background:var(--limesoft);font-weight:800}
       <div class="symbol"><code class="m">\sqrt{d_h}</code> · 控制点积尺度，避免 softmax 过早饱和。</div>
     </div>
     <div class="formula" data-expr="A=\operatorname{softmax}\!\left(\frac{QK^\top}{\sqrt{d_h}}\right),\qquad O=AV"></div>
-    <p>token 从 1,000 增到 10,000，不是多算十倍关系，而是从一百万格变成一亿格。FlashAttention<a class="jr" href="#g-03">03</a>能避免完整关系表反复落入显存，却没有把数学里的两两比较删掉。</p>
+    <p>这个式子是全页的地基，先用两个 token 完整走一遍。取 <code class="m">d_h=2</code>，把一个 token 的 query / key / value 都缩成两个数：</p>
+    <pre>token 1: q₁=[1, 1]   k₁=[1,  1]   v₁=[2, 0]
+token 2:              k₂=[1, −1]   v₂=[0, 4]
+
+① 打分：q₁ 跟每个 k 做点积（对应位相乘再相加）
+   q₁·k₁ = 1×1 + 1×( 1) = <b>2</b>
+   q₁·k₂ = 1×1 + 1×(−1) = <b>0</b>
+
+② 除 √d_h = √2 ≈ 1.414 —— 维度越高点积越容易冲得很大，
+   一大就把 softmax 推到「几乎全给一个」的饱和区，梯度就没了
+   2/1.414 = 1.4142     0/1.414 = 0
+
+③ softmax：先取 e 的指数（把负数也变正、把差距拉开），再各自除以总和
+   e^1.4142 = 4.1133    e^0 = 1
+   总和 = 5.1133
+   a₁ = 4.1133/5.1133 = <b>.8044</b>    a₂ = 1/5.1133 = <b>.1956</b>   （两者和为 1）
+
+④ 拿这两个权重去混 value
+   o₁ = .8044×[2, 0] + .1956×[0, 4] = [<b>1.609</b>, <b>.782</b>]</pre>
+    <p><strong>贵在哪一步，这么写就看清了</strong>：第 ① 步只算了 <code class="m">2\times2=4</code> 个分数，因为只有两个 token。真实视频里每个 token 都要走一遍第 ①②③ 步，格子数是 <code class="m">N\times N</code>。token 从 1,000 增到 10,000，不是多算十倍关系，而是从一百万格变成一亿格。FlashAttention<a class="jr" href="#g-03">03</a>能避免完整关系表反复落入显存，却没有把数学里的两两比较删掉。</p>
     <div class="note"><span class="tag">实测，不是复杂度口号</span>在论文的编译后、各自最佳 kernel、关闭 AttnRes 的主干对照里，720p / 24fps 拉到 60 秒时，全 softmax 比 25% softmax 混合主干慢 <strong>3.17×</strong>。</div>
   </section>
 
@@ -223,6 +248,24 @@ tr.win{background:var(--limesoft);font-weight:800}
       <div class="symbol"><code class="m">r</code> · 表示已应用 rotary position embedding，不是幂。</div>
     </div>
     <div class="formula" data-expr="S=\sum_{n=1}^{N}v_n\!\left(\beta_n k_n^r\right)^\top"></div>
+    <p><strong>先看清那个 <code class="m">\top</code>：列向量乘行向量得到的是一张表，不是一个数。</strong>这叫外积，和上一节点积正好相反——点积把两个向量压成一个标量，外积把它们摊成一个 <code class="m">d_h\times d_h</code> 的矩阵。这一步就是「写入」：<strong><code class="m">k_n</code> 当地址，<code class="m">v_n</code> 当内容，<code class="m">\beta_n</code> 当写入音量</strong>。仍取 <code class="m">d_h=2</code>、两个 token：</p>
+    <pre>token 1: k₁=[1, 0]  v₁=[2, 0]  β₁=1
+token 2: k₂=[0, 1]  v₂=[0, 4]  β₂=.5
+
+① 各自写一张表 —— 外积规则：第 i 行第 j 列 = v 的第 i 个数 × (βk) 的第 j 个数
+
+   token 1： v₁=[2, 0]   β₁k₁=[1, 0]
+      第 1 行 = 2 × [1, 0] = [2, 0]
+      第 2 行 = 0 × [1, 0] = [0, 0]
+
+   token 2： v₂=[0, 4]   β₂k₂=[0, .5]
+      第 1 行 = 0 × [0, .5] = [0, 0]
+      第 2 行 = 4 × [0, .5] = [0, 2]
+
+② 叠加成一份公共状态（两张表逐格相加）
+
+   S = [2, 0]
+       [0, 2]          ← 无论有多少 token，S 永远是 2×2</pre>
     <div class="symbols">
       <div class="symbol"><code class="m">j</code> · 正在读取状态的 query token。</div>
       <div class="symbol"><code class="m">\phi</code> · 本式取 ReLU，作为非负特征映射。</div>
@@ -232,6 +275,17 @@ tr.win{background:var(--limesoft);font-weight:800}
       <div class="symbol"><code class="m">W_o</code> · 把多头结果投影回模型宽度。</div>
     </div>
     <div class="formula wide" data-expr="o_j=W_o\!\left[\operatorname{RMSNorm}\!\left(\frac{Sq_j^r}{\sum_{n=1}^{N}\phi(k_n)^\top\phi(q_j)+\varepsilon}\right)\odot\sigma(g_j)\right]"></div>
+    <p>叠加完，用 query 去读它：<code class="m">Sq_j</code> 就是取回内容。这一步能看出「地址-内容」是真的：</p>
+    <pre>q = [1, 0]（对准 k₁）：Sq = [2, 0] = v₁×β₁     ← 取回 token 1 写的东西
+q = [0, 1]（对准 k₂）：Sq = [0, 2] = v₂×β₂     ← β₂=.5，音量小一半
+q = [1, 1]（两边都问）：Sq = [2, 2]             ← 两份内容按对准程度混起来
+
+再走完 o_j 那条式子的其余部分（q=[1,1]）：
+  分母 = Σ ReLU(k_n)·ReLU(q) + ε = [1,0]·[1,1] + [0,1]·[1,1] = 1 + 1 = 2
+        ↑ 这是归一化：token 越多、S 里堆的东西越多，读出来的数就越大，除掉才不飘
+  [2, 2] / 2 = [1, 1]
+  RMSNorm：√((1²+1²)/2) = 1，除完还是 [1, 1]（这组数刚好不变）
+  再乘输出 gate σ(g)，比如 .7 → [.7, .7]，最后过 W_o 投影回模型宽度</pre>
     <figure>
       <figcaption class="figcap"><span class="n">FIG 02 · 两种“看全片”</span><span>关系表 vs 固定状态</span></figcaption>
       <div class="compare">
@@ -254,8 +308,34 @@ tr.win{background:var(--limesoft);font-weight:800}
         </div>
       </div>
     </figure>
-    <p>关键交换是先算 <code class="m">\phi(K)^\top V</code>，再乘 <code class="m">\phi(Q)</code>。不再生成 <code class="m">N\times N</code> 中间关系表，长序列计算接近随 <code class="m">N</code> 线性增长。</p>
+    <h3>“交换一下乘法顺序”到底交换了什么</h3>
+    <p>省钱的全部秘密就是矩阵乘法可以换结合顺序：<code class="m">(QK^\top)V</code> 和 <code class="m">Q(K^\top V)</code> 结果完全一样，但中间产物一个是 <code class="m">N\times N</code>、一个是 <code class="m">d\times d</code>。用刚才那两个 token 对一遍账：</p>
+    <pre>K = [1, 0]      V = [2, 0]      Q = [1, 1]（一个 query）
+    [0, 1]          [0, 4]
+
+路线 A（先算关系表，softmax 那条路的形状）
+   QKᵀ = [1, 1]              ← 1×N，N 个分数
+   ×V  = 1×[2,0] + 1×[0,4] = [<b>2, 4</b>]
+   中间产物规模：N×N
+
+路线 B（先算状态，线性那条路）
+   KᵀV = [2, 0]              ← d×d，跟 N 无关
+         [0, 4]
+   Q×   = [2, 4] ← <b>同一个答案</b>
+   中间产物规模：d×d
+
+N=10,000、d=128 时：路线 A 的中间表 1 亿格，路线 B 的 16,384 格。</pre>
+    <p><strong>那为什么 softmax 不能也这么换？</strong>因为 <code class="m">A=\operatorname{softmax}(QK^\top/\sqrt{d_h})</code> 里的 softmax 卡在两次乘法<strong>中间</strong>，而它是非线性的——必须先把整行分数凑齐才能取指数、才能除以行内总和。<code class="m">K^\top V</code> 先算就跳过了这一行，softmax 无从下手。所以线性注意力的第一步不是「优化」softmax，而是<strong>把 softmax 换成一个可以拆开的 <code class="m">\phi</code></strong>（本文取 ReLU），代价就是下面这一条。</p>
     <div class="note warn"><span class="tag">省掉的正是可能丢掉的</span>若 head 维度是 128，状态矩阵的秩<a class="jr" href="#g-06">06</a>最高 128；即使视频有十万 token，它仍只有这么多独立方向。像把几千人的会议压成一页纪要：主题还在，但“谁在第几帧碰到什么”更容易被揉掉。</div>
+    <p>这条上界不是经验观察，是外积那一步直接决定的：<strong>每个 token 写进去的那张表都只有秩 1</strong>（每一行都是同一个向量 <code class="m">\beta_nk_n</code> 的倍数），而秩相加不会超过各自之和，所以 <code class="m">\operatorname{rank}(S)\le\min(N,d_h)</code>。<code class="m">N</code> 一旦超过 <code class="m">d_h</code>，后来的 token 就只能在已有方向里重新配比：</p>
+    <pre>给上面那个 S 再写进第三个 token：k₃=[1, 1]，v₃=[1, 1]，β₃=1
+
+   它的表 = [1, 1]      叠加后 S = [3, 1]
+            [1, 1]                [1, 3]
+
+形状还是 2×2，秩还是 2 —— 第三个 token 没能新开一个方向，
+只是把原来那两个方向重新混了一次。真实模型里这个 2 是 128，
+而 N 是十万级：绝大多数 token 都只是在这 128 个方向上「挤」。</pre>
   </section>
 
   <section id="hybrid">
@@ -307,6 +387,9 @@ tr.win{background:var(--limesoft);font-weight:800}
         <div class="arrow" aria-hidden="true">→</div>
         <div class="mix">
           <strong>logits [0, 1, 2] → softmax</strong>
+          <pre>e⁰=1  e¹=2.7183  e²=7.3891
+总和 = 11.1073
+1/11.1073=.090   2.7183/11.1073=.245   7.3891/11.1073=.665</pre>
           <div class="weightrow"><span>b₀</span><div class="bar"><i style="width:9%"></i></div><span>.090</span></div>
           <div class="weightrow"><span>b₁</span><div class="bar"><i style="width:24.5%"></i></div><span>.245</span></div>
           <div class="weightrow"><span>b₂</span><div class="bar"><i style="width:66.5%"></i></div><span>.665</span></div>
@@ -353,12 +436,26 @@ tr.win{background:var(--limesoft);font-weight:800}
     <span class="secno">06 · 时间步课程</span>
     <h2>动得好和画得好，不必总做同一档练习</h2>
     <p>预训练的 TQD<a class="jr" href="#g-11">11</a>不改 flow loss，只改变哪些 <code class="m">t</code> 更常被抽到。高运动但非最高画质的 clip 偏向高噪声，练全局运动与结构；高画质但非高运动的 clip 偏向低噪声，练细节恢复；两者都高或都不高时不偏移。</p>
-    <div class="formula" data-expr="\operatorname{logit}(t_s)=\operatorname{logit}(t)+\log s\qquad\Longleftrightarrow\qquad t_s=\frac{st}{1+(s-1)t}"></div>
     <div class="symbols">
-      <div class="symbol"><code class="m">t</code> · 原始 logit-normal 时间步。</div>
+      <div class="symbol"><code class="m">t</code> · 原始时间步。logit-normal = 先在 logit 轴上取正态，再压回 0–1，所以中间段抽得多、两端抽得少。</div>
       <div class="symbol"><code class="m">s</code> · flow shift；大于 1 偏向高噪声。</div>
       <div class="symbol"><code class="m">t_s</code> · shift 后真正送进训练的时间步。</div>
     </div>
+    <p><code class="m">\operatorname{logit}</code> 不是什么新东西，就是把概率换成<strong>赔率</strong>再取对数：<code class="m">\operatorname{logit}(t)=\log\frac{t}{1-t}</code>。<code class="m">t=.5</code> 时赔率 <code class="m">.5/.5=1</code>，取对数是 0，正好落在中间；<code class="m">t</code> 越靠 1，赔率越大。<strong>在 logit 上加 <code class="m">\log s</code>，等价于把赔率乘 <code class="m">s</code></strong>——这就是 shift 的全部含义。</p>
+    <div class="formula" data-expr="\operatorname{logit}(t_s)=\operatorname{logit}(t)+\log s\qquad\Longleftrightarrow\qquad t_s=\frac{st}{1+(s-1)t}"></div>
+    <p>右边那个闭式不是另一条规则，是左边解回概率的结果。六步，每步只做一件事：</p>
+    <pre>① 按定义展开    ln[t_s/(1−t_s)] = ln[t/(1−t)] + ln s
+② 右边合成一项  ln[t_s/(1−t_s)] = ln[ s·t/(1−t) ]      ← ln a + ln b = ln(ab)
+③ 两边去掉 ln       t_s/(1−t_s) = s·t/(1−t)            ← 赔率乘了 s
+④ 交叉相乘        t_s(1−t) = s·t(1−t_s)
+⑤ 乘开           t_s − t_s·t = s·t − s·t·t_s
+⑥ 把带 t_s 的项挪到一边、提出 t_s
+                 t_s(1 − t + s·t) = s·t
+                 t_s = s·t / (1 + (s−1)t)     ← 1 − t + s·t 就是 1 + (s−1)t
+
+代进 t=.5, s=3 对账：
+  走赔率：赔率 1 × 3 = 3  →  t_s = 3/(1+3) = <b>.75</b>
+  走闭式：3(.5)/[1+2(.5)] = 1.5/2 = <b>.75</b>   ✓ 一致</pre>
     <figure>
       <figcaption class="figcap"><span class="n">FIG 06 · 同一个 .5 被推向两侧</span><span>概率倾斜，不是删掉其他时间步</span></figcaption>
       <div class="axis">
@@ -413,6 +510,21 @@ tr.win{background:var(--limesoft);font-weight:800}
     <div class="formula wide" data-expr="e_\phi^\pm=\frac1D\left\|v_\phi(x_t^\pm,t,c)-(\epsilon-x^\pm)\right\|_2^2,\qquad \Delta_\phi=e_\phi^- - e_\phi^+"></div>
     <div class="formula wide" data-expr="\mathcal L=-\mathbb E\!\left[w\log\sigma\!\left(\beta(\Delta_\theta-\Delta_{\theta_{\rm ref}})\right)\right]+\lambda\mathbb E[e_\theta^+]"></div>
     <p><code class="m">w</code> 来自裁判分差，<code class="m">\beta</code> 控制偏好强度，<code class="m">\lambda</code> 控制 preferred flow regularizer。第一项要求策略比参考模型更会区分好坏；第二项防止模型只顾拉差距、忘掉生成目标。</p>
+    <p>这个式子光看符号很难有感觉，代三组数就清楚了。<code class="m">D=1</code>（当成标量），冻结参考模型在这一对视频上的误差是 <code class="m">e^+_{\rm ref}=.40</code>、<code class="m">e^-_{\rm ref}=.50</code>，所以 <code class="m">\Delta_{\rm ref}=.10</code>；取 <code class="m">w=1</code>、<code class="m">\beta=5</code>（论文没公开这两个数值，这里只为看清算式的走向）。</p>
+    <pre>                        e⁺    e⁻    Δ=e⁻−e⁺   β(Δ−Δref)   σ(·)     −ln σ
+参考模型（基准）        .40   .50    .10          —         —        —
+① 策略更会区分          .30   .60    .30        +1.00      .7311   <b>.313</b>
+② 策略反而更分不清      .42   .47    .05        −0.25      .4378   <b>.826</b>
+③ 两边一起变烂          .90  1.20    .30        +1.00      .7311   <b>.313</b>
+
+读 ①②：Δ 比参考大 → 括号为正 → σ 超过 .5 → −lnσ 变小。
+        「比参考模型更会区分好坏」在数值上就是这么落地的。
+
+读 ①③：<i>两行的第一项一模一样</i>。第一项只是 Δ 的函数，
+        e⁺ 从 .30 涨到 .90（生成质量已经烂了）它完全无感。
+        这就是第二项 λ·E[e⁺] 存在的唯一理由：把 e⁺ 的绝对值重新
+        拉回 loss 里 —— ① 罚 λ×.30，③ 罚 λ×.90。</pre>
+    <div class="note"><span class="tag">这里只说方向，不给权衡点</span>论文没有公开 <code class="m">\beta</code>、<code class="m">\lambda</code> 的取值，所以「③ 会不会真的被压住」取决于 <code class="m">\lambda</code> 多大，上表算不出来。能从式子本身确定的只有一件事：<strong>第一项对绝对误差水平完全不敏感，必须靠第二项兜住</strong>。</div>
     <h3>ReFL：当前模型先生成，再让三位裁判回传奖励</h3>
     <p>rollout 无梯度走到随机步骤，预测干净 latent，解码首帧 / 中帧 / 尾帧。HPSv3++、DeQA-Score、UniPercept<a class="jr" href="#g-14">14</a>按 4:4:1 合成奖励；梯度只穿当前模型评估和 decoder，不反传完整采样轨迹。400 iteration 三条训练 reward 都上升，但这不等于独立人评已全面胜出。</p>
   </section>
@@ -443,7 +555,14 @@ tr.win{background:var(--limesoft);font-weight:800}
       <div class="symbol"><code class="m">p_i</code> · 该奇异方向占全部奇异值之和的比例。</div>
       <div class="symbol"><code class="m">r_{\rm eff}</code> · 信息均匀分布在多少个方向；不是简单数非零项。</div>
     </div>
-    <p>若奇异值为 <code class="m">[3,1]</code>，则 <code class="m">p=[.75,.25]</code>，代入得到 <code class="m">r_{\rm eff}\approx1.75</code>。第二方向虽然非零，但只承载四分之一，因此有效秩小于 2。</p>
+    <p>这个式子就是<strong>把奇异值当成一个概率分布，算它的熵，再取指数</strong>。熵衡量「摊得多均匀」，取指数是把它换回「相当于几个方向」这种能直接读的单位。两个极端一算就明白：</p>
+    <pre>奇异值 σ    归一化 p        熵 H = −Σ p·ln p        r_eff = e^H
+[1, 1]      [.50, .50]      .693 (= ln 2)           <b>2.00</b>  ← 摊得完全均匀 = 满秩 2
+[3, 1]      [.75, .25]      .562                    <b>1.75</b>  ← 第二方向只承载 ¼
+[.99, .01]  [.99, .01]      .056                    <b>1.06</b>  ← 几乎全压在一个方向上
+
+所以 r_eff 落在 1 到 n 之间，n 是矩阵尺寸。</pre>
+    <p><strong>为什么不直接数非零奇异值。</strong>上面第三行那个矩阵，按普通秩算是 2（两个都非零），但第二个方向只占 1%，实际上没在承载信息；<code class="m">r_{\rm eff}=1.06</code> 才如实反映「其实只有一个方向在干活」。论文用它来说 AttnRes 让深层线性状态多用起来 11.7% 的方向——这个说法只有在有效秩这个口径下才成立。</p>
   </section>
 
   <section id="deploy">
@@ -466,7 +585,19 @@ tr.win{background:var(--limesoft);font-weight:800}
       <div class="ev"><span class="big">+0.03</span><p>QAT 相对 BF16 的 VBench Total 差值。</p></div>
       <div class="ev"><span class="big">+5.8%</span><p>GB200 单次 backbone forward 加速。</p></div>
     </div>
-    <p>当前只把 linear GEMM 做 MXFP4 weight / MXFP8 activation QAT<a class="jr" href="#g-16">16</a>；这些 GEMM 原本只占 BF16 runtime 的 16.2%，linear 与 softmax attention operator 仍是 BF16。省存储很多、延迟只小降并不矛盾。</p>
+    <p>当前只把 linear GEMM 做 MXFP4 weight / MXFP8 activation QAT<a class="jr" href="#g-16">16</a>；这些 GEMM 原本只占 BF16 runtime 的 16.2%，linear 与 softmax attention operator 仍是 BF16。省存储很多、延迟只小降并不矛盾——把这 16.2% 的账算完就一目了然：</p>
+    <pre>设被量化的那部分加速 k 倍，其余 83.8% 不变：
+   总时间 = .838 + .162/k
+
+k → ∞（这部分算到不要时间）：总时间 → .838
+   天花板 = 1/.838 = <b>1.19×</b>，也就是最多 +19.3%
+
+实测 +5.8% 反推：总时间 = 1/1.058 = .945
+   .162/k = .945 − .838 = .107  →  k ≈ <b>1.5</b>
+
+结论两句：这条路的上限本来就只有 1.19×，量化再狠也翻不过去；
+而 5.8% 对应 GEMM 大约快了 1.5 倍，跟「只换了权重精度、
+attention operator 还是 BF16」完全对得上。</pre>
   </section>
 
   <section id="limits">
