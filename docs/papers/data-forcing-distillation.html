@@ -545,7 +545,7 @@ gen 挪到哪，L 都是 .500 —— 这条曲线是一条水平线，斜率当�
 靶子跟着枪口一起走，永远差 vsd 那么远，损失自然纹丝不动。</pre>
     <p>最后一点容易误读：<strong><code>loss</code> 的数值不是质量指标。</strong>把 <code class="m">T</code> 代回去，<code class="m">L=\tfrac12(gen-T)^2=\tfrac12\,vsd^2</code>——它衡量的是「本轮要求挪多远」，而不是「学生离真实分布还差多少」。每一轮的 <code class="m">T</code> 都用新的两套 score 重算，所以这条 loss 曲线不该当收敛曲线看。</p>
 
-    <h3>那个 w_norm 是干什么的</h3>
+    <h3>那个 <code class="m">w_{\mathrm{norm}}</code> 是干什么的</h3>
     <p>两套 score 之差的<strong>绝对尺度是不受控的</strong>：噪声时刻不同、视频内容不同，这个差可能大几十倍，也可能几乎为零。直接拿它当步长，训练就时快时慢。<code class="m">w_{\mathrm{norm}}</code> 把这个差<strong>按“学生现在离老师多远”除一遍</strong>，让每步挪动的相对幅度稳定下来：</p>
     <div class="formula" data-expr="w_{\mathrm{norm}}=\frac{1}{|gen-teacher|+10^{-6}}"></div>
     <p>分母那个 <code class="m">10^{-6}</code> 只防除零。差得远时 <code class="m">w_{\mathrm{norm}}</code> 小、单步收着走；已经很近时它变大，但乘上本来就很小的 score 差，净效果仍是小步。</p>

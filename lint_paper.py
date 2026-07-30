@@ -281,6 +281,37 @@ def check_split_sym_label(html, name, issues):
                            "（合成一个，用 ,\\; 分隔）"))
 
 
+# 标题也是一种载体，而 mathify 只认 code.m / .tex / [data-expr] / .math —— <h3> 从来
+# 不在扫描范围里。所以 "那个 w_norm 是干什么的" 会把下划线原样印在正文衬线字里。
+#
+# 这里**不能**复用 is_math：它判的是"整串是不是数学"，而 → × 3×3 θ Dₜ μreal 这些
+# unicode 摆在标题里本来就显示正确，按 is_math 扫全仓会报 88 条、其中 80 多条是误报。
+# 真正会露出源码的只有 ASCII 的 _ ^ \cmd 三种写法，只查这三种。
+# 下划线前必须是**单个**字母：w_norm / s_fake 是数学下标，gen_data / GPU_UTIL /
+# pseudo_target 是标识符，靠"前面是不是还有字母"就能分开。
+# figcaption 故意不查——那里是 11px 等宽大写的代码腔，L_m=300 读起来就是标识符，
+# 塞 KaTeX 进去反而更难看。
+HEADING = re.compile(r"<(h[1-4])\b[^>]*>(.*?)</\1>", re.S)
+BARE_TEX = re.compile(r"(?<![A-Za-z0-9_])[A-Za-zͰ-Ͽ][_^]\{?[A-Za-z0-9]"
+                      r"|\\[A-Za-z]{2,}")
+
+
+def check_unrendered_math_in_heading(html, name, issues):
+    """标题里的裸 LaTeX 不会渲染，会把源码原样显示出来。"""
+    for m in HEADING.finditer(visible(html)):
+        # 已经套好载体的、以及普通 <code>（那是标识符不是数学）都不算
+        inner = re.sub(r"<code\b.*?</code>", " ", m.group(2), flags=re.S)
+        inner = re.sub(r'<span[^>]*(class="(?:tex|math)"|data-expr)[^>]*>.*?</span>',
+                       " ", inner, flags=re.S)
+        t = html_mod.unescape(re.sub(r"<[^>]+>", " ", inner))
+        hit = BARE_TEX.search(t)
+        if hit:
+            flat = " ".join(t.split())
+            issues.append(("ERROR", name,
+                           f"标题里的裸 LaTeX 不会渲染（{hit.group(0)!r}）: {flat[:44]!r}"
+                           "（改成 <code class=\"m\"> 并写 LaTeX）"))
+
+
 # .math-sheet / .calc 里写 τ_global、s_real 这种 ASCII 下划线，读起来就是
 # "没渲染的 LaTeX"。正解是包成 <code class="m"> 让它真渲染 —— 曾经以为
 # "混 KaTeX 进等宽块会毁掉列对齐"，实测是错的：只要同一列各行插入相同，
@@ -365,6 +396,7 @@ def lint(path):
                check_unmarked_sym_label,
                check_broken_subscript,
                check_split_sym_label,
+               check_unrendered_math_in_heading,
                check_ledger_pseudo_latex,
                check_sticky_nav_killer,
                check_glossary, check_markup, check_chat_context):

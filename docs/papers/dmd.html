@@ -98,7 +98,7 @@ figure{margin:34px 0 46px;padding:26px;border:1px solid var(--rule);background:r
 </section>
 
 <section id="kl">
-<h2><span class="n">§ 05</span><span>梯度怎么推：从「让两批图靠近」一路推到 s_fake − s_real</span></h2>
+<h2><span class="n">§ 05</span><span>梯度怎么推：从「让两批图靠近」一路推到 <code class="m">s_{\mathrm{fake}}-s_{\mathrm{real}}</code></span></h2>
 <div class="plain"><b>这是全篇最该慢下来读的一节。</b>§04 已经拿到两套方向 <code class="m">s_{\mathrm{real}}</code>、<code class="m">s_{\mathrm{fake}}</code>。可凭什么把它俩一减，就等于「让学生这批图更像老师」？下面从反向 KL 的定义出发，一步不跳地推到 <code>s_fake − s_real</code>，每步都配一组能手算的数——用的正是 §06 手算例里那份 <code>x=1.2</code>。</div>
 <p class="lead">学生把噪声「推」成自己的输出分布 <code class="m">p_{\mathrm{fake}}</code><a class="jr" href="#g-06">6</a>。DMD 要压小的是反向 KL<a class="jr" href="#g-05">5</a>——站在学生常画的那些地方，问一句：「这儿，老师觉得该有多少概率？」这里的 <a href="../concepts/score-function.html">score</a><a class="jr" href="#g-01">1</a>，正式写法 <code class="m">\nabla x \log p(x)</code>，不是给整张图打的真假分，而是一张和图同形状的「方向图」：每个元素都写着「往哪改、改多少，能更贴近这个分布」。</p>
 
@@ -112,7 +112,7 @@ figure{margin:34px 0 46px;padding:26px;border:1px solid var(--rule);background:r
 <h3>动手前，先备五样小工具</h3>
 <div class="symbol-grid"><div class="symbol"><code>期望=加权平均</code><code class="m">E_{x~p}[f]=\int p(x)f(x)dx</code>。「抽样再平均」就是「按概率加权求和」，两种说法一回事。</div><div class="symbol"><code>换元抽样</code>与其从 <code class="m">p_{\mathrm{fake}}</code> 抽 <code>x</code>，不如抽固定高斯 <code>z</code> 再算 <code class="m">x=G_\theta (z)</code>。好处：抽样口不带 θ，才能安心对 θ 求导。</div><div class="symbol"><code>链式法则</code>复合函数 <code class="m">f(G_\theta )</code> 对 θ 求导 = <code>f</code> 对图求导 × 图对 θ 求导。</div><div class="symbol"><code>θ 藏多处就分头求</code>一个式子里 θ 出现在好几个位置，就每处各求一次导，再相加。</div><div class="symbol"><code>总概率=1</code><code class="m">\int p_\theta (x)dx</code> 永远是 1，跟 θ 没关系，所以它对 θ 的导数是 0。这条是第 ⑤ 步的命根子。</div><div class="symbol"><code>score</code><code class="m">s=\nabla x \log p(x)</code>，图形状的方向；本篇由去噪器换算得来（§04），不用真去求 <code>log p</code>。</div></div>
 
-<h3>第 1 步 · 把「从 p_fake 抽样」换成「抽噪声再过 Gθ」</h3>
+<h3>第 1 步 · 把「从 <code class="m">p_{\mathrm{fake}}</code> 抽样」换成「抽噪声再过 <code class="m">G_\theta</code>」</h3>
 <p>直接对 <code class="m">E_{x~p_fake}[…]</code> 求导会卡住：θ 既在括号里、又躲在「从哪抽 x」的抽样口里，没法一把抓。换元抽样把这团缠绕解开——反正学生的图本来就是 <code class="m">x=G_\theta (z)</code> 生出来的，那就干脆抽固定噪声 <code>z</code>，再让它过生成器。抽样口从此不带 θ：</p>
 <div class="formula math" data-display="true">D_{\mathrm{KL}}=\mathbb E_{z}\!\left[\log p_{\mathrm{fake}}(x)-\log p_{\mathrm{real}}(x)\right],\qquad x=G_\theta(z)</div>
 <p>本轮就盯住一份噪声：<code class="m">\theta =0.7</code>、<code>z=0.5</code>，于是 <code class="m">x=G_\theta (z)=\theta +z=1.2</code>。这个极简生成器 <code class="m">G_\theta (z)=\theta +z</code> 对 θ 的导数 <code class="m">\partial G_\theta /\partial \theta =1</code>，后面每步都要乘它。</p>
