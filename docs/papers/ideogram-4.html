@@ -308,8 +308,8 @@ figure.play .ig-rev.d5 { transition-delay: 1.35s; }
 
 <p>采样的引导用 <strong>非对称 CFG</strong><a class="jr" href="#g-07">7</a>。标准 CFG 同一步算两遍——带 prompt 的条件支、不带的无条件支——把差值放大逼模型听话。Ideogram 4 的"非对称"在于：无条件支<strong>把文本 token 整个丢掉</strong>（只跑图像 token），而不是换成 padding。单流架构天然能这么做。</p>
 
-<pre class="eq">v_cond   = DiT(z_t, t, text)       # 看着 prompt
-v_uncond = DiT(z_t, t, ∅)          # 非对称: 文本整个 drop, 只跑图像 token
+<pre class="eq">v_cond   = DiT(zₜ, t, text)        # 看着 prompt
+v_uncond = DiT(zₜ, t, ∅)           # 非对称: 文本整个 drop, 只跑图像 token
 v = v_uncond + w · (v_cond − v_uncond)   # 放大差值</pre>
 
 <p>好处是两支能<strong>独立调</strong>，把"听话程度"和"画质"分开排期：<code>V4_QUALITY_48</code> 跑 45 步强引导（gw=7）+ 3 步 polish（gw=3）收细节，避免整体过饱和。详见 <a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a>。</p>

@@ -229,22 +229,22 @@ Stage 2：沿【学生自己 rollout】的轨迹            # on-policy
 
 <p>于是 on-policy 蒸馏要算的"学生每步 vs 老师每步"的 <a href="../concepts/cross-entropy.html">KL 散度</a>，落到<strong>两个同协方差高斯</strong>上，有干净的<strong>闭式解</strong>——直接退化成两个均值差的平方（MSE）：</p>
 
-<pre class="eq">KL( N(μ_s, σ²I) ‖ N(μ_t, σ²I) ) = ‖μ_s − μ_t‖² / (2σ²)
+<pre class="eq">KL( N(μₛ, σ²I) ‖ N(μₜ, σ²I) ) = ‖μₛ − μₜ‖² / (2σ²)
                                     └ 同协方差 → 只剩均值之差的平方 ┘</pre>
 
 <h3>为什么会塌成 MSE · 通用高斯 KL 三项,同协方差消掉两项</h3>
 <p>两个 d 维高斯的 KL 通用公式有<strong>三块</strong><a class="jr" href="#g-12">12</a>——形状、位置、体积:</p>
-<pre class="eq">KL(N(μ_s,Σ_s) ‖ N(μ_t,Σ_t)) = ½[ tr(Σ_t⁻¹Σ_s) − d + (μ_t−μ_s)ᵀΣ_t⁻¹(μ_t−μ_s) + ln(detΣ_t/detΣ_s) ]
+<pre class="eq">KL(N(μₛ,Σₛ) ‖ N(μₜ,Σₜ)) = ½[ tr(Σₜ⁻¹Σₛ) − d + (μₜ−μₛ)ᵀΣₜ⁻¹(μₜ−μₛ) + ln(detΣ_t/detΣ_s) ]
                                 └── 形状项 ──┘   └──── 位置项(均值差) ────┘   └── 体积项 ──┘</pre>
 <p>去噪每步这两个高斯<strong>同协方差</strong> <code class="m">\Sigma_s=\Sigma_t=\sigma^{2}I</code>(协方差只由 noise schedule 定<a class="jr" href="#g-10">10</a>、跟学生/老师是谁无关),三项里两项直接归零:</p>
-<pre class="eq">形状项 tr(Σ_t⁻¹Σ_s) − d = tr(I) − d = d − d = 0        # 一样宽,没形状差
+<pre class="eq">形状项 tr(Σₜ⁻¹Σₛ) − d = tr(I) − d = d − d = 0          # 一样宽,没形状差
 体积项 ln(detΣ_t/detΣ_s) = ln(1) = 0                    # 一样宽,没体积差
-位置项 (μ_t−μ_s)ᵀ(σ²I)⁻¹(μ_t−μ_s) = ‖μ_s−μ_t‖²/σ²       # 只剩峰心错开多少
-⟹ KL = ½ · ‖μ_s−μ_t‖²/σ² = ‖μ_s−μ_t‖²/(2σ²)            # 就是均值差的 MSE</pre>
+位置项 (μₜ−μₛ)ᵀ(σ²I)⁻¹(μₜ−μₛ) = ‖μₛ−μₜ‖²/σ²             # 只剩峰心错开多少
+⟹ KL = ½ · ‖μₛ−μₜ‖²/σ² = ‖μₛ−μₜ‖²/(2σ²)                # 就是均值差的 MSE</pre>
 <p>直觉:两条钟形一样胖(σ 同),那它们的差别就只能是"峰心错开多少",自然只剩均值差的平方。</p>
 <h3>数字例子</h3>
-<pre class="eq">取 μ_s=[1,5]、μ_t=[1,4]、σ=0.5(σ²=0.25)、d=2：
-‖μ_s−μ_t‖² = ‖[0,1]‖² = 0² + 1² = 1
+<pre class="eq">取 μₛ=[1,5]、μₜ=[1,4]、σ=0.5(σ²=0.25)、d=2：
+‖μₛ−μₜ‖² = ‖[0,1]‖² = 0² + 1² = 1
 短式   KL = 1 / (2·0.25) = 1 / 0.5 = 2
 全式核对：½[ tr(I)=2  −d=−2  位置=1/0.25=4  体积=0 ] = ½·(0+4+0) = 2   ✓ 两式一致</pre>
 <p>✓ 所以每步蒸馏 = 让学生的一步去噪均值 <code class="m">\mu_s</code> 贴近老师的 <code class="m">\mu_t</code>,一个纯 MSE;<code class="m">\sigma</code> 只当每步的权重(近数据端 σ 小 → 权重大)。没有 RL 的采样方差、没有奖励建模。</p>
@@ -275,16 +275,16 @@ Stage 2：沿【学生自己 rollout】的轨迹            # on-policy
 
 <p>把它逐时间步求和，就是 DiffusionOPD 的训练目标（SDE 版带 <code class="m">1/\sigma</code>，ODE 版更干脆）<a class="jr" href="#g-11">11</a>：</p>
 
-<pre class="eq">L_OPD = E[ Σⱼ ‖μ_s(x_tⱼ; θ) − μ_t(x_tⱼ)‖² / (2σⱼ²) ]     # SDE 版
-L_OPD-ODE = E[ Σⱼ (1/2)‖μ_s(x_tⱼ; θ) − μ_t(x_tⱼ)‖² ]      # ODE 版</pre>
+<pre class="eq">L_OPD = E[ Σⱼ ‖μₛ(xₜⱼ; θ) − μₜ(xₜⱼ)‖² / (2σⱼ²) ]         # SDE 版
+L_OPD-ODE = E[ Σⱼ (1/2)‖μₛ(xₜⱼ; θ) − μₜ(xₜⱼ)‖² ]          # ODE 版</pre>
 
 <p>注意 <code class="m">x_{t_j}</code> 是<strong>学生自己 rollout 走到的状态</strong>（on-policy），在那上面只让<strong>学生的一步去噪均值去贴老师的</strong>。没有 RL 的采样方差、没有奖励建模——一个稳的 MSE。</p>
 
 <pre class="eq"># 训练循环（简化）
 for 每个任务 m:
-    用当前学生 rollout 出轨迹 {x_tⱼ}
-    L_m = Σⱼ ‖μ_s − μ_t^(m)‖² / (2σⱼ²)   # 贴第 m 个老师
-    L_total += L_m
+    用当前学生 rollout 出轨迹 {xₜⱼ}
+    Lₘ = Σⱼ ‖μₛ − μₜ^(m)‖² / (2σⱼ²)      # 贴第 m 个老师
+    L_total += Lₘ
 一次反传更新 θ                              # 跨任务累加 → 均衡整合</pre>
 
 
