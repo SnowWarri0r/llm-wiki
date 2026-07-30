@@ -273,11 +273,36 @@ token 2: k₂=[0, 1]  v₂=[0, 4]  β₂=.5
     <p>下面这个式子一眼看过去有六七个零件，很容易直接放弃。但它不是一次写成的——<strong>真正干活的只有第一件，后面每一件都是为了修前一件留下的毛病</strong>。按这个顺序看，一件也不用背。</p>
     <p><strong>第 1 件 · 主角：拿 query 去乘状态。</strong>写入时 <code class="m">k</code> 是地址、<code class="m">v</code> 是内容，读取就是反过来——用自己的 query 当地址去问。整条式子的语义全在这一步，剩下的都是修补。</p>
     <div class="formula" data-expr="o_j = Sq_j^r"></div>
-    <pre>q = [1, 0]（对准 k₁）：Sq = [2, 0] = v₁×β₁    ← 取回 token 1 写的东西
-q = [0, 1]（对准 k₂）：Sq = [0, 2] = v₂×β₂    ← β₂=.5，音量小一半
-q = [1, 1]（两边都问）：Sq = [2, 2]            ← 两份内容按对准程度混起来
+    <pre>矩阵乘向量的规则：<b>结果的第 i 个数 = S 的第 i 行跟 q 做点积</b>。
+S = [2, 0]
+    [0, 2]
 
-「地址-内容」不是比喻，是真能对上号的。</pre>
+q = [1, 0]（对准 k₁）
+   第 1 个数 = [2, 0]·[1, 0] = 2×1 + 0×0 = 2
+   第 2 个数 = [0, 2]·[1, 0] = 0×1 + 2×0 = 0
+   Sq = [2, 0] = v₁×β₁          ← 原封不动取回 token 1 写的东西
+
+q = [0, 1]（对准 k₂）
+   第 1 个数 = 2×0 + 0×1 = 0
+   第 2 个数 = 0×0 + 2×1 = 2
+   Sq = [0, 2] = v₂×β₂          ← v₂=[0,4] 但 β₂=.5，音量小一半
+
+q = [1, 1]（两边都问）
+   第 1 个数 = 2×1 + 0×1 = 2
+   第 2 个数 = 0×1 + 2×1 = 2
+   Sq = [2, 2]                  ← 两份内容混起来了</pre>
+    <p><strong>为什么恰好取回 <code class="m">v_1\beta_1</code>，不是巧合，把 <code class="m">S</code> 的定义代回去就看见了。</strong>矩阵乘法可以逐项分配到求和里，而 <code class="m">(\beta_nk_n)^\top q</code> 是行向量乘列向量、结果是<strong>一个标量</strong>——标量可以挪到前面去：</p>
+    <div class="formula wide" data-expr="Sq=\left(\sum_n v_n(\beta_nk_n)^\top\right)q=\sum_n v_n\left[(\beta_nk_n)^\top q\right]=\sum_n \underbrace{\beta_n\,(k_n\!\cdot\! q)}_{\text{一个数：对准程度}}\;v_n"></div>
+    <pre>所以读出来的东西永远是「各 token 的 value 按对准程度加权求和」：
+
+q=[1,1] 用这条恒等式再算一遍：
+   token 1： β₁ × (k₁·q) × v₁ = 1  × ([1,0]·[1,1]) × [2,0] = 1×1×[2,0] = [2, 0]
+   token 2： β₂ × (k₂·q) × v₂ = .5 × ([0,1]·[1,1]) × [0,4] = .5×1×[0,4] = [0, 2]
+   加起来 = [2, 2]              ✓ 跟上面逐行点积算的一致
+
+q=[1,0] 时 k₂·q = 0，token 2 那一项直接乘成 0 —— <b>这才是「对准 k₁ 就只取回
+token 1」的真正原因</b>：不是 S 里存着「谁是谁」，是没对准的项被点积清成了 0。
+「地址-内容」不是比喻，但它靠的是 key 之间彼此接近正交；key 一挤，就串味。</pre>
     <p><strong>第 2 件 · 除掉总量：分母。</strong>上面那步有个毛病：<code class="m">S</code> 是 <code class="m">N</code> 个 token 累加出来的，token 越多堆得越厚，读出来的数就越大。10 个 token 的视频和 10 万个 token 的视频，输出会差几个数量级，网络没法用同一套权重接住。所以要除掉一个「一共问到了多少」：</p>
     <div class="formula" data-expr="o_j=\frac{Sq_j^r}{\sum_{n=1}^{N}\phi(k_n)^\top\phi(q_j)+\varepsilon}"></div>
     <pre>分母 = Σ ReLU(k_n)·ReLU(q) + ε
