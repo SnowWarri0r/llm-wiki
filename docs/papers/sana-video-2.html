@@ -300,17 +300,16 @@ q=[1,1] 用这条恒等式再算一遍：
    token 2： β₂ × (k₂·q) × v₂ = .5 × ([0,1]·[1,1]) × [0,4] = .5×1×[0,4] = [0, 2]
    加起来 = [2, 2]              ✓ 跟上面逐行点积算的一致
 
-q=[1,0] 时 k₂·q = 0，token 2 那一项直接乘成 0 —— <b>这才是「对准 k₁ 就只取回
-token 1」的真正原因</b>：不是 S 里存着「谁是谁」，是没对准的项被点积清成了 0。
-「地址-内容」不是比喻，但它靠的是 key 之间彼此接近正交；key 一挤，就串味。</pre>
+   加起来 = [2, 2]              ✓ 跟上面逐行点积算的一致</pre>
+    <p><code class="m">q=[1,0]</code> 时 <code class="m">k_2\!\cdot\!q=0</code>，token 2 那一项直接被乘成 0——<strong>这才是「对准 <code class="m">k_1</code> 就只取回 token 1」的真正原因</strong>：不是 <code class="m">S</code> 里存着「谁是谁」，是没对准的项被点积清成了 0。所以「地址-内容」不是比喻，但它<strong>靠的是 key 之间彼此接近正交</strong>；key 一挤，就串味。</p>
     <p><strong>第 2 件 · 除掉总量：分母。</strong>上面那步有个毛病：<code class="m">S</code> 是 <code class="m">N</code> 个 token 累加出来的，token 越多堆得越厚，读出来的数就越大。10 个 token 的视频和 10 万个 token 的视频，输出会差几个数量级，网络没法用同一套权重接住。所以要除掉一个「一共问到了多少」：</p>
     <div class="formula" data-expr="o_j=\frac{Sq_j^r}{\sum_{n=1}^{N}\phi(k_n)^\top\phi(q_j)+\varepsilon}"></div>
     <pre>分母 = Σ ReLU(k_n)·ReLU(q) + ε
      = [1,0]·[1,1] + [0,1]·[1,1] = 1 + 1 = 2
 [2, 2] / 2 = [1, 1]
 
-φ 取 ReLU 是为了让每一项都非负 —— 否则正负相消，分母可能接近 0，
-一除就炸。ε 是最后一道保险，只管防「真的等于 0」。</pre>
+</pre>
+    <p><code class="m">\phi</code> 取 ReLU 是为了让每一项都<strong>非负</strong>——否则正负相消，分母可能接近 0，一除就炸。<code class="m">\varepsilon</code> 是最后一道保险，只管防「真的等于 0」。</p>
     <p>这个分母正是 softmax 里「除以行内总和」那一步的替身。softmax 的归一化必须先凑齐整行，这里的分母却可以拆成对每个 <code class="m">n</code> 的独立求和，所以能跟着状态一起累加——<strong>能不能拆开累加，是这整套设计的唯一判据。</strong></p>
     <p><strong>第 3 件 · 拉回尺度：RMSNorm。</strong>分母只管住了「总量」，管不住各通道之间的比例失衡。这类模型有几十层，某个通道稍微偏大，一路堆下去就会主导整个残差流。RMSNorm 把向量整体按自己的均方根拉回单位尺度，只改长度不改方向：</p>
     <pre>RMSNorm([1, 1]) = [1,1] / √((1²+1²)/2) = [1,1]/1 = [1, 1]
@@ -318,13 +317,14 @@ token 1」的真正原因</b>：不是 S 里存着「谁是谁」，是没对准
 换成 [3, 1]： √((9+1)/2)=2.236 → [1.342, .447]  ← 方向没变，长度归一</pre>
     <p><strong>第 4 件 · 补回选择性：输出 gate。</strong>这是最容易被当成「随手加的技巧」而其实最有理由的一件。softmax attention 天生会挑：它给某几个 token 极高权重、其余接近 0。线性注意力把所有 token 都揉进一份状态，<strong>这种「挑」的能力就没了</strong>。gate 是把它补回来的地方——每个通道配一个 0 到 1 的阀门，让模型能对当前 token 关掉不需要的通道：</p>
     <div class="formula wide" data-expr="o_j=W_o\!\left[\operatorname{RMSNorm}\!\left(\frac{Sq_j^r}{\sum_{n=1}^{N}\phi(k_n)^\top\phi(q_j)+\varepsilon}\right)\odot\sigma(g_j)\right]"></div>
-    <pre>σ(g) 是 sigmoid，把任意实数压到 0–1：σ(0)=.5  σ(2)=.881  σ(−2)=.119
+    <pre>σ 是 sigmoid，把任意实数压到 0–1：σ(0)=.5   σ(2)=.881   σ(−2)=.119
 ⊙ 是逐通道相乘，不是矩阵乘法：
 
   [1, 1] ⊙ [.881, .119] = [.881, .119]
-                            ↑ 第二个通道被这个 token「拧小」到 12%
-
-最后过 W_o：多个 head 各自算出一份，拼起来投影回模型宽度（2,560 / 4,096）。</pre>
+                            ↑ 第二个通道被这个 token「拧小」到 12%</pre>
+    <p><strong>光看记号就能读出 gate 的两个性质。</strong>下标 <code class="m">j</code> 说明它<strong>每个 token 各有一份</strong>——不是整层共用一个开关，同一层里不同位置可以关掉不同的通道。而 <code class="m">\odot</code> 是逐元素相乘，说明 <code class="m">g_j</code> 不是一个标量而是<strong>和 head 输出等宽的一整个向量</strong>，每个通道配一个自己的阀门。所以它能表达的是「这个 token 现在只要第 1、第 5、第 9 个通道，其余压掉」这种细粒度取舍。</p>
+    <div class="note warn"><span class="tag">论文没说的部分</span><strong><code class="m">g_j</code> 这个打分自己是怎么算出来的，论文没写。</strong>它和写入门 <code class="m">\beta_n</code> 一样，只是在式子里作为符号出现，正文没有给出对应的权重矩阵或生成方式。gated linear attention<a class="jr" href="#g-02">02</a>这一族的常见做法是再拿一个线性投影从当前 token 算出来（跟 <code class="m">q,k,v</code> 同一个套路），但那是族里的惯例，<strong>不是本文披露的内容</strong>，本页不把它当成论文原式。</div>
+    <p>最后过 <code class="m">W_o</code>：多个 head 各自算出一份，拼起来投影回模型宽度（5B 是 2,560，14B 是 4,096）。</p>
     <p>所以这条式子读成一句话是：<strong>用 query 查状态（主角），除掉总量、拉回尺度（两道防炸），再让 gate 挑一遍（补回 softmax 的选择性），最后拼回模型宽度</strong>。下面这张表把每个符号归到它所属的那一件事——<strong>标「水管」的那几个不影响你理解机制，卡住时可以先跳过</strong>：</p>
     <table class="recap">
       <thead><tr><th>符号</th><th>角色</th><th>一句话</th></tr></thead>
@@ -379,8 +379,27 @@ token 1」的真正原因</b>：不是 S 里存着「谁是谁」，是没对准
 
 N=10,000、d=128 时：路线 A 的中间表 1 亿格，路线 B 的 16,384 格。</pre>
     <p><strong>那为什么 softmax 不能也这么换？</strong>因为 <code class="m">A=\operatorname{softmax}(QK^\top/\sqrt{d_h})</code> 里的 softmax 卡在两次乘法<strong>中间</strong>，而它是非线性的——必须先把整行分数凑齐才能取指数、才能除以行内总和。<code class="m">K^\top V</code> 先算就跳过了这一行，softmax 无从下手。所以线性注意力的第一步不是「优化」softmax，而是<strong>把 softmax 换成一个可以拆开的 <code class="m">\phi</code></strong>（本文取 ReLU），代价就是下面这一条。</p>
+    <h3>先说清「秩」是什么，下面那条上界才有意义</h3>
+    <p>接下来整节的结论都压在这一个字上，但它其实很好懂：<strong>秩 = 这张表里真正互相独立的行有几行</strong>。2×2 的情形，只要问一句「第二行是不是第一行的倍数」：</p>
+    <pre>[2, 0]                    [1, 1]
+[0, 2]                    [1, 1]
+第二行不是第一行的倍数      第二行 = 第一行 × 1
+→ 两个独立方向，<b>秩 2</b>       → 只有一个独立方向，<b>秩 1</b></pre>
+    <p><strong>「独立方向」听着抽象，用 <code class="m">Sq</code> 试一下就摸到了</strong>——秩决定的是这张表<strong>能把输入送到几维空间里去</strong>：</p>
+    <pre>秩 1 的表 S = [1, 1]      任取 q = [a, b]
+              [1, 1]      Sq = [a+b, a+b]
+
+  q=[3, 5]  → [8, 8]        q=[1, −1] → [0, 0]        q=[2, 2] → [4, 4]
+  不管 q 怎么变，输出<b>永远落在 [1,1] 这条直线上</b>。想读出 [1, 0] 这种
+  方向？这张表办不到 —— 它只有一个方向可给。
+
+秩 2 的表 S = [2, 0]      Sq = [2a, 2b]
+              [0, 2]
+  q=[3, 5]  → [6, 10]       q=[1, −1] → [2, −2]
+  两个方向都能到，整个平面都覆盖得到。</pre>
+    <p>有了这个，下面这条限制就不再是一句口号：</p>
     <div class="note warn"><span class="tag">省掉的正是可能丢掉的</span>若 head 维度是 128，状态矩阵的秩<a class="jr" href="#g-06">06</a>最高 128；即使视频有十万 token，它仍只有这么多独立方向。像把几千人的会议压成一页纪要：主题还在，但“谁在第几帧碰到什么”更容易被揉掉。</div>
-    <p>这条上界不是经验观察，是外积那一步直接决定的：<strong>每个 token 写进去的那张表都只有秩 1</strong>（每一行都是同一个向量 <code class="m">\beta_nk_n</code> 的倍数），而秩相加不会超过各自之和，所以 <code class="m">\operatorname{rank}(S)\le\min(N,d_h)</code>。<code class="m">N</code> 一旦超过 <code class="m">d_h</code>，后来的 token 就只能在已有方向里重新配比：</p>
+    <p>这条上界不是经验观察，是外积那一步直接决定的：<strong>每个 token 写进去的那张表都只有秩 1</strong>——回看外积的算法：第 <code class="m">i</code> 行 = <code class="m">v_n</code> 的第 <code class="m">i</code> 个数 × <code class="m">\beta_nk_n</code>，<strong>每一行都是同一个向量 <code class="m">\beta_nk_n</code> 的倍数</strong>，按上面的判法就是秩 1，而秩相加不会超过各自之和，所以 <code class="m">\operatorname{rank}(S)\le\min(N,d_h)</code>。<code class="m">N</code> 一旦超过 <code class="m">d_h</code>，后来的 token 就只能在已有方向里重新配比：</p>
     <pre>给上面那个 S 再写进第三个 token：k₃=[1, 1]，v₃=[1, 1]，β₃=1
 
 ① 先按外积规则算它自己的表（跟前面两个 token 同一套算法）
@@ -394,10 +413,8 @@ N=10,000、d=128 时：路线 A 的中间表 1 亿格，路线 B 的 16,384 格�
 ③ 看秩：两行 [3, 1] 和 [1, 3] 互相不成倍数 → 秩 = 2
    （行列式 3×3 − 1×1 = 8 ≠ 0，也说明满秩）
 
-形状还是 2×2 —— <b>秩根本不可能超过 2，因为矩阵只有 2 行</b>。
-第三个 token 自己那张表是秩 1 的，加进来也只能被吸收进已有的
-两个方向里，没能新开一个。真实模型里这个 2 是 d_h=128，而 N 是
-十万级：绝大多数 token 都只是在这 128 个方向上「挤」。</pre>
+</pre>
+    <p>形状还是 2×2——<strong>秩根本不可能超过 2，因为这张表只有 2 行</strong>。第三个 token 自己那张表是秩 1 的，加进来也只能被吸收进已有的两个方向里，没能新开一个。真实模型里这个 2 是 <code class="m">d_h=128</code>，而 <code class="m">N</code> 是十万级：<strong>绝大多数 token 都只是在这 128 个方向上「挤」。</strong></p>
   </section>
 
   <section id="hybrid">
@@ -439,19 +456,14 @@ N=10,000、d=128 时：路线 A 的中间表 1 亿格，路线 B 的 16,384 格�
   …    中间每一块都留了一份
   p_l  当前这一块还没走完的部分和（partial sum）
 
-「每 8 层存一份」的 8，恰好是两个完整的 3:1 周期（见上一节的 FIG 03）。</pre>
+</pre>
+    <p>「每 8 层存一份」的这个 8，恰好是<strong>两个完整的 3:1 周期</strong>（见上一节的 FIG 03）——一块里正好装两轮「三层线性 + 一层 softmax」。</p>
     <p><strong>第 2 步 · 混合就是加权求和。</strong>拿到一组来源，最自然的用法是各取一点、加起来。权重记作 <code class="m">\alpha</code>，这就是式子的前半截，没有任何玄机：</p>
     <div class="formula" data-expr="h_l(x)=\sum_{v_i\in V_l}\alpha_{i\to l}(x)\,v_i(x)"></div>
     <p><strong>第 3 步 · 权重从哪来：让来源自己打分。</strong>剩下的唯一问题是 <code class="m">\alpha</code> 怎么定。固定死（比如永远各占三分之一）就浪费了——不同 token 需要的东西不一样。所以给每个来源打一个分，再 softmax 成和为 1 的权重。打分的办法是<strong>拿一个可训练的向量 <code class="m">w</code> 去点乘该来源的特征</strong>：点积大 = 这个来源现在「对味」。</p>
     <div class="formula wide" data-expr="\alpha_{i\to l}(x)=\operatorname{softmax}_i\!\left[w^\top\operatorname{RMSNorm}(v_i(x))\right]"></div>
-    <pre>为什么点乘之前要先 RMSNorm？
-  不同来源的特征幅度天差地别 —— 最初输入 b₀ 和跑了 24 层的 p_l 根本不在
-  一个尺度上。不先拉平，点积大小主要反映「谁的数比较大」，而不是「谁对味」，
-  路由就退化成按幅度选。RMSNorm 只改长度不改方向，正是为了让点积去比方向。
-
-为什么是 softmax 而不是随便归一化？
-  它保证权重非负且和为 1 —— 输出仍是各来源的一个凸组合，不会跑到所有
-  来源之外去，深层堆叠才稳。</pre>
+    <p><strong>为什么点乘之前要先 RMSNorm？</strong>不同来源的特征幅度天差地别——最初输入 <code class="m">b_0</code> 和跑了 24 层的 <code class="m">p_l</code> 根本不在一个尺度上。不先拉平，点积大小主要反映「谁的数比较大」而不是「谁对味」，路由就退化成按幅度选。RMSNorm 只改长度不改方向，正是为了让点积去比方向。</p>
+    <p><strong>为什么是 softmax 而不是随便归一化？</strong>它保证权重<strong>非负且和为 1</strong>——输出仍然是各来源的一个凸组合，不会跑到所有来源之外去，深层堆叠才稳。</p>
     <p><strong>第 4 步 · 一个上标：<code class="m">\tau</code>。</strong>每个 DiT block 里有两处要用特征——attention 之前和 FFN 之前。这两处想读的东西未必一样，所以各配一份自己的 <code class="m">w</code>，用 <code class="m">\tau</code> 区分。<strong>这个上标不带任何新机制，纯粹是「这套东西一式两份」的记账符号。</strong>把它加回去，就是论文里那条完整式子：</p>
     <div class="formula wide" data-expr="h_l(x)=\sum_{v_i\in V_l}\alpha_{i\to l}^{(\tau)}(x)v_i(x),\qquad \alpha_{i\to l}^{(\tau)}(x)=\operatorname{softmax}_i\!\left[(w^{(\tau)})^\top\operatorname{RMSNorm}(v_i(x))\right]"></div>
     <p>整条读成一句话：<strong>把「最初输入、各块旧摘要、当前部分和」摆成一排，用一个可训练向量给它们打分、softmax 成权重，加权求和当作这一层的输入；attention 前和 FFN 前各来一次。</strong>符号归位如下（<strong>标「记账」的两个跳过也不影响理解</strong>）：</p>
@@ -669,18 +681,15 @@ N=10,000、d=128 时：路线 A 的中间表 1 亿格，路线 B 的 16,384 格�
       <div class="ev"><span class="big">+5.8%</span><p>GB200 单次 backbone forward 加速。</p></div>
     </div>
     <p>当前只把 linear GEMM 做 MXFP4 weight / MXFP8 activation QAT<a class="jr" href="#g-16">16</a>；这些 GEMM 原本只占 BF16 runtime 的 16.2%，linear 与 softmax attention operator 仍是 BF16。省存储很多、延迟只小降并不矛盾——把这 16.2% 的账算完就一目了然：</p>
-    <pre>设被量化的那部分加速 k 倍，其余 83.8% 不变：
-   总时间 = .838 + .162/k
-
-k → ∞（这部分算到不要时间）：总时间 → .838
+    <p>设被量化的那部分加速 <code class="m">k</code> 倍，其余 83.8% 不变，那么<strong>总时间 <code class="m">=.838+.162/k</code></strong>：</p>
+    <pre>k → ∞（这部分算到不要时间）
+   总时间 → .838
    天花板 = 1/.838 = <b>1.19×</b>，也就是最多 +19.3%
 
-实测 +5.8% 反推：总时间 = 1/1.058 = .945
-   .162/k = .945 − .838 = .107  →  k ≈ <b>1.5</b>
-
-结论两句：这条路的上限本来就只有 1.19×，量化再狠也翻不过去；
-而 5.8% 对应 GEMM 大约快了 1.5 倍，跟「只换了权重精度、
-attention operator 还是 BF16」完全对得上。</pre>
+实测 +5.8% 反推
+   总时间 = 1/1.058 = .945
+   .162/k = .945 − .838 = .107   →   k ≈ <b>1.5</b></pre>
+    <p>两句结论：这条路的上限本来就只有 <strong>1.19×</strong>，量化再狠也翻不过去；而 +5.8% 对应 GEMM 大约快了 1.5 倍，跟「只换了权重精度、<code class="m">\phi</code> 那一层和 softmax attention operator 还是 BF16」完全对得上。</p>
   </section>
 
   <section id="limits">
@@ -692,7 +701,8 @@ attention operator 还是 BF16」完全对得上。</pre>
       <div class="limit"><b>VBench 口径不完全齐</b>基线来源、帧数、CFG、checkpoint 不都相同。</div>
       <div class="limit"><b>加速数字不能任意相乘</b>主干、编译、cache、稀疏和量化改变的对象不同。</div>
       <div class="limit"><b>在线 RL 证据有限</b>主要是训练 reward 与四组定性比较。</div>
-      <div class="limit"><b>数据无法完整复现</b>公开了筛选轴与部分阈值，但语料本身是 in-house。</div>
+      <div class="limit"><b>两个门只给了符号</b>写入门 <code class="m">\beta_n</code> 与输出门 <code class="m">g_j</code> 怎么算，正文没写。</div>
+        <div class="limit"><b>数据无法完整复现</b>公开了筛选轴与部分阈值，但语料本身是 in-house。</div>
     </div>
     <h3>真正值得带走的三句话</h3>
     <p><span class="badge">01</span> 线性 attention 的快，来自把所有 token 先写进固定状态；这一步也正是精细关系可能丢失的地方。</p>
