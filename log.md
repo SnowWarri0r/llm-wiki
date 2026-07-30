@@ -1332,3 +1332,11 @@ skill 更新:
 - 完整录入 ToR、Big Bench Audio、Daily-Omni、WER、延迟、消融和长度分桶；保留“无 S2 + ASR 的 ToR 反高于无 S2”这一非单调结果，不把消融硬写成整齐故事。
 - 分开论文实验与当前开源实现：论文用两阶段交替冻结、128×H20；当前公开 recipe 默认先 Thinker 后 Talker，低延迟推理建议至少 8×H20，公开 checkpoint 为 16 层 codec，完整训练数据约 9 TB。
 - 新增 full-duplex-multimodal-interaction 概念页，并补强 dual-model-architecture、thinker-talker、rvq-codec、multi-token-prediction 四个既有概念的 DuplexOmni 边界。
+
+## [2026-07-30] revise | DuplexOmni · 按新版认知桥质量闸复查
+
+- 按真实执行顺序重排三段公式：先由文字与隐状态得到条件，再把历史排成 Talker prefix，最后从主码补齐 RVQ 残差并解码波形；补回此前在 HTML 里先用后定义的 \(R_i\)。
+- 把“改北京”的第 4 个时间片贯穿三节：\(C_4\) → \(P_4\) → \(q^0_{4,1}=57\) → 三层玩具 RVQ → \(r_{4,1}\) → 80 ms 波形，并明确示意索引不是论文实测值。
+- 把训练与部署拆成两章，分清参数怎样更新、RTF 能否跟上播放、响应延迟三笔账；论文未报告实测 RTF 的边界保留。
+- 为 ToR、Big Bench Audio、Daily-Omni、WER 和延迟补首次出现解释；新增 WER 原式、逐符号定义与四词 25% 手算。
+- 修正总览图最后一格为“结果回到 S1”，新增三项 benchmark glossary；桌面与 390 px 下复核公式、横向表格和术语浮卡。
