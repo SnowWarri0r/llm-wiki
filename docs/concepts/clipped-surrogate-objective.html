@@ -75,18 +75,18 @@
 <li>r = 1.5: 新策略把这个 action 的概率提了 50%</li>
 <li>r = 0.5: 新策略把这个 action 的概率降了 50%</li>
 </ul>
-<p><strong>只要每个 action 的 r 都在 <code>[1-ε, 1+ε]</code> 范围内, 新老策略整体就不会差太远</strong>. 这是一个对 KL 的粗暴但有效近似。</p>
+<p><strong>只要每个 action 的 r 都在 <span class="tex math-inline" data-display="false">[1-\epsilon ,1+\epsilon ]</span> 范围内, 新老策略整体就不会差太远</strong>. 这是一个对 KL 的粗暴但有效近似。</p>
 <h2>公式</h2>
 <pre><code>r_t(θ) = π_new(a_t | s_t) / π_old(a_t | s_t)
 
 L_CLIP = E_t [ min( r_t · A_t,  clip(r_t, 1-ε, 1+ε) · A_t ) ]
 </code></pre>
-<p>其中 <code>A_t</code> 是 <a href="../concepts/advantage-function.html">advantage-function</a> (这个 action 比 baseline 好多少)。<code>ε</code> 通常 0.2.</p>
+<p>其中 <code>A_t</code> 是 <a href="../concepts/advantage-function.html">advantage-function</a> (这个 action 比 baseline 好多少)。<span class="tex math-inline" data-display="false">\epsilon</span> 通常 0.2.</p>
 <p>读这个公式的两个关键点:</p>
 <h3>当 A_t &gt; 0 (这个 action 是好的)</h3>
 <ul>
 <li>我们想增加 P(这个 action), 也就是想让 r 变大</li>
-<li>但 <code>clip(r, 1-ε, 1+ε)</code> 在 r &gt; 1+ε 时变成常数 (1+ε)</li>
+<li>但 <span class="tex math-inline" data-display="false">clip(r,1-\epsilon ,1+\epsilon )</span> 在 r &gt; 1+ε 时变成常数 (1+ε)</li>
 <li>所以 loss 在 r &gt; 1+ε 之后变成常数 → <strong>梯度为 0</strong></li>
 <li><strong>效果</strong>: 想增加这个 action 概率 → OK, 但增加到比老策略大 20% 就停, 不让你贪</li>
 <li>防止"看到一个好 action 就一次性 push 它的概率到天上"</li>
@@ -94,13 +94,13 @@ L_CLIP = E_t [ min( r_t · A_t,  clip(r_t, 1-ε, 1+ε) · A_t ) ]
 <h3>当 A_t &lt; 0 (这个 action 是坏的)</h3>
 <ul>
 <li>我们想减小 P(这个 action), 也就是想让 r 变小</li>
-<li><code>clip(r, 1-ε, 1+ε)</code> 在 r &lt; 1-ε 时变成常数 (1-ε)</li>
+<li><span class="tex math-inline" data-display="false">clip(r,1-\epsilon ,1+\epsilon )</span> 在 r &lt; 1-ε 时变成常数 (1-ε)</li>
 <li>所以 loss 在 r &lt; 1-ε 之后变成常数 → <strong>梯度为 0</strong></li>
 <li><strong>效果</strong>: 想减小这个 action 概率 → OK, 但减小到比老策略小 20% 就停</li>
 <li>防止"看到一个坏 action 就一次性 push 它的概率到 0"</li>
 </ul>
 <h3>min 函数干啥的</h3>
-<p><code>min(r · A, clip(r) · A)</code>: 取<strong>更不利于增加 loss</strong> 的那个。</p>
+<p><span class="tex math-inline" data-display="false">\min (r \cdot A,clip(r) \cdot A)</span>: 取<strong>更不利于增加 loss</strong> 的那个。</p>
 <ul>
 <li>当我们的更新是"善意"的方向 (好 action 增、坏 action 减): clip 起作用, 防止贪心</li>
 <li>当 r 跑过了 clip 范围的"另一侧" (比如 r &gt; 1+ε 但 A &lt; 0): 让原 r·A 起作用, 还能修正</li>
@@ -178,6 +178,19 @@ for epoch in range(K):                      # K=4 是常用值
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

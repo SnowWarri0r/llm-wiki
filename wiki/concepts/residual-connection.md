@@ -31,7 +31,7 @@ def residual_block(x):
     return relu(out + x)   # 关键：+ x 这条快车道
 ```
 
-如果 `out.shape` 跟 `x.shape` 不同（比如 stride=2 或通道变了），加一条 1×1 conv 的投影 `W·x`，论文叫 projection shortcut。
+如果 `out.shape` 跟 `x.shape` 不同（比如 stride=2 或通道变了），加一条 1×1 conv 的投影 \(W\cdot x\)，论文叫 projection shortcut。
 
 ## 在 Transformer 里
 完全同款，只是 F 换成 attention/FFN：
@@ -44,7 +44,7 @@ def transformer_sublayer(x, sublayer):
 
 ## 后续变种
 - **DenseNet**：不是 `+`，是 `concat`（沿通道方向拼），更激进
-- **Highway Network**：早于 ResNet，用 gate `T(x)·F(x) + (1-T(x))·x` 控制比例。ResNet 等于把 T 固定成 0.5
+- **Highway Network**：早于 ResNet，用 gate \(T(x)\cdot F(x) + (1-T(x))\cdot x\) 控制比例。ResNet 等于把 T 固定成 0.5
 - **Pre-activation ResNet (Identity Mappings)**：原版是 `relu(F(x) + x)`，改成 `F(x) + x` 不过 relu，BN 和 ReLU 挪到 F 内部 → 训得更稳
 
 ## 链接

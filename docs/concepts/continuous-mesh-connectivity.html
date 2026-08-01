@@ -96,7 +96,7 @@ d23=1.414  ✓     d34=1.414  ✓     d24=2.000  ✗
 (2,3,4): 缺 24              → 不是面
 </code></pre>
 <p>✓ 自检：恢复出的面正好是原来的两张，内部对角线 <code>13</code> 被两张面共用。</p>
-<p>真实 MeshFlow 用的不是上述欧氏距离，而是 SpaceMesh 的 signed spacetime score。论文主文式 (2) 写 <code>d≤τ</code> 连边；但边损失、补充算法和官方代码提交 <code>55f56f6</code> 都使用 <code>d&gt;τ</code>。因此读实现时，应把 <code>d</code> 当“越大越像边”的连接分数，别按主文那句普通距离理解。</p>
+<p>真实 MeshFlow 用的不是上述欧氏距离，而是 SpaceMesh 的 signed spacetime score。论文主文式 (2) 写 <span class="tex math-inline" data-display="false">d\le \tau</span> 连边；但边损失、补充算法和官方代码提交 <code>55f56f6</code> 都使用 <span class="tex math-inline" data-display="false">d&gt;\tau</span>。因此读实现时，应把 <code>d</code> 当“越大越像边”的连接分数，别按主文那句普通距离理解。</p>
 <h2>法线为什么也要预测</h2>
 <p>边只能告诉你哪三个顶点围成面，不能告诉你这个面朝里还是朝外。MeshFlow 再预测每个顶点的外法线。三个顶点法线取平均，与几何叉乘得到的面法线比较：点积为负，就交换面里的两个顶点，把朝向翻过来。</p>
 <p>上例全部顶点法线都取 <code>(0,0,1)</code>。面 <code>(1,2,3)</code> 的两条边是 <code>(1,0,0)</code> 与 <code>(1,1,0)</code>，叉乘得到 <code>(0,0,1)</code>，与平均法线同向，不用翻面。</p>
@@ -130,6 +130,19 @@ d23=1.414  ✓     d34=1.414  ✓     d24=2.000  ✗
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

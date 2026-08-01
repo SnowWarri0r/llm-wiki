@@ -30,7 +30,7 @@ D(x,c,r)=h\!\left(f_{\mathrm{VFM}}(x),c,r\right)
 
 - `x`：待判断的生成图或真实图；
 - `f_VFM(x)`：冻结 DINOv2 提取的多层特征；
-- `c=f_CLIP(text)`：冻结 CLIP 生成的文字条件；
+- \(c=f_{\mathrm{CLIP}}(text)\)：冻结 CLIP 生成的文字条件；
 - `r=f_VFM(x_ref)`：真实参考图经过同一 DINOv2 得到的特征；
 - `h`：可训练的判别头；
 - `D`：输出的真假 logit；数值越高越偏向“真实且匹配”。
@@ -47,7 +47,7 @@ SenseFlow v2 附录专门更正：参考图特征 `r` 来自 DINOv2，不是正�
 +\mathbb E_{\mathrm{fake}}\!\left[\max(0,1+D(x_{\mathrm{fake}}))\right].
 \]
 
-真实图希望 `D≥1`，假图希望 `D≤-1`。已经越过安全边界的样本损失为 0，不再继续把 logit 推到无穷大。
+真实图希望 \(D\ge 1\)，假图希望 \(D\le -1\)。已经越过安全边界的样本损失为 0，不再继续把 logit 推到无穷大。
 
 若 `D(real)=.4、D(fake)=-.2`：
 
@@ -57,7 +57,7 @@ SenseFlow v2 附录专门更正：参考图特征 `r` 来自 DINOv2，不是正�
 总损失 = 1.4
 ```
 
-生成器则最小化 `-D(x_fake)`，也就是努力把假图 logit 调高。
+生成器则最小化 \(-D(x_{\mathrm{fake}})\)，也就是努力把假图 logit 调高。
 
 ## SenseFlow 的时间权重
 
@@ -68,7 +68,7 @@ SenseFlow v2 附录专门更正：参考图特征 `r` 来自 DINOv2，不是正�
 \mathcal L_G^{\mathrm{adv}}=-\omega(t)\,\mathbb E[D(x_{\mathrm{fake}})].
 \]
 
-若 `σ=.8`，权重只有 `.04`；若 `σ=.2`，权重为 `.64`。越接近干净图，判别器越值得信；越接近纯噪声，主要依靠 DMD 方向。
+若 \(\sigma =.8\)，权重只有 `.04`；若 \(\sigma =.2\)，权重为 `.64`。越接近干净图，判别器越值得信；越接近纯噪声，主要依靠 DMD 方向。
 
 ## 工程边界
 

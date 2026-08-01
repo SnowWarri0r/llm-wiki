@@ -75,7 +75,7 @@
 <p>先回忆普通 <a href="../concepts/layernorm.html">layernorm</a> 三步：</p>
 <ol>
 <li><strong>归一化</strong>：向量减自己的均值、除自己的标准差 → 变成均值 0、方差 1 的 <code>x̂</code></li>
-<li><strong>缩放平移</strong>：<code>x̂ ⊙ γ + β</code>（γ、β 是学出来的<strong>固定</strong>参数，每次前向都一样；⊙ 是逐通道相乘）</li>
+<li><strong>缩放平移</strong>：<span class="tex math-inline" data-display="false">\hat{x} \odot \gamma +\beta</span>（γ、β 是学出来的<strong>固定</strong>参数，每次前向都一样；⊙ 是逐通道相乘）</li>
 <li>送进下一层</li>
 </ol>
 <p>γ 像每个通道的"音量"、β 像"底噪"——固定 LN 把它们焊死了。<strong>AdaLN 只改第 2 步参数的来源</strong>：γ、β 不再固定，而是一个小 MLP 吃进条件 (t+c) <strong>现算</strong>出来。<strong>AdaLN-Zero</strong> 再加一件：子层(注意力/FFN)的输出先乘一个门控 α 再加回残差，α 也由 MLP 算、且<strong>初始化为 0</strong>。</p>
@@ -151,7 +151,7 @@ x̂ = [-2, 2] / 2 = [-1, 1]              ← 现在均值0、方差1
 </table>
 <h2>Drift-AR 的 Entropy-AdaLN</h2>
 <p><a href="../papers/drift-ar.html">drift-ar</a> 又提供了一个不同用法：条件不再只有扩散时间步和类别，还多了一张逐空间位置的熵图。低熵位置代表 AR 较确定，高熵位置代表解码器需要留出更大修正空间；Entropy-AdaLN 让这种差异进入解码器各层。</p>
-<p>论文只说明“增加 Entropy-AdaLN”，没有公开它怎样把 <code>h×w</code> 熵图投影成每层 <code>γ/β/门控</code> 的完整实现。普通 DiT 通常接一条全局条件向量，而这里是逐位置条件；两者接口不完全相同，不能直接把常见实现当成论文事实。</p>
+<p>论文只说明“增加 Entropy-AdaLN”，没有公开它怎样把 <span class="tex math-inline" data-display="false">h\times w</span> 熵图投影成每层 <code>γ/β/门控</code> 的完整实现。普通 DiT 通常接一条全局条件向量，而这里是逐位置条件；两者接口不完全相同，不能直接把常见实现当成论文事实。</p>
 <h2>链接</h2>
 <ul>
 <li><a href="../papers/dit.html">dit</a> · 提出 adaLN-Zero 的 paper</li>
@@ -173,6 +173,19 @@ x̂ = [-2, 2] / 2 = [-1, 1]              ← 现在均值0、方差1
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

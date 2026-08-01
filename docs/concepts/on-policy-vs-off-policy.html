@@ -83,8 +83,8 @@
 <h2>数字例子 · 分布错位为什么有偏，重要性采样怎么纠</h2>
 <p>两个动作 A、B，奖励 <code>r(A)=1, r(B)=10</code>。</p>
 <ul>
-<li><strong>当前策略 π</strong>（我们关心的）：<code>π(A)=0.8, π(B)=0.2</code></li>
-<li><strong>数据来源 μ</strong>（旧的/别的策略，off-policy 数据从它来）：<code>μ(A)=0.5, μ(B)=0.5</code></li>
+<li><strong>当前策略 π</strong>（我们关心的）：<span class="tex math-inline" data-display="false">\pi (A)=0.8,\pi (B)=0.2</span></li>
+<li><strong>数据来源 μ</strong>（旧的/别的策略，off-policy 数据从它来）：<span class="tex math-inline" data-display="false">\mu (A)=0.5,\mu (B)=0.5</span></li>
 </ul>
 <pre><code>我们想要的:  E_π[r] = 0.8·1 + 0.2·10 = 2.8
 
@@ -96,7 +96,7 @@
   Σ μ(a)·w(a)·r(a) = 0.5·1.6·1 + 0.5·0.4·10 = 0.8 + 2.0 = 2.8   ✓ 回到真值
 </code></pre>
 <p>✓ 自检：μ 过采了 B（高奖励），所以裸平均 5.5 偏高；重要性采样把"π 比 μ 更/更不偏好某动作"折算回来（B 的权重 0.4 把它压下去），就还原成 π 的真实期望 2.8。一句话：<strong>用 π/μ 这个比率把"别人的数据"重新加权成"像我自己采的"</strong>。</p>
-<p><strong>代价（为什么不能随便 off-policy）</strong>：当 π 和 μ 差很远，比率 <code>π/μ</code> 会在某些动作上<strong>爆掉</strong>（μ 很少采、π 很想要的地方，权重巨大）→ 估计方差爆炸、训练不稳。所以离当前策略越远越危险。<a href="../papers/ppo.html">ppo</a> 的 clip、<a href="../concepts/clipped-surrogate-objective.html">clipped-surrogate-objective</a> 正是"<strong>只允许小步 off-policy</strong>"的纠偏阀门：把比率裁在 1 附近。</p>
+<p><strong>代价（为什么不能随便 off-policy）</strong>：当 π 和 μ 差很远，比率 <span class="tex math-inline" data-display="false">\pi /\mu</span> 会在某些动作上<strong>爆掉</strong>（μ 很少采、π 很想要的地方，权重巨大）→ 估计方差爆炸、训练不稳。所以离当前策略越远越危险。<a href="../papers/ppo.html">ppo</a> 的 clip、<a href="../concepts/clipped-surrogate-objective.html">clipped-surrogate-objective</a> 正是"<strong>只允许小步 off-policy</strong>"的纠偏阀门：把比率裁在 1 附近。</p>
 <h2>接回 wiki</h2>
 <ul>
 <li><a href="../papers/ppo.html">ppo</a> / <a href="../concepts/grpo.html">grpo</a> / <a href="../concepts/rlhf.html">rlhf</a> 是 <strong>on-policy</strong>：模型自己 rollout、自己学；clip/重要性采样让它能安全地复用几步内的旧数据。</li>
@@ -125,6 +125,19 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

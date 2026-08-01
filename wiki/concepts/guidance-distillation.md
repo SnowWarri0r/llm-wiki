@@ -12,7 +12,7 @@ updated: 2026-06-17
 
 ## 直觉 · 别每步都算两遍
 
-[[classifier-free-guidance]] 提质量靠"两遍":一遍带 prompt 出 `v_cond`、一遍空 prompt 出 `v_uncond`,再按引导强度 `w` 外推 `v = v_uncond + w·(v_cond − v_uncond)`。问题:**每一步采样都要前向两次** → 推理算力直接 2×。
+[[classifier-free-guidance]] 提质量靠"两遍":一遍带 prompt 出 \(v_{\mathrm{cond}}\)、一遍空 prompt 出 \(v_{\mathrm{uncond}}\),再按引导强度 `w` 外推 `v = v_uncond + w·(v_cond − v_uncond)`。问题:**每一步采样都要前向两次** → 推理算力直接 2×。
 
 引导蒸馏的想法:**这个外推结果是确定的,能不能让模型直接学会输出它?** 训练时:
 - **老师**:跑完整 CFG(两遍 + 外推),在各种 `w` 下生成"标准答案"。

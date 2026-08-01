@@ -65,12 +65,12 @@
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>把高奖励样本的去噪方向减去低奖励样本的去噪方向,得到一个向量 <code>Δ</code>——它指向"怎么改能更高分",就是强化引导;而 <a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a> 的"条件−无条件"其实是同一种引导,只不过 CFG 那个方向是<strong>离线固定</strong>的,强化引导是<strong>随奖励在线更新</strong>的。</p>
+<p>把高奖励样本的去噪方向减去低奖励样本的去噪方向,得到一个向量 <span class="tex math-inline" data-display="false">\Delta</span>——它指向"怎么改能更高分",就是强化引导;而 <a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a> 的"条件−无条件"其实是同一种引导,只不过 CFG 那个方向是<strong>离线固定</strong>的,强化引导是<strong>随奖励在线更新</strong>的。</p>
 <h2>直觉 · CFG 和 RL 引导原来是一回事</h2>
 <p><a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a> 每步算 <code>v = v_uncond + w·(v_cond − v_uncond)</code>,核心是那个差向量 <code>v_cond − v_uncond</code>——"因为给了条件而多走的那部分",把它放大就更贴 prompt。</p>
-<p><a href="../papers/diffusionnft.html">diffusionnft</a> 指出:这个"差向量当引导"的套路不止 CFG 能用。<strong>用奖励把样本切成正(高分)负(低分)两堆</strong>,正堆的去噪速度 <code>v⁺</code> 减去负堆的 <code>v⁻</code>,得到的 <code>Δ ∝ (v⁺−v_old) ∝ (v_old−v⁻)</code> 同样是个引导方向——只不过它说的是"怎么改能更高分",不是"怎么改更贴条件"。于是一句深刻的话:<strong>CFG 是一种"离线的"强化引导</strong>——cond−uncond 是预先固定好的方向,而真正的强化引导会随着奖励和训练在线变。</p>
+<p><a href="../papers/diffusionnft.html">diffusionnft</a> 指出:这个"差向量当引导"的套路不止 CFG 能用。<strong>用奖励把样本切成正(高分)负(低分)两堆</strong>,正堆的去噪速度 <span class="tex math-inline" data-display="false">v^{+}</span> 减去负堆的 <span class="tex math-inline" data-display="false">v^{-}</span>,得到的 <code>Δ ∝ (v⁺−v_old) ∝ (v_old−v⁻)</code> 同样是个引导方向——只不过它说的是"怎么改能更高分",不是"怎么改更贴条件"。于是一句深刻的话:<strong>CFG 是一种"离线的"强化引导</strong>——cond−uncond 是预先固定好的方向,而真正的强化引导会随着奖励和训练在线变。</p>
 <h2>怎么做的 · 一个模型内建引导,替掉 CFG 的两模型</h2>
-<p>CFG 要同时养"条件模型"和"无条件模型"两套(或一套但跑两遍),推理每步两次前向。强化引导把方向 <code>Δ</code> 直接<strong>学进单个模型</strong>:<a href="../concepts/negative-aware-finetuning.html">negative-aware-finetuning</a> 用隐式参数化让一个 <code>v_θ</code> 同时表达正负速度,采样时只取被引导的正速度 <code>v_θ⁺ = v_old + (引导)</code>,一遍前向出"已引导"结果。</p>
+<p>CFG 要同时养"条件模型"和"无条件模型"两套(或一套但跑两遍),推理每步两次前向。强化引导把方向 <span class="tex math-inline" data-display="false">\Delta</span> 直接<strong>学进单个模型</strong>:<a href="../concepts/negative-aware-finetuning.html">negative-aware-finetuning</a> 用隐式参数化让一个 <span class="tex math-inline" data-display="false">v_\theta</span> 同时表达正负速度,采样时只取被引导的正速度 <code>v_θ⁺ = v_old + (引导)</code>,一遍前向出"已引导"结果。</p>
 <pre><code>CFG:        v = v_uncond + w·(v_cond − v_uncond)     方向固定、两模型/两遍前向
 强化引导:   v_θ⁺ ≈ v_old + (2/β)·Δ                   方向随奖励在线学、单模型一遍
             Δ = 正样本方向 − 负样本方向(由 reward 切出)
@@ -81,7 +81,7 @@
 强化:  v_old=1.0       Δ=0.1(奖励切出的改进量) → β=0.5: v_θ*=1.0+(2/0.5)·0.1=1.0+0.4=1.4
                                                   采样用 v_θ⁺=(1−0.5)·1.0+0.5·1.4=1.2
 </code></pre>
-<p>✓ 自检:两边都是"在基准方向上,沿一个差向量外推"。CFG 的差是 <code>cond−uncond</code>(固定)、外推系数是 <code>w</code>;强化引导的差是 <code>Δ</code>(奖励切出、在线更新)、放大藏在 <code>2/β</code> 里。把它们看成同一族,就懂了为什么 NFT 能用一个在线学的引导替掉 CFG 那套离线两模型。</p>
+<p>✓ 自检:两边都是"在基准方向上,沿一个差向量外推"。CFG 的差是 <span class="tex math-inline" data-display="false">cond-uncond</span>(固定)、外推系数是 <code>w</code>;强化引导的差是 <span class="tex math-inline" data-display="false">\Delta</span>(奖励切出、在线更新)、放大藏在 <span class="tex math-inline" data-display="false">2/\beta</span> 里。把它们看成同一族,就懂了为什么 NFT 能用一个在线学的引导替掉 CFG 那套离线两模型。</p>
 <h2>链接</h2>
 <ul>
 <li><a href="../papers/diffusionnft.html">diffusionnft</a> · 提出"强化引导",并把 CFG 解释成它的离线特例</li>
@@ -102,6 +102,19 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

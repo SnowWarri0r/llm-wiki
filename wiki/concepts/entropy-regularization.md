@@ -42,7 +42,7 @@ total_loss = 策略损失 + 价值损失 − c · 熵
 
 ## 代码出处
 
-stable-baselines3 `ppo.py`: `entropy_loss = -th.mean(entropy)`, 再 `loss = policy_loss + ent_coef * entropy_loss + vf_coef * value_loss`。默认 `ent_coef=0.0`(图像任务常手动调到 0.01)。日志里的 `entropy_loss` 就是当前熵的相反数, 看它有没有过早塌到 0。
+stable-baselines3 `ppo.py`: `entropy_loss = -th.mean(entropy)`, 再 `loss = policy_loss + ent_coef * entropy_loss + vf_coef * value_loss`。默认 \(ent_{\mathrm{coef}}=0.0\)(图像任务常手动调到 0.01)。日志里的 `entropy_loss` 就是当前熵的相反数, 看它有没有过早塌到 0。
 
 ## 链接
 - [[actor-critic]] · 这一项加在 actor 的 loss 上

@@ -102,7 +102,7 @@
 </code></pre>
 <p><strong>关键省法</strong>:从 <strong>loss 那头往回算</strong>(back-prop),每一层把"上游传来的梯度"乘上"本层的局部导数",再传给更里一层。这样每个中间结果<strong>只算一次、被复用</strong>——不然每个参数都从头乘一遍会爆炸。前向算一遍存下中间值,反向再扫一遍收梯度。</p>
 <h2>数字例子 · 手算一步</h2>
-<p>一个最小网络:<code>L = (w·x − y)²</code>,给定 <code>x=2, y=5</code>,当前 <code>w=3</code>,学习率 <code>lr=0.1</code>。</p>
+<p>一个最小网络:<span class="tex math-inline" data-display="false">L = (w\cdot x -y)^{2}</span>,给定 <code>x=2, y=5</code>,当前 <code>w=3</code>,学习率 <code>lr=0.1</code>。</p>
 <p><strong>前向</strong>(算 loss,顺手存中间值):</p>
 <pre><code>a = w·x = 3·2 = 6
 err = a − y = 6 − 5 = 1
@@ -117,7 +117,7 @@ dL/dw = 2 · 1 · 2 = 4                 # 三段乘起来
 <p><strong>走一步</strong>:</p>
 <pre><code>w ← w − lr·(dL/dw) = 3 − 0.1·4 = 2.6
 </code></pre>
-<p><strong>验证变好了</strong>:新 <code>a=2.6·2=5.2</code>,<code>err=0.2</code>,<code>L=0.04</code> —— 从 1 掉到 0.04,loss 真降了。这一步就是 SGD 的全部:前向出 loss、反向出梯度、沿负梯度挪一点。</p>
+<p><strong>验证变好了</strong>:新 <span class="tex math-inline" data-display="false">a=2.6\cdot 2=5.2</span>,<code>err=0.2</code>,<code>L=0.04</code> —— 从 1 掉到 0.04,loss 真降了。这一步就是 SGD 的全部:前向出 loss、反向出梯度、沿负梯度挪一点。</p>
 <h2>为什么深网络要小心梯度</h2>
 <p>链式法则是<strong>一长串相乘</strong>:每段都 &lt;1 → 乘到底<strong>消失</strong>(学不动);每段都 &gt;1 → <strong>爆炸</strong>(炸飞)。所以才有:</p>
 <ul>
@@ -152,6 +152,19 @@ dL/dw = 2 · 1 · 2 = 4                 # 三段乘起来
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

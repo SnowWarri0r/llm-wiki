@@ -106,10 +106,10 @@
 </code></pre>
 <p>交叉熵的脾气：<strong>不光要你答对，还要你"敢对"</strong>；但<strong>自信地错会被往死里罚</strong>。这逼模型诚实地分配概率，不敢乱赌——蒙混（什么都给 0.5）loss 不低，赌错（给错的答案高分）loss 爆炸。</p>
 <h2>怎么做的 · 为什么叫"交叉"</h2>
-<p>它本质是比<strong>两个分布</strong>：你预测的 <code>p</code> vs 真实的 <code>q</code>。完整式子 <code>−Σ q·log p</code>（对所有候选，真实概率 × 你给的 log 概率，求和取负）。</p>
+<p>它本质是比<strong>两个分布</strong>：你预测的 <code>p</code> vs 真实的 <code>q</code>。完整式子 <span class="tex math-inline" data-display="false">-\Sigma q\cdot \log p</span>（对所有候选，真实概率 × 你给的 log 概率，求和取负）。</p>
 <ul>
 <li><strong>分类 / 预测 token</strong>：真实分布 <code>q</code> 是 <strong>one-hot</strong>——概率全压在正确那一项（是猫 → [猫=1, 其它=0]）。代进去，求和只剩正确项，塌成 <code>−log(p_正确)</code>。最常见。</li>
-<li><strong>软标签（如 <a href="../papers/dino.html">dino</a>）</strong>：<code>q</code> <strong>不是 one-hot</strong>，是另一个分布（teacher 的软输出）。这时用完整的 <code>−Σ q·log p</code>——让整条预测分布去贴整条目标分布，不是只对一个答案。</li>
+<li><strong>软标签（如 <a href="../papers/dino.html">dino</a>）</strong>：<code>q</code> <strong>不是 one-hot</strong>，是另一个分布（teacher 的软输出）。这时用完整的 <span class="tex math-inline" data-display="false">-\Sigma q\cdot \log p</span>——让整条预测分布去贴整条目标分布，不是只对一个答案。</li>
 </ul>
 <h2>更妙的直觉 · 用错码本多花的比特</h2>
 <p>信息论视角：<strong>熵</strong> = 用最优编码给一个分布编码、平均花多少比特。<strong>交叉熵</strong> = 你拿<strong>预测分布 p 当码本</strong>去编码<strong>真实分布 q</strong> 实际花的比特。猜得越不准、编码越浪费 → 交叉熵越大。它永远 ≥ 真实分布自己的熵，<strong>多出来的正好是 KL 散度</strong>：</p>
@@ -146,6 +146,19 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

@@ -24,7 +24,7 @@ updated: 2026-05-25
 | 方法 | 原理 | 代表 |
 |---|---|---|
 | **T5 relative bias** | 在 attention score 上加一个可学习的距离偏置矩阵 | T5 / mT5 |
-| **ALiBi** | 在 attention score 上减去 `slope × distance`（线性惩罚远距离） | BLOOM |
+| **ALiBi** | 在 attention score 上减去 \(slope \times distance\)（线性惩罚远距离） | BLOOM |
 | **RoPE** | 旋转 Q/K，点积天然包含相对距离 | LLaMA / Mistral / Qwen / GPT-NeoX |
 | **Transformer-XL 式** | 修改 attention 公式加 relative key/value | Transformer-XL / XLNet |
 

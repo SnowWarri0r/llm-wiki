@@ -23,7 +23,7 @@ updated: 2026-05-20
 - **GRPO 的多维 reward 怎么组合**？加权求和 / 多目标 Pareto / 分阶段？
 - **[[bitwise-determinism]] fish-speech 不要求？**RL 训练时怎么处理 train/inference kernel 不一致？
 - **支持 80+ 语言不用 phonemizer**：是因为 RVQ codec 自动学了发音映射，还是有别的对齐机制？
-- 我自己跑：`fish_speech/models/` 目录怎么布局，主入口是哪个
+- 我自己跑：\(fish_{\mathrm{speech}}/models/\) 目录怎么布局，主入口是哪个
 
 ## 跨源问题
 

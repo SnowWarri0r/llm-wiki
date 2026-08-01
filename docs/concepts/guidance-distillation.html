@@ -67,7 +67,7 @@
 <h2>一句话</h2>
 <p>把 <a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a>(CFG)那个"每步算两遍再外推"的过程<strong>蒸进模型</strong>:让模型把<strong>引导强度当输入</strong>,<strong>一遍前向</strong>就直接吐出"已经引导好"的结果 → 省掉每步那一半算力,质量不掉。</p>
 <h2>直觉 · 别每步都算两遍</h2>
-<p><a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a> 提质量靠"两遍":一遍带 prompt 出 <code>v_cond</code>、一遍空 prompt 出 <code>v_uncond</code>,再按引导强度 <code>w</code> 外推 <code>v = v_uncond + w·(v_cond − v_uncond)</code>。问题:<strong>每一步采样都要前向两次</strong> → 推理算力直接 2×。</p>
+<p><a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a> 提质量靠"两遍":一遍带 prompt 出 <span class="tex math-inline" data-display="false">v_{\mathrm{cond}}</span>、一遍空 prompt 出 <span class="tex math-inline" data-display="false">v_{\mathrm{uncond}}</span>,再按引导强度 <code>w</code> 外推 <code>v = v_uncond + w·(v_cond − v_uncond)</code>。问题:<strong>每一步采样都要前向两次</strong> → 推理算力直接 2×。</p>
 <p>引导蒸馏的想法:<strong>这个外推结果是确定的,能不能让模型直接学会输出它?</strong> 训练时:</p>
 <ul>
 <li><strong>老师</strong>:跑完整 CFG(两遍 + 外推),在各种 <code>w</code> 下生成"标准答案"。</li>
@@ -114,6 +114,19 @@ minimize  ‖ model(z_t, t, prompt, w) − v* ‖
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

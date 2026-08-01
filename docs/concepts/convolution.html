@@ -114,7 +114,7 @@
 <li><strong>滑窗</strong>：核从左上角开始，盖住一块 patch，点乘求和出一个数；右移一格再来；走完一行换下一行。</li>
 <li><strong>stride（步长）</strong>：一次滑几格，2 就跳着走、输出更小。</li>
 <li><strong>padding（补边）</strong>：边上补一圈 0，让输出不缩水 / 控制尺寸。</li>
-<li>输出尺寸 ≈ <code>(W − K + 2P) / S + 1</code>。</li>
+<li>输出尺寸 ≈ <span class="tex math-inline" data-display="false">(W -K +2P) / S +1</span>。</li>
 </ul>
 <h2>多核 → 多张 feature map</h2>
 <p>一个核只能抓<strong>一种</strong>局部模式（比如"竖边")。所以一层放<strong>很多核</strong>（比如 64 个），每个学一种模式（横边、斜边、某种颜色块……），输出 64 张 feature map 摞起来 = 这层的输出通道。下一层的核再在这 64 通道上滑，组合出更复杂的模式（角 → 纹理 → 部件 → 物体）。</p>
@@ -154,6 +154,19 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

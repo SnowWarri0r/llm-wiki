@@ -40,7 +40,7 @@ LTX-2 报告给出约 25 token/s、每 token 128 维：
 20 秒 → 20×25 = 500 token → 500×128 = 64,000 latent 标量
 ```
 
-当前实现把每个时间位置写成 `[8 channels,16 frequency slots]`，`8×16=128`。这说明 latent 形状，不等于 128 个互相独立的声学量。
+当前实现把每个时间位置写成 `[8 channels,16 frequency slots]`，\(8\times 16=128\)。这说明 latent 形状，不等于 128 个互相独立的声学量。
 
 ## 跟 codec token 的对比
 

@@ -22,7 +22,7 @@ updated: 2026-05-28
 - r = 1.5: 新策略把这个 action 的概率提了 50%
 - r = 0.5: 新策略把这个 action 的概率降了 50%
 
-**只要每个 action 的 r 都在 `[1-ε, 1+ε]` 范围内, 新老策略整体就不会差太远**. 这是一个对 KL 的粗暴但有效近似。
+**只要每个 action 的 r 都在 \([1-\epsilon ,1+\epsilon ]\) 范围内, 新老策略整体就不会差太远**. 这是一个对 KL 的粗暴但有效近似。
 
 ## 公式
 
@@ -32,14 +32,14 @@ r_t(θ) = π_new(a_t | s_t) / π_old(a_t | s_t)
 L_CLIP = E_t [ min( r_t · A_t,  clip(r_t, 1-ε, 1+ε) · A_t ) ]
 ```
 
-其中 `A_t` 是 [[advantage-function]] (这个 action 比 baseline 好多少)。`ε` 通常 0.2.
+其中 `A_t` 是 [[advantage-function]] (这个 action 比 baseline 好多少)。\(\epsilon\) 通常 0.2.
 
 读这个公式的两个关键点:
 
 ### 当 A_t > 0 (这个 action 是好的)
 
 - 我们想增加 P(这个 action), 也就是想让 r 变大
-- 但 `clip(r, 1-ε, 1+ε)` 在 r > 1+ε 时变成常数 (1+ε)
+- 但 \(clip(r,1-\epsilon ,1+\epsilon )\) 在 r > 1+ε 时变成常数 (1+ε)
 - 所以 loss 在 r > 1+ε 之后变成常数 → **梯度为 0**
 - **效果**: 想增加这个 action 概率 → OK, 但增加到比老策略大 20% 就停, 不让你贪
 - 防止"看到一个好 action 就一次性 push 它的概率到天上"
@@ -47,14 +47,14 @@ L_CLIP = E_t [ min( r_t · A_t,  clip(r_t, 1-ε, 1+ε) · A_t ) ]
 ### 当 A_t < 0 (这个 action 是坏的)
 
 - 我们想减小 P(这个 action), 也就是想让 r 变小
-- `clip(r, 1-ε, 1+ε)` 在 r < 1-ε 时变成常数 (1-ε)
+- \(clip(r,1-\epsilon ,1+\epsilon )\) 在 r < 1-ε 时变成常数 (1-ε)
 - 所以 loss 在 r < 1-ε 之后变成常数 → **梯度为 0**
 - **效果**: 想减小这个 action 概率 → OK, 但减小到比老策略小 20% 就停
 - 防止"看到一个坏 action 就一次性 push 它的概率到 0"
 
 ### min 函数干啥的
 
-`min(r · A, clip(r) · A)`: 取**更不利于增加 loss** 的那个。
+\(\min (r \cdot A,clip(r) \cdot A)\): 取**更不利于增加 loss** 的那个。
 
 - 当我们的更新是"善意"的方向 (好 action 增、坏 action 减): clip 起作用, 防止贪心
 - 当 r 跑过了 clip 范围的"另一侧" (比如 r > 1+ε 但 A < 0): 让原 r·A 起作用, 还能修正

@@ -83,7 +83,7 @@
 <p>最后三种模态的 token <strong>落到同一条序列</strong>里，一起做 self-attention（这就是 early fusion 的思路，见 <a href="../concepts/early-fusion.html">early-fusion</a>）。占位符位置原本是空槽，projector 把对应模态的向量灌进去。</p>
 <p>在 minimind-o 的方案里，编码器始终冻结，只更新 projector 和按阶段开放的主干。Qwen3-VL 则分两步：S0 只训练 merger，视觉编码器与 LLM 都冻结；S1 起三者全部联合训练。projector 是“接口层”，不等于它两侧必须永远冻结。</p>
 <h2>Qwen3-VL 的 merger 还顺便减少 token</h2>
-<p>假设视觉编码器输出 <code>12×16=192</code> 个特征。Qwen3-VL 每次把相邻 <code>2×2=4</code> 个特征拼起来，再经两层 MLP 映射到 LLM hidden size：</p>
+<p>假设视觉编码器输出 <span class="tex math-inline" data-display="false">12\times 16=192</span> 个特征。Qwen3-VL 每次把相邻 <span class="tex math-inline" data-display="false">2\times 2=4</span> 个特征拼起来，再经两层 MLP 映射到 LLM hidden size：</p>
 <pre><code class="language-text">12×16 个视觉特征 → 6×8 = 48 个视觉 token
 192 → 48，token 数减少 75%
 </code></pre>
@@ -117,6 +117,19 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

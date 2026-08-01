@@ -65,13 +65,13 @@
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>微调时<strong>冻结底模权重不动</strong>,只在旁边训一个<strong>低秩的小增量矩阵</strong> <code>ΔW = B·A</code>(秩 r 很小);推理时用 <code>W + BA</code>。几十 MB 就给大模型加一个专门技能,可插拔、一个底模能挂很多个。</p>
+<p>微调时<strong>冻结底模权重不动</strong>,只在旁边训一个<strong>低秩的小增量矩阵</strong> <span class="tex math-inline" data-display="false">\Delta W =B\cdot A</span>(秩 r 很小);推理时用 <code>W + BA</code>。几十 MB 就给大模型加一个专门技能,可插拔、一个底模能挂很多个。</p>
 <h2>直觉 · 别重训整本书，夹张便利贴</h2>
 <p>全参数微调一个大模型:要更新<strong>所有</strong>权重,显存吃不消、每个任务存一整份几个 GB 的权重,贵。</p>
-<p>LoRA(Hu et al. 2021)的观察:<strong>微调带来的权重改变量 <code>ΔW</code> 其实是低秩的</strong>(<a href="../concepts/matrix-rank.html">matrix-rank</a>:改动只活在少数几个独立方向上)——可以用两个<strong>瘦长的小矩阵相乘</strong>近似出来。于是:</p>
+<p>LoRA(Hu et al. 2021)的观察:<strong>微调带来的权重改变量 <span class="tex math-inline" data-display="false">\Delta W</span> 其实是低秩的</strong>(<a href="../concepts/matrix-rank.html">matrix-rank</a>:改动只活在少数几个独立方向上)——可以用两个<strong>瘦长的小矩阵相乘</strong>近似出来。于是:</p>
 <ul>
 <li>底模权重 <code>W</code> <strong>冻结不动</strong>;</li>
-<li>旁边学一个 <code>ΔW = B·A</code>,其中 <code>A</code> 是 <code>r×k</code>、<code>B</code> 是 <code>d×r</code>,<strong>秩 <code>r</code> 很小</strong>(常 8/16/32);</li>
+<li>旁边学一个 <span class="tex math-inline" data-display="false">\Delta W =B\cdot A</span>,其中 <code>A</code> 是 <span class="tex math-inline" data-display="false">r\times k</span>、<code>B</code> 是 <span class="tex math-inline" data-display="false">d\times r</span>,<strong>秩 <code>r</code> 很小</strong>(常 8/16/32);</li>
 <li>前向变成 <code>y = Wx + B(Ax)</code>,只训 <code>A</code>、<code>B</code>。</li>
 </ul>
 <p>类比:不重印整本教科书,只在页边<strong>夹一叠便利贴</strong>写批注。底书不变,便利贴几十 KB,想换主题换一叠便利贴就行。</p>
@@ -80,7 +80,7 @@
 LoRA:   y = W x + B (A x)        # A:r×k  B:d×r   只训 A,B（秩 r 小）
         ΔW = B·A                 # 用时可合并进 W，零额外推理开销
 </code></pre>
-<p>举个数:<code>W</code> 是 4096×4096 ≈ <strong>1678 万</strong>参数。取 <code>r=16</code>,则 <code>A</code>+<code>B</code> 只有 <code>4096×16×2</code> ≈ <strong>13 万</strong>参数 —— <strong>省约 128×</strong>。所以一个 LoRA 常只有几十 MB,而底模是几个 GB。</p>
+<p>举个数:<code>W</code> 是 4096×4096 ≈ <strong>1678 万</strong>参数。取 <code>r=16</code>,则 <code>A</code>+<code>B</code> 只有 <span class="tex math-inline" data-display="false">4096\times 16\times 2</span> ≈ <strong>13 万</strong>参数 —— <strong>省约 128×</strong>。所以一个 LoRA 常只有几十 MB,而底模是几个 GB。</p>
 <p>好处:</p>
 <ul>
 <li><strong>省显存/省存储</strong>:只训&amp;存那点小矩阵。</li>
@@ -114,6 +114,19 @@ LoRA:   y = W x + B (A x)        # A:r×k  B:d×r   只训 A,B（秩 r 小）
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

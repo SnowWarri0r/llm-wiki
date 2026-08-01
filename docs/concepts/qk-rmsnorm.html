@@ -67,7 +67,7 @@
 <h2>一句话</h2>
 <p>在算 attention 分数之前，先对 Query 和 Key 各做一次 RMSNorm —— <strong>防止点积越训越大、attention 塌成 one-hot 而炸训练</strong>。</p>
 <h2>直觉 · 麦克风别开到爆音</h2>
-<p>attention 的核心是 <code>softmax(Q·K^T / √d)</code>。点积 Q·K 越大，softmax 出来的分布越尖。</p>
+<p>attention 的核心是 <span class="tex math-inline" data-display="false">\operatorname{softmax}(Q\cdot K^T / \sqrt{d})</span>。点积 Q·K 越大，softmax 出来的分布越尖。</p>
 <p>深层大模型训着训着会出一个毛病：<strong>Q 和 K 的数值幅度悄悄涨上去</strong>（logit drift）。点积是两个大向量相乘，结果更大。一旦某个 logit 远超其它，softmax 几乎把全部权重压到一个 token 上 → attention 变成<strong>near one-hot</strong>：每个位置只盯死一个邻居，别的全看不见。</p>
 <p>后果有两层：</p>
 <ul>
@@ -97,7 +97,7 @@ attn = softmax(q @ k.transpose() / sqrt(d))
 <h2>代码出处</h2>
 <ul>
 <li>提出：Scaling ViT to 22B Parameters, arXiv 2302.05442（QK-Norm 是其能稳训的关键之一）</li>
-<li>现代实现：几乎所有新 LLM / DiT 的 attention 模块里都有 <code>q_norm</code> / <code>k_norm</code></li>
+<li>现代实现：几乎所有新 LLM / DiT 的 attention 模块里都有 <span class="tex math-inline" data-display="false">q_{\mathrm{norm}}</span> / <span class="tex math-inline" data-display="false">k_{\mathrm{norm}}</span></li>
 </ul>
 <h2>链接</h2>
 <ul>
@@ -121,6 +121,19 @@ attn = softmax(q @ k.transpose() / sqrt(d))
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

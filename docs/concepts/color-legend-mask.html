@@ -72,13 +72,13 @@
       &lt;p&gt;person-1&lt;color&gt;(245,80,120)&lt;/color&gt;&lt;/p&gt;
 图像：道路像素涂 (20,190,240)，人物像素涂 (245,80,120)
 </code></pre>
-<p>解码器建立 <code>RGB → label/instance</code> 字典，再对每个像素查表。黑色保留给背景。</p>
+<p>解码器建立 <span class="tex math-inline" data-display="false">RGB \to label/instance</span> 字典，再对每个像素查表。黑色保留给背景。</p>
 <h2>200 个颜色怎么拉开</h2>
 <p>SenseNova-Vision 在 RGB 立方体里用 greedy farthest-point sampling 选 200 个 anchor。设已经选中的颜色集合为 <code>S</code>，候选颜色 <code>c</code> 到集合的安全距离为：</p>
 <pre><code class="language-text">d(c,S) = min ||c-s||₂,  s∈S
 c_next = argmax d(c,S)
 </code></pre>
-<p><code>||·||₂</code> 是 RGB 三维欧氏距离；先看候选离最近旧颜色有多远，再挑这个“最近距离”最大的候选。</p>
+<p><span class="tex math-inline" data-display="false">||\cdot ||_{2}</span> 是 RGB 三维欧氏距离；先看候选离最近旧颜色有多远，再挑这个“最近距离”最大的候选。</p>
 <p>数字例：已有红 <code>R=(255,0,0)</code>、绿 <code>G=(0,255,0)</code>，比较蓝 <code>B=(0,0,255)</code> 与黄 <code>Y=(255,255,0)</code>：</p>
 <pre><code class="language-text">d(B,R)=√(255²+0²+(-255)²)=360.6
 d(B,G)=360.6                 → d(B,S)=360.6
@@ -108,6 +108,19 @@ d(Y,G)=255                   → d(Y,S)=255
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

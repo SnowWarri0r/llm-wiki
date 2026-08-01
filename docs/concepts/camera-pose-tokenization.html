@@ -71,7 +71,7 @@
 <ul>
 <li><code>q=(qx,qy,qz,qw)</code>：单位四元数，表示旋转；</li>
 <li><code>u=(ux,uy,uz)</code>：单位方向向量，只说明往哪移动；</li>
-<li><code>s_cm</code>：移动尺度，单位厘米，范围 1–1000，对应 0.01–10m。</li>
+<li><span class="tex math-inline" data-display="false">s_{\mathrm{cm}}</span>：移动尺度，单位厘米，范围 1–1000，对应 0.01–10m。</li>
 </ul>
 <p>四元数与方向分量都乘 1000 并取专用数值 token；<code>&lt;1&gt;</code> 在 scale 字段里表示 1cm。边界标签 <code>&lt;frame&gt; / &lt;quat&gt; / &lt;offset&gt; / &lt;scale&gt;</code> 负责结构。</p>
 <h2>完整数字例</h2>
@@ -88,11 +88,11 @@ s = 1.25m = 125cm       → &lt;125&gt;
   = (0.6,0,0.8) × 125 / 100
   = (0.75,0,1.00) m
 </code></pre>
-<p>自检：方向长度 <code>√(0.6²+0.8²)=1</code>；平移长度 <code>√(0.75²+1²)=1.25m</code>，与 scale 一致。</p>
+<p>自检：方向长度 <span class="tex math-inline" data-display="false">\sqrt{0.6^{2}+0.8^{2}}=1</span>；平移长度 <span class="tex math-inline" data-display="false">\sqrt{0.75^{2}+1^{2}}=1.25m</span>，与 scale 一致。</p>
 <h2>为什么不直接输出三个平移数</h2>
 <p>方向和尺度拆开后，方向永远落在 <code>[-1,1]</code>，能复用固定 <code>[-1000,1000]</code> 量化表；尺度则用厘米 token 覆盖 1cm–10m。代价是自回归解码必须同时保证四元数归一、方向单位长度和标签格式正确，模型生成的整数也不天然满足几何约束。</p>
 <h2>工程证据</h2>
-<p>论文为相机位姿复用基础模型词表最后 2,009 项：2,001 个数值 token 加 8 个结构 token。官方当前源码的解析器将 <code>&lt;quat&gt;</code> 与 <code>&lt;offset&gt;</code> 整数除以 1000，再按 <code>translation = offset × scale / 100</code> 还原米制平移。</p>
+<p>论文为相机位姿复用基础模型词表最后 2,009 项：2,001 个数值 token 加 8 个结构 token。官方当前源码的解析器将 <code>&lt;quat&gt;</code> 与 <code>&lt;offset&gt;</code> 整数除以 1000，再按 <span class="tex math-inline" data-display="false">translation =offset \times scale / 100</span> 还原米制平移。</p>
 <h2>链接</h2>
 <ul>
 <li><a href="../concepts/decodable-vision-representation.html">decodable-vision-representation</a> · 连续视觉量如何进入生成接口</li>
@@ -112,6 +112,19 @@ s = 1.25m = 125cm       → &lt;125&gt;
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

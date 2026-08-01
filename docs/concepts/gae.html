@@ -81,7 +81,7 @@
 <p>GAE = <strong>把未来所有惊讶加起来, 但越远的越打折</strong>:</p>
 <pre><code>优势 = δ_当前 + (γλ)·δ_下一步 + (γλ)²·δ_下下步 + ...
 </code></pre>
-<p>那个打折率是 <code>γ × λ</code> 相乘。比如 γ=0.99、λ=0.95 → 每往未来一步, 权重乘 0.94:</p>
+<p>那个打折率是 <span class="tex math-inline" data-display="false">\gamma \times \lambda</span> 相乘。比如 γ=0.99、λ=0.95 → 每往未来一步, 权重乘 0.94:</p>
 <pre><code>当前步 1.00 → +1步 0.94 → +2步 0.88 → +5步 0.73 → +10步 0.54 → +20步 0.29 ...
 </code></pre>
 <p>越远的惊讶, 指数级地越不算数。</p>
@@ -97,7 +97,7 @@
 <li><strong>λ = 0.95</strong> → 甜点, 主要看现实但让 critic 帮忙抹平噪声</li>
 </ul>
 <h2>代码出处</h2>
-<p>stable-baselines3 <code>buffers.py</code> 的 <code>compute_returns_and_advantage</code>: 从后往前累加 <code>last_gae = delta + gamma * gae_lambda * last_gae</code>, 正是上面那条递推。<code>gae_lambda=0.95</code>、<code>gamma=0.99</code> 是默认。</p>
+<p>stable-baselines3 <code>buffers.py</code> 的 <code>compute_returns_and_advantage</code>: 从后往前累加 <code>last_gae = delta + gamma * gae_lambda * last_gae</code>, 正是上面那条递推。<span class="tex math-inline" data-display="false">gae_{\mathrm{lambda}}=0.95</span>、<code>gamma=0.99</code> 是默认。</p>
 <h2>链接</h2>
 <ul>
 <li><a href="../concepts/advantage-function.html">advantage-function</a> · GAE 是估计它的标配方法</li>
@@ -118,6 +118,19 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {
