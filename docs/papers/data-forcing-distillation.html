@@ -197,7 +197,8 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.72);border:1px so
   <section id="overview">
     <span class="secno">§ 00 · COMPLETE MAP</span>
     <h2>先拼完整：只在训练时多出一条真实数据支路</h2>
-    <p class="lead">如果只盯着那行 <code>teacher_data = data if rand() &lt; p else gen_data</code>，很难知道它为什么有效。先看一轮训练的五站数据流。</p>
+    <p class="lead">先说它拿来干嘛。把 14B 的视频扩散模型蒸成 4 步，速度能快一个数量级，但蒸出来的学生会<strong>塌</strong>：同一句提示词换随机种子，出来的构图几乎一模一样；镜头也不爱动；画面还偏过饱和。DFD 是接在 DMD2 之后的一段<strong>很短的后训练</strong>（论文只跑 100–300 步），把真实视频直接塞进分布匹配的主梯度，把丢掉的多样性和镜头运动找回来一部分。需要它的人是<strong>手上已经有 DMD2 蒸馏产物、想补质量和多样性</strong>的；不用它的替代办法是挂个 GAN 让真实数据间接传话，或者认了这份损失。</p>
+    <p>如果只盯着那行 <code>teacher_data = data if rand() &lt; p else gen_data</code>，很难知道它为什么有效。先看一轮训练的五站数据流。</p>
     <figure>
       <figcaption class="figcap"><span>Fig 01 · DFD 一轮训练</span><span class="n">部署时只留第 1 站</span></figcaption>
       <div class="flow5">
@@ -251,8 +252,7 @@ q 越接近 0，整项越接近 0；不是 ln(0) 本身等于 0。</pre>
       <div class="symbol"><code class="m">\nabla_x</code>对输入 <code class="m">x</code> 的每个元素求偏导，得到同形状的方向场。</div>
     </div>
     <p><code class="m">p(x)</code> 是位置 <code class="m">x</code> 附近的概率密度；<code class="m">\nabla_x</code> 表示“对输入 <code class="m">x</code> 的每个元素求梯度”。结果和视频 latent 同形状：每个位置都有一个“往哪改更像数据”的方向。</p>
-    <p>这两套 score 网络都不是临时凭空造出来的。它们先做同一类扩散训练，只是训练数据不同：</p>
-    <div class="formula wide" data-expr="x_t=\alpha_t x+\sigma_t\epsilon,\qquad \mathcal L_{\mathrm{score}}=\mathbb E\left[\left\|f_\phi(x_t,c,t)-y_t^{*}\right\|_2^2\right]"></div>
+    <p>这两套 score 网络都不是临时凭空造出来的。它们先做同一类扩散训练，只是训练数据不同。先认符号，再看式子：</p>
     <div class="symbols">
       <div class="symbol"><code class="m">x</code>teacher 用真实视频；fake-score 用学生刚生成的视频。</div>
       <div class="symbol"><code class="m">\alpha_t</code>时刻 <code class="m">t</code> 还保留多少原视频信号。</div>
@@ -261,14 +261,26 @@ q 越接近 0，整项越接近 0；不是 ln(0) 本身等于 0。</pre>
       <div class="symbol"><code class="m">f_\phi</code>正在训练的扩散网络；<code class="m">\phi</code> 是它的参数。</div>
       <div class="symbol"><code class="m">c,\ t</code>文本或首帧条件，以及当前噪声时刻。</div>
       <div class="symbol"><code class="m">y_t^{*}</code>该 backbone 原本使用的扩散标签，例如噪声或速度；星号表示目标，不是乘法。</div>
-      <div class="symbol"><code class="m">s_p(x)</code>根据网络预测和噪声参数换算出的 <code class="m">\nabla_x\log p_t(x)</code>。</div>
     </div>
+    <div class="formula wide" data-expr="x_t=\alpha_t x+\sigma_t\epsilon,\qquad \mathcal L_{\mathrm{score}}=\mathbb E\left[\left\|f_\phi(x_t,c,t)-y_t^{*}\right\|_2^2\right]"></div>
     <pre>x=2, α=.8, σ=.6, ε=−.5
 xt = .8×2 + .6×(−.5)
    = 1.6 − .3
    = 1.3
 
 网络就是在这种带噪位置上练习“该往哪改”。</pre>
+
+    <h3>网络吐出来的不是 score，还得换一步</h3>
+    <p>这一点容易被跳过：<strong>扩散网络的输出并不是 score</strong>，它预测的是 <code class="m">y_t^{*}</code>（噪声、速度，看 backbone 而定）。score 要再换算一次。以最常见的「预测噪声」为例，换算式来自加噪定义本身：</p>
+    <div class="formula" data-expr="p_t(x_t\mid x)=\mathcal N(\alpha_t x,\ \sigma_t^2 I)\;\Longrightarrow\; \nabla_{x_t}\log p_t(x_t\mid x)=-\frac{x_t-\alpha_t x}{\sigma_t^{2}}=-\frac{\epsilon}{\sigma_t}"></div>
+    <p>逐步读：高斯的对数密度对自变量求导，得到 <code class="m">-(x_t-\text{均值})/\text{方差}</code>；而 <code class="m">x_t-\alpha_t x</code> 按加噪定义正好等于 <code class="m">\sigma_t\epsilon</code>，约掉一个 <code class="m">\sigma_t</code> 就剩 <code class="m">-\epsilon/\sigma_t</code>。网络给出的是对 <code class="m">\epsilon</code> 的估计 <code class="m">\hat\epsilon</code>，于是：</p>
+    <pre>接着上面那个例子：σ=.6，网络这一步估出 ε̂ = −.5
+
+s = −ε̂ / σ = −(−.5) / .6 = <b>+.8333</b>
+
+正号说明「往正方向改更像数据」—— 因为噪声把它往负方向拽了 .3，
+score 就指回来。这个 +.8333 才是后面 g_DMD 里 s_real / s_fake 的那种量。</pre>
+    <div class="note"><strong>换成别的 backbone，换算式不同但思路一样。</strong>预测速度（v-prediction / flow matching）的网络要按各自的 <code class="m">\alpha_t,\sigma_t</code> 关系重新解一次，得到的仍是同一个 <code class="m">\nabla_x\log p_t</code>。本页后面只用「score = 某个和 latent 同形状的方向场」这一层，不依赖具体哪种 backbone。</div>
     <figure>
       <figcaption class="figcap"><span>Fig 03 · 训练生命周期</span><span class="n">谁保留 · 谁冻结 · 谁追踪</span></figcaption>
       <div class="roles">
@@ -289,7 +301,7 @@ xt = .8×2 + .6×(−.5)
       <div class="symbol"><code class="m">t,\alpha_t,\sigma_t,\epsilon</code>噪声时刻、信号比例、噪声比例和实际噪声。</div>
     </div>
     <div class="formula wide" data-expr="g_{\mathrm{DMD}}(\theta)=\mathbb E\left[\left(s_{\mathrm{fake}}(\tilde x_t\mid c,t)-s_{\mathrm{real}}(\tilde x_t\mid c,t)\right)J_\theta\right],\quad J_\theta=\nabla_\theta G_\theta(z,c)"></div>
-    <p><code class="m">J_\theta</code> 是生成器 Jacobian<a class="jr" href="#g-06">6</a>：它负责把“视频该怎样改”的方向传回参数。梯度下降会减去 <code>gDMD</code>，所以模型靠近 real score，同时避开学生已经堆得过密的位置。</p>
+    <p>式子右边那个 <code class="m">J_\theta=\nabla_\theta G_\theta(z,c)</code> 就是生成器 Jacobian<a class="jr" href="#g-06">6</a>——<strong>学生输出对它自己参数的导数</strong>：参数动一点，输出跟着动多少。前半截 <code class="m">(s_{\mathrm{fake}}-s_{\mathrm{real}})</code> 说的是“<strong>视频</strong>该往哪改”，乘上它才变成“<strong>参数</strong>该往哪改”，这就是链式法则的最后一环。梯度下降会减去 <code>gDMD</code>，所以模型靠近 real score，同时避开学生已经堆得过密的位置。</p>
     <pre>s_fake=.2, s_real=1.0, Jθ=.5
 视频空间的差 = .2−1.0 = −.8
 参数梯度     = −.8×.5 = −.4
@@ -360,13 +372,19 @@ gDFD     = −.40−(−.60×.5)     = −.10
         <div class="codecard new"><h4>DFD MIX</h4><code>teacher_data = data.detach()<br>if rand() &lt; p<br>else gen_data.detach()</code></div>
       </div>
     </figure>
-    <p>随后 fake-score 仍读取加噪学生视频，teacher 读取加噪后的 <code>teacher_data</code>。两者做差，再造伪目标：</p>
-    <pre>vsd_grad     = fake_score − teacher_score
+    <p>随后 fake-score 仍读取加噪学生视频，teacher 读取加噪后的 <code>teacher_data</code>。两者做差，乘一个归一化因子，再造伪目标：</p>
+    <pre>vsd_grad      = (fake_score − teacher_score) × <span class="hi">w_norm</span>
 pseudo_target = gen_data − vsd_grad
 loss          = 1/2 · MSE(gen_data, <span class="hi">stopgrad(pseudo_target)</span>)</pre>
     <p><code>stopgrad</code><a class="jr" href="#g-07">7</a>把右边钉成本轮固定目标，只准左边的学生输出移动。它不会冻结整套学生。</p>
-    <h3>从伪目标算到一次更新</h3>
+
+    <h3>那个 w_norm 是干什么的</h3>
+    <p>两套 score 之差的<strong>绝对尺度是不受控的</strong>：噪声时刻不同、视频内容不同，这个差可能大几十倍，也可能几乎为零。直接拿它当步长，训练就时快时慢。<code class="m">w_{\mathrm{norm}}</code> 把这个差<strong>按“学生现在离老师多远”除一遍</strong>，让每步挪动的相对幅度稳定下来：</p>
     <div class="formula" data-expr="w_{\mathrm{norm}}=\frac{1}{|gen-teacher|+10^{-6}}"></div>
+    <p>分母那个 <code class="m">10^{-6}</code> 只防除零。差得远时 <code class="m">w_{\mathrm{norm}}</code> 小、单步收着走；已经很近时它变大，但乘上本来就很小的 score 差，净效果仍是小步。</p>
+    <div class="boundary"><strong>这一项是实现层的，不在论文正文的公式里。</strong>参考实现里除的是“老师给出的干净预测”与“学生输出”之间的逐样本平均绝对距离；下面把整段视频压成一个标量，所以这两个量在数值上共用了同一个 <code>teacher=1.0</code>——真实代码里它们是两个不同的张量。看数量级和方向可以，别当成论文公式。</div>
+
+    <h3>从伪目标算到一次更新</h3>
     <p>下面用一个标量代替整段视频，并临时设 <code class="m">\partial gen/\partial\theta=1</code>。这样可以把“学生参数改变一点，输出也改变一点”简化成一比一，方便只看伪目标方向；真实网络仍要通过 Jacobian 把输出梯度传回参数。</p>
     <pre>gen=1.2, fake=.8, teacher=1.0
 wnorm ≈ 1/|1.2−1.0| = 5
@@ -393,7 +411,9 @@ dL/dgen  = −1.0
     <p>若两边各采一份噪声，差值里还会多出 <code class="m">\sigma (\epsilon_{\mathrm{real}}-\epsilon_{\mathrm{fake}})</code>，teacher discrepancy 会混入无关波动。</p>
     <p>论文进一步要求：固定条件后，真实样本与学生样本的平均平方距离不能太大。</p>
     <div class="formula wide" data-expr="\mathbb E\left[\|x-G_\theta(z,c)\|_2^2\mid c\right]\le\delta(c)^2"></div>
-    <p>若 teacher score 是 <code>L(c,t)</code>-Lipschitz<a class="jr" href="#g-08">8</a>，生成器 Jacobian 最多放大 <code>B</code> 倍，则：</p>
+    <p>还要求 teacher score 别太“陡”。<strong>Lipschitz<a class="jr" href="#g-08">8</a> 就是给“陡”定一个上限</strong>——输入挪多远，输出最多跟着挪多远：</p>
+    <div class="formula" data-expr="\left\|s_{\mathrm{real}}(a\mid c,t)-s_{\mathrm{real}}(b\mid c,t)\right\|_2\le L(c,t)\,\|a-b\|_2"></div>
+    <p>比如 <code class="m">L=1.5</code> 的意思是：两个输入相差 1，teacher 给出的方向最多相差 1.5。有了这个上限，才能把“输入差多少”翻译成“方向差多少”。再加上生成器 Jacobian 最多放大 <code class="m">B</code> 倍，论文给出误差上界：</p>
     <div class="symbols">
       <div class="symbol"><code class="m">\delta(c)</code>固定条件 <code class="m">c</code> 后，学生视频离真实视频通常有多远。</div>
       <div class="symbol"><code class="m">L(c,t)</code>输入挪动一格时，teacher score 最多变化多少。</div>
