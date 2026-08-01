@@ -76,7 +76,7 @@
 <p>所以，权重不是“从 QKV 变成去噪权重”或“从去噪权重自动变成深度权重”。同一套矩阵一直在做特征混合；变的是输入分布、条件、训练标签和梯度。</p>
 <h2>GenCeption 的整流流例子</h2>
 <p>WAN 的整流流约定是：</p>
-<div class="tex math-display" data-display="true">v^\*= \epsilon-x_0</div>
+<div class="tex math-display" data-display="true">v^{*}= \epsilon-x_0</div>
 <ul>
 <li><span class="tex math-inline" data-display="false">x_{0}</span>：干净视频的 latent；</li>
 <li><span class="tex math-inline" data-display="false">\epsilon</span>：与 <span class="tex math-inline" data-display="false">x_{0}</span> 同形状的高斯噪声；</li>
@@ -84,11 +84,11 @@
 <li>星号 <code>*</code>：表示训练标签，不是乘法。</li>
 </ul>
 <p>GenCeption 输入的是干净视频 latent，并固定 <code>t=0</code>。DiT 原始输出仍沿用上面的速度约定，于是先取反：</p>
-<div class="tex math-display" data-display="true">-v^\*=x_0-\epsilon</div>
+<div class="tex math-display" data-display="true">-v^{*}=x_0-\epsilon</div>
 <p>这个负号只把方向从“干净 → 噪声”翻成“噪声 → 干净”。它不会把输出精确变成深度，也不等于把噪声项消掉。</p>
 <h3>一个标量例子</h3>
 <p>设 <span class="tex math-inline" data-display="false">x_{0}=2</span>、<span class="tex math-inline" data-display="false">\epsilon =-1</span>：</p>
-<div class="tex math-display" data-display="true">v^\*=-1-2=-3,\qquad -v^\*=3</div>
+<div class="tex math-display" data-display="true">v^{*}=-1-2=-3,\qquad -v^{*}=3</div>
 <p>原速度 <code>-3</code> 指向噪声侧，取反后的 <code>3</code> 指回干净侧。论文只声称这个方向与目标视频 latent <strong>更接近</strong>，能加快收敛；真正的深度值仍由后训练标签决定。</p>
 <h2>为什么最终层可以继续接 VAE decoder</h2>
 <p>原生成器的最后一层输出本来就是给 VAE decoder 消费的 latent 形状。GenCeption 直接使用最终层，而不是从中间层拉出一套特征金字塔，因此：</p>
