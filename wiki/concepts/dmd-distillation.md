@@ -1,8 +1,8 @@
 ---
 name: dmd-distillation
 type: concept
-sources: [dmd, dmd2, senseflow, qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2, drifting-models, drift-ar, minwm]
-updated: 2026-07-24
+sources: [dmd, dmd2, data-forcing-distillation, senseflow, qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2, drifting-models, drift-ar, minwm]
+updated: 2026-07-26
 ---
 
 # DMD 蒸馏 · 匹配整批图像，不逐步临摹老师
@@ -63,6 +63,7 @@ L_{\mathrm{pseudo}}=\tfrac12
 |---|---|---|---|
 | DMD | 最终生成分布 | 需要，用来稳定和防漏模式 | 论文为 1 步 |
 | DMD2 | 最终生成分布 | 主方法去掉大规模配对集；用 fake-score 高频更新与 GAN 补强。SDXL 一步仍用 10K 对短暂预热 | 1 步或多步 |
+| DFD | 同一 DMD2 主线 | 在 DMD2 已训好的学生上，让 teacher 偶尔读取同条件真实样本；不用逐样本配对回归 | 论文为 4 步 |
 | SenseFlow | 同一 DMD2 主线 | 沿用无大规模配对主线；IDA 缩短 fake 追踪差、ISG 补段内时间监督、VFM 判别器补语义 | 主文为 4 步，附录扩到 2/1 步 |
 | TDM | 去噪轨迹多个时刻的分布 | 取决于具体实现 | 灵活少步 |
 
@@ -70,6 +71,8 @@ L_{\mathrm{pseudo}}=\tfrac12
 
 - [[dmd]] · 原论文完整公式、算法、配方、消融和局限
 - [[dmd2]] · 去配对回归、5:1 fake-score 更新、真实图 GAN 与 backward simulation
+- [[data-forcing-distillation]] · 把同条件真实视频的 teacher score 直接接进分布匹配梯度
+- [[teacher-score-discrepancy]] · 为什么一项正则最终能化成 teacher 输入的一行替换
 - [[senseflow]] · 为什么 DMD2 搬到 8B / 12B flow 模型会失稳，以及 IDA / ISG / VFM 三处修补
 - [[score-function]] · 对数密度梯度为什么是修改方向
 - [[entropy-kl]] · DMD 最小化的反向 KL
