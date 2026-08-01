@@ -973,7 +973,7 @@ figcaption .fnum { color: var(--deep); font-weight: 700; }
 
 <p><strong>残差 block</strong>：block 输出 <code>F(x) + x</code>。x 那部分是 identity 免费提供的；conv 权重决定的是 F(x)。</p>
 
-<p>两边换算一下：要让残差 block 的输出等于原版的 H(x)，必须有 <code>F(x) + x = H(x)</code> → <code>F(x) = H(x) − x</code>。</p>
+<p>两边换算一下：要让残差 block 的输出等于原版的 H(x)，必须有 <code>F(x) + x = H(x)</code> → <code class="m">F(x) =H(x) -x</code>。</p>
 
 <p class="key-line"><strong>F 学的是 H 跟原值 x 的差</strong>。这就是"残差"两字的字面意思 —— H 减掉 identity 之后<strong>剩下的部分</strong>。跟统计学的 residual 没关系，是这个工程意义。</p>
 
@@ -981,8 +981,8 @@ figcaption .fnum { color: var(--deep); font-weight: 700; }
   <span class="l">具体例子</span>
   <p>假设 layer 想做"把 x 稍微提亮一点点"。</p>
   <ul style="margin:6px 0; padding-left:20px;">
-    <li>plain 形式 · H 要学 <code>x → 1.05·x</code> —— conv 权重必须凑成"接近放大 1.05 倍"的特殊数</li>
-    <li>残差形式 · F 只学 <code>x → 0.05·x</code> —— 权重只需要小幅幅度。x 那部分由 identity 直接送过来</li>
+    <li>plain 形式 · H 要学 <code class="m">x \to 1.05\cdot x</code> —— conv 权重必须凑成"接近放大 1.05 倍"的特殊数</li>
+    <li>残差形式 · F 只学 <code class="m">x \to 0.05\cdot x</code> —— 权重只需要小幅幅度。x 那部分由 identity 直接送过来</li>
   </ul>
   <p>F 永远比 H 的变化量小 —— 学起来轻得多。<strong>每个 block 不再"重做一遍"，只是"修改前一层的结果"</strong>。</p>
 </div>
@@ -1330,7 +1330,7 @@ figcaption .fnum { color: var(--deep); font-weight: 700; }
     <li id="g-05"><span class="term">Sublayer · Transformer 子层</span> · Vaswani 2017 把 encoder/decoder 内部的 self-attention 和 FFN 各算一个 sublayer，每个 sublayer 都包成 <code>LayerNorm(x + Sublayer(x))</code>。这个外套结构是 ResNet 的直接遗产。详见 <a href="../concepts/transformer-architecture.html">transformer-architecture</a>、<a href="../concepts/residual-connection.html">residual-connection</a>。</li>
     <li id="g-06"><span class="term">Degradation Problem</span> · 深网络在<strong>训练集</strong>上 loss 高于浅网络的现象。不是过拟合（test loss 也更高），不是表达力不够（浅网络的能力是子集），是优化器找不到那个本来存在的好解。详见 <a href="../concepts/degradation-problem.html">degradation-problem</a>。</li>
     <li id="g-07"><span class="term">Bottleneck block</span> · 1×1 reduce → 3×3 → 1×1 expand 的三明治结构。让 3×3 在小通道数上算，整体算力比同表达力的 basic block 省 3 倍。ResNet-50/101/152 都用这种 block。</li>
-    <li id="g-08"><span class="term">Highway Network</span> · Srivastava et al. 2015，比 ResNet 早几个月发。用 <code>y = T(x)·F(x) + (1−T(x))·x</code>，T 是可学的 gate。ResNet 等于把 T 固定成 0.5。Highway 的 gate 增加了优化复杂度，实际效果不如 ResNet 的纯加法。</li>
+    <li id="g-08"><span class="term">Highway Network</span> · Srivastava et al. 2015，比 ResNet 早几个月发。用 <code class="m">y =T(x)\cdot F(x) + (1-T(x))\cdot x</code>，T 是可学的 gate。ResNet 等于把 T 固定成 0.5。Highway 的 gate 增加了优化复杂度，实际效果不如 ResNet 的纯加法。</li>
     <li id="g-09"><span class="term">Projection shortcut</span> · 当 F(x) 的输出形状跟 x 不一样（比如 stride=2 下采样、或通道变了），shortcut 走一个 1×1 conv W·x 把维度匹配上。"+"才能算。</li>
     <li id="g-10"><span class="term">Pre-activation ResNet</span> · 同作者 2016 follow-up paper "Identity Mappings in Deep Residual Networks"。把 BN/ReLU 挪到 conv 之前，让 <code>+ x</code> 这条路完全不经过 BN/ReLU，identity 真正干净。1000 层都能训。</li>
     <li id="g-11"><span class="term">Skip connection</span> · 同义词，泛指所有"跨层直接连过去"的结构。ResNet 的残差只是 skip connection 的一种最简单实现（identity）。U-Net 的 skip 是 concat，DenseNet 的 skip 是全连接，本质都是 skip 这一族。</li>

@@ -169,7 +169,7 @@ figure.play .ft-svg .draw.d4 { transition-delay: 0.90s; }
 <!-- §02 -->
 <h2><span class="num">§ 02</span>它怎么"测"一个频率：转圈圈</h2>
 
-<p>那 DFT 是<strong>怎么</strong>知道某个频率在不在的？直觉这样建：一个<strong>纯频率 = 一个匀速绕圈转的点</strong>（数学上就是复指数 <code>e^(iθ)</code>，单位圆上转的小箭头）。</p>
+<p>那 DFT 是<strong>怎么</strong>知道某个频率在不在的？直觉这样建：一个<strong>纯频率 = 一个匀速绕圈转的点</strong>（数学上就是复指数 <code class="m">e^(i_\theta )</code>，单位圆上转的小箭头）。</p>
 
 <p>DFT 测频率 k 的办法，是把信号<strong>缠到一个圆盘上、缠绕的转速设成 k</strong>，再看缠完之后这堆点的"重心"跑哪去了：</p>
 
@@ -274,14 +274,14 @@ figure.play .ft-svg .draw.d4 { transition-delay: 0.90s; }
 <!-- §04 -->
 <h2><span class="num">§ 04</span>蝴蝶与 twiddle：一次乘喂两个输出</h2>
 
-<p>为什么偶/奇拆分能拼回来、还能复用？靠<strong>单位根的对称性</strong>。转子 <code>w = e^(−2πi/N)</code>（绕一圈的小步），它有个关键性质：<strong>转过半圈正好反号</strong>，<code>w^(k+N/2) = −w^k</code>。</p>
+<p>为什么偶/奇拆分能拼回来、还能复用？靠<strong>单位根的对称性</strong>。转子 <code class="m">w =e^(-2\pi i/N)</code>（绕一圈的小步），它有个关键性质：<strong>转过半圈正好反号</strong>，<code class="m">w^(k+N/2) = -w^k</code>。</p>
 
 <p>于是对一对输出频率 <code>k</code> 和 <code>k+N/2</code>，公式长这样（E=偶半边结果，O=奇半边结果）：</p>
 
 <pre class="eq">X[k]       = E[k] + w^k · O[k]      ← 加
 X[k+N/2]   = E[k] − w^k · O[k]      ← 减（因为 w 转半圈反号）</pre>
 
-<p>注意：<strong>那个乘法 <code>w^k · O[k]</code> 只算一次</strong>，一个加、一个减，就同时出了两个输出。这就是"算一次用两次"。中间乘的旋转因子 <code>w^k</code> 叫 <strong>twiddle factor</strong>；这个 ± 一对的数据流小图案叫 <strong>蝴蝶（butterfly）</strong>——两进两出、交叉得像翅膀。堆 log N 层蝴蝶，就是一整个 FFT。</p>
+<p>注意：<strong>那个乘法 <code class="m">w^k \cdot O[k]</code> 只算一次</strong>，一个加、一个减，就同时出了两个输出。这就是"算一次用两次"。中间乘的旋转因子 <code>w^k</code> 叫 <strong>twiddle factor</strong>；这个 ± 一对的数据流小图案叫 <strong>蝴蝶（butterfly）</strong>——两进两出、交叉得像翅膀。堆 log N 层蝴蝶，就是一整个 FFT。</p>
 
 <figure id="fig-bfly" class="fig-bfly">
   <figcaption>
@@ -334,7 +334,7 @@ X[k+N/2]   = E[k] − w^k · O[k]      ← 减（因为 w 转半圈反号）</pr
 
 <h3>三个实现细节 · 拿 N=8 砸实</h3>
 
-<p><strong>① 为什么非得 2 的幂（radix-2）。</strong>折半要能一路折到底：<code>8 → 4 → 2 → 1</code> 干净。但 <strong>6 折一次到 3 就卡住</strong>——3 是奇数，没法再对半切成两个整数半边。遇到非 2 幂长度有三条路：<strong>补零</strong>凑到 8（zero-pad）、按 <code>6=2×3</code> 走 <strong>mixed-radix</strong>、或用 <strong>Bluestein</strong> 把任意长度变成一个卷积再拿 2 幂 FFT 算。</p>
+<p><strong>① 为什么非得 2 的幂（radix-2）。</strong>折半要能一路折到底：<code class="m">8 \to 4 \to 2 \to 1</code> 干净。但 <strong>6 折一次到 3 就卡住</strong>——3 是奇数，没法再对半切成两个整数半边。遇到非 2 幂长度有三条路：<strong>补零</strong>凑到 8（zero-pad）、按 <code class="m">6=2\times 3</code> 走 <strong>mixed-radix</strong>、或用 <strong>Bluestein</strong> 把任意长度变成一个卷积再拿 2 幂 FFT 算。</p>
 
 <p><strong>② bit-reversal<a class="jr" href="#g-07">7</a> 到底重排成什么样。</strong>把下标 0–7 反复按偶/奇拆到底，叶子顺序变成 <code>0 4 2 6 1 5 3 7</code>。这串数正好是<strong>把下标的二进制位左右翻过来</strong>：比如 <code>1=001</code> 翻成 <code>100=4</code>，<code>3=011</code> 翻成 <code>110=6</code>。所以实现里常先按这张表把输入重排一遍，再就地叠蝴蝶：</p>
 
@@ -352,7 +352,7 @@ X[k+N/2]   = E[k] − w^k · O[k]      ← 减（因为 w 转半圈反号）</pr
 
 <p>把最后一列从上往下读：<code>0 4 2 6 1 5 3 7</code> —— 跟上面 Fig 03 那棵树最底层叶子的顺序<strong>一字不差</strong>。所谓"递归偶奇拆分"和"位翻转重排"是同一件事的两种说法。</p>
 
-<p><strong>③ IFFT 怎么"变回去"。</strong>逆变换用<strong>同一套蝴蝶</strong>，只改两处：twiddle 的旋转方向取反（共轭，<code>e^(+…)</code> 而不是 <code>e^(−…)</code>），最后每个数除以 N。举个最小例子——常数信号 <code>[1,1,1,1]</code> 做 FFT → <code>[4,0,0,0]</code>（只有"直流"那一根亮，因为它压根没有任何起伏的频率）；把 <code>[4,0,0,0]</code> 喂回 IFFT、跑同样的蝴蝶、最后除以 4 → 又老老实实变回 <code>[1,1,1,1]</code>。</p>
+<p><strong>③ IFFT 怎么"变回去"。</strong>逆变换用<strong>同一套蝴蝶</strong>，只改两处：twiddle 的旋转方向取反（共轭，<code>e^(+…)</code> 而不是 <code class="m">e^(- …)</code>），最后每个数除以 N。举个最小例子——常数信号 <code>[1,1,1,1]</code> 做 FFT → <code>[4,0,0,0]</code>（只有"直流"那一根亮，因为它压根没有任何起伏的频率）；把 <code>[4,0,0,0]</code> 喂回 IFFT、跑同样的蝴蝶、最后除以 4 → 又老老实实变回 <code>[1,1,1,1]</code>。</p>
 
 
 <!-- §05 -->
@@ -360,7 +360,7 @@ X[k+N/2]   = E[k] − w^k · O[k]      ← 减（因为 w 转半圈反号）</pr
 
 <p>前面都是图和道理，这节拿一个具体输入 <code>x = [1, 2, 3, 4]</code>，把 N=4 的 FFT <strong>一步步蝴蝶算到底</strong>，再跟朴素 N² 对答案。</p>
 
-<p>先备好 N=4 的 4 个转子（twiddle）。<code>w = e^(−i2π/4)</code> 就是"<strong>每次转 90°（顺时针）</strong>"，所以：</p>
+<p>先备好 N=4 的 4 个转子（twiddle）。<code class="m">w =e^(-i2\pi /4)</code> 就是"<strong>每次转 90°（顺时针）</strong>"，所以：</p>
 
 <pre class="eq">w⁰ = 1     （不转）
 w¹ = −i    （转 90°）
@@ -369,7 +369,7 @@ w³ = +i    （转 270°）
 带 i 别慌：i 只是"转一个直角"的记号，× (−i) = 顺时针转 90°</pre>
 
 <h3>Step 1 · 按偶/奇拆成两半</h3>
-<p><code>x=[1,2,3,4]</code> → 偶位 <code>[x₀,x₂]=[1,3]</code>、奇位 <code>[x₁,x₃]=[2,4]</code>。</p>
+<p><code>x=[1,2,3,4]</code> → 偶位 <code class="m">[x_{0},x_{2}]=[1,3]</code>、奇位 <code class="m">[x_{1},x_{3}]=[2,4]</code>。</p>
 
 <h3>Step 2 · 各做一个 2 点 DFT（最简单的蝴蝶，twiddle=w⁰=1，纯加减）</h3>
 <table class="spec">
@@ -379,14 +379,14 @@ w³ = +i    （转 270°）
 </table>
 
 <h3>Step 3 · 拼起来（外层蝴蝶，奇路乘 twiddle）</h3>
-<p>规则：<code>X[k] = E[k] + wᵏ·O[k]</code>，<code>X[k+2] = E[k] − wᵏ·O[k]</code>。</p>
+<p>规则：<code class="m">X[k] =E[k] +wᵏ\cdot O[k]</code>，<code class="m">X[k+2] =E[k] -wᵏ\cdot O[k]</code>。</p>
 <table class="spec">
   <tr><th>k · twiddle</th><th>加 → X[k]</th><th>减 → X[k+2]</th></tr>
   <tr><td>k=0 · w⁰=1</td><td>X₀ = 4 + 1·6 = <strong>10</strong></td><td>X₂ = 4 − 1·6 = <strong>−2</strong></td></tr>
   <tr><td>k=1 · w¹=−i</td><td>X₁ = −2 + (−i)(−2) = <strong>−2+2i</strong></td><td>X₃ = −2 − (−i)(−2) = <strong>−2−2i</strong></td></tr>
 </table>
 
-<p>结果 <code>X = [10, −2+2i, −2, −2−2i]</code>。整条流程画出来就是这张图：</p>
+<p>结果 <code class="m">X = [10, -2+2i, -2, -2-2i]</code>。整条流程画出来就是这张图：</p>
 
 <figure id="fig-walk" class="fig-walk">
   <figcaption>
@@ -453,7 +453,7 @@ w³ = +i    （转 270°）
 </figure>
 
 <h3>对答案 · 朴素 N² 直接硬算</h3>
-<p>朴素 DFT 每个输出 <code>X[k] = Σ x[n]·wⁿᵏ</code>，4 个数全加权求和：</p>
+<p>朴素 DFT 每个输出 <code class="m">X[k] =\Sigma x[n]\cdot w^{n}ᵏ</code>，4 个数全加权求和：</p>
 <pre class="eq">X₀ = 1 + 2 + 3 + 4                     = 10
 X₁ = 1 + 2(−i) + 3(−1) + 4(i) = 1−2i−3+4i = −2+2i
 X₂ = 1 + 2(−1) + 3(1) + 4(−1)  = 1−2+3−4   = −2
@@ -463,7 +463,7 @@ X₃ = 1 + 2(i) + 3(−1) + 4(−i)  = 1+2i−3−4i = −2−2i</pre>
 <div class="note">
   <span class="l">读结果 + 省了多少</span>
   <p><strong>X₀=10</strong> 是"直流"——就是 4 个数的总和（整体平均水平×4，没有任何起伏）；其余几个复数的<strong>大小</strong>就是对应频率成分的强度。<br>
-  <strong>省了多少：</strong>朴素要算 <code>4×4=16</code> 个 <code>x[n]·wⁿᵏ</code> 乘加；FFT 这边只有 <strong>2 个 2 点 DFT + 2 次 twiddle 乘</strong>。N=4 省得还不明显，但每把 N 翻倍一次，<strong>朴素 ×4、FFT 只 ×2</strong>——到 N=1024 时朴素 ~100 万次、FFT ~1 万次。</p>
+  <strong>省了多少：</strong>朴素要算 <code class="m">4\times 4=16</code> 个 <code class="m">x[n]\cdot w^{n}ᵏ</code> 乘加；FFT 这边只有 <strong>2 个 2 点 DFT + 2 次 twiddle 乘</strong>。N=4 省得还不明显，但每把 N 翻倍一次，<strong>朴素 ×4、FFT 只 ×2</strong>——到 N=1024 时朴素 ~100 万次、FFT ~1 万次。</p>
 </div>
 
 
@@ -530,10 +530,10 @@ X₃ = 1 + 2(i) + 3(−1) + 4(−i)  = 1+2i−3−4i = −2−2i</pre>
   <h2>引用 / 术语表</h2>
   <ol>
     <li id="g-01"><span class="term">DFT · 离散傅里叶变换</span> · 把 N 个时域采样 → N 个频率强度（每个带幅度+相位）。FFT 是<strong>快速计算 DFT 的算法</strong>，两者算的是同一件事，只是 FFT 快得多。</li>
-    <li id="g-02"><span class="term">单位根 / 复指数</span> · <code>w = e^(−2πi/N)</code>，单位圆上等分的旋转步。关键对称性 <code>w^(k+N/2) = −w^k</code>（转半圈反号），正是偶/奇能拼回、能复用的根源。</li>
+    <li id="g-02"><span class="term">单位根 / 复指数</span> · <code class="m">w =e^(-2\pi i/N)</code>，单位圆上等分的旋转步。关键对称性 <code class="m">w^(k+N/2) = -w^k</code>（转半圈反号），正是偶/奇能拼回、能复用的根源。</li>
     <li id="g-03"><span class="term">twiddle factor · 旋转因子</span> · 蝴蝶里乘在奇半边上的 <code>w^k</code>。一个蝴蝶只乘一次它，加减各取一次结果。</li>
     <li id="g-04"><span class="term">分治 · N·log N</span> · 按下标拆偶/奇两半，整体 DFT 由两半 DFT 拼出，递归到底。T(N)=2T(N/2)+O(N) → N·log N，对比朴素 N²。</li>
-    <li id="g-05"><span class="term">蝴蝶 · butterfly</span> · 两进两出的基本单元：<code>X[k]=E+w^k·O</code>、<code>X[k+N/2]=E−w^k·O</code>，交叉如翅膀。堆 log N 层就是整个 FFT。</li>
+    <li id="g-05"><span class="term">蝴蝶 · butterfly</span> · 两进两出的基本单元：<code class="m">X[k]=E+w^k\cdot O</code>、<code class="m">X[k+N/2]=E-w^k\cdot O</code>，交叉如翅膀。堆 log N 层就是整个 FFT。</li>
     <li id="g-06"><span class="term">卷积定理</span> · 时域卷积 = 频域逐点相乘。于是卷积可走"FFT→逐点乘→IFFT"加速；大核尤其划算。也是 FFT 在 ML 里最常被用到的入口。</li>
     <li id="g-07"><span class="term">bit-reversal · 位反转重排</span> · 递归偶/奇拆到底后，输入顺序正好是下标二进制位反过来的排列。就地 FFT 常先做一遍位反转，再叠蝴蝶。</li>
     <li id="g-08"><span class="term">STFT · 短时傅里叶变换</span> · 把长信号切成一段段窗口、每段做 FFT，得到"时间×频率"的<a href="../concepts/log-mel-spectrogram.html">频谱图</a>。音频模型的标准输入。</li>

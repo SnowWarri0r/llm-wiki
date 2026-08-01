@@ -280,7 +280,7 @@ svg text{font-family:"IBM Plex Mono",monospace}
 </figure>
 
 <h3>第二次选：这个物体由哪一个 anchor 负责？</h3>
-<p>接下来固定一个例子，第三部分继续用它。输入 416×416，检测网格 13×13，因此 stride=32。某真值框中心为 <code>(112,152) px</code>、宽高为 <code>(96,64) px</code>；除以 32 后，中心是 <code>(3.50,4.75)</code>，宽高是 <code>3×2</code> 个网格单位。中心向下取整为 <code>(3,4)</code>，所以先锁定网格索引 (3,4)；索引从 0 开始，画面上是<strong>第 4 列、第 5 行</strong>。</p>
+<p>接下来固定一个例子，第三部分继续用它。输入 416×416，检测网格 13×13，因此 stride=32。某真值框中心为 <code>(112,152) px</code>、宽高为 <code>(96,64) px</code>；除以 32 后，中心是 <code>(3.50,4.75)</code>，宽高是 <code class="m">3\times 2</code> 个网格单位。中心向下取整为 <code>(3,4)</code>，所以先锁定网格索引 (3,4)；索引从 0 开始，画面上是<strong>第 4 列、第 5 行</strong>。</p>
 
 <figure id="fig-anchor-match" class="reveal">
   <figcaption><span>Fig 02B · 中心先选格子，形状 IOU 再选 anchor</span><span class="tag">ONE TRUTH → ONE RESPONSIBLE ANCHOR</span></figcaption>
@@ -329,9 +329,9 @@ svg text{font-family:"IBM Plex Mono",monospace}
 
 <h3>为什么中心用 sigmoid，宽高却用指数？</h3>
 <div class="why-grid">
-  <div class="why-card"><b>中心：限制在本格</b><code>σ(t)</code> 永远在 0 与 1 之间；加上整数格坐标后，中心只能在负责格内。网络只学一个局部小数，不会在初始化时让 anchor 满图乱飞。</div>
-  <div class="why-card"><b>尺寸：表达相对倍率</b><code>exp(t)</code> 永远为正。<code>t=0</code> 保持 anchor，<code>t=ln2</code> 放大两倍，<code>t=−ln2</code> 缩小一半；放大与缩小在 log 空间互为正负。</div>
-  <div class="why-card"><b>物体性：变成分数</b><code>t_o</code> 是无界 logit，<code>σ(t_o)</code> 才落在 0–1。论文定义为 Pr(object)×IOU；正样本的 Pr(object)=1，所以目标是当前 IOU。官方 VOC 配置也设 <code>rescore=1</code>。</div>
+  <div class="why-card"><b>中心：限制在本格</b><code class="m">\sigma (t)</code> 永远在 0 与 1 之间；加上整数格坐标后，中心只能在负责格内。网络只学一个局部小数，不会在初始化时让 anchor 满图乱飞。</div>
+  <div class="why-card"><b>尺寸：表达相对倍率</b><code>exp(t)</code> 永远为正。<code>t=0</code> 保持 anchor，<code>t=ln2</code> 放大两倍，<code class="m">t=-ln2</code> 缩小一半；放大与缩小在 log 空间互为正负。</div>
+  <div class="why-card"><b>物体性：变成分数</b><code>t_o</code> 是无界 logit，<code class="m">\sigma (t_o)</code> 才落在 0–1。论文定义为 Pr(object)×IOU；正样本的 Pr(object)=1，所以目标是当前 IOU。官方 VOC 配置也设 <code>rescore=1</code>。</div>
 </div>
 
 <p>所以完整分工是：<strong>真值中心选格子，形状 IOU 选 anchor，sigmoid 解码格内位置，指数解码相对尺寸，stride 把网格单位换回像素</strong>。论文把“新骨干 + 维度先验 + 直接位置预测”合成一个消融台阶：69.6 → 74.4，这 4.8 不能全算给某一个组件。</p>
@@ -339,7 +339,7 @@ svg text{font-family:"IBM Plex Mono",monospace}
 <h2><span class="num">§ 04 / Detail &amp; Scale</span>细节搬回来，输入尺寸现场换挡</h2>
 <h3>Passthrough：空间折进通道</h3>
 <p>打个比方：深层的 13×13 特征像一张<strong>缩得很小的地图</strong>，大地标还看得清，小巷子早糊了；而 26×26 那层还留着小巷子的细节。YOLOv2 不重画一张检测图，而是<strong>把 26×26 这张细图按 2×2 一块块折叠、塞进 13×13 的更多"夹层"（通道）里</strong>——细节没丢，只是换了个存法。</p>
-<p>具体地：<code>26×26×512 → 13×13×2048</code>，元素总数仍是 346,112（只是把空间上的格子挪进了通道），再与深层特征拼起来一起预测。</p>
+<p>具体地：<code class="m">26\times 26\times 512 \to 13\times 13\times 2048</code>，元素总数仍是 346,112（只是把空间上的格子挪进了通道），再与深层特征拼起来一起预测。</p>
 
 <figure id="fig-pass" class="reveal">
   <figcaption><span>Fig 04 · 2×2 空间邻域折成四组通道</span><span class="tag">PASSTHROUGH</span></figcaption>

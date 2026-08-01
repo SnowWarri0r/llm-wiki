@@ -123,8 +123,8 @@ figure{margin:36px 0 54px;padding:25px;border:2px solid var(--ink);background:va
 </figure>
 
 <h3>SPP：窗口看得更远，但特征图仍是 13×13</h3>
-<p><a class="jr term-hit" href="#g-13">池化（pooling）</a>做的事很简单：拿一个 <code>k×k</code> 窗口，在里面取最大值或平均值。特征图会不会缩小，要看<a class="jr term-hit" href="#g-17">步长和补边</a>，不能看到 pooling 就默认它会下采样。YOLOv4 让 5×5、9×9、13×13 三个最大池化分支都读取同一份 <code>13×13×512</code> 输入。它们的步长都是 1，补边分别是 2、4、6。</p>
-<p>输出高度按 <code>Hout=floor((H+2p−k)/s)+1</code> 计算：<code>H</code> 是输入高度，<code>k</code> 是窗口大小，<code>p</code> 是单侧补边，<code>s</code> 是步长。5×5 分支代入后是 <code>(13+2×2−5)/1+1=13</code>；9×9 和 13×13 也都是 13。因此这四路不是连续把图越缩越小，而是在同一批空间位置上收集四档上下文。</p>
+<p><a class="jr term-hit" href="#g-13">池化（pooling）</a>做的事很简单：拿一个 <code class="m">k\times k</code> 窗口，在里面取最大值或平均值。特征图会不会缩小，要看<a class="jr term-hit" href="#g-17">步长和补边</a>，不能看到 pooling 就默认它会下采样。YOLOv4 让 5×5、9×9、13×13 三个最大池化分支都读取同一份 <code class="m">13\times 13\times 512</code> 输入。它们的步长都是 1，补边分别是 2、4、6。</p>
+<p>输出高度按 <code class="m">Hout=floor((H+2p-k)/s)+1</code> 计算：<code>H</code> 是输入高度，<code>k</code> 是窗口大小，<code>p</code> 是单侧补边，<code>s</code> 是步长。5×5 分支代入后是 <code class="m">(13+2\times 2-5)/1+1=13</code>；9×9 和 13×13 也都是 13。因此这四路不是连续把图越缩越小，而是在同一批空间位置上收集四档上下文。</p>
 
 <figure id="fig-pooling" class="reveal"><figcaption><span>Fig 04 · 同一中心位置，窗口越大看得越远</span><span>MAX POOL / STRIDE 1 / SAME SIZE</span></figcaption>
   <div class="pool-rows">
@@ -149,7 +149,7 @@ figure{margin:36px 0 54px;padding:25px;border:2px solid var(--ink);background:va
 
 <h3>SAM：从“一个位置共用一扇门”改成“每个元素各有一扇门”</h3>
 <p>先看直觉。原来的 <a class="jr term-hit" href="#g-14">spatial-wise attention</a> 给每个空间位置一个权重；同一位置上的所有通道共用它。YOLOv4 改成 point-wise attention 后，每个通道、每个位置都有自己的权重。同一个位置上，“轮廓”通道可以保留，“纹理”通道可以压低。</p>
-<p>再看公式。<code>F∈R^(C×H×W)</code> 是输入特征，<code>C</code> 是<a class="jr term-hit" href="#g-16">通道数</a>，<code>H,W</code> 是空间尺寸；<code>A</code> 是 0～1 的门控权重，<code>Y</code> 是加权后的输出。原版先沿通道做平均池化和最大池化，得到一张 <code>1×H×W</code> 门控图：<code>Y[c,h,w]=F[c,h,w]×A_sp[h,w]</code>。改版则生成 <code>C×H×W</code> 门控：<code>Y[c,h,w]=F[c,h,w]×A_pt[c,h,w]</code>。差别就落在最后一个下标 <code>c</code>：改版能区分同一位置上的不同通道。</p>
+<p>再看公式。<code class="m">F\in R^(C\times H\times W)</code> 是输入特征，<code>C</code> 是<a class="jr term-hit" href="#g-16">通道数</a>，<code>H,W</code> 是空间尺寸；<code>A</code> 是 0～1 的门控权重，<code>Y</code> 是加权后的输出。原版先沿通道做平均池化和最大池化，得到一张 <code class="m">1\times H\times W</code> 门控图：<code class="m">Y[c,h,w]=F[c,h,w]\times A_{\mathrm{sp}}[h,w]</code>。改版则生成 <code class="m">C\times H\times W</code> 门控：<code class="m">Y[c,h,w]=F[c,h,w]\times A_{\mathrm{pt}}[c,h,w]</code>。差别就落在最后一个下标 <code>c</code>：改版能区分同一位置上的不同通道。</p>
 
 <figure id="fig-sam" class="reveal"><figcaption><span>Fig 06 · 一张共享空间门 vs 每个元素自己的门</span><span>SPATIAL-WISE → POINT-WISE</span></figcaption>
   <div class="sam-compare">
@@ -184,7 +184,7 @@ figure{margin:36px 0 54px;padding:25px;border:2px solid var(--ink);background:va
 
 <h2><span class="num">§ 04 / Assignment & coordinates</span>边界位置更好学，一个真值也能交给多个预设框</h2>
 <h3>消除网格敏感：想预测 0.99，不必再把原始分数推得很大</h3>
-<p>YOLOv3 先让网络输出任意实数 <code>t_x</code>，再用 <a class="jr term-hit" href="#g-23">sigmoid</a> 把它压到 0～1，作为目标中心在格子里的偏移。问题是：越靠近 0 或 1，所需的原始分数（logit）越大，梯度却越小，这就是<a class="jr term-hit" href="#g-10">网格敏感</a>。公开实现改成 <code>s·sigmoid(t_x)-0.5(s-1)</code>：<code>t_x</code> 仍是网络原始输出，<code>s</code> 是把范围向两边撑开的缩放系数；<code>s=1</code> 就退回 YOLOv3，图中用 <code>s=1.2</code>。</p>
+<p>YOLOv3 先让网络输出任意实数 <code>t_x</code>，再用 <a class="jr term-hit" href="#g-23">sigmoid</a> 把它压到 0～1，作为目标中心在格子里的偏移。问题是：越靠近 0 或 1，所需的原始分数（logit）越大，梯度却越小，这就是<a class="jr term-hit" href="#g-10">网格敏感</a>。公开实现改成 <code class="m">s\cdot \operatorname{sigmoid}(t_x)-0.5(s-1)</code>：<code>t_x</code> 仍是网络原始输出，<code>s</code> 是把范围向两边撑开的缩放系数；<code>s=1</code> 就退回 YOLOv3，图中用 <code>s=1.2</code>。</p>
 
 <figure id="fig-grid" class="reveal"><figcaption><span>Fig 09 · 同一个格内位置 0.99</span><span>LOGIT 4.595 → 2.293</span></figcaption>
   <div class="grid-compare"><div class="grid-card rev"><h4>YOLOv3 / RANGE (0,1)</h4><div class="range"><i class="point"></i></div><div class="grid-math">sigmoid(t)=0.99<br><b>t = 4.595</b><br>靠边时 sigmoid 已接近饱和</div></div><div class="grid-card v4 rev d2"><h4>YOLOv4 / s=1.2</h4><div class="range"><i class="point"></i></div><div class="grid-math">1.2·sigmoid(t)-0.1=0.99<br>sigmoid(t)=0.90833<br><b>t = 2.293</b></div></div></div>
@@ -204,7 +204,7 @@ figure{margin:36px 0 54px;padding:25px;border:2px solid var(--ink);background:va
 <div class="formula">L_CIoU = 1-IoU + ρ²(b,b_gt)/c² + αv
 v = 4/π² · [atan(w_gt/h_gt)-atan(w/h)]²
 α = v / (1-IoU+v)</div>
-<p><code>b,b_gt</code> 是预测框和真值框的中心；<code>ρ²</code> 是两中心距离的平方；<code>c²</code> 是能同时包住两框的最小外接框，其对角线长度平方；<code>w,h</code> 是预测框宽高，<code>w_gt,h_gt</code> 是真值框宽高；<code>atan(w/h)</code> 把长宽比变成角度，两个角度相差越大，<code>v</code> 越大；<code>α</code> 决定这一笔形状误差现在该占多大权重。</p>
+<p><code class="m">b,b_{\mathrm{gt}}</code> 是预测框和真值框的中心；<code class="m">\rho^{2}</code> 是两中心距离的平方；<code class="m">c^{2}</code> 是能同时包住两框的最小外接框，其对角线长度平方；<code>w,h</code> 是预测框宽高，<code>w_gt,h_gt</code> 是真值框宽高；<code>atan(w/h)</code> 把长宽比变成角度，两个角度相差越大，<code>v</code> 越大；<code class="m">\alpha</code> 决定这一笔形状误差现在该占多大权重。</p>
 
 <figure id="fig-ciou" class="reveal"><figcaption><span>Fig 11 · 一个同时偏心又变形的预测框</span><span>TRUTH 4×2 / PRED 2×4</span></figcaption>
   <div class="ciou"><div class="box-scene rev"><svg viewBox="0 0 320 260" role="img" aria-label="真值框与预测框的中心、外接框"><rect x="40" y="30" width="240" height="200" fill="#f8f2df" stroke="#b9ad93" stroke-dasharray="5 5"/><rect x="40" y="80" width="200" height="100" fill="#ccdaf0" fill-opacity=".7" stroke="#1952a0" stroke-width="4"/><rect x="140" y="30" width="100" height="200" fill="#efd1c7" fill-opacity=".65" stroke="#b7472f" stroke-width="4"/><circle cx="140" cy="130" r="6" fill="#1952a0"/><circle cx="190" cy="130" r="6" fill="#b7472f"/><line x1="140" y1="130" x2="190" y2="130" stroke="#dfa918" stroke-width="5"/><text x="50" y="72" font-size="13" font-family="Space Mono" fill="#1952a0">truth 4×2</text><text x="150" y="50" font-size="13" font-family="Space Mono" fill="#b7472f">pred 2×4</text><text x="146" y="122" font-size="11" font-family="Space Mono" fill="#8b690d">ρ=1</text></svg></div><div class="ciou-ledger"><div class="term-card rev"><b>0.66667</b><span>覆盖项<br>1 − 4/12</span></div><div class="term-card rev d2"><b>0.03125</b><span>中心项<br>ρ²/c² = 1/32</span></div><div class="term-card rev d3"><b>0.03375</b><span>形状项<br>αv</span></div><div class="ciou-total rev d4">TOTAL CIoU LOSS <b>0.73167</b></div></div></div>

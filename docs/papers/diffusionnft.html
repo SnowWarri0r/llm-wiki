@@ -119,7 +119,7 @@ figure.play .nf-svg .draw { stroke-dashoffset: 0; }
 
 <div class="tldr">
   <span class="label">TL;DR</span>
-  <p>扩散的似然算不出来<a class="jr" href="#g-01">1</a>,所以没法照搬 <a href="../concepts/grpo.html">GRPO</a>。FlowGRPO 的绕法是把<strong>反向去噪</strong>切成多步马尔可夫过程(每步高斯可算概率),但落三个坑:锁死一阶 SDE solver、偏离前向过程、CFG 要两套模型<a class="jr" href="#g-02">2</a>。DiffusionNFT 换思路——<strong>前向加噪唯一、反向去噪无数</strong>,把 RL 搬回前向 <a href="flow-matching.html">flow matching</a><a class="jr" href="#g-03">3</a>:用奖励 <code>r</code> 把样本软切成正分布 <code>π⁺∝r·π_old</code> / 负分布 <code>π⁻∝(1−r)·π_old</code><a class="jr" href="#g-04">4</a>,正负速度之差 <code>Δ</code> 就是隐式的<strong>强化引导</strong>方向(CFG 不过是它的离线版)<a class="jr" href="#g-06">6</a>。一个模型隐式同时装正负速度,RL 揉进一个<strong>监督损失</strong><a class="jr" href="#g-07">7</a>:免似然、任意 solver、只要干净图。SD3.5-M 上 GenEval ~1k 步逼 <strong>0.98</strong>,比 FlowGRPO 快 <strong>3–25×</strong><a class="jr" href="#g-10">10</a>。</p>
+  <p>扩散的似然算不出来<a class="jr" href="#g-01">1</a>,所以没法照搬 <a href="../concepts/grpo.html">GRPO</a>。FlowGRPO 的绕法是把<strong>反向去噪</strong>切成多步马尔可夫过程(每步高斯可算概率),但落三个坑:锁死一阶 SDE solver、偏离前向过程、CFG 要两套模型<a class="jr" href="#g-02">2</a>。DiffusionNFT 换思路——<strong>前向加噪唯一、反向去噪无数</strong>,把 RL 搬回前向 <a href="flow-matching.html">flow matching</a><a class="jr" href="#g-03">3</a>:用奖励 <code>r</code> 把样本软切成正分布 <code class="m">\pi^{+}\propto r\cdot \pi_{\mathrm{old}}</code> / 负分布 <code class="m">\pi^{-}\propto (1-r)\cdot \pi_{\mathrm{old}}</code><a class="jr" href="#g-04">4</a>,正负速度之差 <code class="m">\Delta</code> 就是隐式的<strong>强化引导</strong>方向(CFG 不过是它的离线版)<a class="jr" href="#g-06">6</a>。一个模型隐式同时装正负速度,RL 揉进一个<strong>监督损失</strong><a class="jr" href="#g-07">7</a>:免似然、任意 solver、只要干净图。SD3.5-M 上 GenEval ~1k 步逼 <strong>0.98</strong>,比 FlowGRPO 快 <strong>3–25×</strong><a class="jr" href="#g-10">10</a>。</p>
 </div>
 
 <h2><span class="num">§ 01</span>似然墙：扩散为什么不能照搬 GRPO</h2>
@@ -202,7 +202,7 @@ figure.play .nf-svg .draw { stroke-dashoffset: 0; }
 
 <h2><span class="num">§ 03</span>奖励切正负：两堆之差就是该走的方向</h2>
 
-<p>怎么在前向上注入奖励?给每张采来的图打个奖励 <code>r∈[0,1]</code>,按 <code>r</code> 把样本<strong>软切</strong>成两堆<a class="jr" href="#g-04">4</a>:正分布 <code>π⁺∝r·π_old</code>(高奖励权重大)、负分布 <code>π⁻∝(1−r)·π_old</code>(低奖励权重大)。两堆各自对应一个去噪速度,<strong>正速度减负速度</strong>得到方向 <code>Δ</code>——它指向"怎么改能更高分",就是<strong>强化引导</strong><a class="jr" href="#g-06">6</a>。</p>
+<p>怎么在前向上注入奖励?给每张采来的图打个奖励 <code class="m">r\in [0,1]</code>,按 <code>r</code> 把样本<strong>软切</strong>成两堆<a class="jr" href="#g-04">4</a>:正分布 <code class="m">\pi^{+}\propto r\cdot \pi_{\mathrm{old}}</code>(高奖励权重大)、负分布 <code class="m">\pi^{-}\propto (1-r)\cdot \pi_{\mathrm{old}}</code>(低奖励权重大)。两堆各自对应一个去噪速度,<strong>正速度减负速度</strong>得到方向 <code class="m">\Delta</code>——它指向"怎么改能更高分",就是<strong>强化引导</strong><a class="jr" href="#g-06">6</a>。</p>
 
 <figure id="fig-posneg">
   <figcaption><span>FIG 03 · 奖励切正负，Δ = 改进方向（≈ CFG 的 cond−uncond）</span><span class="fnum">POSITIVE − NEGATIVE = Δ</span></figcaption>
@@ -249,7 +249,7 @@ figure.play .nf-svg .draw { stroke-dashoffset: 0; }
 
 <h2><span class="num">§ 04</span>一个模型隐式装正负，RL 揉进监督损失</h2>
 
-<p>不真去训两个模型——这套"奖励切正负 + 前向监督"的做法就是<strong>负样本感知微调(NFT)</strong><a class="jr" href="#g-05">5</a>。一个 velocity 网络 <code>v_θ</code> 通过<strong>参数插值</strong>同时表示正负两副动态(都围绕冻结的旧模型 <code>v_old</code>)<a class="jr" href="#g-07">7</a>:正速度 <code>v_θ⁺=(1−β)v_old+β·v_θ</code>、负速度 <code>v_θ⁻=(1+β)v_old−β·v_θ</code>。损失是<strong>纯监督 flow matching</strong>(不是 policy gradient)<a class="jr" href="#g-08">8</a>:<code>L=E[ r·‖v_θ⁺−v‖² + (1−r)·‖v_θ⁻−v‖² ]</code>——高奖励样本(r→1)把正速度拉准、低奖励(r→0)把负速度拉准,两股梯度合起来把 <code>v_θ</code> 推向 Δ 指示的方向。</p>
+<p>不真去训两个模型——这套"奖励切正负 + 前向监督"的做法就是<strong>负样本感知微调(NFT)</strong><a class="jr" href="#g-05">5</a>。一个 velocity 网络 <code class="m">v_\theta</code> 通过<strong>参数插值</strong>同时表示正负两副动态(都围绕冻结的旧模型 <code class="m">v_{\mathrm{old}}</code>)<a class="jr" href="#g-07">7</a>:正速度 <code class="m">v_\theta^{+}=(1-\beta )v_{\mathrm{old}}+\beta \cdot v_\theta</code>、负速度 <code class="m">v_\theta^{-}=(1+\beta )v_{\mathrm{old}}-\beta \cdot v_\theta</code>。损失是<strong>纯监督 flow matching</strong>(不是 policy gradient)<a class="jr" href="#g-08">8</a>:<code class="m">L=E[r\cdot \| v_\theta^{+}-v\| ^{2} + (1-r)\cdot \| v_\theta^{-}-v\| ^{2} ]</code>——高奖励样本(r→1)把正速度拉准、低奖励(r→0)把负速度拉准,两股梯度合起来把 <code class="m">v_\theta</code> 推向 Δ 指示的方向。</p>
 
 <figure id="fig-implicit">
   <figcaption><span>FIG 04 · 单模型隐式参数化：正负对称夹住 v_old</span><span class="fnum">IMPLICIT v⁺ / v⁻</span></figcaption>
@@ -278,14 +278,14 @@ figure.play .nf-svg .draw { stroke-dashoffset: 0; }
 </figure>
 
 <h3>数字例子 · 正负速度对称夹住 v_old</h3>
-<p>取标量简化(真实是逐维速度向量):旧模型 <code>v_old=1.0</code>、模型当前输出 <code>v_θ=1.4</code>、引导强度 <code>β=0.5</code>。</p>
+<p>取标量简化(真实是逐维速度向量):旧模型 <code class="m">v_{\mathrm{old}}=1.0</code>、模型当前输出 <code class="m">v_\theta =1.4</code>、引导强度 <code class="m">\beta =0.5</code>。</p>
 <pre class="eq">v_θ⁺ = (1−0.5)·1.0 + 0.5·1.4 = 0.5 + 0.7 = 1.2     (正速度)
 v_θ⁻ = (1+0.5)·1.0 − 0.5·1.4 = 1.5 − 0.7 = 0.8     (负速度)
 
 自检①  v_θ⁺ + v_θ⁻ = 1.2 + 0.8 = 2.0 = 2·v_old   → 正负永远对称夹住 v_old ✓
 自检②  v_θ⁺ − v_θ⁻ = 0.4 = 2β·(v_θ − v_old) = 2·0.5·0.4 ✓   → 缝隙 = 离旧模型多远
 最优解  v_θ* = v_old + (2/β)·Δ ，小小的改进方向 Δ 被 2/β=4 放大着学进去</pre>
-<p>✓ 含义:模型只动一个量 <code>v_θ</code>,正速度抬到 1.2、负速度对称压到 0.8。采样时只取被引导的正速度 <code>v_θ⁺</code>——等于把<a href="../concepts/reinforcement-guidance.html">强化引导</a>内建进了一个模型,不再要 <a href="../concepts/classifier-free-guidance.html">CFG</a> 的两套模型/两遍前向。这也是它跟 <a href="../concepts/direct-preference-optimization.html">DPO</a> 的亲缘:都靠正负对比把 RL 折成类监督损失,只是 DPO 在 LLM 对数似然上、NFT 在扩散速度场上。</p>
+<p>✓ 含义:模型只动一个量 <code class="m">v_\theta</code>,正速度抬到 1.2、负速度对称压到 0.8。采样时只取被引导的正速度 <code class="m">v_\theta^{+}</code>——等于把<a href="../concepts/reinforcement-guidance.html">强化引导</a>内建进了一个模型,不再要 <a href="../concepts/classifier-free-guidance.html">CFG</a> 的两套模型/两遍前向。这也是它跟 <a href="../concepts/direct-preference-optimization.html">DPO</a> 的亲缘:都靠正负对比把 RL 折成类监督损失,只是 DPO 在 LLM 对数似然上、NFT 在扩散速度场上。</p>
 
 <h2><span class="num">§ 05</span>结果：又快又强，CFG-free 还赢 CFG</h2>
 

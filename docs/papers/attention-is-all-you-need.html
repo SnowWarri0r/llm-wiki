@@ -684,7 +684,7 @@
 <p>2017 年之前，NLP 处理序列的标准是 <a class="jr" href="#g-01">RNN<sup>1</sup></a>（包括 <a class="jr" href="#g-02">LSTM<sup>2</sup></a> / GRU）。机器翻译、语言建模、问答、命名实体识别 —— 全是 RNN 的天下。但它有三个让人受不了的痛点：</p>
 
 <ol>
-  <li><strong>串行瓶颈</strong>：RNN 必须 <code>t=0 → t=1 → t=2 ...</code> 一个 timestep 接一个，**前一步算完才能算下一步**。GPU 有几千个核能并行，但 RNN 在 sequence 维度上根本用不上。</li>
+  <li><strong>串行瓶颈</strong>：RNN 必须 <code class="m">t=0 \to t=1 \to t=2 ...</code> 一个 timestep 接一个，**前一步算完才能算下一步**。GPU 有几千个核能并行，但 RNN 在 sequence 维度上根本用不上。</li>
   <li><strong>长程依赖衰减</strong>：序列里第 50 个 token 想看第 1 个 token 的信息，得让信号在 RNN 隐状态里流 49 步。中间每一步乘一个矩阵 + 过激活函数 → 梯度沿路衰减或爆炸（LSTM 缓解但没根治）。</li>
   <li><strong>难 scale</strong>：参数量上去之后训练不稳定 —— 时间维度越长、梯度路径越深、问题越严重。</li>
 </ol>
@@ -1106,7 +1106,7 @@ input = embedding(token) + PE(pos)</code></pre>
   <div class="gloss-item" id="g-01">
     <span class="gloss-num">01</span>
     <span class="gloss-term">RNN &nbsp;(recurrent neural network)</span>
-    <p class="gloss-def">"循环神经网络"。每个时间步 t 用 <code>h_t = f(h_{t-1}, x_t)</code> 更新一个隐状态，序列处理是串行的（必须 t 算完才能 t+1）。1980s 提出，但训练长序列梯度爆炸/消失。LSTM / GRU 缓解了这条，但仍然串行。被 Transformer 全面取代。</p>
+    <p class="gloss-def">"循环神经网络"。每个时间步 t 用 <code class="m">h_t =f(h_{t-1},x_t)</code> 更新一个隐状态，序列处理是串行的（必须 t 算完才能 t+1）。1980s 提出，但训练长序列梯度爆炸/消失。LSTM / GRU 缓解了这条，但仍然串行。被 Transformer 全面取代。</p>
   </div>
 
   <div class="gloss-item" id="g-02">
@@ -1118,7 +1118,7 @@ input = embedding(token) + PE(pos)</code></pre>
   <div class="gloss-item" id="g-03">
     <span class="gloss-num">03</span>
     <span class="gloss-term">softmax</span>
-    <p class="gloss-def">归一化函数：<code>softmax(x)_i = exp(x_i) / Σ_j exp(x_j)</code>。把任意实数向量映射到正且和为 1 的概率分布。Self-attention 的 weights 就是 softmax 后的。"饱和区"指 softmax 在某些极端 input 下输出几乎都是 0 或 1，梯度消失 —— 所以要 √d_k 缩放。</p>
+    <p class="gloss-def">归一化函数：<code class="m">\operatorname{softmax}(x)_i =\exp (x_i) / \Sigma_j \exp (x_j)</code>。把任意实数向量映射到正且和为 1 的概率分布。Self-attention 的 weights 就是 softmax 后的。"饱和区"指 softmax 在某些极端 input 下输出几乎都是 0 或 1，梯度消失 —— 所以要 √d_k 缩放。</p>
   </div>
 
   <div class="gloss-item" id="g-04">
@@ -1196,7 +1196,7 @@ input = embedding(token) + PE(pos)</code></pre>
 
   <div class="pin">
     <span class="pin-label">§ 03 · 公式</span>
-    <code>Attention(Q,K,V) = softmax(QK<sup>T</sup>/√d<sub>k</sub>) V</code> —— 整篇论文最值得记的一行
+    <code class="m">\mathrm{Attention}(Q,K,V) =\operatorname{softmax}(QKT/\sqrt{d}k) V</code> —— 整篇论文最值得记的一行
   </div>
 
   <div class="pin">
