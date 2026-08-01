@@ -262,13 +262,65 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 
 <section id="isg">
 <h2><span class="n">§ 05</span><span>ISG：四个时间点不该只代表四个点</span></h2>
-<p>SD 3.5 Large 的四个 anchor 是 <code>{.25,.50,.75,1.0}</code>。但老师的一步重建误差 <code>ξ(t)</code> 会局部振荡，高噪声的 <code>.8–1.0</code> 尤其明显。某个手工 anchor 若恰好落在坏位置，学生就会拿这个点代表整段。</p>
+<p>§04 的 IDA 修的是「fake 追不上学生」。这一节是另一个病，跟前一个没关系：<strong>监督点太少</strong>。ISG 全称 intra-segment guidance，段内引导。</p>
+
+<h3>一 · 先说清 anchor 是什么，以及为什么只有四个</h3>
+<p>蒸出来的是<strong>四步</strong>生成器：推理时它只在四个时刻各前向一次，就把噪声变成图。这四个时刻就叫 <a class="jr" href="#g-08">anchor</a>。训练时 DMD 的损失也只加在这四个点上——<strong>于是整条轨迹上除了这四个点，生成器收不到任何信号</strong>（论文原话：generator receives no signal over the rest of the trajectory）。</p>
+<p>先把时间轴的方向钉死，不然后面全反：<strong><code>τ=1.0</code> 是纯噪声，<code>τ=0</code> 是干净图</strong>，去噪是从 1 往 0 走。所以下面这排 anchor 要<strong>从右往左</strong>读。</p>
 <div class="timeline">
-  <div class="anchor good">τ₀=.25<br><small>低噪声</small></div><div class="anchor">τ₁=.50</div><div class="anchor">τ₂=.75</div><div class="anchor bad">τ₃=1.00<br><small>高噪声局部误差陡升</small></div>
+  <div class="anchor good">τ₀=.25<br><small>快到干净了</small></div><div class="anchor">τ₁=.50</div><div class="anchor">τ₂=.75</div><div class="anchor bad">τ₃=1.00<br><small>起点·纯噪声</small></div>
+</div>
+<p>三个模型各自的 anchor 不一样，FLUX 用的是 shifted sigma：</p>
+<div class="symbols" style="grid-template-columns:repeat(3,1fr)">
+  <div class="symbol"><code>SDXL</code>{249, 499, 749, 999}</div>
+  <div class="symbol"><code>SD 3.5 Large</code>{.25, .50, .75, 1.0}</div>
+  <div class="symbol"><code>FLUX.1 dev</code>{.512, .759, .904, 1.0}</div>
+</div>
+
+<h3>二 · 只挑四个点，风险在哪</h3>
+<p>论文量了一个东西：老师在时刻 <code>t</code> <strong>一步</strong>猜回干净图能猜得多准。先把符号说清：</p>
+<div class="symbols">
+  <div class="symbol"><code>x_0</code>真实的干净样本。</div>
+  <div class="symbol"><code>x_t</code>把 <code>x_0</code> 加噪到时刻 <code>t</code> 的结果。</div>
+  <div class="symbol"><code>\widehat x_0</code>老师看着 <code>x_t</code>，一步猜出来的干净图。</div>
+  <div class="symbol"><code>\xi(t)</code>这个猜测的平均平方误差。</div>
 </div>
 <p class="formula-purpose">这条式子测量：老师从第 <code>t</code> 个噪声状态一步猜回干净图时，平均错多少？</p>
 <div class="formula math" data-display="true">\xi(t)=\mathbb E_{x_0,\epsilon}\left[\left\|\widehat x_0(x_t,t)-x_0\right\|_2^2\right]</div>
-<p>ISG 不再只看端点。对一段 <code>τ_i→τ_{i-1}</code>，随机采 <code>t_mid</code>：老师走前半段，冻结的学生走后半段，活跃学生则直接跨完整段。</p>
+<p>直觉上 <code>ξ(t)</code> 该是单调的：噪声越大越难猜，误差越大。<strong>但实测不是。</strong>曲线会局部上下抖，<code>t∈[.8,1.0]</code> 这一带尤其明显——而 <code>τ₃=1.0</code> 恰好就是一个 anchor。</p>
+<p>为什么这要命，把因果链摊开走一遍：</p>
+<ol>
+  <li>某个 anchor 落在 <code>ξ</code> 的一个局部尖峰上 → <strong>老师自己在这个时刻就答得偏</strong>。</li>
+  <li>学生在这个 anchor 上对齐老师 → 它学到的方向也跟着偏。</li>
+  <li>四步生成器一共只有四个点，这个 anchor 要<strong>独自代表它左右一整段时间</strong> → 局部的一个坏点被放大成整段的错误。</li>
+</ol>
+<p>论文的说法是：把邻近时刻当成同等有信息量（treating nearby timesteps as equally informative），会把训练锚死在次优点上。</p>
+
+<h3>三 · ISG 的做法：同一段走两条路，再让它们对齐</h3>
+<p>对相邻两个 anchor 之间的一段 <code>τᵢ → τᵢ₋₁</code>（从噪声大的走向噪声小的），每次训练随机抽一个中间点 <code>t_mid</code>，然后走两条路：</p>
+<div class="symbols" style="grid-template-columns:1fr 1fr">
+  <div class="symbol"><code>x_{tar}</code><b>A · 目标路线：</b>老师先从 <code>τ_i</code> 走到 <code>t_mid</code>，学生接着从 <code>t_mid</code> 走到 <code>τ_{i-1}</code>，落点记作 <code>x_{tar}</code>。<strong>整条不回传梯度。</strong></div>
+  <div class="symbol"><code>x_{direct}</code><b>B · 活跃路线：</b>学生自己一步从 <code>τ_i</code> 直接跨到 <code>τ_{i-1}</code>，落点记作 <code>x_{direct}</code>（正式记号是 <code>x_{\tau_{i-1}}</code>）。<strong>梯度只走这条。</strong></div>
+</div>
+<p>两条路的起点、终点<strong>时刻完全一样</strong>，差别只在中间拐没拐一下。损失就是让 B 去贴 A。</p>
+<p class="formula-purpose">走一步用的是最朴素的欧拉法，这里必须先讲清，否则下面的数字对不上：</p>
+<div class="formula math" data-display="true">x_{\text{new}}=x_{\text{old}}+(t_{\text{new}}-t_{\text{old}})\cdot v</div>
+<div class="note"><strong>符号陷阱：去噪时 <code>Δt</code> 是负的。</strong>从 <code>.75</code> 走到 <code>.60</code>，<code>Δt = .60−.75 = −.15</code>。所以速度 <code>v</code> 是负数时，<code>Δt·v</code> 反而是<strong>正</strong>的，<code>x</code> 会变大。下面每一步都会撞上这个负负得正，看数字时留意。</div>
+
+<h3>四 · 一组数字从头算到尾</h3>
+<p>取 <code>τᵢ=.75</code>、随机抽到 <code>t_mid=.60</code>、<code>τᵢ₋₁=.50</code>，段首的值 <code>x=.20</code>。三段速度都由各自的网络前向算出，这里直接给定：</p>
+<div class="calc">路线 A 前半段 · 老师走 · 不回传<br>
+&nbsp;&nbsp;Δt = .60 − .75 = <b>−.15</b>，v_real = −2.0<br>
+&nbsp;&nbsp;x_mid = .20 + (−.15)×(−2.0) = .20 + .30 = <b>.50</b><br><br>
+路线 A 后半段 · 学生走 · 不回传<br>
+&nbsp;&nbsp;Δt = .50 − .60 = <b>−.10</b>，v_G = −1.5<br>
+&nbsp;&nbsp;x_tar = .50 + (−.10)×(−1.5) = .50 + .15 = <b>.65</b><br><br>
+路线 B · 学生一步跨完 · 回传<br>
+&nbsp;&nbsp;Δt = .50 − .75 = <b>−.25</b>，v_G = −1.0<br>
+&nbsp;&nbsp;x_direct = .20 + (−.25)×(−1.0) = .20 + .25 = <b>.45</b><br><br>
+损失<br>
+&nbsp;&nbsp;L = (x_direct − x_tar)² = (.45 − .65)² = (−.20)² = <b>.04</b></div>
+<p><strong>自检：</strong>两条路都是从 <code>t=.75</code> 出发、到 <code>t=.50</code> 结束，各自的 <code>Δt</code> 加起来也对得上（<code>−.15 + −.10 = −.25</code>）。差别只在 A 中途换了一次速度、B 一路用一个速度——<strong>这个差就是段内信息</strong>。</p>
 <figure>
   <figcaption><span>Fig 04 · 段内引导的两条路线</span><b>目标支路也含学生，不是老师独跑全程</b></figcaption>
   <div class="segment">
@@ -280,9 +332,15 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
   <div class="plain"><strong>并行的活跃路线：</strong>学生直接从 <code>.75→.50</code>，以速度 <code>-1</code> 得到 <code>.45</code>。误差只回传这条路线；<a class="jr" href="#g-09">stopgrad</a> 冻结目标值 <code>.65</code>。</div>
 </figure>
 <p class="formula-purpose">正式目标：让直接跨段结果贴近冻结的绕路目标。</p>
-<div class="symbols"><div class="symbol"><code>xτᵢ₋₁</code>活跃学生直接跨完整段的结果。</div><div class="symbol"><code>xtar</code>老师前半段 + 学生后半段造出的临时目标。</div><div class="symbol"><code>i</code>第几个 coarse interval。</div><div class="symbol"><code>stopgrad</code>保留目标数值，但不从目标支路反传。</div></div>
+<div class="symbols"><div class="symbol"><code>x_{\tau_{i-1}}</code>活跃学生直接跨完整段的结果，就是上面的 <code>.45</code>。</div><div class="symbol"><code>x_{tar}</code>老师前半段 + 学生后半段造出的临时目标，上面的 <code>.65</code>。</div><div class="symbol"><code>i</code>第几个 coarse interval。</div><div class="symbol"><code>stopgrad</code>保留目标数值，但不从目标支路反传。</div></div>
 <div class="formula math" data-display="true">\mathcal L_{\mathrm{ISG}}^{(i)}=\mathbb E_{\epsilon,t_{\mathrm{mid}}}\left[\left\|x_{\tau_{i-1}}-\operatorname{stopgrad}(x_{\mathrm{tar}})\right\|_2^2\right]</div>
-<div class="warning"><strong>论文 / 代码差异：</strong>论文 Eq.12 写平方 L2；官方 commit <code>fafc81b7</code> 实际使用 <code>sqrt(diff²+.001²)-.001</code> 的平滑绝对误差。SD3.5 代码还在段两端各留 50 个 index，并用 CFG=5 的老师走前半段。</div>
+
+<h3>五 · 三个容易滑过去的"为什么"</h3>
+<p><strong>为什么每次要重抽 <code>t_mid</code>？</strong>一个 <code>t_mid</code> 只往 anchor 里注入段内某一处的老师行为。随机换，训练多轮之后，这个 anchor 就把<strong>整段</strong>的老师行为都吸收进来了——这才叫"把整段压进四个点"。注意这条绕路<strong>只在训练时存在</strong>，推理还是四步，没有变慢。</p>
+<p><strong>为什么必须 stopgrad？</strong>目标 <code>x_tar</code> 里也含学生，如果不冻，梯度会同时推两边：不用把 B 学对，只要让 A 和 B 一起塌到同一个平凡值，损失照样降到 0。stopgrad 把 A 钉成一个常数，B 才只能真的往它靠。</p>
+<p><strong>为什么目标支路要留学生走后半段，不让老师一路走完？</strong>论文只说这样做能把老师在段内的行为聚合进来（aggregates the teacher's behavior within each segment），<strong>没有正面论证为什么不让老师独走全程</strong>。可以观察到的两点是：老师走完整段要多跑好几个小步，成本明显更高；而且那样目标就纯是老师的轨迹终点，跟"学生一步该落在哪"是两回事。这属于合理推测，不是论文的论证。</p>
+
+<div class="warning"><strong>论文 / 代码差异：</strong>论文 Eq.12 写平方 L2；官方 commit <code>fafc81b7</code> 实际使用 <code>sqrt(diff²+.001²)-.001</code> 的平滑绝对误差。SD3.5 代码还在段两端各留 50 个 index 再抽 <code>t_mid</code>——避免抽到贴着端点的位置，让某半段长度接近 0、那一半白走。前半段的老师还开着 CFG=5。复现时以对应版本代码为准。</div>
 </section>
 
 <section id="vfm">
@@ -311,7 +369,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 <section id="loop">
 <h2><span class="n">§ 07</span><span>一轮训练：三项 loss 和四次更新按什么顺序</span></h2>
 <p>每个小步先选一个 coarse anchor，再以 50% 概率从真实图前向加噪，或从纯噪声做 <a class="jr" href="#g-11">backward simulation</a>。生成器默认每 5 个小步更新一次。</p>
-<div class="symbols"><div class="symbol"><code>L_DMD</code>双 score 分布匹配项。</div><div class="symbol"><code>L_G^adv</code>VFM 判别器给生成器的对抗项。</div><div class="symbol"><code>L_ISG</code>段内引导项。</div><div class="symbol"><code>λG / λISG</code>控制后两项相对强度的超参数。</div></div>
+<div class="symbols"><div class="symbol"><code>\mathcal{L}_{\mathrm{DMD}}</code>双 score 分布匹配项。</div><div class="symbol"><code>\mathcal{L}_G^{\mathrm{adv}}</code>VFM 判别器给生成器的对抗项。</div><div class="symbol"><code>\mathcal{L}_{\mathrm{ISG}}</code>段内引导项。</div><div class="symbol"><code>\lambda_G,\ \lambda_{\mathrm{ISG}}</code>控制后两项相对强度的超参数。</div></div>
 <p class="formula-purpose">生成器更新时，三项监督才合到一起。</p>
 <div class="formula math" data-display="true">\mathcal L_G=\mathcal L_{\mathrm{DMD}}+\lambda_G\mathcal L_G^{\mathrm{adv}}+\lambda_{\mathrm{ISG}}\mathcal L_{\mathrm{ISG}}</div>
 <figure>
@@ -492,9 +550,10 @@ a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
       // 希腊字母与运算符
       t=t.replace(/[\u0370-\u03ff\u2100-\u22ff\u2190-\u21ff\u2212]/g,
         function(c){ return GREEK[c]!==undefined ? GREEK[c]+' ' : c; });
-      // 多字母下标 → \mathrm{}
-      t=t.replace(/_\{?([A-Za-z]{2,})\}?/g, function(m,w){
-        return WORDS.indexOf(w)>=0 || w.length>1 ? '_{\\mathrm{'+w+'}}' : m; });
+      // 多字母下标/上标 → \mathrm{}。上标这条不能漏：LaTeX 里 ^adv 是
+      // "^a 后面跟正文 dv"，语法完全合法，KaTeX 不报错却渲染成 L^a dv。
+      t=t.replace(/([_^])\{?([A-Za-z]{2,})\}?/g, function(m,op,w){
+        return WORDS.indexOf(w)>=0 || w.length>1 ? op+'{\\mathrm{'+w+'}}' : m; });
       // 希腊字母后直接跟单词(θbase) → 变下标
       t=t.replace(/(\\[a-zA-Z]+)\s*([a-z]{2,})\b/g, function(m,g,w){
         return WORDS.indexOf(w)>=0 ? g+'_{\\mathrm{'+w+'}}' : m; });

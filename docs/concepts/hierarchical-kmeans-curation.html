@@ -160,9 +160,10 @@ iter3 分配: 不变 → 收敛
       // 希腊字母与运算符
       t=t.replace(/[\u0370-\u03ff\u2100-\u22ff\u2190-\u21ff\u2212]/g,
         function(c){ return GREEK[c]!==undefined ? GREEK[c]+' ' : c; });
-      // 多字母下标 → \mathrm{}
-      t=t.replace(/_\{?([A-Za-z]{2,})\}?/g, function(m,w){
-        return WORDS.indexOf(w)>=0 || w.length>1 ? '_{\\mathrm{'+w+'}}' : m; });
+      // 多字母下标/上标 → \mathrm{}。上标这条不能漏：LaTeX 里 ^adv 是
+      // "^a 后面跟正文 dv"，语法完全合法，KaTeX 不报错却渲染成 L^a dv。
+      t=t.replace(/([_^])\{?([A-Za-z]{2,})\}?/g, function(m,op,w){
+        return WORDS.indexOf(w)>=0 || w.length>1 ? op+'{\\mathrm{'+w+'}}' : m; });
       // 希腊字母后直接跟单词(θbase) → 变下标
       t=t.replace(/(\\[a-zA-Z]+)\s*([a-z]{2,})\b/g, function(m,g,w){
         return WORDS.indexOf(w)>=0 ? g+'_{\\mathrm{'+w+'}}' : m; });

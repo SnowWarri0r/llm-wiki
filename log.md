@@ -1199,3 +1199,14 @@ skill 更新:
 - 验证：把新旧两版的全部 .jr 都剥掉后逐字节对比，13 页完全一致 —— 27 处纯增量，正文一个字没动。浏览器实测 attention 12/12 入口都渲染正确、锚点跳转命中词条。
 - 顺带修一个早就存在的排版 bug：`.symbol code{display:block}` 本意是让格子开头那个符号单独成行当标签，却把说明文字里的行内 code 也顶成块级，读起来像莫名其妙的断行（senseflow「负责让 p_f 追上 p_g」被拆成四行）。mathify 给这些 code 上了色之后更显眼。在 render.py 注入的样式里加 `code:not(:first-child){display:inline}` 兜底，影响 senseflow 3 处 + dmd2 1 处。
 - 全站现在 0 ERROR / 24 WARN（WARN 全是 define-before-use 与 figcaption 的启发式提示，当 backlog）。
+
+## [2026-07-26] revise | senseflow §05 重写 + 修 mathify 上标全局 bug
+
+- 用户反馈第 5 节（ISG）看不懂、感觉省了细节。对照发现 HTML 版比 md 版少了一大截：md 里那段逐步手算（x_mid / x_tar / x_direct 每一步代入）在 HTML 里只剩 Fig 04 的结果数字，读者看到 `vreal=-2` 和 `xmid=.50` 完全不知道 .50 哪来的。
+- §05 重写成五段：①anchor 是什么、为什么只有四个、τ=1 是噪声 τ=0 是干净（方向此前从未交代）+ 三个模型的 anchor 表（HTML 版原本丢了）；②ξ(t) 先逐符号定义再给公式（原来先用后定义），并把「ξ 局部振荡 → anchor 落在尖峰 → 学生学偏 → 这个点要代表整段」的因果链摊开；③两条路线的构造，先讲欧拉步 x_new = x_old + Δt·v 并点明去噪时 Δt 为负、负负得正这个符号陷阱；④一组数字从头算到尾（含 Δt 相加自检 −.15+−.10=−.25）；⑤三个"为什么"：为什么重抽 t_mid、为什么必须 stopgrad（不冻就能靠两边一起塌到平凡值把 loss 刷到 0）、为什么目标支路留学生走后半段。
+- 第三个"为什么"论文没有正面论证，已明确标注是合理推测而非论文结论。代码差异那条补上"两端各留 50 个 index"的原因（避免某半段长度≈0 白走）。
+- 全部算术 python 复核；散文里的 `τ_i → τ_{i-1}` 等裸 LaTeX 改成 unicode 下标（mathify 只管符号格子不管散文）。
+- 修 `.calc` 块：这页的 .calc 没有 white-space:pre，原有写法是手写 <br>，我按 pre 写导致整块挤成一段。
+- **修 mathify 全局 bug**：toTex 只有多字母下标规则（`_adv` → `_{\mathrm{adv}}`），没有对应的上标规则。于是 `L_G^adv` 里的 `^adv` 原样进 KaTeX，被解析成「`^a` 上标 + 正文 `dv`」，显示成 `L_G^a dv`。这是合法 LaTeX，所以 throwOnError 抓不到、katex-error 计数为 0。已把规则改成同时处理 `[_^]`。
+- senseflow §07 四个 loss 格子写法本来就不统一（L_DMD/L_ISG 被 CONST_NAME 规则跳过保持 code 样式，另两个走 mathify），现统一写成与公式逐字一致的 LaTeX。
+- SKILL 加一条：**katex-error==0 ≠ 渲染对了**，没报错但没亲眼看过的公式不算验过；同一条式子在符号格子和正式公式里出现两次时两处必须逐字一致。
