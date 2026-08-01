@@ -158,7 +158,7 @@ figcaption{display:flex;justify-content:space-between;gap:18px;margin-bottom:23p
     <figcaption><span>Fig 04 · 四类动作注入</span><b>接口粒度要匹配任务</b></figcaption>
     <div class="inject">
       <div class="method"><b>01 · TOKEN</b><strong>与视觉 token 拼接</strong><p>统一、易扩展；但历史视觉太强时，动作 token 可能被当作弱提示。</p></div>
-      <div class="method"><b>02 · MODULATION</b><strong>缩放 / 平移特征</strong><p>由动作生成 <code>γ(a)</code> 与 <code>β(a)</code>，每层都改视觉特征。</p></div>
+      <div class="method"><b>02 · MODULATION</b><strong>缩放 / 平移特征</strong><p>由动作生成 <code class="m">\gamma (a)</code> 与 <code class="m">\beta (a)</code>，每层都改视觉特征。</p></div>
       <div class="method"><b>03 · GEOMETRY</b><strong>相机与显式 3D</strong><p>按位姿先投影场景，再由生成模型补洞；精确但系统更重。</p></div>
       <div class="method"><b>04 · TEXT</b><strong>cross-attention</strong><p>适合“改成黄昏”等高层语义，不适合 50 ms 一次的摇杆数值。</p></div>
     </div>
@@ -166,7 +166,7 @@ figcaption{display:flex;justify-content:space-between;gap:18px;margin-bottom:23p
   <div class="symbols"><div class="sym"><b>h</b>当前视觉特征</div><div class="sym"><b>a</b>当前动作</div><div class="sym"><b>γ(a)</b>动作决定的逐通道缩放</div><div class="sym"><b>β(a)</b>动作决定的逐通道偏移</div><div class="sym"><b>⊙</b>对应位置逐元素相乘</div><div class="sym"><b>h′</b>已经写入动作信息的新特征</div></div>
   <p class="formula-purpose">动作调制的一般写法：</p>
   <div class="formula" data-expr="h'=\gamma(a)\odot h+\beta(a)"></div>
-  <p>若 <code>h=[2,4]</code>、<code>γ(a)=[1.2,.5]</code>、<code>β(a)=[.1,−.2]</code>，则 <code>h′=[1.2×2+.1,.5×4−.2]=[2.5,1.8]</code>：动作放大第一维，同时压低第二维。</p>
+  <p>若 <code>h=[2,4]</code>、<code class="m">\gamma (a)=[1.2,.5]</code>、<code class="m">\beta (a)=[.1,- .2]</code>，则 <code class="m">h′=[1.2\times 2+.1,.5\times 4- .2]=[2.5,1.8]</code>：动作放大第一维，同时压低第二维。</p>
 </section>
 
 <section id="s4">
@@ -217,9 +217,9 @@ figcaption{display:flex;justify-content:space-between;gap:18px;margin-bottom:23p
       <div class="side action"><h4>当前动作权重大</h4><p>按键立即生效；但画面容易跳变，旧物体和空间结构可能丢失。</p><p><strong>响应强 · 漂移风险高</strong></p></div>
     </div>
   </figure>
-  <p class="formula-purpose">先定义教学旋钮 <code>λ∈[0,1]</code>：<code>λ</code> 是历史权重，<code>1−λ</code> 是当前动作权重。下面只是解释冲突，不是论文训练公式：</p>
+  <p class="formula-purpose">先定义教学旋钮 <code class="m">\lambda \in [0,1]</code>：<code class="m">\lambda</code> 是历史权重，<code class="m">1-\lambda</code> 是当前动作权重。下面只是解释冲突，不是论文训练公式：</p>
   <div class="formula" data-expr="h_{\mathrm{next}}=\lambda h_{\mathrm{history}}+(1-\lambda)h_{\mathrm{action}}"></div>
-  <p><code>λ=.8</code> 时历史 / 动作各占 80% / 20%；降到 <code>.3</code> 后动作变强，旧场景也更容易被改写。Astra 给条件帧加随机噪声，故意削弱历史影响；Context Forcing 让带 memory 的 student 在自生成长轨迹上学习平衡。</p>
+  <p><code class="m">\lambda =.8</code> 时历史 / 动作各占 80% / 20%；降到 <code>.3</code> 后动作变强，旧场景也更容易被改写。Astra 给条件帧加随机噪声，故意削弱历史影响；Context Forcing 让带 memory 的 student 在自生成长轨迹上学习平衡。</p>
   <div class="warn">因此只看 FID 会误判：几乎复制上一帧的模型可能非常“稳”，却完全没有执行动作。世界模型评测必须同时包含动作跟随。</div>
 </section>
 

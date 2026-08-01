@@ -120,14 +120,14 @@ figure.play .ls-svg .draw { stroke-dashoffset: 0; }
 
 <div class="tldr">
   <span class="label">TL;DR</span>
-  <p>普通 RNN 反向传播穿过多步 → 梯度连乘 → <strong>消失/爆炸</strong><a class="jr" href="#g-01">1</a>，学不到长程依赖。LSTM 加一条单独的 <strong>cell state（记忆传送带 C）</strong><a class="jr" href="#g-02">2</a>，更新是<strong>加法</strong> <code>C_t = f·C_{t-1} + i·g</code> → 信息和梯度都能带很远。三个<strong>门（0~1 的阀门）</strong>：<strong>遗忘门 f</strong><a class="jr" href="#g-03">3</a>（老记忆留多少）、<strong>输入门 i + 候选 g</strong><a class="jr" href="#g-04">4</a>（写什么新的）、<strong>输出门 o</strong><a class="jr" href="#g-05">5</a>（读出什么当 <code>h_t = o·tanh(C_t)</code>）。梯度不消失的根：加法路径 ≈ 每步乘 1，<strong>同 <a href="resnet.html">ResNet</a> 残差 x+F(x)</strong><a class="jr" href="#g-06">6</a>（LSTM 1997 就用了，ResNet 2015 在深度方向重新发明）。简化版 GRU<a class="jr" href="#g-07">7</a>（2 门）。2014–2017 序列霸主（seq2seq），最早的 attention 加在它上面；后来 <a href="attention-is-all-you-need.html">Attention Is All You Need</a> 把循环全扔了取代它。</p>
+  <p>普通 RNN 反向传播穿过多步 → 梯度连乘 → <strong>消失/爆炸</strong><a class="jr" href="#g-01">1</a>，学不到长程依赖。LSTM 加一条单独的 <strong>cell state（记忆传送带 C）</strong><a class="jr" href="#g-02">2</a>，更新是<strong>加法</strong> <code class="m">C_t =f\cdot C_{t-1} +i\cdot g</code> → 信息和梯度都能带很远。三个<strong>门（0~1 的阀门）</strong>：<strong>遗忘门 f</strong><a class="jr" href="#g-03">3</a>（老记忆留多少）、<strong>输入门 i + 候选 g</strong><a class="jr" href="#g-04">4</a>（写什么新的）、<strong>输出门 o</strong><a class="jr" href="#g-05">5</a>（读出什么当 <code class="m">h_t =o\cdot tanh(C_t)</code>）。梯度不消失的根：加法路径 ≈ 每步乘 1，<strong>同 <a href="resnet.html">ResNet</a> 残差 x+F(x)</strong><a class="jr" href="#g-06">6</a>（LSTM 1997 就用了，ResNet 2015 在深度方向重新发明）。简化版 GRU<a class="jr" href="#g-07">7</a>（2 门）。2014–2017 序列霸主（seq2seq），最早的 attention 加在它上面；后来 <a href="attention-is-all-you-need.html">Attention Is All You Need</a> 把循环全扔了取代它。</p>
 </div>
 
 
 <!-- §01 -->
 <h2><span class="num">§ 01</span>痛点：RNN 记不住远处</h2>
 
-<p>普通 RNN 把序列<strong>一步步</strong>处理，拎着一个隐藏状态 <code>h</code> 往后传，每步 <code>h_t = tanh(W·[h_{t-1}, x_t])</code>。反向传播要<strong>穿过几十上百步</strong>，梯度沿途<strong>连乘</strong>同一批权重和导数：</p>
+<p>普通 RNN 把序列<strong>一步步</strong>处理，拎着一个隐藏状态 <code>h</code> 往后传，每步 <code class="m">h_t =tanh(W\cdot [h_{t-1},x_t])</code>。反向传播要<strong>穿过几十上百步</strong>，梯度沿途<strong>连乘</strong>同一批权重和导数：</p>
 
 <ul>
 <li>连乘的数 &lt;1 → 越乘越小 → <strong>梯度消失</strong>（远处的信号传不回来，学不到长程依赖）。</li>
@@ -257,7 +257,7 @@ h_t = o_t · tanh(C_t)              # 这一步的隐藏状态/输出</pre>
 <!-- §04 -->
 <h2><span class="num">§ 04</span>为什么梯度不消失：加法高速路</h2>
 
-<p>关键在 cell state 的更新是<strong>加法</strong>：<code>C_t = f_t · C_{t−1} + i_t · g_t</code>。反向传播沿 C 这条路往回走，梯度每步大约只<strong>乘一个遗忘门 f（≈1）</strong>，而不是普通 RNN 那样<strong>乘一个会缩水的"权重×tanh导数"</strong>。所以记忆和梯度都能<strong>流很远</strong>——传送带是给梯度修的一条高速路。</p>
+<p>关键在 cell state 的更新是<strong>加法</strong>：<code class="m">C_t =f_t \cdot C_{t-1} +i_t \cdot g_t</code>。反向传播沿 C 这条路往回走，梯度每步大约只<strong>乘一个遗忘门 f（≈1）</strong>，而不是普通 RNN 那样<strong>乘一个会缩水的"权重×tanh导数"</strong>。所以记忆和梯度都能<strong>流很远</strong>——传送带是给梯度修的一条高速路。</p>
 
 <figure id="fig-grad" class="fig-grad">
   <figcaption>
@@ -320,10 +320,10 @@ h_t = o_t · tanh(C_t)              # 这一步的隐藏状态/输出</pre>
   <h2>引用 / 术语表</h2>
   <ol>
     <li id="g-01"><span class="term">梯度消失/爆炸</span> · RNN 反向传播穿过多步、连乘同批权重×导数：&lt;1 越乘越小（消失，学不到长程）、&gt;1 越乘越大（爆炸）。</li>
-    <li id="g-02"><span class="term">cell state · 记忆传送带</span> · 单独一条从头通到尾的记忆通路，更新主要靠加法 <code>C_t=f·C_{t−1}+i·g</code>，信息能原样带很远。</li>
+    <li id="g-02"><span class="term">cell state · 记忆传送带</span> · 单独一条从头通到尾的记忆通路，更新主要靠加法 <code class="m">C_t=f\cdot C_{t-1}+i\cdot g</code>，信息能原样带很远。</li>
     <li id="g-03"><span class="term">遗忘门 f</span> · sigmoid 出 0~1，per-cell 决定老记忆留多少。0=忘、1=留。看到新主语就忘掉旧主语。</li>
     <li id="g-04"><span class="term">输入门 i + 候选 g</span> · i(σ)=新内容写多少，g(tanh)=要写的候选值，写入量 = i·g。</li>
-    <li id="g-05"><span class="term">输出门 o</span> · σ 出 0~1，决定从 cell 读出多少当这步隐藏状态：<code>h_t = o·tanh(C_t)</code>。</li>
+    <li id="g-05"><span class="term">输出门 o</span> · σ 出 0~1，决定从 cell 读出多少当这步隐藏状态：<code class="m">h_t =o\cdot tanh(C_t)</code>。</li>
     <li id="g-06"><span class="term">加法梯度高速路</span> · C 加法更新 → 梯度沿 C 每步 ≈ 乘遗忘门(≈1)，不缩水。同 <a href="resnet.html">ResNet</a> 残差 x+F(x)；LSTM 在时间方向、ResNet 在深度方向。</li>
     <li id="g-07"><span class="term">GRU / seq2seq / 被取代</span> · GRU=2 门简化版；LSTM 撑起 seq2seq + 最早的 attention；后被 <a href="attention-is-all-you-need.html">Transformer</a>（任意位置直接互看 + 可并行）取代。</li>
   </ol>

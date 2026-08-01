@@ -120,7 +120,7 @@ figure.play .qi-svg .draw { stroke-dashoffset: 0; }
 
 <div class="tldr">
   <span class="label">TL;DR</span>
-  <p>Qwen-Image-2.0（20B <a href="../concepts/diffusion-transformer.html">MMDiT</a>）把<strong>生成 + 精确编辑统一进一个模式</strong>：核心是"条件→目标"建模，编辑时把<strong>原图 VAE latent 和文字嵌入拼接</strong> <code>Concat(ℰ_x, h_y)</code><a class="jr" href="#g-01">1</a> 成一条多模态序列，喂同一个 MMDiT——没点名的区域<strong>天然照抄</strong>、只改指令点名处<a class="jr" href="#g-02">2</a>。条件编码器是 <strong>frozen <a href="../concepts/qwen3-vl.html">Qwen3-VL</a></strong><a class="jr" href="#g-03">3</a>；backbone 用 <a href="../concepts/qk-rmsnorm.html">RMSNorm QK-Norm</a>、纯乘性调制、SwiGLU、<a href="../concepts/mrope.html">MSRoPE</a> 跨模态位置；<strong>VAE 升级 f16c64（16× 压缩</strong>，1.0 是 8×）<a class="jr" href="#g-04">4</a>。<strong>六段训练</strong><a class="jr" href="#g-05">5</a> + 闭环 <strong>Data Flywheel</strong>；用 <strong>DMD 把 40 步老师蒸成 4-NFE 学生</strong><a class="jr" href="#g-06">6</a>。结果：LMArena T2I <strong>ELO 1168，全球 #9 / 中文 #1</strong>，超 Nano Banana；原生 2K 分辨率。</p>
+  <p>Qwen-Image-2.0（20B <a href="../concepts/diffusion-transformer.html">MMDiT</a>）把<strong>生成 + 精确编辑统一进一个模式</strong>：核心是"条件→目标"建模，编辑时把<strong>原图 VAE latent 和文字嵌入拼接</strong> <code class="m">\mathrm{Concat}(ℰ_x,h_y)</code><a class="jr" href="#g-01">1</a> 成一条多模态序列，喂同一个 MMDiT——没点名的区域<strong>天然照抄</strong>、只改指令点名处<a class="jr" href="#g-02">2</a>。条件编码器是 <strong>frozen <a href="../concepts/qwen3-vl.html">Qwen3-VL</a></strong><a class="jr" href="#g-03">3</a>；backbone 用 <a href="../concepts/qk-rmsnorm.html">RMSNorm QK-Norm</a>、纯乘性调制、SwiGLU、<a href="../concepts/mrope.html">MSRoPE</a> 跨模态位置；<strong>VAE 升级 f16c64（16× 压缩</strong>，1.0 是 8×）<a class="jr" href="#g-04">4</a>。<strong>六段训练</strong><a class="jr" href="#g-05">5</a> + 闭环 <strong>Data Flywheel</strong>；用 <strong>DMD 把 40 步老师蒸成 4-NFE 学生</strong><a class="jr" href="#g-06">6</a>。结果：LMArena T2I <strong>ELO 1168，全球 #9 / 中文 #1</strong>，超 Nano Banana；原生 2K 分辨率。</p>
 </div>
 
 
@@ -228,7 +228,7 @@ figure.play .qi-svg .draw { stroke-dashoffset: 0; }
   </svg>
 </figure>
 
-<p>几个设计点：<strong>条件编码器是冻结的 <a href="../concepts/qwen3-vl.html">Qwen3-VL</a></strong>（强 VLM 读懂指令，指令遵循更好，跟 <a href="ideogram-4.html">Ideogram-4</a> 那套"翻译官决定上限"同思路）；MMDiT 用 <a href="../concepts/qk-rmsnorm.html">RMSNorm QK-Norm</a> 防 attention 炸、SwiGLU、<strong>纯乘性调制</strong>（<code>h' = αh</code>，无加性 bias）、<a href="../concepts/mrope.html">MSRoPE</a> 给文字+图像算联合位置；<strong>VAE 升到 f16c64（16× 压缩</strong>，1.0 是 8×），残差自编码 + 语义对齐损失，PSNR 33.42 / SSIM 0.9225。</p>
+<p>几个设计点：<strong>条件编码器是冻结的 <a href="../concepts/qwen3-vl.html">Qwen3-VL</a></strong>（强 VLM 读懂指令，指令遵循更好，跟 <a href="ideogram-4.html">Ideogram-4</a> 那套"翻译官决定上限"同思路）；MMDiT 用 <a href="../concepts/qk-rmsnorm.html">RMSNorm QK-Norm</a> 防 attention 炸、SwiGLU、<strong>纯乘性调制</strong>（<code class="m">h' =\alpha h</code>，无加性 bias）、<a href="../concepts/mrope.html">MSRoPE</a> 给文字+图像算联合位置；<strong>VAE 升到 f16c64（16× 压缩</strong>，1.0 是 8×），残差自编码 + 语义对齐损失，PSNR 33.42 / SSIM 0.9225。</p>
 
 
 <!-- §04 -->

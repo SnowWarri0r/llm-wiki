@@ -53,6 +53,31 @@ MATHY = re.compile("[" + "".join(map(re.escape, list(SUB) + list(SUP) + list(GRE
 CJK = re.compile(r"[一-鿿　-〿＀-￯]")
 
 
+# 形状像数学、实际是英文短语 / 图例 / 代码 / 配置，机器分不出来，人工钉死"不是数学"。
+# （典型：里面有个 − 或 → 就被 is_math 放行了，但整体是一句话。）
+NOT_MATH = {
+    '"golden_retriever"',
+    '0.5×Quality + 0.5×Domain',
+    'PSNR_merged',
+    'car-1 → red',
+    'car-2 → cyan',
+    'fake score − real score',
+    'fake ‖ real',
+    'fake − real',
+    'fake−real',
+    'ignore_thresh=.7',
+    'linear → ReLU → linear',
+    'noise - clean_latent',
+    'person-1→pink',
+    'real−fake',
+    'requires_grad=false',
+    'road→cyan',
+    'sfake−sreal',
+    'stride=kernel_size=16',
+    'ε-best response',
+}
+
+
 # 机器判不了的少数记号，人工钉死。空值 = 判定为"不是数学，别碰"。
 MANUAL = {
     "x_tⱼ": r"x_{t_j}",          # 到底是 x_{t_j} 还是 (x_t)_j，按上下文取前者
@@ -107,6 +132,8 @@ def to_tex(s: str) -> str:
 
 def is_math(s: str) -> bool:
     """这串 <code> 是数学，还是代码/普通文本？"""
+    if s in NOT_MATH:
+        return False
     if not s or len(s) > 60 or CJK.search(s):
         return False
     if re.fullmatch(r"[a-z][a-z0-9]+(_[a-z0-9]+)+", s):      # loss_dm 这类 snake_case
@@ -166,8 +193,42 @@ def main():
             print(f"{n:4d}  {raw!r:34s} → {tbl[raw]['tex']!r:44s} {where}")
         print(f"\n共 {len(tbl)} 种唯一串 / {sum(sum(v['pages'].values()) for v in tbl.values())} 处；"
               f"其中 {len(changed)} 种需要改写")
+    elif cmd == "apply":
+        targets = [a for a in sys.argv[2:] if not a.startswith("-")]
+        n_files = n_hits = 0
+        for path in sorted(DOCS.rglob("*.html")):
+            rel = str(path.relative_to(DOCS))
+            if targets and not any(t in rel for t in targets):
+                continue
+            text = path.read_text(encoding="utf-8")
+            cut = text.find("<!-- mathify:start -->")
+            head, tail = (text[:cut], text[cut:]) if cut > 0 else (text, "")
+            # <pre> 里的代码块整段不碰
+            pre = [(m.start(), m.end()) for m in re.finditer(r"<pre\b.*?</pre>", head, re.S)]
+            edits = []
+            for m in re.finditer(r"<code>(.*?)</code>", head, re.S):
+                if any(a <= m.start() < b for a, b in pre):
+                    continue
+                inner = m.group(1)
+                raw = H.unescape(re.sub(r"<[^>]+>", "", inner)).strip()
+                if "\\" in raw or not is_math(raw):
+                    continue
+                tex = to_tex(raw)
+                if tex == raw:
+                    continue
+                edits.append((m.start(), m.end(),
+                              '<code class="m">' + H.escape(tex, quote=False) + "</code>"))
+            if not edits:
+                continue
+            for a, b, v in sorted(edits, reverse=True):
+                head = head[:a] + v + head[b:]
+            path.write_text(head + tail, encoding="utf-8")
+            n_files += 1
+            n_hits += len(edits)
+            print(f"  {rel:52s} {len(edits):3d} 处")
+        print(f"\n改了 {n_files} 个文件 / {n_hits} 处")
     else:
-        print("apply 尚未启用——先审过 table 再说")
+        print("用法: table | table --full | apply [页名片段…]")
         return 2
     return 0
 

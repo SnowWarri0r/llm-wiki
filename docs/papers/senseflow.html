@@ -237,9 +237,9 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 
 <section id="failure">
 <h2><span class="n">§ 03</span><span>真正的失稳点：内循环没追上，外循环就在优化错目标</span></h2>
-<p>先回忆定义：<code>KL(p||q)=E_{X~p}[log p(X)−log q(X)]</code>。现在在上式里加上又减去同一个 <code>log p_g</code>，总值不变：</p>
+<p>先回忆定义：<code class="m">KL(p||q)=E_{X~p}[\log p(X)-\log q(X)]</code>。现在在上式里加上又减去同一个 <code class="m">\log p_g</code>，总值不变：</p>
 <div class="formula math" data-display="true">\begin{aligned}V(\theta,\phi)&=\mathbb E_{p_g}\left[(\log p_g-\log p_r)-(\log p_g-\log p_f)\right]\\&=D_{\mathrm{KL}}(p_g\Vert p_r)-D_{\mathrm{KL}}(p_g\Vert p_f)\end{aligned}</div>
-<p>第一行到第二行只是代回 KL 定义。固定生成器时，第一项不随 <code>φ</code> 变化；fake 网络最大化 <code>V</code>，等价于把第二项压到零。最优点 <code>p_f=p_g</code> 就叫 <a class="jr" href="#g-04">inner best response</a>。</p>
+<p>第一行到第二行只是代回 KL 定义。固定生成器时，第一项不随 <code class="m">\phi</code> 变化；fake 网络最大化 <code>V</code>，等价于把第二项压到零。最优点 <code>p_f=p_g</code> 就叫 <a class="jr" href="#g-04">inner best response</a>。</p>
 <figure>
   <figcaption><span>Fig 02 · 两个 KL 各管一件事</span><b>追踪误差会直接污染外循环</b></figcaption>
   <div class="kl-split">
@@ -259,24 +259,24 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 <section id="ida">
 <h2><span class="n">§ 04</span><span>IDA：先把 fake 拉近，再继续做稠密去噪训练</span></h2>
 <div class="symbols">
-  <div class="symbol"><code>θ</code>刚完成一次更新的生成器参数张量。</div>
-  <div class="symbol"><code>φ</code>更新前的 fake 网络参数张量。</div>
-  <div class="symbol"><code>λ</code>保留多少旧 fake 参数；官方 SD3.5 Large 代码取 <code>.97</code>。</div>
-  <div class="symbol"><code>1−λ</code>从生成器参数转入多少；这里是 3%。</div>
+  <div class="symbol"><code class="m">\theta</code>刚完成一次更新的生成器参数张量。</div>
+  <div class="symbol"><code class="m">\phi</code>更新前的 fake 网络参数张量。</div>
+  <div class="symbol"><code class="m">\lambda</code>保留多少旧 fake 参数；官方 SD3.5 Large 代码取 <code>.97</code>。</div>
+  <div class="symbol"><code class="m">1-\lambda</code>从生成器参数转入多少；这里是 3%。</div>
 </div>
 <p class="formula-purpose">这条式子回答：生成器刚更新后，怎样让 fake 网络立即跟进一小步？</p>
 <div class="formula math" data-display="true">\phi\leftarrow\lambda\phi+(1-\lambda)\theta,\qquad 0&lt;\lambda\le 1</div>
 <figure>
   <figcaption><span>Fig 03 · 一个参数的完整 IDA 更新</span><b>不是把 fake 覆盖成 generator</b></figcaption>
   <div class="ida-row">
-    <div class="param"><b>BEFORE</b><strong>θ=2.000</strong><p>fake 参数 <code>φ=1.500</code><br>两者差 <code>.500</code></p></div>
+    <div class="param"><b>BEFORE</b><strong>θ=2.000</strong><p>fake 参数 <code class="m">\phi =1.500</code><br>两者差 <code>.500</code></p></div>
     <div class="arrow"></div>
     <div class="param after"><b>AFTER λ=.97</b><strong>φnew=1.515</strong><p>两者差变成 <code>.485</code>；fake 随后仍照常接受自己的去噪更新。</p></div>
   </div>
   <div class="calc">φnew = .97×1.500 + .03×2.000<br>     = 1.455 + .060<br>     = 1.515</div>
 </figure>
 <p>为什么能逐参数混合？生成器和 fake 网络都从同一个 teacher 复制，结构都是时间条件速度网络。生成器虽只在少数 <a class="jr" href="#g-08">anchor timestep</a> 上拿梯度，仍能在任意 <code>t</code> 前向。IDA 传递的是同一参数坐标里的小变化，不是把一种完全不同的“生成头”塞进 score 网络。</p>
-<p>附录在局部 Lipschitz、生成器步长趋零、速度差能控制 score 差与 KL 等假设下，得到 <code>E_t KL(pg||pf)≤ε</code>。这里 <code>ε≥0</code> 是允许的平均追踪误差上限，越接近 0，fake 越贴近学生。这叫 <code>ε-best response</code>：不要求 fake 每轮精确追平，只要求追踪误差受控。它不是“权重接近必然等于分布相同”的无条件定理。</p>
+<p>附录在局部 Lipschitz、生成器步长趋零、速度差能控制 score 差与 KL 等假设下，得到 <code class="m">E_t KL(pg||pf)\le \epsilon</code>。这里 <code class="m">\epsilon \ge 0</code> 是允许的平均追踪误差上限，越接近 0，fake 越贴近学生。这叫 <code>ε-best response</code>：不要求 fake 每轮精确追平，只要求追踪误差受控。它不是“权重接近必然等于分布相同”的无条件定理。</p>
 </section>
 
 <section id="isg">
@@ -285,7 +285,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 
 <h3>一 · 先说清 anchor 是什么，以及为什么只有四个</h3>
 <p>蒸出来的是<strong>四步</strong>生成器：推理时它只在四个时刻各前向一次，就把噪声变成图。这四个时刻就叫 <a class="jr" href="#g-08">anchor</a>。训练时 DMD 的损失也只加在这四个点上——<strong>于是整条轨迹上除了这四个点，生成器收不到任何信号</strong>（论文原话：generator receives no signal over the rest of the trajectory）。</p>
-<p>先把时间轴的方向钉死，不然后面全反：<strong><code>τ=1.0</code> 是纯噪声，<code>τ=0</code> 是干净图</strong>，去噪是从 1 往 0 走。所以下面这排 anchor 要<strong>从右往左</strong>读。</p>
+<p>先把时间轴的方向钉死，不然后面全反：<strong><code class="m">\tau =1.0</code> 是纯噪声，<code class="m">\tau =0</code> 是干净图</strong>，去噪是从 1 往 0 走。所以下面这排 anchor 要<strong>从右往左</strong>读。</p>
 <div class="timeline">
   <div class="anchor good">τ₀=.25<br><small>快到干净了</small></div><div class="anchor">τ₁=.50</div><div class="anchor">τ₂=.75</div><div class="anchor bad">τ₃=1.00<br><small>起点·纯噪声</small></div>
 </div>
@@ -306,7 +306,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 </div>
 <p class="formula-purpose">这条式子测量：老师从第 <code>t</code> 个噪声状态一步猜回干净图时，平均错多少？</p>
 <div class="formula math" data-display="true">\xi(t)=\mathbb E_{x_0,\epsilon}\left[\left\|\widehat x_0(x_t,t)-x_0\right\|_2^2\right]</div>
-<p>直觉上 <code>ξ(t)</code> 该是单调的：噪声越大越难猜，误差越大。<strong>但实测不是。</strong>曲线会局部上下抖，<code>t∈[.8,1.0]</code> 这一带尤其明显——而 <code>τ₃=1.0</code> 恰好就是一个 anchor。</p>
+<p>直觉上 <code>ξ(t)</code> 该是单调的：噪声越大越难猜，误差越大。<strong>但实测不是。</strong>曲线会局部上下抖，<code class="m">t\in [.8,1.0]</code> 这一带尤其明显——而 <code class="m">\tau_{3}=1.0</code> 恰好就是一个 anchor。</p>
 <p>为什么这要命，把因果链摊开走一遍：</p>
 <ol>
   <li>某个 anchor 落在 <code>ξ</code> 的一个局部尖峰上 → <strong>老师自己在这个时刻就答得偏</strong>。</li>
@@ -316,18 +316,18 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 <p>论文的说法是：把邻近时刻当成同等有信息量（treating nearby timesteps as equally informative），会把训练锚死在次优点上。</p>
 
 <h3>三 · ISG 的做法：同一段走两条路，再让它们对齐</h3>
-<p>对相邻两个 anchor 之间的一段 <code>τᵢ → τᵢ₋₁</code>（从噪声大的走向噪声小的），每次训练随机抽一个中间点 <code>t_mid</code>，然后走两条路：</p>
+<p>对相邻两个 anchor 之间的一段 <code class="m">\tau_{i} \to \tau_{i-1}</code>（从噪声大的走向噪声小的），每次训练随机抽一个中间点 <code class="m">t_{\mathrm{mid}}</code>，然后走两条路：</p>
 <div class="symbols" style="grid-template-columns:1fr 1fr">
-  <div class="symbol"><code>x_{tar}</code><b>A · 目标路线：</b>老师先从 <code>τ_i</code> 走到 <code>t_mid</code>，学生接着从 <code>t_mid</code> 走到 <code>τ_{i-1}</code>，落点记作 <code>x_{tar}</code>。<strong>整条不回传梯度。</strong></div>
-  <div class="symbol"><code>x_{direct}</code><b>B · 活跃路线：</b>学生自己一步从 <code>τ_i</code> 直接跨到 <code>τ_{i-1}</code>，落点记作 <code>x_{direct}</code>（正式记号是 <code>x_{\tau_{i-1}}</code>）。<strong>梯度只走这条。</strong></div>
+  <div class="symbol"><code>x_{tar}</code><b>A · 目标路线：</b>老师先从 <code class="m">\tau_i</code> 走到 <code class="m">t_{\mathrm{mid}}</code>，学生接着从 <code class="m">t_{\mathrm{mid}}</code> 走到 <code class="m">\tau_{i-1}</code>，落点记作 <code>x_{tar}</code>。<strong>整条不回传梯度。</strong></div>
+  <div class="symbol"><code>x_{direct}</code><b>B · 活跃路线：</b>学生自己一步从 <code class="m">\tau_i</code> 直接跨到 <code class="m">\tau_{i-1}</code>，落点记作 <code>x_{direct}</code>（正式记号是 <code>x_{\tau_{i-1}}</code>）。<strong>梯度只走这条。</strong></div>
 </div>
 <p>两条路的起点、终点<strong>时刻完全一样</strong>，差别只在中间拐没拐一下。损失就是让 B 去贴 A。</p>
 <p class="formula-purpose">走一步用的是最朴素的欧拉法，这里必须先讲清，否则下面的数字对不上：</p>
 <div class="formula math" data-display="true">x_{\text{new}}=x_{\text{old}}+(t_{\text{new}}-t_{\text{old}})\cdot v</div>
-<div class="note"><strong>符号陷阱：去噪时 <code>Δt</code> 是负的。</strong>从 <code>.75</code> 走到 <code>.60</code>，<code>Δt = .60−.75 = −.15</code>。所以速度 <code>v</code> 是负数时，<code>Δt·v</code> 反而是<strong>正</strong>的，<code>x</code> 会变大。下面每一步都会撞上这个负负得正，看数字时留意。</div>
+<div class="note"><strong>符号陷阱：去噪时 <code class="m">\Delta t</code> 是负的。</strong>从 <code>.75</code> 走到 <code>.60</code>，<code class="m">\Delta t = .60- .75 = - .15</code>。所以速度 <code>v</code> 是负数时，<code class="m">\Delta t\cdot v</code> 反而是<strong>正</strong>的，<code>x</code> 会变大。下面每一步都会撞上这个负负得正，看数字时留意。</div>
 
 <h3>四 · 一组数字从头算到尾</h3>
-<p>取 <code>τᵢ=.75</code>、随机抽到 <code>t_mid=.60</code>、<code>τᵢ₋₁=.50</code>，段首的值 <code>x=.20</code>。三段速度都由各自的网络前向算出，这里直接给定：</p>
+<p>取 <code class="m">\tau_{i}=.75</code>、随机抽到 <code class="m">t_{\mathrm{mid}}=.60</code>、<code class="m">\tau_{i-1}=.50</code>，段首的值 <code>x=.20</code>。三段速度都由各自的网络前向算出，这里直接给定：</p>
 <div class="calc">路线 A 前半段 · 老师走 · 不回传<br>
 &nbsp;&nbsp;Δt = .60 − .75 = <b>−.15</b>，v_real = −2.0<br>
 &nbsp;&nbsp;x_mid = .20 + (−.15)×(−2.0) = .20 + .30 = <b>.50</b><br><br>
@@ -339,27 +339,27 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 &nbsp;&nbsp;x_direct = .20 + (−.25)×(−1.0) = .20 + .25 = <b>.45</b><br><br>
 损失<br>
 &nbsp;&nbsp;L = (x_direct − x_tar)² = (.45 − .65)² = (−.20)² = <b>.04</b></div>
-<p><strong>自检：</strong>两条路都是从 <code>t=.75</code> 出发、到 <code>t=.50</code> 结束，各自的 <code>Δt</code> 加起来也对得上（<code>−.15 + −.10 = −.25</code>）。差别只在 A 中途换了一次速度、B 一路用一个速度——<strong>这个差就是段内信息</strong>。</p>
+<p><strong>自检：</strong>两条路都是从 <code>t=.75</code> 出发、到 <code>t=.50</code> 结束，各自的 <code class="m">\Delta t</code> 加起来也对得上（<code class="m">- .15 + - .10 = - .25</code>）。差别只在 A 中途换了一次速度、B 一路用一个速度——<strong>这个差就是段内信息</strong>。</p>
 <figure>
   <figcaption><span>Fig 04 · 段内引导的两条路线</span><b>目标支路也含学生，不是老师独跑全程</b></figcaption>
   <div class="segment">
-    <div class="seg-node"><b>START</b><strong>xτᵢ = .20</strong><p><code>τᵢ=.75</code></p></div><div class="arrow"></div>
+    <div class="seg-node"><b>START</b><strong>xτᵢ = .20</strong><p><code class="m">\tau_{i}=.75</code></p></div><div class="arrow"></div>
     <div class="seg-node teacher"><b>TEACHER / NO GRAD</b><strong>.75 → .60</strong><p><code>vreal=-2</code><br><code>xmid=.50</code></p></div><div class="arrow"></div>
     <div class="seg-node frozen"><b>STUDENT TARGET / NO GRAD</b><strong>.60 → .50</strong><p><code>vG=-1.5</code><br><code>xtar=.65</code></p></div><div class="arrow"></div>
-    <div class="seg-node loss"><b>COMPARE</b><strong>direct=.45</strong><p><code>(.45-.65)²=.04</code></p></div>
+    <div class="seg-node loss"><b>COMPARE</b><strong>direct=.45</strong><p><code class="m">(.45-.65)^{2}=.04</code></p></div>
   </div>
-  <div class="plain"><strong>并行的活跃路线：</strong>学生直接从 <code>.75→.50</code>，以速度 <code>-1</code> 得到 <code>.45</code>。误差只回传这条路线；<a class="jr" href="#g-09">stopgrad</a> 冻结目标值 <code>.65</code>。</div>
+  <div class="plain"><strong>并行的活跃路线：</strong>学生直接从 <code class="m">.75\to .50</code>，以速度 <code>-1</code> 得到 <code>.45</code>。误差只回传这条路线；<a class="jr" href="#g-09">stopgrad</a> 冻结目标值 <code>.65</code>。</div>
 </figure>
 <p class="formula-purpose">正式目标：让直接跨段结果贴近冻结的绕路目标。</p>
 <div class="symbols"><div class="symbol"><code>x_{\tau_{i-1}}</code>活跃学生直接跨完整段的结果，就是上面的 <code>.45</code>。</div><div class="symbol"><code>x_{tar}</code>老师前半段 + 学生后半段造出的临时目标，上面的 <code>.65</code>。</div><div class="symbol"><code>i</code>第几个 coarse interval。</div><div class="symbol"><code>stopgrad</code>保留目标数值，但不从目标支路反传。</div></div>
 <div class="formula math" data-display="true">\mathcal L_{\mathrm{ISG}}^{(i)}=\mathbb E_{\epsilon,t_{\mathrm{mid}}}\left[\left\|x_{\tau_{i-1}}-\operatorname{stopgrad}(x_{\mathrm{tar}})\right\|_2^2\right]</div>
 
 <h3>五 · 三个容易滑过去的"为什么"</h3>
-<p><strong>为什么每次要重抽 <code>t_mid</code>？</strong>一个 <code>t_mid</code> 只往 anchor 里注入段内某一处的老师行为。随机换，训练多轮之后，这个 anchor 就把<strong>整段</strong>的老师行为都吸收进来了——这才叫"把整段压进四个点"。注意这条绕路<strong>只在训练时存在</strong>，推理还是四步，没有变慢。</p>
-<p><strong>为什么必须 stopgrad？</strong>目标 <code>x_tar</code> 里也含学生，如果不冻，梯度会同时推两边：不用把 B 学对，只要让 A 和 B 一起塌到同一个平凡值，损失照样降到 0。stopgrad 把 A 钉成一个常数，B 才只能真的往它靠。</p>
+<p><strong>为什么每次要重抽 <code class="m">t_{\mathrm{mid}}</code>？</strong>一个 <code class="m">t_{\mathrm{mid}}</code> 只往 anchor 里注入段内某一处的老师行为。随机换，训练多轮之后，这个 anchor 就把<strong>整段</strong>的老师行为都吸收进来了——这才叫"把整段压进四个点"。注意这条绕路<strong>只在训练时存在</strong>，推理还是四步，没有变慢。</p>
+<p><strong>为什么必须 stopgrad？</strong>目标 <code class="m">x_{\mathrm{tar}}</code> 里也含学生，如果不冻，梯度会同时推两边：不用把 B 学对，只要让 A 和 B 一起塌到同一个平凡值，损失照样降到 0。stopgrad 把 A 钉成一个常数，B 才只能真的往它靠。</p>
 <p><strong>为什么目标支路要留学生走后半段，不让老师一路走完？</strong>论文只说这样做能把老师在段内的行为聚合进来（aggregates the teacher's behavior within each segment），<strong>没有正面论证为什么不让老师独走全程</strong>。可以观察到的两点是：老师走完整段要多跑好几个小步，成本明显更高；而且那样目标就纯是老师的轨迹终点，跟"学生一步该落在哪"是两回事。这属于合理推测，不是论文的论证。</p>
 
-<div class="warning"><strong>论文 / 代码差异：</strong>论文 Eq.12 写平方 L2；官方 commit <code>fafc81b7</code> 实际使用 <code>sqrt(diff²+.001²)-.001</code> 的平滑绝对误差。SD3.5 代码还在段两端各留 50 个 index 再抽 <code>t_mid</code>——避免抽到贴着端点的位置，让某半段长度接近 0、那一半白走。前半段的老师还开着 CFG=5。复现时以对应版本代码为准。</div>
+<div class="warning"><strong>论文 / 代码差异：</strong>论文 Eq.12 写平方 L2；官方 commit <code>fafc81b7</code> 实际使用 <code class="m">sqrt(diff^{2}+.001^{2})-.001</code> 的平滑绝对误差。SD3.5 代码还在段两端各留 50 个 index 再抽 <code class="m">t_{\mathrm{mid}}</code>——避免抽到贴着端点的位置，让某半段长度接近 0、那一半白走。前半段的老师还开着 CFG=5。复现时以对应版本代码为准。</div>
 </section>
 
 <section id="vfm">
@@ -373,11 +373,11 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
     <div class="vnode head"><b>TRAINABLE</b><strong>卷积判别头</strong><p>融合图像、参考、文字条件，输出真假 logits。</p></div>
   </div>
 </figure>
-<div class="symbols"><div class="symbol"><code>D(x)</code>判别头的实数 logit，越大越像真实图。</div><div class="symbol"><code>xreal / xfake</code>真实参考图 / 当前学生图。</div><div class="symbol"><code>max(0,·)</code>已经越过正确 margin 的样本不再受罚。</div></div>
+<div class="symbols"><div class="symbol"><code>D(x)</code>判别头的实数 logit，越大越像真实图。</div><div class="symbol"><code>xreal / xfake</code>真实参考图 / 当前学生图。</div><div class="symbol"><code class="m">\max (0,\cdot )</code>已经越过正确 margin 的样本不再受罚。</div></div>
 <p>判别器用 <a class="jr" href="#g-10">hinge loss</a>：</p>
 <div class="formula math" data-display="true">\mathcal L_D=\mathbb E_{\mathrm{real}}\max(0,1-D(x_{\mathrm{real}}))+\mathbb E_{\mathrm{fake}}\max(0,1+D(x_{\mathrm{fake}}))</div>
 <div class="calc">D(real)=.4  → max(0,1-.4)=.6<br>D(fake)=-.2 → max(0,1-.2)=.8<br>LD=.6+.8=1.4</div>
-<p>高噪声图不可靠，GAN 信号不能压过 DMD。先定义 <code>σ_t</code> 为噪声比例，<code>α_t=1−σ_t</code> 为干净信号比例；负号表示最小化损失会把学生图的判别评分推高：</p>
+<p>高噪声图不可靠，GAN 信号不能压过 DMD。先定义 <code class="m">\sigma_t</code> 为噪声比例，<code class="m">\alpha_t=1-\sigma_t</code> 为干净信号比例；负号表示最小化损失会把学生图的判别评分推高：</p>
 <div class="formula math" data-display="true">\mathcal L_G^{\mathrm{adv}}=-\alpha_t^2\,\mathbb E[D(x_{\mathrm{fake}})],\qquad \alpha_t=1-\sigma_t</div>
 <div class="weights">
   <div class="weight-card"><b>HIGH NOISE</b><strong>σ=.8 → α²=.04</strong><p>图还很脏，GAN 只轻声提醒，主要听 DMD。</p></div>
@@ -394,8 +394,8 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 <figure>
   <figcaption><span>Fig 06 · generator step 的真实执行顺序</span><b>箭头只表示执行先后</b></figcaption>
   <div class="loop">
-    <div class="step gen"><span class="tag">01 / GENERATOR</span><h4>DMD + GAN + ISG</h4><p>三项相加，只更新 <code>Gθ</code>。</p></div><div class="arrow"></div>
-    <div class="step ida"><span class="tag">02 / ALIGN</span><h4>立即做 IDA</h4><p><code>φ←.97φ+.03θ</code>，先缩短 fake 追踪差。</p></div><div class="arrow"></div>
+    <div class="step gen"><span class="tag">01 / GENERATOR</span><h4>DMD + GAN + ISG</h4><p>三项相加，只更新 <code class="m">G_\theta</code>。</p></div><div class="arrow"></div>
+    <div class="step ida"><span class="tag">02 / ALIGN</span><h4>立即做 IDA</h4><p><code class="m">\phi ←.97\phi +.03\theta</code>，先缩短 fake 追踪差。</p></div><div class="arrow"></div>
     <div class="step fake"><span class="tag">03 / FAKE</span><h4>稠密时间步去噪</h4><p>学生图 stopgrad 后重新加噪，用 <a class="jr" href="#g-15">logit-normal</a> 采时刻。</p></div><div class="arrow"></div>
     <div class="step d"><span class="tag">04 / DISC</span><h4>更新判别头</h4><p>真实图与生成图共同训练 VFM heads。</p></div>
   </div>
@@ -470,7 +470,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 <h2>引用 / 术语表</h2>
 <ol>
   <li id="g-01"><span class="term">DMD2</span> · DMD 的改进版：去大规模配对回归，加 TTUR、GAN 与 backward simulation，并支持少步生成。</li>
-  <li id="g-02"><span class="term">Score function</span> · <code>∇x log p(x)</code>，和输入同形状的概率密度上升方向，不是 0–1 评分。</li>
+  <li id="g-02"><span class="term">Score function</span> · <code class="m">\nabla x \log p(x)</code>，和输入同形状的概率密度上升方向，不是 0–1 评分。</li>
   <li id="g-03"><span class="term">TTUR</span> · 双时间尺度更新；这里主要指 fake 网络每更新多次，生成器才更新一次。</li>
   <li id="g-04"><span class="term">Inner best response</span> · 固定生成器后，内层 fake 网络能达到的最优追踪状态；DMD 中是 <code>pf=pg</code>。</li>
   <li id="g-05"><span class="term">IDA</span> · Implicit Distribution Alignment；把 fake 参数向刚更新的生成器参数插值一小步。</li>

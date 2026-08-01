@@ -114,21 +114,21 @@ figure{margin:38px 0 55px;padding:25px;border:2px solid var(--ink);background:va
 <div class="formula">b_norm = [x₀/W, y₀/H, x₁/W, y₁/H]
        = [64/640, 96/480, 448/640, 384/480]
        = [0.100, 0.200, 0.700, 0.800]</div>
-<p><code>x₀,y₀</code> 是左上角，<code>x₁,y₁</code> 是右下角；横坐标除以宽，纵坐标除以高，让不同分辨率共享 <code>[0,1]</code> 空间。论文保留三位小数。解码时分别乘回宽高，正好得到原框。</p>
+<p><code class="m">x_{0},y_{0}</code> 是左上角，<code class="m">x_{1},y_{1}</code> 是右下角；横坐标除以宽，纵坐标除以高，让不同分辨率共享 <code>[0,1]</code> 空间。论文保留三位小数。解码时分别乘回宽高，正好得到原框。</p>
 
 <figure id="fig-bbox" class="reveal"><figcaption><span>Fig 06 · 像素框 ↔ 归一化文本</span><span>ROUND TRIP VERIFIED</span></figcaption><div class="bbox-demo"><div class="canvas rev"><span class="axis">640 × 480</span></div><div class="calc"><div class="calc-row rev"><b>x₀′</b><span>64 / 640 = 0.100</span></div><div class="calc-row rev d2"><b>y₀′</b><span>96 / 480 = 0.200</span></div><div class="calc-row rev d3"><b>x₁′</b><span>448 / 640 = 0.700</span></div><div class="calc-row rev d4"><b>y₁′</b><span>384 / 480 = 0.800</span></div><div class="roundtrip rev d5">&lt;p&gt;person&lt;/p&gt;<br>&lt;bbox&gt;[.100,.200,.700,.800]&lt;/bbox&gt;<br>× [640,480,640,480] → 原像素框</div></div></div><p class="fig-note">三位小数在 640 宽图上的横向量化间隔约 0.64px。若模型写成 0.701，右边界会解成 448.64px：生成误差被协议变成可测的坐标误差。</p></figure>
 
 <h2><span class="num">§ 07 / Dense encodings</span>深度、法线、mask、3D 点都变成“另一张图”</h2>
 <p><a class="jr" href="#g-05">稠密任务</a>的答案和输入图一样按像素排布。只要每个像素的答案不超过三个数，就可以按确定规则编码进 R、G、B 三个通道。</p>
 <p>· <strong>深度</strong>：每个像素 1 个数（多远）→ 存成灰度（0–255，一个通道就够）。<br>
-· <strong>法线</strong>：每个像素是一支"朝向"箭头，3 个数 <code>(nₓ,nᵧ,n_z)</code>，每个落在 −1~1 → 线性搬到 0~255 分别塞进 R、G、B（例如 <code>nₓ=0 → 128</code>）。所以法线图看着五颜六色，其实每种颜色就是那一点的朝向。<br>
+· <strong>法线</strong>：每个像素是一支"朝向"箭头，3 个数 <code class="m">(n_{x},nᵧ,n_z)</code>，每个落在 −1~1 → 线性搬到 0~255 分别塞进 R、G、B（例如 <code class="m">n_{x}=0 \to 128</code>）。所以法线图看着五颜六色，其实每种颜色就是那一点的朝向。<br>
 · <strong>分割 mask</strong>：前景涂固定色、背景涂固定色，画成一张双色图。<br>
 · <strong>point map</strong>：每个像素存它在 3D 空间里的坐标 <code>(X,Y,Z)</code>，3 个数 → 同样塞进 RGB。<br>
 四种任务的目标因此都成为一张有明确编码规则的 RGB 图，再交给同一套 VAE 与图像生成通路。</p>
 
 <figure id="fig-dense" class="reveal"><figcaption><span>Fig 07 · 四种稠密信号借用 RGB 画布</span><span>DETERMINISTIC VISUAL ENCODING</span></figcaption><div class="dense-grid"><div class="dense-card rev"><div class="mini-map depth-map"></div><b>DEPTH</b><small>metric → inverse depth<br>→ normalized gray</small></div><div class="dense-card rev d2"><div class="mini-map normal-map"></div><b>NORMAL</b><small>(nₓ,nᵧ,n_z)<br>→ R,G,B</small></div><div class="dense-card rev d3"><div class="mini-map mask-map"></div><b>BINARY MASK</b><small>fixed foreground<br>+ background colors</small></div><div class="dense-card rev d4"><div class="mini-map point-map"></div><b>POINT MAP</b><small>normalized X,Y,Z<br>→ R,G,B</small></div></div><div class="toy-depth"><div class="depth-val rev">d=1m<br>1/d=1.00<br>gray=255</div><div class="depth-val rev d2">d=2m<br>1/d=.50<br>gray=85</div><div class="depth-val rev d3">d=4m<br>1/d=.25<br>gray=0</div></div><p class="fig-note">灰度 255/85/0 只是在这三个 toy 值内做 min-max，用来解释“近亮远暗”；论文没有公开完整归一化端点，真实复现必须使用发布的转换规则，不能把这个玩具公式当官方实现。</p></figure>
 
-<p>逆深度<a class="jr" href="#g-06">6</a>为什么合理？<code>1m→2m</code> 的 <code>1/d</code> 差 0.5，<code>2m→4m</code> 只差 0.25，更多动态范围留给近处结构。但“图像形式”也带来生成误差：边缘可能模糊、RGB 可能漂移，必须解码后再按 AbsRel、角度误差或 IoU 评价。</p>
+<p>逆深度<a class="jr" href="#g-06">6</a>为什么合理？<code class="m">1m\to 2m</code> 的 <code>1/d</code> 差 0.5，<code class="m">2m\to 4m</code> 只差 0.25，更多动态范围留给近处结构。但“图像形式”也带来生成误差：边缘可能模糊、RGB 可能漂移，必须解码后再按 AbsRel、角度误差或 IoU 评价。</p>
 
 <h2><span class="num">§ 08 / Mixed response</span>颜色图例负责“是谁”，mask 负责“在哪里”</h2>
 <p>多区域分割不能只吐一张彩色图：RGB 本身不知道对应 road、person 还是 instance-7。模型先用 <code>&lt;color&gt;</code> 绑定语义和颜色，再渲染 mask，这就是颜色图例掩码<a class="jr" href="#g-07">7</a>。</p>

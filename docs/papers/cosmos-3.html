@@ -240,7 +240,7 @@ figure{margin:42px 0;padding:28px;background:var(--card);border:1px solid var(--
 
 <h2 id="s7"><span class="num">§ 07</span>Generator 到底学什么：拿一个数手算</h2>
 <p>论文用 rectified flow。先别管名字，它做的事很朴素：在干净数据和高斯噪声之间连一条直线，训练模型在这条线上的任意位置指出方向。</p>
-<p>设干净 latent 为 <code>x₀</code>，随机噪声为 <code>ε</code>，噪声比例为 <code>σ</code>：</p>
+<p>设干净 latent 为 <code class="m">x_{0}</code>，随机噪声为 <code class="m">\epsilon</code>，噪声比例为 <code class="m">\sigma</code>：</p>
 
 <figure id="fig-07">
   <figcaption><span>Fig 07 · 从干净值 2 走向噪声 −1</span><span class="fnum">RECTIFIED FLOW · NUMERIC</span></figcaption>
@@ -353,7 +353,7 @@ xσ = σ×ε + (1−σ)×x₀
   <figcaption><span>Fig 10C · 同一条 Generator，不同阶段解决不同问题</span><span class="fnum">MIXTURE · OBJECTIVE · UPDATE</span></figcaption>
   <div class="ledger">
     <div class="ledger-row head"><b>阶段</b><span>数据与设置</span><span>为什么这样配</span></div>
-    <div class="ledger-row reveal"><b>REASONER PRETRAIN</b><span>2 个 epoch；最长 16K token；每样本最多 2048 个图像 token、8192 个视频 token。LLM / projector 峰值学习率 <code>5e−5</code>，ViT 是 <code>5e−6</code>。</span><span>ViT 学习率低一个数量级，保住已有视觉表征；所有组件仍从第一步一起更新，不另做“冻结投影器对齐”。</span></div>
+    <div class="ledger-row reveal"><b>REASONER PRETRAIN</b><span>2 个 epoch；最长 16K token；每样本最多 2048 个图像 token、8192 个视频 token。LLM / projector 峰值学习率 <code class="m">5e-5</code>，ViT 是 <code class="m">5e-6</code>。</span><span>ViT 学习率低一个数量级，保住已有视觉表征；所有组件仍从第一步一起更新，不另做“冻结投影器对齐”。</span></div>
     <div class="ledger-row reveal d2"><b>GENERATOR PRETRAIN</b><span>文生图 20%、文生视频 56%、图生视频 16%、视频续写 8%；图像 / 视频总 token 约 20:80。只更新 Generator，Reasoner 冻结。</span><span>生成塔能读稳定的语义条件，却不会反过来把 Reasoner 带向噪声目标；视频占大头，是因为时间规律不能靠静态图补出来。</span></div>
     <div class="ledger-row reveal d3"><b>MID-TRAINING</b><span>图像 10%、普通视频 32%、音视频 8%、动作 25%、通用 transfer 20%、驾驶 transfer 5%；动作损失乘 10。</span><span>动作 token 远少于视觉 token，不放大损失就容易被画面误差淹没。这里补的是控制、声音和领域技能。</span></div>
     <div class="ledger-row reveal d4"><b>POST-TRAINING</b><span>文生图先训 20K 步，再用 470K 超高质量图片训 2K 步；I2V 用 480p、189 帧，混入约 6% 人工 / 合成精选视频；DROID policy 只用 4 步去噪。</span><span>前两项用更窄的数据换画质和指令跟随；策略把步数压到 4，是为了让机器人控制接近实时。</span></div>
@@ -407,7 +407,7 @@ xσ = σ×ε + (1−σ)×x₀
     </div>
   </div>
   <div class="attention-split">
-    <div class="reveal d4"><b>不会复制：运行时 attention 图</b><code>softmax(QKᵀ)</code> 每次前向都按新输入和新 mask 重算。QKV 参数相同，注意力图也可以完全不同。</div>
+    <div class="reveal d4"><b>不会复制：运行时 attention 图</b><code class="m">\operatorname{softmax}(QK^{T})</code> 每次前向都按新输入和新 mask 重算。QKV 参数相同，注意力图也可以完全不同。</div>
     <div class="reveal d5"><b>需要重新学：模态接口与去噪行为</b>VAE、Audio、Action latent 先投影到统一隐藏维；生成训练再修改复制来的 QKV、MLP 和 Norm。</div>
   </div>
 
@@ -477,7 +477,7 @@ w_new = w−η·dL/dw　　<span class="dim">η 是学习率</span><br>
 </figure>
 
 <h3>两种注意力规则，为什么要拆成两个 kernel</h3>
-<p>Reasoner 要因果 mask，Generator 要双向 mask。如果把两者塞进一个通用 FlexAttention mask，灵活但慢。系统把序列重排成 <code>[R₀,G₀,R₁,G₁,…]</code>，分别调用两次变长 SDPA kernel，再把结果放回原位：Nano 上比 FlexAttention 快约 22%。Hopper 用 FlashAttention-3，Blackwell 则用 NATTEN。这里换的是 GPU 执行路径，不是换了一套模型；<a href="../concepts/gpu-kernels-and-compilation.html">kernel 概念页把这几层关系拆开了 →</a></p>
+<p>Reasoner 要因果 mask，Generator 要双向 mask。如果把两者塞进一个通用 FlexAttention mask，灵活但慢。系统把序列重排成 <code class="m">[R_{0},G_{0},R_{1},G_{1},…]</code>，分别调用两次变长 SDPA kernel，再把结果放回原位：Nano 上比 FlexAttention 快约 22%。Hopper 用 FlashAttention-3，Blackwell 则用 NATTEN。这里换的是 GPU 执行路径，不是换了一套模型；<a href="../concepts/gpu-kernels-and-compilation.html">kernel 概念页把这几层关系拆开了 →</a></p>
 
 <div class="grid2">
   <div class="panel"><h4>分片策略</h4><p>参数与优化器状态用<a class="jr" href="#g-22">HSDP</a>切分，长序列用 Ulysses context parallel 切 token；报告没有采用 ring attention，因为这里的交错序列和不对称 mask 会增加通信与实现复杂度。</p></div>

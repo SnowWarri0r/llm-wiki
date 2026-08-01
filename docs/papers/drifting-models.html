@@ -159,28 +159,28 @@ figcaption b{color:var(--rust)}
     <div class="mass-col"><div class="mass-point"><b>x = 0</b><span>概率 50%</span></div><div class="mass-point"><b>x = 2</b><span>概率 50%</span></div></div>
   </div>
 </figure>
-<p>训练改变的是参数 <code>θ</code>，但 <code>fθ</code> 一变，概率质量落点也会变，于是 <code>qθ</code> 跟着变。Drifting 每一轮正是针对这个“最新的 q”重算修正方向。详见 <a href="../concepts/pushforward-distribution.html">pushforward-distribution</a>。</p>
+<p>训练改变的是参数 <code class="m">\theta</code>，但 <code class="m">f_\theta</code> 一变，概率质量落点也会变，于是 <code class="m">q_\theta</code> 跟着变。Drifting 每一轮正是针对这个“最新的 q”重算修正方向。详见 <a href="../concepts/pushforward-distribution.html">pushforward-distribution</a>。</p>
 </section>
 
 <section id="field">
 <h2><span class="num">§ 03</span><span>核心：漂移 V 一块块搭出来，那个减号为什么非有不可</span></h2>
 <p class="lead">q 已经清楚了，现在是全篇的心脏：站在一个当前生成样本 <code>x</code> 上，这一轮它到底该往哪挪一点点？这个方向就叫漂移 <code>V</code>。别急着抄公式——先说清它要满足什么，再一块一块搭出来，最后你会看到那个减号不是随手写的。</p>
-<div class="plain"><b>先把符号约定死，后面每一步都用它：</b><code>x</code> = 正在修正的当前生成样本；<code>y⁺∼p</code> = 一个真实样本（正样本）；<code>y⁻∼q</code> = 本轮另一个生成样本（负样本）。这里先把它们当成同一个空间里的点；至于“距离到底在哪个空间量”，留到 §05 再说，不影响这里的形式。</div>
+<div class="plain"><b>先把符号约定死，后面每一步都用它：</b><code>x</code> = 正在修正的当前生成样本；<code class="m">y^{+}\sim p</code> = 一个真实样本（正样本）；<code class="m">y^{-}\sim q</code> = 本轮另一个生成样本（负样本）。这里先把它们当成同一个空间里的点；至于“距离到底在哪个空间量”，留到 §05 再说，不影响这里的形式。</div>
 
 <h3>第 1 块 · 一个真实邻居怎么拉你</h3>
-<p>一个真实点 <code>y⁺</code> 想把 <code>x</code> 拉向自己。“从 x 指向 y⁺”的方向，就是两点相减 <code>(y⁺−x)</code>——朝它走一步该走的方向、该走多远，都在这一个向量里。这是最小的一块。</p>
+<p>一个真实点 <code class="m">y^{+}</code> 想把 <code>x</code> 拉向自己。“从 x 指向 y⁺”的方向，就是两点相减 <code class="m">(y^{+}-x)</code>——朝它走一步该走的方向、该走多远，都在这一个向量里。这是最小的一块。</p>
 
 <h3>第 2 块 · 近的邻居更有发言权</h3>
 <p>但不能每个真实点都同等重要：隔着半张图的点，不该和你旁边的点一样有话语权。于是给每个邻居乘一个权重 <code>k(x,y)</code>，离得越近越大：</p>
 <div class="formula math" data-display="true">k(x,y)=\exp\!\left(-\frac{\lVert x-y\rVert_2}{\tau}\right)</div>
-<p><code>‖x−y‖₂</code> 是欧氏距离，越近越小；取负号再取 <code>exp</code>，距离小 → 指数接近 <code>1</code>（权重大），距离大 → 迅速衰减到 <code>0</code>。<code>τ</code> 是温度<a class="jr" href="#g-03">3</a>：小温度只信身边很近的几个邻居，大温度看得更宽。最终模型 <code>0.02、0.05、0.2</code> 三个温度合用，不押注单一邻域大小。</p>
+<p><code class="m">\| x-y\| _{2}</code> 是欧氏距离，越近越小；取负号再取 <code>exp</code>，距离小 → 指数接近 <code>1</code>（权重大），距离大 → 迅速衰减到 <code>0</code>。<code class="m">\tau</code> 是温度<a class="jr" href="#g-03">3</a>：小温度只信身边很近的几个邻居，大温度看得更宽。最终模型 <code>0.02、0.05、0.2</code> 三个温度合用，不押注单一邻域大小。</p>
 
 <h3>第 3 块 · 把真实邻居的拉力做加权平均 = 引力 V⁺</h3>
-<p>把每个真实邻居的拉力方向 <code>(y⁺−x)</code> 按权重 <code>k</code> 加起来，再除以权重总和 <code>Zp</code> 归一化——不归一化的话邻居越多力越大，不同位置没法比。这就是引力：一批真实点合起来，平均想把 <code>x</code> 拉去哪。</p>
+<p>把每个真实邻居的拉力方向 <code class="m">(y^{+}-x)</code> 按权重 <code>k</code> 加起来，再除以权重总和 <code>Zp</code> 归一化——不归一化的话邻居越多力越大，不同位置没法比。这就是引力：一批真实点合起来，平均想把 <code>x</code> 拉去哪。</p>
 <div class="formula math" data-display="true">V_p^+(x)=\frac{1}{Z_p}\mathbb E_{y^+\sim p}\left[k(x,y^+)(y^+-x)\right]</div>
 
 <h3>第 4 块 · 生成邻居也在拉你 = 斥力候选 V⁻</h3>
-<p>同一套算法，把真实点换成本轮的生成点 <code>y⁻</code>，得到“一批生成点平均想把 x 拉去哪”。注意此刻它算出来的还是个<strong>吸引</strong>方向，形式和 V⁺ 一模一样，只是数据来源不同：</p>
+<p>同一套算法，把真实点换成本轮的生成点 <code class="m">y^{-}</code>，得到“一批生成点平均想把 x 拉去哪”。注意此刻它算出来的还是个<strong>吸引</strong>方向，形式和 V⁺ 一模一样，只是数据来源不同：</p>
 <div class="formula math" data-display="true">V_q^-(x)=\frac{1}{Z_q}\mathbb E_{y^-\sim q}\left[k(x,y^-)(y^--x)\right]</div>
 
 <h3>第 5 块 · 减号从哪来：让这股力在“追上”时自己归零</h3>
@@ -190,9 +190,9 @@ figcaption b{color:var(--rust)}
 <p><b>浅的一层：</b>只有引力时，一大堆生成点会一起扑向少数几个真实点，全挤成一团（mode collapse）。把“生成点扎堆的方向”减掉，等于对 <code>x</code> 说“你那边已经太挤了，别再往那凑”，把它从自己人堆里推开。</p>
 <p><b>深的一层，也是减号真正的来处：</b>我们要的是一股能<strong>自己停下来</strong>的力——当生成分布 <code>q</code> 真追上真实分布 <code>p</code>，就不该再乱推了。盯着减号看：<code>q=p</code> 时，引力和斥力是<strong>从同一批点</strong>算出来的，两个加权平均一模一样，一减正好抵成 <code>0</code>，漂移归零、训练停住。换成加号或别的组合都没这个性质。这个“追上就自动归零”的不动点，正是减号带来的；它的形式化证明（反对称）留到 §09，但设计动机在这一步就已经定了。</p>
 <div class="vars">
-  <div class="var"><code>x</code>：正在修正的当前生成样本。</div><div class="var"><code>y⁺ ∼ p</code>：真实正样本。</div>
-  <div class="var"><code>y⁻ ∼ q</code>：本轮的生成负样本。</div><div class="var"><code>k(x,y)</code>：距离越近，权重越大。</div>
-  <div class="var"><code>Zp、Zq</code>：各自权重之和，用来归一化。</div><div class="var"><code>V⁺ − V⁻</code>：引力（吸向真实）减去指向生成扎堆处的方向。</div>
+  <div class="var"><code>x</code>：正在修正的当前生成样本。</div><div class="var"><code class="m">y^{+} \sim p</code>：真实正样本。</div>
+  <div class="var"><code class="m">y^{-} \sim q</code>：本轮的生成负样本。</div><div class="var"><code>k(x,y)</code>：距离越近，权重越大。</div>
+  <div class="var"><code>Zp、Zq</code>：各自权重之和，用来归一化。</div><div class="var"><code class="m">V^{+} -V^{-}</code>：引力（吸向真实）减去指向生成扎堆处的方向。</div>
 </div>
 <figure class="reveal">
   <figcaption><span>Fig 03 · 把一维例子从权重算到方向</span><b>注意净漂移来自最后那个减号</b></figcaption>
@@ -235,10 +235,10 @@ figcaption b{color:var(--rust)}
 <p class="lead">先把最容易误解的地方说死：<strong>冻结的不是生成器，也不是“这一轮的整个 f”</strong>。同一次前向算出的 <code>x</code> 被用两次：左边保留梯度，右边先加漂移，再复制成一张不参与反传的数值快照。loss 当场比较这两份数值。</p>
 <div class="formula math" data-display="true">\mathcal L(\theta)=\mathbb E_\epsilon\!\left[\left\lVert f_\theta(\epsilon)-\operatorname{sg}\!\left(f_\theta(\epsilon)+V_{p,q_\theta}(f_\theta(\epsilon))\right)\right\rVert_2^2\right]</div>
 <div class="vars">
-  <div class="var"><code>左侧 fθ(ε)</code>：活分支。数值是当前输出，梯度能沿它回到 <code>θ</code>。</div><div class="var"><code>右侧 fθ(ε)+V</code>：目标分支。先用同一个当前输出算出修正后位置。</div>
-  <div class="var"><code>sg(·)</code>：只冻结右侧计算结果；前向数值不变，反向梯度为 0。</div><div class="var"><code>Eε</code>：对一批噪声样本的损失取平均。</div>
+  <div class="var"><code>左侧 fθ(ε)</code>：活分支。数值是当前输出，梯度能沿它回到 <code class="m">\theta</code>。</div><div class="var"><code>右侧 fθ(ε)+V</code>：目标分支。先用同一个当前输出算出修正后位置。</div>
+  <div class="var"><code class="m">\operatorname{sg}(\cdot )</code>：只冻结右侧计算结果；前向数值不变，反向梯度为 0。</div><div class="var"><code class="m">E_\epsilon</code>：对一批噪声样本的损失取平均。</div>
 </div>
-<p>为什么非冻不可？如果右边也跟着求导，左右两边都含同一个 <code>x=fθ(ε)</code>。假设先把 <code>V</code> 看成常数，<code>x-(x+V)=-V</code>，两个 <code>x</code> 的梯度会直接抵消，生成器收不到“把输出往前挪”的信号；若再让梯度钻进 <code>V</code>，优化器还会去改变造靶子的过程，目标会边追边跑。<code>stopgrad</code> 做的就是：<strong>本次更新先把右边钉住，只准左边朝它靠近</strong>。</p>
+<p>为什么非冻不可？如果右边也跟着求导，左右两边都含同一个 <code class="m">x=f_\theta (\epsilon )</code>。假设先把 <code>V</code> 看成常数，<code>x-(x+V)=-V</code>，两个 <code>x</code> 的梯度会直接抵消，生成器收不到“把输出往前挪”的信号；若再让梯度钻进 <code>V</code>，优化器还会去改变造靶子的过程，目标会边追边跑。<code>stopgrad</code> 做的就是：<strong>本次更新先把右边钉住，只准左边朝它靠近</strong>。</p>
 <figure class="reveal">
   <figcaption><span>Fig 05 · 同一次前向分成两条支路</span><b>冻结右侧快照，不冻结左侧生成器</b></figcaption>
   <div class="sg-diagram">
@@ -258,7 +258,7 @@ figcaption b{color:var(--rust)}
     <div class="sg-panel update">
       <em>03 / 只移动活分支</em>
       <div class="sg-value math">L=(1-1.4)^2=0.16</div>
-      <p><span class="math">\frac{dL}{d\theta}=2(1-1.4)\times\frac{dx}{d\theta}=-0.8</span><br><small>这里 <code>x=θ·1</code>，所以 <code>dx/dθ=1</code>。</small></p>
+      <p><span class="math">\frac{dL}{d\theta}=2(1-1.4)\times\frac{dx}{d\theta}=-0.8</span><br><small>这里 <code class="m">x=\theta \cdot 1</code>，所以 <code class="m">dx/d_\theta =1</code>。</small></p>
       <div class="sg-backward"><span>梯度只走左支：</span><br>学习率 .25 → θ 从 1 更新到 1.2</div>
     </div>
   </div>
@@ -293,19 +293,19 @@ figcaption b{color:var(--rust)}
     <div class="norm"><b>GEOMETRIC MEAN</b><span class="math">A=\sqrt{A_{row}A_{col}}</span>，两边都认可才高。</div>
   </div>
 </figure>
-<p><b>左上角这一格怎么从 0 变成 .802：</b>行 softmax 把第 1 行 <code>[0,−1]</code> 归一成 <code>[.731,.269]</code>（这一行里它更信候选 1）；列 softmax 把第 1 列 <code>[0,−2]</code> 归一成 <code>[.881,.119]</code>（这一列里候选 1 也没被别人抢）；两个都高，几何平均 <code>√(.731×.881)=.802</code> 才高。若只有行高、列被抢（列值低），几何平均就被拉下来——这正是「防止一堆查询点全挤向同一个候选」的机制。</p>
+<p><b>左上角这一格怎么从 0 变成 .802：</b>行 softmax 把第 1 行 <code class="m">[0,-1]</code> 归一成 <code>[.731,.269]</code>（这一行里它更信候选 1）；列 softmax 把第 1 列 <code class="m">[0,-2]</code> 归一成 <code>[.881,.119]</code>（这一列里候选 1 也没被别人抢）；两个都高，几何平均 <code class="m">\sqrt{.731\times .881}=.802</code> 才高。若只有行高、列被抢（列值低），几何平均就被拉下来——这正是「防止一堆查询点全挤向同一个候选」的机制。</p>
 <p>论文消融：只按候选方向归一化 FID <code>8.92</code>，行列都归一化 <code>8.46</code>，完全不归一化 <code>10.54</code>。官方代码还用 float32 算距离、同时使用三个温度，并对目标和力做 stop-gradient。</p>
 </section>
 
 <section id="feature">
 <h2><span class="num">§ 05</span><span>那个距离到底在哪个空间量：冻结特征坐标系</span></h2>
-<p class="lead">§03 的核 <code>k(x,y)</code> 和 §04 的损失，都反复用到一个距离 <code>‖x−y‖</code>，却一直没说清在哪儿量。这节补上最后这块：直接在像素上量会选错邻居，得先把图换进一个冻结特征网络 <code>φ</code> 的语义坐标里，再在那儿选邻居、算漂移。</p>
+<p class="lead">§03 的核 <code>k(x,y)</code> 和 §04 的损失，都反复用到一个距离 <code class="m">\| x-y\|</code>，却一直没说清在哪儿量。这节补上最后这块：直接在像素上量会选错邻居，得先把图换进一个冻结特征网络 <code class="m">\phi</code> 的语义坐标里，再在那儿选邻居、算漂移。</p>
 <h3>为什么不直接比较像素</h3>
 <p>同一只猫向右平移几格，很多像素都会变，但语义没变；一只猫和一只颜色相近的狗，像素均值可能很接近，语义却天差地别。原始像素因此答不好“谁该互相吸引”这个问题。自监督训练过的 MAE、ResNet 或 ConvNeXtV2，会把边缘、纹理、部件乃至类别信息逐层整理出来，论文就在这些中间特征上量距离、定义邻居。</p>
-<div class="plain"><b>于是把 §03、§04 整套照搬进 φ 空间：</b>核和漂移都改成在特征 <code>φ(x)</code> 上算，损失也从 <code>‖x−sg(x+V)‖²</code> 换成特征版；再进一步，对每个尺度 <code>j</code>（下面 LOCAL / GLOBAL / 分区）各算一份漂移和损失，最后求和。梯度照样沿 <code>特征 → 图像 / latent → 生成器参数</code> 原路传回。</div>
+<div class="plain"><b>于是把 §03、§04 整套照搬进 φ 空间：</b>核和漂移都改成在特征 <code class="m">\phi (x)</code> 上算，损失也从 <code class="m">\| x-\operatorname{sg}(x+V)\| ^{2}</code> 换成特征版；再进一步，对每个尺度 <code>j</code>（下面 LOCAL / GLOBAL / 分区）各算一份漂移和损失，最后求和。梯度照样沿 <code>特征 → 图像 / latent → 生成器参数</code> 原路传回。</div>
 <div class="formula math" data-display="true">\mathcal L=\sum_j\mathbb E\left[\left\lVert\phi_j(x)-\operatorname{sg}\!\left(\phi_j(x)+V_j\right)\right\rVert_2^2\right]</div>
-<div class="vars"><div class="var"><code>x=fθ(ε)</code>：生成器当前产出的 latent 或 RGB 图。</div><div class="var"><code>φj(x)</code>：冻结特征网络在第 <code>j</code> 个位置或尺度读出的特征。</div><div class="var"><code>Vj</code>：用同一尺度的真实 / 生成特征算出的净漂移。</div><div class="var"><code>sg(·)</code>：把本轮目标拍成快照；只阻止目标分支反传。</div><div class="var"><code>Σj</code>：每种局部和全局特征各算一份损失，最后相加。</div><div class="var"><code>‖·‖²₂</code>：对应特征向量逐项作差、平方后求和。</div></div>
-<p>读法是：当前特征是 <code>φj(x)</code>，核漂移说它在这一尺度上应该再走 <code>Vj</code>，于是得到临时目标 <code>φj(x)+Vj</code>。右边被 <code>stopgrad</code> 固定，左边保留梯度，模型才会真的朝目标更新。与普通 <a href="../concepts/perceptual-loss.html">perceptual loss</a> 的区别是：普通感知损失通常有一张配对目标图 <code>y</code>，目标是 <code>φ(y)</code>；这里没有配对的正确答案，目标方向由一批真实样本和生成样本共同算出来。</p>
+<div class="vars"><div class="var"><code class="m">x=f_\theta (\epsilon )</code>：生成器当前产出的 latent 或 RGB 图。</div><div class="var"><code class="m">\phi j(x)</code>：冻结特征网络在第 <code>j</code> 个位置或尺度读出的特征。</div><div class="var"><code>Vj</code>：用同一尺度的真实 / 生成特征算出的净漂移。</div><div class="var"><code class="m">\operatorname{sg}(\cdot )</code>：把本轮目标拍成快照；只阻止目标分支反传。</div><div class="var"><code class="m">\Sigma j</code>：每种局部和全局特征各算一份损失，最后相加。</div><div class="var"><code class="m">\| \cdot \| ^{2}_{2}</code>：对应特征向量逐项作差、平方后求和。</div></div>
+<p>读法是：当前特征是 <code class="m">\phi j(x)</code>，核漂移说它在这一尺度上应该再走 <code>Vj</code>，于是得到临时目标 <code class="m">\phi j(x)+Vj</code>。右边被 <code>stopgrad</code> 固定，左边保留梯度，模型才会真的朝目标更新。与普通 <a href="../concepts/perceptual-loss.html">perceptual loss</a> 的区别是：普通感知损失通常有一张配对目标图 <code>y</code>，目标是 <code class="m">\phi (y)</code>；这里没有配对的正确答案，目标方向由一批真实样本和生成样本共同算出来。</p>
 <figure class="reveal">
   <figcaption><span>Fig 07A · 特征漂移如何接回生成器</span><b>前向算目标，反向改参数</b></figcaption>
   <div class="feature-map">
@@ -318,56 +318,56 @@ figcaption b{color:var(--rust)}
     <div class="feature-node train">各尺度算 Vj 与 Lj<small>真实特征提供吸引<br>生成特征提供排斥</small></div>
   </div>
   <div class="grad-return"><b>反向传播 ←</b> 损失 → 特征对输入的导数 →（若有）VAE decoder → 生成器参数 θ；<b>φ 与 VAE 的权重保持不变</b></div>
-  <div class="feature-scales"><div class="feature-scale"><b>LOCAL</b>一张 <code>H×W×D</code> 特征图拆成 <code>H×W</code> 个 D 维局部向量。</div><div class="feature-scale"><b>GLOBAL</b>整张特征图按通道计算均值和标准差，各得到一个 D 维向量。</div><div class="feature-scale"><b>REGIONS</b>再按 <code>2×2</code>、<code>4×4</code> 区域分别统计均值和标准差。</div><div class="feature-scale"><b>SUM</b>每组特征独立算核、漂移和损失，再与不经过 <code>φ</code> 的原始漂移损失相加。</div></div>
+  <div class="feature-scales"><div class="feature-scale"><b>LOCAL</b>一张 <code class="m">H\times W\times D</code> 特征图拆成 <code class="m">H\times W</code> 个 D 维局部向量。</div><div class="feature-scale"><b>GLOBAL</b>整张特征图按通道计算均值和标准差，各得到一个 D 维向量。</div><div class="feature-scale"><b>REGIONS</b>再按 <code class="m">2\times 2</code>、<code class="m">4\times 4</code> 区域分别统计均值和标准差。</div><div class="feature-scale"><b>SUM</b>每组特征独立算核、漂移和损失，再与不经过 <code class="m">\phi</code> 的原始漂移损失相加。</div></div>
 </figure>
 <h3>“冻结特征网络”为什么还能把生成器往前推</h3>
-<p><strong>冻结的是 <code>φ</code> 自己的参数，不是它对输入的导数。</strong>把生成器当前输出暂时简化成一个数 <code>x</code>，再把冻结特征网络简化成 <code>φ(x)=3x</code>。其中系数 3 不训练，但输入变 1，特征仍会变 3，所以梯度可以穿过去。</p>
+<p><strong>冻结的是 <code class="m">\phi</code> 自己的参数，不是它对输入的导数。</strong>把生成器当前输出暂时简化成一个数 <code>x</code>，再把冻结特征网络简化成 <code class="m">\phi (x)=3x</code>。其中系数 3 不训练，但输入变 1，特征仍会变 3，所以梯度可以穿过去。</p>
 <figure class="reveal">
   <figcaption><span>Fig 07B · 冻结网络仍可传梯度的手算</span><b>教学例；真实模型是高维非线性网络</b></figcaption>
-  <div class="grad-demo"><div class="grad-card"><b>01 · 当前特征</b><div class="mathline">x=2</div><div class="mathline">φ(x)=3×2=6</div><p>3 是冻结权重，不会被优化器更新。</p></div><div class="grad-card"><b>02 · 本轮目标</b><div class="mathline">Vφ=+3</div><div class="mathline">target=sg(9)</div><p>本轮只把 9 当固定靶；下一轮会重算。</p></div><div class="grad-card"><b>03 · 梯度</b><div class="mathline">L=(6−9)²=9</div><div class="mathline">dL/dx=2(6−9)×3=−18</div><p>最后的 ×3 就是 <code>dφ/dx</code>。</p></div><div class="grad-card"><b>04 · 更新输出</b><div class="mathline">xnew=2−.05×(−18)=2.9</div><div class="mathline">φ(xnew)=8.7</div><p>相对旧靶的新损失是 <code>(8.7−9)²=.09</code>。</p></div></div>
+  <div class="grad-demo"><div class="grad-card"><b>01 · 当前特征</b><div class="mathline">x=2</div><div class="mathline">φ(x)=3×2=6</div><p>3 是冻结权重，不会被优化器更新。</p></div><div class="grad-card"><b>02 · 本轮目标</b><div class="mathline">Vφ=+3</div><div class="mathline">target=sg(9)</div><p>本轮只把 9 当固定靶；下一轮会重算。</p></div><div class="grad-card"><b>03 · 梯度</b><div class="mathline">L=(6−9)²=9</div><div class="mathline">dL/dx=2(6−9)×3=−18</div><p>最后的 ×3 就是 <code class="m">d_\phi /dx</code>。</p></div><div class="grad-card"><b>04 · 更新输出</b><div class="mathline">xnew=2−.05×(−18)=2.9</div><div class="mathline">φ(xnew)=8.7</div><p>相对旧靶的新损失是 <code class="m">(8.7-9)^{2}=.09</code>。</p></div></div>
 </figure>
 <div class="formula math" data-display="true">\frac{\partial\mathcal L}{\partial\theta}=2\bigl(\phi(x)-\text{target}\bigr)\;\frac{\partial\phi}{\partial x}\;\frac{\partial x}{\partial\theta}</div>
-<p class="formula-note">若先经过 VAE decoder <code>D</code>，链式法则中间再乘一项 <code>∂D/∂latent</code>。优化器不更新 <code>φ</code> 或 <code>D</code>，但它们仍把“图像怎样改变会让特征靠近目标”翻译成生成器梯度。</p>
-<p>多尺度也不是一句装饰。对每个阶段，论文既比较每个空间位置的局部向量，也比较全局、<code>2×2</code> 分区、<code>4×4</code> 分区的均值和标准差；这让漂移同时看到“这里有没有眼睛”与“整张图的纹理统计是否合理”。从局部 + 全局统计扩到更完整的分区统计，消融 FID 为 <code>9.58 → 9.10 → 8.46</code>。</p>
+<p class="formula-note">若先经过 VAE decoder <code>D</code>，链式法则中间再乘一项 <code class="m">\partial D/\partial latent</code>。优化器不更新 <code class="m">\phi</code> 或 <code>D</code>，但它们仍把“图像怎样改变会让特征靠近目标”翻译成生成器梯度。</p>
+<p>多尺度也不是一句装饰。对每个阶段，论文既比较每个空间位置的局部向量，也比较全局、<code class="m">2\times 2</code> 分区、<code class="m">4\times 4</code> 分区的均值和标准差；这让漂移同时看到“这里有没有眼睛”与“整张图的纹理统计是否合理”。从局部 + 全局统计扩到更完整的分区统计，消融 FID 为 <code class="m">9.58 \to 9.10 \to 8.46</code>。</p>
 <p>依赖有多强？像素模型用较弱 MAE 特征时 FID <code>32.11</code>，更强 MAE 到 <code>9.35</code>，再加入 ConvNeXtV2 到 <code>3.70</code>。论文还报告不使用特征编码器时 ImageNet 训练无法正常工作。特征网络不是可有可无的辅助模块，而是决定“邻居是否有语义”的关键坐标系；好消息是它只在训练时出现。</p>
 </section>
 
 <section id="cfg">
 <h2><span class="num">§ 10</span><span>最后一个可选增强：把 CFG 提前到训练时</span></h2>
 <p><b>先补前置：CFG 是什么。</b><a href="../concepts/classifier-free-guidance.html">Classifier-free guidance</a> 是文生图里让画面「更贴题」的常用招：同一步跑两次预测——一次给条件（“画只猫”）、一次什么都不给（无条件），再沿「条件 − 无条件」这个方向多推几步，把类别特征放大。代价是<strong>每一步都要跑两遍网络</strong>，只跑一次前向的 Drifting 付不起这笔账。</p>
-<p><b>Drifting 的招：把它变成反面教材，提前烤进参数。</b>想想斥力那堆负样本（§03）——本来只放学生自己生成的图。现在往里再掺一批「不看类别、随便什么内容」的真实图 <code>p_data(∅)</code>（那批“大众脸”）。模型为了<strong>躲开这批大众脸</strong>，就会把当前类别的特征画得更突出——这恰好就是 CFG「放大条件方向」的效果，只是不在推理时现算，而是提前练进权重里。掺多少，由占比 <code>γ</code> 定，这批掺了料的负分布记作 <code>q̃</code>：</p>
+<p><b>Drifting 的招：把它变成反面教材，提前烤进参数。</b>想想斥力那堆负样本（§03）——本来只放学生自己生成的图。现在往里再掺一批「不看类别、随便什么内容」的真实图 <code>p_data(∅)</code>（那批“大众脸”）。模型为了<strong>躲开这批大众脸</strong>，就会把当前类别的特征画得更突出——这恰好就是 CFG「放大条件方向」的效果，只是不在推理时现算，而是提前练进权重里。掺多少，由占比 <code class="m">\gamma</code> 定，这批掺了料的负分布记作 <code>q̃</code>：</p>
 <div class="formula math" data-display="true">\widetilde q(\cdot|c)=(1-\gamma)\,q_\theta(\cdot|c)+\gamma\,p_{data}(\cdot|\varnothing)</div>
-<div class="vars"><div class="var"><code>c</code>：类别条件（“画只猫”）。</div><div class="var"><code>∅</code>：无条件（什么都不给）。</div><div class="var"><code>q_θ(·|c)</code>：模型在条件 c 下的输出分布，就是 §02 那个 <code>q_θ</code> 带上条件。</div><div class="var"><code>p_data(·|∅)</code>：真实图但不看类别，即“大众脸”。</div><div class="var"><code>γ</code>：负样本堆里掺了多少无条件真实图（0~1）。</div><div class="var"><code>q̃</code>：掺料后真正拿去算斥力的负分布。</div></div>
+<div class="vars"><div class="var"><code>c</code>：类别条件（“画只猫”）。</div><div class="var"><code>∅</code>：无条件（什么都不给）。</div><div class="var"><code class="m">q_\theta (\cdot |c)</code>：模型在条件 c 下的输出分布，就是 §02 那个 <code class="m">q_\theta</code> 带上条件。</div><div class="var"><code>p_data(·|∅)</code>：真实图但不看类别，即“大众脸”。</div><div class="var"><code class="m">\gamma</code>：负样本堆里掺了多少无条件真实图（0~1）。</div><div class="var"><code>q̃</code>：掺料后真正拿去算斥力的负分布。</div></div>
 <p><b>这样练，模型最后会学成什么？</b>用 §03 那条不动点：漂移在「负分布追上正分布」时归零。这里正样本是该类别的真实图 <code>p_data(·|c)</code>，负分布是掺了料的 <code>q̃</code>。收敛时两者相等，列出等式：</p>
 <div class="formula math" data-display="true">(1-\gamma)\,q_\theta(\cdot|c)+\gamma\,p_{data}(\cdot|\varnothing)=p_{data}(\cdot|c)</div>
-<p>把 <code>q_θ(·|c)</code> 解出来。第一步移项，把 <code>γ·p_data(∅)</code> 挪到右边；第二步两边同除 <code>(1−γ)</code>：</p>
+<p>把 <code class="m">q_\theta (\cdot |c)</code> 解出来。第一步移项，把 <code class="m">\gamma \cdot p_{\mathrm{data}}(∅)</code> 挪到右边；第二步两边同除 <code class="m">(1-\gamma )</code>：</p>
 <div class="formula math" data-display="true">q_\theta(\cdot|c)=\frac{p_{data}(\cdot|c)-\gamma\,p_{data}(\cdot|\varnothing)}{1-\gamma}=\frac{1}{1-\gamma}\,p_{data}(\cdot|c)-\frac{\gamma}{1-\gamma}\,p_{data}(\cdot|\varnothing)</div>
-<p>记 <code>α=1/(1−γ)</code>。那个 <code>γ/(1−γ)</code> 的系数正好等于 <code>α−1</code>（<code>α−1 = 1/(1−γ) − 1 = [1−(1−γ)]/(1−γ) = γ/(1−γ)</code>），代进去就收成干净的外推式：</p>
+<p>记 <code class="m">\alpha =1/(1-\gamma )</code>。那个 <code class="m">\gamma /(1-\gamma )</code> 的系数正好等于 <code class="m">\alpha -1</code>（<code class="m">\alpha -1 =1/(1-\gamma ) -1 = [1- (1-\gamma )]/(1-\gamma ) =\gamma /(1-\gamma )</code>），代进去就收成干净的外推式：</p>
 <div class="formula math" data-display="true">q_\theta(\cdot|c)=\alpha\,p_{data}(\cdot|c)-(\alpha-1)\,p_{data}(\cdot|\varnothing),\qquad \alpha=\frac{1}{1-\gamma}</div>
-<p>翻成人话就是 CFG 的分布版：「把类别分布放大 α 倍，再把大众脸减掉 (α−1) 倍」。掺一半时 <code>γ=.5 → α=2</code>，模型学成 <code>2·p_data(c) − p_data(∅)</code>——正是下图那个数字例。推理时把强度 <code>α</code> 当条件喂进去，一次前向就够，不用再跑第二遍无条件。</p>
+<p>翻成人话就是 CFG 的分布版：「把类别分布放大 α 倍，再把大众脸减掉 (α−1) 倍」。掺一半时 <code class="m">\gamma =.5 \to \alpha =2</code>，模型学成 <code>2·p_data(c) − p_data(∅)</code>——正是下图那个数字例。推理时把强度 <code class="m">\alpha</code> 当条件喂进去，一次前向就够，不用再跑第二遍无条件。</p>
 <figure class="reveal">
   <figcaption><span>Fig 08 · α=2 的数字例</span><b>训练混合，推理单路</b></figcaption>
   <div class="cfg">
-    <div class="cfg-card"><h4>训练 · γ=.5</h4><div class="mixbar"><span class="mix-q" style="width:50%">50% 当前条件 q</span><span class="mix-u" style="width:50%">50% 真实无条件 p∅</span></div><p><code>.5q + .5p∅ = pcond</code><br>整理得 <code>q = 2pcond − p∅</code>。</p></div>
+    <div class="cfg-card"><h4>训练 · γ=.5</h4><div class="mixbar"><span class="mix-q" style="width:50%">50% 当前条件 q</span><span class="mix-u" style="width:50%">50% 真实无条件 p∅</span></div><p><code>.5q + .5p∅ = pcond</code><br>整理得 <code class="m">q =2pcond -p∅</code>。</p></div>
     <div class="cfg-card infer"><h4>推理 · α 作为输入条件</h4><div class="one-pass">ε + 类别 c + 强度 α<br><b>→ fθ 一次前向 → 图像</b></div><p>没有第二次无条件网络前向。</p></div>
   </div>
 </figure>
-<p class="plain"><b>数学边界：</b><code>2pcond−p∅</code> 是 CFG 式分布外推的表达，不保证每个位置都像普通概率混合那样非负。</p>
-<div class="plain"><b>那 L/2 最佳 FID 用 α=1.0，是不是说加大众脸还不如不加？</b>要分两层看。<b>机械上确实是：</b><code>α=1 ⟺ γ=0</code>，一张大众脸都没掺、guidance 关掉，模型退回纯条件分布 <code>p_data(c)</code>，L/2 最好的 FID 就落在这里。<b>但这不是"机制没用"，是 CFG 的老规律：</b>FID 比的是整批生成图和真实图的分布匹配，加 guidance（<code>α&gt;1</code>）会把样本往最典型的几种画法挤——类别感更浓、观感更讨喜，却丢多样性、覆盖度，<strong>FID 反而升</strong>。标准扩散 CFG 也一样：FID 最优点几乎总在 <code>α≈1</code>，人评/贴题最优在更高 <code>α</code>。所以这套"把 CFG 烤进训练"的真正卖点是<strong>省成本</strong>——让你在一次前向里就能调 <code>α</code>（不用推理时跑两遍无条件），要浓类别感就调大、代价是 FID；要最低 FID 就 <code>α=1</code>。它换的是那个可调旋钮，不是更低的 FID。</div>
+<p class="plain"><b>数学边界：</b><code class="m">2pcond-p∅</code> 是 CFG 式分布外推的表达，不保证每个位置都像普通概率混合那样非负。</p>
+<div class="plain"><b>那 L/2 最佳 FID 用 α=1.0，是不是说加大众脸还不如不加？</b>要分两层看。<b>机械上确实是：</b><code class="m">\alpha =1 \iff \gamma =0</code>，一张大众脸都没掺、guidance 关掉，模型退回纯条件分布 <code>p_data(c)</code>，L/2 最好的 FID 就落在这里。<b>但这不是"机制没用"，是 CFG 的老规律：</b>FID 比的是整批生成图和真实图的分布匹配，加 guidance（<code class="m">\alpha &gt;1</code>）会把样本往最典型的几种画法挤——类别感更浓、观感更讨喜，却丢多样性、覆盖度，<strong>FID 反而升</strong>。标准扩散 CFG 也一样：FID 最优点几乎总在 <code class="m">\alpha \approx 1</code>，人评/贴题最优在更高 <code class="m">\alpha</code>。所以这套"把 CFG 烤进训练"的真正卖点是<strong>省成本</strong>——让你在一次前向里就能调 <code class="m">\alpha</code>（不用推理时跑两遍无条件），要浓类别感就调大、代价是 FID；要最低 FID 就 <code class="m">\alpha =1</code>。它换的是那个可调旋钮，不是更低的 FID。</div>
 </section>
 
 <section id="architecture">
-<h2><span class="num">§ 07</span><span>方向会算、梯度会传以后，再拆开生成器 <code>fθ</code></span></h2>
-<p class="lead">前六章解释的是<strong>怎样给生成器算训练方向</strong>。本章换一个问题：<strong>训练完以后，真正留下来的 <code>fθ</code> 如何把一份随机数变成图像？</strong>这里的 patch、条件 token 和 Transformer 都是生成器内部零件，不是另一套漂移计算。</p>
+<h2><span class="num">§ 07</span><span>方向会算、梯度会传以后，再拆开生成器 <code class="m">f_\theta</code></span></h2>
+<p class="lead">前六章解释的是<strong>怎样给生成器算训练方向</strong>。本章换一个问题：<strong>训练完以后，真正留下来的 <code class="m">f_\theta</code> 如何把一份随机数变成图像？</strong>这里的 patch、条件 token 和 Transformer 都是生成器内部零件，不是另一套漂移计算。</p>
 <div class="chapter-task">
-  <div><b>这章回答什么</b><code>fθ</code> 的输入、内部数据流和输出。</div>
+  <div><b>这章回答什么</b><code class="m">f_\theta</code> 的输入、内部数据流和输出。</div>
   <div><b>这章不回答什么</b>漂移方向怎么求；那是 §03–§06 的主线。</div>
   <div><b>读完只需记住</b>训练脚手架会拆掉，部署只跑一次完整生成器。</div>
 </div>
 <figure class="reveal">
   <figcaption><span>Fig 09A · 先划清边界</span><b>左边教模型；右边才是模型</b></figcaption>
   <div class="arch-boundary">
-    <div class="arch-role training-only"><b>训练脚手架 · 最后删除</b><p>真实图、生成图队列、冻结特征网络 <code>φ</code>、核权重和漂移 <code>V</code>。它们只负责算出“本轮输出该往哪改”。</p></div>
+    <div class="arch-role training-only"><b>训练脚手架 · 最后删除</b><p>真实图、生成图队列、冻结特征网络 <code class="m">\phi</code>、核权重和漂移 <code>V</code>。它们只负责算出“本轮输出该往哪改”。</p></div>
     <div class="arch-boundary-arrow"><span class="desktop">训练信号<strong>→</strong></span><span class="mobile">训练信号<strong>↓</strong></span></div>
     <div class="arch-role deployed"><b>生成器 fθ · 训练后保留</b><p>噪声和条件进入 DiT 风格 Transformer，一次前向直接得到最终 latent 或 RGB。本章只拆这一个方框。</p></div>
   </div>
@@ -379,7 +379,7 @@ figcaption b{color:var(--rust)}
     <div class="model-stage"><b>05 · 还原图像</b>输出头<br>+ unpatchify<small>latent 版再过 VAE decoder</small></div>
   </div>
 </figure>
-<p class="plain"><b>“一次前向”不等于“只有一层”。</b>论文的 L 模型内部仍有 24 个 Transformer block。1 NFE<a class="jr" href="#g-04">4</a> 的意思是整套 <code>fθ</code> 只调用一次；普通 100 步扩散则会把整套去噪网络调用 100 次。</p>
+<p class="plain"><b>“一次前向”不等于“只有一层”。</b>论文的 L 模型内部仍有 24 个 Transformer block。1 NFE<a class="jr" href="#g-04">4</a> 的意思是整套 <code class="m">f_\theta</code> 只调用一次；普通 100 步扩散则会把整套去噪网络调用 100 次。</p>
 
 <h3>第一步：先选一条输出路线——latent 版和 pixel 版不是前后两站</h3>
 <p>论文训练了两类<strong>独立模型</strong>。latent 版在 VAE 压缩空间里生成，再用冻结 decoder 还原 RGB；pixel 版直接生成 RGB。它们用的是同一套 Drifting 训练思想，但推理时二选一，不会先跑 latent 版再跑 pixel 版。</p>
@@ -389,18 +389,18 @@ figcaption b{color:var(--rust)}
     <div class="arch-card"><h4>Latent Drifting</h4><div class="patch-stack"><div class="arch-box">高斯噪声<small>32×32×4</small></div><i class="arch-arrow">→</i><div class="arch-box main">切成 2×2 patch<small>每块 2×2×4=16 个数</small></div><i class="arch-arrow">→</i><div class="arch-box">线性投影<small>16 → 隐藏维 d</small></div></div><div class="token-strip" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="token-total">32÷2=16 → 16×16=256 个图像 token</div></div>
     <div class="arch-card"><h4>Pixel Drifting</h4><div class="patch-stack"><div class="arch-box">高斯噪声<small>256×256×3</small></div><i class="arch-arrow">→</i><div class="arch-box main">切成 16×16 patch<small>每块 16×16×3=768 个数</small></div><i class="arch-arrow">→</i><div class="arch-box">线性投影<small>768 → 隐藏维 d</small></div></div><div class="token-strip" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="token-total">256÷16=16 → 16×16=256 个图像 token</div></div>
   </div>
-  <div class="alternative-note"><b>为什么 patch 大小不同？</b>作者让两条路线都形成 <code>16×16</code> 的 token 网格，后面的注意力都处理 256 个图像位置。</div>
+  <div class="alternative-note"><b>为什么 patch 大小不同？</b>作者让两条路线都形成 <code class="m">16\times 16</code> 的 token 网格，后面的注意力都处理 256 个图像位置。</div>
 </figure>
-<p><a href="../concepts/patch-embedding.html">Patchify</a><a class="jr" href="#g-05">5</a> 本身不生成任何东西，它只是把二维网格整理成 Transformer 能接收的 token 序列。以一个单通道 <code>4×4</code> 小图为例，按 <code>2×2</code> 切块：</p>
+<p><a href="../concepts/patch-embedding.html">Patchify</a><a class="jr" href="#g-05">5</a> 本身不生成任何东西，它只是把二维网格整理成 Transformer 能接收的 token 序列。以一个单通道 <code class="m">4\times 4</code> 小图为例，按 <code class="m">2\times 2</code> 切块：</p>
 <div class="toy-patches">
   <div class="toy-grid" aria-label="4×4 数字网格"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span><span>16</span></div>
   <div class="toy-arrow">按 2×2 切<strong>→</strong></div>
-  <div class="patch-list"><code>P₁=[1,2,5,6]</code><code>P₂=[3,4,7,8]</code><code>P₃=[9,10,13,14]</code><code>P₄=[11,12,15,16]</code></div>
+  <div class="patch-list"><code class="m">P_{1}=[1,2,5,6]</code><code class="m">P_{2}=[3,4,7,8]</code><code class="m">P_{3}=[9,10,13,14]</code><code class="m">P_{4}=[11,12,15,16]</code></div>
 </div>
-<p>如果中间网络暂时什么也不改，unpatchify 按原位置把四块放回去，就会精确得到原来的 <code>4×4</code> 网格。真实模型的区别只在中间：Transformer 会根据训练学到的权重把这些噪声 token 改写成图像 token。<strong>切块和拼回只是接口，不是“去噪算法”。</strong></p>
+<p>如果中间网络暂时什么也不改，unpatchify 按原位置把四块放回去，就会精确得到原来的 <code class="m">4\times 4</code> 网格。真实模型的区别只在中间：Transformer 会根据训练学到的权重把这些噪声 token 改写成图像 token。<strong>切块和拼回只是接口，不是“去噪算法”。</strong></p>
 
 <h3>第二步：条件为什么要进两次</h3>
-<p>除了高斯噪声，模型还要知道“生成哪一类、希望类别特征多强”。三类条件分别是：类别标签 <code>c</code>、§10 才会细讲的 guidance 强度 <code>α</code>，以及额外的离散随机性。所谓 32 个 style embedding，是从 64 项可学习码本中随机抽 32 个索引，再把查到的向量<strong>求和</strong>；它不是 32 个可见的风格标签，也不会让序列多 32 个 token。论文只把它当额外随机输入，消融把 FID 从 <code>8.86</code> 改到 <code>8.46</code>。</p>
+<p>除了高斯噪声，模型还要知道“生成哪一类、希望类别特征多强”。三类条件分别是：类别标签 <code>c</code>、§10 才会细讲的 guidance 强度 <code class="m">\alpha</code>，以及额外的离散随机性。所谓 32 个 style embedding，是从 64 项可学习码本中随机抽 32 个索引，再把查到的向量<strong>求和</strong>；它不是 32 个可见的风格标签，也不会让序列多 32 个 token。论文只把它当额外随机输入，消融把 FID 从 <code>8.86</code> 改到 <code>8.46</code>。</p>
 <figure class="reveal">
   <figcaption><span>Fig 09C · 同一个条件向量走两条入口</span><b>A 调每一层；B 加进序列</b></figcaption>
   <div class="condition-build"><div class="condition-sources"><div class="cond-chip"><b>CLASS c</b>ImageNet 类别 → embedding</div><div class="cond-chip"><b>GUIDANCE α</b>类别强调强度 → projection</div><div class="cond-chip"><b>STYLE RANDOMNESS</b>32 次码本采样 → 求和</div></div><i class="arch-arrow">→</i><div class="condition-vector">合成条件向量<small>类别 + α + style sum</small></div><i class="arch-arrow">→</i><div class="condition-branches"><div class="condition-branch"><b>路线 A · AdaLN-zero</b><small>每一层都收到缩放、平移和残差门控；相当于告诉各层“这次按哪个条件处理”。</small></div><div class="condition-branch"><b>路线 B · 16 个 in-context / register token</b><small>把条件写进 16 个可学习槽位，接到图像 token 前面，让注意力可以直接读取。</small></div></div></div>
@@ -410,27 +410,27 @@ figcaption b{color:var(--rust)}
 <p><a href="../concepts/adaptive-layernorm.html">AdaLN-zero</a><a class="jr" href="#g-06">6</a> 管的是“每层怎样处理”；16 个 in-context / register token<a class="jr" href="#g-07">7</a> 管的是“注意力能读到哪些条件信息”。这是两条并行入口，不是先 A 再 B。论文配置表叫它们 register tokens，附录正文叫 learnable in-context tokens，指的是同一组 16 个槽位。</p>
 
 <h3>第三步：拿 latent L/2 从头把形状算到尾</h3>
-<p>选论文最强的 latent L/2。输入的 <code>32×32×4=4096</code> 个高斯随机数先被重新分组；模型没有在这里删掉随机数，也没有做第一轮去噪：</p>
+<p>选论文最强的 latent L/2。输入的 <code class="m">32\times 32\times 4=4096</code> 个高斯随机数先被重新分组；模型没有在这里删掉随机数，也没有做第一轮去噪：</p>
 <figure class="reveal">
   <figcaption><span>Fig 09D · 一次前向的完整形状账</span><b>4096 个输入数 → 4096 个输出 latent 数</b></figcaption>
   <div class="transformer-stack"><div class="arch-box main">272×1024<small>16 条件 + 256 图像 token</small></div><i class="arch-arrow">→</i><div class="transformer-core"><b>24 个 Transformer block</b><small>RMSNorm · QK-Norm · RoPE attention · SwiGLU · AdaLN-zero</small></div><i class="arch-arrow">→</i><div class="arch-box">256×16<small>只保留图像位置，输出头还原 patch</small></div></div>
   <div class="shape-ledger">
-    <div class="shape-step"><b>INPUT</b><code>32×32×4</code><br>= 4096 个数</div>
-    <div class="shape-step"><b>PATCHIFY</b><code>256×16</code><br>重新分成 256 块</div>
-    <div class="shape-step"><b>EMBED</b><code>256×1024</code><br>每块投影到隐藏维</div>
-    <div class="shape-step"><b>CONDITION</b><code>272×1024</code><br>前面加 16 个槽位</div>
-    <div class="shape-step"><b>OUTPUT</b><code>256×16</code><br>= 4096 个 latent 数</div>
+    <div class="shape-step"><b>INPUT</b><code class="m">32\times 32\times 4</code><br>= 4096 个数</div>
+    <div class="shape-step"><b>PATCHIFY</b><code class="m">256\times 16</code><br>重新分成 256 块</div>
+    <div class="shape-step"><b>EMBED</b><code class="m">256\times 1024</code><br>每块投影到隐藏维</div>
+    <div class="shape-step"><b>CONDITION</b><code class="m">272\times 1024</code><br>前面加 16 个槽位</div>
+    <div class="shape-step"><b>OUTPUT</b><code class="m">256\times 16</code><br>= 4096 个 latent 数</div>
   </div>
-  <div class="arch-note"><b>最后：</b><code>256×16</code> 按空间位置拼回 <code>32×32×4</code>，再交给冻结的 SD-VAE decoder，得到 <code>256×256×3</code> RGB。</div>
+  <div class="arch-note"><b>最后：</b><code class="m">256\times 16</code> 按空间位置拼回 <code class="m">32\times 32\times 4</code>，再交给冻结的 SD-VAE decoder，得到 <code class="m">256\times 256\times 3</code> RGB。</div>
 </figure>
-<p>Transformer 的注意力让不同 patch 交换全局信息：左上角 token 可以参考右下角 token，类别条件也能影响所有位置。输出头再把每个 1024 维隐藏向量变回 16 个 latent 数。这里没有 diffusion timestep <code>t</code>，也没有“输出一点、加噪、再跑一次”的循环；24 层内部计算结束，<code>fθ</code> 这一次调用就结束。</p>
+<p>Transformer 的注意力让不同 patch 交换全局信息：左上角 token 可以参考右下角 token，类别条件也能影响所有位置。输出头再把每个 1024 维隐藏向量变回 16 个 latent 数。这里没有 diffusion timestep <code>t</code>，也没有“输出一点、加噪、再跑一次”的循环；24 层内部计算结束，<code class="m">f_\theta</code> 这一次调用就结束。</p>
 <div class="why-grid">
   <div class="why-card"><b>PATCHIFY 为何存在</b>Transformer 吃序列，不直接吃二维数组；切块负责改接口。</div>
   <div class="why-card"><b>TRANSFORMER 为何存在</b>它才是学会“随机 token 应该改成什么图像 token”的主体。</div>
   <div class="why-card"><b>DRIFTING 在哪里</b>不在这条推理路径里；它只在训练时给 Transformer 参数提供更新方向。</div>
 </div>
 <p>QK-Norm、RoPE、SwiGLU 和 RMSNorm 都是 Transformer 的常规内部零件：<a href="../concepts/qk-rmsnorm.html">QK-Norm</a> 控制注意力分数的尺度，<a href="../papers/rope.html">RoPE</a> 提供位置关系，<a href="../concepts/swiglu.html">SwiGLU</a> 负责逐 token 的非线性变换，RMSNorm 稳住中间激活。它们不计算漂移，也不会在推理时额外循环。</p>
-<div class="table-wrap"><table><thead><tr><th>项目</th><th>Latent 版</th><th>Pixel 版</th></tr></thead><tbody><tr><td>是不是同一模型的两段</td><td colspan="2"><strong>不是</strong>；这是两种独立生成器，部署时二选一</td></tr><tr><td>输入 / 输出张量</td><td><code>32×32×4</code> latent</td><td><code>256×256×3</code> RGB</td></tr><tr><td>patch 大小</td><td><code>2×2</code>，每块 16 个数</td><td><code>16×16</code>，每块 768 个数</td></tr><tr><td>图像 token</td><td colspan="2">都是 <code>16×16=256</code> 个</td></tr><tr><td>额外序列 token</td><td colspan="2">都是 16 个 in-context / register token，总长度 272</td></tr><tr><td>style 随机输入</td><td colspan="2">32 次码本采样后求和进条件向量，不增加序列长度</td></tr><tr><td>最后一步</td><td>VAE decoder 解码成 RGB</td><td>unpatchify 后就是 RGB</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>项目</th><th>Latent 版</th><th>Pixel 版</th></tr></thead><tbody><tr><td>是不是同一模型的两段</td><td colspan="2"><strong>不是</strong>；这是两种独立生成器，部署时二选一</td></tr><tr><td>输入 / 输出张量</td><td><code class="m">32\times 32\times 4</code> latent</td><td><code class="m">256\times 256\times 3</code> RGB</td></tr><tr><td>patch 大小</td><td><code class="m">2\times 2</code>，每块 16 个数</td><td><code class="m">16\times 16</code>，每块 768 个数</td></tr><tr><td>图像 token</td><td colspan="2">都是 <code class="m">16\times 16=256</code> 个</td></tr><tr><td>额外序列 token</td><td colspan="2">都是 16 个 in-context / register token，总长度 272</td></tr><tr><td>style 随机输入</td><td colspan="2">32 次码本采样后求和进条件向量，不增加序列长度</td></tr><tr><td>最后一步</td><td>VAE decoder 解码成 RGB</td><td>unpatchify 后就是 RGB</td></tr></tbody></table></div>
 </section>
 
 <section id="recipe">
@@ -470,7 +470,7 @@ figcaption b{color:var(--rust)}
   <tr class="best"><td>Drifting L</td><td>pixel</td><td>1</td><td class="num">1.61</td><td>一步 pixel</td></tr>
   <tr><td>SiD2 UViT/1</td><td>pixel</td><td>多步</td><td class="num">1.38</td><td>总体更低，非一步</td></tr>
 </tbody></table></div>
-<p>有些扩散基线在原表记作 <code>250×2</code>，因为传统 CFG 每一步分别做条件与无条件前向。更准确的说法是“论文中的若干强基线需要数百次网络评估”，不能泛化成“所有扩散固定 250+ NFE”。</p>
+<p>有些扩散基线在原表记作 <code class="m">250\times 2</code>，因为传统 CFG 每一步分别做条件与无条件前向。更准确的说法是“论文中的若干强基线需要数百次网络评估”，不能泛化成“所有扩散固定 250+ NFE”。</p>
 <h3>机器人：1 NFE 并非每项都追平 100 NFE</h3>
 <div class="table-wrap"><table><thead><tr><th>任务 / 输入</th><th style="text-align:right">Diffusion Policy · 100 NFE</th><th style="text-align:right">Drifting · 1 NFE</th><th>变化</th></tr></thead><tbody>
   <tr class="best"><td>ToolHang / state</td><td class="num">.30</td><td class="num">.38</td><td>提升</td></tr>

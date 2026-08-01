@@ -233,8 +233,8 @@ figcaption b{color:var(--amber)}
   </div>
 </figure>
 <div class="vars">
-  <div class="var"><code>Z₁:j</code> · 已有的连续 AR 特征序列。</div><div class="var"><code>F₁:j</code> · 目标模型相应位置的隐藏状态。</div>
-  <div class="var"><code>zⱼ₊₁</code> · 目标模型给出的下一连续特征。</div><div class="var"><code>Smooth L1</code><a class="jr" href="#g-06">6</a> · 小误差平方精修，大误差线性限幅。</div>
+  <div class="var"><code class="m">Z_{1}:j</code> · 已有的连续 AR 特征序列。</div><div class="var"><code class="m">F_{1}:j</code> · 目标模型相应位置的隐藏状态。</div>
+  <div class="var"><code class="m">z_{j+1}</code> · 目标模型给出的下一连续特征。</div><div class="var"><code>Smooth L1</code><a class="jr" href="#g-06">6</a> · 小误差平方精修，大误差线性限幅。</div>
 </div>
 <p class="formula-purpose">连续特征回归：草稿下一向量要靠近目标下一向量</p>
 <div class="formula"><span data-tex="\mathcal L_{\mathrm{reg}}=\operatorname{SmoothL1}\!\left(z_{j+1},\operatorname{DraftModel}(Z_{1:j},F_{1:j})\right)"></span></div>
@@ -253,7 +253,7 @@ figcaption b{color:var(--amber)}
 <p class="lead">因果注意力<a class="jr" href="#g-05">5</a>第 <code>r</code> 行只能看前 <code>r</code> 个位置。第 4 行比第 2 行候选更多，原始熵天然更大；除以各自满分 <code>log r</code>，才有同一把 <code>0～1</code> 量尺。</p>
 <div class="vars">
   <div class="var"><code>r</code> · 当前查询位置，也是这一行最多能看的位置数。</div><div class="var"><code>c</code> · 被关注的位置编号。</div>
-  <div class="var"><code>Ωᵣ,c</code> · softmax 后的注意力概率，整行加起来为 1。</div><div class="var"><code>log r</code> · <code>r</code> 个候选完全均匀时的最大熵。</div>
+  <div class="var"><code class="m">\Omega_{r},c</code> · softmax 后的注意力概率，整行加起来为 1。</div><div class="var"><code>log r</code> · <code>r</code> 个候选完全均匀时的最大熵。</div>
 </div>
 <p class="formula-purpose">一行注意力分得有多散</p>
 <div class="formula"><span data-tex="\mathcal E_{\mathrm{entropy}}^{(r)}=-\frac{1}{\log r}\sum_{c=1}^{r}\Omega_{r,c}\log\Omega_{r,c}"></span></div>
@@ -278,9 +278,9 @@ figcaption b{color:var(--amber)}
 <figure>
   <figcaption><span>Fig 06 · 动态停止线</span><b>draft E &lt; τc → stop</b></figcaption>
   <div class="threshold">
-    <div class="pipe-card reveal"><span class="tag">TRAIN STATS</span><div class="num">.17</div><p><code>.3×.6−.1×.1</code></p></div>
+    <div class="pipe-card reveal"><span class="tag">TRAIN STATS</span><div class="num">.17</div><p><code class="m">.3\times .6- .1\times .1</code></p></div>
     <div class="flow-arrow reveal d2">→</div>
-    <div class="pipe-card reveal d3"><span class="tag">TARGET EMA</span><div class="num">.24125</div><p><code>.9×.2125+.1×.5</code></p></div>
+    <div class="pipe-card reveal d3"><span class="tag">TARGET EMA</span><div class="num">.24125</div><p><code class="m">.9\times .2125+.1\times .5</code></p></div>
     <div class="flow-arrow reveal d4">→</div>
     <div class="pipe-card reveal d5"><span class="tag">DYNAMIC τc</span><div class="num">.193</div><p>草稿熵 <code>.15&lt;.193</code><br><b>停止继续起草</b></p></div>
   </div>
@@ -292,15 +292,15 @@ figcaption b{color:var(--amber)}
 <h2><span class="n">§ 06</span><span>右线：把熵变成高斯标准差</span></h2>
 <p class="lead">AR 已经给出每个位置的连续特征。Drift-AR 不再从统一噪声起步，而是让 AR 特征当高斯中心，熵决定这一位置要散多开。</p>
 <div class="vars">
-  <div class="var"><code>E∈[0,1]</code> · 当前位置的归一化注意力熵。</div><div class="var"><code>σ(E)</code> · 标准差/噪声尺度，不是方差本身。</div>
-  <div class="var"><code>σmax=.5</code> · 实验里的尺度上限。</div><div class="var"><code>τσ=2</code> · 映射曲线的弯曲程度。</div>
+  <div class="var"><code class="m">E\in [0,1]</code> · 当前位置的归一化注意力熵。</div><div class="var"><code class="m">\sigma (E)</code> · 标准差/噪声尺度，不是方差本身。</div>
+  <div class="var"><code class="m">\sigma_{\mathrm{\max }}=.5</code> · 实验里的尺度上限。</div><div class="var"><code class="m">\tau \sigma =2</code> · 映射曲线的弯曲程度。</div>
 </div>
 <p class="formula-purpose">归一化熵 → 噪声尺度</p>
 <div class="formula"><span data-tex="\sigma(\mathcal E)=\sigma_{\max}\cdot\frac{\exp(\mathcal E/\tau_\sigma)-1}{\exp(\mathcal E_{\max}/\tau_\sigma)-1}"></span></div>
-<div class="vars"><div class="var"><code>r</code> · 展开后的空间位置。</div><div class="var"><code>zAR(r)</code> · AR 特征，也是高斯均值。</div><div class="var"><code>I</code> · 单位矩阵，各特征维先用同一尺度。</div><div class="var"><code>N(均值,协方差)</code> · 多元高斯；这里协方差是 <code>σ²I</code>。</div></div>
+<div class="vars"><div class="var"><code>r</code> · 展开后的空间位置。</div><div class="var"><code>zAR(r)</code> · AR 特征，也是高斯均值。</div><div class="var"><code>I</code> · 单位矩阵，各特征维先用同一尺度。</div><div class="var"><code>N(均值,协方差)</code> · 多元高斯；这里协方差是 <code class="m">\sigma^{2}I</code>。</div></div>
 <p class="formula-purpose">逐位置高斯与重参数采样<a class="jr" href="#g-09">9</a></p>
 <div class="formula"><span data-tex="q\!\left(x^{(r)}\mid z_{\mathrm{AR}}^{(r)},\mathcal E^{(r)}\right)=\mathcal N\!\left(z_{\mathrm{AR}}^{(r)},\sigma^2(\mathcal E^{(r)})I\right),\qquad x_0^{(r)}=z_{\mathrm{AR}}^{(r)}+\sigma(\mathcal E^{(r)})\epsilon"></span></div>
-<div class="warning"><b>论文这里的文字不够严谨：</b>它多次把 <code>σ</code> 叫 variance，可高斯协方差写的是 <code>σ²I</code>，采样也乘 <code>σ</code>。标准概率记号下，<code>σ</code> 是标准差<a class="jr" href="#g-08">8</a>，真正方差是 <code>σ²</code>。多元高斯<a class="jr" href="#g-07">7</a>的 <code>I</code> 表示各维先用同一尺度、互不相关。</div>
+<div class="warning"><b>论文这里的文字不够严谨：</b>它多次把 <code class="m">\sigma</code> 叫 variance，可高斯协方差写的是 <code class="m">\sigma^{2}I</code>，采样也乘 <code class="m">\sigma</code>。标准概率记号下，<code class="m">\sigma</code> 是标准差<a class="jr" href="#g-08">8</a>，真正方差是 <code class="m">\sigma^{2}</code>。多元高斯<a class="jr" href="#g-07">7</a>的 <code>I</code> 表示各维先用同一尺度、互不相关。</div>
 <figure>
   <figcaption><span>Fig 07 · 同一中心，不同散布</span><b>zAR=1.2 · ε=−.5</b></figcaption>
   <div class="sigma-grid">
@@ -321,13 +321,13 @@ figcaption b{color:var(--amber)}
     <div class="flow-arrow reveal d2">→</div>
     <div class="pipe-card reveal d3"><span class="tag">FROZEN φ</span><h4>统一特征空间</h4><p>复制目标 AR 倒数第二层，参数冻结，输入梯度仍保留。</p></div>
     <div class="flow-arrow reveal d4">→</div>
-    <div class="pipe-card reveal d5"><span class="tag">KERNEL DRIFT</span><h4>真实吸引 − 生成方向</h4><p>得到本轮净漂移 <code>Vₚ,q</code></p></div>
+    <div class="pipe-card reveal d5"><span class="tag">KERNEL DRIFT</span><h4>真实吸引 − 生成方向</h4><p>得到本轮净漂移 <code class="m">V_{p},q</code></p></div>
   </div>
   <div class="force-strip reveal d5"><div class="plus">V⁺ · 吸向真实</div><div class="minus">−V⁻ · 离开生成团块</div><div class="net">V = V⁺ − V⁻</div></div>
 </figure>
 <div class="vars">
-  <div class="var"><code>φ</code><a class="jr" href="#g-13">13</a> · 冻结特征编码器；权重不更新，梯度仍能穿过输入。</div><div class="var"><code>Vₚ,q</code><a class="jr" href="#g-10">10</a> · 真实分布 <code>p</code> 与当前生成分布 <code>q</code> 算出的核漂移。</div>
-  <div class="var"><code>stopgrad</code><a class="jr" href="#g-12">12</a> · 右侧只当本轮固定目标。</div><div class="var"><code>||·||²₂</code> · 特征逐项作差、平方后求和。</div>
+  <div class="var"><code class="m">\phi</code><a class="jr" href="#g-13">13</a> · 冻结特征编码器；权重不更新，梯度仍能穿过输入。</div><div class="var"><code class="m">V_{p},q</code><a class="jr" href="#g-10">10</a> · 真实分布 <code>p</code> 与当前生成分布 <code>q</code> 算出的核漂移。</div>
+  <div class="var"><code>stopgrad</code><a class="jr" href="#g-12">12</a> · 右侧只当本轮固定目标。</div><div class="var"><code class="m">||\cdot ||^{2}_{2}</code> · 特征逐项作差、平方后求和。</div>
 </div>
 <p class="formula-purpose">当前特征朝冻结临时目标移动</p>
 <div class="formula"><span data-tex="\mathcal L_{\mathrm{drift}}=\mathbb E\left[\left\|\phi(\hat x)-\operatorname{stopgrad}\!\left(\phi(\hat x)+V_{p,q}(\phi(\hat x))\right)\right\|_2^2\right]"></span></div>
@@ -347,25 +347,25 @@ dL/dw=2(.9869−1.7869)×.9869≈−1.5790
 w_new=1−.1×(−1.5790)=1.1579
 x̂_new=1.1579×.9869≈1.1427
 旧靶验方向：L_new=(1.1427−1.7869)²≈.4150  ✓</div>
-<p>损失确实下降，输出朝本轮目标移动。下一轮会重新采样、重算 <code>q</code> 和 <code>V</code>，不会永久追这一个旧靶。反对称<a class="jr" href="#g-11">11</a>保证 <code>p=q</code> 时漂移为零；它不自动证明反过来的 <code>V=0⇒p=q</code>。</p>
+<p>损失确实下降，输出朝本轮目标移动。下一轮会重新采样、重算 <code>q</code> 和 <code>V</code>，不会永久追这一个旧靶。反对称<a class="jr" href="#g-11">11</a>保证 <code>p=q</code> 时漂移为零；它不自动证明反过来的 <code class="m">V=0\Rightarrow p=q</code>。</p>
 </section>
 
 <section id="schedule">
 <h2><span class="n">§ 08</span><span>为什么前 80% 联合训，后 20% 冻结 AR</span></h2>
-<p class="lead">AR 一更新，<code>z_AR</code> 和熵图就变，解码起点分布也跟着搬家。漂移解码器若一直追着移动的源分布学，很难稳定。</p>
-<div class="vars"><div class="var"><code>α(t)</code> · 当前训练进度给 AR 两项的权重。</div><div class="var"><code>Lreg + Lentropy</code> · 草稿准确性与防过度自信。</div><div class="var"><code>Ldrift</code> · 单步视觉解码器损失。</div><div class="var"><code>1−α(t)</code> · 漂移损失权重，与 AR 此消彼长。</div></div>
+<p class="lead">AR 一更新，<code class="m">z_{\mathrm{AR}}</code> 和熵图就变，解码起点分布也跟着搬家。漂移解码器若一直追着移动的源分布学，很难稳定。</p>
+<div class="vars"><div class="var"><code class="m">\alpha (t)</code> · 当前训练进度给 AR 两项的权重。</div><div class="var"><code>Lreg + Lentropy</code> · 草稿准确性与防过度自信。</div><div class="var"><code>Ldrift</code> · 单步视觉解码器损失。</div><div class="var"><code class="m">1-\alpha (t)</code> · 漂移损失权重，与 AR 此消彼长。</div></div>
 <p class="formula-purpose">AR 权重逐步让位给漂移损失</p>
 <div class="formula"><span data-tex="\mathcal L_{\mathrm{total}}=\alpha(t)\left(\mathcal L_{\mathrm{reg}}+\mathcal L_{\mathrm{entropy}}\right)+\left(1-\alpha(t)\right)\mathcal L_{\mathrm{drift}}"></span></div>
 <figure>
   <figcaption><span>Fig 09 · α(t) 从 .95 降到 0</span><b>source q 先稳定，再固定</b></figcaption>
   <div class="schedule">
     <div class="phase start reveal"><span class="tag">t=0</span><b>α=.95</b><strong>AR 95% · Drift 5%</strong><p>解码器从一开始就有小信号，避免冷启动。</p><div class="bar"><i></i></div></div>
-    <div class="phase mid reveal d2"><span class="tag">t=.4T</span><b>α=.475</b><strong>AR 47.5% · Drift 52.5%</strong><p><code>.95−.95×(.4/.8)</code></p><div class="bar"><i></i></div></div>
+    <div class="phase mid reveal d2"><span class="tag">t=.4T</span><b>α=.475</b><strong>AR 47.5% · Drift 52.5%</strong><p><code class="m">.95- .95\times (.4/.8)</code></p><div class="bar"><i></i></div></div>
     <div class="phase end reveal d3"><span class="tag">t=.8T</span><b>α=0</b><strong>冻结 AR · 纯 Drift</strong><p>后 20% 固定先验，不准漂移梯度改 AR。</p><div class="bar"><i></i></div></div>
   </div>
   <div class="schedule-key"><span><i class="ar"></i>AR loss</span><span><i class="drift"></i>Drift loss</span></div>
 </figure>
-<div class="plain"><b>“端到端”不等于全程一起更新。</b>Phase I 在同一流水线联合优化；Phase II 明确 detach <code>z_AR</code> 和熵图，只让漂移解码器继续学。移动的是源分布 <code>q</code>，真实目标 <code>p</code> 并没有移动。</div>
+<div class="plain"><b>“端到端”不等于全程一起更新。</b>Phase I 在同一流水线联合优化；Phase II 明确 detach <code class="m">z_{\mathrm{AR}}</code> 和熵图，只让漂移解码器继续学。移动的是源分布 <code>q</code>，真实目标 <code>p</code> 并没有移动。</div>
 </section>
 
 <section id="infer">
@@ -376,11 +376,11 @@ x̂_new=1.1579×.9869≈1.1427
   <div class="keep-flow">
     <div class="pipe-card reveal"><span class="tag">01 · DRAFT</span><h4>草稿 AR</h4><p>连续提出候选特征</p></div>
     <div class="flow-arrow reveal d2">→</div>
-    <div class="pipe-card reveal d3"><span class="tag">02 · VERIFY</span><h4>目标 AR</h4><p>验最长前缀，留下 <code>z_AR+E</code></p></div>
+    <div class="pipe-card reveal d3"><span class="tag">02 · VERIFY</span><h4>目标 AR</h4><p>验最长前缀，留下 <code class="m">z_{\mathrm{AR}}+E</code></p></div>
     <div class="flow-arrow reveal d4">→</div>
     <div class="pipe-card reveal d5"><span class="tag">03 · SAMPLE</span><h4>x₀=z+σ(E)ε</h4><p>按位置采样一次</p></div>
     <div class="flow-arrow reveal d5">→</div>
-    <div class="pipe-card final reveal d5"><span class="tag">04 · 1 NFE</span><h4>单步视觉解码</h4><p>整套 <code>fθ</code> 调用一次</p></div>
+    <div class="pipe-card final reveal d5"><span class="tag">04 · 1 NFE</span><h4>单步视觉解码</h4><p>整套 <code class="m">f_\theta</code> 调用一次</p></div>
   </div>
 </figure>
 <p>NFE<a class="jr" href="#g-16">16</a>只数视觉解码器函数调用。AR 草稿、目标验证、VAE 解码、内存搬运和 kernel 启动都不会凭空消失，所以“1 NFE”与“整条请求只做一次计算”不是一回事。</p>
@@ -423,7 +423,7 @@ x̂_new=1.1579×.9869≈1.1427
   <thead><tr><th>方法</th><th>加速</th><th>GenEval↑</th><th>FID↓</th><th>CLIP↑</th></tr></thead>
   <tbody><tr><td>NextStep-1</td><td>1.00×</td><td>.63</td><td>6.71</td><td>28.67</td></tr><tr><td>+ 推测解码</td><td>2.03×</td><td>.63</td><td>6.90</td><td>27.96</td></tr><tr><td>+ DMD</td><td>1.66×</td><td>.59</td><td>8.33</td><td>25.19</td></tr><tr class="win"><td>+ Drift-AR</td><td>3.81×</td><td>.66</td><td>6.66</td><td>29.02</td></tr></tbody>
 </table></div>
-<p>FID / IS / CLIP<a class="jr" href="#g-17">17</a>只描述批量统计、可辨识度或图文相似度，各自都不是“单张图是否漂亮”的完整答案。论文没有多种子误差条，<code>6.71→6.66</code> 这类小差异要克制解读。</p>
+<p>FID / IS / CLIP<a class="jr" href="#g-17">17</a>只描述批量统计、可辨识度或图文相似度，各自都不是“单张图是否漂亮”的完整答案。论文没有多种子误差条，<code class="m">6.71\to 6.66</code> 这类小差异要克制解读。</p>
 </section>
 
 <section id="ablation">
@@ -439,7 +439,7 @@ x̂_new=1.1579×.9869≈1.1427
     <div class="ab-card full reveal d3"><span class="tag">FULL</span><b>1.57 / 298.1</b><h4>五块一起</h4><p>熵先验是最关键单项，但不是单独就够。</p></div>
   </div>
 </figure>
-<p>表里没有 AR 接受率和分项耗时，因此不能据此把 <code>5.06×</code> 精确拆成“草稿贡献多少、单步解码贡献多少”。</p>
+<p>表里没有 AR 接受率和分项耗时，因此不能据此把 <code class="m">5.06\times</code> 精确拆成“草稿贡献多少、单步解码贡献多少”。</p>
 </section>
 
 <section id="steps">
@@ -458,7 +458,7 @@ x̂_new=1.1579×.9869≈1.1427
 <p>原 diffusion 直接减到一步，FID 崩到 <code>14.72</code>；Drift-AR 的目标从训练开始就是一次前向，所以一步仍到 <code>1.57</code>。这不代表 DMD 原理上必须多步：原始 DMD<a class="jr" href="#g-18">18</a>同样能训练一步学生，区别在于老师 score 蒸馏和直接样本核漂移。</p>
 <h3>σmax 也不能无限加大</h3>
 <div class="table-wrap"><table><thead><tr><th>σmax</th><th>.1</th><th>.3</th><th>.5</th><th>.7</th><th>1.0</th></tr></thead><tbody><tr><td>FID↓</td><td>1.68</td><td>1.58</td><td><b>1.57</b></td><td><b>1.57</b></td><td>1.64</td></tr><tr><td>IS↑</td><td>292.7</td><td>296.5</td><td><b>298.1</b></td><td>296.3</td><td>293.1</td></tr></tbody></table></div>
-<p>太小几乎缩成一个点，没有覆盖面；太大撒得太开，一步修不回来。<code>σmax</code> 是修正范围上限，不是越大越有创造力。</p>
+<p>太小几乎缩成一个点，没有覆盖面；太大撒得太开，一步修不回来。<code class="m">\sigma_{\mathrm{\max }}</code> 是修正范围上限，不是越大越有创造力。</p>
 </section>
 
 <section id="limits">
@@ -487,9 +487,9 @@ x̂_new=1.1579×.9869≈1.1427
   <li id="g-06"><span class="term">Smooth L1</span> · 小误差用平方细修，大误差转成线性，减少异常值影响。</li>
   <li id="g-07"><span class="term">Gaussian prior</span> · 解码前初始状态按高斯采样；均值定中心，协方差定散布。</li>
   <li id="g-08"><span class="term">Standard deviation / variance</span> · 标准差是 σ，方差是 σ²；本文文字有时把两者混叫 variance。</li>
-  <li id="g-09"><span class="term">Reparameterization</span> · 用 <code>x=μ+σε</code> 把随机性移到 ε，使 μ、σ 仍可反传。</li>
+  <li id="g-09"><span class="term">Reparameterization</span> · 用 <code class="m">x=\mu +\sigma \epsilon</code> 把随机性移到 ε，使 μ、σ 仍可反传。</li>
   <li id="g-10"><span class="term">Drifting field</span> · 真实样本吸引、生成样本排斥合成的局部更新方向。</li>
-  <li id="g-11"><span class="term">Anti-symmetry</span> · <code>Vₚ,q=−Vq,p</code>；交换两分布，方向反转，因此 p=q 时漂移为零。</li>
+  <li id="g-11"><span class="term">Anti-symmetry</span> · <code class="m">V_{p},q=-Vq,p</code>；交换两分布，方向反转，因此 p=q 时漂移为零。</li>
   <li id="g-12"><span class="term">stopgrad</span> · 前向保留数值，反向把该分支当常数；这里只冻结本轮目标。</li>
   <li id="g-13"><span class="term">Frozen feature encoder</span> · 权重不更新，但对输入的导数仍在，能把特征损失传回生成器。</li>
   <li id="g-14"><span class="term">Entropy-AdaLN</span> · 用熵条件临时生成归一化调制参数，让不同空间位置获得不同处理。</li>

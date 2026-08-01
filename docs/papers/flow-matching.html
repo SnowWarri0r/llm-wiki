@@ -858,7 +858,7 @@ pre.eq {
     <div class="fd-panel diff">
       <h5>Diffusion · SDE · 随机性</h5>
       <ul>
-        <li><code>dx = f·dt + g·dW</code> · 学 score function</li>
+        <li><code class="m">dx =f\cdot dt +g\cdot dW</code> · 学 score function</li>
         <li>训练 = score matching · 间接</li>
         <li>推理 DDPM 50-1000 步</li>
         <li>同样 x_0 跑两次 → 不同结果（随机扰动）</li>
@@ -980,12 +980,12 @@ pre.eq {
   <ul style="margin:8px 0 0 0; padding-left:20px; line-height:1.7;">
     <li><code>p(x, t)</code> = 这个街区在 t 时刻住了多少人（密度）</li>
     <li><code>v(x, t)</code> = 这街区里人走动的方向和速度（风场）</li>
-    <li><code>∂p/∂t</code> = 街区人口怎么随时间变（位置不动，只让 t 动）</li>
-    <li><code>∇·(p·v)</code> = "净流出率"（散度 · 这点是发散源还是汇聚点）</li>
+    <li><code class="m">\partial p/\partial t</code> = 街区人口怎么随时间变（位置不动，只让 t 动）</li>
+    <li><code class="m">\nabla \cdot (p\cdot v)</code> = "净流出率"（散度 · 这点是发散源还是汇聚点）</li>
   </ul>
   <p style="margin:10px 0 0;">挪到一边：<strong>∂p/∂t = −(净流出) = 净流入</strong>。也就是"人不凭空冒"。三种典型流场：</p>
   <ul style="margin:6px 0 0 0; padding-left:20px; line-height:1.7;">
-    <li><code>→→→→→</code> 等速流过 · 左来 = 右走 · 净流出 = 0 · 密度不变</li>
+    <li><code class="m">\to \to \to \to \to</code> 等速流过 · 左来 = 右走 · 净流出 = 0 · 密度不变</li>
     <li>发散喷泉 · 所有方向往外 · 净流出 &gt; 0 · 密度<strong>下降</strong></li>
     <li>汇聚黑洞 · 所有方向往里 · 净流出 &lt; 0 · 密度<strong>上升</strong></li>
   </ul>
@@ -1009,9 +1009,9 @@ pre.eq {
 <div class="sym-hint">
   <span class="sym-hint-label">📐 符号速查</span>
   <p>
-    <code>E_{t, x_0, x_1}[ · ]</code> = 期望 / "对所有 (t, x_0, x_1) 组合求平均"<br/>
-    <code>u_θ</code> = "参数为 θ 的函数"（θ 是神经网络的 weights，u_θ 就是网络本身）<br/>
-    <code>|| · ||²</code> = 向量平方范数（每个分量平方加起来，对应 PyTorch 的 <code>(a - b).pow(2).sum()</code>）<br/>
+    <code class="m">E_{t,x_0,x_1}[\cdot ]</code> = 期望 / "对所有 (t, x_0, x_1) 组合求平均"<br/>
+    <code class="m">u_\theta</code> = "参数为 θ 的函数"（θ 是神经网络的 weights，u_θ 就是网络本身）<br/>
+    <code class="m">|| \cdot ||^{2}</code> = 向量平方范数（每个分量平方加起来，对应 PyTorch 的 <code>(a - b).pow(2).sum()</code>）<br/>
     全式翻译：<strong>"对所有训练样本平均地，让网络预测的速度尽量贴近 (x_1 − x_0)" → 就是 MSE</strong>
   </p>
 </div>
@@ -1222,7 +1222,7 @@ pre.eq {
     <li id="g-05"><span class="term">TML 选 flow matching 而不是 diffusion 的工程原因</span> · 200ms 实时预算下需要 ≤ 8 步 ODE，OT 直线路径正好支持。Diffusion 50+ 步在这预算下质量崩。Flow matching 既满足实时性又能端到端可微跟 transformer 联训。</li>
     <li id="g-06"><span class="term">Score function · ∇log p(x)</span> · 类比"地形上的上坡方向" —— 一个向量场，每个点指向"概率密度更大的地方"。diffusion 学这个就为了"沿上坡走"生成高密度样本。直接学不行（p 未知），所以绕一圈用 Tweedie's formula 转成"预测加噪样本里的原噪声"。flow matching 完全跳过 score，直接学 velocity。详见 <a href="../concepts/score-function.html">score-function</a>。</li>
     <li id="g-07"><span class="term">连续性方程 · continuity equation</span> · 物理里 "粒子守恒"的标准方程。意思一句话：<strong>密度的时间变化 = 净流入</strong> —— 粒子既不凭空冒出来也不凭空消失。把它套到 flow matching 上：给定一族 probability path p_t，对应的 velocity field v_t 唯一存在（必须满足这条方程），所以"选 path = 选 velocity"。完整推导 + 三种流场例子见 <a href="../concepts/continuity-equation.html">continuity-equation</a>。</li>
-    <li id="g-08"><span class="term">Tweedie's formula</span> · diffusion 的"魔法转换"。原本你想知道 score（密度梯度），但 score 没法直接学。Tweedie 说：训一个网络<strong>预测加噪样本里的原噪声 ε</strong>，然后通过这个公式 <code>score = -ε_pred / √(1 − ᾱ_t)</code> 就<strong>等价</strong>地拿到了 score。这就是为什么 DDPM loss 是 <code>|| ε_pred − ε ||²</code> 而不是直接 score matching —— 工程上预测 ε 比直接学 score 容易。flow matching 不需要这层间接，直接学速度。</li>
+    <li id="g-08"><span class="term">Tweedie's formula</span> · diffusion 的"魔法转换"。原本你想知道 score（密度梯度），但 score 没法直接学。Tweedie 说：训一个网络<strong>预测加噪样本里的原噪声 ε</strong>，然后通过这个公式 <code class="m">score = -\epsilon_{\mathrm{pred}} / \sqrt{1 - ᾱ_t}</code> 就<strong>等价</strong>地拿到了 score。这就是为什么 DDPM loss 是 <code class="m">|| \epsilon_{\mathrm{pred}} -\epsilon ||^{2}</code> 而不是直接 score matching —— 工程上预测 ε 比直接学 score 容易。flow matching 不需要这层间接，直接学速度。</li>
     <li id="g-09"><span class="term">Rectified Flow · Liu et al. 2022</span> · 跟 flow matching 几乎同期发表（早几个月）。同样押 OT 直线路径思想，提出 "rectification" 技术让路径越来越直。SD3 实际用的是 rectified flow + flow matching 的组合。</li>
     <li id="g-10"><span class="term">Stable Diffusion 3 · Flux</span> · 2024 SOTA 图像生成。都用 flow matching · latent diffusion 框架。SD3 论文证明 flow matching 比 DDPM 在同模型规模下质量更高、推理更快。Flux 进一步推到高分辨率。</li>
     <li id="g-11"><span class="term">"训练目标 = 想要的东西" 是反复出现的范式</span> · ResNet 学差量、BERT MLM 学填空、flow matching 学 velocity —— 都是"把不直观的训练目标换成直观的"。每次替换都带来训练稳 + 调参少 + 工程上手快。这是个值得永远问的设计问题。</li>

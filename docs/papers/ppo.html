@@ -283,7 +283,7 @@ figcaption .fnum { color: var(--accent); font-weight: 700; }
   </svg>
 </figure>
 
-<p>目标: 让 agent 学一个 <code>π(a|s)</code> 使得长期累计 reward 最大。<strong>策略梯度</strong>的核心想法是把 π 当成可微分的神经网络, 直接 gradient ascent。</p>
+<p>目标: 让 agent 学一个 <code class="m">\pi (a|s)</code> 使得长期累计 reward 最大。<strong>策略梯度</strong>的核心想法是把 π 当成可微分的神经网络, 直接 gradient ascent。</p>
 
 <pre class="eq">loss = -log π(a_t | s_t) × R_t       # 跟监督学习 cross-entropy 几乎一样
                        └─ "label 权重", 这一步之后的总 reward
@@ -476,7 +476,7 @@ figcaption .fnum { color: var(--accent); font-weight: 700; }
 
 <div class="note">
   <span class="l">为什么 min 函数</span>
-  <p><code>min(r·A, clip(r)·A)</code> 取"更不利于增加 loss"的那个。当更新是"善意方向"(好 action 增、坏 action 减): clip 起作用, 防贪心。当 r 已经跑过边界且要修正回来: 让原 r·A 起作用, 不阻碍修正。<strong>这个 min 设计让 clip 只在该停的方向停</strong>, 是 PPO 论文最微妙也最关键的一个细节。</p>
+  <p><code class="m">\min (r\cdot A,clip(r)\cdot A)</code> 取"更不利于增加 loss"的那个。当更新是"善意方向"(好 action 增、坏 action 减): clip 起作用, 防贪心。当 r 已经跑过边界且要修正回来: 让原 r·A 起作用, 不阻碍修正。<strong>这个 min 设计让 clip 只在该停的方向停</strong>, 是 PPO 论文最微妙也最关键的一个细节。</p>
 </div>
 
 
@@ -626,7 +626,7 @@ PPO: 一批 rollout 可以反复跑 <strong>K 个 epoch (K=3~10)</strong>, sampl
 
 <p>"实际拿到 1000" 这个数听着简单, 其实最难。问题是: 当下这步之后还没玩完, "实际接下来拿多少" 怎么估? 两种极端都不好 —— <strong>看到底</strong>(把剩下每步真实分全加, 准但抖得厉害, 全看运气); <strong>只看一步</strong>(只看下一步 + critic 估值, 稳但太依赖 critic 而偏)。</p>
 
-<p><strong>GAE</strong> (Generalized Advantage Estimation)<a class="jr" href="#g-11">11</a> 就是这两者之间的调和旋钮。它把未来每一步的<strong>"惊讶值"</strong>(实际比 critic 当场预期好/差一点点)加起来, 但<strong>越远的越打折</strong>, 打折率是 <code>γ × λ</code> 相乘:</p>
+<p><strong>GAE</strong> (Generalized Advantage Estimation)<a class="jr" href="#g-11">11</a> 就是这两者之间的调和旋钮。它把未来每一步的<strong>"惊讶值"</strong>(实际比 critic 当场预期好/差一点点)加起来, 但<strong>越远的越打折</strong>, 打折率是 <code class="m">\gamma \times \lambda</code> 相乘:</p>
 
 <figure id="fig-gae" class="fig-gae">
   <figcaption>
@@ -889,7 +889,7 @@ PPO: 一批 rollout 可以反复跑 <strong>K 个 epoch (K=3~10)</strong>, sampl
 
 <div class="note">
   <span class="l">KL penalty 防 reward hacking</span>
-  <p>没有 KL penalty 时, LLM 会过拟合 RM 的 bug —— "RM 喜欢长回答" → LLM 学会啰嗦; "RM 给 'Certainly!' 高分" → LLM 每个回答开头都加 "Certainly!"。加 <code>β × KL(LLM ‖ SFT)</code> 限制 LLM 偏离 SFT 模型太远, 是 RLHF 工程最关键的细节之一<a class="jr" href="#g-09">9</a>。</p>
+  <p>没有 KL penalty 时, LLM 会过拟合 RM 的 bug —— "RM 喜欢长回答" → LLM 学会啰嗦; "RM 给 'Certainly!' 高分" → LLM 每个回答开头都加 "Certainly!"。加 <code class="m">\beta \times KL(LLM \| SFT)</code> 限制 LLM 偏离 SFT 模型太远, 是 RLHF 工程最关键的细节之一<a class="jr" href="#g-09">9</a>。</p>
 </div>
 
 
@@ -917,13 +917,13 @@ PPO: 一批 rollout 可以反复跑 <strong>K 个 epoch (K=3~10)</strong>, sampl
 
 L_t = min(ρ_t A_t, clip(ρ_t, 1−ε, 1+ε) A_t)</pre>
 
-<p><code>x</code> 是 prompt，<code>y_t</code> 是第 t 个 token，<code>V_critic</code> 预测从当前前缀继续写的未来回报；<code>ρ_t</code> 是新旧策略给同一个已采 token 的概率比。reward model 给完成品打分，critic 预测半成品将来得几分，两者不是同一个模型。</p>
+<p><code>x</code> 是 prompt，<code>y_t</code> 是第 t 个 token，<code class="m">V_{\mathrm{critic}}</code> 预测从当前前缀继续写的未来回报；<code class="m">\rho_t</code> 是新旧策略给同一个已采 token 的概率比。reward model 给完成品打分，critic 预测半成品将来得几分，两者不是同一个模型。</p>
 
 <h3>第二步 · GRPO 用同一道题的回答互比，替掉 critic</h3>
 
 <pre class="eq">A_i = (R_i − mean(R_1...R_G)) / std(R_1...R_G)</pre>
 
-<p><code>G</code> 是同题回答数，<code>R_i</code> 是第 i 条完整回答的 reward。若四条回答得分为 <code>[1,1,0,0]</code>，均值和总体标准差都是 <code>.5</code>，所以 <code>A=[1,1,−1,−1]</code>。正确回答所有 token 往上推，错误回答往下压。GRPO<a class="jr" href="#g-10">10</a>省掉的是 critic，不是必然省掉 reward model；数学和代码能用规则判分，主观任务仍可能需要 RM。</p>
+<p><code>G</code> 是同题回答数，<code>R_i</code> 是第 i 条完整回答的 reward。若四条回答得分为 <code>[1,1,0,0]</code>，均值和总体标准差都是 <code>.5</code>，所以 <code class="m">A=[1,1,-1,-1]</code>。正确回答所有 token 往上推，错误回答往下压。GRPO<a class="jr" href="#g-10">10</a>省掉的是 critic，不是必然省掉 reward model；数学和代码能用规则判分，主观任务仍可能需要 RM。</p>
 
 <h3>同一条正确回答 · token 比率怎样经过 clip</h3>
 
@@ -936,7 +936,7 @@ L_t = min(ρ_t A_t, clip(ρ_t, 1−ε, 1+ε) A_t)</pre>
   <div><b>ρ₄ = 1.25</b><span>上侧 clip → 1.20</span></div>
 </div>
 
-<p>令 <code>ε=.2</code>，GRPO 的这条回答有 <code>A_i=1</code>，四项贡献就是 <code>[1.10,1.05,.90,1.20]</code>。最后一个 token 原本是 <code>1.25</code>，但继续超过 20% 的概率增长不再增加代理目标。GRPO 没有抛弃 PPO 的 clip，只换了 advantage。</p>
+<p>令 <code class="m">\epsilon =.2</code>，GRPO 的这条回答有 <code>A_i=1</code>，四项贡献就是 <code>[1.10,1.05,.90,1.20]</code>。最后一个 token 原本是 <code>1.25</code>，但继续超过 20% 的概率增长不再增加代理目标。GRPO 没有抛弃 PPO 的 clip，只换了 advantage。</p>
 
 <h3>第三步 · Dr.GRPO 去掉两种隐藏加权</h3>
 
