@@ -311,12 +311,26 @@ s = −ε̂ / σ = −(−.5) / .6 = <b>+.8333</b>
 正号说明「往正方向改更像数据」—— 因为噪声把它往负方向拽了 .3，
 score 就指回来。这个 +.8333 才是后面 g_DMD 里 s_real / s_fake 的那种量。</pre>
     <div class="note"><strong>换成别的 backbone，换算式不同但思路一样。</strong>预测速度（v-prediction / flow matching）的网络要按各自的 <code class="m">\alpha_t,\sigma_t</code> 关系重新解一次，得到的仍是同一个 <code class="m">\nabla_x\log p_t</code>。本页后面只用「score = 某个和 latent 同形状的方向场」这一层，不依赖具体哪种 backbone。</div>
+    <h3>三套网络的起点在哪</h3>
+    <p>容易漏掉的一环：student 和 fake-score 不是随机初始化的，<strong>它们开局都是 teacher 的副本</strong>。这是 DMD 就定下的做法——学生沿用老师的网络结构、直接复制参数，fake-score 同样复制一份。所以「三套网络」实际是<strong>一个 teacher 生出的两个分身</strong>：一个分身学着几步出图，另一个分身专职追踪第一个分身当前的分布。</p>
+    <pre>backbone（Wan2.1-1.3B / Cosmos 2B）
+   已在真实视频上做完普通多步扩散训练
+        │
+        ├─→ 自己留下不动         = <b>teacher</b>（real-score），全程冻结
+        ├─→ 拷一份权重           = <b>student</b> Gθ
+        └─→ 再拷一份权重         = <b>fake-score</b>
+                  │
+                  ├── DMD2 阶段：这两份一起训 <b>25K 步</b>
+                  │
+                  └── DFD 阶段：接着上面那对 checkpoint 往下走，只再跑 100–300 步
+</pre>
+    <p>换句话说 <strong>DFD 拿到手的从来不是那份原始拷贝</strong>，而是已经被 DMD2 训过的一对。这正好解释了 § 07 那个最硬的负结果：跳过 DMD2、让 student 直接从 teacher 的原始拷贝开跑 DFD，训练 1400 次仍然失败——那时学生离真实视频太远，teacher discrepancy 的方差压不住。</p>
     <figure>
       <figcaption class="figcap"><span>Fig 03 · 训练生命周期</span><span class="n">谁保留 · 谁冻结 · 谁追踪</span></figcaption>
       <div class="roles">
-        <div class="role keep"><span class="life">最终保留</span><h4>学生 Gθ</h4><p>从噪声和条件生成视频；接收梯度；推理时唯一留下。</p></div>
-        <div class="role freeze"><span class="life">预训练后冻结</span><h4>real-score teacher</h4><p>先在真实视频上做普通扩散训练；DFD 阶段只提供目标分布方向。</p></div>
-        <div class="role online"><span class="life">训练中持续更新</span><h4>fake-score 网络</h4><p>用学生最新视频训练，追踪不断移动的 <code class="m">p_{\mathrm{fake}}</code><a class="jr" href="#g-05">5</a>。</p></div>
+        <div class="role keep"><span class="life">最终保留</span><h4>学生 Gθ</h4><p>起点是 teacher 的权重副本，经 DMD2 训过 25K 步。从噪声和条件生成视频；接收梯度；推理时唯一留下。</p></div>
+        <div class="role freeze"><span class="life">预训练后冻结</span><h4>real-score teacher</h4><p>就是 backbone 本身，先在真实视频上做完普通多步扩散训练；另外两套都是从它复制出来的。DFD 阶段只提供目标分布方向，权重不动。</p></div>
+        <div class="role online"><span class="life">训练中持续更新</span><h4>fake-score 网络</h4><p>起点同样是 teacher 的权重副本。用学生最新视频继续训练，追踪不断移动的 <code class="m">p_{\mathrm{fake}}</code><a class="jr" href="#g-05">5</a>。</p></div>
       </div>
     </figure>
   </section>
