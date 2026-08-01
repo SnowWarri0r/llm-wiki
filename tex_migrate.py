@@ -154,6 +154,8 @@ def is_math(s: str) -> bool:
         return False
     if re.fullmatch(r"[A-Z][A-Z0-9]{3,}", s):
         return False
+    if re.fullmatch(r"[A-Z][A-Za-z0-9]*(_[A-Za-z0-9]+){2,}", s):   # V4_QUALITY_48
+        return False
     if re.match(r"^(https?:|/|\./|--)", s):                   # 路径 / URL / 命令行开关
         return False
     if re.fullmatch(r"[0-9a-f]{7,40}", s):                    # commit hash

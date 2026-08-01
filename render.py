@@ -1556,7 +1556,9 @@ def render_concept_page(entry: Entry, chapter_nav_top: str = "", chapter_nav_bot
         chapter_nav_top=chapter_nav_top,
         chapter_nav_bottom=chapter_nav_bottom,
         # 有行内 code 的页也要加载 KaTeX：mathify pass 要把符号 code 转成公式
-        math_head=KATEX_PAGE_HEAD if (maths or "<code>" in body_html) else "",
+        # 注意匹配 "<code" 而不是 "<code>"：数学统一后行内数学都是 <code class="m">，
+        # 只匹配裸标签会让"整页 code 都带 class"的页面漏掉 KaTeX，mathify 随之不注入。
+        math_head=KATEX_PAGE_HEAD if (maths or "<code" in body_html) else "",
         math_script=KATEX_PAGE_SCRIPT if maths else "",
         css_ver=_css_ver(),
     )
