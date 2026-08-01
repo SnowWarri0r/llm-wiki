@@ -400,7 +400,7 @@ IoU = 80 / 100 = 0.8
 | 损失 | 边界加权像素交叉熵 | 常混合 Dice / CE / focal |
 | 任务 | 生物医学像素分割 | 分割、修复、扩散去噪等 |
 
-把扩散模型的“U-Net”理解成同一个思想家族即可，不要以为 Stable Diffusion 原封不动用了这套 23 层 Caffe 网络。扩散 U-Net 保留多尺度下采样—上采样和横向跳连，但加入残差块、时间条件、注意力，并把输出改成噪声或速度预测。
+把扩散模型的“U-Net”理解成同一个思想家族即可，不要以为 Stable Diffusion 原封不动用了这套 23 层 Caffe 网络。[[diffusion-unet]] 保留多尺度下采样—上采样和横向跳连，但加入残差块、时间条件、注意力，并把输出改成噪声或速度预测。
 
 ## 我的批注
 
@@ -428,6 +428,7 @@ IoU = 80 / 100 = 0.8
 - [[cnn]] · U-Net 的编码器沿用卷积、ReLU、池化这条经典视觉主线
 - [[resnet]] · 都使用跨层连接；ResNet 用逐元素相加帮助优化，U-Net 用通道拼接补空间细节
 - [[dit]] · DiT 把扩散去噪骨架从 U-Net 换成 Transformer
+- [[diffusion-unet]] · DDPM、ADM 到 Stable Diffusion 的扩散 U-Net 完整尺寸账
 - [[stable-diffusion-3-5]] · 现代文生图从卷积 U-Net 进一步走向 MMDiT
 
 ## 历史定位

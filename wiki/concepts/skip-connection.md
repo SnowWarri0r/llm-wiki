@@ -1,8 +1,8 @@
 ---
 name: skip-connection
 type: concept
-sources: [unet]
-updated: 2026-07-24
+sources: [unet, diffusion-unet]
+updated: 2026-07-27
 ---
 
 # Skip Connection · 跨层连接 · 让早期信息绕过中间层
@@ -72,5 +72,6 @@ concat([10,20],[1,2]) = [10,20,1,2]
 ## 链接
 
 - [[unet]] · 横向跳连把定位细节送入解码器
+- [[diffusion-unet]] · 去噪时把高分辨率特征直接送回上采样路径
 - [[residual-connection]] · 用逐元素相加实现的另一类跨层连接
 - [[transposed-convolution]] · 解码特征放大后再与 skip 对齐
