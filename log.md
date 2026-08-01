@@ -1245,3 +1245,12 @@ skill 更新:
 - 上一条只修了 md 侧的反向引用（让 backlinks 生效）；bespoke 页那侧还没跟上，而这页的惯例是 md wikilink 与页内 concept 链接一一对应。
 - 在 §01「统一的不是 backbone，是答案出口」补一段，同时链三个相邻概念并说清各管一头：`rgb-task-representation`（把稠密答案编码成三通道图，同一个 VAE decoder + 同一条 loss 通吃）、`generation-to-perception`（本来为了画得像才训练的生成通路被接去回答"看到了什么"）、`decodable-vision-representation`（产出来的东西能不能按确定规则还原成 benchmark 打得了分的框/点/深度值）。前两个回答"能不能用同一套通路把答案生成出来"，后一个回答"生成出来的还算不算数"。
 - 现在 sensenova-vision 的 md wikilink 与 bespoke concept 链接完全一致（10 个，差集为空）。
+
+## [2026-07-26] fix | toTex 把函数名 max 吞成 θ 的下标
+
+- 现象：senseflow §02 的符号格子 `minθ maxφ` 渲染成 `min θ_max φ`，跟下面公式的 `\min_\theta\max_\phi` 对不上。
+- 成因：toTex 先把 `θ` 换成 `\theta `（尾部带一个空格作分隔），随后"希腊字母后跟单词→变下标"那条规则用的是 `\s*`，于是把 `\theta  max` 里的 `max` 当成下标吃掉了（`max` 在 WORDS 里）。函数名规则再跑一遍，产出 `\theta_{\mathrm{\max }}` 这种嵌套垃圾。
+- 修法两处：① 源码改成规范 LaTeX `\min_\theta\ \max_\phi`，含反斜杠走 verbatim，与公式逐字一致；② toTex 那条规则的 `\s*` 收成单个空格——那个空格正是希腊替换自己加的分隔符；原文里真有空格说明作者本就当两个记号，不该再吞。
+- 影响面先算后改：全站符号格子里"希腊字母 + WORDS 词"的用法共 20 处，其中 19 处是紧贴写法（`σmax=.5` / `θbase` / `μfake` / `λreg` 等），收紧后行为完全不变；带空格的只有 senseflow 这一处，正是要修的。
+- 扫描脚本本身先踩了个坑：Python 的 `\b` 认 Unicode 字母，`maxφ` 里 `max\b` 不匹配，第一版扫描因此漏掉了 senseflow 这条、差点得出"零影响"的错误结论。JS 的 `\b` 只认 ASCII，规则照样触发。复现 JS 语义要用 `(?![A-Za-z0-9_])` 代替 `\b`。
+- 验证：node 复跑 `σmax=.5`→`\sigma_{\mathrm{max}}=.5`、`θbase`→`\theta_{\mathrm{base}}`、`μfake`→`\mu_{\mathrm{fake}}` 全部保留；浏览器实测 senseflow / drift-ar / dmd / dmd2 四页 katex-error 全 0，格子渲染数正向对账通过。

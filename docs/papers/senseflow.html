@@ -211,7 +211,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 <p class="formula-purpose">这条式子回答：学生在自己会生成的位置上，和老师分布差多少？</p>
 <div class="formula math" data-display="true">\min_{p_g}D_{\mathrm{KL}}(p_g\Vert p_r)=\mathbb E_{t,X_t\sim p_g}\left[\log p_g(X_t)-\log p_r(X_t)\right]</div>
 <p>学生密度 <code>p_g</code> 不能直接算。DMD 于是训练一套 fake 网络 <code>p_f</code> 去追踪它，再比较 fake score 与 real score：</p>
-<div class="symbols"><div class="symbol"><code>θ</code>生成器参数，改变它会移动学生分布。</div><div class="symbol"><code>φ</code>fake 网络参数，负责让 <code>p_f</code> 追上 <code>p_g</code>。</div><div class="symbol"><code>minθ maxφ</code>外循环拉学生靠近老师，内循环先校准 fake 追踪器。</div></div>
+<div class="symbols"><div class="symbol"><code>θ</code>生成器参数，改变它会移动学生分布。</div><div class="symbol"><code>φ</code>fake 网络参数，负责让 <code>p_f</code> 追上 <code>p_g</code>。</div><div class="symbol"><code>\min_\theta\ \max_\phi</code>外循环拉学生靠近老师，内循环先校准 fake 追踪器。</div></div>
 <div class="formula math" data-display="true">\min_\theta\max_\phi V(\theta,\phi)=\mathbb E_{t,X_t\sim p_g}\left[\log p_f(X_t)-\log p_r(X_t)\right]</div>
 <p><code>θ</code> 是生成器参数，<code>φ</code> 是 fake 网络参数。生成器每动一步，学生分布就变；fake 网络面对的是持续移动的靶。DMD2 用 <a class="jr" href="#g-03">TTUR</a> 让 fake 网络多更新几次。</p>
 </section>
@@ -554,8 +554,10 @@ a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
       // "^a 后面跟正文 dv"，语法完全合法，KaTeX 不报错却渲染成 L^a dv。
       t=t.replace(/([_^])\{?([A-Za-z]{2,})\}?/g, function(m,op,w){
         return WORDS.indexOf(w)>=0 || w.length>1 ? op+'{\\mathrm{'+w+'}}' : m; });
-      // 希腊字母后直接跟单词(θbase) → 变下标
-      t=t.replace(/(\\[a-zA-Z]+)\s*([a-z]{2,})\b/g, function(m,g,w){
+      // 希腊字母后"紧贴"单词(θbase) → 变下标。这里只吃 1 个空格：那是上面
+      // 希腊替换自己加的分隔符。原文里真有空格(θ max)说明作者本就当两个记号，
+      // 再吞就会把函数名 max 吃成 θ 的下标（senseflow 的 "minθ maxφ" 正是这么坏的）。
+      t=t.replace(/(\\[a-zA-Z]+) ([a-z]{2,})\b/g, function(m,g,w){
         return WORDS.indexOf(w)>=0 ? g+'_{\\mathrm{'+w+'}}' : m; });
       // 常见函数名
       t=t.replace(/\b(exp|log|ln|max|min|sin|cos|det|dim)\b/g,'\\$1 ');
