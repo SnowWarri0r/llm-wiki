@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Residual + LayerNorm · Concept</title>
+<title>Hybrid Linear–Softmax Attention · 大多数层做摘要，少数层逐一核对 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,46 +53,42 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · residual-layernorm</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · hybrid-linear-softmax-attention</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Residual + LayerNorm</h1>
+  <h1>Hybrid Linear–Softmax Attention · 大多数层做摘要，少数层逐一核对</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>Transformer block 里每个子层都配 <code>x + sublayer(x)</code> 和 <a href="../concepts/layernorm.html">layernorm</a>，让深层网络既能传梯度又能稳住激活尺度。</p>
-<h2>直觉</h2>
-<p><a href="../concepts/residual-connection.html">residual-connection</a> 给信息一条直达高速路，LayerNorm 给每个 token 做尺度整理。一个负责"别学坏了还能走原路"，一个负责"每层输出别越跑越飘"。</p>
-<p>没有这对组合，Transformer 堆到几十层、上百层会非常难训。</p>
-<h2>怎么做的</h2>
-<p>常见有两种摆法：</p>
-<ul>
-<li><strong>Post-LN</strong>：<code>LayerNorm(x + Sublayer(x))</code>，原始 Transformer 用法</li>
-<li><strong>Pre-LN</strong>：<code>x + Sublayer(LayerNorm(x))</code>，后来的大模型更常见，深层训练更稳</li>
-</ul>
-<p>直觉上 Pre-LN 让 residual 主干更干净，梯度更容易沿着 identity path 往回走。</p>
-<h2>代码出处</h2>
-<p>Transformer 原论文 block；现代 GPT/BERT 系列实现都有对应变体。</p>
+<p>按固定节奏混排线性 attention 与完整 softmax attention：前者承担长序列的大部分计算，后者周期性恢复每个 query 对每个 token 的独立关系。</p>
+<h2>SANA-Video 2.0 的节奏</h2>
+<pre><code class="language-text">Linear → Linear → Linear → Softmax → 重复
+</code></pre>
+<p>softmax 占 25%。32 层模型有 24 层 linear、8 层 softmax；40 层模型有 30 层 linear、10 层 softmax。</p>
+<p>这里的 softmax layer 不是事后校准一个数，而是重新计算完整 token-to-token attention。它产出的丰富表示随后进入下一轮线性层。</p>
+<h2>为什么不是越多 softmax 越好</h2>
+<p>在固定宽深的短程代理实验里，50% softmax 验证损失最低 0.897；25% 是 0.905，却在 1080p 形状上比 50% 少 29% 延迟。作者因此选质量—延迟拐点，而不是最低 loss。</p>
+<p>25% 是具体实验选择，不是理论常数。序列长度、head 维度、kernel 和训练配方变化后，合理比例也可能变化。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../concepts/layernorm.html">layernorm</a> · 归一化组件</li>
-<li><a href="../concepts/residual-connection.html">residual-connection</a> · 残差组件</li>
-<li><a href="../concepts/transformer-architecture.html">transformer-architecture</a> · block 结构</li>
+<li><a href="../concepts/gated-linear-attention.html">gated-linear-attention</a> · 便宜层怎样压缩关系。</li>
+<li><a href="../concepts/block-attention-residuals.html">block-attention-residuals</a> · 怎样把 softmax anchor 的特征带到更深层。</li>
+<li><a href="../papers/sana-video-2.html">sana-video-2</a> · 完整架构、消融和效率口径。</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 4 处</span>
-  <ul><li><a href="../papers/attention-is-all-you-need.html"><span class="cat">paper</span>Attention Is All You Need · Transformer 始祖</a></li><li><a href="../concepts/block-attention-residuals.html"><span class="cat">concept</span>Block Attention Residuals · 让深层 token 按需翻早先的块摘要</a></li><li><a href="../concepts/layernorm.html"><span class="cat">concept</span>LayerNorm · 层归一化</a></li><li><a href="../concepts/transformer-architecture.html"><span class="cat">concept</span>Transformer Architecture · 整体架构</a></li></ul>
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/sana-video-2.html"><span class="cat">paper</span>SANA-Video 2.0 · 用三层“速写”加一层“精查”生成长视频</a></li><li><a href="../concepts/block-attention-residuals.html"><span class="cat">concept</span>Block Attention Residuals · 让深层 token 按需翻早先的块摘要</a></li><li><a href="../concepts/gated-linear-attention.html"><span class="cat">concept</span>Gated Linear Attention · 把所有 token 先写进固定大小的公共状态</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/residual-layernorm.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/hybrid-linear-softmax-attention.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 

@@ -1,8 +1,8 @@
 ---
 name: flow-matching
 type: concept
-sources: [interaction-models-tml, ideogram-4, stable-diffusion-3-5, krea-2, omnieraser, diffusionnft, sensenova-vision, meshflow, ltx-2, drifting-models, solaris-multiplayer-world-model, senseflow]
-updated: 2026-07-24
+sources: [interaction-models-tml, ideogram-4, stable-diffusion-3-5, krea-2, omnieraser, diffusionnft, sensenova-vision, meshflow, ltx-2, drifting-models, solaris-multiplayer-world-model, senseflow, sana-video-2]
+updated: 2026-07-28
 ---
 
 # Flow Matching · 流匹配

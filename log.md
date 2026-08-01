@@ -1307,3 +1307,11 @@ skill 更新:
 - 用同一组标量走通加噪、噪声预测损失与干净样本恢复；逐一定义公式参数，并补 GroupNorm、时间嵌入、AdaGN、skip concat、self/cross-attention 与 scheduler 的职责。
 - 以 Stable Diffusion v1 官方配置核对 64×64×4 latent、320/640/1280/1280 通道与 attention 下采样率；用 ADM 消融区分证据与架构惯例。
 - 新增 GroupNorm、扩散时间条件、噪声预测目标三个概念页，并与经典 U-Net、DiT、CFG、cross-attention 双向链接。
+
+## [2026-07-28] ingest | SANA-Video 2.0
+
+- 新增 SANA-Video 2.0 精读页与 bespoke HTML；按“视频 softmax 成本 → 线性状态压缩 → 3:1 周期精查 → Block AttnRes 跨深度取回 → 训练课程 → 后训练 → 实验 → 部署”重排，不沿论文目录平铺。
+- 用同一条完整架构图先定位 LTX-VAE、Gemma、Hybrid Video DiT、AttnRes、flow solver 和 decoder；另用无重叠 CSS grid 重画 8 层注意力周期、三来源路由、时间步 shift 和完整 flow 数字例。
+- 对 gated linear attention、router、flow matching、flow shift、Diffusion-DPO 与有效秩逐符号解释；验证 3-source softmax 混合得到 6.7256、奇异值 `[3,1]` 的有效秩为 1.7548。
+- 分开记录质量、机制和系统证据：25% 是代理实验的 Pareto knee；AttnRes MSE 近乎打平，主要证据是深层有效秩 +11.7% 和块入口删除旧来源后 −82%～91%；Sol-Engine 的 kernel / cache / sparsity 不与架构 speedup 混乘。
+- 新增四个概念页：gated-linear-attention、hybrid-linear-softmax-attention、block-attention-residuals、content-aware-flow-shift。
