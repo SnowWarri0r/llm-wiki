@@ -83,8 +83,8 @@ year: 2026
 
 - [[sensenova-vision]] · 同样把深度、法线等视觉目标放进生成模型的连续 latent；GenCeption 更强调复用完整视频生成骨干和一次前向。
 - [[drifting-models]] · 生成模型怎样提供可迁移的 score / 速度知识；GenCeption 不做蒸馏，而是直接后训练骨干。
-- [[dmd2]] · DMD2 把多步扩散蒸成少步生成；GenCeption走另一条路，把任务变成确定性感知，因此只做一次前向。
-- [[qwen3-vl-report]] · 另一条通才路线：把视觉变成语言 token，再由自回归模型回答；GenCeption尽量把视觉任务留在连续像素空间。
+- [[dmd2]] · DMD2 把多步扩散蒸成少步生成；GenCeption 走另一条路，把任务变成确定性感知，因此只做一次前向。
+- [[qwen3-vl-report]] · 另一条通才路线：把视觉变成语言 token，再由自回归模型回答；GenCeption 尽量把视觉任务留在连续像素空间。
 
 ## 历史定位
 
