@@ -31,6 +31,7 @@ h1 em{display:block;color:var(--teal);font-weight:500}
 .tldr{margin:36px 0 0;background:var(--night);color:#f7f2e6;border-left:6px solid var(--teal);padding:24px 28px;box-shadow:9px 9px 0 rgba(23,59,86,.12)}
 .tldr .tag{display:block;color:#79d5d4;font-size:11px;letter-spacing:2px;font-weight:800;margin-bottom:5px}
 .tldr strong{color:#fff}
+.tldr code:not(.mathified){background:#f7c976;border-color:#f7c976;color:#15283f;font-weight:750}
 .toc{display:flex;flex-wrap:wrap;gap:8px;margin:28px 0 0}
 .toc a{font:700 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;text-decoration:none;color:var(--blue);border:1px solid var(--rule);background:var(--card);padding:7px 10px}
 .toc a:hover,.toc a:focus{background:var(--tealsoft);outline:2px solid var(--teal)}
@@ -213,7 +214,7 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
     <div class="symbols">
       <div class="symbol"><code class="m">x_0</code><br>干净视频经 VAE 得到的 latent。</div>
       <div class="symbol"><code class="m">\epsilon</code><br>与 <code class="m">x_{0}</code> 同形状的高斯噪声。</div>
-      <div class="symbol"><b>t</b><br>路径位置；<code>0</code> 是干净端，<code>1</code> 是噪声端。</div>
+      <div class="symbol"><code class="m">t</code>路径位置；<code>0</code> 是干净端，<code>1</code> 是噪声端。</div>
       <div class="symbol"><code class="m">x_t</code><br>在时刻 <code>t</code> 的带噪 latent。</div>
       <div class="symbol"><code class="m">(1-t),\;t</code><br>干净信号和噪声各占多少。</div>
       <div class="symbol"><code class="m">0\le t\le 1</code><br><code>t</code> 只在闭区间零到一内取值。</div>
@@ -224,7 +225,7 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
     <div class="formula" data-expr="v^\*=\frac{dx_t}{dt}=\epsilon-x_0"></div>
     <div class="symbols">
       <div class="symbol"><code class="m">\mathrm{d}x_t/\mathrm{d}t</code><br><code>t</code> 增加一点时，latent 怎样变化。</div>
-      <div class="symbol"><b>v*</b><br>训练标签里的目标速度；星号不是乘法。</div>
+      <div class="symbol"><code class="m">v^\*</code>训练标签里的目标速度；星号不是乘法。</div>
       <div class="symbol"><code class="m">\epsilon-x_0</code><br>从干净端指向噪声端的方向。</div>
     </div>
     <p>生成时恰好反着走：从 <code>t=1</code> 的噪声积分回 <code>t=0</code> 的视频。感知输入本来就是干净视频，因此 GenCeption 直接喂 <code class="m">x_{0}</code>，告诉 DiT 当前在干净端 <code>t=0</code>，只跑一次。</p>
@@ -291,9 +292,9 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
       </div>
     </figure>
     <div class="symbols">
-      <div class="symbol"><b>T</b><br>原视频帧数，也是新增 token 数。</div>
-      <div class="symbol"><b>T′</b><br>VAE 时间压缩后的 latent 时间长度。</div>
-      <div class="symbol"><b>K</b><br>每帧目标向量的维数。</div>
+      <div class="symbol"><code class="m">T</code>原视频帧数，也是新增 token 数。</div>
+      <div class="symbol"><code class="m">T'</code>VAE 时间压缩后的 latent 时间长度。</div>
+      <div class="symbol"><code class="m">K</code>每帧目标向量的维数。</div>
     </div>
     <p>因为 <code>T</code> 帧会压成更短的 <code>T′</code> 个 latent 时间位置，新增 token 的原始帧编号会超出 DiT 预训练见过的时间范围。论文采用位置插值，把 <code>T</code> 个编号按比例缩到 <code>T′</code> 的边界内；空间位置没有天然坐标，所以直接学习。论文没有给出具体插值公式，因此这里不伪造实现细节。</p>
     <div class="note warn"><span class="mini">后来发生了什么</span>这条新增 token 支路在单任务训练中可用，但联合训练时 3D 关键点明显退化。作者认为：坐标回归偏离连续像素预训练，而且从零初始化的 token 会扰动原 DiT 注意力。这是整篇论文最重要的负结果。</div>
@@ -323,12 +324,12 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
     <p>密集任务在 VAE latent 空间算 L2，稀疏任务在坐标输出空间算 L2。以向量形式写：</p>
     <div class="formula" data-expr="L_2=\sum_j(\hat y_j-y_j)^2"></div>
     <div class="symbols">
-      <div class="symbol"><b>j</b><br>输出向量或 latent 中的第 <code>j</code> 个元素。</div>
+      <div class="symbol"><code class="m">j</code>输出向量或 latent 中的第 <code>j</code> 个元素。</div>
       <div class="symbol"><code class="m">\hat y_j</code><br>模型在该位置的预测。</div>
       <div class="symbol"><code class="m">y_j</code><br>监督目标。</div>
       <div class="symbol"><code class="m">\hat y_j-y_j</code><br>有正负号的预测误差。</div>
       <div class="symbol"><code class="m">(\cdot)^2</code><br>平方：消除符号，并更重罚大误差。</div>
-      <div class="symbol"><code class="m">\Sigma</code><br>把所有元素的平方误差相加。</div>
+      <div class="symbol"><code class="m">\sum_j</code>把所有元素的平方误差相加。</div>
     </div>
     <p>例如预测 <code>ŷ=[0.2,0.8]</code>、标签 <code>y=[0.3,0.6]</code>，求和式 L2 是 <code>0.01+0.04=0.05</code>。如果实现取均值则为 <code>0.025</code>；论文没有公开具体 reduction。</p>
 
@@ -336,7 +337,7 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
     <div class="formula" data-expr="d_i=\frac{D_i}{m}"></div>
     <div class="symbols">
       <div class="symbol"><code class="m">D_i</code><br>第 <code>i</code> 个像素的原始深度。</div>
-      <div class="symbol"><b>m</b><br>整段视频有效深度的中位数。</div>
+      <div class="symbol"><code class="m">m</code>整段视频有效深度的中位数。</div>
       <div class="symbol"><code class="m">d_i</code>除掉整体尺度后的相对深度。</div>
     </div>
     <p>原值 <code>[2,4,8]</code> 的中位数是 <code>4</code>，归一化后得到 <code>[0.5,1,2]</code>。整个场景若放大两倍，分子和中位数一起放大，结果不变。</p>
@@ -344,12 +345,12 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
     <h3>第二步：取对数压缩远距离，再截进零到一</h3>
     <div class="formula" data-expr="d'=\operatorname{clip}\!\left(\alpha\log(d+1),0,1\right)"></div>
     <div class="symbols">
-      <div class="symbol"><b>d</b><br>中位数归一化后的非负深度。</div>
-      <div class="symbol"><b>log(d+1)</b><br>自然对数；加一避免对零取对数。</div>
+      <div class="symbol"><code class="m">d</code>中位数归一化后的非负深度。</div>
+      <div class="symbol"><code class="m">\log(d+1)</code>自然对数；加一避免对零取对数。</div>
       <div class="symbol"><code class="m">\alpha</code><br>缩放系数，调节近处与远处占用范围。</div>
-      <div class="symbol"><b>clip</b><br>低于零变零，高于一变一。</div>
-      <div class="symbol"><b>d′</b><br>最终可复制为 RGB 的值。</div>
-      <div class="symbol"><b>[0,1]</b><br>包括两个端点的数值区间。</div>
+      <div class="symbol"><code class="m">\operatorname{clip}</code>低于零变零，高于一变一。</div>
+      <div class="symbol"><code class="m">d'</code>最终可复制为 RGB 的值。</div>
+      <div class="symbol"><code class="m">[0,1]</code>包括两个端点的数值区间。</div>
     </div>
     <figure>
       <figcaption class="figcap"><span>Fig 08 · 代入一组数字</span><span class="n">缩放系数取 0.5，仅为教学示例</span></figcaption>
@@ -393,7 +394,7 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
     <div class="formula wide" data-expr="\operatorname{AbsRel}=\frac{1}{N}\sum_{i=1}^{N}\frac{|\hat d_i-d_i|}{d_i}"></div>
     <div class="formula wide" data-expr="\delta_1=\frac{1}{N}\sum_{i=1}^{N}\mathbf 1\left[\max\left(\frac{\hat d_i}{d_i},\frac{d_i}{\hat d_i}\right)<1.25\right]"></div>
     <div class="symbols">
-      <div class="symbol"><b>N</b><br>参与评估的有效像素数。</div>
+      <div class="symbol"><code class="m">N</code>参与评估的有效像素数。</div>
       <div class="symbol"><code class="m">d_i</code>第 <code>i</code> 个像素的真实深度。</div>
       <div class="symbol"><code class="m">\widehat d_i</code>模型预测深度。</div>
       <div class="symbol"><code class="m">\lvert\widehat d_i-d_i\rvert/d_i</code>该像素误差占真实深度的比例。</div>
