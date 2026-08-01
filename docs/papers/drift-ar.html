@@ -168,9 +168,45 @@ figcaption b{color:var(--amber)}
 </section>
 
 <section id="signal">
-<h2><span class="n">§ 01</span><span>论文说的“预测熵”，到底是哪张张量</span></h2>
-<p class="lead">名字容易让人以为模型显式输出了一条概率分布。其实 Eq. (4) 读取草稿模型倒数第二层的因果注意力图，量一行注意力分得有多散。</p>
-<div class="warning"><b>先把边界说死：</b>这是注意力熵<a class="jr" href="#g-04">4</a>，作者把它当连续特征预测不确定性的代理；它不是连续输出分布的精确熵。<code>r=0.64</code> 的相关性支持“能当信号用”，不等于两者完全相同。</div>
+<h2><span class="n">§ 01</span><span>论文说的“预测熵”，到底是哪个张量</span></h2>
+<p class="lead">“预测熵”这个名字容易让人以为模型显式吐出了一条概率分布，再对它算熵。不是。Eq. (4) 读的是<strong>注意力</strong>——草稿模型倒数第二层那张注意力图，量其中一行摊得有多开。</p>
+
+<h3>1.1 先看清“一行注意力”是什么</h3>
+<p>模型写第 <code class="m">r</code> 个位置时，要决定前面每个位置各参考多少。这组权重过一遍 softmax，加起来正好是 1——所以它本身<strong>就是一条概率分布</strong>，只不过分的不是“下一个 token 是谁”，而是“注意力往哪儿投”。因果 mask<a class="jr" href="#g-05">5</a>决定这一行只有 <code class="m">r</code> 个数：第 <code class="m">r</code> 行只能看自己和前面。</p>
+<div class="math-sheet"><b>把注意力图想成一张下三角表，行 = 正在写哪个位置，列 = 它在看谁</b>
+
+           看第1位  看第2位  看第3位  看第4位
+  写第1位     1.00      -        -        -      只有自己，没得选
+  写第2位      .90     .10       -        -      几乎只抄左邻
+  写第3位      .40     .35      .25       -      三处都要看一点
+  写第4位      .85     .05      .05      .05     认死了第 1 位
+
+每一行自己加起来 = 1。要量的就是「这一行是集中在一格，还是摊平在几格」。</div>
+
+<h3>1.2 熵就是把“摊得多开”压成一个数</h3>
+<p>一行有 <code class="m">r</code> 个数，不好直接互相比较。熵把整行压成一个标量：<strong>全押一格 → 0；完全均匀 → 最大</strong>。两格的情形一行就能口算：</p>
+<div class="math-sheet">[1, 0]      全押第一格             H = 0                 → 归一化后 <b>0</b>
+[.5, .5]    两格对半，最摊         H = ln 2 = .6931      → 除以满分 ln 2 = <b>1</b>
+
+“满分”就是这一行完全均匀时的熵。行有几格，满分就是 ln(几格)，
+所以每行除以自己的满分，不同长度的行才能放在同一把 0～1 的尺子上量。</div>
+<p>四个位置的真实手算、以及“为什么分母是 <code class="m">\log r</code>”，在 <a href="#entropy">§ 04</a> 展开。这里只要记住结论：<strong>每个位置最后得到一个 0～1 之间的数，越大表示这一步的注意力越摊。</strong></p>
+
+<h3>1.3 注意力摊开，凭什么就等于模型没把握</h3>
+<p>这是全篇的支点，值得说透。注意力集中，意思是模型认定“照着这一处抄就够了”——大片天空的下一个位置，抄左邻即可，不必东张西望。注意力摊开，意思是<strong>没有哪一处单独够用</strong>，它得从好几个地方各取一点拼出来；而需要东拼西凑的位置，通常也正是它拿不准的位置。物体边缘、密集纹理就属于这一类。</p>
+<p>注意这只是一条<strong>经验上的对应关系</strong>，不是恒等式。论文给的证据是相关性：逐位置的注意力熵与 AR 预测误差，Pearson 相关系数 <code class="m">0.64</code>。</p>
+
+<h3>1.4 0.64 撑得起什么，撑不起什么</h3>
+<p>Pearson 相关系数量的是“两个量有多接近同涨同落”：1 是完全同步，0 是毫无线性关系。0.64 属于<strong>方向明显一致，但远谈不上重合</strong>。把它平方一下更好体会：</p>
+<div class="math-sheet">0.64² = <b>0.41</b>
+
+读法：逐位置预测误差的波动里，大约四成能被「熵」这条直线解释，
+剩下六成不能。所以熵拿来<b>排序</b>（哪些位置更该多留余地）站得住，
+拿来<b>估计具体误差有多大</b>就不行。</div>
+<div class="warning"><b>先把边界说死：</b>这是注意力熵<a class="jr" href="#g-04">4</a>——作者把它当作连续特征预测不确定性的<strong>代理量</strong>，它不是连续输出分布的精确熵。0.64 的相关性支持“能当信号用”，不等于两者是同一回事。分布外或者换成没有因果注意力的架构，这条对应关系未必还成立。</div>
+
+<h3>1.5 为什么读倒数第二层</h3>
+<p>论文取的是倒数第二层，不是最后一层。常见的理由是最后一层往往已经在为输出投影做特化，倒数第二层保留的还是比较通用的表示——但<strong>这条理由不是论文给的，它没有对层数做消融</strong>，也没有解释这个选择。照搬到别的骨架上时，这是需要自己重测的一个点。</p>
 <figure>
   <figcaption><span>Fig 02 · 同一张熵图的两种用途</span><b>easy region ≠ hard region</b></figcaption>
   <div class="signal-grid">
@@ -183,11 +219,12 @@ figcaption b{color:var(--amber)}
     </div>
     <div class="evidence reveal d2">
       <div><b>0.64</b><span>逐位置熵与 AR 预测误差的 Pearson 相关系数</span></div>
-      <div><b>左线</b><span>草稿熵过低，可能是小模型塌成过度自信</span></div>
-      <div><b>右线</b><span>熵越高，初始高斯给这一位置留的散布越大</span></div>
+      <div><b>用途一</b><span>草稿熵过低，可能是小模型塌成了过度自信，该喊停</span></div>
+      <div><b>用途二</b><span>熵越高，解码起步时给这一位置留的散布越大</span></div>
     </div>
   </div>
 </figure>
+<p>同一张熵图，两处用法完全不同——下一节先把这两条线的位置摆清楚，再逐个拆开。</p>
 </section>
 
 <section id="map">
@@ -233,7 +270,7 @@ figcaption b{color:var(--amber)}
   </div>
 </figure>
 <div class="vars">
-  <div class="var"><code class="m">Z_{1}:j</code> · 已有的连续 AR 特征序列。</div><div class="var"><code class="m">F_{1}:j</code> · 目标模型相应位置的隐藏状态。</div>
+  <div class="var"><code class="m">Z_{1:j}</code> · 已有的连续 AR 特征序列。</div><div class="var"><code class="m">F_{1:j}</code> · 目标模型相应位置的隐藏状态。</div>
   <div class="var"><code class="m">z_{j+1}</code> · 目标模型给出的下一连续特征。</div><div class="var"><code>Smooth L1</code><a class="jr" href="#g-06">6</a> · 小误差平方精修，大误差线性限幅。</div>
 </div>
 <p class="formula-purpose">连续特征回归：草稿下一向量要靠近目标下一向量</p>
@@ -250,21 +287,21 @@ figcaption b{color:var(--amber)}
 
 <section id="entropy">
 <h2><span class="n">§ 04</span><span>熵公式：为什么要除以 log r</span></h2>
-<p class="lead">因果注意力<a class="jr" href="#g-05">5</a>第 <code>r</code> 行只能看前 <code>r</code> 个位置。第 4 行比第 2 行候选更多，原始熵天然更大；除以各自满分 <code>log r</code>，才有同一把 <code>0～1</code> 量尺。</p>
+<p class="lead">因果注意力<a class="jr" href="#g-05">5</a>第 <code class="m">r</code> 行只能看前 <code class="m">r</code> 个位置。第 4 行比第 2 行候选更多，原始熵天然更大；除以各自满分 <code class="m">\log r</code>，才有同一把 <code>0～1</code> 量尺。</p>
 <div class="vars">
-  <div class="var"><code>r</code> · 当前查询位置，也是这一行最多能看的位置数。</div><div class="var"><code>c</code> · 被关注的位置编号。</div>
-  <div class="var"><code class="m">\Omega_{r},c</code> · softmax 后的注意力概率，整行加起来为 1。</div><div class="var"><code>log r</code> · <code>r</code> 个候选完全均匀时的最大熵。</div>
+  <div class="var"><code class="m">r</code> · 当前查询位置，也是这一行最多能看的位置数。</div><div class="var"><code class="m">c</code> · 被关注的位置编号。</div>
+  <div class="var"><code class="m">\Omega_{r,c}</code> · softmax 后的注意力概率，整行加起来为 1。</div><div class="var"><code class="m">\log r</code> · <code class="m">r</code> 个候选完全均匀时的最大熵。</div>
 </div>
 <p class="formula-purpose">一行注意力分得有多散</p>
 <div class="formula"><span data-tex="\mathcal E_{\mathrm{entropy}}^{(r)}=-\frac{1}{\log r}\sum_{c=1}^{r}\Omega_{r,c}\log\Omega_{r,c}"></span></div>
 <figure>
   <figcaption><span>Fig 05 · 四位置手算</span><b>0.4238 vs 0.8805</b></figcaption>
   <div class="entropy-compare">
-    <div class="entropy-card low reveal"><span class="tag">DRAFT · OVERCONFIDENT</span><h4>[.85, .05, .05, .05]</h4><div class="matrix"><div class="cell dominant">.85</div><div class="cell">.05</div><div class="cell">.05</div><div class="cell">.05</div></div><p><code>H=.5875</code> · <code>E=.5875/log4=.4238</code></p><div class="meter"><i></i></div></div>
-    <div class="entropy-card high reveal d2"><span class="tag">TARGET · MORE DISTRIBUTED</span><h4>[.50, .20, .20, .10]</h4><div class="matrix"><div class="cell">.50</div><div class="cell">.20</div><div class="cell">.20</div><div class="cell">.10</div></div><p><code>H=1.2206</code> · <code>E=1.2206/log4=.8805</code></p><div class="meter"><i></i></div></div>
+    <div class="entropy-card low reveal"><span class="tag">DRAFT · OVERCONFIDENT</span><h4>[.85, .05, .05, .05]</h4><div class="matrix"><div class="cell dominant">.85</div><div class="cell">.05</div><div class="cell">.05</div><div class="cell">.05</div></div><p><code class="m">H=.5875</code> · <code class="m">\mathcal E=.5875/\log 4=.4238</code></p><div class="meter"><i></i></div></div>
+    <div class="entropy-card high reveal d2"><span class="tag">TARGET · MORE DISTRIBUTED</span><h4>[.50, .20, .20, .10]</h4><div class="matrix"><div class="cell">.50</div><div class="cell">.20</div><div class="cell">.20</div><div class="cell">.10</div></div><p><code class="m">H=1.2206</code> · <code class="m">\mathcal E=1.2206/\log 4=.8805</code></p><div class="meter"><i></i></div></div>
   </div>
 </figure>
-<p>第 1 行只有自己一个候选，熵必定为 0，而且 <code>log1=0</code> 不能当分母，所以求和从 <code>r=2</code> 开始。</p>
+<p>第 1 行只有自己一个候选，熵必定为 0，而且 <code class="m">\log 1=0</code> 不能当分母，所以求和从 <code class="m">r=2</code> 开始。</p>
 <p class="formula-purpose">总损失：最小化负熵，也就是把熵推高</p>
 <div class="formula"><span data-tex="\mathcal L_{\mathrm{entropy}}=-\frac1R\sum_{r=2}^{R}\mathcal E_{\mathrm{entropy}}^{(r)}"></span></div>
 <div class="warning"><b>论文措辞比公式更强：</b>它称这一步“对齐草稿与目标熵”，可式子里没有目标熵，也没有二者的距离。公式实际做的是提高草稿注意力熵，缓解过度自信。详见 <a href="../concepts/causal-normalized-attention-entropy.html">归一化注意力熵</a>。</div>
@@ -278,11 +315,11 @@ figcaption b{color:var(--amber)}
 <figure>
   <figcaption><span>Fig 06 · 动态停止线</span><b>draft E &lt; τc → stop</b></figcaption>
   <div class="threshold">
-    <div class="pipe-card reveal"><span class="tag">TRAIN STATS</span><div class="num">.17</div><p><code class="m">.3\times .6- .1\times .1</code></p></div>
+    <div class="pipe-card reveal"><span class="tag">TRAIN STATS</span><div class="num">.17</div><p><code class="m">.3\times.6-.1\times.1</code></p></div>
     <div class="flow-arrow reveal d2">→</div>
     <div class="pipe-card reveal d3"><span class="tag">TARGET EMA</span><div class="num">.24125</div><p><code class="m">.9\times .2125+.1\times .5</code></p></div>
     <div class="flow-arrow reveal d4">→</div>
-    <div class="pipe-card reveal d5"><span class="tag">DYNAMIC τc</span><div class="num">.193</div><p>草稿熵 <code>.15&lt;.193</code><br><b>停止继续起草</b></p></div>
+    <div class="pipe-card reveal d5"><span class="tag">DYNAMIC τc</span><div class="num">.193</div><p>草稿熵 <code class="m">.15&lt;.193</code><br><b>停止继续起草</b></p></div>
   </div>
 </figure>
 <p>复杂区域目标熵高，停止线也高，更容易拦下过度自信的草稿；平滑区域目标熵低，停止线随之放宽。目标模型验证时本来就会生成注意力图，因此没有多加一套网络。</p>
@@ -292,15 +329,15 @@ figcaption b{color:var(--amber)}
 <h2><span class="n">§ 06</span><span>右线：把熵变成高斯标准差</span></h2>
 <p class="lead">AR 已经给出每个位置的连续特征。Drift-AR 不再从统一噪声起步，而是让 AR 特征当高斯中心，熵决定这一位置要散多开。</p>
 <div class="vars">
-  <div class="var"><code class="m">E\in [0,1]</code> · 当前位置的归一化注意力熵。</div><div class="var"><code class="m">\sigma (E)</code> · 标准差/噪声尺度，不是方差本身。</div>
-  <div class="var"><code class="m">\sigma_{\mathrm{\max }}=.5</code> · 实验里的尺度上限。</div><div class="var"><code class="m">\tau \sigma =2</code> · 映射曲线的弯曲程度。</div>
+  <div class="var"><code class="m">\mathcal E\in[0,1]</code> · 当前位置的归一化注意力熵。</div><div class="var"><code class="m">\sigma(\mathcal E)</code> · 标准差/噪声尺度，不是方差本身。</div>
+  <div class="var"><code class="m">\sigma_{\max}=.5</code> · 实验里的尺度上限。</div><div class="var"><code class="m">\tau_\sigma=2</code> · 映射曲线的弯曲程度。</div>
 </div>
 <p class="formula-purpose">归一化熵 → 噪声尺度</p>
 <div class="formula"><span data-tex="\sigma(\mathcal E)=\sigma_{\max}\cdot\frac{\exp(\mathcal E/\tau_\sigma)-1}{\exp(\mathcal E_{\max}/\tau_\sigma)-1}"></span></div>
-<div class="vars"><div class="var"><code>r</code> · 展开后的空间位置。</div><div class="var"><code>zAR(r)</code> · AR 特征，也是高斯均值。</div><div class="var"><code>I</code> · 单位矩阵，各特征维先用同一尺度。</div><div class="var"><code>N(均值,协方差)</code> · 多元高斯；这里协方差是 <code class="m">\sigma^{2}I</code>。</div></div>
+<div class="vars"><div class="var"><code class="m">r</code> · 展开后的空间位置。</div><div class="var"><code class="m">z_{\mathrm{AR}}^{(r)}</code> · AR 特征，也是高斯均值。</div><div class="var"><code class="m">I</code> · 单位矩阵，各特征维先用同一尺度。</div><div class="var"><code>N(均值,协方差)</code> · 多元高斯；这里协方差是 <code class="m">\sigma^{2}I</code>。</div></div>
 <p class="formula-purpose">逐位置高斯与重参数采样<a class="jr" href="#g-09">9</a></p>
 <div class="formula"><span data-tex="q\!\left(x^{(r)}\mid z_{\mathrm{AR}}^{(r)},\mathcal E^{(r)}\right)=\mathcal N\!\left(z_{\mathrm{AR}}^{(r)},\sigma^2(\mathcal E^{(r)})I\right),\qquad x_0^{(r)}=z_{\mathrm{AR}}^{(r)}+\sigma(\mathcal E^{(r)})\epsilon"></span></div>
-<div class="warning"><b>论文这里的文字不够严谨：</b>它多次把 <code class="m">\sigma</code> 叫 variance，可高斯协方差写的是 <code class="m">\sigma^{2}I</code>，采样也乘 <code class="m">\sigma</code>。标准概率记号下，<code class="m">\sigma</code> 是标准差<a class="jr" href="#g-08">8</a>，真正方差是 <code class="m">\sigma^{2}</code>。多元高斯<a class="jr" href="#g-07">7</a>的 <code>I</code> 表示各维先用同一尺度、互不相关。</div>
+<div class="warning"><b>论文这里的文字不够严谨：</b>它多次把 <code class="m">\sigma</code> 叫 variance，可高斯协方差写的是 <code class="m">\sigma^{2}I</code>，采样也乘 <code class="m">\sigma</code>。标准概率记号下，<code class="m">\sigma</code> 是标准差<a class="jr" href="#g-08">8</a>，真正方差是 <code class="m">\sigma^{2}</code>。多元高斯<a class="jr" href="#g-07">7</a>的 <code class="m">I</code> 表示各维先用同一尺度、互不相关。</div>
 <figure>
   <figcaption><span>Fig 07 · 同一中心，不同散布</span><b>zAR=1.2 · ε=−.5</b></figcaption>
   <div class="sigma-grid">
@@ -317,17 +354,17 @@ figcaption b{color:var(--amber)}
 <figure>
   <figcaption><span>Fig 08 · 训练数据流</span><b>训练脚手架最后全部删除</b></figcaption>
   <div class="drift-flow">
-    <div class="pipe-card reveal"><span class="tag">ONE FORWARD</span><h4>fθ(x₀,c,E)</h4><p>一次前向得到当前图像 latent <code>x̂</code></p></div>
+    <div class="pipe-card reveal"><span class="tag">ONE FORWARD</span><h4>fθ(x₀,c,E)</h4><p>一次前向得到当前图像 latent <code class="m">\hat x</code></p></div>
     <div class="flow-arrow reveal d2">→</div>
     <div class="pipe-card reveal d3"><span class="tag">FROZEN φ</span><h4>统一特征空间</h4><p>复制目标 AR 倒数第二层，参数冻结，输入梯度仍保留。</p></div>
     <div class="flow-arrow reveal d4">→</div>
-    <div class="pipe-card reveal d5"><span class="tag">KERNEL DRIFT</span><h4>真实吸引 − 生成方向</h4><p>得到本轮净漂移 <code class="m">V_{p},q</code></p></div>
+    <div class="pipe-card reveal d5"><span class="tag">KERNEL DRIFT</span><h4>真实吸引 − 生成方向</h4><p>得到本轮净漂移 <code class="m">V_{p,q}</code></p></div>
   </div>
   <div class="force-strip reveal d5"><div class="plus">V⁺ · 吸向真实</div><div class="minus">−V⁻ · 离开生成团块</div><div class="net">V = V⁺ − V⁻</div></div>
 </figure>
 <div class="vars">
-  <div class="var"><code class="m">\phi</code><a class="jr" href="#g-13">13</a> · 冻结特征编码器；权重不更新，梯度仍能穿过输入。</div><div class="var"><code class="m">V_{p},q</code><a class="jr" href="#g-10">10</a> · 真实分布 <code>p</code> 与当前生成分布 <code>q</code> 算出的核漂移。</div>
-  <div class="var"><code>stopgrad</code><a class="jr" href="#g-12">12</a> · 右侧只当本轮固定目标。</div><div class="var"><code class="m">||\cdot ||^{2}_{2}</code> · 特征逐项作差、平方后求和。</div>
+  <div class="var"><code class="m">\phi</code><a class="jr" href="#g-13">13</a> · 冻结特征编码器；权重不更新，梯度仍能穿过输入。</div><div class="var"><code class="m">V_{p,q}</code><a class="jr" href="#g-10">10</a> · 真实分布 <code class="m">p</code> 与当前生成分布 <code class="m">q</code> 算出的核漂移。</div>
+  <div class="var"><code>stopgrad</code><a class="jr" href="#g-12">12</a> · 右侧只当本轮固定目标。</div><div class="var"><code class="m">\|\cdot\|_2^2</code> · 特征逐项作差、平方后求和。</div>
 </div>
 <p class="formula-purpose">当前特征朝冻结临时目标移动</p>
 <div class="formula"><span data-tex="\mathcal L_{\mathrm{drift}}=\mathbb E\left[\left\|\phi(\hat x)-\operatorname{stopgrad}\!\left(\phi(\hat x)+V_{p,q}(\phi(\hat x))\right)\right\|_2^2\right]"></span></div>
@@ -347,25 +384,25 @@ dL/dw=2(.9869−1.7869)×.9869≈−1.5790
 w_new=1−.1×(−1.5790)=1.1579
 x̂_new=1.1579×.9869≈1.1427
 旧靶验方向：L_new=(1.1427−1.7869)²≈.4150  ✓</div>
-<p>损失确实下降，输出朝本轮目标移动。下一轮会重新采样、重算 <code>q</code> 和 <code>V</code>，不会永久追这一个旧靶。反对称<a class="jr" href="#g-11">11</a>保证 <code>p=q</code> 时漂移为零；它不自动证明反过来的 <code class="m">V=0\Rightarrow p=q</code>。</p>
+<p>损失确实下降，输出朝本轮目标移动。下一轮会重新采样、重算 <code class="m">q</code> 和 <code class="m">V</code>，不会永久追这一个旧靶。反对称<a class="jr" href="#g-11">11</a>保证 <code class="m">p=q</code> 时漂移为零；它不自动证明反过来的 <code class="m">V=0\Rightarrow p=q</code>。</p>
 </section>
 
 <section id="schedule">
 <h2><span class="n">§ 08</span><span>为什么前 80% 联合训，后 20% 冻结 AR</span></h2>
 <p class="lead">AR 一更新，<code class="m">z_{\mathrm{AR}}</code> 和熵图就变，解码起点分布也跟着搬家。漂移解码器若一直追着移动的源分布学，很难稳定。</p>
-<div class="vars"><div class="var"><code class="m">\alpha (t)</code> · 当前训练进度给 AR 两项的权重。</div><div class="var"><code>Lreg + Lentropy</code> · 草稿准确性与防过度自信。</div><div class="var"><code>Ldrift</code> · 单步视觉解码器损失。</div><div class="var"><code class="m">1-\alpha (t)</code> · 漂移损失权重，与 AR 此消彼长。</div></div>
+<div class="vars"><div class="var"><code class="m">\alpha (t)</code> · 当前训练进度给 AR 两项的权重。</div><div class="var"><code class="m">\mathcal L_{\mathrm{reg}}+\mathcal L_{\mathrm{entropy}}</code> · 草稿准确性与防过度自信。</div><div class="var"><code class="m">\mathcal L_{\mathrm{drift}}</code> · 单步视觉解码器损失。</div><div class="var"><code class="m">1-\alpha (t)</code> · 漂移损失权重，与 AR 此消彼长。</div></div>
 <p class="formula-purpose">AR 权重逐步让位给漂移损失</p>
 <div class="formula"><span data-tex="\mathcal L_{\mathrm{total}}=\alpha(t)\left(\mathcal L_{\mathrm{reg}}+\mathcal L_{\mathrm{entropy}}\right)+\left(1-\alpha(t)\right)\mathcal L_{\mathrm{drift}}"></span></div>
 <figure>
   <figcaption><span>Fig 09 · α(t) 从 .95 降到 0</span><b>source q 先稳定，再固定</b></figcaption>
   <div class="schedule">
     <div class="phase start reveal"><span class="tag">t=0</span><b>α=.95</b><strong>AR 95% · Drift 5%</strong><p>解码器从一开始就有小信号，避免冷启动。</p><div class="bar"><i></i></div></div>
-    <div class="phase mid reveal d2"><span class="tag">t=.4T</span><b>α=.475</b><strong>AR 47.5% · Drift 52.5%</strong><p><code class="m">.95- .95\times (.4/.8)</code></p><div class="bar"><i></i></div></div>
+    <div class="phase mid reveal d2"><span class="tag">t=.4T</span><b>α=.475</b><strong>AR 47.5% · Drift 52.5%</strong><p><code class="m">.95-.95\times(.4/.8)</code></p><div class="bar"><i></i></div></div>
     <div class="phase end reveal d3"><span class="tag">t=.8T</span><b>α=0</b><strong>冻结 AR · 纯 Drift</strong><p>后 20% 固定先验，不准漂移梯度改 AR。</p><div class="bar"><i></i></div></div>
   </div>
   <div class="schedule-key"><span><i class="ar"></i>AR loss</span><span><i class="drift"></i>Drift loss</span></div>
 </figure>
-<div class="plain"><b>“端到端”不等于全程一起更新。</b>Phase I 在同一流水线联合优化；Phase II 明确 detach <code class="m">z_{\mathrm{AR}}</code> 和熵图，只让漂移解码器继续学。移动的是源分布 <code>q</code>，真实目标 <code>p</code> 并没有移动。</div>
+<div class="plain"><b>“端到端”不等于全程一起更新。</b>Phase I 在同一流水线联合优化；Phase II 明确 detach <code class="m">z_{\mathrm{AR}}</code> 和熵图，只让漂移解码器继续学。移动的是源分布 <code class="m">q</code>，真实目标 <code class="m">p</code> 并没有移动。</div>
 </section>
 
 <section id="infer">
@@ -392,8 +429,8 @@ x̂_new=1.1579×.9869≈1.1427
   <div><b>BACKBONES</b><span>MAR · TransDiff · NextStep-1</span></div>
   <div><b>DRAFT</b><span>TransDiff 使用 6 层草稿 Transformer</span></div>
   <div><b>SCHEDULE</b><span>Phase I 80% · Phase II 20%</span></div>
-  <div><b>PRIOR</b><span>σmax=.5 · τσ=2.0</span></div>
-  <div><b>DRIFT KERNEL</b><span>τ∈{.02,.05,.2}</span></div>
+  <div><b>PRIOR</b><span><code class="m">\sigma_{\max}=.5</code> · <code class="m">\tau_\sigma=2.0</code></span></div>
+  <div><b>DRIFT KERNEL</b><span><code class="m">\tau\in\{.02,.05,.2\}</code></span></div>
   <div><b>IMAGENET</b><span>AdamW · lr 1e−4 · batch 32</span></div>
 </div>
 <div class="warning"><b>没有公开：</b>训练硬件、精度、总 step、表中延迟的 batch 与设备口径、连续特征验收规则、实际接受率、Entropy-AdaLN 实现。截至 2026-07-24，论文链接的官方仓库只有空项目页，没有代码文件。</div>
@@ -458,7 +495,7 @@ x̂_new=1.1579×.9869≈1.1427
 <p>原 diffusion 直接减到一步，FID 崩到 <code>14.72</code>；Drift-AR 的目标从训练开始就是一次前向，所以一步仍到 <code>1.57</code>。这不代表 DMD 原理上必须多步：原始 DMD<a class="jr" href="#g-18">18</a>同样能训练一步学生，区别在于老师 score 蒸馏和直接样本核漂移。</p>
 <h3>σmax 也不能无限加大</h3>
 <div class="table-wrap"><table><thead><tr><th>σmax</th><th>.1</th><th>.3</th><th>.5</th><th>.7</th><th>1.0</th></tr></thead><tbody><tr><td>FID↓</td><td>1.68</td><td>1.58</td><td><b>1.57</b></td><td><b>1.57</b></td><td>1.64</td></tr><tr><td>IS↑</td><td>292.7</td><td>296.5</td><td><b>298.1</b></td><td>296.3</td><td>293.1</td></tr></tbody></table></div>
-<p>太小几乎缩成一个点，没有覆盖面；太大撒得太开，一步修不回来。<code class="m">\sigma_{\mathrm{\max }}</code> 是修正范围上限，不是越大越有创造力。</p>
+<p>太小几乎缩成一个点，没有覆盖面；太大撒得太开，一步修不回来。<code class="m">\sigma_{\max}</code> 是修正范围上限，不是越大越有创造力。</p>
 </section>
 
 <section id="limits">
@@ -489,7 +526,7 @@ x̂_new=1.1579×.9869≈1.1427
   <li id="g-08"><span class="term">Standard deviation / variance</span> · 标准差是 σ，方差是 σ²；本文文字有时把两者混叫 variance。</li>
   <li id="g-09"><span class="term">Reparameterization</span> · 用 <code class="m">x=\mu +\sigma \epsilon</code> 把随机性移到 ε，使 μ、σ 仍可反传。</li>
   <li id="g-10"><span class="term">Drifting field</span> · 真实样本吸引、生成样本排斥合成的局部更新方向。</li>
-  <li id="g-11"><span class="term">Anti-symmetry</span> · <code class="m">V_{p},q=-Vq,p</code>；交换两分布，方向反转，因此 p=q 时漂移为零。</li>
+  <li id="g-11"><span class="term">Anti-symmetry</span> · <code class="m">V_{p,q}=-V_{q,p}</code>；交换两分布，方向反转，因此 p=q 时漂移为零。</li>
   <li id="g-12"><span class="term">stopgrad</span> · 前向保留数值，反向把该分支当常数；这里只冻结本轮目标。</li>
   <li id="g-13"><span class="term">Frozen feature encoder</span> · 权重不更新，但对输入的导数仍在，能把特征损失传回生成器。</li>
   <li id="g-14"><span class="term">Entropy-AdaLN</span> · 用熵条件临时生成归一化调制参数，让不同空间位置获得不同处理。</li>
