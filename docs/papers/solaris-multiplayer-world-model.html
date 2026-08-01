@@ -38,7 +38,7 @@ h2{display:grid;grid-template-columns:68px 1fr;gap:18px;align-items:baseline;mar
 h2>span:last-child{min-width:0;overflow-wrap:anywhere}
 h2 .n{color:var(--cyan);font:500 11px/1.4 "DM Mono",monospace;letter-spacing:2px}
 h3{font-size:25px;line-height:1.45;margin:34px 0 12px}
-section>ul{margin:14px 0;padding-left:23px}section>ul>li{margin:9px 0}p{margin:12px 0}.lead{font-size:20px;color:#31414a}
+section>ul,section>ol{margin:14px 0;padding-left:23px}section>ul>li,section>ol>li{margin:9px 0}p{margin:12px 0}.lead{font-size:20px;color:#31414a}
 a{color:var(--cyan);text-underline-offset:3px}
 code{background:var(--paper2);border:1px solid var(--line);padding:2px 5px;border-radius:3px;font:500 .86em/1.4 "DM Mono",monospace}
 .formula-purpose{margin-top:22px;color:var(--blue);font:700 17px/1.5 "Noto Sans SC",sans-serif}
@@ -121,7 +121,12 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
 
 <section id="s0">
   <h2><span class="n">SECTION 00</span><span>先看完整系统：部署时只有一个因果生成器</span></h2>
-  <p class="lead">训练时有高质量双向 teacher 和因果 student；推理时保留 student。四阶段不是四套互不相关的模型，而是一条能力迁移路线。</p>
+  <p class="lead">要玩的东西必须<strong>边按键边出画面</strong>，所以部署时只能留一个"只看过去"的生成器。但这种生成器单独训质量很差，于是训练时还要养一个只在训练期间存在的高质量陪练。四个阶段不是四套互不相关的模型，而是一条能力迁移路线。</p>
+  <div class="mismatch">
+    <div class="side train"><h4>双向 teacher · 只活在训练期</h4><p><strong>每个 token 前后都能看。</strong></p><p>整段视频一起去噪，信息最全，质量最高。代价是必须<strong>整段都在手上</strong>才能算——你按一下 W 它算不出下一帧，因为它还等着看第 100 帧。</p></div>
+    <div class="side test"><h4>因果 student · 真正部署的那个</h4><p><strong>只能看过去。</strong></p><p>可以一帧一帧往外吐，边玩边生成。代价是可用信息少，直接从零训质量明显不如双向。</p></div>
+  </div>
+  <p>所以走的是既定套路：<strong>先把双向那个训好，再把它改造成因果的，改造过程中拿双向版当 teacher 把质量拉住。</strong>§05 的四个阶段就是这条改造路线，§06 和 §07 是改造的最后一步。</p>
   <figure>
     <figcaption><span>Fig 01 · 输入、联合建模与双路输出</span><b>一项事件，两份观察</b></figcaption>
     <div class="flow">
@@ -174,6 +179,7 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
     <figcaption><span>Fig 04 · 六维视频 latent</span><b>P 不是普通 batch</b></figcaption>
     <div class="shape"><div class="dim"><b>B</b><span>一批有几局</span></div><div class="dim player"><b>P</b><span>每局几位玩家<br>本文 P=2</span></div><div class="dim"><b>T</b><span>时间位置</span></div><div class="dim"><b>H</b><span>latent 高</span></div><div class="dim"><b>W</b><span>latent 宽</span></div><div class="dim"><b>C</b><span>latent 通道</span></div></div>
   </figure>
+  <p>取 <code>B=2, P=2, T=3</code> 读一遍：一批有 2 局，每局 2 位玩家，每人 3 个时间位置。<strong>关键是 <code>P</code> 这一维不能当成把 batch 翻倍。</strong>batch 里的样本互不相干，各算各的；而同一局的两位玩家必须互换信息，否则就退化成两个各跑各的单人模型——正是 §01 说的那个失败模式。</p>
   <p class="formula-purpose">整段视频的自回归概率：</p>
   <div class="symbols"><div class="sym"><b><code>\theta</code></b>Solaris 参数</div><div class="sym"><b><code>x_t</code></b>时刻 t 的联合画面</div><div class="sym"><b><code>x_{&lt;t}</code></b>此前联合画面</div><div class="sym"><b><code>a_{&lt;t}</code></b>此前玩家动作</div></div>
   <div class="formula" data-expr="p_\theta(\mathbf{x})=\prod_{t=1}^{T}p_\theta(\mathbf{x}_t\mid \mathbf{x}_{<t},\mathbf{a}_{<t})"></div>
@@ -186,7 +192,37 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
       <div class="shared">两组视觉 token 交错后进入同一 self-attention → 此处交换跨视角信息</div>
     </div>
   </figure>
-  <p>首帧 cross-attention 仍按玩家独立；其他模块跨玩家共享权重。动作模块实现上把 <code>B P T D</code> 临时整理成 <code>(B P) T D</code>，因此 A 按 W 不会被误当成 B 的动作。</p>
+  <h3>"交错进同一个 self-attention"具体是什么样</h3>
+  <p>这句话是整篇论文唯一的架构改动，值得摊开算一遍。把每一帧简化成 1 个 token，取 <code>P=2, T=2</code>，按时刻交错排成一条序列：</p>
+  <div class="calc">
+    <span class="hi">序列位置</span>&nbsp; 1 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 2 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 3 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 4<br>
+    <span class="hi">token &nbsp;&nbsp;</span>&nbsp; P1·t1 &nbsp; P2·t1 &nbsp; P1·t2 &nbsp; P2·t2<br><br>
+    <span class="hi">谁能读谁（因果卡在"时刻"这一级）</span><br>
+    P1·t1 → 可读 P1·t1, <span class="ans">P2·t1</span><br>
+    P2·t1 → 可读 <span class="ans">P1·t1</span>, P2·t1<br>
+    P1·t2 → 可读 P1·t1, <span class="ans">P2·t1</span>, P1·t2, <span class="ans">P2·t2</span><br>
+    P2·t2 → 可读 <span class="ans">P1·t1</span>, P2·t1, <span class="ans">P1·t2</span>, P2·t2<br><br>
+    <span class="hi">橙色就是跨视角信息通道。</span>同一时刻的两人互相可见——它们描述的是<br>
+    同一瞬间的世界；跨时刻只能往回看，保证部署时不偷看未来。
+  </div>
+  <p>拿 §01 那根火把走一遍这张表，机制就落地了：</p>
+  <ol>
+    <li>A 在 <code>t1</code> 按下放置键。动作模块<strong>只把这个动作注入 P1·t1</strong>——动作是分玩家读的，B 的通道里根本没有这个键。</li>
+    <li>进入共享 attention，<strong>P2·t1 读到了 P1·t1</strong>。B 这一刻的表示里于是带上了"这个位置多了个火把"。</li>
+    <li>生成 <code>t2</code> 时，P2·t2 又能读回 P1·t1 和 P2·t1，火把在 B 的画面里持续存在，而不是闪一下就没。</li>
+  </ol>
+  <p>反过来看 Frame concat 基线为什么不行：它把两路画面沿<strong>通道</strong>拼，等于让每个空间位置同时装着 A 和 B 的像素。网络确实能同时看见两路，但没有"这些 token 属于谁"的标签，也没有一条像上表这样明确的读取通道，只能靠卷积/注意力自己碰运气对上。</p>
+  <p class="formula-purpose">顺带算一下这条共享序列的真实代价：</p>
+  <div class="calc">
+    latent 若是 16×16，一帧就是 <span class="ans">256</span> 个 token（不是上面简化的 1 个）<br>
+    窗口 6 帧、2 位玩家 → 一条序列 = 6 × 2 × 256 = <span class="ans">3,072</span> token<br>
+    attention 矩阵 = 3,072 × 3,072 ≈ <span class="ans">944 万</span> 个分数<br><br>
+    <span class="hi">同样窗口下单人只有 1,536 token、236 万个分数。</span><br>
+    多一个玩家，token 数翻倍，注意力开销翻<span class="ans">四</span>倍——这就是<br>
+    §07 那么在意显存的原因。
+  </div>
+  <div class="warn">论文只说两人的视觉 token "沿序列维交错"，<strong>没有写明具体排列顺序</strong>。上面按"时刻优先"排是最自然的一种读法，用来讲清机制；真实实现可能是别的排法，但不影响"同一时刻两人互相可见、跨时刻只能回看"这个结论。</div>
+  <p>最后两处细节。<strong>首帧 cross-attention 仍按玩家独立</strong>：每一路只读自己那张初始画面，不然两人的世界会从第一帧就串味。<strong>动作模块把 <code>B P T D</code> 临时整理成 <code>(B P) T D</code></strong>：小括号表示把这两维压成一维，于是 2 局 × 2 人变成 4 条互不相干的样本各走各的——在这个模块里玩家之间是彻底隔离的，A 按的 W 没有任何路径能流到 B。跨玩家的交流只发生在共享 attention 那一处，别的地方一概不发生。</p>
 </section>
 
 <section id="s4">
@@ -194,9 +230,13 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
   <div class="symbols"><div class="sym"><b><code>x</code></b>真实双人视频 latent</div><div class="sym"><b><code>\epsilon</code></b>同形状高斯噪声</div><div class="sym"><b><code>\sigma</code></b>噪声比例：0 干净，1 全噪声</div><div class="sym"><b><code>x_\sigma</code></b>混合后的训练输入</div><div class="sym"><b><code>v_\theta</code></b>网络预测速度</div><div class="sym"><b><code>a</code></b>两位玩家动作</div></div>
   <p class="formula-purpose">先把真实 latent 和随机噪声按比例混合：</p>
   <div class="formula" data-expr="\mathbf{x}_{\boldsymbol{\sigma}}=(1-\boldsymbol{\sigma})\mathbf{x}+\boldsymbol{\sigma}\boldsymbol{\epsilon},\qquad \boldsymbol{\epsilon}\sim\mathcal{N}(0,I)"></div>
-  <p class="formula-purpose">沿这条直线的正确速度是 <code>ε−x</code>，网络用平方误差拟合：</p>
+  <p>这条式子把 <code>σ</code> 当成"走了多远"：<code>σ=0</code> 停在真实 latent，<code>σ=1</code> 停在纯噪声，中间是一条把两端连起来的直线。</p>
+  <p class="formula-purpose">那"速度"是多少？把上式对 <code>σ</code> 求一次导就有了：</p>
+  <div class="formula" data-expr="\frac{\mathrm{d}\mathbf{x}_{\boldsymbol{\sigma}}}{\mathrm{d}\boldsymbol{\sigma}}=\frac{\mathrm{d}}{\mathrm{d}\boldsymbol{\sigma}}\big[(1-\boldsymbol{\sigma})\mathbf{x}+\boldsymbol{\sigma}\boldsymbol{\epsilon}\big]=-\mathbf{x}+\boldsymbol{\epsilon}=\boldsymbol{\epsilon}-\mathbf{x}"></div>
+  <p>逐项看：<code>(1-σ)x</code> 里 <code>x</code> 是常数，对 <code>σ</code> 求导得 <code>−x</code>；<code>σε</code> 里 <code>ε</code> 是常数，求导得 <code>ε</code>。结果 <code>ε−x</code> <strong>里面不含 <code>σ</code></strong>——不管走到路上哪一点，速度都一样。这正是"直线"这个词的数学含义，也是 flow matching 比一般扩散好学的原因：要拟合的目标是一个常量，不随时刻乱变。</p>
+  <p class="formula-purpose">于是网络的任务就是拿平方误差去逼近这个速度：</p>
   <div class="formula" data-expr="\mathcal{L}_\theta=\mathbb{E}\left[\left\|v_\theta(\mathbf{x}_{\boldsymbol{\sigma}},\boldsymbol{\sigma},\mathbf{a})-(\boldsymbol{\epsilon}-\mathbf{x})\right\|_2^2\right]"></div>
-  <p><code>||e||²₂</code> 里的下标 2 表示 L2 范数，上标 2 表示再平方，因此 <code>||e||²₂=Σᵢeᵢ²</code>：把每个速度误差平方后相加，正负误差不会互相抵消，偏得越远惩罚增长越快。</p>
+  <p><code>‖e‖₂²</code> 不是两个 2 挤在一起：先看<strong>下标</strong>的 2，它说明这是 L2 范数（各分量平方和再开根）；再看<strong>上标</strong>的 2，是把范数整体再平方，正好把根号消掉。所以 <code>‖e‖₂²=Σᵢeᵢ²</code>：每个速度误差平方后相加。用平方而不是绝对值，是因为正负误差不会互相抵消，而且偏得越远惩罚增长越快。</p>
   <figure>
     <figcaption><span>Fig 06 · 一个数算到还原结果</span><b>公式、代入、答案不跳步</b></figcaption>
     <div class="calc">
@@ -204,6 +244,10 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
       xσ = (1−.25)×2 + .25×(−1) = <span class="ans">1.25</span><br>
       v* = ε−x = −1−2 = <span class="ans">−3</span><br>
       若 vθ = −2.6，则 L = [−2.6−(−3)]² = <span class="ans">.16</span><br><br>
+      <span class="hi">验一下速度真的是常数：</span><br>
+      σ=0 时 xσ = 2；σ=1 时 xσ = −1；全程位移 = −1−2 = −3，用时 1<br>
+      平均速度 = −3 ÷ 1 = <span class="ans">−3</span>，跟 ε−x 一致 ✓<br>
+      再取 σ=.5：xσ = .5×2+.5×(−1) = <span class="ans">.5</span>，正好在 2 和 −1 的中点 ✓<br><br>
       干净估计公式：x̂₀ = xσ−σvθ<br>
       若预测正确：x̂₀ = 1.25−.25×(−3) = <span class="ans">2</span>
     </div>
@@ -216,12 +260,13 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
   <figure>
     <figcaption><span>Fig 07 · 训练课程表</span><b>每阶段只增加一个难点</b></figcaption>
     <div class="stages">
-      <div class="stage"><b>STAGE 1 · 120K</b><strong>双向单人</strong><p>从 Matrix Game 2.0 初始化，在 VPT 超 2,000 小时人类游戏上补齐 MineRL 动作。双向<a class="jr" href="#g-03">03</a>上下文 33 帧。</p></div>
-      <div class="stage"><b>STAGE 2 · 120K</b><strong>双向多人</strong><p>加入 player 维与共享注意力，在 Solaris 数据上联合去噪。最终 checkpoint 当 teacher。</p></div>
-      <div class="stage"><b>STAGE 3 · 60K</b><strong>因果多人</strong><p>从 Stage 2 的 60K 中间点分支，用 Diffusion Forcing<a class="jr" href="#g-05">05</a> 和因果<a class="jr" href="#g-04">04</a>滑窗，只读过去。</p></div>
-      <div class="stage"><b>STAGE 4</b><strong>Self Forcing</strong><p>Self Forcing<a class="jr" href="#g-06">06</a> 让 student 在自己的生成历史上滚动，长上下文 teacher 用分布匹配纠正少步生成。</p></div>
+      <div class="stage"><b>STAGE 1 · 120K</b><strong>双向单人</strong><p>从 Matrix Game 2.0 初始化，在 VPT 超 2,000 小时人类游戏上补齐 MineRL 动作。双向<a class="jr" href="#g-03">03</a>上下文 33 帧。</p><p><b>跳了会怎样</b>——§08 有这一行对照：去掉它，Grounding VLM 从 62.5 掉到 29.2。</p></div>
+      <div class="stage"><b>STAGE 2 · 120K</b><strong>双向多人</strong><p>加入 player 维与共享注意力，在 Solaris 数据上联合去噪。最终 checkpoint 当 teacher。</p><p><b>跳了会怎样</b>——后面就没有 teacher 可用了，Stage 4 无从谈起。</p></div>
+      <div class="stage"><b>STAGE 3 · 60K</b><strong>因果多人</strong><p>用 Diffusion Forcing<a class="jr" href="#g-05">05</a> 和因果<a class="jr" href="#g-04">04</a>滑窗，把双向模型改造成只读过去。</p><p><b>跳了会怎样</b>——模型仍然要等整段才能算，做不到边玩边出画面。</p></div>
+      <div class="stage"><b>STAGE 4</b><strong>Self Forcing</strong><p>Self Forcing<a class="jr" href="#g-06">06</a> 让 student 在自己的生成历史上滚动，长上下文 teacher 用分布匹配<a class="jr" href="#g-11">11</a>纠正。</p><p><b>跳了会怎样</b>——就是 §06 那个 exposure bias：训练看真历史、部署看自己的历史，误差一路滚大。</p></div>
     </div>
   </figure>
+  <p>有一处容易看岔：<strong>Stage 3 不是从 Stage 2 的终点接的，而是从它跑到 60K 时分叉出来的</strong>。论文给的理由很实际——为了省训练时间：双向模型跑到 60K 就复制一份出去改造成因果版，本体继续跑到 120K 收敛后当 teacher。所以 Stage 2 和 Stage 3 有一段是并行训的，不是首尾相接。</p>
   <p>因果 student 的窗口为 6 个 latent frame；冻结 3D VAE 每个 latent 对应 4 个真实帧，所以最大滚动 KV cache<a class="jr" href="#g-07">07</a> 上下文是 24 帧。前三阶段学习率均为 <code>1e-4</code>；Self Forcing generator / critic 分别为 <code>3e-6</code> 与 <code>3e-7</code>。</p>
 </section>
 
@@ -234,7 +279,12 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
       <div class="side test"><h4>真实部署</h4><p><strong>每一步看自己的输出。</strong></p><p>第 2 帧的误差会成为第 3 帧条件，再继续累积。</p><code>x̂₁ → x̂₂ → x̂₃ → …</code></div>
     </div>
   </figure>
-  <p>Self Forcing 让 student 在训练时就用自生成历史向前滚动，再由 teacher / distribution matching 纠正整段输出。这让输入更像部署，却带来巨大的反向传播显存：滑窗不断重叠，每个窗口都保存一份计算图。</p>
+  <p>Self Forcing 的做法就是把右边那一列搬到训练里：让 student 训练时就用自己生成的历史往前滚，于是它学到的输入分布跟部署时真正会遇到的对得上。</p>
+  <h3>但这样一来，"标准答案"就没了</h3>
+  <p>普通训练能逐帧对答案，是因为每一步的输入都来自数据集，输出该长什么样也是现成的。student 一旦滚在自己的历史上，它走的这条轨迹数据集里根本不存在，<strong>没有任何一帧真值可以跟它逐像素比对</strong>。</p>
+  <p>解法是换一种打分方式：<strong>分布匹配</strong><a class="jr" href="#g-11">11</a>。不再问"你这一帧跟标准答案差多少"，改问"你生成的这一批东西，整体看起来像不像 teacher 会生成的东西"，梯度往"更像"的方向推。好处有两个：一是不需要配对的真值，二是 student 可以只用很少的去噪步数——反正只要最终分布对得上，中间怎么走不管。这也是 §05 Stage 4 说的"蒸成少步"。</p>
+  <div class="warn">论文只写了它优化 <em>distribution matching loss</em>，<strong>没有点名具体是 DMD 还是 DMD2 的哪一版</strong>，也没给出 critic 的结构细节。这类损失的通用机理见 <a href="dmd.html">DMD</a>。</div>
+  <p>代价在显存上：滑窗不断重叠，每个窗口都要保存一份计算图。这就是 §07 要解决的问题。</p>
 </section>
 
 <section id="s7">
@@ -333,8 +383,19 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
       <tr class="best"><td>Solaris</td><td>68.2 / <strong>38.5</strong></td><td><strong>62.5</strong> / <strong>38.0</strong></td><td><strong>37.5</strong> / <strong>55.1</strong></td><td><strong>20.8</strong> / <strong>83.6</strong></td><td><strong>71.4</strong> / <strong>99.4</strong></td></tr>
     </tbody>
   </table></div>
-  <p>Solaris 五类 FID<a class="jr" href="#g-08">08</a> 全部最低，在 Grounding、Building、Consistency 的 VLM-as-judge<a class="jr" href="#g-09">09</a> 分数领先；Frame concat 的 Movement VLM 更高，必须保留这一反例。作者观察到它在 no-op 时有动作幻觉，说明单项 VLM 分数覆盖不了所有错误。</p>
-  <div class="trade"><div class="quality"><h4>KV 反传得到什么</h4><p>同为 Causal FT、无 Pre-DMD，开启 KV-BP 后五项 FID 全部改善，Building 与 Consistency VLM 也上升。</p></div><div class="control"><h4>又失去什么</h4><p>Movement 78.6→68.2，Grounding 72.9→62.5，Memory 49.0→37.5。视觉分布更好，不等于每项动作跟随都更好。</p></div></div>
+  <p>先说清楚<strong>为什么每格要写两个数</strong>。FID<a class="jr" href="#g-08">08</a> 比的是"生成的画面看起来像不像真的 Minecraft 截图"，它只认视觉分布，<strong>完全不知道你按了 W 有没有前进</strong>；VLM-as-judge<a class="jr" href="#g-09">09</a> 反过来，只问"该发生的事发生了没有"，画面糊一点它不在乎。两个数测的是两件事，缺一个都会看走眼。</p>
+  <p>读表的顺序：</p>
+  <ol>
+    <li><strong>Solaris 五类 FID 全部最低</strong>（38.5 / 38.0 / 55.1 / 83.6 / 99.4），长时间滚动下画质最稳，这一点没有争议。</li>
+    <li><strong>真正需要跨视角关系的三项，VLM 分数领先</strong>：Grounding 62.5、Building 20.8、Consistency 71.4。这三项恰好是"必须知道队友在哪、做了什么"才能答对的。</li>
+    <li><strong>Frame concat 的 Movement VLM 反而更高</strong>（77.1 对 68.2），这一格必须保留不能抹掉。但作者同时观察到它在<strong>无动作时会凭空制造动作</strong>——一个乱动的模型，在"有没有动"这类问题上更容易蒙对。单看一格分数会得出反的结论。</li>
+    <li><strong>Building 那一列最该盯</strong>：两个对照组都是 <code>0.0</code>，就是一次都没成功过；Solaris 的 <code>20.8</code> 虽然领先，也不过五次里成一次。"一个人搭方块、另一个人要看见"是全套任务里最难的，谁都还没做好。</li>
+  </ol>
+  <h3>为什么 FID 和 VLM 会互相打架</h3>
+  <p>最能说明问题的是这组同起点消融（都从 Causal FT 出发、都不做 Pre-DMD），唯一变量是要不要让梯度穿过重算的 KV：</p>
+  <div class="trade"><div class="quality"><h4>KV 反传得到什么</h4><p>五项 FID 全部改善，Building 与 Consistency 的 VLM 也上升。</p></div><div class="control"><h4>又失去什么</h4><p>Movement 78.6→68.2，Grounding 72.9→62.5，Memory 49.0→37.5。</p></div></div>
+  <p>一个合理的解释是：把视觉分布往"更像真实截图"的方向压，等于奖励模型生成<strong>更典型</strong>的画面；而典型往往意味着保守——镜头别晃太狠、方块别变太快、不确定的时候少动。保守能让 FID 好看，却正好削弱"我按了键它跟不跟"这件事。所以论文选 KV 反传那一行当 Solaris，是一次<strong>取舍</strong>，不是全面碾压。</p>
+  <p>还有一格值得看：去掉单人预训练（第二行）后 Grounding VLM 从 62.5 塌到 29.2、Memory 从 37.5 到 18.8。多人一致性不是从多人数据里凭空长出来的，得先有一个懂 Minecraft 是怎么回事的单人底子。</p>
   <div class="warn">VLM 也会错：在真实视频上，Memory 准确率只有 92.71±1.47，Consistency-opposite 为 93.75±4.42。表中标准差来自 VLM 评测重复 3 次，不是大量人类评审。</div>
 </section>
 
@@ -364,6 +425,7 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
     <li id="g-08"><span class="term">FID</span>：比较真实与生成图像特征分布的距离，越低越好，但不直接判断动作是否正确。</li>
     <li id="g-09"><span class="term">VLM as judge</span>：让视觉语言模型回答可验证问题；能测语义任务，也继承裁判模型的误差。</li>
     <li id="g-10"><span class="term">stop-gradient</span>：前向仍使用该数值，反向不沿生成它的旧路径传梯度；Solaris 会在第二遍重算新的可微路径。</li>
+    <li id="g-11"><span class="term">distribution matching</span>：不逐帧比对真值，而是推动 student 生成物的整体分布靠近 teacher 的分布；因此不需要配对答案，也允许 student 用极少的去噪步数。</li>
   </ol>
 </section>
 
