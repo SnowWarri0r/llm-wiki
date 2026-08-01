@@ -36,6 +36,7 @@
 - [dMel](wiki/papers/dmel.md) — 跳过 neural codec 直接 bin quantize log-mel，简单方案跟 RVQ 一样好
 - [Interaction Models · Thinking Machines](wiki/papers/interaction-models-tml.md) — 把交互能力做进权重的 276B MoE 模型
 - [Fish Audio S2 Pro](wiki/papers/fish-speech-s2-pro.md) — Dual-AR + RVQ + GRPO 的开源 TTS
+- [DuplexOmni · 边听边说时，后台还能继续想](wiki/papers/duplexomni.md) — 把实时交互 S1 与后台思考 S2 拆成并行线；交互模型内部再用 480 ms 时间片、Thinker–Talker 和 16 层 Mimi codec 生成语音。ToR 72.6 最强，但 Daily-Omni 53.8、WER 11.92%；论文结果与公开仓库至少 8×H20 的低延迟部署口径分开记录。
 - [ViiTorVoice · 低帧率语义码+并行填声](wiki/papers/viitorvoice.md) — 开源流式零样本 TTS 引擎(无独立论文,思路源自 DualCodec+OmniVoice): 三招各砍一刀延迟—①DualCodec 把 24kHz 压到 12.5 帧/秒,RVQ-1 语义(w2v-BERT 蒸馏,码本16384)+RVQ 2-8 声学残差; ②NAR 掩码并行填声(像完形填空,步数从200降到~8); ③首块流式首帧~60ms; 给参考音零样本克隆+两路CFG调情绪
 - [VITS · 文本进去，波形出来](wiki/papers/vits.md) — 把两段式 TTS 的固定 mel 交接收回一套联合训练：条件 VAE 用 z 装下文字没写出的声音，Flow 接通文本先验与音频后验，MAS 从整句配对中找音素—帧路径，随机时长用去量化 u 与增广 ν 建模多种节奏，HiFi-GAN 多周期判别器补波形细节；LJ MOS 4.43 vs 真人4.46，×67.12实时，并完整覆盖损失、配方、VCTK、消融、声音转换和局限
 - [LTX-2 · 让声音和画面在同一段去噪中彼此校正](wiki/papers/ltx-2.md) — 开源联合音视频生成：两套 causal VAE 保留模态差异，14B 视频流与 5B 音频流在 48 层中用双向 cross-attention 沿共同时间轴交换；Gemma 全层特征+双向 connector+thinking registers 加强文本条件，modality-CFG 分开调文字遵循和音视频同步，0.5MP base→latent 放大→重叠 tiles 生成 1080p。H100 每步 1.22s vs Wan2.2 22.30s 约18×，但内部质量人评缺少样本数/胜率/置信区间，训练规模与配方也未公开；正文 14B+5B 与结论 13B+3B 矛盾留档。

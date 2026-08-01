@@ -1,8 +1,8 @@
 ---
 name: rvq-codec
 type: concept
-sources: [fish-speech-s2-pro, viitorvoice]
-updated: 2026-07-02
+sources: [fish-speech-s2-pro, viitorvoice, duplexomni]
+updated: 2026-07-29
 ---
 
 # RVQ Codec · 残差向量量化
@@ -27,6 +27,8 @@ updated: 2026-07-02
 - 解码器吃 10 路 token 重建波形
 - 训练时联合优化编码器 + 解码器 + codebook（VQ-VAE 风格，带 commitment loss + codebook loss）
 
+DuplexOmni 的论文把码本层数写成一般符号 \(K\)。2026-07-29 的官方 checkpoint 配置取 \(K=16\)，每个 480 ms 时间片生成 6 帧，也就是 12.5 帧/秒；Talker 先自回归出第 0 层，MTP 再补其余 15 层。
+
 ## 跟 TML dMel 的区别
 - **RVQ** = 学出来的 codebook，跨数据集会自动适配，表达力强
 - **[[dmel]]** = 规则离散化 Mel 频谱（每个频带按预设格点切）—— 简单、无需训 codebook，但只适合输入侧
@@ -39,3 +41,4 @@ updated: 2026-07-02
 - [[flow-matching]] · TML 选用的非量化路线
 - [[audio-tokenization-rvq-vs-flow]] · 横向比较
 - [[fish-speech-s2-pro]] · 论文
+- [[duplexomni]] · 16 层 Mimi codec 用在全双工 Talker 输出

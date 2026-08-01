@@ -1,8 +1,8 @@
 ---
 name: multi-token-prediction
 type: concept
-sources: [minimind-o]
-updated: 2026-06-08
+sources: [minimind-o, duplexomni]
+updated: 2026-07-29
 ---
 
 # Multi-Token Prediction · MTP · 一步预测好几个
@@ -15,6 +15,8 @@ updated: 2026-06-08
 [[rvq-codec]] 把每帧音频量化成**多层 code**（Mimi 是 8 层：第 1 层粗轮廓，往后逐层补残差细节）。一秒 12.5 帧、每帧 8 层 → 如果像普通自回归那样一个 code 一个 code 地吐，序列瞬间变 8 倍长，又慢又难训。
 
 MTP 的办法：**每个解码步一次预测多层**（模型在每个位置有多个输出头 / 一个能出多路的结构）。这样序列长度回到"每步一列"，不膨胀。但有个坑：RVQ 的层是**残差依赖**的（第 k 层量化前 k−1 层的残差），直接同帧 8 层一起吐会丢掉这个依赖——所以真正用起来要配**延迟错位**（下一节）。
+
+DuplexOmni 走的是 Qwen3-Omni 的另一种 MTP 组织：Talker 先自回归预测当前帧的 layer-0 codec token，MTP 再以 Talker 隐状态和 layer-0 为条件，预测其余残差 codebook。公开 checkpoint 是 16 组 code，因此一帧是 1 个主码 + 15 个残差码。它和下面 minimind-o 的 8 层 delay pattern 不能直接画等号。
 
 ## 关键 · 阶梯并行（delay pattern）· 依赖斜着保住
 
@@ -150,3 +152,4 @@ DeepSeek 等用 MTP 指"训练时多预测几个未来 token 当辅助目标 / �
 - [[thinker-talker]] · Talker 用 MTP 渲染 codes
 - [[dual-ar]] · fish-speech 处理多码本的另一种结构
 - [[minimind-o]] · 用 MTP 的 0.1B Omni
+- [[duplexomni]] · layer-0 自回归 + 15 层残差码 MTP

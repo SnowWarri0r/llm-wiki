@@ -7,6 +7,32 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
 <link rel="stylesheet" href="../style.css?v=43080b49" />
 </head>
 <body>
@@ -58,6 +84,7 @@
 <li>解码器吃 10 路 token 重建波形</li>
 <li>训练时联合优化编码器 + 解码器 + codebook（VQ-VAE 风格，带 commitment loss + codebook loss）</li>
 </ul>
+<p>DuplexOmni 的论文把码本层数写成一般符号 <span class="tex math-inline" data-display="false">K</span>。2026-07-29 的官方 checkpoint 配置取 <span class="tex math-inline" data-display="false">K=16</span>，每个 480 ms 时间片生成 6 帧，也就是 12.5 帧/秒；Talker 先自回归出第 0 层，MTP 再补其余 15 层。</p>
 <h2>跟 TML dMel 的区别</h2>
 <ul>
 <li><strong>RVQ</strong> = 学出来的 codebook，跨数据集会自动适配，表达力强</li>
@@ -71,12 +98,13 @@
 <li><a href="../concepts/flow-matching.html">flow-matching</a> · TML 选用的非量化路线</li>
 <li><a href="../topics/audio-tokenization-rvq-vs-flow.html">audio-tokenization-rvq-vs-flow</a> · 横向比较</li>
 <li><a href="../papers/fish-speech-s2-pro.html">fish-speech-s2-pro</a> · 论文</li>
+<li><a href="../papers/duplexomni.html">duplexomni</a> · 16 层 Mimi codec 用在全双工 Talker 输出</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 20 处</span>
-  <ul><li><a href="../papers/attention-is-all-you-need.html"><span class="cat">paper</span>Attention Is All You Need · Transformer 始祖</a></li><li><a href="../papers/dmel.html"><span class="cat">paper</span>dMel · 离散 Mel 频谱</a></li><li><a href="../papers/fish-speech-s2-pro.html"><span class="cat">paper</span>Fish Audio S2 Pro</a></li><li><a href="../papers/minimind-o.html"><span class="cat">paper</span>MiniMind-O · 0.1B 端到端 Omni</a></li><li><a href="../papers/viitorvoice.html"><span class="cat">paper</span>ViiTorVoice · 低帧率语义码 + 并行填声 = 60ms 流式克隆</a></li><li><a href="../papers/vits.html"><span class="cat">paper</span>VITS · 文本进去，波形出来</a></li><li><a href="../topics/audio-tokenization-rvq-vs-flow.html"><span class="cat">topic</span>音频 token 化：RVQ vs Flow Matching</a></li><li><a href="../concepts/audio-vae.html"><span class="cat">concept</span>Audio VAE · 把波形压成适合生成模型处理的声音 latent</a></li><li><a href="../concepts/bin-quantization.html"><span class="cat">concept</span>Bin Quantization · 等距分箱量化</a></li><li><a href="../concepts/dmel.html"><span class="cat">concept</span>dMel · 离散 Mel 频谱</a></li><li><a href="../concepts/dual-ar.html"><span class="cat">concept</span>Dual-AR · 双自回归</a></li><li><a href="../concepts/dualcodec.html"><span class="cat">concept</span>DualCodec · 低帧率 + 语义增强的双流音频码</a></li><li><a href="../concepts/flow-matching.html"><span class="cat">concept</span>Flow Matching · 流匹配</a></li><li><a href="../concepts/inline-emotion-tags.html"><span class="cat">concept</span>Inline Emotion Tags · 内联情绪标签</a></li><li><a href="../concepts/log-mel-spectrogram.html"><span class="cat">concept</span>Log-Mel Spectrogram · Fbank · 对数 Mel 频谱图</a></li><li><a href="../concepts/multi-token-prediction.html"><span class="cat">concept</span>Multi-Token Prediction · MTP · 一步预测好几个</a></li><li><a href="../concepts/semantic-vs-acoustic-tokens.html"><span class="cat">concept</span>语义码 vs 声学码 · 把&quot;说什么&quot;和&quot;听起来啥样&quot;分开</a></li><li><a href="../concepts/thinker-talker.html"><span class="cat">concept</span>Thinker–Talker · 想的和说的分两条路</a></li><li><a href="../concepts/tokenization.html"><span class="cat">concept</span>Tokenization / BPE · 文本怎么切成 token 喂给模型</a></li><li><a href="../concepts/voice-cloning-reference.html"><span class="cat">concept</span>Voice Cloning Reference · 声音克隆参考音频</a></li></ul>
+  <span class="label">引用此页的内容 · 21 处</span>
+  <ul><li><a href="../papers/attention-is-all-you-need.html"><span class="cat">paper</span>Attention Is All You Need · Transformer 始祖</a></li><li><a href="../papers/dmel.html"><span class="cat">paper</span>dMel · 离散 Mel 频谱</a></li><li><a href="../papers/duplexomni.html"><span class="cat">paper</span>DuplexOmni · 边听边说时，后台还能继续想</a></li><li><a href="../papers/fish-speech-s2-pro.html"><span class="cat">paper</span>Fish Audio S2 Pro</a></li><li><a href="../papers/minimind-o.html"><span class="cat">paper</span>MiniMind-O · 0.1B 端到端 Omni</a></li><li><a href="../papers/viitorvoice.html"><span class="cat">paper</span>ViiTorVoice · 低帧率语义码 + 并行填声 = 60ms 流式克隆</a></li><li><a href="../papers/vits.html"><span class="cat">paper</span>VITS · 文本进去，波形出来</a></li><li><a href="../topics/audio-tokenization-rvq-vs-flow.html"><span class="cat">topic</span>音频 token 化：RVQ vs Flow Matching</a></li><li><a href="../concepts/audio-vae.html"><span class="cat">concept</span>Audio VAE · 把波形压成适合生成模型处理的声音 latent</a></li><li><a href="../concepts/bin-quantization.html"><span class="cat">concept</span>Bin Quantization · 等距分箱量化</a></li><li><a href="../concepts/dmel.html"><span class="cat">concept</span>dMel · 离散 Mel 频谱</a></li><li><a href="../concepts/dual-ar.html"><span class="cat">concept</span>Dual-AR · 双自回归</a></li><li><a href="../concepts/dualcodec.html"><span class="cat">concept</span>DualCodec · 低帧率 + 语义增强的双流音频码</a></li><li><a href="../concepts/flow-matching.html"><span class="cat">concept</span>Flow Matching · 流匹配</a></li><li><a href="../concepts/inline-emotion-tags.html"><span class="cat">concept</span>Inline Emotion Tags · 内联情绪标签</a></li><li><a href="../concepts/log-mel-spectrogram.html"><span class="cat">concept</span>Log-Mel Spectrogram · Fbank · 对数 Mel 频谱图</a></li><li><a href="../concepts/multi-token-prediction.html"><span class="cat">concept</span>Multi-Token Prediction · MTP · 一步预测好几个</a></li><li><a href="../concepts/semantic-vs-acoustic-tokens.html"><span class="cat">concept</span>语义码 vs 声学码 · 把&quot;说什么&quot;和&quot;听起来啥样&quot;分开</a></li><li><a href="../concepts/thinker-talker.html"><span class="cat">concept</span>Thinker–Talker · 想的和说的分两条路</a></li><li><a href="../concepts/tokenization.html"><span class="cat">concept</span>Tokenization / BPE · 文本怎么切成 token 喂给模型</a></li><li><a href="../concepts/voice-cloning-reference.html"><span class="cat">concept</span>Voice Cloning Reference · 声音克隆参考音频</a></li></ul>
 </div>
 
 <div class="colophon">
@@ -85,6 +113,19 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {
@@ -101,5 +142,55 @@
   figs.forEach(function (f) { obs.observe(f); });
 })();
 </script>
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
 </body>
 </html>

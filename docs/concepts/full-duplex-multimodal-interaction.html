@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Thinker–Talker · 想的和说的分两条路 · Concept</title>
+<title>Full-Duplex Multimodal Interaction · 全双工多模态交互 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,65 +53,121 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · thinker-talker</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · full-duplex-multimodal-interaction</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Thinker–Talker · 想的和说的分两条路</h1>
+  <h1>Full-Duplex Multimodal Interaction · 全双工多模态交互</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>把"理解+思考"和"发声"拆成两个模块：<strong>Thinker</strong> 读多模态、出语义文本；<strong>Talker</strong> 在 Thinker 的语义状态上渲染语音 token —— 一个负责想，一个负责说。</p>
-<h2>直觉 · 人也是先想好再开口</h2>
-<p>让一个 0.1B 的小模型既听懂图文语音、又能说出自然的流式语音，要是塞进一条链路会互相拖累：语言理解要的是"抓语义"，语音生成要的是"逐帧把声学细节铺出来"，两件事的目标不一样。</p>
-<p>Thinker–Talker（Qwen-Omni、minimind-o 走这条）的办法是<strong>解耦</strong>：</p>
+<p>模型说话时仍在听和看，新输入能立刻改变后半句话。</p>
+<h2>直觉</h2>
+<p>普通语音助手像对讲机：用户说完，机器才开始处理；机器说话时，用户只能等。全双工更像电话：两边的声音可以同时存在，听到一句“等等，条件变了”，说话的人会马上收住原来的话，改讲新方案。</p>
+<p>“全双工”不是“回答得快”的同义词。一个模型可以 300 毫秒开口，却在自己说话期间关掉麦克风；它仍然只是低延迟的轮流说话。真正的全双工至少要同时处理三件事：</p>
 <ul>
-<li><strong>Thinker</strong> = 一个语言主干（minimind-o 里是 8 层 MiniMind Transformer）。吃文本 token + 注入进来的语音/图像特征，像平常 LLM 一样<strong>输出语义层面的文本回复</strong>。</li>
-<li><strong>Talker</strong> = 一组独立的小 Transformer block（minimind-o 里 4 层）。它不重新理解世界，只接 Thinker 给的<strong>语义条件</strong>，把它<strong>渲染成可解码的音频 codes</strong>（见 <a href="../concepts/rvq-codec.html">rvq-codec</a> 的 Mimi codec）。</li>
+<li>继续接收用户音频、视频和环境变化；</li>
+<li>继续生成自己的文本与语音；</li>
+<li>处理抢话、附和、停顿、改条件和中途取消。</li>
 </ul>
-<p>类比：Thinker 是编剧（想清楚说什么），Talker 是配音演员（把台词用声音演出来）。配音演员不需要再读一遍剧本背景，只要拿到台词和情绪就能开口。</p>
-<p>DuplexOmni 还提醒一个容易混淆的命名：模型内部的 <strong>Thinker</strong> 不是系统外层的 <strong>thinking layer / S2</strong>。前者属于实时交互模型，负责出文本状态；后者是可插拔的慢推理或工具模块。</p>
-<h2>怎么做的 · Talker 吃的是中间层，不是最后一层</h2>
-<p>最关键的设计点：Thinker 传给 Talker 的不是 embedding、也不是最后一层，而是<strong>中间层</strong>的表征。</p>
-<ul>
-<li>embedding 层：还没融合上下文，语义太薄</li>
-<li>最后一层：已经被 LM head 往"预测下一个文本 token"的方向过度塑形，丢了适合发声的信息</li>
-<li><strong>中间层</strong>：上下文和跨模态信息已经融好，又没被输出目标带偏 —— 最适合当语音生成的条件</li>
-</ul>
-<p>minimind-o 默认 <code>bridge_layer = 层数//2 − 1</code>。这一刀切在"理解够了、还没被文本输出目标污染"的位置。</p>
-<pre><code>多模态输入 ─▶ [Thinker 8层] ──┬─▶ 末层 → 文本回复
-                              │
-                     中间层(bridge) ─▶ [Talker 4层] ─MTP─▶ 8层 Mimi codes ─▶ 流式语音
+<h2>怎么做的</h2>
+<p>连续对话通常被切成固定时间片。每到一个时间片，系统都重新读一次“刚刚发生了什么”，再决定下一小段要不要继续说：</p>
+<pre><code class="language-text">上一片的对话状态
+
+      + 新到的用户音频
+      + 同时刻的视频帧
+      + 后台任务新返回的结果
+                    ↓
+          更新理解与说话计划
+                    ↓
+     下一小段文本 + 下一小段语音
 </code></pre>
-<h2>为什么对小模型特别划算</h2>
-<p>Thinker/Talker 解耦后，<strong>语言理解和跨模态融合都压在 Thinker</strong>，Talker 只在语义条件上渲染声音。所以 Talker 可以做得很小（minimind-o 实验里 Talker 768 维、4 层就够），整条 Omni 链路压在 0.1B 量级。真正的瓶颈在输出端：Talker 面对的是 <a href="../concepts/multi-token-prediction.html">multi-token-prediction</a> 出来的 8 层 Mimi codebook，不是单路 next-token。</p>
-<h2>代码出处</h2>
-<ul>
-<li>minimind-o <code>model/model_omni.py</code>（Thinker / Talker / bridge）</li>
-<li>谱系：Qwen2.5-Omni / Qwen3-Omni 的 Thinker-Talker；minimind-o 是 0.1B 的从零复现</li>
-</ul>
+<p>DuplexOmni 的时间片是 480 ms。它不是先生成完整句子再播放，而是每 480 ms 交付一小段，并在下一片重新看用户有没有插话。</p>
+<h2>数字例子</h2>
+<p>假设助手准备说：</p>
+<blockquote>
+<p>我查到上海出发的航班，早上……</p>
+</blockquote>
+<p>时间线如下：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">时间</th>
+<th>用户新输入</th>
+<th>助手下一步</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">0–480 ms</td>
+<td>“查上海到洛杉矶”</td>
+<td>开始后台查上海航班，同时先回应“我来看看”</td>
+</tr>
+<tr>
+<td style="text-align: right;">480–960 ms</td>
+<td>没有新话</td>
+<td>继续说“正在查上海出发……”</td>
+</tr>
+<tr>
+<td style="text-align: right;">960–1440 ms</td>
+<td>“等等，改北京出发”</td>
+<td>停掉上海查询，不再续写原句</td>
+</tr>
+<tr>
+<td style="text-align: right;">1440–1920 ms</td>
+<td>没有新话</td>
+<td>启动北京查询，改口“好，我重新查北京”</td>
+</tr>
+</tbody>
+</table>
+<p>若系统要等整句说完才看新输入，改条件至少要晚一整句才生效。时间片把“反应机会”缩到每 480 ms 一次，但它也意味着最坏情况下仍可能晚接近一个时间片才响应。</p>
+<h2>跟低延迟、流式输出的区别</h2>
+<table>
+<thead>
+<tr>
+<th>能力</th>
+<th>只说明什么</th>
+<th>仍然可能缺什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>低延迟</td>
+<td>很快开始回答</td>
+<td>说话时可能听不见用户</td>
+</tr>
+<tr>
+<td>流式输出</td>
+<td>一边生成一边播放</td>
+<td>生成计划可能不会被新输入改写</td>
+</tr>
+<tr>
+<td>全双工</td>
+<td>输入和输出并行，计划持续更新</td>
+<td>深度推理仍可能拖慢，需要额外分层</td>
+</tr>
+</tbody>
+</table>
 <h2>链接</h2>
 <ul>
-<li><a href="../concepts/multi-token-prediction.html">multi-token-prediction</a> · Talker 一次预测多层 codes 的方式</li>
-<li><a href="../concepts/modality-projector.html">modality-projector</a> · 语音/图像怎么注入 Thinker</li>
-<li><a href="../concepts/rvq-codec.html">rvq-codec</a> · Talker 输出的 Mimi codes 就是 RVQ 神经码</li>
-<li><a href="../concepts/next-token-forward-pass.html">next-token-forward-pass</a> · Thinker 出文本走的是这条自回归链</li>
-<li><a href="../papers/minimind-o.html">minimind-o</a> · 0.1B 端到端 Omni</li>
-<li><a href="../papers/duplexomni.html">duplexomni</a> · 35B 交互模型在 480 ms 时间片中流式运行 Thinker–Talker</li>
+<li><a href="../papers/duplexomni.html">duplexomni</a> · 以 480 ms 时间片实现音视频全双工，并接入异步思考层</li>
+<li><a href="../concepts/dual-model-architecture.html">dual-model-architecture</a> · 前台交互和后台慢推理怎样分工</li>
+<li><a href="../concepts/thinker-talker.html">thinker-talker</a> · 交互模型内部又怎样把文本理解与语音生成拆开</li>
+<li><a href="../concepts/micro-turn.html">micro-turn</a> · 更细粒度地组织实时对话的另一种做法</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 5 处</span>
-  <ul><li><a href="../papers/duplexomni.html"><span class="cat">paper</span>DuplexOmni · 边听边说时，后台还能继续想</a></li><li><a href="../papers/minimind-o.html"><span class="cat">paper</span>MiniMind-O · 0.1B 端到端 Omni</a></li><li><a href="../concepts/full-duplex-multimodal-interaction.html"><span class="cat">concept</span>Full-Duplex Multimodal Interaction · 全双工多模态交互</a></li><li><a href="../concepts/modality-projector.html"><span class="cat">concept</span>Modality Projector · 把别的模态翻译进 LLM 的隐空间</a></li><li><a href="../concepts/multi-token-prediction.html"><span class="cat">concept</span>Multi-Token Prediction · MTP · 一步预测好几个</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/duplexomni.html"><span class="cat">paper</span>DuplexOmni · 边听边说时，后台还能继续想</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/thinker-talker.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/full-duplex-multimodal-interaction.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
