@@ -22,9 +22,10 @@ DOCS = Path(__file__).parent / "docs"
 
 SUB = {"₀": "0", "₁": "1", "₂": "2", "₃": "3", "₄": "4", "₅": "5", "₆": "6",
        "₇": "7", "₈": "8", "₉": "9", "ₜ": "t", "ₓ": "x", "ᵢ": "i", "ⱼ": "j",
-       "ₙ": "n", "ₖ": "k", "ₐ": "a", "ₑ": "e", "ₒ": "o", "ₚ": "p", "ₛ": "s"}
-SUP = {"⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4", "⁵": "5", "ⁿ": "n",
-       "ᵀ": "T", "⁻": "-", "⁺": "+"}
+       "ₙ": "n", "ₖ": "k", "ₐ": "a", "ₑ": "e", "ₒ": "o", "ₚ": "p", "ₛ": "s",
+       "₊": "+", "₋": "-", "ᵥ": "v", "ᵣ": "r", "ᵤ": "u", "ₘ": "m", "ₗ": "l", "ₕ": "h"}
+SUP = {"⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4", "⁵": "5", "⁶": "6",
+       "⁷": "7", "⁸": "8", "⁹": "9", "ⁿ": "n", "ᵀ": "T", "ⁱ": "i", "⁻": "-", "⁺": "+"}
 GREEK = {"θ": r"\theta", "σ": r"\sigma", "α": r"\alpha", "μ": r"\mu",
          "ε": r"\epsilon", "φ": r"\phi", "ψ": r"\psi", "γ": r"\gamma",
          "λ": r"\lambda", "ω": r"\omega", "τ": r"\tau", "β": r"\beta",
@@ -43,14 +44,25 @@ WORDS = {"fake", "real", "base", "cfg", "cond", "uncond", "data", "reg", "pseudo
          "denoise", "train", "infer", "new", "old", "out", "tot", "avg", "ref",
          "max", "min", "tar", "mid", "direct", "adv", "gt", "lin", "text", "dur",
          "clip", "KL", "GAN", "DMD", "DM", "MSE", "LPIPS", "FID", "CE", "ISG"}
-FUNCS = ("exp", "log", "ln", "max", "min", "sin", "cos", "det", "dim", "softmax",
-         "sigmoid", "softplus", "argmax", "argmin")
+# KaTeX 自带的函数命令
+FUNCS = ("exp", "log", "ln", "max", "min", "sin", "cos", "det", "dim")
+# KaTeX 没有对应命令的，要包 \operatorname
+OPNAMES = ("softmax", "softplus", "sigmoid", "argmax", "argmin", "stopgrad", "sg")
 
 MATHY = re.compile("[" + "".join(map(re.escape, list(SUB) + list(SUP) + list(GREEK) + list(OPS))) + "]")
 CJK = re.compile(r"[一-鿿　-〿＀-￯]")
 
 
+# 机器判不了的少数记号，人工钉死。空值 = 判定为"不是数学，别碰"。
+MANUAL = {
+    "x_tⱼ": r"x_{t_j}",          # 到底是 x_{t_j} 还是 (x_t)_j，按上下文取前者
+    "fᵥⁱᵀ_l": r"f^{v,i,T}_{l}",  # 三个上标挤在一起，拆成逗号分隔
+}
+
+
 def to_tex(s: str) -> str:
+    if s in MANUAL:
+        return MANUAL[s]
     t = s
     # unicode 上下标 → LaTeX。连续的合成一组：xₜ₊₁ → x_{t+1}
     t = re.sub("([" + "".join(SUB) + "]+)", lambda m: "_{" + "".join(SUB[c] for c in m.group(1)) + "}", t)
@@ -58,21 +70,26 @@ def to_tex(s: str) -> str:
     # 希腊字母与运算符
     t = re.sub("[" + "".join(map(re.escape, GREEK)) + "]", lambda m: GREEK[m.group(0)] + " ", t)
     t = re.sub("[" + "".join(map(re.escape, OPS)) + "]", lambda m: OPS[m.group(0)] + " ", t)
-    # 多字母下标/上标 → \mathrm{}
-    t = re.sub(r"([_^])\{?([A-Za-z]{2,})\}?", lambda m: m.group(1) + "{\\mathrm{" + m.group(2) + "}}", t)
+    # 多字母下标/上标 → \mathrm{}。先处理已带花括号的，再处理裸的，
+    # 否则 x_{t_mid} 会被当成 "_mid}" 匹配掉，吐出括号不配对的 x_{t_{\mathrm{mid}}
+    t = re.sub(r"([_^])\{([A-Za-z]{2,})\}", lambda m: m.group(1) + "{\\mathrm{" + m.group(2) + "}}", t)
+    t = re.sub(r"([_^])([A-Za-z]{2,})(?![A-Za-z}])", lambda m: m.group(1) + "{\\mathrm{" + m.group(2) + "}}", t)
     # 希腊命令后"紧贴"一个词（θbase）→ 下标；只吃希腊替换自己加的那一个空格
     t = re.sub(r"(\\[a-zA-Z]+) ([a-z]{2,})\b",
                lambda m: m.group(1) + "_{\\mathrm{" + m.group(2) + "}}" if m.group(2) in WORDS else m.group(0), t)
     # 拉丁字母紧跟希腊字母（fθ / Gθ / qφ）→ 论文里几乎总是下标：f_\theta
     t = re.sub(r"(?<![\\A-Za-z])([A-Za-z])(\\(?:theta|phi|psi|sigma|mu|lambda|omega|eta|beta|alpha|gamma|delta|rho|tau|pi|nu|kappa|chi|epsilon|zeta)) ",
                lambda m: m.group(1) + "_" + m.group(2) + " ", t)
-    # 组合变音符号：x̂ → \hat{x}，x̃ → \tilde{x}，x̄ → \bar{x}
+    # 组合变音符号：x̂ → \hat{x}。希腊字母此时已变成 "\epsilon "，所以要连命令一起吃
     for comb, cmd in (("\u0302", "hat"), ("\u0303", "tilde"), ("\u0304", "bar"), ("\u0307", "dot")):
+        t = re.sub(r"(\\[a-zA-Z]+) ?" + comb, lambda m, c=cmd: "\\" + c + "{" + m.group(1) + "}", t)
         t = re.sub(r"([A-Za-z])" + comb, lambda m, c=cmd: "\\" + c + "{" + m.group(1) + "}", t)
     # 函数名直立
     t = re.sub(r"(?<!\\)\b(" + "|".join(FUNCS) + r")\b", lambda m: "\\" + m.group(1) + " ", t)
+    t = re.sub(r"(?<![\\A-Za-z])(" + "|".join(OPNAMES) + r")\b",
+               lambda m: "\\operatorname{" + m.group(1) + "}", t)
     # 函数名后紧跟希腊字母（minθ maxφ）→ 那是取极值的变量，写成下标
-    t = re.sub(r"(\\(?:" + "|".join(FUNCS) + r")) (\\[a-zA-Z]+) ",
+    t = re.sub(r"(\\(?:" + "|".join(FUNCS) + r")) (\\[a-zA-Z]+) (?![_^])",
                lambda m: m.group(1) + "_" + m.group(2) + " ", t)
     # 多字母的函数式名字（Beta(…) / Uniform(…)）直立
     t = re.sub(r"(?<![\\A-Za-z])([A-Z][a-z]{2,})\(", lambda m: "\\mathrm{" + m.group(1) + "}(", t)
@@ -80,6 +97,11 @@ def to_tex(s: str) -> str:
     t = re.sub(r"\s+", " ", t).strip()
     t = re.sub(r"(?<=[-+=,(\[]) (?=[\\A-Za-z0-9])", "", t)
     t = re.sub(r"(\\[a-zA-Z]+) (?=[_^])", r"\1", t)
+    # \sqrt 后面必须跟一个组：\sqrt (2\pi ) → \sqrt{2\pi}；\sqrt \hat{v} → \sqrt{\hat{v}}
+    t = re.sub(r"\\sqrt\s*\(([^()]*)\)", lambda m: "\\sqrt{" + m.group(1).strip() + "}", t)
+    t = re.sub(r"\\sqrt\s+(\\[a-zA-Z]+\{[^{}]*\}|\\[a-zA-Z]+|[A-Za-z0-9])", lambda m: "\\sqrt{" + m.group(1) + "}", t)
+    t = re.sub(r"\\sqrt(?![{\\A-Za-z0-9])", lambda m: "\\surd", t)
+    t = re.sub(r"(?<!\\\\)#", lambda m: "\\#", t)
     return t
 
 
@@ -89,6 +111,17 @@ def is_math(s: str) -> bool:
         return False
     if re.fullmatch(r"[a-z][a-z0-9]+(_[a-z0-9]+)+", s):      # loss_dm 这类 snake_case
         return False
+    # 真代码：属性访问、赋值、两段以上的多字母 snake_case、末尾下划线
+    if "." in s and re.search(r"[A-Za-z]\.[A-Za-z_]", s):    # skimage.metrics.xxx
+        return False
+    if "=True" in s or "=False" in s or "=None" in s:
+        return False
+    if s.endswith("_"):                                       # clip_grad_norm_
+        return False
+    if len(re.findall(r"_[A-Za-z]{2,}", s)) >= 2:             # a_memory_search / _get_init_query
+        return False
+    if re.match(r"^[A-Za-z_][A-Za-z0-9_]*\(", s) and re.search(r"_[A-Za-z]{2,}", s):
+        return False                                          # 带下划线的函数调用
     if re.fullmatch(r"[A-Z][A-Z0-9_]{3,}", s):                # CONST_NAME
         return False
     if re.match(r"^(https?:|/|\./|--)", s):                   # 路径 / URL / 命令行开关
