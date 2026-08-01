@@ -342,7 +342,12 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
     <div class="sym"><b>方括号</b>沿序列维首尾相接，长度 <code>N \to 2N</code></div>
   </div>
   <p>为什么这样拼就能一次算完？因为"第 <code>i</code> 帧做最后一步去噪"这件事，输入只有两类东西：<strong>自己那份带噪状态</strong>，加上<strong>窗口内更早那几帧的干净估计</strong>。既然两类都在这条序列里了，只要用 mask 把每个带噪位置能看见的范围削回它当初的窗口，一次前向就同时复现了 <code>N</code> 个时间步各自的处境。</p>
-  <div class="note"><strong>"Checkpointed" 这个名字的来历：</strong>第一遍只留几个存档点（<code>X₀</code> 和 <code>Xₛ</code>），第二遍从存档点把要留梯度的那一小段重算一次。这跟 PyTorch 的 gradient checkpointing 是同一个思路——<strong>用重算换显存</strong>；区别只是存档点选在"帧"这个粒度上。</div>
+  <div class="note"><strong>"Checkpointed" 这个名字的来历：</strong>第一遍只留几个存档点（<code>X₀</code> 和 <code>Xₛ</code>），第二遍从存档点把要留梯度的那一小段重算一次。大方向跟 PyTorch 的 gradient checkpointing 一样——<strong>用重算换显存</strong>，存档点选在"帧"这个粒度上。</div>
+  <h3>但它不只是"时间换空间"</h3>
+  <p><strong>一 · 重算的不是同一段计算，是改写过的。</strong>vanilla gradient checkpointing 把丢掉的那段<strong>原样再跑一遍</strong>：同一份代码、同一个顺序，所以不需要任何额外设计。这里的第二遍不是重放第一遍那 <code>N</code> 次串行前向，而是把它<strong>改写成 1 次并行前向</strong>。正因为形式变了，才必须专门造下面那张 mask 去复刻每一帧当初的处境——结果等价，算法不同。</p>
+  <p><strong>二 · 它买到的不只是"同样的结果 + 更少显存"。</strong>原版 Self Forcing 对缓存的 KV 停梯度，不是不想要那条梯度，是<strong>要不起</strong>。显存压下来之后这条路才走得通，于是多出一项原来做不到的事（细节见本节末尾）。所以这不是在同一条时间—空间曲线上滑动，是换到了另一条曲线上，而新曲线上还有它自己的取舍。</p>
+  <p><strong>三 · 换来的"空间"不是固定倍数</strong>，是把 <code>Lₛ</code> 从式子里消掉了——上面那笔账算的就是这件事。</p>
+  <p>至于"多花了多少时间"，<strong>论文没给</strong>，而且方向不像直觉那么显然：第二遍的序列长 <code>2N</code>，注意力是平方项，FLOPs 未必比 <code>N</code> 次小窗口便宜；但它是一次并行前向，硬件利用率远高于 <code>N</code> 次串行小前向，wall-clock 反而可能更好看。既没有显存曲线也没有速度表，只能说"多跑了一遍"，说不出多几成。</p>
   <figure>
     <figcaption><span>Fig 10 · 教学用最小 mask（窗口取 3）</span><b>蓝：可读的历史；橙：只读自己</b></figcaption>
     <div class="mask"><div class="mask-grid">
