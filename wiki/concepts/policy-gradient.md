@@ -38,7 +38,7 @@ updated: 2026-05-28
 - \(\nabla J(\theta )\) 是参数 θ 该怎么调
 - \(\pi (a_t | s_t; \theta )\) 是策略, 你给状态它给 action 概率分布
 - \(\nabla \log \pi (...)\) 是 log 概率的梯度 (跟分类的 cross-entropy 是同一个 trick)
-- `R_t` 是这一步之后的总 reward
+- \(R_t\) 是这一步之后的总 reward
 
 **意译**: "在状态 s_t 选了 a_t 之后总收益是 R_t, 就把 'log P(选 a_t)' 朝 R_t 的方向推"。R_t 高 → 推大概率, R_t 低 → 推小概率。
 

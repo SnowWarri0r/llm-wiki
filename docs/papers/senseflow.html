@@ -202,20 +202,20 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 
 <section id="dmd">
 <h2><span class="n">§ 02</span><span>先补 DMD 前置：fake 网络为什么存在</span></h2>
-<p>学生分布记作 <code>p_g(X_t)</code>，老师目标分布记作 <code>p_r(X_t)</code>。DMD 想缩小反向 KL：</p>
+<p>学生分布记作 <code class="m">p_g(X_t)</code>，老师目标分布记作 <code class="m">p_r(X_t)</code>。DMD 想缩小反向 KL：</p>
 <div class="symbols">
-  <div class="symbol"><code>X_t</code>学生干净 latent 加噪到时刻 <code>t</code> 后的随机变量。</div>
-  <div class="symbol"><code>p_g / p_r</code>学生诱导分布 / 冻结老师代表的目标分布。</div>
-  <div class="symbol"><code>D_{\mathrm{KL}}</code>反向 KL；平均点来自学生，不是老师。</div>
+  <div class="symbol"><code class="m">X_t</code>学生干净 latent 加噪到时刻 <code>t</code> 后的随机变量。</div>
+  <div class="symbol"><code class="m">p_g / p_r</code>学生诱导分布 / 冻结老师代表的目标分布。</div>
+  <div class="symbol"><code class="m">D_{\mathrm{KL}}</code>反向 KL；平均点来自学生，不是老师。</div>
   <div class="symbol"><code>E</code>不断更换时间与学生样本，再取平均。</div>
 </div>
 <p class="formula-purpose">这条式子回答：学生在自己会生成的位置上，和老师分布差多少？</p>
 <div class="formula math" data-display="true">\min_{p_g}D_{\mathrm{KL}}(p_g\Vert p_r)=\mathbb E_{t,X_t\sim p_g}\left[\log p_g(X_t)-\log p_r(X_t)\right]</div>
-<p>问题出在 <code class="m">\log p_g</code> 这一项：学生的密度<strong>根本算不出来</strong>。学生是个生成器，你能从它采样，但拿不到它在某点的概率值。DMD 的办法是<strong>找个替身</strong>——训练一套 fake 网络 <code>p_f</code> 专门去追踪 <code>p_g</code>，然后把上式里算不动的 <code class="m">\log p_g</code> 换成能算的 <code class="m">\log p_f</code>：</p>
+<p>问题出在 <code class="m">\log p_g</code> 这一项：学生的密度<strong>根本算不出来</strong>。学生是个生成器，你能从它采样，但拿不到它在某点的概率值。DMD 的办法是<strong>找个替身</strong>——训练一套 fake 网络 <code class="m">p_f</code> 专门去追踪 <code class="m">p_g</code>，然后把上式里算不动的 <code class="m">\log p_g</code> 换成能算的 <code class="m">\log p_f</code>：</p>
 <div class="symbols" style="grid-template-columns:repeat(3,1fr)">
-  <div class="symbol"><code>\theta</code>生成器参数，改变它会移动学生分布。</div>
-  <div class="symbol"><code>\phi</code>fake 网络参数，负责让 <code>p_f</code> 追上 <code>p_g</code>。</div>
-  <div class="symbol"><code>V(\theta,\phi)</code>这场博弈的<strong>价值函数</strong>：一个标量，两方朝相反方向拉它。</div>
+  <div class="symbol"><code class="m">\theta</code>生成器参数，改变它会移动学生分布。</div>
+  <div class="symbol"><code class="m">\phi</code>fake 网络参数，负责让 <code class="m">p_f</code> 追上 <code class="m">p_g</code>。</div>
+  <div class="symbol"><code class="m">V(\theta,\phi)</code>这场博弈的<strong>价值函数</strong>：一个标量，两方朝相反方向拉它。</div>
 </div>
 <div class="formula math" data-display="true">\min_\theta\max_\phi V(\theta,\phi)=\mathbb E_{t,X_t\sim p_g}\left[\log p_f(X_t)-\log p_r(X_t)\right]</div>
 <p class="formula-purpose">这条式子跟上一条只差一个字母，但读法完全变了，并排看：</p>
@@ -223,14 +223,14 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 \text{上一条}\quad &\min_{p_g}\ \mathbb E\left[\log p_g-\log p_r\right]\\
 \text{这一条}\quad &\min_\theta\max_\phi\ \mathbb E\left[\log p_f-\log p_r\right]
 \end{aligned}</div>
-<p>上一条对着<strong>分布本身</strong>求最小，是理想写法——但 <code>p_g</code> 算不出来，这个 min 没法执行。下一条做了两件事：把算不动的 <code class="m">\log p_g</code> 换成能算的 <code class="m">\log p_f</code>，并把 min 从分布落到<strong>真正能调的参数 <code class="m">\theta</code></strong> 上。<strong>换掉的那一项就是全部代价</strong>：<code>p_f</code> 追得准不准，直接决定这条式子还算不算数。</p>
+<p>上一条对着<strong>分布本身</strong>求最小，是理想写法——但 <code class="m">p_g</code> 算不出来，这个 min 没法执行。下一条做了两件事：把算不动的 <code class="m">\log p_g</code> 换成能算的 <code class="m">\log p_f</code>，并把 min 从分布落到<strong>真正能调的参数 <code class="m">\theta</code></strong> 上。<strong>换掉的那一项就是全部代价</strong>：<code class="m">p_f</code> 追得准不准，直接决定这条式子还算不算数。</p>
 <h3>V 是什么：不是损失，是一场博弈的"分数"</h3>
 <p>平时见到的 loss 是<strong>所有人一起往小里压</strong>。<code class="m">V</code> 不是——它是<strong>价值函数</strong>（value function），博弈论里两方共用的那一个标量分数：</p>
 <ul>
   <li><strong>生成器（调 <code class="m">\theta</code>）想让它小。</strong>小意味着学生分布离老师近。</li>
   <li><strong>fake 网络（调 <code class="m">\phi</code>）想让它大。</strong>这一条最反直觉——下面解释。</li>
 </ul>
-<p>为什么 fake 要<strong>最大化</strong>？因为 <code class="m">V</code> 里只有 <code class="m">\log p_f</code> 这一项归它管，而 <code>p_f</code> 是概率密度：把 <code class="m">\log p_f(X_t)</code> 在<strong>学生采样点上</strong>顶高，就是让 <code>p_f</code> 把概率质量堆到学生真正会去的地方——这正是"追上学生"的数学写法。所以"最大化"不是跟生成器作对，是在<strong>把自己校准到学生身上</strong>。</p>
+<p>为什么 fake 要<strong>最大化</strong>？因为 <code class="m">V</code> 里只有 <code class="m">\log p_f</code> 这一项归它管，而 <code class="m">p_f</code> 是概率密度：把 <code class="m">\log p_f(X_t)</code> 在<strong>学生采样点上</strong>顶高，就是让 <code class="m">p_f</code> 把概率质量堆到学生真正会去的地方——这正是"追上学生"的数学写法。所以"最大化"不是跟生成器作对，是在<strong>把自己校准到学生身上</strong>。</p>
 <p>这也是 <code class="m">\min_\theta\ \max_\phi</code> 里外两层的分工：<strong>内层先把尺子校准，外层才用这把尺子去挪学生。</strong>尺子没校准就挪，挪的方向就是错的——那正是 <a href="#failure">§03</a> 要展开的失稳点。到那里会把 <code class="m">V</code> 拆成 <code>KL(目标) − KL(追踪误差)</code> 两块，这个"分数"到底在数什么就完全落地了。</p>
 <p>另一个麻烦：生成器每动一步，学生分布就变，fake 网络面对的是<strong>持续移动的靶</strong>。DMD2 用 <a class="jr" href="#g-03">TTUR</a> 让 fake 网络多更新几次，SenseFlow 发现在 8B / 12B 上这还不够。</p>
 </section>
@@ -239,7 +239,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 <h2><span class="n">§ 03</span><span>真正的失稳点：内循环没追上，外循环就在优化错目标</span></h2>
 <p>先回忆定义：<code class="m">KL(p||q)=E_{X~p}[\log p(X)-\log q(X)]</code>。现在在上式里加上又减去同一个 <code class="m">\log p_g</code>，总值不变：</p>
 <div class="formula math" data-display="true">\begin{aligned}V(\theta,\phi)&=\mathbb E_{p_g}\left[(\log p_g-\log p_r)-(\log p_g-\log p_f)\right]\\&=D_{\mathrm{KL}}(p_g\Vert p_r)-D_{\mathrm{KL}}(p_g\Vert p_f)\end{aligned}</div>
-<p>第一行到第二行只是代回 KL 定义。固定生成器时，第一项不随 <code class="m">\phi</code> 变化；fake 网络最大化 <code>V</code>，等价于把第二项压到零。最优点 <code>p_f=p_g</code> 就叫 <a class="jr" href="#g-04">inner best response</a>。</p>
+<p>第一行到第二行只是代回 KL 定义。固定生成器时，第一项不随 <code class="m">\phi</code> 变化；fake 网络最大化 <code>V</code>，等价于把第二项压到零。最优点 <code class="m">p_f=p_g</code> 就叫 <a class="jr" href="#g-04">inner best response</a>。</p>
 <figure>
   <figcaption><span>Fig 02 · 两个 KL 各管一件事</span><b>追踪误差会直接污染外循环</b></figcaption>
   <div class="kl-split">
@@ -299,10 +299,10 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 <h3>二 · 只挑四个点，风险在哪</h3>
 <p>论文量了一个东西：老师在时刻 <code>t</code> <strong>一步</strong>猜回干净图能猜得多准。先把符号说清：</p>
 <div class="symbols">
-  <div class="symbol"><code>x_0</code>真实的干净样本。</div>
-  <div class="symbol"><code>x_t</code>把 <code>x_0</code> 加噪到时刻 <code>t</code> 的结果。</div>
-  <div class="symbol"><code>\widehat x_0</code>老师看着 <code>x_t</code>，一步猜出来的干净图。</div>
-  <div class="symbol"><code>\xi(t)</code>这个猜测的平均平方误差。</div>
+  <div class="symbol"><code class="m">x_0</code>真实的干净样本。</div>
+  <div class="symbol"><code class="m">x_t</code>把 <code class="m">x_0</code> 加噪到时刻 <code>t</code> 的结果。</div>
+  <div class="symbol"><code class="m">\widehat x_0</code>老师看着 <code class="m">x_t</code>，一步猜出来的干净图。</div>
+  <div class="symbol"><code class="m">\xi(t)</code>这个猜测的平均平方误差。</div>
 </div>
 <p class="formula-purpose">这条式子测量：老师从第 <code>t</code> 个噪声状态一步猜回干净图时，平均错多少？</p>
 <div class="formula math" data-display="true">\xi(t)=\mathbb E_{x_0,\epsilon}\left[\left\|\widehat x_0(x_t,t)-x_0\right\|_2^2\right]</div>
@@ -319,7 +319,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 <p>对相邻两个 anchor 之间的一段 <code class="m">\tau_{i} \to \tau_{i-1}</code>（从噪声大的走向噪声小的），每次训练随机抽一个中间点 <code class="m">t_{\mathrm{mid}}</code>，然后走两条路：</p>
 <div class="symbols" style="grid-template-columns:1fr 1fr">
   <div class="symbol"><code>x_{tar}</code><b>A · 目标路线：</b>老师先从 <code class="m">\tau_i</code> 走到 <code class="m">t_{\mathrm{mid}}</code>，学生接着从 <code class="m">t_{\mathrm{mid}}</code> 走到 <code class="m">\tau_{i-1}</code>，落点记作 <code>x_{tar}</code>。<strong>整条不回传梯度。</strong></div>
-  <div class="symbol"><code>x_{direct}</code><b>B · 活跃路线：</b>学生自己一步从 <code class="m">\tau_i</code> 直接跨到 <code class="m">\tau_{i-1}</code>，落点记作 <code>x_{direct}</code>（正式记号是 <code>x_{\tau_{i-1}}</code>）。<strong>梯度只走这条。</strong></div>
+  <div class="symbol"><code>x_{direct}</code><b>B · 活跃路线：</b>学生自己一步从 <code class="m">\tau_i</code> 直接跨到 <code class="m">\tau_{i-1}</code>，落点记作 <code>x_{direct}</code>（正式记号是 <code class="m">x_{\tau_{i-1}}</code>）。<strong>梯度只走这条。</strong></div>
 </div>
 <p>两条路的起点、终点<strong>时刻完全一样</strong>，差别只在中间拐没拐一下。损失就是让 B 去贴 A。</p>
 <p class="formula-purpose">走一步用的是最朴素的欧拉法，这里必须先讲清，否则下面的数字对不上：</p>
@@ -351,7 +351,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
   <div class="plain"><strong>并行的活跃路线：</strong>学生直接从 <code class="m">.75\to .50</code>，以速度 <code>-1</code> 得到 <code>.45</code>。误差只回传这条路线；<a class="jr" href="#g-09">stopgrad</a> 冻结目标值 <code>.65</code>。</div>
 </figure>
 <p class="formula-purpose">正式目标：让直接跨段结果贴近冻结的绕路目标。</p>
-<div class="symbols"><div class="symbol"><code>x_{\tau_{i-1}}</code>活跃学生直接跨完整段的结果，就是上面的 <code>.45</code>。</div><div class="symbol"><code>x_{tar}</code>老师前半段 + 学生后半段造出的临时目标，上面的 <code>.65</code>。</div><div class="symbol"><code>i</code>第几个 coarse interval。</div><div class="symbol"><code>stopgrad</code>保留目标数值，但不从目标支路反传。</div></div>
+<div class="symbols"><div class="symbol"><code class="m">x_{\tau_{i-1}}</code>活跃学生直接跨完整段的结果，就是上面的 <code>.45</code>。</div><div class="symbol"><code>x_{tar}</code>老师前半段 + 学生后半段造出的临时目标，上面的 <code>.65</code>。</div><div class="symbol"><code>i</code>第几个 coarse interval。</div><div class="symbol"><code>stopgrad</code>保留目标数值，但不从目标支路反传。</div></div>
 <div class="formula math" data-display="true">\mathcal L_{\mathrm{ISG}}^{(i)}=\mathbb E_{\epsilon,t_{\mathrm{mid}}}\left[\left\|x_{\tau_{i-1}}-\operatorname{stopgrad}(x_{\mathrm{tar}})\right\|_2^2\right]</div>
 
 <h3>五 · 三个容易滑过去的"为什么"</h3>
@@ -388,7 +388,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 <section id="loop">
 <h2><span class="n">§ 07</span><span>一轮训练：三项 loss 和四次更新按什么顺序</span></h2>
 <p>每个小步先选一个 coarse anchor，再以 50% 概率从真实图前向加噪，或从纯噪声做 <a class="jr" href="#g-11">backward simulation</a>。生成器默认每 5 个小步更新一次。</p>
-<div class="symbols"><div class="symbol"><code>\mathcal{L}_{\mathrm{DMD}}</code>双 score 分布匹配项。</div><div class="symbol"><code>\mathcal{L}_G^{\mathrm{adv}}</code>VFM 判别器给生成器的对抗项。</div><div class="symbol"><code>\mathcal{L}_{\mathrm{ISG}}</code>段内引导项。</div><div class="symbol"><code>\lambda_G,\ \lambda_{\mathrm{ISG}}</code>控制后两项相对强度的超参数。</div></div>
+<div class="symbols"><div class="symbol"><code class="m">\mathcal{L}_{\mathrm{DMD}}</code>双 score 分布匹配项。</div><div class="symbol"><code class="m">\mathcal{L}_G^{\mathrm{adv}}</code>VFM 判别器给生成器的对抗项。</div><div class="symbol"><code class="m">\mathcal{L}_{\mathrm{ISG}}</code>段内引导项。</div><div class="symbol"><code class="m">\lambda_G,\ \lambda_{\mathrm{ISG}}</code>控制后两项相对强度的超参数。</div></div>
 <p class="formula-purpose">生成器更新时，三项监督才合到一起。</p>
 <div class="formula math" data-display="true">\mathcal L_G=\mathcal L_{\mathrm{DMD}}+\lambda_G\mathcal L_G^{\mathrm{adv}}+\lambda_{\mathrm{ISG}}\mathcal L_{\mathrm{ISG}}</div>
 <figure>
@@ -541,92 +541,29 @@ a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
 <!-- gloss-popover:end -->
 <!-- mathify:start -->
 <script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
 (function(){
   function run(){
     if(!window.katex) return;
-    var GREEK={'θ':'\\theta','σ':'\\sigma','α':'\\alpha','μ':'\\mu','ε':'\\epsilon',
-      'φ':'\\phi','ψ':'\\psi','γ':'\\gamma','λ':'\\lambda','ω':'\\omega','τ':'\\tau',
-      'β':'\\beta','δ':'\\delta','ρ':'\\rho','π':'\\pi','η':'\\eta','ζ':'\\zeta',
-      'Ω':'\\Omega','Σ':'\\sum','Δ':'\\Delta','Φ':'\\Phi','Ψ':'\\Psi','Θ':'\\Theta',
-      'ℓ':'\\ell','∇':'\\nabla','∈':'\\in','≈':'\\approx','≠':'\\neq','≤':'\\le',
-      '≥':'\\ge','×':'\\times','·':'\\cdot','−':'-','∼':'\\sim','→':'\\to',
-      '⟺':'\\iff','⇒':'\\Rightarrow','‖':'\\|','∫':'\\int','∂':'\\partial',
-      '√':'\\sqrt','∞':'\\infty','⊕':'\\oplus','∝':'\\propto'};
-    var SUB={'₀':'0','₁':'1','₂':'2','₃':'3','₄':'4','₅':'5','₆':'6','₇':'7','₈':'8','₉':'9',
-      'ₜ':'t','ₓ':'x','ᵢ':'i','ⱼ':'j','ₙ':'n','ₖ':'k','ₐ':'a','ₑ':'e','ₒ':'o','ₚ':'p','ₛ':'s'};
-    var SUP={'⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','ⁿ':'n','ᵀ':'T'};
-    var WORDS=['fake','real','base','cfg','cond','uncond','data','reg','pseudo','denoise',
-      'train','infer','new','old','out','in','tot','max','min','avg','ref','KL','GAN','DMD',
-      'DM','MSE','LPIPS','FID','CE','sg','stopgrad'];
-
-    function toTex(s){
-      var t=s;
-      // unicode 上下标 → LaTeX
-      t=t.replace(/[\u2080-\u2089\u2093\u209c\u1d62\u2c7c\u2099\u2096\u2090\u2091\u2092\u209a\u209b]/g,
-        function(c){ return SUB[c]!==undefined ? '_{'+SUB[c]+'}' : c; });
-      t=t.replace(/[\u00b2\u00b3\u00b9\u2070\u2074\u2075\u207f\u1d40]/g,
-        function(c){ return SUP[c]!==undefined ? '^{'+SUP[c]+'}' : c; });
-      // 希腊字母与运算符
-      t=t.replace(/[\u0370-\u03ff\u2100-\u22ff\u2190-\u21ff\u2212]/g,
-        function(c){ return GREEK[c]!==undefined ? GREEK[c]+' ' : c; });
-      // 多字母下标/上标 → \mathrm{}。上标这条不能漏：LaTeX 里 ^adv 是
-      // "^a 后面跟正文 dv"，语法完全合法，KaTeX 不报错却渲染成 L^a dv。
-      t=t.replace(/([_^])\{?([A-Za-z]{2,})\}?/g, function(m,op,w){
-        return WORDS.indexOf(w)>=0 || w.length>1 ? op+'{\\mathrm{'+w+'}}' : m; });
-      // 希腊字母后"紧贴"单词(θbase) → 变下标。这里只吃 1 个空格：那是上面
-      // 希腊替换自己加的分隔符。原文里真有空格(θ max)说明作者本就当两个记号，
-      // 再吞就会把函数名 max 吃成 θ 的下标（senseflow 的 "minθ maxφ" 正是这么坏的）。
-      t=t.replace(/(\\[a-zA-Z]+) ([a-z]{2,})\b/g, function(m,g,w){
-        return WORDS.indexOf(w)>=0 ? g+'_{\\mathrm{'+w+'}}' : m; });
-      // 常见函数名
-      t=t.replace(/\b(exp|log|ln|max|min|sin|cos|det|dim)\b/g,'\\$1 ');
-      return t;
-    }
-
-    function looksLikeMath(s){
-      if(!s || s.length>44) return false;
-      if(/[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/.test(s)) return false; // 中日韩
-      if(/[\[\]"'`]/.test(s)) return false;                                     // 索引/字符串=代码
-      if(/^[A-Z][A-Z0-9_]{3,}$/.test(s)) return false;                            // CONST_NAME
-      if(/\s/.test(s) && /^[A-Za-z\s‖|,]+$/.test(s)) return false;              // "fake ‖ real" 词组
-      if(/^(https?:|\/|\.\/)/.test(s)) return false;                            // 路径/URL
-      if(/^<.*>$/.test(s)) return false;                                          // <eos> / <|zh|> 这类 token，不是数学
-      // snake_case 且首段是多字母 = 代码变量名(no_grad / loss_dm / cross_entropy)，
-      // 而数学下标的首段通常只有一个字母(p_fake / w_c / d_1)，予以保留
-      if(/^[a-z][a-z0-9]+(_[a-z0-9]+)+$/.test(s)) return false;
-      return true;
-    }
-
-    // 散文里的 <code> 用更严的形状判定：单个字母 + 下标/上标/括号参数。
-    // 散文不像符号格子那样"里面基本都是数学"，混着 commit hash(fafc81b7)、
-    // 版本号(1e-5)、命令行开关(--apply)，所以这里宁可漏也不能误伤。
-    // 光秃秃一个字母(A / N)不渲染——它可能只是"选项 A"。
-    var TIGHT=/^[A-Za-z\u0370-\u03ff](_\{?[A-Za-z0-9]{1,5}\}?)*(\^\{?[A-Za-z0-9]{1,3}\}?)*(\(.*\))?$/;
-    function proseIsMath(s){ return TIGHT.test(s) && /[_^(]/.test(s); }
-
-    var CELL='.var code, .symbol code, .vars code, .symbol-grid code, .sym code, .concept-body code';
-    var cells=[].slice.call(document.querySelectorAll(CELL));
-    // code.m = 作者显式声明"这是数学"，任何位置都渲染，不受形状限制
-    var opt=[].slice.call(document.querySelectorAll('code.m'));
-    var prose=[].slice.call(document.querySelectorAll('code')).filter(function(el){
-      return cells.indexOf(el)<0 && opt.indexOf(el)<0 && proseIsMath((el.textContent||'').trim());
-    });
-
-    cells.concat(opt).concat(prose).forEach(function(el){
+    document.querySelectorAll('code.m').forEach(function(el){
       if(el.dataset.mathified) return;
-      if(el.closest('pre')) return;               // 代码块原样保留
-      var raw=(el.textContent||'').trim();
-      if(!el.classList.contains('m') && !looksLikeMath(raw)) return;
-      // 已经是手写 LaTeX（含反斜杠命令）的，原样送 KaTeX，绝不让 toTex 再改写一遍——
-      // 否则同一条式子在「符号格子」和「.formula 公式」两条渲染路径上会长得不一样。
-      // toTex 那层启发式只服务于存量页里随手写的松散记号(θbase / p_fake / L_G^adv)。
-      var tex = raw.indexOf('\\') >= 0 ? raw : toTex(raw);
+      if(el.closest('pre')) return;
       try{
-        var html=katex.renderToString(tex,{throwOnError:true,displayMode:false});
-        el.innerHTML=html;
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
         el.dataset.mathified='1';
         el.classList.add('mathified');
-      }catch(e){ /* 转换不了就保持原来的 code 样子 */ }
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
     });
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
@@ -636,9 +573,8 @@ a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
 <style>
 code.mathified{border:none;background:none;padding:0;font-size:1em}
 .var code.mathified,.symbol code.mathified{color:#7e2e20}
-/* 符号格子里「开头那个 code 是标签、要单独成行」的样式(.symbol code{display:block})
-   会连说明文字里的行内 code 一起顶成块级，读起来像莫名其妙的断行。
-   只有第一个 code 该是块级，后面的一律恢复行内。 */
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
 .sym code:not(:first-child),.symbol code:not(:first-child),
 .var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
 </style>

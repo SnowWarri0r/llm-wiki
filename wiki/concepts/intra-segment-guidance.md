@@ -22,8 +22,8 @@ ISG（Intra-Segment Guidance，段内引导）在相邻两个少步 anchor 之�
 设当前段是 \(\tau_i\to \tau_{i-1}\)：
 
 1. 随机抽 \(t_{\mathrm{mid}}\in (\tau_{i-1},\tau_i)\)；
-2. 冻结老师，从 \(x_{\tau_i}\) 走到 `x_{t_mid}`；
-3. 冻结这条目标支路里的学生，从 `x_{t_mid}` 再走到 \(x_{\mathrm{tar}}\)；
+2. 冻结老师，从 \(x_{\tau_i}\) 走到 \(x_{t_mid}\)；
+3. 冻结这条目标支路里的学生，从 \(x_{t_mid}\) 再走到 \(x_{\mathrm{tar}}\)；
 4. 活跃的学生从 \(x_{\tau_i}\) 直接一步走到 \(x_{\tau_{i-1}}\)；
 5. 让直接结果贴近 `stopgrad(x_tar)`。
 

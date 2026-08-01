@@ -1272,3 +1272,22 @@ skill 更新:
 - 全站效果：13 页共 82 处散文数学现在会渲染（vits 19、dmd 17、senseflow 15…）。另有 13 页共 34 处仍是灰底，因为那些页压根没加载 KaTeX（`inject_mathify` 有这道门槛，否则 renderToString 会炸）——那些是纯文字页，要渲染得先给它们加 KaTeX head，属于另一个决定。
 - senseflow §02 顺带把那个 `.calc` 对照块换成真正的 aligned KaTeX 公式（本来就是两条式子的对照，不该用等宽 ASCII 排）。
 - linter 同步：`code.m` 与紧形状的豁免从"碰巧不匹配"改成明写，并注入三种情形回归验证——裸 code 写 LaTeX 报错、code.m 写 LaTeX 不报、裸 code 写紧形状不报，三条都符合预期。
+
+## [2026-07-26] refactor | 数学统一成一套格式，删掉运行时猜测层
+
+用户定调："就该统一成一套格式啊，用啥 unicode，直接用公式渲染不好吗"。对——这一整轮的 bug 几乎全是"两套格式 + 一层猜测"生出来的。
+
+**Phase A** render.py 新增 ensure_katex_head()：页面有数学记号却没加载 KaTeX 就自动补 head（inject_mathify 原本会因此跳过，符号永远灰底）。35 页补上，剩 29 页确认无数学。
+
+**Phase B** 新增 tex_migrate.py，把 toTex 的转换搬到离线：
+- paper 侧 882 处 `<code>xₜ</code>` → `<code class="m">x_{t}</code>`（46 页）
+- md 侧 613 处 `` `xₜ` `` → `\(x_{t}\)`（100 个会渲染的文件；wiki/papers/*.md 是不渲染的脚手架，故意没动）
+- 全部经真 KaTeX 预校验。从 53 种非法一路修到 0，其中最险的是 is_math 把真代码当数学：archival_memory_search(query)、skimage.metrics.peak_signal_noise_ratio、requires_grad=false。另修 \softmax 不是 KaTeX 命令、x_{t_mid} 括号失配、希腊命令后的组合变音符、\sqrt 缺参数、字符表缺 ₊₋ᵥⁱ、logπ_ref 双下标、# 转义。
+- 19 条"里面有个 − 或 → 就被当数学"的英文短语/图例/配置（fake score − real score、car-1 → red、"golden_retriever"）进 NOT_MATH 人工钉死。
+- 结构完整性：把两版的 <code>…</code> 整体换成占位符后逐字节比对，只动了 code 内容。
+
+**Phase C** MATHIFY_BLOCK 从 104 行砍到 40 行——toTex / looksLikeMath / 散文严格形状全删，运行时只剩"把 code.m 原样送 KaTeX"。linter 相应改成"裸 <code> 里的数学 = ERROR"（没有兜底了）。
+
+过程中又踩一次同源的坑：linter 自己重写了一套 is_math，跟 tex_migrate 判定不一致，扫出 53 个假 ERROR（D_KL 被 CONST_NAME 规则误吞、NOT_MATH 短语被重复标记）。改成直接 import 同一个函数。SKILL 加 7.6 记这条：**发现两处表述同一件事，第一反应是让一处引用另一处，而不是同步维护。**
+
+最终：36 页浏览器实测 785 个 code.m + 312 个 .tex 节点全部渲染、katex-error 0；lint 80 页 0 ERROR。
