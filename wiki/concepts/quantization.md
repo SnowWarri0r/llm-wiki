@@ -1,8 +1,8 @@
 ---
 name: quantization
 type: concept
-sources: [lumine, turboquant]
-updated: 2026-06-16
+sources: [lumine, turboquant, sana-video-2]
+updated: 2026-07-28
 ---
 
 # 量化 · WxAy · 用更少比特存数字和算

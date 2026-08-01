@@ -1,8 +1,8 @@
 ---
 name: diffusion-timestep-conditioning
 type: concept
-sources: [diffusion-unet, dit]
-updated: 2026-07-27
+sources: [diffusion-unet, dit, sana-video-2]
+updated: 2026-07-28
 ---
 
 # Diffusion Timestep Conditioning · 告诉去噪网络“现在噪到哪一步”

@@ -1,8 +1,8 @@
 ---
 name: ema
 type: concept
-sources: [dino, krea-2, senseflow, drift-ar]
-updated: 2026-07-24
+sources: [dino, krea-2, senseflow, drift-ar, sana-video-2]
+updated: 2026-07-28
 ---
 
 # EMA · 指数滑动平均 · 一行就够
