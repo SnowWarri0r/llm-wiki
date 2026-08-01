@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Generation to Perception · 把生成骨干改造成感知模型 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · generation-to-perception</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Generation to Perception · 把生成骨干改造成感知模型</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>生成模型为了把噪声还原成合理视频，已经学到纹理、几何、运动和文本语义；“生成转感知”保留这套骨干，再用有标签目标把它改造成深度、法线或分割预测器。</p>
+<h2>先把三个作用分开</h2>
+<p>“复用生成权重”很容易被误解成：原来预测去噪速度的 QKV，突然就天然会输出深度。真实过程分三层：</p>
+<ol>
+<li><strong>生成预训练提供内部特征</strong>：attention 和 FFN 权重已经会关联跨帧物体、遮挡、透视和文字条件。</li>
+<li><strong>接口改造提供合适的起点</strong>：输入干净视频、选合适时间条件、调整输出符号，让初始特征更接近干净视觉数据。</li>
+<li><strong>监督后训练改变任务目标</strong>：用深度、法线、分割等标签继续更新权重，模型才真正学会输出这些目标。</li>
+</ol>
+<p>所以，权重不是“从 QKV 变成去噪权重”或“从去噪权重自动变成深度权重”。同一套矩阵一直在做特征混合；变的是输入分布、条件、训练标签和梯度。</p>
+<h2>GenCeption 的整流流例子</h2>
+<p>WAN 的整流流约定是：</p>
+<div class="tex math-display" data-display="true">v^\*= \epsilon-x_0</div>
+<ul>
+<li><code>x₀</code>：干净视频的 latent；</li>
+<li><code>ε</code>：与 <code>x₀</code> 同形状的高斯噪声；</li>
+<li><code>v*</code>：从干净数据指向噪声的目标速度；</li>
+<li>星号 <code>*</code>：表示训练标签，不是乘法。</li>
+</ul>
+<p>GenCeption 输入的是干净视频 latent，并固定 <code>t=0</code>。DiT 原始输出仍沿用上面的速度约定，于是先取反：</p>
+<div class="tex math-display" data-display="true">-v^\*=x_0-\epsilon</div>
+<p>这个负号只把方向从“干净 → 噪声”翻成“噪声 → 干净”。它不会把输出精确变成深度，也不等于把噪声项消掉。</p>
+<h3>一个标量例子</h3>
+<p>设 <code>x₀=2</code>、<code>ε=-1</code>：</p>
+<div class="tex math-display" data-display="true">v^\*=-1-2=-3,\qquad -v^\*=3</div>
+<p>原速度 <code>-3</code> 指向噪声侧，取反后的 <code>3</code> 指回干净侧。论文只声称这个方向与目标视频 latent <strong>更接近</strong>，能加快收敛；真正的深度值仍由后训练标签决定。</p>
+<h2>为什么最终层可以继续接 VAE decoder</h2>
+<p>原生成器的最后一层输出本来就是给 VAE decoder 消费的 latent 形状。GenCeption 直接使用最终层，而不是从中间层拉出一套特征金字塔，因此：</p>
+<ul>
+<li>张量形状不用重新设计；</li>
+<li>VAE decoder 仍能把 latent 还原成三通道目标视频；</li>
+<li>预训练阶段的输出接口被最大程度保留。</li>
+</ul>
+<p>代价是：输出必须尽量适配生成模型原生的连续图像形式。于是深度和掩码被复制成 RGB，相机姿态被改写成 raymap；难以图像化的关键点坐标只能新增 token，效果也更不稳定。</p>
+<h2>不同路线的区别</h2>
+<table>
+<thead>
+<tr>
+<th>路线</th>
+<th>生成模型怎样被使用</th>
+<th style="text-align: right;">推理是否迭代</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>生成时提示 / probing</td>
+<td>保持原模型，靠多步生成暴露知识</td>
+<td style="text-align: right;">是</td>
+</tr>
+<tr>
+<td>少步蒸馏</td>
+<td>保留生成任务，把几十步压到几步</td>
+<td style="text-align: right;">通常 1–4 步</td>
+</tr>
+<tr>
+<td>GenCeption 式后训练</td>
+<td>改成确定性感知映射</td>
+<td style="text-align: right;">一次前向</td>
+</tr>
+<tr>
+<td>取中间特征 + 专用头</td>
+<td>把生成器当 encoder</td>
+<td style="text-align: right;">一次前向，但接口改动更大</td>
+</tr>
+</tbody>
+</table>
+<h2>容易说错的地方</h2>
+<ul>
+<li><strong>错误</strong>：“取反后就是 <code>x₀</code>。” <strong>正确</strong>：取反后仍是 <code>x₀-ε</code>，只是经验上更靠近干净目标方向。</li>
+<li><strong>错误</strong>：“生成器本来就会深度估计。” <strong>正确</strong>：生成预训练提供强初始化，深度能力仍由带标签后训练形成。</li>
+<li><strong>错误</strong>：“一次前向等于实时。” <strong>正确</strong>：它只表示不再迭代采样；14B GenCeption 在论文硬件上仍约需 10 秒处理 81 帧。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/genception.html">genception</a> · 完整方法、数值例子和实验边界</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · 速度场和整流流</li>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · 被复用的 DiT 骨干</li>
+<li><a href="../concepts/rgb-task-representation.html">rgb-task-representation</a> · 怎样让感知目标继续走生成接口</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/genception.html"><span class="cat">paper</span>GenCeption · 视频生成模型也能成为通用视觉骨干</a></li><li><a href="../concepts/rgb-task-representation.html"><span class="cat">concept</span>RGB Task Representation · 把不同视觉答案改写成三通道图像</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/generation-to-perception.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+<!-- mathify:start -->
+<script>
+(function(){
+  function run(){
+    if(!window.katex) return;
+    var GREEK={'θ':'\\theta','σ':'\\sigma','α':'\\alpha','μ':'\\mu','ε':'\\epsilon',
+      'φ':'\\phi','ψ':'\\psi','γ':'\\gamma','λ':'\\lambda','ω':'\\omega','τ':'\\tau',
+      'β':'\\beta','δ':'\\delta','ρ':'\\rho','π':'\\pi','η':'\\eta','ζ':'\\zeta',
+      'Ω':'\\Omega','Σ':'\\sum','Δ':'\\Delta','Φ':'\\Phi','Ψ':'\\Psi','Θ':'\\Theta',
+      'ℓ':'\\ell','∇':'\\nabla','∈':'\\in','≈':'\\approx','≠':'\\neq','≤':'\\le',
+      '≥':'\\ge','×':'\\times','·':'\\cdot','−':'-','∼':'\\sim','→':'\\to',
+      '⟺':'\\iff','⇒':'\\Rightarrow','‖':'\\|','∫':'\\int','∂':'\\partial',
+      '√':'\\sqrt','∞':'\\infty','⊕':'\\oplus','∝':'\\propto'};
+    var SUB={'₀':'0','₁':'1','₂':'2','₃':'3','₄':'4','₅':'5','₆':'6','₇':'7','₈':'8','₉':'9',
+      'ₜ':'t','ₓ':'x','ᵢ':'i','ⱼ':'j','ₙ':'n','ₖ':'k','ₐ':'a','ₑ':'e','ₒ':'o','ₚ':'p','ₛ':'s'};
+    var SUP={'⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','ⁿ':'n','ᵀ':'T'};
+    var WORDS=['fake','real','base','cfg','cond','uncond','data','reg','pseudo','denoise',
+      'train','infer','new','old','out','in','tot','max','min','avg','ref','KL','GAN','DMD',
+      'DM','MSE','LPIPS','FID','CE','sg','stopgrad'];
+
+    function toTex(s){
+      var t=s;
+      // unicode 上下标 → LaTeX
+      t=t.replace(/[\u2080-\u2089\u2093\u209c\u1d62\u2c7c\u2099\u2096\u2090\u2091\u2092\u209a\u209b]/g,
+        function(c){ return SUB[c]!==undefined ? '_{'+SUB[c]+'}' : c; });
+      t=t.replace(/[\u00b2\u00b3\u00b9\u2070\u2074\u2075\u207f\u1d40]/g,
+        function(c){ return SUP[c]!==undefined ? '^{'+SUP[c]+'}' : c; });
+      // 希腊字母与运算符
+      t=t.replace(/[\u0370-\u03ff\u2100-\u22ff\u2190-\u21ff\u2212]/g,
+        function(c){ return GREEK[c]!==undefined ? GREEK[c]+' ' : c; });
+      // 多字母下标/上标 → \mathrm{}。上标这条不能漏：LaTeX 里 ^adv 是
+      // "^a 后面跟正文 dv"，语法完全合法，KaTeX 不报错却渲染成 L^a dv。
+      t=t.replace(/([_^])\{?([A-Za-z]{2,})\}?/g, function(m,op,w){
+        return WORDS.indexOf(w)>=0 || w.length>1 ? op+'{\\mathrm{'+w+'}}' : m; });
+      // 希腊字母后直接跟单词(θbase) → 变下标
+      t=t.replace(/(\\[a-zA-Z]+)\s*([a-z]{2,})\b/g, function(m,g,w){
+        return WORDS.indexOf(w)>=0 ? g+'_{\\mathrm{'+w+'}}' : m; });
+      // 常见函数名
+      t=t.replace(/\b(exp|log|ln|max|min|sin|cos|det|dim)\b/g,'\\$1 ');
+      return t;
+    }
+
+    function looksLikeMath(s){
+      if(!s || s.length>44) return false;
+      if(/[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/.test(s)) return false; // 中日韩
+      if(/[\[\]"'`]/.test(s)) return false;                                     // 索引/字符串=代码
+      if(/^[A-Z][A-Z0-9_]{3,}$/.test(s)) return false;                            // CONST_NAME
+      if(/\s/.test(s) && /^[A-Za-z\s‖|,]+$/.test(s)) return false;              // "fake ‖ real" 词组
+      if(/^(https?:|\/|\.\/)/.test(s)) return false;                            // 路径/URL
+      if(/^<.*>$/.test(s)) return false;                                          // <eos> / <|zh|> 这类 token，不是数学
+      // snake_case 且首段是多字母 = 代码变量名(no_grad / loss_dm / cross_entropy)，
+      // 而数学下标的首段通常只有一个字母(p_fake / w_c / d_1)，予以保留
+      if(/^[a-z][a-z0-9]+(_[a-z0-9]+)+$/.test(s)) return false;
+      return true;
+    }
+
+    var sel='.var code, .symbol code, .vars code, .symbol-grid code, .sym code, .concept-body code';
+    document.querySelectorAll(sel).forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;               // 代码块原样保留
+      var raw=(el.textContent||'').trim();
+      if(!looksLikeMath(raw)) return;
+      // 已经是手写 LaTeX（含反斜杠命令）的，原样送 KaTeX，绝不让 toTex 再改写一遍——
+      // 否则同一条式子在「符号格子」和「.formula 公式」两条渲染路径上会长得不一样。
+      // toTex 那层启发式只服务于存量页里随手写的松散记号(θbase / p_fake / L_G^adv)。
+      var tex = raw.indexOf('\\') >= 0 ? raw : toTex(raw);
+      try{
+        var html=katex.renderToString(tex,{throwOnError:true,displayMode:false});
+        el.innerHTML=html;
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){ /* 转换不了就保持原来的 code 样子 */ }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里「开头那个 code 是标签、要单独成行」的样式(.symbol code{display:block})
+   会连说明文字里的行内 code 一起顶成块级，读起来像莫名其妙的断行。
+   只有第一个 code 该是块级，后面的一律恢复行内。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+</style>
+<!-- mathify:end -->
+</body>
+</html>
