@@ -1072,7 +1072,7 @@ MATHIFY_BLOCK = MATHIFY_START + """
       return true;
     }
 
-    var sel='.var code, .symbol code, .vars code, .symbol-grid code, .concept-body code';
+    var sel='.var code, .symbol code, .vars code, .symbol-grid code, .sym code, .concept-body code';
     document.querySelectorAll(sel).forEach(function(el){
       if(el.dataset.mathified) return;
       if(el.closest('pre')) return;               // 代码块原样保留
