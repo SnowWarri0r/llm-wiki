@@ -24,16 +24,16 @@ v = 4/π² × [atan(w_gt/h_gt)-atan(w/h)]²
 α = v / (1-IoU+v)
 ~~~
 
-- <code>b,b_gt</code>：预测框与真值框中心。
-- <code>ρ²</code>：两中心欧氏距离的平方。
-- <code>c²</code>：两框最小外接框对角线平方，负责归一化距离。
+- <code class="m">b,b_{\mathrm{gt}}</code>：预测框与真值框中心。
+- <code class="m">\rho^{2}</code>：两中心欧氏距离的平方。
+- <code class="m">c^{2}</code>：两框最小外接框对角线平方，负责归一化距离。
 - <code>w,h,w_gt,h_gt</code>：两框宽高。
 - <code>v</code>：长宽比差异。
-- <code>α</code>：让长宽比项随当前重叠情况自适应。
+- <code class="m">\alpha</code>：让长宽比项随当前重叠情况自适应。
 
 ## 数字例子
 
-真值中心 <code>(0,0)</code>、宽高 <code>4×2</code>；预测中心 <code>(1,0)</code>、宽高 <code>2×4</code>：
+真值中心 <code>(0,0)</code>、宽高 <code class="m">4\times 2</code>；预测中心 <code>(1,0)</code>、宽高 <code class="m">2\times 4</code>：
 
 ~~~text
 交集=2×2=4，并集=8+8-4=12

@@ -39,7 +39,7 @@ YOLOv4 的 SPP 不把 13×13 变小，而是在每个位置并排收集原点、
 
 ## 为什么 5/9/13 都不会把 13×13 缩小
 
-三路 max pooling 都使用 <code>stride=1</code>，并对奇数窗口补 <code>p=(k−1)/2</code> 的 padding：
+三路 max pooling 都使用 <code>stride=1</code>，并对奇数窗口补 <code class="m">p=(k-1)/2</code> 的 padding：
 
 ~~~text
 H_out = floor((H + 2p − k) / s) + 1
@@ -55,7 +55,7 @@ k=13, p=6: floor((13+12−13)/1)+1 = 13
 
 ## 四路如何合并
 
-进入 SPP 前的张量是 <code>13×13×512</code>。max pooling 按通道独立处理，不改变通道数：
+进入 SPP 前的张量是 <code class="m">13\times 13\times 512</code>。max pooling 按通道独立处理，不改变通道数：
 
 ~~~text
 原特征直通      13×13×512

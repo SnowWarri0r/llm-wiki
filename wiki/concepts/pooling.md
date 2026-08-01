@@ -15,7 +15,7 @@ Pooling 让一个窗口里的多个数变成一个数；**窗口怎么移动**�
 
 池化做两件彼此独立的事：
 
-1. 在一个 <code>k×k</code> 窗口内汇总数值；max pooling 取最大值，average pooling 取平均值。
+1. 在一个 <code class="m">k\times k</code> 窗口内汇总数值；max pooling 取最大值，average pooling 取平均值。
 2. 按 stride 移动窗口。stride 大于 1 才会跳格，通常才会缩小输出。
 
 因此，“2×2、stride 2 的 max pool 会把宽高减半”是一个常见配置，不是 pooling 的定义。YOLOv4 的 SPP 用 5×5、9×9、13×13 的大窗口，却把 stride 固定为 1，再补 padding，输出空间尺寸完全不变。
@@ -30,7 +30,7 @@ X = [ 1  2  0 ]
     [ 0  2  9 ]
 ~~~
 
-使用 <code>kernel=3</code>、<code>stride=1</code>、<code>padding=1</code>。为了让边缘也有完整的 3×3 窗口，外围补上不会抢到最大值的 <code>−∞</code>。
+使用 <code>kernel=3</code>、<code>stride=1</code>、<code>padding=1</code>。为了让边缘也有完整的 3×3 窗口，外围补上不会抢到最大值的 <code class="m">-\infty</code>。
 
 左上角输出看到的窗口是：
 
@@ -58,19 +58,19 @@ maxpool(X) = [ 4  4  4 ]
 L_out = floor((L_in + 2p − k) / s) + 1
 ~~~
 
-- <code>L_in</code>：输入高度或宽度。
+- <code class="m">L_{\mathrm{in}}</code>：输入高度或宽度。
 - <code>k</code>：池化窗口大小。
 - <code>s</code>：stride，窗口每次移动多少格。
 - <code>p</code>：两侧 padding 的格数。
 - <code>floor</code>：向下取整。
 
-上例代入 <code>L_in=3, k=3, s=1, p=1</code>：
+上例代入 <code class="m">L_{\mathrm{in}}=3,k=3,s=1,p=1</code>：
 
 ~~~text
 L_out = floor((3 + 2×1 − 3) / 1) + 1 = 3
 ~~~
 
-对奇数窗口，只要 <code>s=1</code> 且 <code>p=(k−1)/2</code>，输出长度就等于输入长度。YOLOv4 的 13×13 特征图正是这样：
+对奇数窗口，只要 <code>s=1</code> 且 <code class="m">p=(k-1)/2</code>，输出长度就等于输入长度。YOLOv4 的 13×13 特征图正是这样：
 
 ~~~text
 k=5,  p=2  → (13+4−5)+1  = 13

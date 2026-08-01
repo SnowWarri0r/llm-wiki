@@ -1291,3 +1291,12 @@ skill 更新:
 过程中又踩一次同源的坑：linter 自己重写了一套 is_math，跟 tex_migrate 判定不一致，扫出 53 个假 ERROR（D_KL 被 CONST_NAME 规则误吞、NOT_MATH 短语被重复标记）。改成直接 import 同一个函数。SKILL 加 7.6 记这条：**发现两处表述同一件事，第一反应是让一处引用另一处，而不是同步维护。**
 
 最终：36 页浏览器实测 785 个 code.m + 312 个 .tex 节点全部渲染、katex-error 0；lint 80 页 0 ERROR。
+
+## [2026-07-26] fix | 收尾：md 里的裸 HTML code、以及迁移引入的一个 KaTeX 回归
+
+- 我先前说"剩下未转的全在 <pre> 里"是错的——复查发现 <pre> 外还有 98 处。原因：部分 concept md 用的是**裸 HTML `<code>` 标签**而不是 markdown 反引号，我的 md pass 只处理了反引号。补一遍，6 文件 / 23 处。
+- 另两处：`V4_QUALITY_48` 是配置常量不是数学（CONST_NAME 规则漏了"字母+数字"开头的），加规则排除；`π(a\|s)` 被 markdown 表格转义的反斜杠挡住（md pass 把含反斜杠的当成"已是 LaTeX"跳过），该行改写成 `\(\pi(a\mid s)\)`。
+- **迁移引入的真回归**：render.py 判断自动页要不要加载 KaTeX 的条件是 `"<code>" in body_html`，字面匹配不带属性的标签。迁移后整页 code 都成了 `<code class="m">`，条件不成立 → 不加载 KaTeX → mathify 也不注入 → 那页数学永远灰底。改成匹配 `"<code"`。
+- 这个回归是被 §7.2 的正向断言抓到的：katex-error 是 0、lint 也全绿，只有"分子 180 / 分母 181 对不上"暴露了它。要是只查报错就漏过去了。
+- 全站现在 <pre> 外 0 处未标记；41 页浏览器实测 779 个 code.m + 337 个 tex 节点全部渲染、0 error。
+- SKILL 同步清理：§4 那段描述旧 mathify"自动识别符号表 code"的说明已经是假的（Phase C 删掉了那层），改成指向 §7.5；§7.2 的验证片段换成新语义（数 code.m / .tex，并列出 bareMathLeft 供逐条看）；文件布局补上 tex_migrate.py 和 fix_gloss_orphans.py；glossary 那条手敲 diff 命令改成"lint_paper.py 已覆盖"。
