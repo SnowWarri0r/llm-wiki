@@ -110,7 +110,7 @@ code{overflow-wrap:anywhere;word-break:break-word}
 
 <h2 id="s4"><span class="sec">04 · TEMPORAL ALIGNMENT</span>画面中的撞击，怎么查到同一刻的声音</h2>
 <p>视频 query 读取音频 K/V，就是 A→V；音频 query 读取视频 K/V，就是 V→A<a class="jr" href="#g-05">05</a>。</p>
-<div class="math"><div class="tex" data-display="true">A_{V\leftarrow A}=\operatorname{softmax}\!\left(\frac{Q_VK_A^\top}{\sqrt d}\right)V_A</div><div class="symbols"><b>Q_V</b><span>视频 token 提出的查询：我现在需要什么声音线索？</span><b>K_A</b><span>音频 token 的索引，用来与 query 比较。</span><b>V_A</b><span>匹配后真正取回的音频内容。</span><b>d</b><span>Q/K 的共同通道宽度；除以 √d 防止点积过大、softmax 过早饱和。</span></div></div>
+<div class="math"><div class="tex" data-display="true">A_{V\leftarrow A}=\operatorname{softmax}\!\left(\frac{Q_VK_A^\top}{\sqrt d}\right)V_A</div><div class="symbols"><code class="m">Q_V</code><span>视频 token 提出的查询：我现在需要什么声音线索？</span><b>K_A</b><span>音频 token 的索引，用来与 query 比较。</span><b>V_A</b><span>匹配后真正取回的音频内容。</span><b>d</b><span>Q/K 的共同通道宽度；除以 √d 防止点积过大、softmax 过早饱和。</span></div></div>
 <div class="figure" id="fig-04"><div class="figcap"><span>Fig 04 · 同一时刻获得最高权重</span><b>TOY NUMBERS · NOT PAPER METRICS</b></div>
   <div class="timeline"><i class="impact"><b>0.40s · 杯子碰桌面</b></i><i class="tick" style="left:25%" data-t="0.36s"></i><i class="tick" style="left:50%" data-t="0.40s"></i><i class="tick" style="left:75%" data-t="0.44s"></i><div class="weight w1">.107</div><div class="weight w2">.787</div><div class="weight w3">.107</div></div>
   <p><code class="m">\operatorname{softmax}([1,3,1])\approx [.107,.787,.107]</code>。若三个音频 value 的碰撞强度为 <code>[.2,1,.1]</code>，加权输出约 <code>.819</code>。这只演示一次 attention 的算术。</p>
@@ -119,7 +119,7 @@ code{overflow-wrap:anywhere;word-break:break-word}
 
 <h2 id="s5"><span class="sec">05 · CROSS-MODALITY ADALN</span>自己的进度调制，对方的进度开门</h2>
 <p>联合生成时两条流可能噪声程度不同。V2A 甚至可以让给定视频保持干净 <code class="m">\sigma_{\mathrm{video}}=0</code>，只去噪音频。交叉注意力必须知道：谁现在更可靠<a class="jr" href="#g-07">07</a>。</p>
-<div class="math"><div class="tex" data-display="true">h'_V=h_V+g(\sigma_A)\odot\operatorname{CrossAttn}\!\left(\operatorname{AdaLN}(h_V;\sigma_V),\operatorname{AdaLN}(h_A;\sigma_A)\right)</div><div class="symbols"><b>h_V,h_A</b><span>交换前的两条隐藏状态。</span><b>σ_V, σ_A</b><span>视频与音频当前噪声级别。</span><b>AdaLN</b><span>用本流 σ 算 scale/shift，先把自己整理到适合交换的尺度。</span><b>g(σ_A)</b><span>由对方噪声进度算出的写回门；⊙ 是逐通道相乘。</span></div></div>
+<div class="math"><div class="tex" data-display="true">h'_V=h_V+g(\sigma_A)\odot\operatorname{CrossAttn}\!\left(\operatorname{AdaLN}(h_V;\sigma_V),\operatorname{AdaLN}(h_A;\sigma_A)\right)</div><div class="symbols"><code class="m">h_V,\;h_A</code><span>交换前的两条隐藏状态。</span><b>σ_V, σ_A</b><span>视频与音频当前噪声级别。</span><b>AdaLN</b><span>用本流 σ 算 scale/shift，先把自己整理到适合交换的尺度。</span><b>g(σ_A)</b><span>由对方噪声进度算出的写回门；⊙ 是逐通道相乘。</span></div></div>
 <div class="figure" id="fig-05"><div class="figcap"><span>Fig 05 · 两道控制不是同一件事</span><b>MODULATE SELF · GATE OTHER</b></div>
   <div class="gateflow">
     <div class="gate-card content"><span class="tag v">① 算交换内容 C</span><h3>两边先按各自的噪声进度整理特征</h3><p>以音频写入视频（A→V）为例：</p><div class="gate-lane v"><b>视频侧</b><span><code class="m">AdaLN(hV; \sigma V)</code> → 查询 <code>Q<sub>V</sub></code></span></div><div class="gate-lane a"><b>音频侧</b><span><code class="m">AdaLN(hA; \sigma A)</code> → 索引与内容 <code>K<sub>A</sub>, V<sub>A</sub></code></span></div><div class="gate-output">CrossAttn(Q<sub>V</sub>, K<sub>A</sub>, V<sub>A</sub>) → <strong>C：准备写回的视频修正量</strong></div></div>
@@ -156,7 +156,7 @@ code{overflow-wrap:anywhere;word-break:break-word}
 <p>这里的 mel-spectrogram<a class="jr" href="#g-18">18</a> 是沿时间展示各频带能量的时频图。4 秒约 100 个音频 token，20 秒约 500 个。vocoder<a class="jr" href="#g-12">12</a> 只负责把频谱合成为相位连续、可播放的波形，不是又一轮语义去噪。当前代码形状 <code>[B,8,T/4,16]</code> 也解释了 128 维来自 <code class="m">8\times 16</code>。</p>
 
 <h2 id="s9"><span class="sec">09 · FLOW MATCHING</span>两条流训练时，究竟在预测什么<a class="jr" href="#g-16">16</a></h2>
-<div class="math"><div class="tex" data-display="true">x_\sigma=(1-\sigma)x_0+\sigma\epsilon,\qquad v^*=\epsilon-x_0,\qquad \mathcal L=\lVert v_\theta(x_\sigma,\sigma,c)-v^*\rVert_2^2</div><div class="symbols"><b>x₀</b><span>VAE 编码后的干净视频或音频 latent。</span><b>ε</b><span>与 latent 同形状的随机噪声。</span><b>σ</b><span>0 到 1 的插值位置；0 靠近数据，1 靠近噪声。</span><b>xσ</b><span>模型训练时看到的带噪 latent。</span><b>v*</b><span>直线路径的真实速度。由 dxσ/dσ 求导得到 ε−x₀。</span><b>vθ</b><span>双流 DiT 预测的速度。</span><b>‖·‖²₂</b><span>每一维误差先平方，再全部求和。</span></div></div>
+<div class="math"><div class="tex" data-display="true">x_\sigma=(1-\sigma)x_0+\sigma\epsilon,\qquad v^*=\epsilon-x_0,\qquad \mathcal L=\lVert v_\theta(x_\sigma,\sigma,c)-v^*\rVert_2^2</div><div class="symbols"><code class="m">x_0</code><span>VAE 编码后的干净视频或音频 latent。</span><b>ε</b><span>与 latent 同形状的随机噪声。</span><b>σ</b><span>0 到 1 的插值位置；0 靠近数据，1 靠近噪声。</span><b>xσ</b><span>模型训练时看到的带噪 latent。</span><b>v*</b><span>直线路径的真实速度。由 dxσ/dσ 求导得到 ε−x₀。</span><b>vθ</b><span>双流 DiT 预测的速度。</span><b>‖·‖²₂</b><span>每一维误差先平方，再全部求和。</span></div></div>
 <p>补充材料只明确“video/audio latents 用 flow-matching velocity loss”。它没有披露两项如何加权、σ 如何采样、optimizer、batch 或训练步数。推理时从两条噪声 latent 出发，用 Euler 等求解器反向积分，最后各自由 VAE 解码。</p>
 
 <h2 id="s10"><span class="sec">10 · MODALITY-CFG</span>“符合文字”和“彼此同步”可以分开调</h2>

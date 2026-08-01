@@ -318,8 +318,8 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 <h3>三 · ISG 的做法：同一段走两条路，再让它们对齐</h3>
 <p>对相邻两个 anchor 之间的一段 <code class="m">\tau_{i} \to \tau_{i-1}</code>（从噪声大的走向噪声小的），每次训练随机抽一个中间点 <code class="m">t_{\mathrm{mid}}</code>，然后走两条路：</p>
 <div class="symbols" style="grid-template-columns:1fr 1fr">
-  <div class="symbol"><code>x_{tar}</code><b>A · 目标路线：</b>老师先从 <code class="m">\tau_i</code> 走到 <code class="m">t_{\mathrm{mid}}</code>，学生接着从 <code class="m">t_{\mathrm{mid}}</code> 走到 <code class="m">\tau_{i-1}</code>，落点记作 <code>x_{tar}</code>。<strong>整条不回传梯度。</strong></div>
-  <div class="symbol"><code>x_{direct}</code><b>B · 活跃路线：</b>学生自己一步从 <code class="m">\tau_i</code> 直接跨到 <code class="m">\tau_{i-1}</code>，落点记作 <code>x_{direct}</code>（正式记号是 <code class="m">x_{\tau_{i-1}}</code>）。<strong>梯度只走这条。</strong></div>
+  <div class="symbol"><code class="m">x_{\mathrm{tar}}</code><b>A · 目标路线：</b>老师先从 <code class="m">\tau_i</code> 走到 <code class="m">t_{\mathrm{mid}}</code>，学生接着从 <code class="m">t_{\mathrm{mid}}</code> 走到 <code class="m">\tau_{i-1}</code>，落点记作 <code class="m">x_{\mathrm{tar}}</code>。<strong>整条不回传梯度。</strong></div>
+  <div class="symbol"><code class="m">x_{\mathrm{direct}}</code><b>B · 活跃路线：</b>学生自己一步从 <code class="m">\tau_i</code> 直接跨到 <code class="m">\tau_{i-1}</code>，落点记作 <code class="m">x_{\mathrm{direct}}</code>（正式记号是 <code class="m">x_{\tau_{i-1}}</code>）。<strong>梯度只走这条。</strong></div>
 </div>
 <p>两条路的起点、终点<strong>时刻完全一样</strong>，差别只在中间拐没拐一下。损失就是让 B 去贴 A。</p>
 <p class="formula-purpose">走一步用的是最朴素的欧拉法，这里必须先讲清，否则下面的数字对不上：</p>
@@ -351,7 +351,7 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
   <div class="plain"><strong>并行的活跃路线：</strong>学生直接从 <code class="m">.75\to .50</code>，以速度 <code>-1</code> 得到 <code>.45</code>。误差只回传这条路线；<a class="jr" href="#g-09">stopgrad</a> 冻结目标值 <code>.65</code>。</div>
 </figure>
 <p class="formula-purpose">正式目标：让直接跨段结果贴近冻结的绕路目标。</p>
-<div class="symbols"><div class="symbol"><code class="m">x_{\tau_{i-1}}</code>活跃学生直接跨完整段的结果，就是上面的 <code>.45</code>。</div><div class="symbol"><code>x_{tar}</code>老师前半段 + 学生后半段造出的临时目标，上面的 <code>.65</code>。</div><div class="symbol"><code>i</code>第几个 coarse interval。</div><div class="symbol"><code>stopgrad</code>保留目标数值，但不从目标支路反传。</div></div>
+<div class="symbols"><div class="symbol"><code class="m">x_{\tau_{i-1}}</code>活跃学生直接跨完整段的结果，就是上面的 <code>.45</code>。</div><div class="symbol"><code class="m">x_{\mathrm{tar}}</code>老师前半段 + 学生后半段造出的临时目标，上面的 <code>.65</code>。</div><div class="symbol"><code>i</code>第几个 coarse interval。</div><div class="symbol"><code>stopgrad</code>保留目标数值，但不从目标支路反传。</div></div>
 <div class="formula math" data-display="true">\mathcal L_{\mathrm{ISG}}^{(i)}=\mathbb E_{\epsilon,t_{\mathrm{mid}}}\left[\left\|x_{\tau_{i-1}}-\operatorname{stopgrad}(x_{\mathrm{tar}})\right\|_2^2\right]</div>
 
 <h3>五 · 三个容易滑过去的"为什么"</h3>
