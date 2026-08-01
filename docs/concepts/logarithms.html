@@ -287,8 +287,10 @@ document.addEventListener('DOMContentLoaded', function () {
       // "^a 后面跟正文 dv"，语法完全合法，KaTeX 不报错却渲染成 L^a dv。
       t=t.replace(/([_^])\{?([A-Za-z]{2,})\}?/g, function(m,op,w){
         return WORDS.indexOf(w)>=0 || w.length>1 ? op+'{\\mathrm{'+w+'}}' : m; });
-      // 希腊字母后直接跟单词(θbase) → 变下标
-      t=t.replace(/(\\[a-zA-Z]+)\s*([a-z]{2,})\b/g, function(m,g,w){
+      // 希腊字母后"紧贴"单词(θbase) → 变下标。这里只吃 1 个空格：那是上面
+      // 希腊替换自己加的分隔符。原文里真有空格(θ max)说明作者本就当两个记号，
+      // 再吞就会把函数名 max 吃成 θ 的下标（senseflow 的 "minθ maxφ" 正是这么坏的）。
+      t=t.replace(/(\\[a-zA-Z]+) ([a-z]{2,})\b/g, function(m,g,w){
         return WORDS.indexOf(w)>=0 ? g+'_{\\mathrm{'+w+'}}' : m; });
       // 常见函数名
       t=t.replace(/\b(exp|log|ln|max|min|sin|cos|det|dim)\b/g,'\\$1 ');
