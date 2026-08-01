@@ -1229,3 +1229,13 @@ skill 更新:
 - 7.5 约定符号格子写规范 LaTeX（含反斜杠 → verbatim，与 .formula 逐字一致），散文里的 code 不在 mathify 作用域、要用 unicode 下标。
 - checklist 里那条"katex-error===0"换成跑 7.2 的正向断言片段。
 - 片段本身已 dogfood：在 senseflow 上逐字跑出 48/49、skipped 只有 SDXL；又人为把页面还原成"mathify 没跑"的故障态复验，旧式检查 katexErr 仍是 0（会放行），新式 mathified 0/49 一眼暴露。
+
+## [2026-07-26] ingest | GenCeption · 视频生成模型也能成为通用视觉骨干
+
+- 新增 `wiki/papers/genception.md` 与 bespoke `docs/papers/genception.html`，另配三个概念页 `generation-to-perception` / `raymap` / `rgb-task-representation`。
+- 主线：不给视觉任务接专用大头，而是尽量不动 WAN 2.1 的 VAE、文本编码器和 DiT——输入干净 latent、把时间固定成 `t=0`、只跑一次前向，并把速度输出取反。取反只是让初始输出方向更像干净数据，任务能力仍来自后训练；接口没被破坏才是关键（最终层还能接原 VAE decoder）。
+- 目标格式统一成三通道 `[0,1]` 视频：深度、掩码、法线、DensePose 都这么编码，相机姿态拆成 raymap 的两张"Rothko"图，于是同一个 decoder + 同一条 L2 通吃。只有稀疏 3D 关键点被迫另开 token 支路。
+- 数据：800 个 RenderPeople 人体 + 200 段 CMU 动作 + Blender 多渲染通道 → 7,500 段多标签视频。
+- 保留了不整齐的结果：联合训练下前景分割受益，深度和相机姿态小幅回退，新增 token 的 3D 关键点严重退化——统一框架可行，但"尽量不改预训练接口"是有边界的。"一个 loss"也不是免费的，复杂度从 loss/head 搬到了 target formatter。
+- 诚实标注：项目页代码截至 2026-07-26 仍 TBA；论文未公开深度映射系数 α 的取值规则、梯度裁剪/丢弃阈值、任务混合比例和 L2 的 reduction 方式。"世界模型"那部分主要是定性图，不足以支撑通用物理因果的结论。
+- 收尾（本次补齐）：index.md 加 1 篇 paper + 3 个 concept 入口；`generation-to-perception` 与 `rgb-task-representation` 的 sources 已声称含 sensenova-vision，但那篇 md 里并没有反向引用，补上两处 `[[...]]` 让 ER 图闭合；genception.md 两处中英文之间漏的空格一并修掉。

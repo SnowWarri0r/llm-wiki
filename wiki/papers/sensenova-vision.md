@@ -17,7 +17,7 @@ authors: Xiaoyang Han et al. · arXiv 2026
 
 ## 它真正改了什么
 
-先解释“**head（输出头）**”：共享 backbone 把图像变成特征，检测 head 再把特征变成类别与框，分割 decoder 把特征变成 mask，深度 head 把特征变成连续深度。每种任务都要单独设计结构、loss 和解码。SenseNova-Vision 不再新增这些**任务专用**模块：Bagel 本来就会生成文字和图像，于是把框写成文字坐标，把深度编码成灰度图，把分割写成“文字图例 + 彩色 mask”。
+先解释“**head（输出头）**”：共享 backbone 把图像变成特征，检测 head 再把特征变成类别与框，分割 decoder 把特征变成 mask，深度 head 把特征变成连续深度。每种任务都要单独设计结构、loss 和解码。SenseNova-Vision 不再新增这些**任务专用**模块：Bagel 本来就会生成文字和图像，于是把框写成文字坐标，把深度编码成灰度图，把分割写成“文字图例 + 彩色 mask”。后两者就是 [[rgb-task-representation]]：把答案改写成可解码的三通道图，而不是给每个任务配一个输出头。
 
 这里有个必须先划清的边界：**“不新增任务 head”不等于“内部只有一套权重”。** Bagel 本来就有理解专家、生成专家、SigLIP2 视觉编码器和冻结的 VAE。SenseNova 复用了这些通用的模态通路，没有把它们删掉，也没有把两套专家合成一套。
 
@@ -31,6 +31,8 @@ authors: Xiaoyang Han et al. · arXiv 2026
 | 跨任务知识容易被各自的 head 隔开 | 同一模型在共享上下文中学习文字、像素与对应关系 |
 
 这就是 [[unified-multimodal-generation]]。统一的是模型、调用入口与原生生成空间；内部的模态专家、benchmark 指标与解码协议仍然存在。
+
+换个角度看，这也是一次 [[generation-to-perception]]：Bagel 的生成通路本来是为了“画得像”，SenseNova 把它接去回答“看到了什么”。区别在于 GenCeption 那条路线改造的是纯视频生成骨干、只跑一次前向，而这里保留了理解专家与生成专家两侧。
 
 ## 先拆开底座 · Bagel 里面不是“一条完全相同的通路”
 
