@@ -51,6 +51,7 @@ code{background:var(--paper2);border:1px solid var(--line);padding:2px 5px;borde
 .symbols{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
 .sym{padding:13px 14px;background:var(--paper2);border:1px solid var(--line);font:400 14px/1.6 "Noto Sans SC",sans-serif}
 .sym b{display:block;color:var(--teal);font:700 12px/1.4 "DM Mono",monospace}
+.sym>code.m:first-child{color:var(--teal)}
 .calc{padding:19px 21px;background:var(--navy);color:white;font:500 14px/1.95 "DM Mono",monospace;overflow-x:auto}
 .calc .hi{color:#8ce8e2}.calc .ans{color:#ffd36d}
 .calc pre{margin:0;padding:0;background:none;border:0;font:inherit;color:inherit;white-space:pre}
@@ -203,8 +204,8 @@ figcaption span:first-child{color:var(--teal)}figcaption b{color:var(--orange)}
   <div class="formula-purpose">这条式子做什么：把“世界→相机”和“相机→像素”两步拧成一个 4×4 矩阵，一次乘完。</div>
   <div class="formula" data-expr="\widetilde P_i=\begin{bmatrix}[K_i\;0]\,T_i^{cw}\\e_4^\top\end{bmatrix}\in\mathbb R^{4\times4},\qquad e_4=(0,0,0,1)^\top"></div>
   <div class="symbols">
-    <div class="sym"><b>i</b>视频的第 i 帧</div><div class="sym"><b>Kᵢ</b>3×3 相机内参</div><div class="sym"><b>Tᵢᶜʷ</b>世界坐标→相机坐标</div>
-    <div class="sym"><b>[Kᵢ 0]</b>给内参补一列零，凑成 3×4 才能乘 4×4</div><div class="sym"><b>e₄ᵀ</b>补上第 4 行，把 3×4 撑成方阵才可逆</div><div class="sym"><b>P̃ᵢ</b>最终 4×4 投影矩阵</div>
+    <div class="sym"><code class="m">i</code>视频的第 i 帧</div><div class="sym"><code class="m">K_i</code>3×3 相机内参</div><div class="sym"><code class="m">T_i^{cw}</code>世界坐标→相机坐标</div>
+    <div class="sym"><code class="m">[K_i\;0]</code>给内参补一列零，凑成 3×4 才能乘 4×4</div><div class="sym"><code class="m">e_4^\top</code>补上第 4 行，把 3×4 撑成方阵才可逆</div><div class="sym"><code class="m">\widetilde P_i</code>最终 4×4 投影矩阵</div>
   </div>
   <p>补第 4 行不是凑数：<strong>只有方阵才有逆</strong>，而整套机制的核心恰恰是求逆。现在把两台相机的 <code class="m">\widetilde P</code> 算出来。相机 1 摆在世界原点不转，所以 <code class="m">T_1^{cw}=I</code>；相机 2 向世界 x 正方向挪 1 米，于是原来在 <code class="m">x=0</code> 的东西在它眼里变成 <code class="m">x=-1</code>，平移列写 <code class="m">-1</code>。</p>
   <div class="calc"><pre>[K 0]　内参补一列零，凑成 3×4：
@@ -313,8 +314,8 @@ P̃₂·X = (100·0 + 50·5 <span class="hi">- 100</span>,          250, 5, 1) =
   <div class="formula-purpose">这条式子做什么：把一个 attention head 的 <code class="m">d</code> 维特征切成两半；前半装相机投影，后半再分给横向和纵向位置。</div>
   <div class="formula wide" data-expr="D_t^{\mathrm{PRoPE}}=\begin{bmatrix}I_{d/8}\otimes\widetilde P_{i(t)}&0\\0&\begin{bmatrix}\mathrm{RoPE}_{d/4}(x_t)&0\\0&\mathrm{RoPE}_{d/4}(y_t)\end{bmatrix}\end{bmatrix}"></div>
   <div class="symbols">
-    <div class="sym"><b>t / i(t)</b>token t 属于哪一帧</div><div class="sym"><b>xₜ, yₜ</b>token 的画面内坐标</div><div class="sym"><b>d</b>attention head 维度</div>
-    <div class="sym"><b>⊗</b>Kronecker 积；把 4×4 块沿对角线复印几份</div><div class="sym"><b>上半块</b>相机投影特征</div><div class="sym"><b>下半块</b>横向、纵向普通 RoPE</div>
+    <div class="sym"><code class="m">t\,/\,i(t)</code>token t 属于哪一帧</div><div class="sym"><code class="m">x_t,\;y_t</code>token 的画面内坐标</div><div class="sym"><code class="m">d</code>attention head 维度</div>
+    <div class="sym"><code class="m">\otimes</code>Kronecker 积；把 4×4 块沿对角线复印几份</div><div class="sym"><b>上半块</b>相机投影特征</div><div class="sym"><b>下半块</b>横向、纵向普通 RoPE</div>
   </div>
   <p>先把 <code class="m">\otimes</code> 认清：它不是普通矩阵相乘，而是“拿左边矩阵当模板，每个元素替换成右边整块”。左边是单位阵时，效果就是沿对角线复印：</p>
   <div class="calc"><pre>把 2×2 的块沿对角线复印两份，写成 I₂ ⊗ 它：
@@ -477,8 +478,8 @@ v1 = (1, 0)    v2 = (0, 2)    a = (0.5, 0.5)
   <div class="formula-purpose">这条式子做什么：随便挑一个噪声时刻的中间状态喂给学生，要求它一步吐出干净答案，跟老师存下来的终点比。</div>
   <div class="formula" data-expr="\theta^*=\arg\min_\theta\mathbb E\left[\left\|G_\theta(x_t^i,x_{\mathrm{gt}}^{<i},t)-x_0^i\right\|_2^2\right]"></div>
   <div class="symbols">
-    <div class="sym"><b>i</b>当前自回归 chunk</div><div class="sym"><b>xₜⁱ</b>噪声时刻 t 的当前 chunk</div><div class="sym"><b>xgt&lt;i</b>当前 chunk 前的真实历史</div>
-    <div class="sym"><b>Gθ</b>正在训练的少步学生</div><div class="sym"><b>x₀ⁱ</b>干净目标 chunk</div><div class="sym"><b>‖·‖₂²</b>逐元素平方后求和</div>
+    <div class="sym"><code class="m">i</code>当前自回归 chunk</div><div class="sym"><code class="m">x_t^i</code>噪声时刻 t 的当前 chunk</div><div class="sym"><code class="m">x_{\mathrm{gt}}^{&lt;i}</code>当前 chunk 前的真实历史</div>
+    <div class="sym"><code class="m">G_\theta</code>正在训练的少步学生</div><div class="sym"><code class="m">x_0^i</code>干净目标 chunk</div><div class="sym"><code class="m">\|\cdot\|_2^2</code>逐元素平方后求和</div>
   </div>
   <p><code class="m">\|\cdot\|_2^2</code> 要从里往外读：先把两个向量逐元素相减，每个差平方，再全部加起来。拿个二维的算一遍——</p>
   <div class="calc"><pre>老师存下的终点 x0 = [1, 1]      学生这一跳落在 [.8, 1.4]
@@ -511,8 +512,8 @@ L = (.8 − 1)² + (1.4 − 1)²
   <div class="formula-purpose">这条式子做什么：把“梯子上相邻两级答案必须相同”写成损失。</div>
   <div class="formula wide" data-expr="\theta^*=\arg\min_\theta\mathbb E\left[w(t)d\left(G_\theta(x_t^i,x_{\mathrm{gt}}^{<i},t),G_{\theta^-}(\hat x_{t-\Delta t}^i,x_{\mathrm{gt}}^{<i},t-\Delta t)\right)\right]"></div>
   <div class="symbols">
-    <div class="sym"><b>x̂t−Δt</b>老师沿 ODE 走一小步</div><div class="sym"><b>Gθ⁻</b>停止梯度的 EMA 学生</div><div class="sym"><b>w(t)</b>当前噪声时刻权重</div>
-    <div class="sym"><b>d(a,b)</b>两个预测的距离</div><div class="sym"><b>Δt</b>相邻噪声时刻间隔</div><div class="sym"><b>目标</b>两点都映到同一干净 chunk</div>
+    <div class="sym"><code class="m">\hat x_{t-\Delta t}^i</code>老师沿 ODE 走一小步</div><div class="sym"><code class="m">G_{\theta^-}</code>停止梯度的 EMA 学生</div><div class="sym"><code class="m">w(t)</code>当前噪声时刻权重</div>
+    <div class="sym"><code class="m">d(a,b)</code>两个预测的距离</div><div class="sym"><code class="m">\Delta t</code>相邻噪声时刻间隔</div><div class="sym"><b>目标</b>两点都映到同一干净 chunk</div>
   </div>
   <p>式子里的 <code class="m">d(a,b)</code> 只是“两个结果差多远”的占位写法，论文保留一般形式。把它具体设成平方距离 <code class="m">d(a,b)=(a-b)^2</code>，就能拿梯子的第 2 级手算一遍——学生这一跳还没学到位，落在 .93，而 EMA 靶子已经报出 1.00：</p>
   <div class="calc"><pre>学生在 t=0.50 处答 .93      EMA 靶子（来自 t=0.25）答 1.00      w = 2
@@ -749,6 +750,11 @@ code.mathified{border:none;background:none;padding:0;font-size:1em}
    块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
 .sym code:not(:first-child),.symbol code:not(:first-child),
 .var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
 </style>
 <!-- mathify:end -->
 </body>
