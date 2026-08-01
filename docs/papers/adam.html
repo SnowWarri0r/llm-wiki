@@ -151,7 +151,7 @@ figure.play .ad-rev.d6 { transition-delay: 1.65s; }
 
 <p>第一招治"来回弹"：不直接用瞬时梯度，而用梯度的 <a href="../concepts/ema.html">EMA</a>——<strong>动量 m</strong>。一致的方向会累积（越走越快），来回抖的方向正负相消（被抹平）。像一个<strong>有惯性的重球</strong>滚下沟，不跟着每一步噪声乱跳。</p>
 
-<pre class="eq">m_t = β1·m_{t−1} + (1−β1)·g_t      # β1=0.9，梯度的 EMA = 平滑后的方向</pre>
+<pre class="eq">mₜ = β1·mₜ₋₁ + (1−β1)·gₜ           # β1=0.9，梯度的 EMA = 平滑后的方向</pre>
 
 <figure id="fig-mom" class="fig-mom">
   <figcaption>
@@ -179,8 +179,8 @@ figure.play .ad-rev.d6 { transition-delay: 1.65s; }
 
 <p>第二招治"陡平不一"：再记一个<strong>梯度平方的 EMA——v</strong>，它衡量每个参数<strong>最近梯度有多大</strong>。更新时<strong>除以 √v</strong>：梯度一直很大的参数（陡方向）步长被<strong>缩小</strong>，梯度一直很小的（平方向）步长被<strong>放大</strong> → 每个参数都拿到<strong>自己的</strong>合适步长。这就是 RMSprop。</p>
 
-<pre class="eq">v_t = β2·v_{t−1} + (1−β2)·g_t²     # β2=0.999，梯度平方的 EMA = 最近多大
-步长 ∝ 1 / √v_t                    # 大梯度→小步、小梯度→大步（逐参数）</pre>
+<pre class="eq">vₜ = β2·vₜ₋₁ + (1−β2)·gₜ²          # β2=0.999，梯度平方的 EMA = 最近多大
+步长 ∝ 1 / √vₜ                     # 大梯度→小步、小梯度→大步（逐参数）</pre>
 
 <figure id="fig-rms" class="fig-rms">
   <figcaption>
@@ -275,9 +275,9 @@ figure.play .ad-rev.d6 { transition-delay: 1.65s; }
   </svg>
 </figure>
 
-<pre class="eq">m_t = β1·m + (1−β1)·g            # 一阶：方向
-v_t = β2·v + (1−β2)·g²           # 二阶：大小
-m̂ = m_t/(1−β1ᵗ),  v̂ = v_t/(1−β2ᵗ)   # bias correction（修早期偏小）
+<pre class="eq">mₜ = β1·m + (1−β1)·g             # 一阶：方向
+vₜ = β2·v + (1−β2)·g²            # 二阶：大小
+m̂ = mₜ/(1−β1ᵗ),   v̂ = vₜ/(1−β2ᵗ)    # bias correction（修早期偏小）
 θ ← θ − lr · m̂ / (√v̂ + ε)        # 默认 β1=0.9, β2=0.999, ε=1e-8</pre>
 
 <div class="note">

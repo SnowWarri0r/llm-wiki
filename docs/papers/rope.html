@@ -285,10 +285,10 @@ figcaption .fnum { color: var(--accent); font-weight: 700; }
 
 <pre class="eq">d_model = 64  →  32 对 2D 子空间
 
-每对 i 的旋转频率:  θ_i = 1 / 10000^(2i / d)
+每对 i 的旋转频率:  θᵢ = 1 / 10000^(2i / d)
 
 position m 的 token:
-  第 i 对子空间旋转角度 = m × θ_i
+  第 i 对子空间旋转角度 = m × θᵢ
 
 → 低频对(i 小) 转得慢, 对长距离位置敏感
 → 高频对(i 大) 转得快, 对短距离位置敏感</pre>
@@ -334,8 +334,8 @@ position m 的 token:
 <p>实际代码里不会真的做矩阵乘法旋转（太慢），而是用 sin/cos 直接做元素级重排<a class="jr" href="#g-08">8</a>：</p>
 
 <pre class="eq"># 对 Q/K 的第 i 对 (x_even, x_odd):
-out_even = x_even × cos(m × θ_i) − x_odd × sin(m × θ_i)
-out_odd  = x_even × sin(m × θ_i) + x_odd × cos(m × θ_i)
+out_even = x_even × cos(m × θᵢ) − x_odd × sin(m × θᵢ)
+out_odd  = x_even × sin(m × θᵢ) + x_odd × cos(m × θᵢ)
 
 # 就是 2D 旋转公式 · 两次乘法 + 两次加法 per pair
 # 全程 element-wise · 跟 Flash Attention 完美兼容</pre>

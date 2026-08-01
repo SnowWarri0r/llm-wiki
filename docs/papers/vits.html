@@ -316,10 +316,10 @@ z &= \mu_q+\sigma_q\odot\varepsilon \\[4pt]
 
 <h3>数字例子 · KL 项在算什么</h3>
 <pre class="eq">为看清方向，先假设后验和先验的标准差都等于 1：
-后验均值 μ_q=1.2，文本先验均值 μ_p=0.8
-KL = 1/2 × (μ_q−μ_p)² = 1/2 × (1.2−0.8)² = 0.08
+后验均值 1.2，文本先验均值 0.8
+KL = 1/2 × (后验μ − 先验μ)² = 1/2 × (1.2−0.8)² = 0.08
 
-若 μ_p 从 0.8 移到 1.1：
+若 μₚ 从 0.8 移到 1.1：
 KL = 1/2 × (1.2−1.1)² = 0.005</pre>
 <p>先验越靠近后验，罚得越少。真实公式还会比较方差；这里固定方差只是为了把算术走完整。新的问题是：文本先验通常是简单高斯，而音频后验很复杂，硬拉近会让后验也变简单，所以还需要下一节的 Flow。</p>
 
@@ -663,7 +663,7 @@ B     .08      .25     .32
 直接相加：pθ(d|c)=.12+.08=.20
 
 按 q 抽样并校正：
-E_q[p/q] = .75×.16 + .25×.32
+E[p/q] = .75×.16 + .25×.32
          = .12 + .08 = .20  ✓</pre></div>
 
   <div class="calc-check"><strong>再验算 ≥：只有 Jensen 这一步是不等式</strong><pre>左边 = log .20 = −1.609
@@ -785,11 +785,11 @@ E_q[p/q] = .75×.16 + .25×.32
 第 2 层：真 [.4]，假 [.1]
 平均差 = |.4−.1| / 1 = .3
 
-L_fm(G) = .5 + .3 = .8</pre></div>
+L_feat(G) = .5 + .3 = .8</pre></div>
 
 <p>这项损失要求生成波形不只拿到一个高分，还要让判别器每一层提取到的周期、纹理和局部形状都接近真声。它只用来训练 <code>G</code>，不参与 <code>D</code> 的更新。</p>
 
-<div class="note"><span class="l">官方训练顺序</span><code>① G(z).detach() → L_adv(D) → 只更新 D</code><br><code>② 重新算 G(z) → L_adv(G)+L_fm(G)+其他生成侧损失 → 更新 G 与生成侧模块</code></div>
+<div class="note"><span class="l">官方训练顺序</span><code>① G(z).detach() → L_adv(D) → 只更新 D</code><br><code>② 重新算 G(z) → L_adv(G)+L_feat(G)+其他生成侧损失 → 更新 G 与生成侧模块</code></div>
 
 <h2 id="s8"><span class="num">§ 08</span>五项损失，各自在拧哪颗螺丝</h2>
 <div class="math-board loss">
@@ -809,7 +809,7 @@ L_fm(G) = .5 + .3 = .8</pre></div>
     <div class="loss-card" style="border-top-color:#28768a"><b>L_kl</b><span>音频后验 vs 文本先验</span><small>管推理能否采到可解码 z</small></div>
     <div class="loss-card" style="border-top-color:var(--ochre)"><b>L_dur</b><span>时长变分下界取负</span><small>管每个音素说多久</small></div>
     <div class="loss-card" style="border-top-color:var(--wine)"><b>L_adv(G)</b><span>生成器骗过判别器</span><small>管波形真假感</small></div>
-    <div class="loss-card" style="border-top-color:var(--brick)"><b>L_fm(G)</b><span>判别器中间特征 L1</span><small>管细节与训练稳定</small></div>
+    <div class="loss-card" style="border-top-color:var(--brick)"><b>L_feat(G)</b><span>判别器中间特征 L1</span><small>管细节与训练稳定</small></div>
   </div>
 </figure>
 <p>判别器还有单独的 <code>L_adv(D)</code>。因此“单阶段推理”绝不等于“训练很简单”：后验、Flow、动态对齐、时长 Flow、生成器和多个判别器必须同时配合。</p>

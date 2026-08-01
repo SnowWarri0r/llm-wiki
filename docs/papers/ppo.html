@@ -285,7 +285,7 @@ figcaption .fnum { color: var(--accent); font-weight: 700; }
 
 <p>目标: 让 agent 学一个 <code class="m">\pi (a|s)</code> 使得长期累计 reward 最大。<strong>策略梯度</strong>的核心想法是把 π 当成可微分的神经网络, 直接 gradient ascent。</p>
 
-<pre class="eq">loss = -log π(a_t | s_t) × R_t       # 跟监督学习 cross-entropy 几乎一样
+<pre class="eq">loss = -log π(aₜ | sₜ) × Rₜ          # 跟监督学习 cross-entropy 几乎一样
                        └─ "label 权重", 这一步之后的总 reward
 </pre>
 
@@ -369,7 +369,7 @@ figcaption .fnum { color: var(--accent); font-weight: 700; }
 
 <p>定义新老策略的概率比:</p>
 
-<pre class="eq">r_t(θ) = π_new(a_t | s_t) / π_old(a_t | s_t)
+<pre class="eq">rₜ(θ) = π_new(aₜ | sₜ) / π_old(aₜ | sₜ)
 
   r = 1.0  ←  新老完全一样
   r = 1.5  ←  新策略把这个 action 概率提了 50%
@@ -377,7 +377,7 @@ figcaption .fnum { color: var(--accent); font-weight: 700; }
 
 <p>PPO 的 loss:</p>
 
-<pre class="eq">L_CLIP = E_t [ min( r_t · A_t,  clip(r_t, 1-ε, 1+ε) · A_t ) ]
+<pre class="eq">L_CLIP = Eₜ [ min( rₜ · Aₜ,     clip(rₜ, 1-ε, 1+ε) · Aₜ ) ]
                                           ↑
                                   ε 一般 0.2</pre>
 
@@ -911,17 +911,17 @@ PPO: 一批 rollout 可以反复跑 <strong>K 个 epoch (K=3~10)</strong>, sampl
 
 <h3>第一步 · PPO 用 critic 回答“比预期好多少”</h3>
 
-<pre class="eq">A_t ≈ 实际回报 − V_critic(s_t)
+<pre class="eq">Aₜ ≈ 实际回报 − V_critic(sₜ)
 
-ρ_t = π_θ(y_t | x,y_&lt;t) / π_old(y_t | x,y_&lt;t)
+ρₜ = π_θ(yₜ | x,y_&lt;t) / π_old(yₜ | x,y_&lt;t)
 
-L_t = min(ρ_t A_t, clip(ρ_t, 1−ε, 1+ε) A_t)</pre>
+Lₜ = min(ρₜ Aₜ, clip(ρₜ, 1−ε, 1+ε) Aₜ)</pre>
 
 <p><code>x</code> 是 prompt，<code class="m">y_t</code> 是第 t 个 token，<code class="m">V_{\mathrm{critic}}</code> 预测从当前前缀继续写的未来回报；<code class="m">\rho_t</code> 是新旧策略给同一个已采 token 的概率比。reward model 给完成品打分，critic 预测半成品将来得几分，两者不是同一个模型。</p>
 
 <h3>第二步 · GRPO 用同一道题的回答互比，替掉 critic</h3>
 
-<pre class="eq">A_i = (R_i − mean(R_1...R_G)) / std(R_1...R_G)</pre>
+<pre class="eq">Aᵢ = (Rᵢ − mean(组内全部 R)) / std(组内全部 R)</pre>
 
 <p><code>G</code> 是同题回答数，<code class="m">R_i</code> 是第 i 条完整回答的 reward。若四条回答得分为 <code>[1,1,0,0]</code>，均值和总体标准差都是 <code>.5</code>，所以 <code class="m">A=[1,1,-1,-1]</code>。正确回答所有 token 往上推，错误回答往下压。GRPO<a class="jr" href="#g-10">10</a>省掉的是 critic，不是必然省掉 reward model；数学和代码能用规则判分，主观任务仍可能需要 RM。</p>
 
@@ -942,8 +942,8 @@ L_t = min(ρ_t A_t, clip(ρ_t, 1−ε, 1+ε) A_t)</pre>
 
 <p>Dr.GRPO<a class="jr" href="#g-19">19</a>指出：除以每道题自己的 reward 标准差，会让 <code>std</code> 小的题更新更重；每条回答先除以自身 token 数，会让长回答里的每个 token 权重更轻。它改为：</p>
 
-<pre class="eq">A_i^Dr = R_i − group_mean                 # 不再除 group_std
-L_i^Dr = (1/M) × Σ_t token_loss(i,t)     # M 是所有回答共享的常数</pre>
+<pre class="eq">Aᵢᴰʳ = Rᵢ − group_mean                    # 不再除 group_std
+Lᵢᴰʳ = (1/M) × Σₜ token_loss(i,t)        # M 是所有回答共享的常数</pre>
 
 <p>例如 <code>[1,1,0,0]</code> 的正确回答在原 GRPO 中 advantage 为 <code>1</code>；<code>[1,0,0,0]</code> 的正确回答因标准差更小，advantage 变成约 <code>1.732</code>。Dr.GRPO 保留减组均值，但取消额外的 <code>1/std</code> 放大。固定分母 <code>M</code> 也不是奖励长回答，而是让 token 不因所在回答更长就被摊薄。</p>
 
@@ -958,8 +958,8 @@ L_i^Dr = (1/M) × Σ_t token_loss(i,t)     # M 是所有回答共享的常数</p
 
 <h3>第五步 · GSPO 让整条回答共用一个比率</h3>
 
-<pre class="eq">s_i = [π_θ(y_i|x) / π_old(y_i|x)]^(1/|y_i|)
-    = exp((1/|y_i|) × Σ_t log ρ_i,t)</pre>
+<pre class="eq">sᵢ = [π_θ(yᵢ|x) / π_old(yᵢ|x)]^(1/|yᵢ|)
+    = exp((1/|yᵢ|) × Σₜ log ρᵢ,t)</pre>
 
 <p><code class="m">s_i</code> 是第 i 条回答唯一的序列级比率；<code class="m">|y_i|</code> 是回答长度。对刚才四个 token：</p>
 
