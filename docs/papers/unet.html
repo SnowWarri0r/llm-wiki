@@ -282,7 +282,7 @@ figcaption b{color:var(--blue)}
 <p class="lead">先说这节要解决什么麻烦：两个细胞贴在一起时，中间那条一两像素宽的缝<b>最难画又最要紧</b>——画丢了，两只细胞就粘成一只，前面 §01 说的"靠缝分开"整套就废了。可这条缝在整张图里才占几百个像素，普通训练里它的声音会被淹没。U-Net 的办法：<b>给这些像素的损失乘一个大得多的权重</b>。</p>
 
 <h3>第 1 步 · 先搭好底座：逐像素交叉熵</h3>
-<p>网络最后给每个像素吐 <code>K</code> 个分数（这里 <code>K=2</code>：细胞、背景），经 <a href="../concepts/softmax.html">softmax</a><a class="jr" href="#g-10">10</a> 变成加起来等于 1 的概率。然后看<strong>它给正确答案那一类打了多少概率</strong>——打得越低，罚得越狠，这就是<a href="../concepts/cross-entropy.html">交叉熵</a><a class="jr" href="#g-12">12</a> <code class="m">-\log p</code>：<code>p=0.9</code> 罚 <code>0.105</code>，<code>p=0.119</code> 罚 <code>2.13</code>。把每个像素罚的分加起来，再各自乘一个权重 <code>w(x)</code>，就是<a href="../concepts/weighted-pixelwise-cross-entropy.html">逐像素加权交叉熵</a><a class="jr" href="#g-11">11</a>：</p>
+<p>网络最后给每个像素吐 <code>K</code> 个分数（这里 <code>K=2</code>：细胞、背景），经 <a href="../concepts/softmax.html">softmax</a><a class="jr" href="#g-10">10</a> 变成加起来等于 1 的概率。然后看<strong>它给正确答案那一类打了多少概率</strong>——打得越低，罚得越狠，这就是<a href="../concepts/cross-entropy.html">交叉熵</a><a class="jr" href="#g-12">12</a> <code class="m">-\log p</code>：<code>p=0.9</code> 罚 <code>0.105</code>，<code>p=0.119</code> 罚 <code>2.13</code>。把每个像素罚的分加起来，再各自乘一个“这个位置有多要紧”的权重，就是<a href="../concepts/weighted-pixelwise-cross-entropy.html">逐像素加权交叉熵</a><a class="jr" href="#g-11">11</a>：</p>
 <div class="formula math" data-display="true">\mathcal L=-\sum_{\mathbf x\in\Omega}w(\mathbf x)\log p_{\ell(\mathbf x)}(\mathbf x)</div>
 <div class="vars"><div class="var"><code class="m">\Omega</code>所有输出像素位置（原版就是中央 388×388 那些格子）。</div><div class="var"><code>x</code>加粗表示它是<b>像素坐标</b>，不是一个数值。</div><div class="var"><code>ℓ(x)</code>花体小写 L（label），念 "ell of x"：位置 x 的<b>正确答案是第几类</b>。</div><div class="var"><code class="m">p_{\ell(x)}(x)</code>模型在 x 给<b>正确那一类</b>打的概率。</div><div class="var"><code>w(x)</code>这个位置有多要紧；下一步专门造它。</div><div class="var"><code class="m">\Sigma_{x\in \Omega }</code>把每个像素算出的数加起来。</div></div>
 <div class="plain"><b><code class="m">p_{\ell(x)}(x)</code> 这一坨怎么念：</b>难点在<strong>下标里还套着一个函数</strong>，而且 <code>x</code> 出现了两次——但它俩是同一个像素，只是分工不同。末尾的 <code>(x)</code> 说"看哪个像素"；下标 <code>ℓ(x)</code> 先去<strong>查这个像素的标准答案是第几类</strong>，查出来是个编号，再拿这个编号去挑模型输出的那一路概率。整句念作：<b>"模型在像素 x 上，给 x 的正确类别打的那个概率"</b>。写成代码就一目了然：
@@ -366,9 +366,9 @@ figcaption b{color:var(--blue)}
 <div class="era">
   <div><b>2015 原版</b>valid conv · crop+concat · 加权像素交叉熵 · Caffe · 无 BatchNorm</div>
   <div><b>现代分割 U-Net</b>same padding · 直接 concat · BN/GN · Dice/CE/focal 混合</div>
-  <div><b>扩散 U-Net</b>多尺度 U 形 + skip 保留；加入残差、时间条件、注意力，输出噪声或速度</div>
+  <div><b><a href="diffusion-unet.html">扩散 U-Net</a></b>多尺度 U 形 + skip 保留；加入残差、时间条件、注意力，输出噪声或速度</div>
 </div>
-<p>因此，Stable Diffusion 的 U-Net 和这篇论文有清楚的家族关系，却不是把医学分割网络原封不动搬去生成图像。后来的 3D U-Net 把操作扩成三维；Attention U-Net 给 skip 加门；U-Net++ 把单条 skip 改成嵌套、稠密路径。再后来，<a href="dit.html">DiT</a> 直接用 Transformer 接替扩散 U-Net。</p>
+<p>因此，Stable Diffusion 的 U-Net 和这篇论文有清楚的家族关系，却不是把医学分割网络原封不动搬去生成图像。完整的时间条件、ResBlock、attention 与采样循环见<a href="diffusion-unet.html">扩散 U-Net 专题</a>。后来的 3D U-Net 把操作扩成三维；Attention U-Net 给 skip 加门；U-Net++ 把单条 skip 改成嵌套、稠密路径。再后来，<a href="dit.html">DiT</a> 直接用 Transformer 接替扩散 U-Net。</p>
 <div class="fact"><b>一句话带走：</b>U-Net 真正留下的是多尺度分工——深层保语义，浅层保位置，解码器把两者逐级合回来。</div>
 </section>
 

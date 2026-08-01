@@ -1,8 +1,8 @@
 ---
 name: residual-connection
 type: concept
-sources: [resnet, attention-is-all-you-need, yolov3]
-updated: 2026-07-13
+sources: [resnet, attention-is-all-you-need, yolov3, diffusion-unet]
+updated: 2026-07-27
 ---
 
 # Residual Connection · 残差连接 / Skip Connection
@@ -50,6 +50,7 @@ def transformer_sublayer(x, sublayer):
 ## 链接
 - [[resnet]] · 起源论文
 - [[attention-is-all-you-need]] · 在 transformer block 里复用
+- [[diffusion-unet]] · 每个带时间条件的卷积块内部也走 \(F(x)+x\)
 - [[transformer-architecture]] · 怎么嵌入 sublayer
 - [[degradation-problem]] · 残差连接解决的问题
 - [[batchnorm]] · 配套训练技巧

@@ -1,8 +1,8 @@
 ---
 name: cross-attention
 type: concept
-sources: [attention-is-all-you-need, ltx-2]
-updated: 2026-07-17
+sources: [attention-is-all-you-need, ltx-2, diffusion-unet]
+updated: 2026-07-27
 ---
 
 # Cross-Attention · 交叉注意力
@@ -81,6 +81,7 @@ Decoder-only GPT 路线把 encoder 和 cross-attention 都砍掉，统一变成�
 Transformer 原论文架构图里的 "multi-head attention over encoder output" 子层。
 
 ## 链接
+- [[diffusion-unet]] · Stable Diffusion 让图像位置做 Q、文字 token 做 K/V
 - [[transformer-architecture]] · cross-attention 的位置
 - [[multi-head-attention]] · 具体 attention 机制
 - [[decoder-only-paradigm]] · 为什么后来的 GPT 路线不用它

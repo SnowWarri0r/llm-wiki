@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Positional Encoding · 位置编码 · Concept</title>
+<title>Diffusion Timestep Conditioning · 告诉去噪网络“现在噪到哪一步” · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,67 +53,75 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · positional-encoding</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · diffusion-timestep-conditioning</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Positional Encoding · 位置编码</h1>
+  <h1>Diffusion Timestep Conditioning · 告诉去噪网络“现在噪到哪一步”</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>Attention 本身<strong>对位置不敏感</strong>（"dog bites man" 和 "man bites dog" 算出来一样），所以要显式给每个位置加一个独特的"位置向量"。</p>
-<h2>直觉</h2>
-<p>RNN 天然有顺序：t=1 → t=2 → t=3。Attention 是<strong>置换不变的</strong> —— 对 Q · K^T 来说，把 K 矩阵的行打乱不影响结果（只影响输出的对应位置）。</p>
-<p>为了让 transformer 能区分"第一个 the" vs "第二个 the"，要给每个 token 加一个<strong>只依赖位置的向量</strong>：</p>
-<pre><code>input = embedding(token) + PE(position)
+<p>同一个去噪网络要处理从纯噪声到近乎干净的所有状态；先把时刻 <span class="tex math-inline" data-display="false">t</span> 编成向量，再送进每个 block，让网络随噪声强度切换工作方式。</p>
+<h2>为什么不能只喂 <span class="tex math-inline" data-display="false">x_t</span></h2>
+<p>输入数值本身不一定能唯一说明噪声等级。早期步骤要先搭全局结构，晚期步骤只需修小纹理。不给 <span class="tex math-inline" data-display="false">t</span>，相当于让同一个修图师不知道现在拿到的是草稿还是终稿。</p>
+<h2>正弦时间嵌入</h2>
+<p>一个常见写法是：</p>
+<div class="tex math-display" data-display="true">e_{2i}(t)=\sin\left(\frac{t}{10000^{2i/d}}\right),\qquad
+e_{2i+1}(t)=\cos\left(\frac{t}{10000^{2i/d}}\right)</div>
+<p><span class="tex math-inline" data-display="false">d</span> 是嵌入维度，<span class="tex math-inline" data-display="false">i</span> 选择不同频率。高频分量分得清相邻时刻，低频分量表示长范围进度。</p>
+<h2>数字例子</h2>
+<p>用两档频率 <span class="tex math-inline" data-display="false">1</span> 与 <span class="tex math-inline" data-display="false">0.1</span> 做四维玩具版：</p>
+<div class="tex math-display" data-display="true">e(t)=[\sin t,\cos t,\sin(0.1t),\cos(0.1t)]</div>
+<p>当 <span class="tex math-inline" data-display="false">t=0</span>：</p>
+<div class="tex math-display" data-display="true">e(0)=[0,1,0,1]</div>
+<p>当 <span class="tex math-inline" data-display="false">t=\pi</span>：</p>
+<div class="tex math-display" data-display="true">e(\pi)\approx[0,-1,0.309,0.951]</div>
+<p>同一个时刻被多档“钟表指针”共同编码，不需要为 1000 个时刻各存一张互不相关的表。</p>
+<h2>怎样进入 ResBlock</h2>
+<p>时间向量先过 MLP，再投影成 scale 与 shift。OpenAI guided-diffusion 的代码形式是：</p>
+<div class="tex math-display" data-display="true">h&#x27;=(1+s_t)\operatorname{GN}(h)+b_t</div>
+<p><span class="tex math-inline" data-display="false">h</span> 是当前空间特征，<span class="tex math-inline" data-display="false">s_t</span> 与 <span class="tex math-inline" data-display="false">b_t</span> 都由时间嵌入生成。若 <span class="tex math-inline" data-display="false">\operatorname{GN}(h)=[-1,1]</span>：</p>
+<pre><code class="language-text">时刻 A：scale=.5, shift=.2 → [-1.3, 1.7]
+时刻 B：scale=-.2, shift=.1 → [-.7, .9]
 </code></pre>
-<p>PE(pos) 必须对每个 pos 唯一，且让模型能学到"相对位置"信息。</p>
-<h2>Sinusoidal PE（论文用的）</h2>
-<pre><code>PE(pos, 2i)   = sin(pos / 10000^(2i / d_model))
-PE(pos, 2i+1) = cos(pos / 10000^(2i / d_model))
-</code></pre>
-<p>第 i 维用频率 1 / 10000^(2i / d_model) 的正弦/余弦。低维高频，高维低频。</p>
-<p><strong>为什么这么设计</strong>：</p>
-<ul>
-<li>每个位置 pos 在 d_model 维度上有唯一的频率指纹</li>
-<li>任何相对位置 k 都能表达成 PE(pos+k) 是 PE(pos) 的<strong>线性变换</strong>（用 sin/cos 加法定理）→ 模型能学相对位置</li>
-<li>不需要训练（无参数）</li>
-<li>可外推到训练时没见过的长序列（理论上）</li>
-</ul>
-<h2>后续改进</h2>
-<p>论文这种 sinusoidal PE 是 OG 方案，但有问题（外推效果一般、跟现代长上下文不太搭）。现代 LLM 大多换了：</p>
-<ul>
-<li><strong>Learned PE</strong>（GPT-2）：把 PE 当 embedding 训。简单但不能外推。</li>
-<li><strong>Rotary PE / RoPE</strong>（GPT-J / LLaMA / Mistral / Qwen）：不在 embedding 层加位置，而是每层 attention 算之前<strong>旋转 Q/K</strong> —— 点积天然包含相对位置，零额外参数。2024-2025 几乎所有新 LLM 都用。详见 <a href="../concepts/rotary-position-embedding.html">rotary-position-embedding</a>。</li>
-<li><strong>ALiBi</strong>（BLOOM）：在 attention scores 上加位置距离偏置。可外推。</li>
-<li><strong>NoPE</strong>：完全不要 PE，让模型自己学（小模型不行，大模型 OK）。</li>
-</ul>
+<p>输入特征相同，仅时刻不同，block 的处理结果就不同。这才是“条件注入”真正改动的地方。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../concepts/self-attention.html">self-attention</a> · attention 为什么不带位置</li>
-<li><a href="../papers/attention-is-all-you-need.html">attention-is-all-you-need</a> · 论文（sinusoidal PE）</li>
-<li><a href="../papers/rope.html">rope</a> · RoPE 论文</li>
-<li><a href="../concepts/rotary-position-embedding.html">rotary-position-embedding</a> · RoPE 详解</li>
-<li><a href="../concepts/relative-position-encoding.html">relative-position-encoding</a> · 为什么相对位置好</li>
-<li><a href="../concepts/transformer-architecture.html">transformer-architecture</a> · 在哪嵌入 PE</li>
+<li><a href="../papers/diffusion-unet.html">diffusion-unet</a> · 时间嵌入送进每个残差块</li>
+<li><a href="../concepts/group-normalization.html">group-normalization</a> · 被 scale / shift 调制的归一化</li>
+<li><a href="../concepts/adaptive-layernorm.html">adaptive-layernorm</a> · DiT 用 LayerNorm 实现的后继版本</li>
+<li><a href="../concepts/positional-encoding.html">positional-encoding</a> · 同一套正弦编码最早在 Transformer 里表示位置</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 11 处</span>
-  <ul><li><a href="../papers/attention-is-all-you-need.html"><span class="cat">paper</span>Attention Is All You Need · Transformer 始祖</a></li><li><a href="../papers/rope.html"><span class="cat">paper</span>RoFormer · Rotary Position Embedding (RoPE)</a></li><li><a href="../papers/vit.html"><span class="cat">paper</span>ViT · An Image is Worth 16×16 Words</a></li><li><a href="../papers/whisper.html"><span class="cat">paper</span>Whisper · Robust Speech Recognition via Large-Scale Weak Supervision</a></li><li><a href="../concepts/diffusion-timestep-conditioning.html"><span class="cat">concept</span>Diffusion Timestep Conditioning · 告诉去噪网络“现在噪到哪一步”</a></li><li><a href="../concepts/mrope.html"><span class="cat">concept</span>M-RoPE · 多模态旋转位置编码</a></li><li><a href="../concepts/patch-embedding.html"><span class="cat">concept</span>Patch Embedding · 图像切块成 token</a></li><li><a href="../concepts/relative-position-encoding.html"><span class="cat">concept</span>Relative Position Encoding · 相对位置编码</a></li><li><a href="../concepts/rotary-position-embedding.html"><span class="cat">concept</span>Rotary Position Embedding · RoPE · 旋转位置编码</a></li><li><a href="../concepts/self-attention.html"><span class="cat">concept</span>Self-Attention · 自注意力</a></li><li><a href="../concepts/transformer-architecture.html"><span class="cat">concept</span>Transformer Architecture · 整体架构</a></li></ul>
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/diffusion-unet.html"><span class="cat">paper</span>Diffusion U-Net · 同一张网，反复回答“这一步该擦掉什么”</a></li><li><a href="../concepts/group-normalization.html"><span class="cat">concept</span>Group Normalization · 分组归一化</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/positional-encoding.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/diffusion-timestep-conditioning.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

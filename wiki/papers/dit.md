@@ -10,7 +10,7 @@ year: 2023
 
 # DiT · 把扩散模型的 U-Net 换成 Transformer
 
-扩散生成的"骨架换芯"里程碑。在它之前，扩散模型的去噪网络几乎都是 U-Net；DiT 证明**纯 Transformer 在 latent patch 上做去噪，不但能用，还更会 scale**——越多算力(更大模型/更小 patch)FID 越低。后来 SD3、FLUX、可灵、Sora 那一代图像/视频生成主干，全是 DiT 的后代。它是 [[diffusion-transformer]] 这个概念的源头论文。
+扩散生成的"骨架换芯"里程碑。在它之前，扩散模型的去噪网络几乎都是 [[diffusion-unet]]；DiT 证明**纯 Transformer 在 latent patch 上做去噪，不但能用，还更会 scale**——越多算力(更大模型/更小 patch)FID 越低。后来 SD3、FLUX、可灵、Sora 那一代图像/视频生成主干，全是 DiT 的后代。它是 [[diffusion-transformer]] 这个概念的源头论文。
 
 ## 一句话
 **把扩散去噪的 U-Net 整个换成 ViT（在 VAE latent 的 patch token 上跑），用 adaLN-Zero 把时间步和类别条件注进每层归一化——架构干净、scale 起来 FID 一路降到 2.27。**
