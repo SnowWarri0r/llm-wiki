@@ -332,7 +332,7 @@ X[k+N/2]   = E[k] − w^k · O[k]      ← 减（因为 w 转半圈反号）</pr
 
 <p><strong>① 为什么非得 2 的幂（radix-2）。</strong>折半要能一路折到底：<code>8 → 4 → 2 → 1</code> 干净。但 <strong>6 折一次到 3 就卡住</strong>——3 是奇数，没法再对半切成两个整数半边。遇到非 2 幂长度有三条路：<strong>补零</strong>凑到 8（zero-pad）、按 <code>6=2×3</code> 走 <strong>mixed-radix</strong>、或用 <strong>Bluestein</strong> 把任意长度变成一个卷积再拿 2 幂 FFT 算。</p>
 
-<p><strong>② bit-reversal 到底重排成什么样。</strong>把下标 0–7 反复按偶/奇拆到底，叶子顺序变成 <code>0 4 2 6 1 5 3 7</code>。这串数正好是<strong>把下标的二进制位左右翻过来</strong>：比如 <code>1=001</code> 翻成 <code>100=4</code>，<code>3=011</code> 翻成 <code>110=6</code>。所以实现里常先按这张表把输入重排一遍，再就地叠蝴蝶：</p>
+<p><strong>② bit-reversal<a class="jr" href="#g-07">7</a> 到底重排成什么样。</strong>把下标 0–7 反复按偶/奇拆到底，叶子顺序变成 <code>0 4 2 6 1 5 3 7</code>。这串数正好是<strong>把下标的二进制位左右翻过来</strong>：比如 <code>1=001</code> 翻成 <code>100=4</code>，<code>3=011</code> 翻成 <code>110=6</code>。所以实现里常先按这张表把输入重排一遍，再就地叠蝴蝶：</p>
 
 <table class="spec">
   <tr><th>原下标</th><th>二进制</th><th>位翻转</th><th>→ 新位置</th></tr>
@@ -470,7 +470,7 @@ X₃ = 1 + 2(i) + 3(−1) + 4(−i)  = 1+2i−3−4i = −2−2i</pre>
 
 <ul>
 <li><strong>卷积定理</strong>——<a href="../concepts/convolution.html">时域卷积</a> = 频域<strong>逐点相乘</strong>。所以一个贵的卷积可以"<strong>FFT → 逐元素乘 → IFFT</strong>"绕过去，大核卷积提速就靠这个。</li>
-<li><strong>音频模型</strong>——<a href="../concepts/log-mel-spectrogram.html">mel 频谱</a>就是把信号切成一段段窗口、<strong>每段做一次 FFT</strong>（STFT），再压到 mel 刻度。你跑过的 <a href="fish-speech-s2-pro.html">fish-speech</a>、<a href="whisper.html">Whisper</a> 的输入频谱全是这么来的。</li>
+<li><strong>音频模型</strong>——<a href="../concepts/log-mel-spectrogram.html">mel 频谱</a>就是把信号切成一段段窗口、<strong>每段做一次 FFT</strong>（STFT<a class="jr" href="#g-08">8</a>），再压到 mel 刻度。你跑过的 <a href="fish-speech-s2-pro.html">fish-speech</a>、<a href="whisper.html">Whisper</a> 的输入频谱全是这么来的。</li>
 <li><strong>频域学习</strong>——FNO（傅里叶神经算子）直接在频域里学算子；RoPE 的旋转本质也是一套频率基。</li>
 </ul>
 
