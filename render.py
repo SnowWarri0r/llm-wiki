@@ -1124,6 +1124,55 @@ code.mathified{border:none;background:none;padding:0;font-size:1em}
 """ + MATHIFY_END + "\n"
 
 
+# --- 保证 bespoke 页加载 KaTeX ------------------------------------------------
+# inject_mathify 有个门槛："页面没加载 KaTeX 就别注入"（否则 renderToString 会炸）。
+# 于是一个页面只要作者当初没写公式、没引 KaTeX，它散文里的 p_g / xₜ 就永远是灰底 code。
+# 这里反过来：只要页面里有数学记号的 <code>，就把 KaTeX 的 head 补上，让 mathify 能生效。
+KATEX_HEAD_START = "<!-- katex-head:start -->"
+KATEX_HEAD_END = "<!-- katex-head:end -->"
+KATEX_BESPOKE_HEAD = (
+    KATEX_HEAD_START
+    + '\n<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />'
+    + '\n<script defer src="../vendor/katex/katex.min.js"></script>\n'
+    + KATEX_HEAD_END
+)
+
+_MATHY_CHARS = re.compile(
+    "[\u2080-\u209c\u2070-\u207f\u0370-\u03ff\u2200-\u22ff\u2190-\u21ff\u2212\u00d7\u00b7\u2016]"
+)
+
+
+def _looks_mathy(s: str) -> bool:
+    if not s or len(s) > 60 or re.search(r"[\u4e00-\u9fff]", s):
+        return False
+    if re.fullmatch(r"[a-z][a-z0-9]+(_[a-z0-9]+)+", s):      # loss_dm
+        return False
+    if re.fullmatch(r"[A-Z][A-Z0-9_]{3,}", s):                # CONST_NAME
+        return False
+    if re.match(r"^(https?:|/|\./|--)", s) or re.fullmatch(r"[0-9a-f]{7,40}", s):
+        return False
+    if re.fullmatch(r"<.*>", s):
+        return False
+    return bool(_MATHY_CHARS.search(s)) or bool(re.search(r"[A-Za-z]_[A-Za-z0-9]", s))
+
+
+def ensure_katex_head(path: Path) -> bool:
+    """页面有数学记号却没加载 KaTeX 时，补上 head。幂等。"""
+    text = path.read_text()
+    head = text.split("</head>", 1)[0]
+    if "katex" in head:
+        return False
+    body = text.split(MATHIFY_START, 1)[0]
+    codes = re.findall(r"<code[^>]*>(.*?)</code>", body, re.S)
+    if not any(_looks_mathy(html.unescape(re.sub(r"<[^>]+>", "", c)).strip()) for c in codes):
+        return False
+    new_text, n = re.subn(r"</head>", KATEX_BESPOKE_HEAD + "\n</head>", text, count=1)
+    if n == 0:
+        return False
+    path.write_text(new_text)
+    return True
+
+
 def inject_mathify(path: Path) -> bool:
     """Inject (or refresh) the <code> → KaTeX pass before </body>. Idempotent."""
     text = path.read_text()
@@ -1658,6 +1707,7 @@ def main():
     injected = 0
     linked = 0
     popped = 0
+    katexed = 0
     for e in entries:
         if e.bespoke_path and e.bespoke_path.exists():
             if inject_nav_strip(e.bespoke_path, e.category, e.slug):
@@ -1666,6 +1716,8 @@ def main():
                 linked += 1
             if inject_glossary_popover(e.bespoke_path):
                 popped += 1
+            if ensure_katex_head(e.bespoke_path):
+                katexed += 1
             inject_mathify(e.bespoke_path)
 
     # 3. Render landing index + per-category sub-pages（按时间倒序）
@@ -1684,6 +1736,7 @@ def main():
     print(f"  待做: {len(entries) - ready}")
     print(f"  nav strip refreshed in {injected} bespoke pages")
     print(f"  glossary popover injected in {popped} bespoke pages")
+    print(f"  katex head added to {katexed} bespoke pages")
     print(f"  wikilinks resolved in {linked} bespoke pages")
     print(f"  auto-rendered concept/topic/thread pages: {auto_rendered}")
 
