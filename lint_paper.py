@@ -280,6 +280,27 @@ def check_split_sym_label(html, name, issues):
                            "（合成一个，用 ,\\; 分隔）"))
 
 
+# .math-sheet / .calc 是等宽算式块，不走 KaTeX（混进去会毁掉列对齐）。
+# 里面写 τ_global、s_real 这种 ASCII 下划线，读起来就是"没渲染的 LaTeX"。
+# 那里要么用 unicode 下标（x₀ / V⁺），要么直接写中文名（门槛 / 目标点）。
+LEDGER = re.compile(r'<div class="(?:math-sheet|calc)"[^>]*>(.*?)</div>', re.S)
+FAKE_SUB = re.compile(r"(?<![A-Za-z0-9])[A-Za-z\u0370-\u03ff][A-Za-z0-9]*_[A-Za-z][A-Za-z0-9]*")
+
+
+def check_ledger_pseudo_latex(html, name, issues):
+    """等宽算式块里出现 X_y 形式的假下标。"""
+    seen = set()
+    for m in LEDGER.finditer(visible(html)):
+        txt = html_mod.unescape(re.sub(r"<[^>]+>", "", m.group(1)))
+        for g in FAKE_SUB.finditer(txt):
+            if g.group(0) in seen:
+                continue
+            seen.add(g.group(0))
+            issues.append(("ERROR", name,
+                           f"等宽算式块里的假下标不会渲染: {g.group(0)!r}"
+                           "（改用 unicode 下标或中文名，这里不走 KaTeX）"))
+
+
 def check_glossary(html, name, issues):
     refs = set(re.findall(r'href="#(g-\d+)"', html))
     ids = set(re.findall(r'id="(g-\d+)"', html))
@@ -324,6 +345,7 @@ def lint(path):
                check_unmarked_sym_label,
                check_broken_subscript,
                check_split_sym_label,
+               check_ledger_pseudo_latex,
                check_glossary, check_markup, check_chat_context):
         fn(html, path.name, issues)
     return issues
