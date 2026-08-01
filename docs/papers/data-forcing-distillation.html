@@ -312,15 +312,48 @@ xt = .8×2 + .6×(−.5)
     <p>三步就能推出来，全部来自上面那条加噪定义 <code class="m">x_t=\alpha_t x+\sigma_t\epsilon</code>：</p>
     <p><strong>① 除了 <code class="m">\epsilon</code>，右边全是常数。</strong><code class="m">\alpha_t,\sigma_t</code> 是事先排好的调度表，<code class="m">x</code> 被条件钉住了——所谓「给定 <code class="m">x</code>」就是把它当固定数值看。整个式子里唯一还在随机的只有 <code class="m">\epsilon</code>。</p>
     <p><strong>② 高斯乘常数、加常数，还是高斯。</strong><code class="m">\epsilon\sim\mathcal N(0,I)</code> 是一团标准噪声；乘 <code class="m">\sigma_t</code> 是按比例放大缩小，加 <code class="m">\alpha_t x</code> 是整体平移。钟形还是钟形，只是换了位置和胖瘦。</p>
-    <p><strong>③ 均值和方差直接算。</strong>均值：<code class="m">\mathbb E[x_t]=\alpha_t x+\sigma_t\,\mathbb E[\epsilon]=\alpha_t x</code>，因为 <code class="m">\mathbb E[\epsilon]=0</code>。方差：乘一个常数，方差要乘这个常数的<strong>平方</strong>，所以 <code class="m">\mathrm{Var}(\sigma_t\epsilon)=\sigma_t^2\cdot I=\sigma_t^2I</code>；平移不改变方差。两格填进去就是那一行。</p>
-    <pre>延续上面的数：x=2, α=.8, σ=.6
+    <p><strong>③ 均值和方差直接算。</strong>这两格各只用一条最基本的规则。先把工具摆出来（<code class="m">c</code> 表示常数，<code class="m">A,B</code> 表示随机量）：</p>
+    <div class="symbols">
+      <div class="symbol"><code class="m">\mathbb E[A]</code>期望：把 <code class="m">A</code> 反复采无穷多次，取这些值的平均。</div>
+      <div class="symbol"><code class="m">\mathbb E[c]=c</code>常数没有随机性，平均下来还是它自己。</div>
+      <div class="symbol"><code class="m">\mathbb E[cA]=c\,\mathbb E[A]</code>常数可以拎到期望外面。</div>
+      <div class="symbol"><code class="m">\mathbb E[A+B]=\mathbb E[A]+\mathbb E[B]</code>加减可以拆开算，各算各的再合。</div>
+    </div>
+    <p>用之前先认清谁是常数：<code class="m">\alpha_t x</code> 整块是常数（调度表给定 <code class="m">\alpha_t</code>，条件钉住 <code class="m">x</code>），<code class="m">\sigma_t</code> 也是常数，<strong>只有 <code class="m">\epsilon</code> 是随机量</strong>。四条规则挨个用下去：</p>
+    <div class="formula wide" data-expr="\begin{aligned}\mathbb E[x_t]&=\mathbb E[\alpha_t x+\sigma_t\epsilon]&&\text{代入加噪定义}\\&=\mathbb E[\alpha_t x]+\mathbb E[\sigma_t\epsilon]&&\text{加减拆开}\\&=\alpha_t x+\sigma_t\,\mathbb E[\epsilon]&&\text{常数的期望是自己；常数拎出来}\\&=\alpha_t x+\sigma_t\cdot 0=\alpha_t x&&\mathbb E[\epsilon]=0\end{aligned}"></div>
+    <p>最后一步的 <code class="m">\mathbb E[\epsilon]=0</code> 不是推出来的，是「标准」高斯这个词的定义：<code class="m">\mathcal N(0,I)</code> 第一格写的就是均值 0，曲线对称地压在 0 两边，正的负的一样多，平均下来抵消。</p>
+    <pre>四次采样验一遍（x_t = 1.6 + .6ε）
 
-  均值   = .8 × 2 = 1.6
-  标准差 = .6      → 方差 .36
-  所以 p_t(x_t|x) 就是「中心在 1.6、标准差 .6」的那根钟形曲线
+   ε        x_t
+ −0.5      1.30
+ +1.0      2.20
+ +0.3      1.78
+ −0.8      1.12
+ ──────────────
+ ε 的平均   = (−.5 +1 +.3 −.8) / 4 = 0 / 4 = 0
+ x_t 的平均 = (1.3 +2.2 +1.78 +1.12) / 4 = 6.4 / 4 = <b>1.6</b>   ← 正好是 α_t x
 
-刚才采到 ε=−.5 得出的 x_t=1.3，只是这根曲线上的<b>一个样本点</b>，不是分布本身。
-换一次 ε 就落到别处：ε=+1 → .8×2+.6×1 = 2.2。
+ε 的平均没落在 0 上时，x_t 的平均也跟着偏，偏多少完全由 σ_t 放大：
+ 只取前三个：ε 平均   = .8 / 3 = .2667
+             x_t 平均 = 1.6 + .6 × .2667 = 1.76
+
+所以「均值 = α_t x」说的是采无穷多次的平均；有限几次只会在 1.6 附近晃。</pre>
+    <p><strong>方差那一格为什么要乘平方。</strong>方差量的是「每个样本离均值有多远」的平方的平均。<code class="m">x_t</code> 的偏离量是 <code class="m">\epsilon</code> 偏离量的 <code class="m">\sigma_t</code> 倍——<code class="m">x_t-\alpha_t x=\sigma_t\epsilon</code>，一平方，倍数就变成 <code class="m">\sigma_t^2</code>：</p>
+    <div class="formula" data-expr="\mathrm{Var}(x_t)=\mathbb E\!\left[(\sigma_t\epsilon)^2\right]=\sigma_t^2\,\mathbb E[\epsilon^2]=\sigma_t^2\cdot I"></div>
+    <p>最后一步用的仍是「标准」的定义：<code class="m">\epsilon</code> 各分量方差都是 1、彼此不相关，写成矩阵正好是 <code class="m">I</code>。而 <code class="m">\alpha_t x</code> 那块只是整体平移，不改变任何样本离均值的距离，对方差没有贡献。</p>
+    <pre>用上面同样四个样本量一遍（这条不用取极限，任何一组样本都成立）
+
+ ε   离它均值的偏离：−.5, +1, +.3, −.8
+   平方后平均 = (.25 + 1 + .09 + .64) / 4 = .495
+
+ x_t 离它均值的偏离：−.3, +.6, +.18, −.48   （每个都正好是上面那行的 .6 倍）
+   平方后平均 = (.09 + .36 + .0324 + .2304) / 4 = .1782
+
+ .1782 / .495 = <b>.36</b> = .6²    ← 乘常数 .6，方差就乘 .36，跟采到哪几个 ε 无关
+
+真正的标准高斯 Var(ε)=1，所以 Var(x_t) = .36 × 1 = .36，标准差 .6。</pre>
+    <pre>两格填回去：p_t(x_t|x) 就是「中心在 1.6、标准差 .6」的那根钟形曲线。
+上面那张表里的 x_t=1.3、2.20、1.78、1.12 都只是这根曲线上的<b>样本点</b>，不是分布本身。
 
 I 那一格在管什么（换成两维才看得出来）：x=[2, −1]
   均值   = [1.6, −.8]
