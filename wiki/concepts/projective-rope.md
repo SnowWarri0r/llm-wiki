@@ -31,7 +31,7 @@ e_4^\top
 \qquad e_4=(0,0,0,1)^\top.
 \]
 
-随后把一部分 attention head 维度留给 `\widetilde P_i`，剩余部分继续使用横向 `x` 与纵向 `y` 的普通 RoPE。两个 token 的 Q/K 做点积时，真正留下的是：
+随后把一部分 attention head 维度留给 \(\widetilde P_i\)，剩余部分继续使用横向 `x` 与纵向 `y` 的普通 RoPE。两个 token 的 Q/K 做点积时，真正留下的是：
 
 \[
 \widetilde P_{i_1}\widetilde P_{i_2}^{-1}.

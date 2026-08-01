@@ -737,7 +737,7 @@ def make_card(e) -> str:
     entry_class = f"entry {e.category[:-1] if e.category.endswith('s') else e.category}"
     if not ready:
         entry_class += " todo"
-    hook_html = ('<p class="hook">' + html.escape(e.hook) + '</p>') if e.hook else ''
+    hook_html = ('<p class="hook">' + inline_hook(e.hook) + '</p>') if e.hook else ''
     return (f'<div class="{entry_class}" data-domains="{html.escape(" ".join(doms))}" data-s="{html.escape(stext, quote=True)}">\n'
             f'  <h3>{title_link}</h3>\n'
             f'  {hook_html}\n'
@@ -823,7 +823,43 @@ def _css_ver() -> str:
     return hashlib.md5(CSS.encode("utf-8")).hexdigest()[:8]
 
 
-def _doc_head(title_tag: str, extra_css: str = "") -> str:
+# hook 直接来自 md 的「## 一句话」，里面本来就带 markdown 和 \(...\)。
+# 以前是 html.escape 后原样输出，于是索引页上显示成字面的 **粗体**、`反引号`、
+# \(t\) —— 263 条里 110 条都这样。这里做一层最小行内格式化。
+_HOOK_TEX = re.compile(r"\\\((.+?)\\\)")
+
+
+def inline_hook(text: str) -> str:
+    """hook 的最小行内渲染：code span / 粗体 / 行内公式 / [[wikilink]]。
+
+    顺序有讲究：先把 code span 和公式抠成占位符，免得它们内部的 * 和 _
+    被后面的粗体规则改写。
+    """
+    if not text:
+        return ""
+    stash: list[str] = []
+
+    def keep(frag: str) -> str:
+        stash.append(frag)
+        return f"\x00{len(stash) - 1}\x00"
+
+    # 公式先抠（内容不转义两次，交给 KaTeX；索引页会按需加载 KaTeX）
+    text = _HOOK_TEX.sub(
+        lambda m: keep('<span class="tex" data-display="false">'
+                       + html.escape(m.group(1).strip()) + '</span>'), text)
+    text = re.sub(r"`([^`]+)`",
+                  lambda m: keep("<code>" + html.escape(m.group(1)) + "</code>"), text)
+    text = html.escape(text)
+    text = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", text)
+    text = re.sub(r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]", lambda m: m.group(2) or m.group(1), text)
+    return re.sub(r"\x00(\d+)\x00", lambda m: stash[int(m.group(1))], text)
+
+
+def _doc_head(title_tag: str, extra_css: str = "", need_math: bool = False) -> str:
+    # 索引页原本不加载 KaTeX。hook 里的行内公式改成 .tex 之后必须按需挂上，
+    # 否则 span 只是个空壳、公式直接不显示。用相对根目录的路径（索引页在 docs/ 下）。
+    math = ('<link href="vendor/katex/katex-swap.min.css" rel="stylesheet" />\n'
+            '<script defer src="vendor/katex/katex.min.js"></script>\n') if need_math else ''
     return (
         '<!doctype html>\n<html lang="zh-CN">\n<head>\n<meta charset="utf-8" />\n'
         f'<title>{title_tag}</title>\n'
@@ -832,8 +868,15 @@ def _doc_head(title_tag: str, extra_css: str = "") -> str:
         '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
         + FONTS_LINK + '\n'
         f'<link rel="stylesheet" href="style.css?v={_css_ver()}" />\n'
+        + math +
         f'<style>\n{extra_css}\n</style>\n</head>\n<body>\n<div class="page">\n'
     )
+
+
+def _index_math_script() -> str:
+    """索引页复用自动页那段 .tex 渲染脚本（选择器不依赖路径，可直接用）。
+    写成函数是因为 KATEX_PAGE_SCRIPT 定义在本文件更后面。"""
+    return KATEX_PAGE_SCRIPT
 
 
 def _masthead(right: str) -> str:
@@ -876,7 +919,7 @@ def render_category_page(cat: str, items: list) -> str:
     chips_html = "".join(chips)
     label = CATEGORY_LABELS[cat]
     return (
-        _doc_head(f"个人 wiki · {label}", LIST_CSS)
+        _doc_head(f"个人 wiki · {label}", LIST_CSS, need_math='class="tex"' in cards)
         + _masthead(f"{label} · {book_note or str(len(items)) + ' 条目'}")
         + '\n<section class="hero">\n'
           '  <div class="issue"><a href="index.html" style="color:var(--brick);text-decoration:none;">← index</a> · 按时间倒序</div>\n'
@@ -888,7 +931,9 @@ def render_category_page(cat: str, items: list) -> str:
           '<div id="nores" class="nores" hidden>没有匹配的条目 — 换个词试试</div>\n'
         + f'<div class="entries">\n{cards}\n</div>\n'
         + COLOPHON
-        + f'\n</div>\n<script>\n{FILTER_JS}\n</script>\n</body>\n</html>\n'
+        + f'\n</div>\n<script>\n{FILTER_JS}\n</script>\n'
+        + (_index_math_script() if 'class="tex"' in cards else '')
+        + '</body>\n</html>\n'
     )
 
 
@@ -929,11 +974,11 @@ def render_index(entries: list) -> str:
             f'<span class="tl-date">{html.escape(entry_date(e) or "—")}</span>'
             f'<span class="tl-cat">{html.escape(catname)}</span>'
             f'<span class="tl-title">{html.escape(e.title)}</span>'
-            f'<span class="tl-hook">{html.escape(e.hook)}</span></a>'
+            f'<span class="tl-hook">{inline_hook(e.hook)}</span></a>'
         )
     rows_html = "\n".join(rows)
     return (
-        _doc_head("个人 wiki · index", LANDING_CSS)
+        _doc_head("个人 wiki · index", LANDING_CSS, need_math='class="tex"' in rows_html)
         + _masthead(f"索引 · {len(entries)} 条目")
         + '\n<section class="hero">\n'
           '  <div class="issue">FIELD NOTES · 个人学习 / 多领域</div>\n'
@@ -944,7 +989,9 @@ def render_index(entries: list) -> str:
         + '\n<h2><span class="num">§ 02</span>最近更新 · Recent</h2>\n'
           f'<div class="timeline">\n{rows_html}\n</div>\n'
         + COLOPHON
-        + '\n</div>\n</body>\n</html>\n'
+        + '\n</div>\n'
+        + (_index_math_script() if 'class="tex"' in rows_html else '')
+        + '</body>\n</html>\n'
     )
 
 
