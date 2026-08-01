@@ -103,6 +103,9 @@ figure{margin:34px 0;padding:27px;background:rgba(255,253,245,.72);border:1px so
 .tick strong{color:var(--blue);font-weight:800}
 .badge{display:inline-block;padding:3px 9px;background:var(--limesoft);border:1px solid #789b27;font:800 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
 table{width:100%;border-collapse:collapse;font-size:15px}
+/* 符号归类速查：三列都是文字，不走默认的右对齐 */
+table.recap td,table.recap th{text-align:left}
+table.recap td:first-child{white-space:nowrap}
 th,td{padding:11px 10px;border-bottom:1px solid var(--rule);text-align:right}
 th:first-child,td:first-child{text-align:left}
 th{font:800 10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);text-transform:uppercase}
@@ -266,26 +269,51 @@ token 2: k₂=[0, 1]  v₂=[0, 4]  β₂=.5
 
    S = [2, 0]
        [0, 2]          ← 无论有多少 token，S 永远是 2×2</pre>
-    <div class="symbols">
-      <div class="symbol"><code class="m">j</code> · 正在读取状态的 query token。</div>
-      <div class="symbol"><code class="m">\phi</code> · 本式取 ReLU，作为非负特征映射。</div>
-      <div class="symbol"><code class="m">\varepsilon</code> · 防止分母为零的小常数。</div>
-      <div class="symbol"><code class="m">g_j</code> · 输出 gate；sigmoid 后落在 0 到 1。</div>
-      <div class="symbol"><code class="m">\odot</code> · 对应通道逐元素相乘。</div>
-      <div class="symbol"><code class="m">W_o</code> · 把多头结果投影回模型宽度。</div>
-    </div>
-    <div class="formula wide" data-expr="o_j=W_o\!\left[\operatorname{RMSNorm}\!\left(\frac{Sq_j^r}{\sum_{n=1}^{N}\phi(k_n)^\top\phi(q_j)+\varepsilon}\right)\odot\sigma(g_j)\right]"></div>
-    <p>叠加完，用 query 去读它：<code class="m">Sq_j</code> 就是取回内容。这一步能看出「地址-内容」是真的：</p>
-    <pre>q = [1, 0]（对准 k₁）：Sq = [2, 0] = v₁×β₁     ← 取回 token 1 写的东西
-q = [0, 1]（对准 k₂）：Sq = [0, 2] = v₂×β₂     ← β₂=.5，音量小一半
-q = [1, 1]（两边都问）：Sq = [2, 2]             ← 两份内容按对准程度混起来
+    <h3>读取那条长式子，是一件件加上去的</h3>
+    <p>下面这个式子一眼看过去有六七个零件，很容易直接放弃。但它不是一次写成的——<strong>真正干活的只有第一件，后面每一件都是为了修前一件留下的毛病</strong>。按这个顺序看，一件也不用背。</p>
+    <p><strong>第 1 件 · 主角：拿 query 去乘状态。</strong>写入时 <code class="m">k</code> 是地址、<code class="m">v</code> 是内容，读取就是反过来——用自己的 query 当地址去问。整条式子的语义全在这一步，剩下的都是修补。</p>
+    <div class="formula" data-expr="o_j = Sq_j^r"></div>
+    <pre>q = [1, 0]（对准 k₁）：Sq = [2, 0] = v₁×β₁    ← 取回 token 1 写的东西
+q = [0, 1]（对准 k₂）：Sq = [0, 2] = v₂×β₂    ← β₂=.5，音量小一半
+q = [1, 1]（两边都问）：Sq = [2, 2]            ← 两份内容按对准程度混起来
 
-再走完 o_j 那条式子的其余部分（q=[1,1]）：
-  分母 = Σ ReLU(k_n)·ReLU(q) + ε = [1,0]·[1,1] + [0,1]·[1,1] = 1 + 1 = 2
-        ↑ 这是归一化：token 越多、S 里堆的东西越多，读出来的数就越大，除掉才不飘
-  [2, 2] / 2 = [1, 1]
-  RMSNorm：√((1²+1²)/2) = 1，除完还是 [1, 1]（这组数刚好不变）
-  再乘输出 gate σ(g)，比如 .7 → [.7, .7]，最后过 W_o 投影回模型宽度</pre>
+「地址-内容」不是比喻，是真能对上号的。</pre>
+    <p><strong>第 2 件 · 除掉总量：分母。</strong>上面那步有个毛病：<code class="m">S</code> 是 <code class="m">N</code> 个 token 累加出来的，token 越多堆得越厚，读出来的数就越大。10 个 token 的视频和 10 万个 token 的视频，输出会差几个数量级，网络没法用同一套权重接住。所以要除掉一个「一共问到了多少」：</p>
+    <div class="formula" data-expr="o_j=\frac{Sq_j^r}{\sum_{n=1}^{N}\phi(k_n)^\top\phi(q_j)+\varepsilon}"></div>
+    <pre>分母 = Σ ReLU(k_n)·ReLU(q) + ε
+     = [1,0]·[1,1] + [0,1]·[1,1] = 1 + 1 = 2
+[2, 2] / 2 = [1, 1]
+
+φ 取 ReLU 是为了让每一项都非负 —— 否则正负相消，分母可能接近 0，
+一除就炸。ε 是最后一道保险，只管防「真的等于 0」。</pre>
+    <p>这个分母正是 softmax 里「除以行内总和」那一步的替身。softmax 的归一化必须先凑齐整行，这里的分母却可以拆成对每个 <code class="m">n</code> 的独立求和，所以能跟着状态一起累加——<strong>能不能拆开累加，是这整套设计的唯一判据。</strong></p>
+    <p><strong>第 3 件 · 拉回尺度：RMSNorm。</strong>分母只管住了「总量」，管不住各通道之间的比例失衡。这类模型有几十层，某个通道稍微偏大，一路堆下去就会主导整个残差流。RMSNorm 把向量整体按自己的均方根拉回单位尺度，只改长度不改方向：</p>
+    <pre>RMSNorm([1, 1]) = [1,1] / √((1²+1²)/2) = [1,1]/1 = [1, 1]
+                                   ↑ 这组数刚好等长，所以看不出变化
+换成 [3, 1]： √((9+1)/2)=2.236 → [1.342, .447]  ← 方向没变，长度归一</pre>
+    <p><strong>第 4 件 · 补回选择性：输出 gate。</strong>这是最容易被当成「随手加的技巧」而其实最有理由的一件。softmax attention 天生会挑：它给某几个 token 极高权重、其余接近 0。线性注意力把所有 token 都揉进一份状态，<strong>这种「挑」的能力就没了</strong>。gate 是把它补回来的地方——每个通道配一个 0 到 1 的阀门，让模型能对当前 token 关掉不需要的通道：</p>
+    <div class="formula wide" data-expr="o_j=W_o\!\left[\operatorname{RMSNorm}\!\left(\frac{Sq_j^r}{\sum_{n=1}^{N}\phi(k_n)^\top\phi(q_j)+\varepsilon}\right)\odot\sigma(g_j)\right]"></div>
+    <pre>σ(g) 是 sigmoid，把任意实数压到 0–1：σ(0)=.5  σ(2)=.881  σ(−2)=.119
+⊙ 是逐通道相乘，不是矩阵乘法：
+
+  [1, 1] ⊙ [.881, .119] = [.881, .119]
+                            ↑ 第二个通道被这个 token「拧小」到 12%
+
+最后过 W_o：多个 head 各自算出一份，拼起来投影回模型宽度（2,560 / 4,096）。</pre>
+    <p>所以这条式子读成一句话是：<strong>用 query 查状态（主角），除掉总量、拉回尺度（两道防炸），再让 gate 挑一遍（补回 softmax 的选择性），最后拼回模型宽度</strong>。下面这张表把每个符号归到它所属的那一件事——<strong>标「水管」的那几个不影响你理解机制，卡住时可以先跳过</strong>：</p>
+    <table class="recap">
+      <thead><tr><th>符号</th><th>角色</th><th>一句话</th></tr></thead>
+      <tbody>
+        <tr><td><code class="m">j</code></td><td>主角</td><td>正在读取状态的那个 query token。</td></tr>
+        <tr><td><code class="m">q_j^r</code></td><td>主角</td><td>它的 query，<code class="m">r</code> 表示已经过 RoPE 旋转、带上了位置关系。</td></tr>
+        <tr><td><code class="m">g_j</code></td><td>主角</td><td>输出 gate 的原始打分；<code class="m">\sigma</code> 之后落在 0 到 1。</td></tr>
+        <tr><td><code class="m">\phi</code></td><td>关键替身</td><td>本文取 ReLU，替掉 softmax 的那个非负映射。</td></tr>
+        <tr><td><code class="m">\odot</code></td><td>读法</td><td>对应通道逐元素相乘，不是矩阵乘法。</td></tr>
+        <tr><td><code class="m">\varepsilon</code></td><td>水管</td><td>防分母为零的小常数，不承担任何语义。</td></tr>
+        <tr><td><code class="m">W_o</code></td><td>水管</td><td>把多头结果拼接后投影回模型宽度。</td></tr>
+        <tr><td><code class="m">\operatorname{RMSNorm}</code></td><td>水管</td><td>按均方根把向量拉回单位尺度；只改长度不改方向。</td></tr>
+      </tbody>
+    </table>
     <figure>
       <figcaption class="figcap"><span class="n">FIG 02 · 两种“看全片”</span><span>关系表 vs 固定状态</span></figcaption>
       <div class="compare">
@@ -366,16 +394,47 @@ N=10,000、d=128 时：路线 A 的中间表 1 亿格，路线 B 的 16,384 格�
   <section id="attnres">
     <span class="secno">04 · 核心二：Block AttnRes</span>
     <h2>别只接上一层，让 token 自己翻旧笔记</h2>
-    <p>普通残差只有 <code class="m">h_l=h_{l-1}+f_l(h_{l-1})</code>。深层想用早先 softmax anchor 形成的精确关系，只能指望它一路不被稀释。Block AttnRes<a class="jr" href="#g-09">09</a>每 8 层冻结一份摘要，让后续 token 直接读取。</p>
-    <div class="symbols">
-      <div class="symbol"><code class="m">x</code> · 当前某一个时空 token；不是整条视频共用一路由。</div>
-      <div class="symbol"><code class="m">V_l</code> · 输入 <code class="m">b_0</code>、已完成块 <code class="m">b_i</code>、当前部分和 <code class="m">p_l</code> 的集合。</div>
-      <div class="symbol"><code class="m">v_i(x)</code> · 来源 <code class="m">i</code> 在 token <code class="m">x</code> 处的特征。</div>
-      <div class="symbol"><code class="m">w^{(\tau)}</code> · 共享 query；attention 与 FFN 分支各一份。</div>
-      <div class="symbol"><code class="m">\tau</code> · 当前是 attention 前路由，还是 FFN 前路由。</div>
-      <div class="symbol"><code class="m">\alpha_{i\to l}^{(\tau)}(x)</code> · 来源权重；对 <code class="m">i</code> 求和为 1。</div>
-    </div>
+    <p>这一节的公式又是一长串带上标下标的东西，但它同样是<strong>从「普通残差不够用」一步步逼出来的</strong>，跟着这四步走，最后那条式子会变成一句废话。</p>
+    <p><strong>起点：普通残差只认上一层。</strong>标准写法是 <code class="m">h_l=h_{l-1}+f_l(h_{l-1})</code>——第 <code class="m">l</code> 层只能接第 <code class="m">l-1</code> 层递过来的东西。第 4 层那个 softmax anchor 好不容易算出的精确 token 关系，想被第 28 层用上，只能指望它在中间 24 层里一路不被稀释。</p>
+    <p><strong>第 1 步 · 把可选的来源摆出来。</strong>既然指望不上接力，就让深层<strong>直接去拿</strong>。每 8 层冻结一份摘要，于是第 <code class="m">l</code> 层面前摆着一组候选：</p>
+    <pre>V_l = { b₀ , b₁ , b₂ , … , p_l }
+
+  b₀   最初的输入（还没进任何 block）
+  b₁   第 1 个 8 层块结束时冻结的摘要
+  b₂   第 2 个 8 层块的摘要
+  …    中间每一块都留了一份
+  p_l  当前这一块还没走完的部分和（partial sum）
+
+「每 8 层存一份」的 8，恰好是两个完整的 3:1 周期（见上一节的 FIG 03）。</pre>
+    <p><strong>第 2 步 · 混合就是加权求和。</strong>拿到一组来源，最自然的用法是各取一点、加起来。权重记作 <code class="m">\alpha</code>，这就是式子的前半截，没有任何玄机：</p>
+    <div class="formula" data-expr="h_l(x)=\sum_{v_i\in V_l}\alpha_{i\to l}(x)\,v_i(x)"></div>
+    <p><strong>第 3 步 · 权重从哪来：让来源自己打分。</strong>剩下的唯一问题是 <code class="m">\alpha</code> 怎么定。固定死（比如永远各占三分之一）就浪费了——不同 token 需要的东西不一样。所以给每个来源打一个分，再 softmax 成和为 1 的权重。打分的办法是<strong>拿一个可训练的向量 <code class="m">w</code> 去点乘该来源的特征</strong>：点积大 = 这个来源现在「对味」。</p>
+    <div class="formula wide" data-expr="\alpha_{i\to l}(x)=\operatorname{softmax}_i\!\left[w^\top\operatorname{RMSNorm}(v_i(x))\right]"></div>
+    <pre>为什么点乘之前要先 RMSNorm？
+  不同来源的特征幅度天差地别 —— 最初输入 b₀ 和跑了 24 层的 p_l 根本不在
+  一个尺度上。不先拉平，点积大小主要反映「谁的数比较大」，而不是「谁对味」，
+  路由就退化成按幅度选。RMSNorm 只改长度不改方向，正是为了让点积去比方向。
+
+为什么是 softmax 而不是随便归一化？
+  它保证权重非负且和为 1 —— 输出仍是各来源的一个凸组合，不会跑到所有
+  来源之外去，深层堆叠才稳。</pre>
+    <p><strong>第 4 步 · 一个上标：<code class="m">\tau</code>。</strong>每个 DiT block 里有两处要用特征——attention 之前和 FFN 之前。这两处想读的东西未必一样，所以各配一份自己的 <code class="m">w</code>，用 <code class="m">\tau</code> 区分。<strong>这个上标不带任何新机制，纯粹是「这套东西一式两份」的记账符号。</strong>把它加回去，就是论文里那条完整式子：</p>
     <div class="formula wide" data-expr="h_l(x)=\sum_{v_i\in V_l}\alpha_{i\to l}^{(\tau)}(x)v_i(x),\qquad \alpha_{i\to l}^{(\tau)}(x)=\operatorname{softmax}_i\!\left[(w^{(\tau)})^\top\operatorname{RMSNorm}(v_i(x))\right]"></div>
+    <p>整条读成一句话：<strong>把「最初输入、各块旧摘要、当前部分和」摆成一排，用一个可训练向量给它们打分、softmax 成权重，加权求和当作这一层的输入；attention 前和 FFN 前各来一次。</strong>符号归位如下（<strong>标「记账」的两个跳过也不影响理解</strong>）：</p>
+    <table class="recap">
+      <thead><tr><th>符号</th><th>角色</th><th>一句话</th></tr></thead>
+      <tbody>
+        <tr><td><code class="m">x</code></td><td>主角</td><td>当前某<strong>一个</strong>时空 token；不是整条视频共用一路。</td></tr>
+        <tr><td><code class="m">V_l</code></td><td>主角</td><td>候选来源的集合：<code class="m">b_0</code>（输入）、<code class="m">b_i</code>（已完成块）、<code class="m">p_l</code>（当前部分和）。</td></tr>
+        <tr><td><code class="m">w</code></td><td>主角</td><td>可训练的打分向量，跨层共享；它决定「什么样的来源现在对味」。</td></tr>
+        <tr><td><code class="m">\alpha_{i\to l}(x)</code></td><td>主角</td><td>打分 softmax 后的权重，对 <code class="m">i</code> 求和为 1。</td></tr>
+        <tr><td><code class="m">v_i(x)</code></td><td>读法</td><td>来源 <code class="m">i</code> 在 token <code class="m">x</code> 这个位置上的特征。</td></tr>
+        <tr><td><code class="m">\operatorname{RMSNorm}</code></td><td>关键预处理</td><td>拉平各来源幅度，让点积去比方向而不是比大小。</td></tr>
+        <tr><td><code class="m">\tau</code></td><td>记账</td><td>标明这次是 attention 前还是 FFN 前的路由。</td></tr>
+        <tr><td><code class="m">i\to l</code></td><td>记账</td><td>下标只是在说「从来源 <code class="m">i</code> 流到第 <code class="m">l</code> 层」，不是运算。</td></tr>
+      </tbody>
+    </table>
+    <p>Block AttnRes<a class="jr" href="#g-09">09</a>的全部内容就是这个。下面这张图是它在第 17 层某个 token 上的一次真实取值。</p>
     <figure>
       <figcaption class="figcap"><span class="n">FIG 04 · 第 17 层某个 token 的一次路由</span><span>箭头只占独立列，不压文字</span></figcaption>
       <div class="router">
@@ -501,7 +560,7 @@ N=10,000、d=128 时：路线 A 的中间表 1 亿格，路线 B 的 16,384 格�
     <h3>Diffusion-DPO：同一 prompt 的好视频应比坏视频更容易解释</h3>
     <div class="symbols">
       <div class="symbol"><code class="m">x^+,x^-</code> · Gemini 离线选出的 preferred / rejected 视频。</div>
-      <div class="symbol"><code class="m">\phi</code> · 当前策略 <code class="m">\theta</code> 或冻结参考模型 <code class="m">\theta_{\rm ref}</code>。</div>
+      <div class="symbol"><code class="m">\phi</code> · 当前策略 <code class="m">\theta</code> 或冻结参考模型 <code class="m">\theta_{\rm ref}</code> 的占位符。<strong>跟 § 02 那个 <code class="m">\phi</code>（ReLU 特征映射）不是一回事</strong>——论文两处各自用了这个字母，本页保留原记号。</div>
       <div class="symbol"><code class="m">D</code> · latent 元素数；把平方误差取平均。</div>
       <div class="symbol"><code class="m">e_\phi^\pm</code> · 模型对好 / 坏视频的 flow prediction error。</div>
       <div class="symbol"><code class="m">\Delta_\phi</code> · 坏视频误差比好视频大多少。</div>
