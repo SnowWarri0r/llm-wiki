@@ -215,28 +215,58 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.72);border:1px so
   <section id="problem">
     <span class="secno">§ 01 · FAILURE MODE</span>
     <h2>反向 KL 为什么看不见学生漏掉的花样</h2>
-    <p>DMD 最小化反向 KL<a class="jr" href="#g-02">2</a>。公式最值得盯住的不是 <code>log</code>，而是平均值按谁抽样：</p>
+    <p>DMD 最小化<strong>反向</strong> KL<a class="jr" href="#g-02">2</a>。式子里最值得盯住的不是 <code class="m">\log</code>，而是那个下标——<strong>求平均用的样本从谁那里抽</strong>：</p>
     <div class="formula" data-expr="D_{\mathrm{KL}}(p_{\mathrm{fake}}\|p_{\mathrm{real}})=\mathbb E_{\tilde x\sim p_{\mathrm{fake}}}\left[\log\frac{p_{\mathrm{fake}}(\tilde x)}{p_{\mathrm{real}}(\tilde x)}\right]"></div>
     <div class="symbols">
       <div class="symbol"><code class="m">p_{\mathrm{fake}}</code><br>学生输出的概率分布。</div>
       <div class="symbol"><code class="m">p_{\mathrm{real}}</code><br>老师代表的目标视频分布。</div>
-      <div class="symbol"><code class="m">\widetilde{x}\sim p_{\mathrm{fake}}</code>用于求平均的样本来自学生。</div>
+      <div class="symbol"><code class="m">\mathbb E_{\tilde x\sim p_{\mathrm{fake}}}</code>对 <strong>学生抽出来的</strong>样本求平均——这个下标就是整节的关键。</div>
+      <div class="symbol"><code class="m">\log\frac{p_{\mathrm{fake}}}{p_{\mathrm{real}}}</code>在某个位置上，学生给的概率比老师给的高出几倍（取对数）。</div>
     </div>
+    <p>「<strong>反向</strong>」指的就是这个抽样方向：括号里第一个写的是 <code class="m">p_{\mathrm{fake}}</code>，平均也按它抽。反过来那种（按 <code class="m">p_{\mathrm{real}}</code> 抽）叫正向 KL，后面会拿来对照——两者差别大到一个有限、一个无穷。</p>
+
+    <h3>先把期望摊成加权求和</h3>
+    <p>「期望」在离散情形就是<strong>按概率加权求和</strong>：每个位置算一遍括号里的东西，再乘上<strong>抽到这个位置的概率</strong>，最后加起来。抽样来自 <code class="m">p_{\mathrm{fake}}</code>，所以权重就是 <code class="m">p_{\mathrm{fake}}</code>：</p>
+    <div class="formula wide" data-expr="D_{\mathrm{KL}}(p_{\mathrm{fake}}\|p_{\mathrm{real}})=\sum_{\text{每个位置}}\underbrace{p_{\mathrm{fake}}(x)}_{\text{权重}}\cdot\log\frac{p_{\mathrm{fake}}(x)}{p_{\mathrm{real}}(x)}"></div>
+    <p><strong>权重和被加权的东西用的是同一个 <code class="m">p_{\mathrm{fake}}</code></strong>——这一点马上会出事。把世界简化成只有两种构图：</p>
     <figure>
       <figcaption class="figcap"><span>Fig 02 · 真实分布有两座岛，学生只到过一座</span><span class="n">没样本就没梯度</span></figcaption>
       <div class="islands">
         <div class="island covered">近景构图<br>真实概率 .50<br>学生概率 1.00</div>
         <div class="island missed">远景构图<br>真实概率 .50<br>学生概率 0</div>
       </div>
-      <div class="formula wide" data-expr="\mathrm{KL}(Q\|P)=1\log\frac{1}{0.5}+\lim_{q\to0^+}q\log\frac{q}{0.5}=\log 2+0\approx0.693"></div>
+      <div class="formula wide" data-expr="D_{\mathrm{KL}}(p_{\mathrm{fake}}\|p_{\mathrm{real}})=\underbrace{1\cdot\log\frac{1}{0.5}}_{\text{近景}}+\underbrace{0\cdot\log\frac{0}{0.5}}_{\text{远景}}"></div>
     </figure>
-    <p><strong>这里不能把 <code>log 0</code> 当成普通数字算。</strong>正确做法是让学生给远景的概率 <code class="m">q</code> 从正数慢慢逼近零，再看整项 <code class="m">q\log(q/0.5)</code> 的极限：</p>
-    <pre>q=.1    → .1×ln(.1/.5)    ≈ −.161
-q=.01   → .01×ln(.01/.5)  ≈ −.039
-q=.001  → .001×ln(.001/.5)≈ −.006
+    <p>两项各自的三个数都对得上表格：近景那项，权重是学生概率 <code class="m">1</code>，括号里是学生 <code class="m">1</code> 比真实 <code class="m">0.5</code>；远景那项，权重是学生概率 <code class="m">0</code>，括号里是 <code class="m">0/0.5</code>。</p>
 
-q 越接近 0，整项越接近 0；不是 ln(0) 本身等于 0。</pre>
-    <p>学生把“远景”彻底漏掉，反向 KL 仍只有有限代价，因为这一格的权重也跟着学生概率一起缩到零。这就是模式塌缩<a class="jr" href="#g-03">3</a>的根：训练只在学生到过的地方问路。</p>
+    <h3>远景那一项不能硬算，要取极限</h3>
+    <p><code class="m">\log 0</code> 是负无穷，<code class="m">0\times(-\infty)</code> 没有定义。正确做法是让学生给远景的概率 <code class="m">q</code> 从正数一点点逼近 0，看<strong>整个式子</strong>往哪儿去。注意学生概率要归一，近景那格同时变成 <code class="m">1-q</code>：</p>
+    <pre>学生 = [1−q, q]      真实 = [.5, .5]      对数取自然对数
+
+  q       近景项 (1−q)·ln((1−q)/.5)   远景项 q·ln(q/.5)      合计
+ .1              +0.529008                 −0.160944       0.368064
+ .01             +0.676266                 −0.039120       0.637146
+ .001            +0.691455                 −0.006215       0.685240
+ q→0             +0.693147                 −0.000000       <b>0.693147</b> = ln 2
+
+远景项的绝对值虽然在涨（ln(q/.5) 一路往负无穷跑），但前面那个权重 q
+缩得更快，乘出来反而趋于 0。<b>不是 ln(0) 等于 0，是「0 乘一个爆炸量」被压住了。</b></pre>
+    <div class="note"><strong>单项可以是负的，总和不会。</strong>远景那三个数都带负号，看着像“负代价”——那只是因为学生在那儿给的概率<strong>低于</strong>真实（比值小于 1，对数为负）。KL 是所有项加起来才有意义，合计那一列始终是正的，而且随 <code class="m">q\to 0</code> 单调涨到 <code class="m">\ln 2</code> 就不动了。</div>
+
+    <h3>关键对照：换成正向 KL，同一件事的代价是无穷</h3>
+    <p>0.693 到底算大还是算小？得有个参照。把抽样方向换过来——权重改用<strong>真实</strong>概率，比值也倒过来——同一组 <code class="m">q</code> 再算一遍：</p>
+    <div class="formula wide" data-expr="D_{\mathrm{KL}}(p_{\mathrm{real}}\|p_{\mathrm{fake}})=\sum_{\text{每个位置}}\underbrace{p_{\mathrm{real}}(x)}_{\text{权重换成真实}}\cdot\log\frac{p_{\mathrm{real}}(x)}{p_{\mathrm{fake}}(x)}"></div>
+    <pre>  q       近景项 .5·ln(.5/(1−q))   远景项 .5·ln(.5/q)      合计
+ .1             −0.293893              +0.804719        0.510826
+ .01            −0.341548              +1.956012        1.614463
+ .001           −0.346073              +3.107304        2.761231
+ q→0            −0.346574                  <b>→ +∞</b>          <b>→ ∞</b>
+
+差别全在远景那一项的权重上：
+  反向 KL 用学生概率 q 当权重 —— q→0，这一项自己消失
+  正向 KL 用真实概率 .5 当权重 —— 权重不动，而 ln(.5/q) 冲向无穷</pre>
+    <p>这就是「反向」两个字的全部后果：<strong>学生漏掉一整种构图，反向 KL 只罚 0.693 就到顶；正向 KL 会罚到无穷</strong>。0.693 相当于什么概念——它就是「两种构图只剩一种」这件事在反向 KL 眼里的<strong>全部</strong>代价，一个常数，梯度也随之消失。</p>
+    <p>换句话说，反向 KL 的权重是学生自己给的：<strong>学生没去过的地方，权重是 0，也就没有梯度把它拽回去。</strong>这就是模式塌缩<a class="jr" href="#g-03">3</a>的根——训练只在学生到过的地方问路。DFD 要做的，正是想办法让真实数据那一侧也能出声。</p>
     <div class="note warn"><span class="mini">证据边界</span>这条采样逻辑直接解释“漏模式为什么没有信号”。论文还把视频过饱和归入反向 KL 的 mode-seeking 结果；实验支持 DFD 能缓解它，但过饱和不是上面两个格子的数学例子单独证明出来的。</div>
   </section>
 
