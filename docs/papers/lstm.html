@@ -42,6 +42,11 @@ p { margin: 12px 0; } strong { font-weight: 700; }
 ul { margin: 12px 0; padding-left: 24px; } li { margin: 6px 0; }
 code { font-family: 'JetBrains Mono', monospace; font-size: 0.86em; background: var(--paper-3); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--rule); }
 pre.eq { background: var(--paper-card); border: 1px solid var(--rule); padding: 18px 22px; font-family: 'JetBrains Mono', monospace; font-size: 13.5px; line-height: 1.6; overflow-x: auto; border-radius: 4px; margin: 16px 0; white-space: pre-wrap; }
+/* 符号定义表：公式列走 KaTeX（W_f 这类下标 unicode 排不出，pre 里会露源码），
+   注释列保持 pre.eq 的等宽腔调 */
+table.eqt { background: var(--paper-card); border: 1px solid var(--rule); border-radius: 4px; margin: 16px 0; padding: 10px 14px; border-collapse: separate; border-spacing: 8px 6px; }
+table.eqt td { vertical-align: middle; }
+table.eqt td:last-child { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--muted, #7a6f5d); padding-left: 18px; }
 a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .jr { font-family: 'JetBrains Mono', monospace; font-size: 10px; vertical-align: super; background: var(--pine-soft); color: var(--ink-2); padding: 1px 5px; border-radius: 2px; border: 1px solid var(--pine); text-decoration: none !important; margin: 0 2px; cursor: pointer; }
 .jr:hover { background: var(--pine); color: var(--paper); }
@@ -193,12 +198,14 @@ figure.play .ls-svg .draw { stroke-dashoffset: 0; }
   </svg>
 </figure>
 
-<pre class="eq">f_t = σ(W_f·[h_{t−1}, x_t])        # 遗忘门：老记忆留多少（0~1）
-i_t = σ(W_i·[h_{t−1}, x_t])        # 输入门：新的写多少
-g_t = tanh(W_g·[h_{t−1}, x_t])     # 候选：要写的内容
-C_t = f_t · C_{t−1} + i_t · g_t    # 传送带更新：擦一点 + 加一点（加法！）
-o_t = σ(W_o·[h_{t−1}, x_t])        # 输出门：读出多少
-h_t = o_t · tanh(C_t)              # 这一步的隐藏状态/输出</pre>
+<table class="eqt">
+  <tr><td><code class="m">f_t=\sigma(W_f\cdot[h_{t-1},x_t])</code></td><td>遗忘门：老记忆留多少（0~1）</td></tr>
+  <tr><td><code class="m">i_t=\sigma(W_i\cdot[h_{t-1},x_t])</code></td><td>输入门：新的写多少</td></tr>
+  <tr><td><code class="m">g_t=\tanh(W_g\cdot[h_{t-1},x_t])</code></td><td>候选：要写的内容</td></tr>
+  <tr><td><code class="m">C_t=f_t\cdot C_{t-1}+i_t\cdot g_t</code></td><td>传送带更新：擦一点 + 加一点（加法！）</td></tr>
+  <tr><td><code class="m">o_t=\sigma(W_o\cdot[h_{t-1},x_t])</code></td><td>输出门：读出多少</td></tr>
+  <tr><td><code class="m">h_t=o_t\cdot\tanh(C_t)</code></td><td>这一步的隐藏状态/输出</td></tr>
+</table>
 
 
 <!-- §03 -->

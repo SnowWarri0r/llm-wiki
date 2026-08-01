@@ -281,6 +281,41 @@ def check_split_sym_label(html, name, issues):
                            "（合成一个，用 ,\\; 分隔）"))
 
 
+# <pre> 里 mathify 不生效（run() 显式 `if(el.closest('pre')) return`），所以 pre 里的
+# ASCII 下标/上标会原样显示成 k_n / e^H —— 被连着指了三次。pre 里的规范是：
+# 下标走 unicode（kₙ pₗ dₕ tₛ qⱼ），e 的幂写成 exp(·)（小数上标 unicode 排不出来），
+# 整数次幂走 unicode 上标（N² wᵏ）。
+# 判据跟标题那条同源：下划线前必须是**单个**字母。gen_data / pseudo_target / img_embeds
+# 是标识符，伪代码里本来就该长这样；k_n / x_t / V_l 才是数学。
+# 判定和修复共用 fix_pre_math 里的同一套规则（转换表、代码块豁免）——两处各写一套
+# 然后悄悄分叉，这个仓库踩得够多了。含 torch./import 这类真代码标记的块整块豁免：
+# 那里的 x_t 当变量名读是成立的，转成 xₜ 反而不能照抄运行。
+# 能被 fix_pre_math 自动转的 → ERROR（错误信息就是修法，零判断成本）；
+# 转不了的（W_f 没有 unicode 下标、E_{t,x₀} 带花括号）→ WARN，要人决定是
+# 改成 KaTeX aligned 还是换个记号。
+_fspec = importlib.util.spec_from_file_location("_fpm", Path(__file__).parent / "fix_pre_math.py")
+_fpm = importlib.util.module_from_spec(_fspec)
+_fspec.loader.exec_module(_fpm)
+
+
+def check_pre_ascii_math(html, name, issues):
+    """<pre> 里的 ASCII 下标/上标不会渲染，且常跟同块的 unicode 下标混用。"""
+    for m in re.finditer(r"<pre\b[^>]*>(.*?)</pre>", visible(html), re.S):
+        body = html_mod.unescape(re.sub(r"<[^>]+>", "", m.group(1)))
+        if _fpm.CODE_MARKERS.search(body):
+            continue
+        manual = []
+        converted = _fpm.convert_text(body, manual)
+        mixed = "；同块里已有 unicode 下标，混用" if re.search("[\u2080-\u209c\u1d62-\u1d6a\u2c7c]", body) else ""
+        if converted != body:
+            issues.append(("ERROR", name,
+                           f"<pre> 里的 ASCII 数学记号不会渲染"
+                           f"（跑 python3 fix_pre_math.py --write {name.removesuffix('.html')} 即修）{mixed}"))
+        for tok in sorted(set(manual)):
+            issues.append(("WARN", name,
+                           f"<pre> 里的 {tok!r} 转不了 unicode（改 KaTeX aligned 或换记号）{mixed}"))
+
+
 # 标题也是一种载体，而 mathify 只认 code.m / .tex / [data-expr] / .math —— <h3> 从来
 # 不在扫描范围里。所以 "那个 w_norm 是干什么的" 会把下划线原样印在正文衬线字里。
 #
@@ -397,6 +432,7 @@ def lint(path):
                check_broken_subscript,
                check_split_sym_label,
                check_unrendered_math_in_heading,
+               check_pre_ascii_math,
                check_ledger_pseudo_latex,
                check_sticky_nav_killer,
                check_glossary, check_markup, check_chat_context):
