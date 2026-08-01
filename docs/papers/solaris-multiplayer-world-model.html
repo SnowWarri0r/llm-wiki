@@ -297,12 +297,26 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
 
   <h3>二 · 有两条轴会把这个数乘大</h3>
   <p><strong>轴一：每帧要去噪好几步。</strong>一帧不是一次前向就出来的，要反复去噪若干步。若每步都留梯度，一帧就占好几份激活。这条轴原版 Self Forcing 已经砍掉了：只在<strong>最后一个去噪步</strong>留梯度，前面几步一律 stop-gradient<a class="jr" href="#g-10">10</a>。所以本节之后每帧只算 1 份。</p>
-  <p><strong>轴二：滑窗互相重叠。</strong>这条是 Solaris 要解决的。因果 student 每生成一帧，都要把窗口里的 <code>Lₛ</code> 帧一起送进网络算一遍；下一帧再算一次，窗口往右挪一格。相邻两次前向有 <code>Lₛ−1</code> 帧是同一批帧，但它们是<strong>两次独立的前向</strong>，各留各的激活，谁也替不了谁。</p>
   <div class="symbols">
     <div class="sym"><b><code>L_s</code></b>student 一次能看的窗口长度。论文取 6 个 latent frame，即 24 个真实帧</div>
     <div class="sym"><b><code>L_t</code></b>这一次要 rollout 出来的总长度，也就是长上下文 teacher 一次要评的长度</div>
     <div class="sym"><b><code>N</code></b>rollout 出来的帧数，本节按 <code>N=L_t</code> 读</div>
   </div>
+  <p><strong>轴二：滑窗互相重叠。</strong>这条是 Solaris 要解决的。因果 student 每生成一帧，都要把窗口里的 <code>Lₛ</code> 帧一起送进网络算一遍；下一帧再算一次，窗口往右挪一格。相邻两次前向有 <code>Lₛ−1</code> 帧是同一批帧，但它们是<strong>两次独立的前向</strong>，各留各的激活，谁也替不了谁。</p>
+  <p>光这么说还看不出钱花在哪。<strong>换个角度数：不数"每一步留了几份"，改数"同一帧被留了几次"。</strong>盯住第 3 帧看它什么时候出现、什么时候滑走：</p>
+  <div class="calc">
+    生成第 3 帧 → 窗口 [1 2 <span class="ans">3</span>]&nbsp;&nbsp;<span class="hi">← 历史还不够，窗口没填满</span><br>
+    生成第 4 帧 → 窗口 [1 2 <span class="ans">3</span> 4]<br>
+    生成第 5 帧 → 窗口 [1 2 <span class="ans">3</span> 4 5]<br>
+    生成第 6 帧 → 窗口 [1 2 <span class="ans">3</span> 4 5 6]&nbsp;&nbsp;<span class="hi">← 到这儿才填满 6 格</span><br>
+    生成第 7 帧 → 窗口 [2 <span class="ans">3</span> 4 5 6 7]&nbsp;&nbsp;<span class="hi">← 开始右移，1 被挤掉</span><br>
+    生成第 8 帧 → 窗口 [<span class="ans">3</span> 4 5 6 7 8]&nbsp;&nbsp;<span class="hi">← 3 的最后一次</span><br>
+    生成第 9 帧 → 窗口 [4 5 6 7 8 9]&nbsp;&nbsp;<span class="hi">← 3 滑出去了</span><br><br>
+    <span class="hi">第 3 帧出现在第 3~8 步，一共</span> <span class="ans">6</span> <span class="hi">个窗口，正好是 Lₛ。</span>
+  </div>
+  <p>关键在于：<strong>这 6 次不是同一份激活被引用 6 回，是 6 次各自独立的前向。</strong>每一次，第 3 帧的 token 都要重新算 Q/K/V、重新过每一层 MLP、重新过每个 norm，留下一份<strong>全新的</strong>中间结果。6 份都挂在各自的计算图上，谁也替不了谁，所以 6 份都得占着显存到反传结束。</p>
+  <p>每帧 ×<code>Lₛ</code>、一共 <code>Lₜ</code> 帧——这就是 <code>Lₜ×Lₛ</code> 的来历。</p>
+  <div class="note"><strong>那 KV cache 呢，不就是为了避免重算历史帧吗？</strong>推理时是，训练时不是。KV cache 成立的前提是把历史帧的 K/V 当成<strong>已经算好的常量</strong>读进来；可一旦你要梯度穿过它们，它们就不是常量，而是参数的函数。于是只剩三条路：①留住生成它们的那条链——那是整条串行 rollout 的图，比重算还贵；②每个窗口里重算一遍——这就是上面那 <code>Lₛ</code> 份；③干脆不要那条梯度，对 KV 停梯度——<strong>原版 Self Forcing 选的正是这条</strong>。Solaris 想把第 ③ 条拿回来（§08 的消融显示那条梯度让五项 FID 都改善），所以只能在 ① 和 ② 里挑，两条都贵。这才是它非得另想办法不可的原因。</div>
   <figure>
     <figcaption><span>Fig 09 · 显存从 O(Lₜ·Lₛ) 降到 O(Lₜ)</span><b>停梯度只发生在第一遍</b></figcaption>
     <div class="memory">
@@ -311,18 +325,29 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
       <div class="memside good"><h4>两遍法</h4><p><strong>A.</strong> 先不留梯度地把整段跑完，只存两组存档值。</p><p><strong>B.</strong> 把存档值拼成<strong>一条</strong>序列，一次并行前向重算所有帧的最后去噪步，梯度只穿这一次。</p><p>再没有"行数 × 每行长度"，只剩一条序列。</p></div>
     </div>
   </figure>
-  <p class="formula-purpose">拿真实参数算一遍这笔账：</p>
+  <p class="formula-purpose">拿真实参数把总数算出来：</p>
   <div class="calc">
-    <span class="hi">给定</span> Lₛ = 6（student 窗口），Lₜ = 20（这次要生成 20 帧）<br><br>
-    朴素滑窗：生成第 1 帧留 6 份，第 2 帧再留 6 份 …… 共 20 行<br>
-    &nbsp;&nbsp;总量 = 20 × 6 = <span class="ans">120 份</span><br><br>
-    两遍法：第一遍不留；第二遍一条序列 = 20 干净 + 20 带噪<br>
-    &nbsp;&nbsp;总量 = 2 × 20 = <span class="ans">40 份</span> &nbsp;→ 省 3 倍<br><br>
-    <span class="hi">关键不在这 3 倍，而在这 3 倍是从哪来的：</span><br>
-    把窗口放宽到 Lₛ = 12，朴素变成 20 × 12 = <span class="ans">240 份</span><br>
-    两遍法仍是 <span class="ans">40 份</span>，因为它<span class="hi">压根不含 Lₛ</span>&nbsp; → 省 6 倍
+    <span class="hi">给定</span> Lₛ = 6（论文配置），Lₜ = 20（示例：这次要生成 20 帧）<br><br>
+    <span class="hi">按帧数</span>：帧 1–15 各被算 6 遍；结尾 5 帧滑出得早，只有 5、4、3、2、1 遍<br>
+    &nbsp;&nbsp;6×15 + (5+4+3+2+1) = 90 + 15 = <span class="ans">105 份</span><br><br>
+    <span class="hi">按步数</span>（同一笔账换个方向数，必须对得上）：<br>
+    &nbsp;&nbsp;开头 5 步窗口没填满，留 1,2,3,4,5 份；第 6 步起每步 6 份，共 15 步<br>
+    &nbsp;&nbsp;(1+2+3+4+5) + 6×15 = 15 + 90 = <span class="ans">105 份</span> ✓ 两边一致<br><br>
+    两遍法：第一遍不建图；第二遍一条序列 = 20 干净 + 20 带噪<br>
+    &nbsp;&nbsp;总量 = 2 × 20 = <span class="ans">40 份</span>
+  </div>
+  <p class="formula-purpose">这 105 : 40 的比值是怎么随两个参数变的：</p>
+  <div class="calc">
+    <span class="hi">拉长窗口</span> Lₛ 6 → 12（Lₜ 仍 20）<br>
+    &nbsp;&nbsp;朴素 105 → <span class="ans">174 份</span>；两遍法 40 → <span class="ans">40 份</span>（没动）<br><br>
+    <span class="hi">拉长生成</span> Lₜ 20 → 100（两种窗口各算一次）<br>
+    &nbsp;&nbsp;Lₛ=6 ：朴素 <span class="ans">585</span> / 两遍法 <span class="ans">200</span> → 2.9 倍<br>
+    &nbsp;&nbsp;Lₛ=12：朴素 <span class="ans">1134</span> / 两遍法 <span class="ans">200</span> → 5.7 倍<br><br>
+    <span class="hi">看出来了：拉长 Lₜ，两边一起涨，倍数不变；</span><br>
+    <span class="hi">拉长 Lₛ，只有朴素那边涨，倍数跟着 Lₛ 走（趋近 Lₛ/2）。</span>
   </div>
   <p>所以这套方法真正买到的东西是：<strong>显存不再跟 student 的窗口长度挂钩。</strong>窗口想开多长开多长，显存只按生成了多少帧线性涨。这就是论文说的"把自回归 rollout 与反向传播解耦"。</p>
+  <div class="note"><strong>为什么论文写 <code>O(Lₜ·Lₛ)</code> 而不是 105：</strong>大 O 记的是增长形状，不是精确值。<code>20×6=120</code> 是上界——它假设每一步窗口都是满的，但开头 5 步还没攒够历史。精确值 105 比上界小一点，形状一样。</div>
 
   <h3>三 · 第一遍：只管生成，不留计算图</h3>
   <p>照常自回归把 <code>N</code> 帧滚完，但全程关掉梯度。跑完只留两组值：</p>
@@ -366,6 +391,15 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
     <li><strong>noisy N4 那行</strong>：读 C2、C3 加自己，<strong>读不到 C1</strong>。不是因为 C1 是未来，而是因为窗口只有 3 格——这张图里的 <code>Lₛ=3</code>，N4 的窗口是第 2、3、4 帧。论文实际用 6。</li>
   </ul>
   <p>把这三条规则合起来就是一句话：<strong>每个带噪帧只看得见自己，以及窗口内严格更早的干净帧。</strong>这正好等于它在第一遍串行 rollout 时真实看到的上下文，所以这次并行重算不是近似，是复刻。</p>
+  <h3>回头看：<code>Lₛ</code> 到底是在哪一步消失的</h3>
+  <p>盯住上表的 <code>C2</code> 那一列——<code>N3</code> 和 <code>N4</code> 都在读它（真实配置里是 <code>Lₛ</code> 个 noisy query 都在读它）。但 <code>C2</code> 在这条序列里<strong>只算了一份</strong>。</p>
+  <div class="calc">
+    <span class="hi">串行时</span>&nbsp; 第 3 帧被<span class="ans">重算 6 遍</span>，每遍服务 1 个时间步<br>
+    <span class="hi">并行时</span>&nbsp; 第 3 帧<span class="ans">算 1 遍</span>，同时服务 6 个 query<br><br>
+    同样是"第 3 帧要给 6 个时间步当上下文"这件事，<br>
+    一个花 6 份激活，一个花 1 份。
+  </div>
+  <p>所以 <code>Lₛ</code> 不是被什么技巧"优化掉"的，是<strong>重复计算被合并了</strong>——它本来就是同一份东西被算了 <code>Lₛ</code> 遍，摊平成一条序列之后自然只剩一份。二 里那条"轴二"说的"各留各的激活，谁也替不了谁"，在并行版里变成了"一份大家一起用"。</p>
   <div class="note"><strong>为什么这样还能训练：</strong>第一遍的缓存值确实被冻住了，但第二遍是<strong>重新算</strong>的——这一遍的 Q/K/V 和输出都挂着完整计算图，分布匹配损失的梯度顺着它回到参数上。省下显存后还多出一项原版 Self Forcing 做不了的事：梯度可以穿过重算出来的 KV 表示。§08 的消融会显示这一项明显改善 FID，同时压低几个动作跟随分数，不是白拿的。</div>
   <div class="warn">论文只说 teacher 的上下文比 student 长，<strong>没有给出 <code>Lₜ</code> 的具体帧数</strong>，也没有报告实测显存曲线。上面的 20 帧是为算账取的示例值，<code>Lₛ=6</code> 才是论文给的真实配置。</div>
 </section>
