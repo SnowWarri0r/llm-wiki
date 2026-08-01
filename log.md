@@ -1262,3 +1262,13 @@ skill 更新:
 - 又一次当场违反自己刚写的 SKILL 7.5：新写的散文里用了 `<code>\theta</code>` / `<code>\log p_f</code>`，散文不走 mathify，渲染出来是裸反斜杠。8 处改成 unicode。
 - 这已是第三次同类翻车（solaris §07 也中过），所以搬进 lint_paper.py 当 ERROR：mathify 作用域外的 `<code>` 只要含 `\命令` 就报。用注入已知 bug 的方式验过检查本身有效（注入即报、清空即静），不是"扫出 0 就当过了"。
 - 顺带给 senseflow 加了 `section>ul` 样式（此前全页没用过 ul）。
+
+## [2026-07-26] fix | 散文数学终于会渲染了：mathify 加严格形状 + code.m 显式开关
+
+- 用户指出 `p_g(X_t)` 在散文里还是灰底、露着下划线。这暴露了上一条约定本身的漏洞：我让"散文里写 unicode 下标"，可 `p_g` / `p_f` / `p_r` 的下标 g/f/r **在 unicode 里根本不存在**（只有 ₐₑₒₓₕₖₗₘₙₚₛₜ）。等于把问题从"裸反斜杠"挪成了"裸下划线"。
+- 关键发现：mathify 的 looksLikeMath 本来就设计了区分数学下标与代码变量名的规则（`loss_dm` 跳过、`p_fake` 保留）。挡住散文的是**选择器**，不是分类器。
+- 但直接把散文全放进作用域会误伤 commit hash（fafc81b7）、版本号（1e-5）、命令行开关（--apply）。所以给散文单独一套更严的形状：单个字母 + 下标/上标/括号参数，且必须含 `_ ^ (` 之一——光秃秃一个 `A`/`N` 不渲染（可能只是"选项 A"）。
+- 形状匹配不上的（带空格的 `log p_f`、单独的 `θ`/`V`）走新增的显式开关 `<code class="m">`，任何位置都渲染，可写完整 LaTeX。
+- 全站效果：13 页共 82 处散文数学现在会渲染（vits 19、dmd 17、senseflow 15…）。另有 13 页共 34 处仍是灰底，因为那些页压根没加载 KaTeX（`inject_mathify` 有这道门槛，否则 renderToString 会炸）——那些是纯文字页，要渲染得先给它们加 KaTeX head，属于另一个决定。
+- senseflow §02 顺带把那个 `.calc` 对照块换成真正的 aligned KaTeX 公式（本来就是两条式子的对照，不该用等宽 ASCII 排）。
+- linter 同步：`code.m` 与紧形状的豁免从"碰巧不匹配"改成明写，并注入三种情形回归验证——裸 code 写 LaTeX 报错、code.m 写 LaTeX 不报、裸 code 写紧形状不报，三条都符合预期。
