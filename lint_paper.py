@@ -21,6 +21,7 @@ WARN  = 启发式，可能误报，要人眼看一下再决定。
 import html as html_mod
 import importlib.util
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -371,6 +372,30 @@ def lint(path):
     return issues
 
 
+def run_katex_check():
+    """把每条数学源码丢给真 KaTeX 编译一遍。
+
+    正则永远猜不出"这条 LaTeX 合不合法"。而页面上 data-tex 走的是
+    throwOnError:false —— 非法命令只渲染成红字，不报错、不留痕迹
+    （genception 的 v^\\* 就这么活了很久）。只有真编译器说了算。
+    没装 node 就跳过，但会明说跳过了，不假装通过。
+    """
+    js = Path(__file__).parent / "check_katex.js"
+    if not js.exists():
+        return 0
+    try:
+        r = subprocess.run(["node", str(js)], capture_output=True, text=True, timeout=120)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        print("· 跳过 KaTeX 编译校验（没有 node 或超时）—— 这一项没验过，别当成通过")
+        return 0
+    out = r.stdout.strip()
+    if out:
+        print(out.splitlines()[-1])
+    if r.returncode:
+        print("\n".join(out.splitlines()[:-1]))
+    return r.returncode
+
+
 def main():
     argv = sys.argv[1:]
     strict = "--warn" in argv
@@ -392,7 +417,8 @@ def main():
     for lvl, name, msg in errors + warns:
         print(f"[{lvl}] {name}: {msg}")
     print(f"\n扫了 {len(paths)} 页 · {len(errors)} ERROR · {len(warns)} WARN")
-    return 1 if errors or (strict and warns) else 0
+    katex_rc = run_katex_check() if len(paths) > 1 else 0   # 全量扫时才跑，单页别等 node
+    return 1 if errors or katex_rc or (strict and warns) else 0
 
 
 if __name__ == "__main__":
