@@ -133,7 +133,10 @@ figure{margin:34px 0 46px;padding:26px;border:1px solid var(--rule);background:r
 <p>图这条路和 real 完全对称：<code>s_fake×1 = 0.1667</code>。麻烦的是前面那条「密度这条路」——real 块压根没有它，因为老师不随 θ 变。这项要是不为零，整条公式就不成立了。第 5 步专门清它。</p>
 
 <h3>第 5 步 · 多冒的那项，对整批一平均正好是 0</h3>
-<p>把「密度这条路」按第 1 步的期望摊开。用一个恒等式 <code>∂_θ log p = (∂_θ p)/p</code>，分母的 <code>p_fake</code> 和期望里的 <code>p_fake</code> 恰好抵消，只剩 <code>∂_θ p_fake</code>；再把求导和积分换个次序，命根子那条工具（总概率=1）就登场了：</p>
+<p>把「密度这条路」按第 1 步的期望摊开。这里要用一个恒等式，先把它推出来——<b>它就是 log 的链式法则</b>：外层 <code>log(u)</code> 对 <code>u</code> 求导得 <code>1/u</code>，内层 <code>p(θ)</code> 对 <code>θ</code> 求导得 <code>∂_θ p</code>，两者相乘：</p>
+<div class="formula math" data-display="true">\partial_\theta\log p=\underbrace{\frac{1}{p}}_{\text{外层}}\cdot\underbrace{\partial_\theta p}_{\text{内层}}=\frac{\partial_\theta p}{p}\qquad\Longleftrightarrow\qquad \partial_\theta p=p\,\partial_\theta\log p</div>
+<p>不是什么特殊定理，就是中学那条 <code>(log u)' = u'/u</code> 换个字母。拿数字验一下：取 <code>p(θ)=θ²</code>、<code>θ=3</code>，右边 <code>∂_θp/p = 2θ/θ² = 6/9 = 0.667</code>；左边直接算 <code>log(θ²)=2logθ</code>，导数 <code>2/θ = 2/3 = 0.667</code>——对上了。</p>
+<p><b>为什么偏要用它？</b>看右边那个反写形式 <code>∂_θ p = p·∂_θ log p</code>：期望天生长成 <code>∫ p·(…) dx</code> 的样子，手上这个 <code>∂_θ p</code> 单独摆着没法写成期望，一旦换成 <code>p·∂_θ log p</code>，那个 <code>p</code> 就正好当上采样权重。这招有名字，叫 <b>log-derivative trick</b>（策略梯度 REINFORCE 也靠它）。下面正是反着用一次：分母的 <code>p_fake</code> 和期望里的 <code>p_fake</code> 抵消，只剩 <code>∂_θ p_fake</code>；再把求导和积分换个次序，命根子那条工具（总概率=1）就登场了：</p>
 <div class="formula math" data-display="true">\mathbb E_z\!\left[\partial_\theta\log p_{\mathrm{fake}}(x)\right]=\int p_{\mathrm{fake}}\cdot\frac{\partial_\theta p_{\mathrm{fake}}}{p_{\mathrm{fake}}}\,dx=\partial_\theta\!\int p_{\mathrm{fake}}\,dx=\partial_\theta 1=0</div>
 <p>它不是被「忽略」了，是数学上<strong>必然为 0</strong>：不管 θ 怎么动，学生所有可能输出的概率加起来永远是 1，1 对 θ 的导数当然是 0。</p>
 <div class="plain"><b>拿数字验一下这条命根子。</b>取一个最简单的学生分布 <code>p_θ=N(θ,1)</code>（均值随 θ 走的高斯）。它的 <code>∂_θ log p=x−θ</code>。从这分布里抽几十万个 <code>x</code>，把 <code>x−θ</code> 平均——结果贴着 0（实测 <code>θ=0.7</code> 时约 <code>0.0006</code>）。换成 <code>θ=−2</code>、方差换成 <code>0.25</code>，平均还是约 <code>0</code>（<code>−0.0004</code>）。不是对称特例凑巧，是「总概率=1」逼出来的。</div>
