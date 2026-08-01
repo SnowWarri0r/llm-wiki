@@ -331,7 +331,8 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
     <div class="event">两样缺一不可</div>
     <div class="view"><h4><code>Xₛ</code> · 每帧被抽中的带噪状态</h4><ol><li>训练时给每帧独立抽一个噪声比例 <code>σ</code>（Diffusion Forcing<a class="jr" href="#g-05">05</a>），<code>Xₛ</code> 就是那一刻的带噪 latent。</li><li>它的用途是<strong>当待办</strong>：第二遍要重算的"最后一步去噪"，输入的就是它。</li></ol></div>
   </div>
-  <p>两组值都做 stop-gradient。这不是说它们退出训练了——它们照样参与前向、照样影响损失，只是<strong>梯度不再往回穿第一遍那条又长又串行的生成链</strong>，于是那条链的激活可以当场丢掉。</p>
+  <p>两组值都做 stop-gradient。这不是说它们退出训练了——它们照样参与前向、照样影响损失，只是<strong>梯度不再往回穿第一遍那条又长又串行的生成链</strong>。准确地说，那条链的激活不是"建了再丢"，而是<strong>从来没建过</strong>：整个第一遍是在 no-grad 下跑的，框架根本不去记录中间结果。</p>
+  <div class="note"><strong>这里要分清一件事：存一个值 ≠ 存一条计算图。</strong><code>X₀</code> 和 <code>Xₛ</code> 当然也占显存，<code>2N</code> 个 frame 张量跑不掉。但那是 <code>2N</code> 个<strong>张量</strong>；而一条计算图是这一帧穿过 DiT <strong>每一层</strong>留下的全部中间结果——每个 attention 的分数矩阵、每个 MLP 的隐层、每个 norm 的输入，有多少层就翻多少倍。所以"缓存几十份值"才换得掉"保留上百份图"，两边的单位根本不是一回事。</div>
 
   <h3>四 · 第二遍：把 N 次串行前向压成 1 次并行前向</h3>
   <p class="formula-purpose">第二遍喂给网络的输入，是把两组存档值沿序列维拼在一起：</p>
@@ -342,6 +343,7 @@ figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--orange)}
     <div class="sym"><b>方括号</b>沿序列维首尾相接，长度 <code>N \to 2N</code></div>
   </div>
   <p>为什么这样拼就能一次算完？因为"第 <code>i</code> 帧做最后一步去噪"这件事，输入只有两类东西：<strong>自己那份带噪状态</strong>，加上<strong>窗口内更早那几帧的干净估计</strong>。既然两类都在这条序列里了，只要用 mask 把每个带噪位置能看见的范围削回它当初的窗口，一次前向就同时复现了 <code>N</code> 个时间步各自的处境。</p>
+  <div class="warn"><strong>别误会成"边算边传、所以不占显存"。</strong>反向传播的顺序是反的——要算前面层的梯度，得先有后面层的，所以第二遍的前向必须<strong>整个跑完</strong>才能开始反传，峰值就卡在前向结束那一刻。第二遍照样占显存，占的正是上面算的那 40 份；它是从 120 降到 40，<strong>不是降到 0</strong>。省下来的 80 份不是靠流式传播省的，而是第一遍那 120 份图<strong>从来没存在过</strong>。（分块反传、梯度累积这类"边算边放"的手法确实存在，FlashAttention 是典型，但那是在省一次前向<em>内部</em>的激活，跟这里省"要不要保留 N 条串行 rollout 的图"是两层问题，可以叠加；论文没提。）</div>
   <div class="note"><strong>"Checkpointed" 这个名字的来历：</strong>第一遍只留几个存档点（<code>X₀</code> 和 <code>Xₛ</code>），第二遍从存档点把要留梯度的那一小段重算一次。大方向跟 PyTorch 的 gradient checkpointing 一样——<strong>用重算换显存</strong>，存档点选在"帧"这个粒度上。</div>
   <h3>但它不只是"时间换空间"</h3>
   <p><strong>一 · 重算的不是同一段计算，是改写过的。</strong>vanilla gradient checkpointing 把丢掉的那段<strong>原样再跑一遍</strong>：同一份代码、同一个顺序，所以不需要任何额外设计。这里的第二遍不是重放第一遍那 <code>N</code> 次串行前向，而是把它<strong>改写成 1 次并行前向</strong>。正因为形式变了，才必须专门造下面那张 mask 去复刻每一帧当初的处境——结果等价，算法不同。</p>
