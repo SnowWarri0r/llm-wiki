@@ -1323,3 +1323,12 @@ skill 更新:
 - 完整录入 I2V/V2V 结果，并保留论文表格核算异常：Wonder I2V 五个已打印画质分项的均值约为 .8564，与表内 Avg .8558 不一致；没有原始评测文件时不擅自改论文数字。
 - 把 16 FPS / 0.5 秒标成项目页口径，并明确缺少分辨率、推理 GPU、卡数、显存和测速细节；把“本轮 active attention 近似固定”与“完整历史 KV 存储仍增长”分开。
 - 新增四个概念页：pixel-space-coordinate-field、sparse-context-forcing、mixture-of-students、gan-control-regularization；DMD 与 sparse attention 旧概念页补 Wonder 来源。
+
+## [2026-07-29] ingest | DuplexOmni
+
+- 新增 DuplexOmni 精读与 bespoke HTML；按“为什么串行系统会卡住 → 两条并行线 → 480 ms 时间片 → Thinker–Talker → 16 层 RVQ codec → Writer–Director → 数据、训练、实验与边界”重排，不照论文目录平铺。
+- 把容易混淆的两组名字拆开：外部 thinking layer / S2 负责检索、计算和工具调用，模型内部 Thinker 负责把本片 token 与上下文变成 Talker 的发声条件；二者不是同一个模块。
+- 用一条改签场景走通 S1 与 S2 的异步协作，并逐符号解释条件向量、RVQ 残差求和、Talker prefix、主 codec 层与 15 个 residual code predictor；480 ms、6 帧、80 ms/帧的换算已正向验算。
+- 完整录入 ToR、Big Bench Audio、Daily-Omni、WER、延迟、消融和长度分桶；保留“无 S2 + ASR 的 ToR 反高于无 S2”这一非单调结果，不把消融硬写成整齐故事。
+- 分开论文实验与当前开源实现：论文用两阶段交替冻结、128×H20；当前公开 recipe 默认先 Thinker 后 Talker，低延迟推理建议至少 8×H20，公开 checkpoint 为 16 层 codec，完整训练数据约 9 TB。
+- 新增 full-duplex-multimodal-interaction 概念页，并补强 dual-model-architecture、thinker-talker、rvq-codec、multi-token-prediction 四个既有概念的 DuplexOmni 边界。

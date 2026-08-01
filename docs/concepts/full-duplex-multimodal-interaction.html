@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Full-Duplex Multimodal Interaction · 全双工多模态交互 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · full-duplex-multimodal-interaction</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Full-Duplex Multimodal Interaction · 全双工多模态交互</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>模型说话时仍在听和看，新输入能立刻改变后半句话。</p>
+<h2>直觉</h2>
+<p>普通语音助手像对讲机：用户说完，机器才开始处理；机器说话时，用户只能等。全双工更像电话：两边的声音可以同时存在，听到一句“等等，条件变了”，说话的人会马上收住原来的话，改讲新方案。</p>
+<p>“全双工”不是“回答得快”的同义词。一个模型可以 300 毫秒开口，却在自己说话期间关掉麦克风；它仍然只是低延迟的轮流说话。真正的全双工至少要同时处理三件事：</p>
+<ul>
+<li>继续接收用户音频、视频和环境变化；</li>
+<li>继续生成自己的文本与语音；</li>
+<li>处理抢话、附和、停顿、改条件和中途取消。</li>
+</ul>
+<h2>怎么做的</h2>
+<p>连续对话通常被切成固定时间片。每到一个时间片，系统都重新读一次“刚刚发生了什么”，再决定下一小段要不要继续说：</p>
+<pre><code class="language-text">上一片的对话状态
+
+      + 新到的用户音频
+      + 同时刻的视频帧
+      + 后台任务新返回的结果
+                    ↓
+          更新理解与说话计划
+                    ↓
+     下一小段文本 + 下一小段语音
+</code></pre>
+<p>DuplexOmni 的时间片是 480 ms。它不是先生成完整句子再播放，而是每 480 ms 交付一小段，并在下一片重新看用户有没有插话。</p>
+<h2>数字例子</h2>
+<p>假设助手准备说：</p>
+<blockquote>
+<p>我查到上海出发的航班，早上……</p>
+</blockquote>
+<p>时间线如下：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">时间</th>
+<th>用户新输入</th>
+<th>助手下一步</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">0–480 ms</td>
+<td>“查上海到洛杉矶”</td>
+<td>开始后台查上海航班，同时先回应“我来看看”</td>
+</tr>
+<tr>
+<td style="text-align: right;">480–960 ms</td>
+<td>没有新话</td>
+<td>继续说“正在查上海出发……”</td>
+</tr>
+<tr>
+<td style="text-align: right;">960–1440 ms</td>
+<td>“等等，改北京出发”</td>
+<td>停掉上海查询，不再续写原句</td>
+</tr>
+<tr>
+<td style="text-align: right;">1440–1920 ms</td>
+<td>没有新话</td>
+<td>启动北京查询，改口“好，我重新查北京”</td>
+</tr>
+</tbody>
+</table>
+<p>若系统要等整句说完才看新输入，改条件至少要晚一整句才生效。时间片把“反应机会”缩到每 480 ms 一次，但它也意味着最坏情况下仍可能晚接近一个时间片才响应。</p>
+<h2>跟低延迟、流式输出的区别</h2>
+<table>
+<thead>
+<tr>
+<th>能力</th>
+<th>只说明什么</th>
+<th>仍然可能缺什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>低延迟</td>
+<td>很快开始回答</td>
+<td>说话时可能听不见用户</td>
+</tr>
+<tr>
+<td>流式输出</td>
+<td>一边生成一边播放</td>
+<td>生成计划可能不会被新输入改写</td>
+</tr>
+<tr>
+<td>全双工</td>
+<td>输入和输出并行，计划持续更新</td>
+<td>深度推理仍可能拖慢，需要额外分层</td>
+</tr>
+</tbody>
+</table>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/duplexomni.html">duplexomni</a> · 以 480 ms 时间片实现音视频全双工，并接入异步思考层</li>
+<li><a href="../concepts/dual-model-architecture.html">dual-model-architecture</a> · 前台交互和后台慢推理怎样分工</li>
+<li><a href="../concepts/thinker-talker.html">thinker-talker</a> · 交互模型内部又怎样把文本理解与语音生成拆开</li>
+<li><a href="../concepts/micro-turn.html">micro-turn</a> · 更细粒度地组织实时对话的另一种做法</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/duplexomni.html"><span class="cat">paper</span>DuplexOmni · 边听边说时，后台还能继续想</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/full-duplex-multimodal-interaction.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>

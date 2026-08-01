@@ -1,8 +1,8 @@
 ---
 name: dual-model-architecture
 type: concept
-sources: [interaction-models-tml]
-updated: 2026-05-20
+sources: [interaction-models-tml, duplexomni]
+updated: 2026-07-29
 ---
 
 # Dual-Model Architecture · 双模型架构
@@ -19,6 +19,8 @@ updated: 2026-05-20
 - 前台/后台分在两个服务上
 
 TML 是把这同一种形状收到**模型权重内**：前台 interaction model 跑 [[micro-turn]]，遇到要深推理的事情委托后台 background model，结果 streaming 回流织进对话。
+
+DuplexOmni 把同一分工落成了另一套可训练系统：前台 S1 每 480 ms 继续听、看、说，后台 S2 可以是大模型、检索或工具 agent。Writer-Director 数据还显式标出触发、取消和结果回流，使“什么时候委托、旧任务何时作废”也能被监督。
 
 ## 怎么做的
 - **Interaction Model**：276B MoE / 12B 激活（每个 token 只过 12B 计算路径）。always-on，跑在 200ms tick 上。
@@ -41,6 +43,7 @@ TML 是把这同一种形状收到**模型权重内**：前台 interaction model
 
 ## 链接
 - [[interaction-models-tml]] · 论文
+- [[duplexomni]] · 480 ms 全双工时间片 + S1/S2 异步协作
 - [[micro-turn]] · 前台跑的是 micro-turn
 - [[moe]] · 前台用 MoE 稀疏激活省算力
 - [[dual-ar]] · 不同维度的"双模型"

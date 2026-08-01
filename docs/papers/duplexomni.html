@@ -1,0 +1,502 @@
+<!doctype html>
+<!-- bespoke -->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DuplexOmni · 边听边说时，后台还能继续想</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&amp;family=Noto+Sans+SC:wght@400;500;600;700&amp;family=Noto+Serif+SC:wght@400;600;700;900&amp;display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+:root{
+  --paper:#f0e9d6;--paper2:#e8e0c8;--card:#f8f2df;--ink:#181410;--ink2:#3a3128;
+  --muted:#766d5f;--rule:#b9ad91;--teal:#0d7282;--teal2:#d0e9e8;--navy:#132a43;
+  --blue:#215b8b;--blue2:#d8e5ef;--amber:#b56816;--amber2:#f3dfb7;--red:#9b3528;--red2:#efd4ca;
+  --green:#3e6c50;--green2:#d7e6d8;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;overflow-x:clip}
+body{margin:0;overflow-x:clip;background:var(--paper);color:var(--ink);font-family:"Noto Serif SC",serif;font-size:18px;line-height:1.82;-webkit-font-smoothing:antialiased}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.17;background-image:linear-gradient(rgba(24,20,16,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(24,20,16,.08) 1px,transparent 1px);background-size:32px 32px}
+.page{position:relative;max-width:1060px;margin:auto;padding:58px 38px 120px}
+.mast{display:flex;justify-content:space-between;gap:20px;border-top:4px double var(--ink);border-bottom:1px solid var(--rule);padding:12px 0;margin-bottom:54px;font:500 11px/1.5 "DM Mono",monospace;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.hero{padding-bottom:42px;border-bottom:1px solid var(--rule)}
+.kicker{display:flex;align-items:center;gap:12px;color:var(--teal);font:600 11px/1.4 "DM Mono",monospace;letter-spacing:2.4px;text-transform:uppercase}
+.kicker:after{content:"";height:1px;background:var(--rule);flex:1}
+h1{font-size:clamp(48px,8vw,88px);line-height:1.03;letter-spacing:-.055em;margin:18px 0 20px;font-weight:900}
+h1 em{font-style:normal;color:var(--teal)}
+.dek{max-width:840px;color:var(--ink2);font-size:23px;line-height:1.65}
+.meta{font:500 12px/1.6 "DM Mono",monospace;color:var(--muted)}
+.tldr{margin:34px 0 0;background:var(--navy);color:#f9f2df;border-left:6px solid #46c0c8;padding:24px 28px;font-size:20px}
+.tldr b{color:#7fe1e0}
+h2{font-size:37px;line-height:1.25;margin:82px 0 22px;letter-spacing:-.035em}
+h2 .n{font:600 12px/1 "DM Mono",monospace;color:var(--teal);letter-spacing:2px;margin-right:14px}
+h3{font-size:23px;margin:38px 0 12px}
+p{margin:14px 0}
+strong{font-weight:700}
+a{color:var(--teal);text-decoration-thickness:1px;text-underline-offset:3px}
+code{font:500 .84em/1.5 "DM Mono",monospace;background:#fffaf0;border:1px solid var(--rule);border-radius:3px;padding:2px 6px;color:#173d59}
+.jr{display:inline-block;vertical-align:super;font:600 9px/1 "DM Mono",monospace;text-decoration:none;background:var(--amber2);color:#5c3b0d;border:1px solid #c7984a;border-radius:999px;padding:3px 5px;margin-left:2px}
+.lead{font-size:21px;color:var(--ink2)}
+.note,.warn{margin:22px 0;padding:18px 20px;background:#fbf5e6;border-left:4px solid var(--teal);color:var(--ink2)}
+.warn{border-left-color:var(--red);background:#f7e6dc}
+.label{display:block;margin-bottom:6px;font:600 10px/1.3 "DM Mono",monospace;letter-spacing:1.8px;text-transform:uppercase;color:var(--teal)}
+.warn .label{color:var(--red)}
+figure{margin:38px 0;padding:28px;background:rgba(250,246,232,.88);border:1px solid var(--rule);box-shadow:8px 8px 0 rgba(55,43,25,.08);overflow:hidden}
+figcaption{display:flex;justify-content:space-between;gap:18px;border-bottom:1px dashed var(--rule);padding-bottom:13px;margin-bottom:24px;font:600 11px/1.5 "DM Mono",monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+figcaption b{color:var(--teal)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.card{border:1px solid var(--rule);background:rgba(255,255,255,.55);padding:20px}
+.card h3{margin:0 0 7px;font-size:19px}.card p{margin:7px 0;font-size:15px;line-height:1.65;color:var(--ink2)}
+.tag{display:inline-block;font:600 10px/1 "DM Mono",monospace;letter-spacing:1.2px;padding:6px 8px;margin-bottom:10px;background:var(--blue2);color:var(--blue)}
+.tag.slow{background:var(--amber2);color:#74450d}.tag.voice{background:var(--green2);color:var(--green)}
+.flow{display:grid;grid-template-columns:1fr 34px 1fr 34px 1fr;align-items:stretch;gap:0}
+.flow .arrow{display:grid;place-items:center;color:var(--amber);font:700 25px/1 "DM Mono",monospace}
+.lane{border:1px solid var(--rule);padding:18px;background:#fffdf5;min-height:136px}.lane b{display:block;font-size:17px;margin-bottom:8px}.lane p{font-size:14px;line-height:1.55;margin:4px 0;color:var(--ink2)}
+.lane.fast{border-top:5px solid var(--teal)}.lane.slow{border-top:5px solid var(--amber)}.lane.out{border-top:5px solid var(--green)}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.compare .bad{border-top:5px solid var(--red)}.compare .good{border-top:5px solid var(--teal)}
+.timeline{display:grid;grid-template-columns:90px repeat(4,1fr);border-left:1px solid var(--rule);border-top:1px solid var(--rule)}
+.timeline>div{min-height:82px;padding:12px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);font-size:13px;line-height:1.48}
+.timeline .head{background:var(--navy);color:#fff;font:600 11px/1.35 "DM Mono",monospace;min-height:auto}
+.timeline .rowhead{background:var(--paper2);font-weight:700;color:var(--ink)}
+.timeline .user{background:var(--blue2)}.timeline .s1{background:var(--teal2)}.timeline .s2{background:var(--amber2)}
+.math{margin:22px 0;background:var(--navy);color:#fff;padding:22px 20px;border-left:5px solid #46c0c8;overflow:auto;text-align:center}
+.math .katex{font-size:1.08em}
+.vars{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 22px;margin:16px 0;padding:18px;background:rgba(255,255,255,.38);border:1px solid var(--rule)}
+.vars div{font-size:15px;line-height:1.6}.vars code{margin-right:5px}
+.calc{margin:20px 0;border:1px solid var(--rule);background:#fffdf5}
+.calc .step{display:grid;grid-template-columns:105px 1fr;gap:14px;padding:13px 16px;border-bottom:1px dashed var(--rule);font-size:15px}.calc .step:last-child{border-bottom:0}
+.calc .step b{font:600 10px/1.6 "DM Mono",monospace;color:var(--teal);letter-spacing:1px;text-transform:uppercase}
+.codec-row{display:grid;grid-template-columns:90px 1fr;gap:12px;margin:9px 0}.codec-row>span{font:600 10px/34px "DM Mono",monospace;color:var(--muted)}
+.codes{display:flex;gap:7px;flex-wrap:wrap}.codes i{font:normal 600 11px/34px "DM Mono",monospace;width:36px;text-align:center;border:1px solid var(--rule);background:var(--blue2)}.codes i:first-child{background:var(--teal);color:#fff;border-color:var(--teal)}
+.prefix{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.prefix span{font:600 10px/1.4 "DM Mono",monospace;padding:8px 10px;border:1px solid var(--rule);background:#fff}.prefix .cond{background:var(--blue2)}.prefix .rvq{background:var(--green2)}.prefix .mark{background:var(--amber2)}
+.token-table,.results{width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;line-height:1.45}
+.token-table th,.token-table td,.results th,.results td{padding:11px 10px;border-bottom:1px solid var(--rule);text-align:left;vertical-align:top}
+.token-table th,.results th{font:600 10px/1.4 "DM Mono",monospace;letter-spacing:.7px;color:var(--muted);text-transform:uppercase}
+.results td:not(:first-child),.results th:not(:first-child){text-align:right;font-family:"DM Mono",monospace}
+.results .win{background:var(--teal2)}.results .weak{background:var(--red2)}
+.scriptbox{background:var(--navy);color:#eaf5f3;padding:20px;font:500 13px/1.9 "DM Mono",monospace}
+.scriptbox .u{color:#acd6ff}.scriptbox .a{color:#c9f0d1}.scriptbox .ctl{color:#ffd47b;font-weight:700}
+.bars{display:grid;grid-template-columns:90px 1fr 54px;gap:8px 12px;align-items:center}
+.bars .name{font:500 11px/1.2 "DM Mono",monospace}.bar{height:22px;background:var(--paper2);position:relative}.bar i{display:block;height:100%;background:var(--teal)}.bars .val{font:600 11px/1 "DM Mono",monospace;text-align:right}
+.evidence{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.evidence .card{min-height:144px}.evidence .big{font:700 29px/1.1 "DM Mono",monospace;color:var(--teal);display:block;margin:6px 0 12px}
+.gloss{margin-top:80px;padding-top:28px;border-top:3px double var(--ink)}
+.gloss h2{margin-top:0}.gloss ol{list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:0 26px;counter-reset:g}
+.gloss li{counter-increment:g;padding:14px 0 14px 42px;position:relative;border-bottom:1px dashed var(--rule);font-size:14px;line-height:1.55}
+.gloss li:before{content:counter(g,decimal-leading-zero);position:absolute;left:0;top:16px;font:600 10px/1 "DM Mono",monospace;color:var(--teal)}
+.gloss li:target{background:var(--amber2)}
+.sources{margin-top:54px;padding:22px;border:1px solid var(--rule);background:rgba(255,255,255,.35);font-size:15px}
+.sources li{margin:7px 0}
+.reveal{opacity:0;transform:translateY(10px);transition:opacity .55s ease,transform .55s ease}
+figure.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{transition-delay:.24s}.d4{transition-delay:.36s}
+@media(max-width:760px){
+  body{font-size:16px}.page{padding:34px 18px 80px}.mast{margin-bottom:35px}.mast span:last-child{display:none}
+  h1{font-size:48px}.dek{font-size:19px}h2{font-size:29px;margin-top:62px}
+  figure{margin:28px -4px;padding:18px 13px}.grid2,.grid3,.compare,.evidence,.vars,.gloss ol{grid-template-columns:1fr}
+  .flow{grid-template-columns:1fr}.flow .arrow{height:30px;transform:rotate(90deg)}
+  .timeline{grid-template-columns:72px repeat(4,minmax(135px,1fr));overflow-x:auto}.timeline>div{min-width:0}
+  .scroll{overflow-x:auto}.token-table,.results{min-width:680px}
+  .calc .step{grid-template-columns:1fr;gap:3px}.codec-row{grid-template-columns:70px 1fr}
+  figcaption{display:block}figcaption b{display:block;margin-top:6px}
+}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · duplexomni</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+  <header class="mast"><span>Connectionism · Paper Notes</span><span>arXiv 2606.09186v1 · 08 Jun 2026</span></header>
+  <section class="hero">
+    <div class="kicker">Real-time multimodal agent · field notes 52</div>
+    <h1>边听边说，<br><em>后台继续想</em></h1>
+    <p class="dek">DuplexOmni 不要求复杂推理在半秒内做完。它让一个前台模型持续听、看、说，把检索、计算和工具调用交给后台；结果回来后，再自然地接进后半段对话。</p>
+    <p class="meta">Muye Huang et al. · XJTU / PKU / Meituan · 35B public checkpoint</p>
+    <div class="tldr"><b>TL;DR</b>　把实时交互和慢推理拆成两条并行线；交互模型本身再用 480 ms 时间片与 Thinker–Talker 流水生成文字和声音。论文最强的是轮次控制，不是通用多模态能力或 ASR。</div>
+  </section>
+
+  <h2><span class="n">§ 01</span>先把两个问题拆开</h2>
+  <p class="lead">“能很快开口”和“开口后还听得见用户”不是一回事。后者才是全双工<a class="jr" href="#g-01">01</a>。</p>
+  <figure id="fig-1">
+    <figcaption><span>Fig 01 · 为什么串行链路会卡住</span><b>一次只做一件事 → 两条时间线并行</b></figcaption>
+    <div class="compare">
+      <div class="card bad reveal">
+        <span class="tag" style="background:var(--red2);color:var(--red)">传统串行</span>
+        <h3>查资料时，对话停在原地</h3>
+        <p>收完问题 → 调工具 → 等结果 → 组织完整答案 → 才开口。工具要 5 秒，用户就面对 5 秒空白。</p>
+      </div>
+      <div class="card good reveal d2">
+        <span class="tag">DuplexOmni</span>
+        <h3>先维持交流，结果在后台回来</h3>
+        <p>前台回应“我来查”，同时继续听用户；后台流式返还结果。用户改条件，前台立即取消旧任务。</p>
+      </div>
+    </div>
+    <div class="note reveal d3"><span class="label">关键区别</span>低延迟只保证“第一次开口快”。全双工还要求助手说话时继续接收输入，并允许新输入改掉还没说出口的计划。</div>
+  </figure>
+
+  <h2><span class="n">§ 02</span>两层系统，和两块模型，不要混</h2>
+  <p>外层是 S1/S2<a class="jr" href="#g-02">02</a>，解决快任务与慢任务的时间预算；S1 内部才是 Thinker–Talker<a class="jr" href="#g-03">03</a>，解决文字语义如何变成声音。</p>
+  <figure id="fig-2">
+    <figcaption><span>Fig 02 · 完整系统拼图</span><b>thinking layer ≠ Thinker</b></figcaption>
+    <div class="flow">
+      <div class="lane fast reveal">
+        <b>① Interaction layer / S1</b>
+        <p>持续接收音频、视频和对话历史；控制抢话、停顿、取消；决定要不要向后台求助。</p>
+      </div>
+      <div class="arrow reveal d2">→</div>
+      <div class="lane slow reveal d2">
+        <b>② Thinking layer / S2</b>
+        <p>大模型、检索或工具 agent。慢慢查、算、规划，结果分片返回；默认实验使用 Gemini-3.1-Flash-Lite。</p>
+      </div>
+      <div class="arrow reveal d3">→</div>
+      <div class="lane out reveal d3">
+        <b>③ 后续对话</b>
+        <p>S1 把已返回的事实改写成适合当前语境的话；条件变了，就停止旧 S2，不能把过期答案说出来。</p>
+      </div>
+    </div>
+    <div class="grid2" style="margin-top:18px">
+      <div class="card reveal d3"><span class="tag">S1 内部 · Thinker</span><p>读上下文，生成助手文本 token 和隐状态。它仍属于实时交互模型，不是外部慢推理层。</p></div>
+      <div class="card reveal d4"><span class="tag voice">S1 内部 · Talker</span><p>把 Thinker 的语义状态渲染成语音 codec，再由 Code2Wav 还原波形。</p></div>
+    </div>
+  </figure>
+
+  <h2><span class="n">§ 03</span>480 ms 时间片：每半秒左右重看一次</h2>
+  <p>DuplexOmni 把连续交互切成固定时间片<a class="jr" href="#g-04">04</a>。每一片都重新看新语音、新视频帧、后台新结果和旧状态，再产出下一小段文字与 480 ms 声音。</p>
+  <figure id="fig-3">
+    <figcaption><span>Fig 03 · 改航班条件的四个时间片</span><b>旧任务不是等它做完，而是立刻作废</b></figcaption>
+    <div class="timeline">
+      <div class="head">time</div><div class="head">t=1</div><div class="head">t=2</div><div class="head">t=3</div><div class="head">t=4</div>
+      <div class="rowhead">用户</div><div class="user reveal">查上海到洛杉矶</div><div class="user reveal d2">安静</div><div class="user reveal d3">等等，改北京出发</div><div class="user reveal d4">安静</div>
+      <div class="rowhead">S1</div><div class="s1 reveal">“我来查”</div><div class="s1 reveal d2">“正在看上海出发……”</div><div class="s1 reveal d3">收住原句，确认改条件</div><div class="s1 reveal d4">“好，重新查北京”</div>
+      <div class="rowhead">S2</div><div class="s2 reveal">查 PVG→LAX</div><div class="s2 reveal d2">返回上海片段</div><div class="s2 reveal d3">停止旧查询</div><div class="s2 reveal d4">查 PKX/PEK</div>
+    </div>
+    <div class="note reveal d4"><span class="label">480 ms 不等于总延迟</span>它表示模型多久获得一次“改计划”的机会。若新话刚错过片边界，最坏还要等接近一片；深度查询仍可能跑几秒，只是不会堵住前台。</div>
+  </figure>
+
+  <h2><span class="n">§ 04</span>公式一：把 token 和语境合成发声条件</h2>
+  <p>Thinker 给 Talker 两份同位置信息：token embedding 回答“是哪个词”，hidden state 回答“这个词在当前语境里是什么意思”。两份先投影到同一维度，再逐元素相加。</p>
+  <div class="math" data-expr="\begin{aligned}c_{t,\ell}&amp;=f_{\mathrm{text}}(e_{t,\ell})+f_{\mathrm{hidden}}(h_{t,\ell})\\[-2pt]\ell&amp;=1,\ldots,m_t\end{aligned}"></div>
+  <div class="vars">
+    <div><code>t</code>第几个 480 ms 时间片</div><div><code>ℓ</code>本片第几个助手 token</div>
+    <div><code class="m">m_t</code>本片助手 token 总数</div><div><code class="m">e_{t,\ell}</code>该 token 的 embedding</div>
+    <div><code class="m">h_{t,\ell}</code>Thinker 同位置隐状态</div><div><code class="m">f_{\mathrm{text}},f_{\mathrm{hidden}}</code>可学习投影</div>
+    <div><code class="m">c_{t,\ell}</code>Talker 最终拿到的条件向量</div><div><code class="m">C_t</code>本片全部条件向量排成的序列</div>
+  </div>
+  <div class="calc">
+    <div class="step"><b>给定</b><span><code class="m">f_{\mathrm{text}}(e_1)=[0.6,-0.2]</code>，<code class="m">f_{\mathrm{hidden}}(h_1)=[0.1,0.5]</code></span></div>
+    <div class="step"><b>逐位相加</b><span><code class="m">c_1=[0.6+0.1,-0.2+0.5]=[0.7,0.3]</code></span></div>
+    <div class="step"><b>排成序列</b><span>若第二个 token 得到 <code>[0.6,0.7]</code>，则 <code class="m">C_t=([0.7,0.3],[0.6,0.7])</code></span></div>
+    <div class="step"><b>它还不是声音</b><span><code class="m">C_t</code>只是“台词 + 语境”提要，下一步才据此预测离散声音码。</span></div>
+  </div>
+
+  <h2><span class="n">§ 05</span>公式二：一帧声音为什么有 16 层码</h2>
+  <p>RVQ<a class="jr" href="#g-05">05</a> 先用第 0 层画粗轮廓，后面逐层补残差。论文把层数写成 \(K\)；公开 checkpoint 的配置是 \(K=16\)。</p>
+  <div class="math" data-expr="\begin{aligned}q_{i,j}&amp;=(q^0_{i,j},q^1_{i,j},\ldots,q^{K-1}_{i,j})\\r_{i,j}&amp;=u_0(q^0_{i,j})+\sum_{k=1}^{K-1}u_k(q^k_{i,j})\end{aligned}"></div>
+  <div class="vars">
+    <div><code>i</code>历史中的第几个时间片</div><div><code>j</code>该片第几个 codec 帧</div>
+    <div><code>K</code>RVQ 码本层数；公开权重为 16</div><div><code>q^k</code>第 k 层选中的离散码索引</div>
+    <div><code class="m">u_k</code>第 k 个码本的 embedding 查表</div><div><code class="m">r_{i,j}</code>16 层相加后的帧向量</div>
+  </div>
+  <figure id="fig-4">
+    <figcaption><span>Fig 04 · 从 1 个主码补成一整帧</span><b>每片 6 帧 · 每秒 12.5 帧</b></figcaption>
+    <div class="codec-row reveal"><span>frame j</span><div class="codes"><i>q⁰</i><i>q¹</i><i>q²</i><i>q³</i><i>…</i><i>q¹⁵</i></div></div>
+    <div class="codec-row reveal d2"><span>谁来预测</span><div class="codes"><i style="width:72px">Talker</i><i style="width:240px;background:var(--amber2);color:#6d430f;border-color:#bf944a">MTP 补 15 层</i></div></div>
+    <div class="calc reveal d3">
+      <div class="step"><b>三层玩具例</b><span>把 16 层暂缩成 3 层，查表得到 <code>[.5,.1]</code>、<code>[.2,-.1]</code>、<code>[-.1,.3]</code></span></div>
+      <div class="step"><b>相加</b><span><code>r=[.5+.2-.1, .1-.1+.3]=[.6,.3]</code></span></div>
+      <div class="step"><b>时间换算</b><span>一片 480 ms 生成 6 帧，所以 <code>6÷0.48=12.5 帧/秒</code>；一帧覆盖 80 ms。</span></div>
+    </div>
+    <p class="reveal d4">Talker 先自回归出主码 \(q^0\)，MTP<a class="jr" href="#g-06">06</a> 再补残差层，完整 codec<a class="jr" href="#g-07">07</a> 交给 Code2Wav 还原波形。</p>
+  </figure>
+
+  <h2><span class="n">§ 06</span>公式三：Talker 的长 prefix 只是在列历史顺序</h2>
+  <div class="math" data-expr="P_t=\bigl[(C_i,b_{\mathrm{BOS}},R_i,b_{\mathrm{EOS}})_{i=1}^{t-1},\ C_t,b_{\mathrm{BOS}}\bigr]"></div>
+  <p>这里没有额外概率技巧。\(C_i\) 是第 \(i\) 片的文本条件，\(R_i\) 是它已经生成的声音帧，BOS/EOS 是声音段边界。取 \(t=2\)，直接展开：</p>
+  <div class="prefix">
+    <span class="cond">C₁ · 历史台词条件</span><span class="mark">BOS</span><span class="rvq">R₁ · 历史声音</span><span class="mark">EOS</span><span class="cond">C₂ · 当前条件</span><span class="mark">BOS</span>
+  </div>
+  <div class="math" data-expr="q^0_{t,j}=\mathrm{Talker}(P_t,q^0_{t,<j})"></div>
+  <p><code class="m">q^0_{t,&lt;j}</code> 是当前片已经生成的主码。Talker 用 prefix 和这些旧主码预测第 \(j\) 个主码；MTP 再补余下 15 层。相邻时间片把 \(C_t,Q_t\) 写回历史，不必重头生成整句话。</p>
+
+  <h2><span class="n">§ 07</span>Writer–Director：给“什么时候发生”补监督</h2>
+  <p>普通聊天记录只告诉模型谁先说谁后说。Writer–Director<a class="jr" href="#g-08">08</a> 先写自然脚本，再添加可训练的时间因果。</p>
+  <figure id="fig-5">
+    <figcaption><span>Fig 05 · 一句抢话怎样变成训练样本</span><b>标记会在 TTS 前删除</b></figcaption>
+    <div class="scriptbox reveal">
+      <div><span class="u">User:</span> 帮我算一下。<span class="ctl">[THINK]</span></div>
+      <div><span class="a">Assistant:</span> 这确实需要仔<span class="ctl">^</span>细<span class="ctl">[CUT]</span>分析。</div>
+      <div><span class="u">User:</span> 等等，我漏了一个条件。<span class="ctl">[WAIT]</span></div>
+    </div>
+    <div class="scroll">
+      <table class="token-table">
+        <thead><tr><th>标记</th><th>谁放</th><th>它告诉模型什么</th><th>精确限制</th></tr></thead>
+        <tbody>
+          <tr><td><code>[THINK]</code></td><td>User</td><td>启动后台 S2</td><td>放在需要外部推理的用户句末</td></tr>
+          <tr><td><code>&lt;...&gt;</code></td><td>Assistant</td><td>一段完整 S2 结果到达</td><td>放在相关事实前；不能成为用户 turn 后的第一项</td></tr>
+          <tr><td><code>^</code></td><td>Assistant</td><td>另一人从这个字符位置开始说</td><td>agent 不能用它触发用户或自己</td></tr>
+          <tr><td><code>[CUT]</code></td><td>Assistant</td><td>助手声音在这里真正停下</td><td>通常在 <code>^</code> 后 2–4 字；纯附和不需要</td></tr>
+          <tr><td><code>[WAIT]</code></td><td>User</td><td>条件变了，旧 S2 作废</td><td>重新开始必须再出现 <code>[THINK]</code></td></tr>
+          <tr><td><code>[PENDNS]</code></td><td>User</td><td>双方共同沉默 N 秒</td><td>N=1–35；放在恢复说话的 user turn 开头</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>控制标记先删除，再做 TTS 和强制对齐<a class="jr" href="#g-09">09</a>，把每个字落到真实音频时间上，最终切成与推理相同的 480 ms 片。</p>
+  </figure>
+
+  <h2><span class="n">§ 08</span>620K 场景不是 620K 段真实电话</h2>
+  <div class="evidence">
+    <div class="card"><span class="tag">场景种子</span><span class="big">≈620K</span><p>定义谁先说、是否改条件、何时停顿、何时触发 S2。</p></div>
+    <div class="card"><span class="tag">原始对话</span><span class="big">≈3.02M</span><p>平均 10.4 turn，范围 4–33；只有 10K 是视频通话。</p></div>
+    <div class="card"><span class="tag">语言</span><span class="big">70 / 30</span><p>约 70% 中文、30% 英文，另有少量其他语言。</p></div>
+  </div>
+  <div class="grid2" style="margin-top:16px">
+    <div class="card"><h3>Writer / Director</h3><p>Qwen3.5-397B-A27B 负责生成与标注；一致性检查会删掉缺触发、无来源结果和不合理打断。</p></div>
+    <div class="card"><h3>声音</h3><p>Qwen3-TTS 合成语音，Mimi 编成 codec；控制标记本身不会被念出来。</p></div>
+  </div>
+  <p>94.3% 样本有延迟推理，68.2% 有共同沉默，49.8% 有重叠说话，90.7% 同时含至少两种模式。这些比例可重叠，不能相加成 100%。</p>
+
+  <h2><span class="n">§ 09</span>训练与实时账：论文口径和开源 recipe 要分开</h2>
+  <div class="grid2">
+    <div class="card">
+      <span class="tag">论文 v1</span>
+      <h3>两阶段 SFT，交替优化</h3>
+      <p>先学基本边听边说，再补复杂交互与视频。训 Thinker 时冻结 Talker；训 Talker 时反过来。学习率 \(10^{-5}/10^{-4}\)，batch 128，128 张 H20。</p>
+    </div>
+    <div class="card">
+      <span class="tag slow">当前开源 recipe</span>
+      <h3>先 Thinker，再 Talker</h3>
+      <p>标准说明给出顺序训练，示例 global batch 256。它是后续公开实现，不应倒填成论文实验原配置。</p>
+    </div>
+  </div>
+  <p>实时系数 RTF<a class="jr" href="#g-10">10</a>：</p>
+  <div class="math" data-expr="\mathrm{RTF}=\frac{\text{生成音频耗时}}{\text{音频播放时长}}"></div>
+  <div class="calc">
+    <div class="step"><b>能跟上播放</b><span>生成 480 ms 音频花 240 ms：<code>RTF=.24÷.48=.5&lt;1</code></span></div>
+    <div class="step"><b>会越说越卡</b><span>生成同一片花 600 ms：<code>RTF=.60÷.48=1.25</code>，每片欠 120 ms</span></div>
+    <div class="step"><b>如何压账</b><span>Thinker/Talker 异步流水；Talker 用 KV cache<a class="jr" href="#g-11">11</a>、增量解码和图执行优化。</span></div>
+  </div>
+
+  <h2><span class="n">§ 10</span>实验结果：每列都在测不同的事</h2>
+  <div class="scroll">
+    <table class="results">
+      <thead><tr><th>模型</th><th>ToR ↑</th><th>Big Bench Audio ↑</th><th>Daily-Omni ↑</th><th>WER ↓</th><th>延迟 s ↓</th></tr></thead>
+      <tbody>
+        <tr class="win"><td>DuplexOmni</td><td><b>72.6</b></td><td><b>77.2</b></td><td>53.8</td><td class="weak">11.92%</td><td>0.506</td></tr>
+        <tr><td>MiniCPM-o 4.5</td><td>36.3</td><td>36.0</td><td>80.2</td><td>–</td><td><b>0.502</b></td></tr>
+        <tr><td>Qwen3-Omni-Realtime</td><td>25.2</td><td>32.1</td><td>76.2</td><td>1.3%</td><td>1.28</td></tr>
+        <tr><td>Qwen3.5-Omni-Realtime</td><td>26.4</td><td>35.0</td><td><b>81.8</b></td><td><b>1.1%</b></td><td>1.25</td></tr>
+        <tr><td>Gemini-3.1-Flash-Live</td><td>24.1</td><td>57.9</td><td>–</td><td>4.1%</td><td>2.57</td></tr>
+        <tr><td>Gemini-3.1-Flash-Lite</td><td>–</td><td>58.9</td><td>59.0</td><td>3.8%</td><td>–</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="grid3">
+    <div class="card"><h3>轮次控制强</h3><p>ToR 72.6，比次高 36.3 多 36.3 个百分点。这是论文最硬的结果。</p></div>
+    <div class="card"><h3>通用 omni 不强</h3><p>Daily-Omni 53.8，明显低于 80.2/81.8，不能概括成“多模态全面最好”。</p></div>
+    <div class="card"><h3>ASR 很弱</h3><p>WER<a class="jr" href="#g-12">12</a> 11.92%，而 Qwen 实时模型约 1.1%–1.3%。</p></div>
+  </div>
+
+  <h2><span class="n">§ 11</span>消融：S1 管节奏，S2 抬能力上限</h2>
+  <div class="scroll">
+    <table class="results">
+      <thead><tr><th>配置</th><th>ToR</th><th>Big Bench Audio</th><th>相对完整系统</th></tr></thead>
+      <tbody>
+        <tr class="win"><td>完整系统</td><td>72.6</td><td>77.2</td><td>基准</td></tr>
+        <tr><td>弱 S2</td><td>72.1</td><td>50.3</td><td>ToR −0.5；BBA −26.9</td></tr>
+        <tr><td>去掉 S2</td><td>65.2</td><td>22.2</td><td>ToR −7.4；BBA −55.0</td></tr>
+        <tr><td>再去掉 ASR 文本</td><td>67.2</td><td>18.1</td><td>ToR 反而比上一行高 2.0</td></tr>
+        <tr><td>只用 S2</td><td>–</td><td>58.9</td><td>接上 S1 后 +18.3</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="warn"><span class="label">不要把消融讲成单调故事</span><code>w/o Thinking &amp; ASR</code> 的 ToR 67.2 高于只去 thinking 的 65.2。它不能证明 ASR 一定提升轮次控制；更稳妥的结论是 S2 强弱主要影响复杂理解，而 S1 对流式输入的组织确实有额外价值。</div>
+
+  <h2><span class="n">§ 12</span>最短的一句改口，恰好最容易听错</h2>
+  <figure id="fig-6">
+    <figcaption><span>Fig 06 · DuplexOmni 的 WER 随句长下降</span><b>1–5 词是 25.1%</b></figcaption>
+    <div class="bars">
+      <div class="name">1–5 词</div><div class="bar"><i style="width:100%"></i></div><div class="val">25.1%</div>
+      <div class="name">6–10</div><div class="bar"><i style="width:61.4%"></i></div><div class="val">15.4%</div>
+      <div class="name">11–15</div><div class="bar"><i style="width:47.8%"></i></div><div class="val">12.0%</div>
+      <div class="name">16–20</div><div class="bar"><i style="width:42.2%"></i></div><div class="val">10.6%</div>
+      <div class="name">21+</div><div class="bar"><i style="width:35.1%"></i></div><div class="val">8.8%</div>
+    </div>
+    <p class="note">“嗯”“不是”“改北京”都很短，却最可能改变任务。短句 WER 高不是边角缺陷，而是全双工产品最危险的错误区。</p>
+  </figure>
+
+  <h2><span class="n">§ 13</span>论文结论，和公开可用性边界</h2>
+  <div class="evidence">
+    <div class="card"><span class="tag">checkpoint</span><span class="big">35B</span><p>BF16，Thinker 与 Talker 均包含在公开权重中；codec 配置为 16 层。</p></div>
+    <div class="card"><span class="tag slow">低延迟部署</span><span class="big">≥8 H20</span><p>这是官方模型卡的当前建议，不是普通单卡实时方案。</p></div>
+    <div class="card"><span class="tag" style="background:var(--red2);color:var(--red)">known issues</span><span class="big" style="color:var(--red)">silence</span><p>官方承认偶发意外沉默、部分语音表现不佳，且部署后需要 warm-up。</p></div>
+  </div>
+  <ul>
+    <li>默认 77.2 分使用 Gemini S2，不是纯开源权重独立结果。</li>
+    <li>视频通话训练数据只有 10K，论文也承认视觉 grounding 仍弱。</li>
+    <li>论文没有给 RTF 实测表、显存、并发、首包与稳态延迟分解。</li>
+    <li>约 3.02M 对话大量由强模型标注、Qwen3-TTS 合成，真实电话分布仍可能不同。</li>
+    <li>论文 v1 的交替训练/batch 128，与当前仓库顺序训练/global batch 256 不是同一口径。</li>
+  </ul>
+  <div class="note"><span class="label">我的判断</span>这篇最有价值的资产不是某个公式，而是“系统分层 + 时间片模型 + 时间因果数据”三件事一起闭环。强项已经很明确：轮次控制。离普适产品还有两关：把短句识别和偶发沉默压下去，再把至少 8 张 H20 的运行成本降下来。</div>
+
+  <section class="gloss">
+    <h2>术语直接触达</h2>
+    <ol>
+      <li id="g-01"><strong>全双工</strong>：输入和输出可同时发生；助手说话时仍在听、看并更新计划。详见 <a href="../concepts/full-duplex-multimodal-interaction.html">full-duplex-multimodal-interaction</a>。</li>
+      <li id="g-02"><strong>S1 / S2</strong>：S1 是低延迟交互层；S2 是可插拔慢推理或工具层。详见 <a href="../concepts/dual-model-architecture.html">dual-model-architecture</a>。</li>
+      <li id="g-03"><strong>Thinker–Talker</strong>：交互模型内部“出文本语义 / 渲染语音”的两块，不等于外层 S1/S2。详见 <a href="../concepts/thinker-talker.html">thinker-talker</a>。</li>
+      <li id="g-04"><strong>时间片</strong>：把连续流切成固定时长的小窗口，每片重新读新输入并产出下一片。</li>
+      <li id="g-05"><strong>RVQ</strong>：第一层给声音粗轮廓，后续码本逐层量化剩余误差。详见 <a href="../concepts/rvq-codec.html">rvq-codec</a>。</li>
+      <li id="g-06"><strong>MTP</strong>：主 codec token 出来后，用额外模块预测同帧的残差码本。详见 <a href="../concepts/multi-token-prediction.html">multi-token-prediction</a>。</li>
+      <li id="g-07"><strong>Neural codec</strong>：把波形压成离散 token，并能从 token 解码回声音的神经网络压缩器。</li>
+      <li id="g-08"><strong>Writer–Director</strong>：Writer 写自然脚本；Director 只补打断、停顿、触发与回传的时间标记。</li>
+      <li id="g-09"><strong>强制对齐</strong>：已知文字内容后，计算每个字在音频中的开始与结束时间。详见 <a href="../concepts/forced-alignment.html">forced-alignment</a>。</li>
+      <li id="g-10"><strong>RTF</strong>：生成耗时除以音频时长；小于 1 才能稳定跟上播放。</li>
+      <li id="g-11"><strong>KV cache</strong>：保存旧 token 的注意力 K/V，下一片只算新增部分。详见 <a href="../concepts/kv-cache.html">kv-cache</a>。</li>
+      <li id="g-12"><strong>WER</strong>：词错误率；替换、删除、插入总数除以参考词数，越低越好。</li>
+    </ol>
+  </section>
+
+  <section class="sources">
+    <span class="label">Sources · accessed 2026-07-29</span>
+    <ul>
+      <li><a href="https://arxiv.org/html/2606.09186v1">DuplexOmni · arXiv HTML v1</a></li>
+      <li><a href="https://github.com/MuyeHuang/DuplexOmni">官方 GitHub · 本页核对 commit 33bfba1a821b09c5aa66790944f9098584979d34</a></li>
+      <li><a href="https://huggingface.co/MuyeHuang/DuplexOmni">官方 35B 权重与模型卡</a></li>
+      <li><a href="https://huggingface.co/datasets/MuyeHuang/DuplexOmni-Data">官方数据与可复现元数据</a></li>
+    </ul>
+  </section>
+</div>
+<script>
+document.querySelectorAll("figure").forEach((fig)=>{
+  const obs=new IntersectionObserver((entries)=>{
+    entries.forEach((entry)=>{if(entry.isIntersecting){fig.classList.add("play");obs.disconnect();}});
+  },{threshold:.16});obs.observe(fig);
+});
+function renderMath(){
+  if(!window.katex){setTimeout(renderMath,40);return;}
+  document.querySelectorAll("[data-expr]").forEach((el)=>{
+    try{katex.render(el.dataset.expr,el,{displayMode:true,throwOnError:true});}
+    catch(err){el.textContent=el.dataset.expr;el.style.color="#ffb6a8";}
+  });
+}
+window.addEventListener("DOMContentLoaded",renderMath);
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!document.getElementById(id))return;
+      e.preventDefault();
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>

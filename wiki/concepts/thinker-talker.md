@@ -1,8 +1,8 @@
 ---
 name: thinker-talker
 type: concept
-sources: [minimind-o]
-updated: 2026-06-08
+sources: [minimind-o, duplexomni]
+updated: 2026-07-29
 ---
 
 # Thinker–Talker · 想的和说的分两条路
@@ -19,6 +19,8 @@ Thinker–Talker（Qwen-Omni、minimind-o 走这条）的办法是**解耦**：
 - **Talker** = 一组独立的小 Transformer block（minimind-o 里 4 层）。它不重新理解世界，只接 Thinker 给的**语义条件**，把它**渲染成可解码的音频 codes**（见 [[rvq-codec]] 的 Mimi codec）。
 
 类比：Thinker 是编剧（想清楚说什么），Talker 是配音演员（把台词用声音演出来）。配音演员不需要再读一遍剧本背景，只要拿到台词和情绪就能开口。
+
+DuplexOmni 还提醒一个容易混淆的命名：模型内部的 **Thinker** 不是系统外层的 **thinking layer / S2**。前者属于实时交互模型，负责出文本状态；后者是可插拔的慢推理或工具模块。
 
 ## 怎么做的 · Talker 吃的是中间层，不是最后一层
 
@@ -50,3 +52,4 @@ Thinker/Talker 解耦后，**语言理解和跨模态融合都压在 Thinker**�
 - [[rvq-codec]] · Talker 输出的 Mimi codes 就是 RVQ 神经码
 - [[next-token-forward-pass]] · Thinker 出文本走的是这条自回归链
 - [[minimind-o]] · 0.1B 端到端 Omni
+- [[duplexomni]] · 35B 交互模型在 480 ms 时间片中流式运行 Thinker–Talker
