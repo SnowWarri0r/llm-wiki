@@ -1,8 +1,8 @@
 ---
 name: sparse-attention
 type: concept
-sources: [gpt-3, unlimited-ocr]
-updated: 2026-05-21
+sources: [gpt-3, unlimited-ocr, wonder-video-world-model]
+updated: 2026-07-29
 ---
 
 # Sparse Attention · 稀疏注意力
