@@ -344,7 +344,31 @@ P̃₂·X = (100·0 + 50·5 <span class="hi">- 100</span>,          250, 5, 1) =
 位置半边　RoPE(xt) · RoPE(xs)的逆 = RoPE(<span class="ans">xt - xs</span>)
           剩下的是两个 token 之间的相对像素距离</pre></div>
   <p>（第一行用的是 Kronecker 积的性质：复印过的矩阵相乘等于先乘再复印。第二行是 RoPE 本来就有的老性质：旋转矩阵相乘等于角度相减。）</p>
-  <p>喂进去的是每帧<strong>各自的绝对相机矩阵</strong>，attention 分数里剩下的却只有<strong>相对关系</strong>——两台相机怎么换算、两个 token 隔多远。整台相机搬到世界另一头，只要相对关系不变，注意力分数一个字都不改。<code class="m">V</code> 那一路同理：<code class="m">D_t\big(\sum_s a_{ts}D_s^{-1}v_s\big)</code>，每一项都是 <code class="m">D_tD_s^{-1}v_s</code>，取回来的内容同样按相对几何对齐。</p>
+  <p>喂进去的是每帧<strong>各自的绝对相机矩阵</strong>，attention 分数里剩下的却只有<strong>相对关系</strong>——两台相机怎么换算、两个 token 隔多远。整台相机搬到世界另一头，只要相对关系不变，注意力分数一个字都不改。</p>
+  <p>刚才只算了分数那一路。<code class="m">V</code> 那一路多绕了一层，单独拆开走一遍。先回忆普通 attention 的输出长什么样——对所有 token 的 <code class="m">V</code> 做加权求和，权重 <code class="m">a_{ts}</code> 是 softmax 出来的<strong>标量</strong>：</p>
+  <div class="formula" data-expr="\mathrm{out}_t=\sum_s a_{ts}\,v_s"></div>
+  <p>PRoPE 在这条式子上只插了两处变换：进去的 <code class="m">v_s</code> 先被 <code class="m">D_s^{-1}</code> 变一道（那是公式里的 <code class="m">D^{-1}\odot V</code>），整个加权和出来之后再被 <code class="m">D_t</code> 变回去（那是最外层的 <code class="m">D\odot</code>）。照抄下来就是：</p>
+  <div class="formula" data-expr="\mathrm{out}_t=D_t\Big(\sum_s a_{ts}\,D_s^{-1}v_s\Big)"></div>
+  <p>括号能拆开，靠的是两件小事：<strong>矩阵左乘对加法可分配</strong>，所以 <code class="m">D_t</code> 能钻进求和号里；<strong><code class="m">a_{ts}</code> 只是个标量</strong>，在矩阵之间怎么挪都行。于是：</p>
+  <div class="formula" data-expr="D_t\Big(\sum_s a_{ts}D_s^{-1}v_s\Big)=\sum_s a_{ts}\big(D_tD_s^{-1}v_s\big)"></div>
+  <p>每一项里又冒出了同一个 <code class="m">D_tD_s^{-1}</code>。所以<strong>取回来的内容和注意力分数一样，只依赖相对几何</strong>。拿二维验一遍，两个 token 各占一半权重：</p>
+  <div class="calc"><pre>Dt = [2  0]    Ds1 = [1  0]（单位阵）    Ds2 = [1  1]，其逆 = [1  -1]
+     [0  1]          [0  1]                    [0  1]         [0   1]
+
+v1 = (1, 0)    v2 = (0, 2)    a = (0.5, 0.5)
+
+先算括号里（先各自变换，再加权求和，最后统一左乘 Dt）：
+    Ds1 的逆 · v1 = ( 1, 0)
+    Ds2 的逆 · v2 = (-2, 2)        1×0 + (-1)×2 = -2，0×0 + 1×2 = 2
+    加权和         = 0.5×( 1,0) + 0.5×(-2,2) = (-0.5, 1)
+    再左乘 Dt      = (2×-0.5, 1×1) = <span class="ans">(-1, 1)</span>
+
+再把 Dt 提进去（每一项各自左乘 Dt，最后才加权求和）：
+    Dt · ( 1, 0) = ( 2, 0)
+    Dt · (-2, 2) = (-4, 2)
+    加权和        = 0.5×(2,0) + 0.5×(-4,2) = <span class="ans">(-1, 1)</span>
+
+<span class="hi">两条路结果相同</span>——这就是“可分配”这三个字的全部内容。</pre></div>
   <p>这也是标题里那句“不是显式 3D 重建”的意思：模型没有在哪一层解算出场景的三维结构，只是让注意力算分时天然带上了几何换算。</p>
   <div class="boundary"><strong>论文公式 vs 当前代码：</strong>官方实现保留普通 RoPE attention，并增加独立 PRoPE 路径，再用零初始化投影逐渐加回主干。训练开始时新分支输出为零，原模型不会被随机相机分支突然打乱。</div>
 </section>
