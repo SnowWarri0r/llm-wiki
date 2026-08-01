@@ -1,8 +1,8 @@
 ---
 name: entropy-kl
 type: concept
-sources: [dmd]
-updated: 2026-07-22
+sources: [dmd, data-forcing-distillation]
+updated: 2026-07-26
 ---
 
 # 熵 / KL 散度 · 多不确定 · 用错分布多浪费多少
