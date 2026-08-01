@@ -137,7 +137,7 @@ figcaption span:first-child{color:var(--teal)}figcaption b{color:var(--orange)}
       <div class="stage"><b>PHASE 1</b><strong>双向 + PRoPE</strong><p>先在原始高质量模型上学会“镜头该怎样移动”。</p></div><div class="arr"></div>
       <div class="stage"><b>STAGE 1</b><strong>因果多步 AR</strong><p>用 teacher forcing 改成只看过去、逐段生成。</p></div><div class="arr"></div>
       <div class="stage"><b>STAGE 2</b><strong>四步初始化</strong><p>离线 ODE 或在线 consistency，两条路二选一。</p></div><div class="arr"></div>
-      <div class="stage final"><b>STAGE 3</b><strong>DMD + self-rollout</strong><p>学生读自己的历史，双向 score 负责质量纠偏。</p></div>
+      <div class="stage final"><b>STAGE 3</b><strong>DMD + self-rollout</strong><p>学生读自己的历史；双向模型再给出“视频该往哪改”的质量方向，§06 会展开。</p></div>
     </div>
   </figure>
   <div class="note"><strong>先分清两个“4”：</strong><code>4 latent frames / chunk</code> 是一次提交多少时间位置；<code>4 denoising steps</code> 是每个 chunk 调用几次网络。一个切时间，一个压采样成本。</div>
@@ -181,11 +181,18 @@ figcaption span:first-child{color:var(--teal)}figcaption b{color:var(--orange)}
     <div class="sym"><b>[Kᵢ 0]</b>给内参补一列零</div><div class="sym"><b>e₄ᵀ</b>补齐齐次坐标最后一行</div><div class="sym"><b>P̃ᵢ</b>最终 4×4 投影矩阵</div>
   </div>
   <h3>3.2 一个 token 要同时带“相机在哪”和“画面里在哪”</h3>
+  <div class="formula-purpose">这条式子做什么：把一个 attention head 的 <code class="m">d</code> 维特征切成两半；前半装相机投影，后半再分给横向和纵向位置。</div>
   <div class="formula wide" data-expr="D_t^{\mathrm{PRoPE}}=\begin{bmatrix}I_{d/8}\otimes\widetilde P_{i(t)}&0\\0&\begin{bmatrix}\mathrm{RoPE}_{d/4}(x_t)&0\\0&\mathrm{RoPE}_{d/4}(y_t)\end{bmatrix}\end{bmatrix}"></div>
   <div class="symbols">
     <div class="sym"><b>t / i(t)</b>token t 属于哪一帧</div><div class="sym"><b>xₜ, yₜ</b>token 的画面内坐标</div><div class="sym"><b>d</b>attention head 维度</div>
     <div class="sym"><b>⊗</b>Kronecker product；重复铺 4×4 块</div><div class="sym"><b>上半块</b>相机投影特征</div><div class="sym"><b>下半块</b>横向、纵向普通 RoPE</div>
   </div>
+  <p><code class="m">\otimes</code> 在这里不是把两个矩阵普通相乘，而是把 <code class="m">\widetilde P</code> 沿对角线复制多份。取一个能数清的例子：若 head 维度 <code class="m">d=32</code>，那么：</p>
+  <div class="calc">相机半边：I<sub>32/8</sub> ⊗ P̃ = I₄ ⊗ P̃<br>
+　　把 4×4 的 P̃ 沿对角线放 4 份 → 16×16<br>
+位置半边：RoPE₈(x) + RoPE₈(y) → 8+8 = 16 维<br>
+合起来：16 + 16 = <span class="ans">32 维</span>，正好回到原 head 宽度</div>
+  <p>这样切不是为了扩宽网络，而是在原来的 <code class="m">d</code> 个通道里重新分工：一半记镜头，一半记像素位置。</p>
   <figure id="fig-04">
     <figcaption><span>Fig 04 · 绝对相机输入，留下相对关系</span><b>不是显式 3D 重建</b></figcaption>
     <div class="prope">
@@ -194,9 +201,10 @@ figcaption span:first-child{color:var(--teal)}figcaption b{color:var(--orange)}
       <div class="cam"><h4>Frame 2 · 世界 x 方向 +1</h4><p>world-to-camera 外参含 <code class="m">-1</code> 平移；求逆后，相对项出现 <code>+1</code>。</p><div class="matrix">[1 0 0 1]<br>[0 1 0 0]<br>[0 0 1 0]<br>[0 0 0 1]</div><div class="splitbar"><div class="pose">相对位移 +1</div><div class="xy">画面坐标</div></div></div>
     </div>
   </figure>
-  <p>论文写成 GTA attention 形式：</p>
+  <p>论文把它写成 GTA attention。GTA 可以先按“给每个 token 套自己的坐标变换，再做 attention，最后变回去”理解；这里的 <code class="m">D_t</code> 就是第 <code class="m">t</code> 个 token 的变换表：</p>
   <div class="formula wide" data-expr="\operatorname{Attn}_{\mathrm{PRoPE}}(Q,K,V)=D\odot\operatorname{Attn}(D^\top\odot Q,D^{-1}\odot K,D^{-1}\odot V)"></div>
   <p><code class="m">\odot</code> 在这里表示把分块线性变换施加到对应特征，不是普通标量逐元素乘。Q/K 交互中留下 <code class="m">\tilde{P}_{i1}\tilde{P}_{i2}^{-1}</code>，所以 attention 能直接依赖相对相机。</p>
+  <div class="note"><strong>为什么绝对矩阵最后能表达相对关系：</strong>一维位置里，镜头分别在 10 和 7，真正影响两帧关系的是 <code class="m">10-7=3</code>。矩阵不能直接相减，就用“乘对方的逆”做对应操作：<code class="m">\widetilde P_1\widetilde P_2^{-1}</code>。它回答的不是“各自在哪”，而是“从第二台相机怎样变到第一台相机”。</div>
   <div class="boundary"><strong>论文公式 vs 当前代码：</strong>官方实现保留普通 RoPE attention，并增加独立 PRoPE 路径，再用零初始化投影逐渐加回主干。训练开始时新分支输出为零，原模型不会被随机相机分支突然打乱。</div>
 </section>
 
@@ -231,6 +239,7 @@ figcaption span:first-child{color:var(--teal)}figcaption b{color:var(--orange)}
   </div>
   <div class="calc">target = [1, 1]　prediction = [.8, 1.4]<br>L = (.8−1)² + (1.4−1)²<br>&nbsp;&nbsp;= .04 + .16 = <span class="ans">.20</span><br><span class="hi">若实现用 mean MSE，再除以 2 得 .10；论文公式是平方范数。</span></div>
   <h3>5.2 Causal CD 公式：相邻时刻要指向同一个干净结果</h3>
+  <p>这里的 <code class="m">d(a,b)</code> 只是“两个结果差多远”的占位写法。论文保留一般形式；下面的手算把它具体设成平方距离 <code class="m">d(a,b)=(a-b)^2</code>，这样每一步都能验。</p>
   <div class="formula wide" data-expr="\theta^*=\arg\min_\theta\mathbb E\left[w(t)d\left(G_\theta(x_t^i,x_{\mathrm{gt}}^{<i},t),G_{\theta^-}(\hat x_{t-\Delta t}^i,x_{\mathrm{gt}}^{<i},t-\Delta t)\right)\right]"></div>
   <div class="symbols">
     <div class="sym"><b>x̂t−Δt</b>老师沿 ODE 走一小步</div><div class="sym"><b>Gθ⁻</b>停止梯度的 EMA 学生</div><div class="sym"><b>w(t)</b>当前噪声时刻权重</div>
@@ -243,6 +252,15 @@ figcaption span:first-child{color:var(--teal)}figcaption b{color:var(--orange)}
 <section id="s6">
   <h2><span class="n">SECTION 06</span><span>Stage 3：因果学生负责生成，双向模型负责评判</span></h2>
   <p>Stage 2 的老师也是因果模型，质量上限仍低于能看整段的双向模型。Stage 3 让学生 self-rollout 完整视频，再用 asymmetric DMD<a class="jr" href="#g-11">11</a> 拉回双向目标分布。</p>
+  <p>先把三样东西钉死：记学生滚完整段得到的视频为 <code class="m">\tilde{x}</code>；给它加噪后的版本为 <code class="m">\tilde{x}_t</code>；score<a class="jr" href="#g-12">12</a> 不是质量分，而是“当前位置的 latent 往哪改，会更像某个分布”的方向。</p>
+  <div class="symbols">
+    <div class="sym"><code class="m">\widetilde{x}</code>学生读取自身历史后生成的完整视频</div>
+    <div class="sym"><code class="m">\widetilde{x}_t</code>把学生视频加噪到时刻 <code class="m">t</code></div>
+    <div class="sym"><code class="m">s_{\mathrm{real}}</code>冻结的双向老师；在真实视频上预训练</div>
+    <div class="sym"><code class="m">s_{\mathrm{fake}}</code>在线网络；不断用学生最新视频更新</div>
+    <div class="sym"><b>差值</b><code class="m">s_{\mathrm{real}}-s_{\mathrm{fake}}</code>，学生还缺少的修改方向</div>
+    <div class="sym"><b>不对称</b>学生按 chunk 生成，两个评判网络却能看完整段</div>
+  </div>
   <figure id="fig-07">
     <figcaption><span>Fig 07 · 为什么叫 asymmetric</span><b>生成结构与评判结构不对称</b></figcaption>
     <div class="dmd">
@@ -251,12 +269,15 @@ figcaption span:first-child{color:var(--teal)}figcaption b{color:var(--orange)}
       <div class="role update"><b>UPDATE</b><strong>只更新学生</strong><p>吸向 real 认为合理的方向，扣掉 fake 已经堆得过密的方向。</p></div>
     </div>
   </figure>
+  <div class="formula-purpose">公式按两步搭起来：先在视频空间算“该往哪改”，再用链式法则把这个方向传回学生参数。</div>
   <div class="formula wide" data-expr="\nabla_\theta\mathbb E_t[D_{\mathrm{KL}}(p_{\theta,t}\|p_{\mathrm{data},t})]=-\mathbb E\left[(s_{\mathrm{real}}(\tilde x_t,t)-s_{\mathrm{fake}}(\tilde x_t,t))\frac{\partial\tilde x}{\partial\theta}\right]"></div>
   <div class="symbols">
-    <div class="sym"><b>x̃</b>学生 self-rollout 的完整视频</div><div class="sym"><b>x̃ₜ</b>把学生视频加噪到时刻 t</div><div class="sym"><b>pθ,t</b>学生加噪后的分布</div>
-    <div class="sym"><b>pdata,t</b>目标数据加同样噪声后的分布</div><div class="sym"><b>sreal / sfake</b>两套 score direction<a class="jr" href="#g-12">12</a></div><div class="sym"><b>∂x̃/∂θ</b>参数怎样改变输出</div>
+    <div class="sym"><code class="m">p_{\theta,t}</code>学生加噪后的分布</div><div class="sym"><code class="m">p_{\mathrm{data},t}</code>目标数据加同样噪声后的分布</div><div class="sym"><code class="m">D_{\mathrm{KL}}</code>学生分布与目标分布的反向 KL</div>
+    <div class="sym"><code class="m">\partial\widetilde{x}/\partial\theta</code>参数变化一点时，学生视频怎样跟着变</div><div class="sym"><code class="m">\mathbb E[\cdot]</code>对噪声时刻和样本求平均</div><div class="sym"><b>最外面的 −</b>把“真实方向减学生方向”换成 KL 对参数的梯度</div>
   </div>
+  <p>如果只有 <code class="m">s_{\mathrm{real}}</code>，学生会一股脑挤向老师认为常见的位置；减掉 <code class="m">s_{\mathrm{fake}}</code>，等于扣除学生自己已经堆得很密的方向。两者相等时差值为零，学生匹配目标后这股力会自己停下。</p>
   <div class="calc">s_real = 1.2　s_fake = .4　∂x/∂θ = .5<br>gradient = −(1.2−.4)×.5 = <span class="ans">−.4</span><br>θ=1, lr=.1 → θ_new = 1−.1×(−.4) = <span class="ans">1.04</span></div>
+  <p>这个例子里 <code class="m">\partial\tilde{x}/\partial\theta=.5&gt;0</code>，所以参数增大时输出也朝正方向移动。梯度下降减去负梯度，<code class="m">\theta</code> 从 1 增到 1.04，正好沿 <code class="m">s_{\mathrm{real}}-s_{\mathrm{fake}}=.8</code> 指向的方向走。</p>
   <div class="note"><strong>相机条件不能只给学生：</strong>real/fake score 也必须看到同一轨迹。否则质量老师可能把画面推向“更像视频但不再服从当前镜头”的方向。</div>
 </section>
 
@@ -289,7 +310,7 @@ figcaption span:first-child{color:var(--teal)}figcaption b{color:var(--orange)}
     <figcaption><span>Fig 09 · 两条已开放模型线</span><b>共享抽象，不共享全部权重</b></figcaption>
     <div class="two-model">
       <div class="model"><h4>Wan2.1-T2V</h4><span class="big">1.3B</span><p>DiT + cross-attention；文本到视频。数据常预编码进 LMDB，完整四阶段与四步 DMD 推理已开放。</p></div>
-      <div class="model"><h4>HY1.5-TI2V</h4><span class="big">8B</span><p>MMDiT；文本+图像到视频。预编码 latent 常按样本存为 <code>.pt</code>，使用 sequence parallel<a class="jr" href="#g-14">14</a> 与分片并行。</p></div>
+      <div class="model"><h4>HY1.5-TI2V</h4><span class="big">8B</span><p>MMDiT；文本与视频各保留一条特征流，在 Transformer 内交换信息。预编码 latent 常按样本存为 <code>.pt</code>，使用 sequence parallel<a class="jr" href="#g-14">14</a> 与分片并行。</p></div>
     </div>
   </figure>
   <p>“架构可扩展”表示 dataset、loss、stage 和模型 wrapper 已拆开，不表示第三个 backbone 只改一行配置。latent 形状、attention、PRoPE、KV cache、并行和 checkpoint 都仍要适配。</p>
@@ -304,6 +325,7 @@ figcaption span:first-child{color:var(--teal)}figcaption b{color:var(--orange)}
       <tr><td>Wan2.1 · 论文配方</td><td>32</td><td>2e−6</td><td>5K</td><td>4K</td><td>2K</td><td>200</td></tr>
     </tbody>
   </table></div>
+  <p>表里的 <code>8K</code> 表示 8,000 次优化器更新，不是 8,000 条视频。若暂时忽略重复采样和梯度累积，batch 32 跑 8,000 步，相当于处理 <code class="m">32\times8000=256000</code> 个训练样本位置。这样读表，batch 和 steps 才不会混成一回事。</p>
   <p>HY 的 8K 双向 checkpoint 用作 Stage 3 的 <code>s_real/s_fake</code>，Stage 1 从 5K checkpoint 初始化。当前仓库部分通用脚本的 <code>max_steps</code> 更大，Wan 默认 YAML 的 total batch 也不总是 32；它们是可继续训练的模板/上限，不是论文实验的逐字复刻。</p>
   <div class="boundary"><strong>复现时的证据顺序：</strong>先看论文报告的实际 run，再看对应 stage 文档，最后确认真正传给启动命令的参数。只读一个 YAML 很容易把默认值错当论文配方。</div>
 </section>

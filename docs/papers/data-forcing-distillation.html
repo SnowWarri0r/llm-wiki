@@ -92,7 +92,8 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.72);border:1px so
 .term{padding:18px;border:2px solid var(--rule);background:var(--white);text-align:center}
 .term b{display:block;font:800 12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--deep)}
 .term span{display:block;margin-top:9px;font-size:16px}
-.term.fade{text-decoration:line-through;color:var(--muted);opacity:.72;background:var(--paper2)}
+.term.fade{text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:var(--orange);color:#62594d;background:var(--paper2)}
+.term.fade b{color:#62594d}
 .op{display:flex;align-items:center;justify-content:center;color:var(--orange);font-size:28px;font-weight:900}
 .codechange{display:grid;grid-template-columns:1fr 44px 1fr;gap:0;align-items:stretch}
 .codecard{padding:18px;background:var(--night);color:white;border:3px solid var(--deep)}
@@ -217,7 +218,7 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.72);border:1px so
     <div class="symbols">
       <div class="symbol"><b>p_fake</b><br>学生输出的概率分布。</div>
       <div class="symbol"><b>p_real</b><br>老师代表的目标视频分布。</div>
-      <div class="symbol"><b>x̃ ~ p_fake</b><br>用于求平均的样本来自学生。</div>
+      <div class="symbol"><code class="m">\widetilde{x}\sim p_{\mathrm{fake}}</code>用于求平均的样本来自学生。</div>
     </div>
     <figure>
       <figcaption class="figcap"><span>Fig 02 · 真实分布有两座岛，学生只到过一座</span><span class="n">没样本就没梯度</span></figcaption>
@@ -225,11 +226,15 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.72);border:1px so
         <div class="island covered">近景构图<br>真实概率 .50<br>学生概率 1.00</div>
         <div class="island missed">远景构图<br>真实概率 .50<br>学生概率 0</div>
       </div>
-      <pre>KL(Q||P) = 1×ln(1/.5) + 0×ln(0/.5)
-         = ln 2
-         ≈ .693</pre>
+      <div class="formula wide" data-expr="\mathrm{KL}(Q\|P)=1\log\frac{1}{0.5}+\lim_{q\to0^+}q\log\frac{q}{0.5}=\log 2+0\approx0.693"></div>
     </figure>
-    <p>学生把“远景”彻底漏掉，反向 KL 仍只有有限代价，因为第二格前面乘着学生概率 <code>0</code>。这就是模式塌缩<a class="jr" href="#g-03">3</a>的根：训练只在学生到过的地方问路。</p>
+    <p><strong>这里不能把 <code>log 0</code> 当成普通数字算。</strong>正确做法是让学生给远景的概率 <code class="m">q</code> 从正数慢慢逼近零，再看整项 <code class="m">q\log(q/0.5)</code> 的极限：</p>
+    <pre>q=.1    → .1×ln(.1/.5)    ≈ −.161
+q=.01   → .01×ln(.01/.5)  ≈ −.039
+q=.001  → .001×ln(.001/.5)≈ −.006
+
+q 越接近 0，整项越接近 0；不是 ln(0) 本身等于 0。</pre>
+    <p>学生把“远景”彻底漏掉，反向 KL 仍只有有限代价，因为这一格的权重也跟着学生概率一起缩到零。这就是模式塌缩<a class="jr" href="#g-03">3</a>的根：训练只在学生到过的地方问路。</p>
     <div class="note warn"><span class="mini">证据边界</span>这条采样逻辑直接解释“漏模式为什么没有信号”。论文还把视频过饱和归入反向 KL 的 mode-seeking 结果；实验支持 DFD 能缓解它，但过饱和不是上面两个格子的数学例子单独证明出来的。</div>
   </section>
 
@@ -238,7 +243,23 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.72);border:1px so
     <h2>先分清三套网络，score 才不会像凭空出现</h2>
     <p>扩散里的 score<a class="jr" href="#g-04">4</a>不是“视频得 82 分”，而是与视频 latent 同形状的修改方向：</p>
     <div class="formula" data-expr="s_p(x)=\nabla_x\log p(x)"></div>
-    <p><code>p(x)</code> 是位置 <code>x</code> 附近的概率密度；<code class="m">\nabla x</code> 对输入每个元素求梯度；结果指出怎样改动能最快走向高密度区域。</p>
+    <p><code class="m">p(x)</code> 是位置 <code class="m">x</code> 附近的概率密度；<code class="m">\nabla_x</code> 表示“对输入 <code class="m">x</code> 的每个元素求梯度”。结果和视频 latent 同形状：每个位置都有一个“往哪改更像数据”的方向。</p>
+    <p>这两套 score 网络都不是临时凭空造出来的。它们先做同一类扩散训练，只是训练数据不同：</p>
+    <div class="formula wide" data-expr="x_t=\alpha_t x+\sigma_t\epsilon,\qquad \mathcal L_{\mathrm{score}}=\mathbb E\left[\left\|f_\phi(x_t,c,t)-y_t^\*\right\|_2^2\right]"></div>
+    <div class="symbols">
+      <div class="symbol"><code class="m">x</code>teacher 用真实视频；fake-score 用学生刚生成的视频。</div>
+      <div class="symbol"><code class="m">\alpha_t/\sigma_t/\epsilon</code>保留多少原视频、加入多少高斯噪声，以及本次噪声。</div>
+      <div class="symbol"><code class="m">f_\phi</code>正在训练的扩散网络；<code class="m">\phi</code> 是它的参数。</div>
+      <div class="symbol"><code class="m">c,\ t</code>文本或首帧条件，以及当前噪声时刻。</div>
+      <div class="symbol"><code class="m">y_t^{*}</code>该 backbone 原本使用的扩散标签，例如噪声或速度；星号表示目标，不是乘法。</div>
+      <div class="symbol"><code class="m">s_p(x)</code>根据网络预测和噪声参数换算出的 <code class="m">\nabla_x\log p_t(x)</code>。</div>
+    </div>
+    <pre>x=2, α=.8, σ=.6, ε=−.5
+xt = .8×2 + .6×(−.5)
+   = 1.6 − .3
+   = 1.3
+
+网络就是在这种带噪位置上练习“该往哪改”。</pre>
     <figure>
       <figcaption class="figcap"><span>Fig 03 · 训练生命周期</span><span class="n">谁保留 · 谁冻结 · 谁追踪</span></figcaption>
       <div class="roles">
@@ -256,10 +277,18 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.72);border:1px so
     <div class="symbols">
       <div class="symbol"><b>z ~ N(0,I)</b><br>学生的随机输入。</div>
       <div class="symbol"><b>c</b><br>文本、首帧或自回归历史条件。</div>
-      <div class="symbol"><b>t, αt, σt, ε</b><br>噪声时刻、信号比例、噪声比例和实际噪声。</div>
+      <div class="symbol"><code class="m">t,\alpha_t,\sigma_t,\epsilon</code>噪声时刻、信号比例、噪声比例和实际噪声。</div>
     </div>
     <div class="formula wide" data-expr="g_{\mathrm{DMD}}(\theta)=\mathbb E\left[\left(s_{\mathrm{fake}}(\tilde x_t\mid c,t)-s_{\mathrm{real}}(\tilde x_t\mid c,t)\right)J_\theta\right],\quad J_\theta=\nabla_\theta G_\theta(z,c)"></div>
     <p><code class="m">J_\theta</code> 是生成器 Jacobian<a class="jr" href="#g-06">6</a>：它负责把“视频该怎样改”的方向传回参数。梯度下降会减去 <code>gDMD</code>，所以模型靠近 real score，同时避开学生已经堆得过密的位置。</p>
+    <pre>s_fake=.2, s_real=1.0, Jθ=.5
+视频空间的差 = .2−1.0 = −.8
+参数梯度     = −.8×.5 = −.4
+
+若 θ=1、学习率=.1：
+θnew = 1−.1×(−.4) = 1.04
+
+Jθ 为正时，θ 增大让输出沿 real 指向的方向移动。</pre>
     <figure>
       <figcaption class="figcap"><span>Fig 04 · 原始 DMD 与 DFD 的唯一结构差异</span><span class="n">fake 分支从来没换</span></figcaption>
       <div class="paths">
@@ -276,7 +305,14 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.72);border:1px so
     <div class="formula" data-expr="x\sim p_{\mathrm{real}}(\cdot\mid c),\qquad x_t=\alpha_tx+\sigma_t\epsilon"></div>
     <p>竖线 <code>|c</code> 表示条件已经固定。文本是“海边奔跑的狗”，真实视频也要对应这条描述；I2V 时，真实视频必须匹配输入首帧。它不是随手抓一条无关视频。</p>
     <div class="formula" data-expr="\Delta_{\mathrm{teacher}}=s_{\mathrm{real}}(x_t\mid c,t)-s_{\mathrm{real}}(\tilde x_t\mid c,t)"></div>
-    <p>第一项把真实数据的位置带进训练，第二项是 DMD 本来就在算的 teacher score。学生已经匹配真实分布时，两处样本同分布，这个差在期望上为零。详见 <a href="../concepts/teacher-score-discrepancy.html">teacher-score-discrepancy</a>。</p>
+    <p>第一项让老师站在真实视频处回答，第二项让同一位老师站在学生视频处回答。二者相减，问的就是：“从学生现在的位置挪到真实数据常出现的位置，老师的修改建议会变多少？”</p>
+    <pre>假设匹配后，两边都以 .5 概率落到 A / B：
+teacher(A)=+1，teacher(B)=−1
+
+真实支路平均 = .5×1 + .5×(−1) = 0
+学生支路平均 = .5×1 + .5×(−1) = 0
+两边平均之差 = 0−0 = 0</pre>
+    <p>所以学生已经匹配真实分布时，两处样本虽然不必逐个相同，但它们来自同一分布，teacher discrepancy 在期望上自动归零。详见 <a href="../concepts/teacher-score-discrepancy.html">teacher-score-discrepancy</a>。</p>
   </section>
 
   <section id="cancel">
@@ -322,6 +358,7 @@ loss          = 1/2 · MSE(gen_data, <span class="hi">stopgrad(pseudo_target)</s
     <p><code>stopgrad</code><a class="jr" href="#g-07">7</a>把右边钉成本轮固定目标，只准左边的学生输出移动。它不会冻结整套学生。</p>
     <h3>从伪目标算到一次更新</h3>
     <div class="formula" data-expr="w_{\mathrm{norm}}=\frac{1}{|gen-teacher|+10^{-6}}"></div>
+    <p>下面用一个标量代替整段视频，并临时设 <code class="m">\partial gen/\partial\theta=1</code>。这样可以把“学生参数改变一点，输出也改变一点”简化成一比一，方便只看伪目标方向；真实网络仍要通过 Jacobian 把输出梯度传回参数。</p>
     <pre>gen=1.2, fake=.8, teacher=1.0
 wnorm ≈ 1/|1.2−1.0| = 5
 vsd_grad = (.8−1.0)×5 = −1.0
@@ -339,16 +376,25 @@ dL/dgen  = −1.0
     <figure>
       <figcaption class="figcap"><span>Fig 07 · 两条支路共用随机量</span><span class="n">噪声项相减后消失</span></figcaption>
       <div class="shared">
-        <div class="lane"><b>真实支路</b><br><code class="m">xt=.8\times 2+.6\times (- .5)=1.3</code></div>
-        <div class="lane"><b>学生支路</b><br><code class="m">\tilde{x}t=.8\times 1.5+.6\times (- .5)=.9</code></div>
-        <div class="same">xt−x̃t=.4=.8×(2−1.5)；共同的 σε 已抵消</div>
+        <div class="lane"><b>真实支路</b><br><code class="m">x_t=.8\times 2+.6\times(-.5)=1.3</code></div>
+        <div class="lane"><b>学生支路</b><br><code class="m">\tilde{x}_t=.8\times1.5+.6\times(-.5)=.9</code></div>
+        <div class="same"><code class="m">x_t-\tilde{x}_t=.4=.8\times(2-1.5)</code>；共同的噪声项已经抵消</div>
       </div>
     </figure>
     <p>若两边各采一份噪声，差值里还会多出 <code class="m">\sigma (\epsilon_{\mathrm{real}}-\epsilon_{\mathrm{fake}})</code>，teacher discrepancy 会混入无关波动。</p>
     <p>论文进一步要求：固定条件后，真实样本与学生样本的平均平方距离不能太大。</p>
     <div class="formula wide" data-expr="\mathbb E\left[\|x-G_\theta(z,c)\|_2^2\mid c\right]\le\delta(c)^2"></div>
     <p>若 teacher score 是 <code>L(c,t)</code>-Lipschitz<a class="jr" href="#g-08">8</a>，生成器 Jacobian 最多放大 <code>B</code> 倍，则：</p>
+    <div class="symbols">
+      <div class="symbol"><code class="m">\delta(c)</code>固定条件 <code class="m">c</code> 后，学生视频离真实视频通常有多远。</div>
+      <div class="symbol"><code class="m">L(c,t)</code>输入挪动一格时，teacher score 最多变化多少。</div>
+      <div class="symbol"><code class="m">B</code>视频空间的方向传回参数时，Jacobian 最多放大多少倍。</div>
+      <div class="symbol"><code class="m">\alpha_t</code>加噪后还保留多少原视频信号。</div>
+      <div class="symbol"><code class="m">\|\cdot\|_2^2</code>各分量平方后求和，表示整体误差大小。</div>
+      <div class="symbol"><b>左边</b><br>DFD 近似梯度与理想 KL 梯度之间的差。</div>
+    </div>
     <div class="formula wide" data-expr="\|g_{\mathrm{DFD}}-\nabla_\theta D_{\mathrm{KL}}\|_2^2\le B^2\alpha_t^2L(c,t)^2\delta(c)^2"></div>
+    <p>这条上界像四级扩音器：学生与真实数据先差 <code class="m">\delta</code>；teacher 的方向变化把它放大 <code class="m">L</code> 倍；加噪只留下 <code class="m">\alpha_t</code> 份信号；最后 Jacobian 再放大 <code class="m">B</code> 倍。任一环很大，DFD 的近似就可能偏；学生已经靠 DMD2 走近真实数据时，最关键的 <code class="m">\delta</code> 才足够小。</p>
     <pre>B=.5, α=.8, L=1.5, δ=.5
 上界 = .5²×.8²×1.5²×.5²
      = .09</pre>
@@ -390,6 +436,7 @@ dL/dgen  = −1.0
       <div class="task"><span class="tag">AR · SELF FORCING</span><strong>定性证据</strong><p>长序列结构更稳，但论文没有与前两项同等级的主表数字。</p></div>
     </div>
     <h3>文生视频主表的关键列</h3>
+    <p>表里的“多样性”是在同一提示词下换多个随机种子，再比较视频特征差多少；数值越高，说明不同种子越不容易挤成同一种构图。“镜头终点距离”只比较最后机位，“镜头轨迹距离”比较整条运动路径；它们越高表示镜头运动更丰富，不表示镜头控制更准确。</p>
     <figure>
       <figcaption class="figcap"><span>Table 01 · Wan2.1-1.3B</span><span class="n">全部越高越好</span></figcaption>
       <div class="tablewrap"><table class="metrics">
@@ -428,6 +475,7 @@ DFD      <span class="good">.9303</span></pre>
       <div class="panel goodp"><h4>Wan T2V</h4><p>81 帧 · 480p · batch 16<br>student / fake LR <code class="m">1e-5</code><br>CFG 5.0 · 8×A100<br>DMD2 25K → DFD 100 次</p></div>
       <div class="panel goodp"><h4>Cosmos I2V</h4><p>81 帧 · 480p · batch 16<br>student / fake LR <code class="m">1e-5</code><br>CFG 3.0 · 16×A100<br>DMD2 25K → DFD 300 次</p></div>
     </div>
+    <p><code>CFG</code> 是提示词条件强度：数值越大，生成结果通常越紧跟条件，但太大也可能损伤画面自然度。这里记录的是论文训练配方，不代表所有模型都该用同一个 CFG。</p>
     <div class="note warn"><span class="mini">论文版本不一致</span>arXiv 摘要写 100–300 steps，正文 v2 §1 仍残留 50–100。表 4 与官方复现命令支持 100 / 300，本页按可复现配置记录。</div>
     <div class="note"><span class="mini">代码默认值不等于论文配方</span>官方配置类里的 <code>gen_real_replace_prob</code> 默认是 <code>.25</code>；README 的 DFD 训练命令会显式覆盖为 <code>.5</code>。复现时应看最终命令，而不是只读配置类默认值。</div>
     <div class="note warn"><span class="mini">论文说删 GAN，公开命令却没有关</span>论文表 4 把 DFD 的判别器学习率标成 N/A，并用消融说明 GAN 没有一致收益；但官方 commit <code>7281906</code> 的 README 命令没有覆盖 Wan / Cosmos 配置继承的 <code>gan_loss_weight_gen=.03</code>，还加载 discriminator。照当前命令运行会继续使用 GAN，除非显式把权重设为 0。</div>
@@ -450,7 +498,7 @@ DFD      <span class="good">.9303</span></pre>
       <li id="g-01"><span class="termname">DMD / DMD2</span> · 用 real / fake score 匹配生成分布；DMD2 补高频 fake 更新、GAN 和多步训练。<a href="../papers/dmd2.html">dmd2</a></li>
       <li id="g-02"><span class="termname">Reverse KL</span> · <code>KL(pfake||preal)</code>，平均值按学生样本计算，因此偏向学生已经覆盖的模式。<a href="../concepts/entropy-kl.html">entropy-kl</a></li>
       <li id="g-03"><span class="termname">Mode collapse</span> · 输入噪声不同，生成结果却集中在少数构图或运动模式。</li>
-      <li id="g-04"><span class="termname">Score function</span> · <code class="m">\nabla x \log p(x)</code>；不是分数，而是样本空间里的局部修改方向。<a href="../concepts/score-function.html">score-function</a></li>
+      <li id="g-04"><span class="termname">Score function</span> · <code class="m">\nabla_x\log p(x)</code>；不是分数，而是样本空间里的局部修改方向。<a href="../concepts/score-function.html">score-function</a></li>
       <li id="g-05"><span class="termname">Fake-score network</span> · 在线去噪器，用学生最新输出训练，近似 <code>pfake</code> 的 score。</li>
       <li id="g-06"><span class="termname">Jacobian</span> · 输出对参数的导数；把视频 latent 的修改方向通过链式法则传回模型参数。</li>
       <li id="g-07"><span class="termname">Stop-gradient</span> · 前向保留数值，反向把该支路当常数。<a class="wikilink-missing" title="missing slug">stop-gradient</a></li>

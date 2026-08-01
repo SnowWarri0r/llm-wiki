@@ -83,8 +83,9 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
 .six{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 .raypart{min-height:170px;padding:20px;border:2px solid var(--blue);background:var(--bluesoft);display:flex;flex-direction:column;justify-content:center;text-align:center}
 .raypart:nth-child(2){border-color:var(--purple);background:var(--purplesoft)}
-.pack{height:250px;border:3px solid var(--teal);background:var(--purplesoft);padding:38px;display:flex;align-items:center;justify-content:center}
+.pack{position:relative;height:250px;border:3px solid var(--teal);background:var(--purplesoft);padding:38px;display:flex;align-items:center;justify-content:center}
 .pack .center{width:50%;height:50%;background:var(--bluesoft);border:2px solid var(--blue);display:flex;align-items:center;justify-content:center;text-align:center;font-weight:800}
+.pack .outer-label{position:absolute;top:14px;left:18px;color:var(--purple);font:800 12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:1px}
 .tokenline{display:grid;grid-template-columns:1fr 34px 1fr 34px 1fr;align-items:stretch}
 .tokenbox{background:var(--white);border:2px solid var(--purple);padding:18px;min-height:145px}
 .tokenbox h4{margin:0 0 8px;font-size:20px}.tokenbox p{font-size:15px;line-height:1.5}
@@ -132,6 +133,7 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
   .split,.symbols,.taskgrid,.tokenline,.pipeline,.config,.meter,.limits,.gloss ol,.sourcebox{grid-template-columns:1fr}
   .tokenline .arrow{min-height:34px;font-size:0}.tokenline .arrow:before{content:"↓";font-size:22px}
   .six{grid-template-columns:1fr}.pack{height:210px}.formula{padding:18px 8px}.formula .katex{font-size:.82em}.formula.wide .katex{font-size:.68em}
+  .tablewrap:before{content:"← 左右滑动查看完整表格 →";display:block;margin:0 0 8px;color:var(--teal);font:700 10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em}
   .colophon{display:block}.colophon span{display:block;margin:6px 0}
 }
 </style>
@@ -217,6 +219,8 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
       <div class="symbol"><b>0 ≤ t ≤ 1</b><br><code>t</code> 只在闭区间零到一内取值。</div>
     </div>
     <p>对 <code>t</code> 求导，直线路径的速度恒定：</p>
+    <div class="formula" data-expr="\frac{d}{dt}\left[(1-t)x_0+t\epsilon\right]=\frac{d(1-t)}{dt}x_0+\frac{dt}{dt}\epsilon=-x_0+\epsilon"></div>
+    <p><code class="m">x_0</code> 和 <code class="m">\epsilon</code> 在这次求导里都当常数；变化的只有 <code class="m">t</code>。因此 <code class="m">d(1-t)/dt=-1</code>，而 <code class="m">dt/dt=1</code>。两项合起来就是：</p>
     <div class="formula" data-expr="v^\*=\frac{dx_t}{dt}=\epsilon-x_0"></div>
     <div class="symbols">
       <div class="symbol"><b>dxₜ/dt</b><br><code>t</code> 增加一点时，latent 怎样变化。</div>
@@ -259,25 +263,25 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
 
     <h3>六维相机射线为什么能变成一张三通道图</h3>
     <p>这里的 raymap<a class="jr" href="#g-08">8</a>是每个像素对应的相机射线场，不是把相机矩阵直接涂成彩色。详见 <a href="../concepts/raymap.html">raymap</a>。</p>
-    <p>每个像素对应一条三维射线：三维起点 <code class="m">o=(o_{x},oᵧ,o_z)</code> 加三维方向 <code class="m">d=(d_{x},dᵧ,d_z)</code>，合计六个数。论文的 “Rothko” 表示没有把六个数硬压成三个，而是让画面不同区域承担不同含义。</p>
+    <p>每个像素对应一条三维射线：三维起点 <code class="m">o=(o_x,o_y,o_z)</code> 加三维方向 <code class="m">d=(d_x,d_y,d_z)</code>，合计六个数。普通 RGB 一处只能放三个数，所以不能把六个分量全塞进同一个像素。论文的 “Rothko” 做法是把画面切成两类区域：中心区域的 RGB 存起点，外围区域的 RGB 存方向。</p>
     <figure>
       <figcaption class="figcap"><span>Fig 05 · Rothko raymap 的空间打包</span><span class="n">中心存起点，外围存方向</span></figcaption>
       <div class="ray">
         <div class="six">
-          <div class="raypart"><strong>射线起点 o</strong><span>3 通道<br><code class="m">o_{x},oᵧ,o_z</code></span></div>
-          <div class="raypart"><strong>射线方向 d</strong><span>3 通道<br><code class="m">d_{x},dᵧ,d_z</code></span></div>
+          <div class="raypart"><strong>射线起点 o</strong><span>3 通道<br><code class="m">o_x,o_y,o_z</code></span></div>
+          <div class="raypart"><strong>射线方向 d</strong><span>3 通道<br><code class="m">d_x,d_y,d_z</code></span></div>
         </div>
         <div class="arrow">→</div>
-        <div class="pack"><div class="center">中心矩形<br>起点 RGB</div><span style="position:absolute;opacity:0">外围存方向 RGB</span></div>
+        <div class="pack"><span class="outer-label">外围：方向 RGB</span><div class="center">中心矩形<br>起点 RGB</div></div>
       </div>
-      <p style="margin:14px 0 0;font-size:15px;color:var(--muted)">右侧紫色外围区域存方向 RGB；蓝色中心矩形存起点 RGB。模型之后再从整张 raymap 恢复相机参数。</p>
+      <p style="margin:14px 0 0;font-size:15px;color:var(--muted)">这不是把 6 维压成 3 维：六个分量都保留，只是借画面的空间位置分两批存。模型之后再从整张 raymap 恢复相机参数。</p>
     </figure>
   </section>
 
   <section id="sparse">
     <span class="secno">§ 04 · SPARSE TOKENS</span>
     <h2>为什么关键点不能照搬 RGB 方案</h2>
-    <p>机器人控制或人体姿态常常直接需要坐标表，而不是一张彩色骨架图。设视频有 <code>T</code> 帧，GenCeption 为每帧追加一个可学习 token；经过 DiT 后，MLP 把每个 token 变成 <code>K</code> 维坐标。</p>
+    <p>机器人控制或人体姿态常常直接需要坐标表，而不是一张彩色骨架图。可以把查询 token 理解成“每帧预留的一格空白答案”：它在 attention 里读取这一帧及其前后帧的视频特征，最后由 MLP 把格子里的信息翻译成坐标。设视频有 <code>T</code> 帧，GenCeption 就追加 <code>T</code> 个这样的 token；每个 token 输出 <code>K</code> 个数。</p>
     <figure>
       <figcaption class="figcap"><span>Fig 06 · 每帧一个查询 token</span><span class="n">T 表示帧数，K 表示每帧答案维数</span></figcaption>
       <div class="tokenline">
@@ -333,7 +337,7 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
     <div class="symbols">
       <div class="symbol"><b>Dᵢ</b><br>第 <code>i</code> 个像素的原始深度。</div>
       <div class="symbol"><b>m</b><br>整段视频有效深度的中位数。</div>
-      <div class="symbol"><b>dᵢ</b><br>除掉整体尺度后的相对深度。</div>
+      <div class="symbol"><code class="m">d_i</code>除掉整体尺度后的相对深度。</div>
     </div>
     <p>原值 <code>[2,4,8]</code> 的中位数是 <code>4</code>，归一化后得到 <code>[0.5,1,2]</code>。整个场景若放大两倍，分子和中位数一起放大，结果不变。</p>
 
@@ -348,9 +352,9 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
       <div class="symbol"><b>[0,1]</b><br>包括两个端点的数值区间。</div>
     </div>
     <figure>
-      <figcaption class="figcap"><span>Fig 08 · 代入一组数字</span><span class="n">α=.5 仅为教学示例，论文未公布取值</span></figcaption>
+      <figcaption class="figcap"><span>Fig 08 · 代入一组数字</span><span class="n">缩放系数取 0.5，仅为教学示例</span></figcaption>
       <div class="tablewrap"><table class="calc">
-        <thead><tr><th>相对深度 d</th><th>log(d+1)</th><th>乘 α=.5</th><th>截断后 d′</th></tr></thead>
+        <thead><tr><th>相对深度 d</th><th>log(d+1)</th><th>乘缩放系数 0.5</th><th>截断后 d′</th></tr></thead>
         <tbody><tr><td>0.5</td><td>0.405</td><td>0.203</td><td>0.203</td></tr><tr><td>1</td><td>0.693</td><td>0.347</td><td>0.347</td></tr><tr><td>2</td><td>1.099</td><td>0.549</td><td>0.549</td></tr><tr><td>10</td><td>2.398</td><td>1.199</td><td>1.000</td></tr></tbody>
       </table></div>
     </figure>
@@ -380,16 +384,34 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px so
         <tbody><tr><td>1.3B</td><td>5.92 秒</td><td>13.6</td><td>0.96 秒</td><td>15.3 GB</td></tr><tr><td>14B</td><td>10.03 秒</td><td>8.0</td><td>5.11 秒</td><td>42.8 GB</td></tr></tbody>
       </table></div>
     </figure>
-    <p>小模型的 DiT 只占 <code class="m">0.96/5.92\approx 16%</code> 总时间，VAE 和文本编码等外围成本反而更显眼。论文还报告文本编码器约 10 GB、VAE 约 0.25 GB，可卸载到系统内存，但会牺牲速度。</p>
+    <pre>1.3B：81 帧 ÷ 5.92 秒 = 13.68 FPS ≈ 13.6
+14B ：81 帧 ÷ 10.03 秒 = 8.08 FPS ≈ 8.0</pre>
+    <p>所以表里的 FPS 是“整段帧数 ÷ 整段耗时”，不是只拿 DiT 时间计算。小模型的 DiT 只占 <code class="m">0.96/5.92\approx 16\%</code> 总时间，VAE 和文本编码等外围成本反而更显眼。论文还报告文本编码器约 10 GB、VAE 约 0.25 GB，可卸载到系统内存，但会牺牲速度。</p>
 
     <h3>对照二：同一深度数据下，生成预训练明显更强</h3>
-    <p><code>AbsRel</code> 是平均绝对相对深度误差，越低越好；<code class="m">\delta 1</code> 是预测与真值的比值落在 <code>1/1.25</code> 到 <code>1.25</code> 内的像素比例，越高越好。</p>
+    <p><code>AbsRel</code> 是平均绝对相对深度误差，越低越好；<code class="m">\delta_1</code> 统计预测与真值相差不超过 25% 的像素比例，越高越好。</p>
     <div class="formula wide" data-expr="\operatorname{AbsRel}=\frac{1}{N}\sum_{i=1}^{N}\frac{|\hat d_i-d_i|}{d_i}"></div>
+    <div class="formula wide" data-expr="\delta_1=\frac{1}{N}\sum_{i=1}^{N}\mathbf 1\left[\max\left(\frac{\hat d_i}{d_i},\frac{d_i}{\hat d_i}\right)<1.25\right]"></div>
     <div class="symbols">
       <div class="symbol"><b>N</b><br>参与评估的有效像素数。</div>
-      <div class="symbol"><b>dᵢ</b><br>第 <code>i</code> 个像素的真实深度。</div>
-      <div class="symbol"><b>d̂ᵢ</b><br>模型预测深度。</div>
+      <div class="symbol"><code class="m">d_i</code>第 <code>i</code> 个像素的真实深度。</div>
+      <div class="symbol"><code class="m">\widehat d_i</code>模型预测深度。</div>
+      <div class="symbol"><code class="m">\lvert\widehat d_i-d_i\rvert/d_i</code>该像素误差占真实深度的比例。</div>
+      <div class="symbol"><code class="m">\max(\cdot)</code>同时检查预测偏大和偏小，取更坏的那一边。</div>
+      <div class="symbol"><code class="m">\mathbf 1[\text{条件}]</code>条件成立记 1，不成立记 0；最后求通过比例。</div>
     </div>
+    <pre>真实深度 d = [2, 4]
+预测深度 d̂ = [2.2, 5.2]
+
+AbsRel：
+第 1 点 = |2.2−2|/2 = .1
+第 2 点 = |5.2−4|/4 = .3
+平均     = (.1+.3)/2 = .2
+
+δ1：
+第 1 点 max(2.2/2, 2/2.2) = 1.10 &lt; 1.25 → 1
+第 2 点 max(5.2/4, 4/5.2) = 1.30 &gt; 1.25 → 0
+通过比例 = (1+0)/2 = .5</pre>
     <figure>
       <figcaption class="figcap"><span>Table 02 · 相同 7.5K 视频 / 0.9M 帧微调</span><span class="n">平均三套深度基准</span></figcaption>
       <div class="tablewrap"><table class="metrics">
