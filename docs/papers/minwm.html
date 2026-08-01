@@ -53,6 +53,7 @@ code{background:var(--paper2);border:1px solid var(--line);padding:2px 5px;borde
 .sym b{display:block;color:var(--teal);font:700 12px/1.4 "DM Mono",monospace}
 .calc{padding:19px 21px;background:var(--navy);color:white;font:500 14px/1.95 "DM Mono",monospace;overflow-x:auto}
 .calc .hi{color:#8ce8e2}.calc .ans{color:#ffd36d}
+.calc pre{margin:0;padding:0;background:none;border:0;font:inherit;color:inherit;white-space:pre}
 figure{margin:34px 0;padding:28px;background:rgba(250,247,237,.94);border:1px solid var(--line);box-shadow:10px 10px 0 rgba(16,56,71,.06)}
 figcaption{display:flex;justify-content:space-between;gap:18px;margin-bottom:23px;padding-bottom:12px;border-bottom:1px dashed var(--line);color:var(--muted);font:500 11px/1.5 "DM Mono",monospace;letter-spacing:1.2px;text-transform:uppercase}
 figcaption span:first-child{color:var(--teal)}figcaption b{color:var(--orange)}
@@ -173,38 +174,148 @@ figcaption span:first-child{color:var(--teal)}figcaption b{color:var(--orange)}
 <section id="s3">
   <h2><span class="n">SECTION 03</span><span>PRoPE：让 attention 直接看到两台相机的相对投影</span></h2>
   <p>普通 RoPE 只编码 token 在画面中的二维位置。PRoPE<a class="jr" href="#g-03">03</a> 再把相机几何放进 Q/K/V 变换，让模型更容易区分“物体动了”和“相机动了”。</p>
-  <h3>3.1 先把内参和外参合成 4×4 矩阵</h3>
-  <div class="formula-purpose">这条式子做什么：把焦距、主点、相机位置与朝向装进同一个齐次投影矩阵。</div>
-  <div class="formula" data-expr="\widetilde P_i=\begin{bmatrix}[K_i\;0]T_i^{cw}\\e_4^\top\end{bmatrix}\in\mathbb R^{4\times4},\qquad e_4=(0,0,0,1)^\top"></div>
+  <p class="lead">这一节全程用同一组数字走到底：一台 100 焦距的小相机、一个摆在正前方 5 米的点、第二台相机向右挪 1 米。每一步都能拿笔跟着算。</p>
+
+  <h3>3.1 三个矩阵零件，先各自认清</h3>
+  <p><strong>内参 <code class="m">K</code>（3×3）</strong>回答“相机坐标系里的 3D 点，落在画面第几个像素”。它只跟镜头本身有关，相机搬到哪儿都不变。取一台方便手算的：焦距 <code class="m">f=100</code>，画面中心 <code class="m">(c_x,c_y)=(50,50)</code>。</p>
+  <div class="formula" data-expr="K=\begin{bmatrix}100&0&50\\0&100&50\\0&0&1\end{bmatrix},\qquad \text{像素}\;u=f\cdot\frac{x}{z}+c_x"></div>
+  <p>那个 <code class="m">/z</code> 就是“近大远小”：同样横向偏 1 米，离得越远，画面上挪得越少。这个除法后面会变成关键。</p>
+  <p><strong>外参 <code class="m">T^{cw}</code>（4×4）</strong>回答“世界坐标系里的点，在这台相机自己的坐标系里是多少”。它跟镜头无关，只记相机摆在哪、朝哪。它长这样：左上 3×3 是旋转 <code class="m">R</code>，右上一列是平移 <code class="m">t</code>，最后一行固定 <code class="m">(0,0,0,1)</code>。</p>
+  <p><strong>齐次坐标</strong>就是那个多出来的第 4 维。3D 点 <code class="m">(x,y,z)</code> 写成 <code class="m">(x,y,z,1)</code>，纯粹为了一件事：<strong>让“平移”也能写成矩阵乘法</strong>。矩阵乘法只会做“各分量的加权和”，天生做不出“统统加个常数”；补一维常数 1，常数就有地方乘了。一维版本最直观：</p>
+  <div class="calc"><pre>把“平移 a”写成矩阵，让它作用在齐次坐标 (p, 1) 上：
+
+    [1  a]   [p]     [p + a]
+    [0  1] . [1]  =  [  1  ]     <span class="ans">加法变成了乘法</span></pre></div>
+  <p>这个小技巧待会儿会连本带利还回来：因为平移变成了乘法，“两台相机的位置差”才能写成“乘对方的逆”。</p>
+
+  <h3>3.2 把两步合成一步：投影矩阵 P̃</h3>
+  <div class="formula-purpose">这条式子做什么：把“世界→相机”和“相机→像素”两步拧成一个 4×4 矩阵，一次乘完。</div>
+  <div class="formula" data-expr="\widetilde P_i=\begin{bmatrix}[K_i\;0]\,T_i^{cw}\\e_4^\top\end{bmatrix}\in\mathbb R^{4\times4},\qquad e_4=(0,0,0,1)^\top"></div>
   <div class="symbols">
     <div class="sym"><b>i</b>视频的第 i 帧</div><div class="sym"><b>Kᵢ</b>3×3 相机内参</div><div class="sym"><b>Tᵢᶜʷ</b>世界坐标→相机坐标</div>
-    <div class="sym"><b>[Kᵢ 0]</b>给内参补一列零</div><div class="sym"><b>e₄ᵀ</b>补齐齐次坐标最后一行</div><div class="sym"><b>P̃ᵢ</b>最终 4×4 投影矩阵</div>
+    <div class="sym"><b>[Kᵢ 0]</b>给内参补一列零，凑成 3×4 才能乘 4×4</div><div class="sym"><b>e₄ᵀ</b>补上第 4 行，把 3×4 撑成方阵才可逆</div><div class="sym"><b>P̃ᵢ</b>最终 4×4 投影矩阵</div>
   </div>
-  <h3>3.2 一个 token 要同时带“相机在哪”和“画面里在哪”</h3>
+  <p>补第 4 行不是凑数：<strong>只有方阵才有逆</strong>，而整套机制的核心恰恰是求逆。现在把两台相机的 <code class="m">\widetilde P</code> 算出来。相机 1 摆在世界原点不转，所以 <code class="m">T_1^{cw}=I</code>；相机 2 向世界 x 正方向挪 1 米，于是原来在 <code class="m">x=0</code> 的东西在它眼里变成 <code class="m">x=-1</code>，平移列写 <code class="m">-1</code>。</p>
+  <div class="calc"><pre>[K 0]　内参补一列零，凑成 3×4：
+
+    [100    0   50    0]
+    [  0  100   50    0]
+    [  0    0    1    0]
+
+T₂ᶜʷ　相机 2 的外参（相机向世界 x 正方向挪 1 米，所以平移写 -1）：
+
+    [1  0  0  -1]
+    [0  1  0   0]
+    [0  0  1   0]
+    [0  0  0   1]
+
+P̃₁ = [K 0]·I 再补上第 4 行 e₄ᵀ，相机 1 不动，等于内参原样：
+
+    [100    0   50    0]
+    [  0  100   50    0]
+    [  0    0    1    0]
+    [  0    0    0    1]
+
+P̃₂ = [K 0]·T₂ᶜʷ 再补上第 4 行，只有右上角那一格变了：
+
+    [100    0   50 <span class="hi">-100</span>]    100 × (-1) = -100
+    [  0  100   50    0]
+    [  0    0    1    0]
+    [  0    0    0    1]</pre></div>
+
+  <h3>3.3 先验一遍：P̃ 乘上去到底出来什么</h3>
+  <p>拿世界里那个点 <code class="m">X=(0,0,5,1)</code>，正前方 5 米。两边各乘一次：</p>
+  <div class="calc"><pre>P̃₁·X = (100·0 + 50·5, 100·0 + 50·5, 5, 1) = (250, 250, 5, 1)
+P̃₂·X = (100·0 + 50·5 <span class="hi">- 100</span>,          250, 5, 1) = (<span class="hi">150</span>, 250, 5, 1)
+
+前两位各除以第三位（第三位就是深度 z），才是真像素：
+
+    相机 1 看到 (250/5, 250/5) = <span class="ans">(50, 50)</span>   正中间，合理
+    相机 2 看到 (150/5, 250/5) = <span class="ans">(30, 50)</span>   相机右移，物体在画面里左移 20 px</pre></div>
+  <p>所以 <code class="m">\widetilde P</code> 的输出不是像素，是<strong>“像素×深度”的四元组 <code class="m">(uz,\,vz,\,z,\,1)</code></strong>——最后那步除法特意没做。这一点马上就有用：<strong>深度 z 还留在里面</strong>，没被除掉。</p>
+
+  <h3>3.4 两台相机之间的“差”，为什么是相乘而不是相减</h3>
+  <p>一维直觉先来：镜头分别停在 10 和 7，真正决定两帧关系的是 <code class="m">10-7=3</code>。可矩阵没有减法可用——但 3.1 那个技巧把平移变成了乘法，于是“相减”就有了对应写法：<strong>乘对方的逆</strong>。</p>
+  <div class="calc"><pre>T(10) 乘上 T(7) 的逆：
+
+    [1  10]   [1  -7]     [1  <span class="ans">3</span>]
+    [0   1] . [0   1]  =  [0  1]
+
+因为 T(7) 的逆就是 T(-7)，也就是“把 7 退回去”。
+乘上它，绝对量对消，只剩下差 3。</pre></div>
+  <p>4×4 的相机矩阵同理。<code class="m">\widetilde P_2^{-1}</code> 的意思是“把相机 2 那一整套投影原路撤销”，接着再乘 <code class="m">\widetilde P_1</code> 换成相机 1 的。绝对位置在中间对消，剩下的只有两台相机的相对关系：</p>
+  <div class="calc"><pre>P̃₂ 的逆　把相机 2 的整套投影原路撤销：
+
+    [0.01     0   -0.5   <span class="hi">1</span>]
+    [   0  0.01   -0.5   0]
+    [   0     0      1   0]
+    [   0     0      0   1]
+
+再左乘 P̃₁，换成相机 1 的那一套：
+
+    [1  0  0  <span class="ans">100</span>]
+    [0  1  0    0]
+    [0  0  1    0]
+    [0  0  0    1]</pre></div>
+  <p>为什么平移项是 100 而不是 1？因为这个矩阵活在“像素×深度”的坐标系里，不是米。相机挪了 1 米，乘上焦距 100 就是 100。真正的画面位移还要再除以深度——而深度就藏在被乘的那个向量里。</p>
+  <figure id="fig-04">
+    <figcaption><span>Fig 04 · 输入是两台相机各自的绝对矩阵，attention 里只剩相对量</span><b>不是显式 3D 重建</b></figcaption>
+    <div class="prope">
+      <div class="cam"><h4>Frame 1 · 相机在原点</h4><p><code class="m">T_1^{cw}=I</code>，只剩内参起作用。</p><div class="matrix">P̃₁ =<br>[100&nbsp;&nbsp;&nbsp;0&nbsp;&nbsp;50&nbsp;&nbsp;&nbsp;&nbsp;0]<br>[&nbsp;&nbsp;0&nbsp;100&nbsp;&nbsp;50&nbsp;&nbsp;&nbsp;&nbsp;0]<br>[&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;&nbsp;0]<br>[&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;&nbsp;1]</div><div class="splitbar"><div class="pose">点 X 落在 (50,50)</div><div class="xy">x / y 块另走 RoPE</div></div></div>
+      <div class="relative">P̃₁P̃₂⁻¹</div>
+      <div class="cam"><h4>Frame 2 · 世界 x 方向 +1</h4><p>world-to-camera 平移写 <code class="m">-1</code>；求逆再左乘后，相对项变成 <code class="m">+100=f\cdot 1</code>。</p><div class="matrix">P̃₂ =<br>[100&nbsp;&nbsp;&nbsp;0&nbsp;&nbsp;50&nbsp;−100]<br>[&nbsp;&nbsp;0&nbsp;100&nbsp;&nbsp;50&nbsp;&nbsp;&nbsp;&nbsp;0]<br>[&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;1&nbsp;&nbsp;&nbsp;&nbsp;0]<br>[&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;0&nbsp;&nbsp;&nbsp;&nbsp;1]</div><div class="splitbar"><div class="pose">同一点落在 (30,50)</div><div class="xy">画面坐标</div></div></div>
+    </div>
+    <div class="calc"><pre>这个相对矩阵到底干什么：把相机 2 的观测直接搬到相机 1 的画面上。
+
+    相机 2 看到的四元组　　(150, 250, 5, 1)
+    左乘相对矩阵后　　　　(150 + 100×1, 250, 5, 1) = <span class="ans">(250, 250, 5, 1)</span>
+    相机 1 看到的四元组　　(250, 250, 5, 1)　　　　　<span class="ans">完全一致</span>
+
+它唯一做的事，就是把第 4 位那个 1 乘上 100 加进第 1 位。</pre></div>
+  </figure>
+  <div class="note"><strong>为什么不干脆把“相对位姿”当条件直接喂进去：</strong>因为同一次镜头位移，画面上挪多少还取决于物体多远。同一个 <code class="m">\widetilde P_1\widetilde P_2^{-1}</code> 不用改，换个深度就自动给出不同视差——深度 z 一直躺在被乘向量的第 3 位：<br>
+<code class="m">z=2</code> → 相机 2 看到 <code class="m">u=0</code>，相机 1 看到 <code class="m">50</code>，差 50 px；<br>
+<code class="m">z=5</code> → 30 对 50，差 20 px；<br>
+<code class="m">z=10</code> → 40 对 50，差 10 px。<br>
+一个矩阵覆盖所有深度，这就是“投影”比“位姿”多出来的那部分信息。</div>
+
+  <h3>3.5 一个 token 的变换表 Dₜ：一半记镜头，一半记像素坐标</h3>
   <div class="formula-purpose">这条式子做什么：把一个 attention head 的 <code class="m">d</code> 维特征切成两半；前半装相机投影，后半再分给横向和纵向位置。</div>
   <div class="formula wide" data-expr="D_t^{\mathrm{PRoPE}}=\begin{bmatrix}I_{d/8}\otimes\widetilde P_{i(t)}&0\\0&\begin{bmatrix}\mathrm{RoPE}_{d/4}(x_t)&0\\0&\mathrm{RoPE}_{d/4}(y_t)\end{bmatrix}\end{bmatrix}"></div>
   <div class="symbols">
     <div class="sym"><b>t / i(t)</b>token t 属于哪一帧</div><div class="sym"><b>xₜ, yₜ</b>token 的画面内坐标</div><div class="sym"><b>d</b>attention head 维度</div>
-    <div class="sym"><b>⊗</b>Kronecker product；重复铺 4×4 块</div><div class="sym"><b>上半块</b>相机投影特征</div><div class="sym"><b>下半块</b>横向、纵向普通 RoPE</div>
+    <div class="sym"><b>⊗</b>Kronecker 积；把 4×4 块沿对角线复印几份</div><div class="sym"><b>上半块</b>相机投影特征</div><div class="sym"><b>下半块</b>横向、纵向普通 RoPE</div>
   </div>
-  <p><code class="m">\otimes</code> 在这里不是把两个矩阵普通相乘，而是把 <code class="m">\widetilde P</code> 沿对角线复制多份。取一个能数清的例子：若 head 维度 <code class="m">d=32</code>，那么：</p>
-  <div class="calc">相机半边：I<sub>32/8</sub> ⊗ P̃ = I₄ ⊗ P̃<br>
-　　把 4×4 的 P̃ 沿对角线放 4 份 → 16×16<br>
-位置半边：RoPE₈(x) + RoPE₈(y) → 8+8 = 16 维<br>
-合起来：16 + 16 = <span class="ans">32 维</span>，正好回到原 head 宽度</div>
-  <p>这样切不是为了扩宽网络，而是在原来的 <code class="m">d</code> 个通道里重新分工：一半记镜头，一半记像素位置。</p>
-  <figure id="fig-04">
-    <figcaption><span>Fig 04 · 绝对相机输入，留下相对关系</span><b>不是显式 3D 重建</b></figcaption>
-    <div class="prope">
-      <div class="cam"><h4>Frame 1 · 相机不动</h4><p><code class="m">K_{1}=I</code>，<code class="m">T_{1}ᶜʷ=I</code></p><div class="matrix">P̃₁ = identity<br>位置 (x₁,y₁) 另走 2D RoPE</div><div class="splitbar"><div class="pose">相机块</div><div class="xy">x / y 块</div></div></div>
-      <div class="relative">P̃₁P̃₂⁻¹</div>
-      <div class="cam"><h4>Frame 2 · 世界 x 方向 +1</h4><p>world-to-camera 外参含 <code class="m">-1</code> 平移；求逆后，相对项出现 <code>+1</code>。</p><div class="matrix">[1 0 0 1]<br>[0 1 0 0]<br>[0 0 1 0]<br>[0 0 0 1]</div><div class="splitbar"><div class="pose">相对位移 +1</div><div class="xy">画面坐标</div></div></div>
-    </div>
-  </figure>
-  <p>论文把它写成 GTA attention。GTA 可以先按“给每个 token 套自己的坐标变换，再做 attention，最后变回去”理解；这里的 <code class="m">D_t</code> 就是第 <code class="m">t</code> 个 token 的变换表：</p>
-  <div class="formula wide" data-expr="\operatorname{Attn}_{\mathrm{PRoPE}}(Q,K,V)=D\odot\operatorname{Attn}(D^\top\odot Q,D^{-1}\odot K,D^{-1}\odot V)"></div>
-  <p><code class="m">\odot</code> 在这里表示把分块线性变换施加到对应特征，不是普通标量逐元素乘。Q/K 交互中留下 <code class="m">\tilde{P}_{i1}\tilde{P}_{i2}^{-1}</code>，所以 attention 能直接依赖相对相机。</p>
-  <div class="note"><strong>为什么绝对矩阵最后能表达相对关系：</strong>一维位置里，镜头分别在 10 和 7，真正影响两帧关系的是 <code class="m">10-7=3</code>。矩阵不能直接相减，就用“乘对方的逆”做对应操作：<code class="m">\widetilde P_1\widetilde P_2^{-1}</code>。它回答的不是“各自在哪”，而是“从第二台相机怎样变到第一台相机”。</div>
+  <p>先把 <code class="m">\otimes</code> 认清：它不是普通矩阵相乘，而是“拿左边矩阵当模板，每个元素替换成右边整块”。左边是单位阵时，效果就是沿对角线复印：</p>
+  <div class="calc"><pre>把 2×2 的块沿对角线复印两份，写成 I₂ ⊗ 它：
+
+    [1  2  0  0]
+    [3  4  0  0]
+    [0  0  1  2]
+    [0  0  3  4]     <span class="ans">2×2 变 4×4，两份互不干扰</span></pre></div>
+  <p>为什么要复印：<code class="m">\widetilde P</code> 只有 4×4，一次只能作用在 4 个通道上，可相机那半边有 <code class="m">d/2</code> 个通道要管。复印 <code class="m">d/8</code> 份，就是把这 <code class="m">d/2</code> 个通道拆成 <code class="m">d/8</code> 组、每组 4 个，每组各自被同一张投影表变换一次。数一遍宽度，<code class="m">d=32</code> 时：</p>
+  <div class="calc"><pre>相机半边　I₍₃₂/₈₎ ⊗ P̃ = I₄ ⊗ P̃
+          把 4×4 的 P̃ 沿对角线放 4 份 → 16×16
+
+位置半边　RoPE₈(x) 占 8 维 + RoPE₈(y) 占 8 维 → 16 维
+
+合起来　　16 + 16 = <span class="ans">32 维</span>，正好回到原来的 head 宽度</pre></div>
+  <p>所以这样切不是为了扩宽网络，而是在原来的 <code class="m">d</code> 个通道里重新分工：一半记镜头，一半记像素位置。</p>
+
+  <h3>3.6 摆进 attention：Dᵀ 配 D⁻¹，相对项自己浮出来</h3>
+  <p>论文把它写成 GTA attention。GTA 可以先按“给每个 token 套自己的坐标变换，做完 attention 再变回去”理解；<code class="m">D_t</code> 就是第 <code class="m">t</code> 个 token 的变换表：</p>
+  <div class="formula wide" data-expr="\operatorname{Attn}_{\mathrm{PRoPE}}(Q,K,V)=D\odot\operatorname{Attn}(D^\top\odot Q,\;D^{-1}\odot K,\;D^{-1}\odot V)"></div>
+  <p><code class="m">\odot</code> 在这里表示把分块线性变换施加到对应的那段特征上，不是标量逐元素相乘。三个位置摆的东西不一样（<code class="m">Q</code> 用转置、<code class="m">K/V</code> 用逆），是为了让绝对量在算注意力分数时自己抵消。把 token <code class="m">t</code> 查 token <code class="m">s</code> 的分数展开一次就看见了：</p>
+  <div class="formula" data-expr="(D_t^\top q_t)^\top (D_s^{-1}k_s)=q_t^\top D_t D_s^{-1} k_s"></div>
+  <p>关键在中间冒出来的 <code class="m">D_tD_s^{-1}</code>：两个绝对变换表挨在一起，正好凑成 3.4 那种“乘对方的逆”。它是块对角的，两半各自算各自的——</p>
+  <div class="calc"><pre>相机半边　(I ⊗ P̃ₜ) · (I ⊗ P̃ₛ)的逆 = I ⊗ (<span class="ans">P̃ₜ · P̃ₛ 的逆</span>)
+          剩下的是两帧之间的相对投影
+
+位置半边　RoPE(xt) · RoPE(xs)的逆 = RoPE(<span class="ans">xt - xs</span>)
+          剩下的是两个 token 之间的相对像素距离</pre></div>
+  <p>（第一行用的是 Kronecker 积的性质：复印过的矩阵相乘等于先乘再复印。第二行是 RoPE 本来就有的老性质：旋转矩阵相乘等于角度相减。）</p>
+  <p>喂进去的是每帧<strong>各自的绝对相机矩阵</strong>，attention 分数里剩下的却只有<strong>相对关系</strong>——两台相机怎么换算、两个 token 隔多远。整台相机搬到世界另一头，只要相对关系不变，注意力分数一个字都不改。<code class="m">V</code> 那一路同理：<code class="m">D_t\big(\sum_s a_{ts}D_s^{-1}v_s\big)</code>，每一项都是 <code class="m">D_tD_s^{-1}v_s</code>，取回来的内容同样按相对几何对齐。</p>
+  <p>这也是标题里那句“不是显式 3D 重建”的意思：模型没有在哪一层解算出场景的三维结构，只是让注意力算分时天然带上了几何换算。</p>
   <div class="boundary"><strong>论文公式 vs 当前代码：</strong>官方实现保留普通 RoPE attention，并增加独立 PRoPE 路径，再用零初始化投影逐渐加回主干。训练开始时新分支输出为零，原模型不会被随机相机分支突然打乱。</div>
 </section>
 
