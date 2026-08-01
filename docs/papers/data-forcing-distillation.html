@@ -523,12 +523,26 @@ loss          = 1/2 · MSE(gen_data, <span class="hi">stopgrad(pseudo_target)</s
     <p>剩下的问题纯粹是工程写法：手里握着的是「<strong>想施加在 <code>gen_data</code> 上的梯度</strong>」，而常规训练循环要的是「一个标量 <code>loss</code>，然后 <code>loss.backward()</code>」。DMD 的做法是<strong>倒推一个目标值，让最普通的均方误差求导之后，正好吐出这个想施加的梯度</strong>。倒推只有三行代数（<code class="m">T</code> 被 stopgrad<a class="jr" href="#g-07">7</a> 钉成常数，所以求导时它不动）：</p>
     <div class="formula wide" data-expr="\begin{aligned}T&=gen-vsd&&\text{这就是 pseudo\_target}\\[2pt]L&=\tfrac12\,(gen-T)^2\\[2pt]\frac{\partial L}{\partial gen}&=gen-T&&\tfrac12\ \text{和平方求导的 }2\ \text{正好约掉}\\[2pt]&=gen-(gen-vsd)\\[2pt]&=vsd&&\text{精确等于想施加的那个梯度}\end{aligned}"></div>
     <p>所以那两个看着随手写的地方其实都不能改：<strong><code class="m">\tfrac12</code> 的作用是把平方求导冒出来的 2 约掉</strong>，不然梯度会大一倍；<strong>伪目标用减号</strong>（<code class="m">gen-vsd</code> 而不是加），是为了让 <code class="m">gen-T</code> 这个差恰好等于 <code class="m">vsd</code> 而不是 <code class="m">-vsd</code>，方向才不会反。</p>
-    <p>这也解释了 <code>stopgrad</code> 为什么是<strong>必需</strong>而不是保险措施。<code class="m">T</code> 里含着 <code>gen</code>，要是不钉住，链式法则会多出一项，而这一项刚好把梯度<strong>整块清零</strong>：</p>
-    <pre>不加 stopgrad 时，T 也随 gen 变，dT/dgen = 1：
+    <p>这也解释了 <code>stopgrad</code> 为什么是<strong>必需</strong>而不是保险措施。上面那三行是把 <code class="m">T</code> 当常数算的；可 <code class="m">T</code> 里明明含着 <code>gen</code>，一旦不钉住，求导就得走完整的<strong>链式法则</strong>。</p>
+    <p>把中间那截命名一下会清楚很多：记 <code class="m">u=gen-T(gen)</code>，那么 <code class="m">L=\tfrac12u^2</code> 是外层，<code class="m">u</code> 是内层。链式法则说的是<strong>外层对内层求导，再乘上内层对自变量求导</strong>——两层各求各的，然后相乘：</p>
+    <div class="formula wide" data-expr="\begin{aligned}\frac{\partial L}{\partial u}&=u=gen-T&&\text{外层 }\tfrac12u^2\text{ 求导得 }u\\[3pt]\frac{\partial u}{\partial gen}&=\frac{\partial\,gen}{\partial gen}-\frac{\partial T}{\partial gen}=1-\frac{\partial T}{\partial gen}&&\text{内层：减号两边各求各的}\\[3pt]\frac{\partial L}{\partial gen}&=\frac{\partial L}{\partial u}\cdot\frac{\partial u}{\partial gen}=(gen-T)\left(1-\frac{\partial T}{\partial gen}\right)&&\text{两层相乘}\end{aligned}"></div>
+    <p>这条才是<strong>通用</strong>写法，前面那个 <code class="m">\partial L/\partial gen=gen-T</code> 是它的特例：stopgrad 让 <code class="m">\partial T/\partial gen=0</code>，右边括号变成 1，乘上去等于没乘。反过来不钉住时，<code class="m">T=gen-vsd</code> 里的 <code class="m">vsd</code> 是拿不带梯度的张量算出来的、对求导是常数，于是 <code class="m">\partial T/\partial gen=1</code>，括号变成 0：</p>
+    <pre>不加 stopgrad：dT/dgen = 1
 
  dL/dgen = (gen − T) × (1 − dT/dgen)
          = vsd × (1 − 1)
          = <b>0</b>          ← 训练一动不动，而且不会报错，静默失效</pre>
+    <p>这个 0 不用微积分也看得出来——不加 stopgrad 时，<code class="m">L</code> 根本就是个跟 <code>gen</code> 无关的常数函数：</p>
+    <pre>T(gen) = gen − vsd = gen + 1.0        （沿用下面那组数，vsd = −1.0）
+
+  gen      T = gen+1.0      gen − T      L = ½(gen−T)²
+  1.2        2.2             −1.0          .500
+  1.3        2.3             −1.0          .500
+  2.0        3.0             −1.0          .500
+  99         100             −1.0          .500
+
+gen 挪到哪，L 都是 .500 —— 这条曲线是一条水平线，斜率当然是 0。
+靶子跟着枪口一起走，永远差 vsd 那么远，损失自然纹丝不动。</pre>
     <p>最后一点容易误读：<strong><code>loss</code> 的数值不是质量指标。</strong>把 <code class="m">T</code> 代回去，<code class="m">L=\tfrac12(gen-T)^2=\tfrac12\,vsd^2</code>——它衡量的是「本轮要求挪多远」，而不是「学生离真实分布还差多少」。每一轮的 <code class="m">T</code> 都用新的两套 score 重算，所以这条 loss 曲线不该当收敛曲线看。</p>
 
     <h3>那个 w_norm 是干什么的</h3>
