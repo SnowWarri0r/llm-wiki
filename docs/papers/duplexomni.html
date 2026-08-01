@@ -134,7 +134,7 @@ figure.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{trans
     <h1>边听边说，<br><em>后台继续想</em></h1>
     <p class="dek">DuplexOmni 不要求复杂推理在半秒内做完。它让一个前台模型持续听、看、说，把检索、计算和工具调用交给后台；结果回来后，再自然地接进后半段对话。</p>
     <p class="meta">Muye Huang et al. · XJTU / PKU / Meituan · 35B public checkpoint</p>
-    <div class="tldr"><b>TL;DR</b>　把实时交互和慢推理拆成两条并行线；交互模型本身再用 480 ms 时间片与 Thinker–Talker 流水生成文字和声音。论文最强的是轮次控制，不是通用多模态能力或 ASR。</div>
+    <div class="tldr"><b>TL;DR</b>　把实时交互和慢推理拆成两条并行线；交互模型本身再用 480 ms 时间片与 Thinker–Talker 流水生成文字和声音。论文最强的是轮次控制，不是通用多模态能力或 ASR（自动语音识别）。</div>
   </section>
 
   <h2><span class="n">§ 01</span>先把两个问题拆开</h2>
@@ -172,7 +172,7 @@ figure.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{trans
       </div>
       <div class="arrow reveal d3">→</div>
       <div class="lane out reveal d3">
-        <b>③ 后续对话</b>
+        <b>③ 结果回到 S1</b>
         <p>S1 把已返回的事实改写成适合当前语境的话；条件变了，就停止旧 S2，不能把过期答案说出来。</p>
       </div>
     </div>
@@ -194,54 +194,67 @@ figure.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{trans
     </div>
     <div class="note reveal d4"><span class="label">480 ms 不等于总延迟</span>它表示模型多久获得一次“改计划”的机会。若新话刚错过片边界，最坏还要等接近一片；深度查询仍可能跑几秒，只是不会堵住前台。</div>
   </figure>
+  <p>到这里，系统已经决定第 4 片要说“好，重新查北京”。接下来三节沿用这同一片，依次看：文字怎样变成条件向量、历史怎样排成 Talker 输入、主声音码怎样补成完整波形。</p>
 
   <h2><span class="n">§ 04</span>公式一：把 token 和语境合成发声条件</h2>
-  <p>Thinker 给 Talker 两份同位置信息：token embedding 回答“是哪个词”，hidden state 回答“这个词在当前语境里是什么意思”。两份先投影到同一维度，再逐元素相加。</p>
+  <p>继续看第 4 片。Thinker 给 Talker 两份同位置信息：token embedding 回答“是哪个词”，hidden state 回答“这个词在当前语境里是什么意思”。两份先投影到同一维度，再逐元素相加。</p>
+  <span class="tag">角色 · 定义发声条件</span>
   <div class="math" data-expr="\begin{aligned}c_{t,\ell}&amp;=f_{\mathrm{text}}(e_{t,\ell})+f_{\mathrm{hidden}}(h_{t,\ell})\\[-2pt]\ell&amp;=1,\ldots,m_t\end{aligned}"></div>
   <div class="vars">
-    <div><code>t</code>第几个 480 ms 时间片</div><div><code>ℓ</code>本片第几个助手 token</div>
+    <div><code class="m">t</code>第几个 480 ms 时间片</div><div><code class="m">\ell</code>本片第几个助手 token</div>
     <div><code class="m">m_t</code>本片助手 token 总数</div><div><code class="m">e_{t,\ell}</code>该 token 的 embedding</div>
     <div><code class="m">h_{t,\ell}</code>Thinker 同位置隐状态</div><div><code class="m">f_{\mathrm{text}},f_{\mathrm{hidden}}</code>可学习投影</div>
     <div><code class="m">c_{t,\ell}</code>Talker 最终拿到的条件向量</div><div><code class="m">C_t</code>本片全部条件向量排成的序列</div>
   </div>
   <div class="calc">
-    <div class="step"><b>给定</b><span><code class="m">f_{\mathrm{text}}(e_1)=[0.6,-0.2]</code>，<code class="m">f_{\mathrm{hidden}}(h_1)=[0.1,0.5]</code></span></div>
-    <div class="step"><b>逐位相加</b><span><code class="m">c_1=[0.6+0.1,-0.2+0.5]=[0.7,0.3]</code></span></div>
-    <div class="step"><b>排成序列</b><span>若第二个 token 得到 <code>[0.6,0.7]</code>，则 <code class="m">C_t=([0.7,0.3],[0.6,0.7])</code></span></div>
-    <div class="step"><b>它还不是声音</b><span><code class="m">C_t</code>只是“台词 + 语境”提要，下一步才据此预测离散声音码。</span></div>
+    <div class="step"><b>第 4 片首词</b><span>把“好”当第 1 个 token。设 <code class="m">f_{\mathrm{text}}(e_{4,1})=[0.6,-0.2]</code>，<code class="m">f_{\mathrm{hidden}}(h_{4,1})=[0.1,0.5]</code></span></div>
+    <div class="step"><b>逐位相加</b><span><code class="m">c_{4,1}=[0.6+0.1,-0.2+0.5]=[0.7,0.3]</code></span></div>
+    <div class="step"><b>排成序列</b><span>若第 2 个 token 得到 <code class="m">c_{4,2}=[0.6,0.7]</code>，则 <code class="m">C_4=([0.7,0.3],[0.6,0.7])</code></span></div>
+    <div class="step"><b>交给下一节</b><span><code class="m">C_4</code>还不是声音。它会和前三片的文字、声音历史一起排成 Talker 的输入。</span></div>
   </div>
 
-  <h2><span class="n">§ 05</span>公式二：一帧声音为什么有 16 层码</h2>
-  <p>RVQ<a class="jr" href="#g-05">05</a> 先用第 0 层画粗轮廓，后面逐层补残差。论文把层数写成 \(K\)；公开 checkpoint 的配置是 \(K=16\)。</p>
-  <div class="math" data-expr="\begin{aligned}q_{i,j}&amp;=(q^0_{i,j},q^1_{i,j},\ldots,q^{K-1}_{i,j})\\r_{i,j}&amp;=u_0(q^0_{i,j})+\sum_{k=1}^{K-1}u_k(q^k_{i,j})\end{aligned}"></div>
+  <h2><span class="n">§ 05</span>公式二：把历史和当前条件排成 Talker 输入</h2>
+  <p>上一节拿到了 <code class="m">C_4</code>。Talker 还要知道前三片已经说过什么，否则每 480 ms 都像重新开场。先定义 <code class="m">R_i</code>：它是第 <code class="m">i</code> 片已经生成的全部声音帧，<code class="m">L_i</code> 是该片帧数。</p>
+  <span class="tag">角色 1 · 定义历史声音序列</span>
+  <div class="math" data-expr="R_i=(r_{i,1},r_{i,2},\ldots,r_{i,L_i})"></div>
+  <p>再把每个历史片的文字条件、声音起点、声音帧、声音终点依次排好；最后放当前 <code class="m">C_t</code> 和一个新的声音起点。</p>
+  <span class="tag">角色 2 · 定义 Talker 输入</span>
+  <div class="math" data-expr="P_t=\bigl[(C_i,b_{\mathrm{BOS}},R_i,b_{\mathrm{EOS}})_{i=1}^{t-1},\ C_t,b_{\mathrm{BOS}}\bigr]"></div>
+  <p>这里没有额外概率技巧。BOS/EOS 只是每段声音的开始和结束标记。继续取 <code class="m">t=4</code>，直接展开：</p>
+  <div class="prefix">
+    <span class="cond">(C₁, BOS, R₁, EOS)</span><span>…</span><span class="cond">(C₃, BOS, R₃, EOS)</span><span class="cond">C₄ · 当前条件</span><span class="mark">BOS</span>
+  </div>
+  <span class="tag" style="margin-top:18px">角色 3 · 预测当前主码</span>
+  <div class="math" data-expr="q^0_{t,j}=\mathrm{Talker}(P_t,q^0_{t,<j})"></div>
+  <p><code class="m">q^0_{t,&lt;j}</code> 是当前片已经生成的主码。第 4 片第 1 帧还没有旧主码，因此 Talker 只看 <code class="m">P_4</code>；假设这个课堂玩具例预测索引 <code class="m">q^0_{4,1}=57</code>。57 只是帮助追踪数据流的示意值，不是论文报告的真实输出，也无法脱离模型权重手算出来。</p>
+  <p>现在已经拿到一帧声音的主码。下一节继续用第 4 片第 1 帧，看它怎样补出其余 15 层并还原成 80 ms 波形。</p>
+
+  <h2><span class="n">§ 06</span>公式三：一个主码怎样补成 16 层声音</h2>
+  <p>RVQ<a class="jr" href="#g-05">05</a> 先用第 0 层给声音粗轮廓，后面逐层补残差。论文把层数写成 <code class="m">K</code>；公开 checkpoint 的配置是 <code class="m">K=16</code>。</p>
+  <span class="tag">角色 1 · 定义一帧的全部离散码</span>
+  <div class="math" data-expr="q_{i,j}=(q^0_{i,j},q^1_{i,j},\ldots,q^{K-1}_{i,j})"></div>
+  <span class="tag">角色 2 · 把各层查表向量重建成一帧</span>
+  <div class="math" data-expr="r_{i,j}=u_0(q^0_{i,j})+\sum_{k=1}^{K-1}u_k(q^k_{i,j})"></div>
   <div class="vars">
-    <div><code>i</code>历史中的第几个时间片</div><div><code>j</code>该片第几个 codec 帧</div>
-    <div><code>K</code>RVQ 码本层数；公开权重为 16</div><div><code>q^k</code>第 k 层选中的离散码索引</div>
-    <div><code class="m">u_k</code>第 k 个码本的 embedding 查表</div><div><code class="m">r_{i,j}</code>16 层相加后的帧向量</div>
+    <div><code class="m">i</code>历史中的第几个时间片；例子里取 4</div><div><code class="m">j</code>该片第几个 codec 帧；例子里取 1</div>
+    <div><code class="m">K</code>RVQ 码本层数；公开权重为 16</div><div><code class="m">q^k_{i,j}</code>第 k 层选中的离散码索引</div>
+    <div><code class="m">u_k(\cdot)</code>第 k 个码本的 embedding 查表</div><div><code class="m">r_{i,j}</code>全部层相加后的帧向量</div>
   </div>
   <figure id="fig-4">
     <figcaption><span>Fig 04 · 从 1 个主码补成一整帧</span><b>每片 6 帧 · 每秒 12.5 帧</b></figcaption>
     <div class="codec-row reveal"><span>frame j</span><div class="codes"><i>q⁰</i><i>q¹</i><i>q²</i><i>q³</i><i>…</i><i>q¹⁵</i></div></div>
     <div class="codec-row reveal d2"><span>谁来预测</span><div class="codes"><i style="width:72px">Talker</i><i style="width:240px;background:var(--amber2);color:#6d430f;border-color:#bf944a">MTP 补 15 层</i></div></div>
     <div class="calc reveal d3">
-      <div class="step"><b>三层玩具例</b><span>把 16 层暂缩成 3 层，查表得到 <code>[.5,.1]</code>、<code>[.2,-.1]</code>、<code>[-.1,.3]</code></span></div>
-      <div class="step"><b>相加</b><span><code>r=[.5+.2-.1, .1-.1+.3]=[.6,.3]</code></span></div>
-      <div class="step"><b>时间换算</b><span>一片 480 ms 生成 6 帧，所以 <code>6÷0.48=12.5 帧/秒</code>；一帧覆盖 80 ms。</span></div>
+      <div class="step"><b>接上主码</b><span>沿用 <code class="m">q^0_{4,1}=57</code>。为便于手算，把 16 层缩成 3 层，并假设 MTP 补出 18、203，所以 <code class="m">q_{4,1}=(57,18,203)</code>。</span></div>
+      <div class="step"><b>三次查表</b><span>三个索引分别查到 <code class="m">u_0(57)=[.5,.1]</code>、<code class="m">u_1(18)=[.2,-.1]</code>、<code class="m">u_2(203)=[-.1,.3]</code>。</span></div>
+      <div class="step"><b>逐位相加</b><span><code class="m">r_{4,1}=[.5+.2-.1,\ .1-.1+.3]=[.6,.3]</code></span></div>
+      <div class="step"><b>算到波形</b><span>完整 codec<a class="jr" href="#g-07">07</a> 交给 Code2Wav 解码成第 1 段 80 ms 波形；6 帧正好覆盖 <code class="m">6\times80=480\ \mathrm{ms}</code>。</span></div>
     </div>
-    <p class="reveal d4">Talker 先自回归出主码 \(q^0\)，MTP<a class="jr" href="#g-06">06</a> 再补残差层，完整 codec<a class="jr" href="#g-07">07</a> 交给 Code2Wav 还原波形。</p>
+    <p class="reveal d4">真实模型由 Talker 自回归出主码，MTP<a class="jr" href="#g-06">06</a> 一次补 15 个残差码；这个三层例子只缩短层数，没有改变“主码 → 残差码 → 查表求和 → 波形”的执行顺序。</p>
   </figure>
 
-  <h2><span class="n">§ 06</span>公式三：Talker 的长 prefix 只是在列历史顺序</h2>
-  <div class="math" data-expr="P_t=\bigl[(C_i,b_{\mathrm{BOS}},R_i,b_{\mathrm{EOS}})_{i=1}^{t-1},\ C_t,b_{\mathrm{BOS}}\bigr]"></div>
-  <p>这里没有额外概率技巧。\(C_i\) 是第 \(i\) 片的文本条件，\(R_i\) 是它已经生成的声音帧，BOS/EOS 是声音段边界。取 \(t=2\)，直接展开：</p>
-  <div class="prefix">
-    <span class="cond">C₁ · 历史台词条件</span><span class="mark">BOS</span><span class="rvq">R₁ · 历史声音</span><span class="mark">EOS</span><span class="cond">C₂ · 当前条件</span><span class="mark">BOS</span>
-  </div>
-  <div class="math" data-expr="q^0_{t,j}=\mathrm{Talker}(P_t,q^0_{t,<j})"></div>
-  <p><code class="m">q^0_{t,&lt;j}</code> 是当前片已经生成的主码。Talker 用 prefix 和这些旧主码预测第 \(j\) 个主码；MTP 再补余下 15 层。相邻时间片把 \(C_t,Q_t\) 写回历史，不必重头生成整句话。</p>
-
   <h2><span class="n">§ 07</span>Writer–Director：给“什么时候发生”补监督</h2>
-  <p>普通聊天记录只告诉模型谁先说谁后说。Writer–Director<a class="jr" href="#g-08">08</a> 先写自然脚本，再添加可训练的时间因果。</p>
+  <p>前六节已经走完一次推理：输入到来，S1 形成条件，Talker 生成波形。现在反过来问训练数据从哪来。普通聊天记录只告诉模型谁先说谁后说；Writer–Director<a class="jr" href="#g-08">08</a> 先写自然脚本，再添加可训练的时间因果。</p>
   <figure id="fig-5">
     <figcaption><span>Fig 05 · 一句抢话怎样变成训练样本</span><b>标记会在 TTS 前删除</b></figcaption>
     <div class="scriptbox reveal">
@@ -266,6 +279,7 @@ figure.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{trans
   </figure>
 
   <h2><span class="n">§ 08</span>620K 场景不是 620K 段真实电话</h2>
+  <p>上一节定义了单条样本里的控制标记；这一节只核算它们怎样扩成训练集，并分清“场景种子、生成对话、真实视频通话”三个数量。</p>
   <div class="evidence">
     <div class="card"><span class="tag">场景种子</span><span class="big">≈620K</span><p>定义谁先说、是否改条件、何时停顿、何时触发 S2。</p></div>
     <div class="card"><span class="tag">原始对话</span><span class="big">≈3.02M</span><p>平均 10.4 turn，范围 4–33；只有 10K 是视频通话。</p></div>
@@ -277,7 +291,8 @@ figure.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{trans
   </div>
   <p>94.3% 样本有延迟推理，68.2% 有共同沉默，49.8% 有重叠说话，90.7% 同时含至少两种模式。这些比例可重叠，不能相加成 100%。</p>
 
-  <h2><span class="n">§ 09</span>训练与实时账：论文口径和开源 recipe 要分开</h2>
+  <h2><span class="n">§ 09</span>训练：两阶段 SFT，论文和开源 recipe 口径不同</h2>
+  <p>数据准备好后，DuplexOmni 才进入参数训练。这里讨论的是权重怎样更新；下一节再单独核算部署时能不能跟上音频播放。</p>
   <div class="grid2">
     <div class="card">
       <span class="tag">论文 v1</span>
@@ -290,15 +305,27 @@ figure.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{trans
       <p>标准说明给出顺序训练，示例 global batch 256。它是后续公开实现，不应倒填成论文实验原配置。</p>
     </div>
   </div>
-  <p>实时系数 RTF<a class="jr" href="#g-10">10</a>：</p>
+
+  <h2><span class="n">§ 10</span>部署：RTF 只回答“能不能跟上播放”</h2>
+  <p>训练结束后，部署侧关心的是每片生成速度。RTF<a class="jr" href="#g-10">10</a> 只比较生成耗时与播放时长；它不是模型质量分数，也不等于首包延迟。</p>
+  <span class="tag">角色 · 实时决策指标</span>
   <div class="math" data-expr="\mathrm{RTF}=\frac{\text{生成音频耗时}}{\text{音频播放时长}}"></div>
   <div class="calc">
     <div class="step"><b>能跟上播放</b><span>生成 480 ms 音频花 240 ms：<code>RTF=.24÷.48=.5&lt;1</code></span></div>
     <div class="step"><b>会越说越卡</b><span>生成同一片花 600 ms：<code>RTF=.60÷.48=1.25</code>，每片欠 120 ms</span></div>
     <div class="step"><b>如何压账</b><span>Thinker/Talker 异步流水；Talker 用 KV cache<a class="jr" href="#g-11">11</a>、增量解码和图执行优化。</span></div>
   </div>
+  <p>论文只写目标 <code class="m">\mathrm{RTF}&lt;1</code>，没有给实测 RTF 表。下一节的 0.506 s 是响应延迟，不能拿来代替这条分数。</p>
 
-  <h2><span class="n">§ 10</span>实验结果：每列都在测不同的事</h2>
+  <h2><span class="n">§ 11</span>实验结果：每列都在测不同的事</h2>
+  <p>训练与部署账已经分开，下面再看质量。五列指标不在回答同一个问题，先认清各自测什么，再比较数字：</p>
+  <div class="vars">
+    <div><code>ToR</code><a class="jr" href="#g-13">13</a> 测打断、停顿、抢话等轮次控制</div>
+    <div><code>Big Bench Audio</code><a class="jr" href="#g-14">14</a> 测音频理解与推理</div>
+    <div><code>Daily-Omni</code><a class="jr" href="#g-15">15</a> 测日常多模态综合能力</div>
+    <div><code>WER</code><a class="jr" href="#g-12">12</a> 测自动语音识别错误率</div>
+    <div><code>延迟</code> 测系统从输入到响应的等待时间；不等于 RTF</div>
+  </div>
   <div class="scroll">
     <table class="results">
       <thead><tr><th>模型</th><th>ToR ↑</th><th>Big Bench Audio ↑</th><th>Daily-Omni ↑</th><th>WER ↓</th><th>延迟 s ↓</th></tr></thead>
@@ -315,10 +342,11 @@ figure.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{trans
   <div class="grid3">
     <div class="card"><h3>轮次控制强</h3><p>ToR 72.6，比次高 36.3 多 36.3 个百分点。这是论文最硬的结果。</p></div>
     <div class="card"><h3>通用 omni 不强</h3><p>Daily-Omni 53.8，明显低于 80.2/81.8，不能概括成“多模态全面最好”。</p></div>
-    <div class="card"><h3>ASR 很弱</h3><p>WER<a class="jr" href="#g-12">12</a> 11.92%，而 Qwen 实时模型约 1.1%–1.3%。</p></div>
+    <div class="card"><h3>ASR 很弱</h3><p>WER 11.92%，而 Qwen 实时模型约 1.1%–1.3%。</p></div>
   </div>
 
-  <h2><span class="n">§ 11</span>消融：S1 管节奏，S2 抬能力上限</h2>
+  <h2><span class="n">§ 12</span>消融：S1 管节奏，S2 抬能力上限</h2>
+  <p>主表告诉我们完整系统在哪些指标领先；消融再追问领先来自哪一层。这里比较的都是同一套评测，才能把 S1 与 S2 的作用拆开。</p>
   <div class="scroll">
     <table class="results">
       <thead><tr><th>配置</th><th>ToR</th><th>Big Bench Audio</th><th>相对完整系统</th></tr></thead>
@@ -333,7 +361,18 @@ figure.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{trans
   </div>
   <div class="warn"><span class="label">不要把消融讲成单调故事</span><code>w/o Thinking &amp; ASR</code> 的 ToR 67.2 高于只去 thinking 的 65.2。它不能证明 ASR 一定提升轮次控制；更稳妥的结论是 S2 强弱主要影响复杂理解，而 S1 对流式输入的组织确实有额外价值。</div>
 
-  <h2><span class="n">§ 12</span>最短的一句改口，恰好最容易听错</h2>
+  <h2><span class="n">§ 13</span>最短的一句改口，恰好最容易听错</h2>
+  <p>WER 先把识别结果和参考文本对齐，再数三类错误：词被换掉、词被漏掉、凭空多出词。它回答的是“每 100 个参考词，大约错几个”。</p>
+  <span class="tag">角色 · 定义识别错误率</span>
+  <div class="math" data-expr="\mathrm{WER}=\frac{S+D+I}{N}"></div>
+  <div class="vars">
+    <div><code class="m">S</code>替换错误数</div><div><code class="m">D</code>删除错误数</div>
+    <div><code class="m">I</code>插入错误数</div><div><code class="m">N</code>参考文本的词数</div>
+  </div>
+  <div class="calc">
+    <div class="step"><b>四词小例</b><span>参考句有 4 个词；识别时错换 1 个，没有漏词或多词，所以 <code class="m">S=1,\ D=0,\ I=0,\ N=4</code>。</span></div>
+    <div class="step"><b>代入</b><span><code class="m">\mathrm{WER}=(1+0+0)/4=0.25=25\%</code>。这正好接近论文 1–5 词分桶的 25.1%。</span></div>
+  </div>
   <figure id="fig-6">
     <figcaption><span>Fig 06 · DuplexOmni 的 WER 随句长下降</span><b>1–5 词是 25.1%</b></figcaption>
     <div class="bars">
@@ -346,7 +385,7 @@ figure.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{trans
     <p class="note">“嗯”“不是”“改北京”都很短，却最可能改变任务。短句 WER 高不是边角缺陷，而是全双工产品最危险的错误区。</p>
   </figure>
 
-  <h2><span class="n">§ 13</span>论文结论，和公开可用性边界</h2>
+  <h2><span class="n">§ 14</span>论文结论，和公开可用性边界</h2>
   <div class="evidence">
     <div class="card"><span class="tag">checkpoint</span><span class="big">35B</span><p>BF16，Thinker 与 Talker 均包含在公开权重中；codec 配置为 16 层。</p></div>
     <div class="card"><span class="tag slow">低延迟部署</span><span class="big">≥8 H20</span><p>这是官方模型卡的当前建议，不是普通单卡实时方案。</p></div>
@@ -376,6 +415,9 @@ figure.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{trans
       <li id="g-10"><strong>RTF</strong>：生成耗时除以音频时长；小于 1 才能稳定跟上播放。</li>
       <li id="g-11"><strong>KV cache</strong>：保存旧 token 的注意力 K/V，下一片只算新增部分。详见 <a href="../concepts/kv-cache.html">kv-cache</a>。</li>
       <li id="g-12"><strong>WER</strong>：词错误率；替换、删除、插入总数除以参考词数，越低越好。</li>
+      <li id="g-13"><strong>ToR</strong>：Turn-taking Rating，衡量系统处理抢话、停顿、打断和恢复说话的能力；越高越好。</li>
+      <li id="g-14"><strong>Big Bench Audio</strong>：面向音频输入的理解与推理评测；分数越高，说明从声音中提取信息并回答问题的能力越强。</li>
+      <li id="g-15"><strong>Daily-Omni</strong>：覆盖日常音频、图像、视频等输入的综合多模态评测；它和专测轮次控制的 ToR 不是一回事。</li>
     </ol>
   </section>
 
