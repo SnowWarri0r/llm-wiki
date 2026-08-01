@@ -1,0 +1,608 @@
+<!doctype html>
+<!-- bespoke -->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>GenCeption · 视频生成模型也能成为通用视觉骨干</title>
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+:root{
+  --paper:#f0e9d6;--paper2:#e8e0c8;--card:#faf5e5;--white:#fffdf6;
+  --ink:#181410;--ink2:#3a3128;--muted:#706653;--rule:#b7aa8e;
+  --blue:#1c5676;--bluesoft:#cfe3e8;--teal:#087f8c;--tealsoft:#c8e8e4;
+  --orange:#bd501f;--orangesoft:#f2d4c3;--green:#416a43;--greensoft:#d8e8d2;
+  --gold:#936b10;--goldsoft:#efdfa7;--purple:#624b83;--purplesoft:#dfd5ec;--night:#102638;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);scroll-behavior:smooth}
+body{font-family:"Noto Serif SC","Songti SC","STSong",Georgia,serif;font-size:18px;line-height:1.8;-webkit-font-smoothing:antialiased}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:20;opacity:.22;background-image:linear-gradient(rgba(28,86,118,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(28,86,118,.045) 1px,transparent 1px);background-size:28px 28px}
+.page{max-width:1240px;margin:auto;padding:58px 42px 120px;position:relative}
+.mast{display:flex;justify-content:space-between;gap:20px;border-top:4px double var(--ink);border-bottom:1px solid var(--rule);padding:12px 0;font:700 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.hero{padding:66px 0 58px;border-bottom:1px solid var(--rule)}
+.eyebrow,.secno,.tag,.mini,.figcap,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.eyebrow{font-size:12px;letter-spacing:3px;color:var(--teal);font-weight:800;text-transform:uppercase}
+h1{font-size:clamp(52px,8.5vw,110px);line-height:.9;letter-spacing:-.055em;margin:22px 0 20px;font-weight:800}
+h1 em{display:block;color:var(--teal);font-weight:500}
+.byline{font:600 12px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);letter-spacing:.6px;max-width:1030px}
+.dek{font-size:clamp(21px,2.25vw,29px);line-height:1.48;max-width:930px;color:var(--ink2);margin:22px 0 0;font-style:italic}
+.tldr{margin:36px 0 0;background:var(--night);color:#f7f2e6;border-left:6px solid var(--teal);padding:24px 28px;box-shadow:9px 9px 0 rgba(23,59,86,.12)}
+.tldr .tag{display:block;color:#79d5d4;font-size:11px;letter-spacing:2px;font-weight:800;margin-bottom:5px}
+.tldr strong{color:#fff}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:28px 0 0}
+.toc a{font:700 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;text-decoration:none;color:var(--blue);border:1px solid var(--rule);background:var(--card);padding:7px 10px}
+.toc a:hover,.toc a:focus{background:var(--tealsoft);outline:2px solid var(--teal)}
+section{padding-top:70px}
+h2{font-size:clamp(34px,4vw,51px);line-height:1.13;letter-spacing:-.03em;margin:0 0 24px}
+.secno{display:block;color:var(--teal);font-size:12px;letter-spacing:3px;margin-bottom:12px}
+h3{font-size:25px;line-height:1.35;margin:36px 0 10px}
+p{margin:12px 0;max-width:1000px}
+strong{font-weight:800}
+a{color:var(--blue);text-underline-offset:4px;text-decoration-thickness:1px}
+code{font:500 .86em/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;background:#fffaf0;border:1px solid var(--rule);padding:1px 5px;border-radius:3px}
+.lead{font-size:21px;color:var(--ink2);max-width:1020px}
+.note{margin:22px 0;padding:16px 20px;background:var(--white);border-left:4px solid var(--gold);max-width:1020px}
+.note .mini{font-size:10px;letter-spacing:2px;color:var(--gold);font-weight:800;text-transform:uppercase;display:block}
+.warn{border-color:var(--orange)}.warn .mini{color:var(--orange)}
+.goodnote{border-color:var(--green)}.goodnote .mini{color:var(--green)}
+.formula{max-width:1020px;background:var(--night);color:white;padding:23px 18px;margin:20px 0;overflow-x:auto;border-left:5px solid var(--teal);text-align:center}
+.formula .katex{color:white;font-size:1.08em}.formula.wide .katex{font-size:.95em}
+.symbols{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:1020px;margin:16px 0}
+.symbol{background:var(--card);border:1px solid var(--rule);padding:14px 15px;font-size:16px}
+.symbol b{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--blue);font-size:14px}
+pre{max-width:1020px;overflow:auto;background:var(--night);color:#f4f0e7;padding:20px 22px;border-radius:2px;font:500 14px/1.72 ui-monospace,SFMono-Regular,Menlo,monospace}
+.hi{color:#83dfdc}.bad{color:#ff9e78}.good{color:#a6dfa1}.dim{color:#b7c5cc}
+figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.74);border:1px solid var(--rule);box-shadow:9px 9px 0 rgba(65,50,30,.08)}
+.figcap{display:flex;justify-content:space-between;gap:20px;font-size:11px;letter-spacing:1.35px;color:var(--muted);padding-bottom:14px;margin-bottom:22px;border-bottom:1px dashed var(--rule);text-transform:uppercase;font-weight:700}
+.figcap .n{color:var(--teal)}
+.map{display:grid;grid-template-columns:1fr 34px 1fr 34px 1fr 34px 1fr;align-items:stretch}
+.box{border:2px solid var(--blue);background:var(--white);padding:18px;min-height:178px}
+.box .num{font:800 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--teal);letter-spacing:2px}
+.box h4{font-size:21px;margin:12px 0 7px;line-height:1.25}
+.box p{font-size:15px;line-height:1.58;margin:0;color:var(--ink2)}
+.box.teal{border-color:var(--teal);background:var(--tealsoft)}
+.box.green{border-color:var(--green);background:var(--greensoft)}
+.box.orange{border-color:var(--orange);background:var(--orangesoft)}
+.arrow{display:flex;align-items:center;justify-content:center;color:var(--orange);font:900 24px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.panel{border:1px solid var(--rule);background:var(--white);padding:22px}
+.panel h4{margin:0 0 12px;font-size:24px}.panel p{font-size:16px}
+.panel.before{border-top:6px solid var(--orange)}.panel.after{border-top:6px solid var(--teal)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.step{background:var(--white);border-top:5px solid var(--blue);padding:20px}
+.step:nth-child(2){border-color:var(--gold)}.step:nth-child(3){border-color:var(--green)}
+.step .num{font:800 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+.step h4{font-size:22px;margin:12px 0 7px}.step p{font-size:15px;line-height:1.55;margin:0}
+.taskgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.task{background:var(--white);border:1px solid var(--rule);padding:18px;min-height:160px}
+.task b{display:block;color:var(--blue);font-size:19px;margin-bottom:7px}.task p{font-size:14px;line-height:1.5;margin:0}
+.task.sparse{border-top:5px solid var(--purple)}.task.dense{border-top:5px solid var(--teal)}
+.ray{display:grid;grid-template-columns:1fr 48px 1fr;align-items:center}
+.six{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.raypart{min-height:170px;padding:20px;border:2px solid var(--blue);background:var(--bluesoft);display:flex;flex-direction:column;justify-content:center;text-align:center}
+.raypart:nth-child(2){border-color:var(--purple);background:var(--purplesoft)}
+.pack{height:250px;border:3px solid var(--teal);background:var(--purplesoft);padding:38px;display:flex;align-items:center;justify-content:center}
+.pack .center{width:50%;height:50%;background:var(--bluesoft);border:2px solid var(--blue);display:flex;align-items:center;justify-content:center;text-align:center;font-weight:800}
+.tokenline{display:grid;grid-template-columns:1fr 34px 1fr 34px 1fr;align-items:stretch}
+.tokenbox{background:var(--white);border:2px solid var(--purple);padding:18px;min-height:145px}
+.tokenbox h4{margin:0 0 8px;font-size:20px}.tokenbox p{font-size:15px;line-height:1.5}
+.pipeline{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.pipe{background:var(--white);border:1px solid var(--rule);padding:16px;min-height:160px}
+.pipe b{display:block;font:800 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--teal)}
+.pipe strong{display:block;font-size:21px;margin:10px 0 7px}.pipe p{font-size:14px;line-height:1.5;margin:0}
+.calc{width:100%;border-collapse:collapse;font-size:15px}.calc th,.calc td{padding:10px;border-bottom:1px solid var(--rule);text-align:right}
+.calc th:first-child,.calc td:first-child{text-align:left}.calc thead th{font:800 10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);text-transform:uppercase}
+.tablewrap{overflow-x:auto}.metrics{width:100%;border-collapse:collapse;font-size:14px;min-width:850px}
+.metrics th,.metrics td{padding:10px 9px;border-bottom:1px solid var(--rule);text-align:right;white-space:nowrap}
+.metrics th:first-child,.metrics td:first-child{text-align:left}
+.metrics thead th{font:800 10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);text-transform:uppercase}
+.metrics tr.win{background:var(--tealsoft);font-weight:800}.metrics .up{color:var(--green);font-weight:800}.metrics .down{color:var(--orange);font-weight:800}
+.config{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.cfg{background:var(--night);color:#f4f0e7;padding:17px;min-height:118px}
+.cfg b{display:block;font:800 10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:#83dfdc;letter-spacing:1px}.cfg strong{display:block;font-size:22px;color:white;margin:8px 0 4px}.cfg p{font-size:13px;line-height:1.45;margin:0;color:#c8d7dc}
+.meter{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.evidence{padding:18px;background:var(--white);border-top:5px solid var(--green)}
+.evidence:nth-child(2){border-color:var(--gold)}.evidence:nth-child(3){border-color:var(--orange)}
+.evidence b{display:block;font-size:20px}.evidence p{font-size:15px;line-height:1.55}
+.limits{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.limit{padding:18px;background:var(--orangesoft);border:1px solid #c98362}.limit b{display:block;margin-bottom:7px}.limit p{font-size:15px;line-height:1.55;margin:0}
+.jr{font:800 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;vertical-align:super;text-decoration:none;background:var(--goldsoft);border:1px solid var(--gold);color:var(--ink);padding:2px 5px;border-radius:3px;margin:0 2px}
+.jr:hover,.jr:focus{background:var(--gold);color:#fff;outline:2px solid var(--blue);outline-offset:2px}
+.gloss{margin-top:78px;padding-top:30px;border-top:3px double var(--ink)}
+.gloss h2{font-size:32px}.gloss ol{list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:0 24px;counter-reset:g}
+.gloss li{counter-increment:g;position:relative;padding:14px 10px 14px 48px;border-bottom:1px dashed var(--rule);font-size:15px}
+.gloss li:before{content:counter(g,decimal-leading-zero);position:absolute;left:4px;color:var(--teal);font:800 11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+.gloss li:target{background:var(--goldsoft);outline:2px solid var(--gold)}.gloss .termname{font-weight:800;color:var(--blue)}
+.sourcebox{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:22px}
+.sourcebox a{display:block;background:var(--night);color:#fff;padding:14px 16px;text-decoration:none;font:700 12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+.sourcebox a:hover,.sourcebox a:focus{background:var(--teal);outline:3px solid var(--blue)}
+.colophon{margin-top:70px;padding-top:18px;border-top:1px solid var(--rule);display:flex;justify-content:space-between;color:var(--muted);font:600 11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+@media(max-width:980px){
+  .map{grid-template-columns:1fr}.arrow{min-height:34px;font-size:0}.arrow:before{content:"↓";font-size:22px}
+  .taskgrid,.config{grid-template-columns:1fr 1fr}.pipeline{grid-template-columns:repeat(2,1fr)}
+  .ray{grid-template-columns:1fr}.ray>.arrow{min-height:44px}.steps,.meter{grid-template-columns:1fr}
+}
+@media(max-width:650px){
+  body{font-size:17px}.page{padding:36px 12px 80px}.mast{display:block}.mast span{display:block;margin:4px 0}
+  .hero{padding:45px 0 42px}h1{font-size:49px}.dek{font-size:20px}section{padding-top:55px}h2{font-size:34px}
+  figure{padding:15px;margin-left:0;margin-right:0;box-shadow:5px 5px 0 rgba(65,50,30,.08)}
+  .figcap{display:block}.figcap span{display:block;margin:3px 0}
+  .split,.symbols,.taskgrid,.tokenline,.pipeline,.config,.meter,.limits,.gloss ol,.sourcebox{grid-template-columns:1fr}
+  .tokenline .arrow{min-height:34px;font-size:0}.tokenline .arrow:before{content:"↓";font-size:22px}
+  .six{grid-template-columns:1fr}.pack{height:210px}.formula{padding:18px 8px}.formula .katex{font-size:.82em}.formula.wide .katex{font-size:.68em}
+  .colophon{display:block}.colophon span{display:block;margin:6px 0}
+}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · genception</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page">
+  <div class="mast"><span>Connectionism · Paper Field Notes</span><span>ECCV 2026 · arXiv 2607.09024 v1</span></div>
+  <header class="hero">
+    <div class="eyebrow">Video Generation → Unified Perception</div>
+    <h1>Gen<em>Ception.</em></h1>
+    <div class="byline">Letian Wang · Chuhan Zhang · Rishabh Kabra · Jasper Uijlings · Steven Waslander · Andrew Zisserman · Joao Carreira · Kaiming He · Misha Andriluka · Eduard Gabriel Bazavan · Andrei Zanfir · Cristian Sminchisescu</div>
+    <p class="dek">一个已经会生成视频的 WAN，为什么还能学深度、法线、分割和相机姿态？关键不在于“去噪权重自动变成视觉权重”，而在于保留生成骨干学到的时空规律，再把输入、输出接口和监督目标改造成感知任务。</p>
+    <div class="tldr"><span class="tag">TL;DR</span>GenCeption 把 WAN 2.1 的多步视频生成改成<strong>一次前向的确定性感知</strong>：输入干净视频，时间固定为 <code>t=0</code>，将整流流速度取反；文字提示选择任务；密集答案统一成三通道视频，稀疏坐标才增加查询 token。它证明生成预训练是很强的视觉初始化，也同时证明：越偏离原生像素接口，联合训练越容易出问题。</div>
+    <nav class="toc" aria-label="页面目录">
+      <a href="#map">完整地图</a><a href="#why">为什么生成能迁移</a><a href="#flow">t=0 与负号</a><a href="#targets">统一目标</a><a href="#sparse">稀疏 token</a><a href="#data">数据</a><a href="#loss">公式与训练</a><a href="#results">实验</a><a href="#limits">边界</a>
+    </nav>
+  </header>
+
+  <section id="map">
+    <span class="secno">§ 00 · COMPLETE MAP</span>
+    <h2>先拼完整：同一骨干，两种输出出口</h2>
+    <p class="lead">输入视频告诉模型“看什么”，文字提示告诉模型“要回答什么”。视频和文字分别编码后进入同一个 WAN DiT<a class="jr" href="#g-01">1</a>；需要逐像素答案时走原 VAE decoder<a class="jr" href="#g-04">4</a>，需要坐标答案时才走 MLP。</p>
+    <figure>
+      <figcaption class="figcap"><span>Fig 01 · 从输入到答案的四站</span><span class="n">箭头表示前向数据流</span></figcaption>
+      <div class="map">
+        <div class="box"><span class="num">01 / INPUT</span><h4>视频 + 任务文字</h4><p>例如一段 81 帧视频，加提示“输出深度”。提示不是解释图片，而是选择输出模态。</p></div><div class="arrow">→</div>
+        <div class="box teal"><span class="num">02 / ENCODE</span><h4>干净 video latent</h4><p>VAE 压视频得到 latent<a class="jr" href="#g-02">2</a>；文本编码器压任务提示。输入不加噪，时间条件固定为 <code>t=0</code>。</p></div><div class="arrow">→</div>
+        <div class="box orange"><span class="num">03 / WAN DIT</span><h4>只跑一次</h4><p>复用 WAN 2.1 的注意力和 FFN。密集任务取最终 video token；稀疏任务另带每帧一个可学习 token。</p></div><div class="arrow">→</div>
+        <div class="box green"><span class="num">04 / OUTPUT</span><h4>视频或坐标</h4><p>VAE decoder 输出深度、法线、掩码、DensePose、raymap；MLP 输出 2D / 3D 关键点。</p></div>
+      </div>
+    </figure>
+    <div class="note"><span class="mini">训练与部署</span>VAE、文本编码器和 DiT 都来自预训练 WAN；论文图里的雪花表示冻结，火焰表示更新。感知后训练主要更新 DiT，并训练新增的稀疏 token / MLP。部署时不再循环去噪，但 VAE 和文本编码仍有成本。</div>
+  </section>
+
+  <section id="why">
+    <span class="secno">§ 01 · WHY GENERATION HELPS</span>
+    <h2>“会画”为什么可能帮助“会看”</h2>
+    <p>生成视频比记住单张纹理更苛刻。为了让下一帧不穿帮，模型需要维持物体身份、三维朝向、遮挡关系、相机运动和动作连续性；为了服从提示，它还要把文字和视觉概念对齐。GenCeption 的假设是：这些能力已经写进 DiT 的内部特征，不必从随机权重重新学。</p>
+    <figure>
+      <figcaption class="figcap"><span>Fig 02 · 迁移不是一次魔法替换</span><span class="n">三个阶段承担不同职责</span></figcaption>
+      <div class="steps">
+        <div class="step"><span class="num">01 / PRETRAIN</span><h4>先学视觉规律</h4><p>生成目标迫使 QKV、FFN 和时空位置编码学会组合跨帧证据。</p></div>
+        <div class="step"><span class="num">02 / INTERFACE</span><h4>把输入接对</h4><p>喂干净 latent、设 <code>t=0</code>、取反速度，让初始输出更偏向干净视觉数据。</p></div>
+        <div class="step"><span class="num">03 / FINETUNE</span><h4>再学感知答案</h4><p>深度、法线、分割等标签产生梯度，真正改变模型的输出目标。</p></div>
+      </div>
+    </figure>
+    <div class="note warn"><span class="mini">别跳过第三步</span>预训练权重没有自动“变成深度权重”。同一套矩阵始终在混合特征；后训练更换了数据、目标和梯度，才把已有视觉规律组织成特定答案。详见 <a href="../concepts/generation-to-perception.html">generation-to-perception</a>。</div>
+  </section>
+
+  <section id="flow">
+    <span class="secno">§ 02 · RECTIFIED FLOW</span>
+    <h2>为什么是 <code>t=0</code>，又为什么要加一个负号</h2>
+    <p>WAN 采用 Rectified Flow<a class="jr" href="#g-03">3</a>：在干净数据和噪声之间选一条直线路径，让网络预测沿路移动的速度。</p>
+    <p class="lead">这部分最容易被一句“取反更接近目标”带过。先把 WAN 的训练路径写完整。</p>
+    <h3>训练时：沿直线从干净视频走向噪声</h3>
+    <div class="formula" data-expr="x_t=(1-t)x_0+t\epsilon,\qquad 0\le t\le 1"></div>
+    <div class="symbols">
+      <div class="symbol"><b>x₀</b><br>干净视频经 VAE 得到的 latent。</div>
+      <div class="symbol"><b>ε</b><br>与 <code>x₀</code> 同形状的高斯噪声。</div>
+      <div class="symbol"><b>t</b><br>路径位置；<code>0</code> 是干净端，<code>1</code> 是噪声端。</div>
+      <div class="symbol"><b>xₜ</b><br>在时刻 <code>t</code> 的带噪 latent。</div>
+      <div class="symbol"><b>(1−t), t</b><br>干净信号和噪声各占多少。</div>
+      <div class="symbol"><b>0 ≤ t ≤ 1</b><br><code>t</code> 只在闭区间零到一内取值。</div>
+    </div>
+    <p>对 <code>t</code> 求导，直线路径的速度恒定：</p>
+    <div class="formula" data-expr="v^\*=\frac{dx_t}{dt}=\epsilon-x_0"></div>
+    <div class="symbols">
+      <div class="symbol"><b>dxₜ/dt</b><br><code>t</code> 增加一点时，latent 怎样变化。</div>
+      <div class="symbol"><b>v*</b><br>训练标签里的目标速度；星号不是乘法。</div>
+      <div class="symbol"><b>ε−x₀</b><br>从干净端指向噪声端的方向。</div>
+    </div>
+    <p>生成时恰好反着走：从 <code>t=1</code> 的噪声积分回 <code>t=0</code> 的视频。感知输入本来就是干净视频，因此 GenCeption 直接喂 <code>x₀</code>，告诉 DiT 当前在干净端 <code>t=0</code>，只跑一次。</p>
+
+    <h3>取反：只翻转方向，不会把噪声凭空删掉</h3>
+    <div class="formula" data-expr="-v^\*=x_0-\epsilon"></div>
+    <p>原速度指向噪声，负速度指回干净端。论文的原话是它与目标视频 latent “更接近”，并在实验上加快收敛、改善表现；论文没有说 <code>−v</code> 就精确等于目标。</p>
+    <figure>
+      <figcaption class="figcap"><span>Fig 03 · 一个标量沿整流流直线移动</span><span class="n">仅用于解释符号，不是实际网络维数</span></figcaption>
+      <pre><span class="dim">给定：</span>x₀ = 2，ε = −1，t = .25
+
+<span class="hi">先混合：</span>xₜ = (1−.25)×2 + .25×(−1)
+           = 1.5 − .25
+           = 1.25
+
+<span class="bad">原速度：</span>v* = ε−x₀ = −1−2 = −3
+<span class="good">取反后：</span>−v* = x₀−ε = 2−(−1) = 3</pre>
+    </figure>
+    <p>这里的 <code>3</code> 仍不等于干净值 <code>2</code>，正好说明“方向更像干净端”和“答案就是干净 latent”不是一回事。真实 DiT 的输出是高维张量，后训练会继续把它调整为目标深度或法线 latent。</p>
+  </section>
+
+  <section id="targets">
+    <span class="secno">§ 03 · UNIFIED TARGETS</span>
+    <h2>一个 decoder 和一种 loss，是怎样做到的</h2>
+    <p>先区分两类答案：<strong>密集任务</strong><a class="jr" href="#g-05">5</a>给每个像素一个值，例如深度和法线；<strong>稀疏任务</strong><a class="jr" href="#g-06">6</a>只给有限个坐标，例如人体 17 个关节。GenCeption 只把前者强行统一成三通道视频。</p>
+    <figure>
+      <figcaption class="figcap"><span>Fig 04 · 输出格式，而不是任务名称，决定走哪条支路</span><span class="n">密集 = 每像素；稀疏 = 有限坐标</span></figcaption>
+      <div class="taskgrid">
+        <div class="task dense"><b>深度 / 掩码</b><p>原来每像素 1 个数，预处理后复制到 RGB 三个通道。</p></div>
+        <div class="task dense"><b>法线 / DensePose</b><p>每像素本来就有 3 个连续分量，分别占 R、G、B。</p></div>
+        <div class="task dense"><b>相机 raymap</b><p>每像素 6 个数，沿画面空间拆成两块三通道区域。</p></div>
+        <div class="task sparse"><b>2D / 3D 关键点</b><p>答案是关节坐标向量，追加每帧一个 token，再由 MLP 解码。</p></div>
+      </div>
+    </figure>
+    <p>这套设计把任务差异从网络头和 loss 搬到目标编码：文字提示“输出深度”或“输出法线”选择模态；目标 formatter 决定怎样编码、怎样还原。它不是让所有任务天然相同。详见 <a href="../concepts/rgb-task-representation.html">rgb-task-representation</a>。</p>
+
+    <h3>六维相机射线为什么能变成一张三通道图</h3>
+    <p>这里的 raymap<a class="jr" href="#g-08">8</a>是每个像素对应的相机射线场，不是把相机矩阵直接涂成彩色。</p>
+    <p>每个像素对应一条三维射线：三维起点 <code>o=(oₓ,oᵧ,o_z)</code> 加三维方向 <code>d=(dₓ,dᵧ,d_z)</code>，合计六个数。论文的 “Rothko” 表示没有把六个数硬压成三个，而是让画面不同区域承担不同含义。</p>
+    <figure>
+      <figcaption class="figcap"><span>Fig 05 · Rothko raymap 的空间打包</span><span class="n">中心存起点，外围存方向</span></figcaption>
+      <div class="ray">
+        <div class="six">
+          <div class="raypart"><strong>射线起点 o</strong><span>3 通道<br><code>oₓ, oᵧ, o_z</code></span></div>
+          <div class="raypart"><strong>射线方向 d</strong><span>3 通道<br><code>dₓ, dᵧ, d_z</code></span></div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="pack"><div class="center">中心矩形<br>起点 RGB</div><span style="position:absolute;opacity:0">外围存方向 RGB</span></div>
+      </div>
+      <p style="margin:14px 0 0;font-size:15px;color:var(--muted)">右侧紫色外围区域存方向 RGB；蓝色中心矩形存起点 RGB。模型之后再从整张 raymap 恢复相机参数。</p>
+    </figure>
+  </section>
+
+  <section id="sparse">
+    <span class="secno">§ 04 · SPARSE TOKENS</span>
+    <h2>为什么关键点不能照搬 RGB 方案</h2>
+    <p>机器人控制或人体姿态常常直接需要坐标表，而不是一张彩色骨架图。设视频有 <code>T</code> 帧，GenCeption 为每帧追加一个可学习 token；经过 DiT 后，MLP 把每个 token 变成 <code>K</code> 维坐标。</p>
+    <figure>
+      <figcaption class="figcap"><span>Fig 06 · 每帧一个查询 token</span><span class="n">T 表示帧数，K 表示每帧答案维数</span></figcaption>
+      <div class="tokenline">
+        <div class="tokenbox"><h4><code>T</code> 个 token</h4><p>第 1 个问第 1 帧，第 2 个问第 2 帧，直到第 <code>T</code> 帧。</p></div><div class="arrow">→</div>
+        <div class="tokenbox"><h4>同一个 DiT</h4><p>查询 token 与视频 latent 互相注意，并使用原生 3D RoPE<a class="jr" href="#g-07">7</a> 标记时空位置。</p></div><div class="arrow">→</div>
+        <div class="tokenbox"><h4><code>T × K</code> 输出</h4><p>MLP 为每帧输出 <code>K</code> 个数，例如所有关节的 3D 坐标。</p></div>
+      </div>
+    </figure>
+    <div class="symbols">
+      <div class="symbol"><b>T</b><br>原视频帧数，也是新增 token 数。</div>
+      <div class="symbol"><b>T′</b><br>VAE 时间压缩后的 latent 时间长度。</div>
+      <div class="symbol"><b>K</b><br>每帧目标向量的维数。</div>
+    </div>
+    <p>因为 <code>T</code> 帧会压成更短的 <code>T′</code> 个 latent 时间位置，新增 token 的原始帧编号会超出 DiT 预训练见过的时间范围。论文采用位置插值，把 <code>T</code> 个编号按比例缩到 <code>T′</code> 的边界内；空间位置没有天然坐标，所以直接学习。论文没有给出具体插值公式，因此这里不伪造实现细节。</p>
+    <div class="note warn"><span class="mini">后来发生了什么</span>这条新增 token 支路在单任务训练中可用，但联合训练时 3D 关键点明显退化。作者认为：坐标回归偏离连续像素预训练，而且从零初始化的 token 会扰动原 DiT 注意力。这是整篇论文最重要的负结果。</div>
+  </section>
+
+  <section id="data">
+    <span class="secno">§ 05 · SYNTHETIC DATA</span>
+    <h2>没有一套真实视频同时给齐七种标签，怎么办</h2>
+    <p>同一真实视频很少同时带深度、法线、掩码、DensePose、2D / 3D 关节和相机轨迹。Blender 则知道场景里的几何真值，可以一次渲染多套答案。</p>
+    <figure>
+      <figcaption class="figcap"><span>Fig 07 · 7,500 段多标签视频怎样生成</span><span class="n">每个框是一道数据工序</span></figcaption>
+      <div class="pipeline">
+        <div class="pipe"><b>01 / HUMAN</b><strong>800 个资产</strong><p>RenderPeople 人体模型提供外观、骨架与关节。</p></div>
+        <div class="pipe"><b>02 / MOTION</b><strong>200 段动作</strong><p>CMU MoCap 驱动人物运动。</p></div>
+        <div class="pipe"><b>03 / SCENE</b><strong>背景与相机</strong><p>3D 场景、HDRI、焦距、机位和轨迹随机变化。</p></div>
+        <div class="pipe"><b>04 / RENDER</b><strong>多通道真值</strong><p>Blender 分别渲染 RGB、深度、法线和掩码。</p></div>
+        <div class="pipe"><b>05 / CACHE</b><strong>预存 latent</strong><p>视频提前过 VAE，任务文字提前过文本编码器。</p></div>
+      </div>
+    </figure>
+    <p>训练还加入 TartanAir、Virtual KITTI 和 MVS Synth 的深度数据，以及 TartanAir 相机轨迹。表达式指代分割因为有现成真实数据，使用 MeViS、Ref-COCO 和 YouTube-VOS。</p>
+    <div class="note"><span class="mini">准确说法</span>论文可以说“除表达式指代分割外主要使用合成监督”，不能简化成“所有任务都纯合成”。基础 WAN 的生成预训练数据也不是这 7,500 段视频，论文没有重新披露 WAN 的完整预训练集。</div>
+  </section>
+
+  <section id="loss">
+    <span class="secno">§ 06 · LOSS & RECIPE</span>
+    <h2>统一 L2 之前，深度标签已经被重新设计</h2>
+    <p>密集任务在 VAE latent 空间算 L2，稀疏任务在坐标输出空间算 L2。以向量形式写：</p>
+    <div class="formula" data-expr="L_2=\sum_j(\hat y_j-y_j)^2"></div>
+    <div class="symbols">
+      <div class="symbol"><b>j</b><br>输出向量或 latent 中的第 <code>j</code> 个元素。</div>
+      <div class="symbol"><b>ŷⱼ</b><br>模型在该位置的预测。</div>
+      <div class="symbol"><b>yⱼ</b><br>监督目标。</div>
+      <div class="symbol"><b>ŷⱼ−yⱼ</b><br>有正负号的预测误差。</div>
+      <div class="symbol"><b>(·)²</b><br>平方：消除符号，并更重罚大误差。</div>
+      <div class="symbol"><b>Σ</b><br>把所有元素的平方误差相加。</div>
+    </div>
+    <p>例如预测 <code>ŷ=[0.2,0.8]</code>、标签 <code>y=[0.3,0.6]</code>，求和式 L2 是 <code>0.01+0.04=0.05</code>。如果实现取均值则为 <code>0.025</code>；论文没有公开具体 reduction。</p>
+
+    <h3>深度第一步：用场景中位数消掉整体尺度</h3>
+    <div class="formula" data-expr="d_i=\frac{D_i}{m}"></div>
+    <div class="symbols">
+      <div class="symbol"><b>Dᵢ</b><br>第 <code>i</code> 个像素的原始深度。</div>
+      <div class="symbol"><b>m</b><br>整段视频有效深度的中位数。</div>
+      <div class="symbol"><b>dᵢ</b><br>除掉整体尺度后的相对深度。</div>
+    </div>
+    <p>原值 <code>[2,4,8]</code> 的中位数是 <code>4</code>，归一化后得到 <code>[0.5,1,2]</code>。整个场景若放大两倍，分子和中位数一起放大，结果不变。</p>
+
+    <h3>第二步：取对数压缩远距离，再截进零到一</h3>
+    <div class="formula" data-expr="d'=\operatorname{clip}\!\left(\alpha\log(d+1),0,1\right)"></div>
+    <div class="symbols">
+      <div class="symbol"><b>d</b><br>中位数归一化后的非负深度。</div>
+      <div class="symbol"><b>log(d+1)</b><br>自然对数；加一避免对零取对数。</div>
+      <div class="symbol"><b>α</b><br>缩放系数，调节近处与远处占用范围。</div>
+      <div class="symbol"><b>clip</b><br>低于零变零，高于一变一。</div>
+      <div class="symbol"><b>d′</b><br>最终可复制为 RGB 的值。</div>
+      <div class="symbol"><b>[0,1]</b><br>包括两个端点的数值区间。</div>
+    </div>
+    <figure>
+      <figcaption class="figcap"><span>Fig 08 · 代入一组数字</span><span class="n">α=.5 仅为教学示例，论文未公布取值</span></figcaption>
+      <div class="tablewrap"><table class="calc">
+        <thead><tr><th>相对深度 d</th><th>log(d+1)</th><th>乘 α=.5</th><th>截断后 d′</th></tr></thead>
+        <tbody><tr><td>0.5</td><td>0.405</td><td>0.203</td><td>0.203</td></tr><tr><td>1</td><td>0.693</td><td>0.347</td><td>0.347</td></tr><tr><td>2</td><td>1.099</td><td>0.549</td><td>0.549</td></tr><tr><td>10</td><td>2.398</td><td>1.199</td><td>1.000</td></tr></tbody>
+      </table></div>
+    </figure>
+
+    <h3>完整训练配置</h3>
+    <div class="config">
+      <div class="cfg"><b>BACKBONE</b><strong>1.3B / 14B</strong><p>WAN 2.1 两个规模。</p></div>
+      <div class="cfg"><b>INPUT</b><strong>81 帧</strong><p>480×832，24 FPS。</p></div>
+      <div class="cfg"><b>OPTIMIZER</b><strong>Adam</strong><p>学习率 5×10⁻⁵。</p></div>
+      <div class="cfg"><b>SCHEDULE</b><strong>15k steps</strong><p>前 250 步线性 warmup<a class="jr" href="#g-09">9</a>。</p></div>
+      <div class="cfg"><b>BATCH</b><strong>64</strong><p>256 张 v6e TPU。</p></div>
+      <div class="cfg"><b>VAE SCALE</b><strong>4× / 8×</strong><p>时间压 4 倍，宽高各压 8 倍。</p></div>
+      <div class="cfg"><b>CLIPPING</b><strong>缩放梯度</strong><p>超过较低阈值就按比例缩小。</p></div>
+      <div class="cfg"><b>DROPPING</b><strong>丢弃批次</strong><p>超过更高阈值就不更新。</p></div>
+    </div>
+    <p>梯度范数<a class="jr" href="#g-10">10</a>衡量整批更新有多大。梯度裁剪保留方向，只把异常大的更新缩短；梯度丢弃则认为这个批次已严重异常，整批跳过。作者称两者对稳定训练至关重要，但没有公布两个阈值。</p>
+  </section>
+
+  <section id="results">
+    <span class="secno">§ 07 · RESULTS</span>
+    <h2>实验最有价值的不是“全都赢”，而是三组对照</h2>
+    <h3>对照一：一次前向减少了迭代，但还不等于实时</h3>
+    <figure>
+      <figcaption class="figcap"><span>Table 01 · 81 帧、480×832、单张 v6e TPU</span><span class="n">FPS 越高越快</span></figcaption>
+      <div class="tablewrap"><table class="metrics">
+        <thead><tr><th>WAN 规模</th><th>总耗时</th><th>整段视频 FPS</th><th>DiT 本身</th><th>显存</th></tr></thead>
+        <tbody><tr><td>1.3B</td><td>5.92 秒</td><td>13.6</td><td>0.96 秒</td><td>15.3 GB</td></tr><tr><td>14B</td><td>10.03 秒</td><td>8.0</td><td>5.11 秒</td><td>42.8 GB</td></tr></tbody>
+      </table></div>
+    </figure>
+    <p>小模型的 DiT 只占 <code>0.96/5.92≈16%</code> 总时间，VAE 和文本编码等外围成本反而更显眼。论文还报告文本编码器约 10 GB、VAE 约 0.25 GB，可卸载到系统内存，但会牺牲速度。</p>
+
+    <h3>对照二：同一深度数据下，生成预训练明显更强</h3>
+    <p><code>AbsRel</code> 是平均绝对相对深度误差，越低越好；<code>δ1</code> 是预测与真值的比值落在 <code>1/1.25</code> 到 <code>1.25</code> 内的像素比例，越高越好。</p>
+    <div class="formula wide" data-expr="\operatorname{AbsRel}=\frac{1}{N}\sum_{i=1}^{N}\frac{|\hat d_i-d_i|}{d_i}"></div>
+    <div class="symbols">
+      <div class="symbol"><b>N</b><br>参与评估的有效像素数。</div>
+      <div class="symbol"><b>dᵢ</b><br>第 <code>i</code> 个像素的真实深度。</div>
+      <div class="symbol"><b>d̂ᵢ</b><br>模型预测深度。</div>
+    </div>
+    <figure>
+      <figcaption class="figcap"><span>Table 02 · 相同 7.5K 视频 / 0.9M 帧微调</span><span class="n">平均三套深度基准</span></figcaption>
+      <div class="tablewrap"><table class="metrics">
+        <thead><tr><th>预训练骨干</th><th>参数量</th><th>平均 AbsRel ↓</th><th>平均 δ1 ↑</th></tr></thead>
+        <tbody><tr><td>V-JEPA H</td><td>0.6B</td><td>0.281</td><td>52.2</td></tr><tr><td>VideoMAE V2 H</td><td>0.6B</td><td>0.175</td><td>62.0</td></tr><tr><td>VideoMAE V2 G</td><td>1B</td><td>0.154</td><td>66.9</td></tr><tr><td>WAN 2.1 S</td><td>1.3B</td><td>0.122</td><td>85.8</td></tr><tr class="win"><td>WAN 2.1 L</td><td>14B</td><td>0.093</td><td>90.7</td></tr></tbody>
+      </table></div>
+    </figure>
+    <p>这组对照控制了后训练数据，最直接支持“视频生成预训练提供了强视觉先验”。但模型参数量并未完全匹配，14B 对 0.6B / 1B 的优势不能全归因于目标函数。</p>
+
+    <h3>对照三：专家模型合并成通才后，有得也有失</h3>
+    <p>Specialist 和 Generalist<a class="jr" href="#g-11">11</a>的区别是：前者每个任务单独训练，后者把多项任务混进同一套权重。</p>
+    <figure>
+      <figcaption class="figcap"><span>Table 03 · 同为 WAN 14B，单任务与联合训练</span><span class="n">绿色改善 · 橙色退化</span></figcaption>
+      <div class="tablewrap"><table class="metrics">
+        <thead><tr><th>指标</th><th>单任务 Specialist</th><th>联合 Generalist</th><th>变化</th></tr></thead>
+        <tbody>
+          <tr><td>Sintel 法线 mAE ↓</td><td>29.7</td><td>29.3</td><td class="up">改善</td></tr>
+          <tr><td>Hi4D 法线 mAE ↓</td><td>10.99</td><td>11.47</td><td class="down">退化</td></tr>
+          <tr><td>Sintel 深度 AbsRel ↓</td><td>0.130</td><td>0.156</td><td class="down">退化</td></tr>
+          <tr><td>KITTI 深度 AbsRel ↓</td><td>0.048</td><td>0.048</td><td>持平</td></tr>
+          <tr><td>VideoMatte MSE ↓</td><td>0.0027</td><td>0.0010</td><td class="up">改善</td></tr>
+          <tr><td>Ref-DAVIS J&amp;F ↑</td><td>76.4</td><td>75.8</td><td class="down">小幅退化</td></tr>
+          <tr><td>EMDB 3D 关键点 MPJPE ↓</td><td>71.8</td><td>未得到结果</td><td class="down">严重退化</td></tr>
+        </tbody>
+      </table></div>
+    </figure>
+    <p><code>mAE</code> 是平均法线夹角误差；<code>MSE</code> 是均方误差；<code>J&amp;F</code> 综合掩码区域重叠和轮廓准确率；<code>MPJPE</code> 是关节三维位置平均误差。表中箭头已经说明每项的好坏方向。</p>
+  </section>
+
+  <section id="limits">
+    <span class="secno">§ 08 · EVIDENCE BOUNDARY</span>
+    <h2>论文真正证明到哪一层</h2>
+    <div class="meter">
+      <div class="evidence"><b>强证据：可量化</b><p>同数据深度对照、随机初始化几乎不收敛、迁移更多预训练层性能继续提高，说明 WAN 预训练确实有价值。</p></div>
+      <div class="evidence"><b>中等证据：跨任务</b><p>一个框架覆盖多种密集任务，并在多个真实基准上竞争；但通才不是每项都优于专家。</p></div>
+      <div class="evidence"><b>弱证据：定性涌现</b><p>单人物合成训练后能处理多人和 OOD 类别<a class="jr" href="#g-12">12</a>，例如动物和拟人角色；证据主要来自示例图，尚无完整类别泛化统计。</p></div>
+    </div>
+    <h3>读结论时必须带上的限制</h3>
+    <div class="limits">
+      <div class="limit"><b>“通用”仍有范围</b><p>覆盖的是选定视觉感知任务，不等于任意视觉推理、规划或行动。</p></div>
+      <div class="limit"><b>稀疏任务不统一</b><p>新增 token 偏离预训练接口，3D 关键点联合训练失败。</p></div>
+      <div class="limit"><b>一次前向仍不便宜</b><p>14B 处理 81 帧约 10 秒，只是省掉迭代采样。</p></div>
+      <div class="limit"><b>合成数据仍偏人体</b><p>800 个人体资产和 200 段动作不能代表开放世界全部外观与运动。</p></div>
+      <div class="limit"><b>关键超参未公开</b><p><code>α</code>、梯度阈值、任务混合比例和 L2 reduction 都缺失。</p></div>
+      <div class="limit"><b>代码尚未放出</b><p>截至 2026-07-26，项目页仍写 Code TBA，复现边界要保留。</p></div>
+    </div>
+    <div class="note goodnote"><span class="mini">我的结论</span>GenCeption 最可信的贡献不是已经造出“万能视觉大脑”，而是给出一条可操作路线：生成预训练负责大规模学世界，后训练尽量沿用原输出接口，把视觉任务改写为生成模型熟悉的连续目标。它的负结果又提醒我们，统一的关键不是任务越多越好，而是新任务能否用预训练模型熟悉的语言表达。</div>
+  </section>
+
+  <section class="gloss" id="glossary">
+    <span class="secno">§ 09 · REACHABLE GLOSSARY</span>
+    <h2>点得到的术语解释</h2>
+    <ol>
+      <li id="g-01"><span class="termname">DiT</span>：Diffusion Transformer，在 VAE latent 上根据文本和时间条件预测噪声、速度或干净目标。</li>
+      <li id="g-02"><span class="termname">latent</span>：VAE 把原视频压缩后得到的连续张量；空间更小、时间也更短。</li>
+      <li id="g-03"><span class="termname">Rectified Flow</span>：在数据与噪声之间选近似直线路径，并学习路径速度的生成方法。</li>
+      <li id="g-04"><span class="termname">VAE decoder</span>：把压缩 latent 还原成可见三通道视频的解码器。</li>
+      <li id="g-05"><span class="termname">Dense task</span>：每个像素都有答案的任务，例如深度、法线、掩码。</li>
+      <li id="g-06"><span class="termname">Sparse task</span>：答案是有限个结构化数值的任务，例如 2D / 3D 关节坐标。</li>
+      <li id="g-07"><span class="termname">RoPE</span>：把位置写进 Q/K 旋转角度的编码；3D RoPE 同时编码时间、高度和宽度。</li>
+      <li id="g-08"><span class="termname">Raymap</span>：为每像素保存相机射线起点和方向的几何场。</li>
+      <li id="g-09"><span class="termname">Warmup</span>：训练刚开始先把学习率从小值线性升到目标值，减少初期不稳定。</li>
+      <li id="g-10"><span class="termname">Gradient norm</span>：把所有梯度元素平方求和再开根号得到的整体长度，用来检测更新是否异常大。</li>
+      <li id="g-11"><span class="termname">Specialist / Generalist</span>：前者每个任务单独训练一套模型；后者把多个任务混在一起训练同一套权重。</li>
+      <li id="g-12"><span class="termname">OOD</span>：Out-of-Distribution，训练分布之外的对象或场景，例如只见过人却测试动物。</li>
+    </ol>
+    <div class="sourcebox">
+      <a href="https://arxiv.org/pdf/2607.09024">论文 PDF ↗</a>
+      <a href="https://arxiv.org/html/2607.09024v1">论文 HTML ↗</a>
+      <a href="https://genception.github.io/">项目页 ↗</a>
+    </div>
+  </section>
+
+  <footer class="colophon"><span>Written from arXiv v1 · verified 2026-07-26</span><span>Code status: TBA · CC BY 4.0</span></footer>
+</main>
+<script>
+document.addEventListener("DOMContentLoaded",function(){
+  if(!window.katex)return;
+  document.querySelectorAll("[data-expr]").forEach(function(el){
+    try{katex.render(el.getAttribute("data-expr"),el,{throwOnError:false,displayMode:true})}catch(e){}
+  });
+});
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  var items={};
+  document.querySelectorAll('.gloss ol li[id^="g-"]').forEach(function(li){items[li.id]=li.innerHTML;});
+  if(!Object.keys(items).length)return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!items[id])return;
+      e.preventDefault();
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+items[id];
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+<!-- mathify:start -->
+<script>
+(function(){
+  function run(){
+    if(!window.katex) return;
+    var GREEK={'θ':'\\theta','σ':'\\sigma','α':'\\alpha','μ':'\\mu','ε':'\\epsilon',
+      'φ':'\\phi','ψ':'\\psi','γ':'\\gamma','λ':'\\lambda','ω':'\\omega','τ':'\\tau',
+      'β':'\\beta','δ':'\\delta','ρ':'\\rho','π':'\\pi','η':'\\eta','ζ':'\\zeta',
+      'Ω':'\\Omega','Σ':'\\sum','Δ':'\\Delta','Φ':'\\Phi','Ψ':'\\Psi','Θ':'\\Theta',
+      'ℓ':'\\ell','∇':'\\nabla','∈':'\\in','≈':'\\approx','≠':'\\neq','≤':'\\le',
+      '≥':'\\ge','×':'\\times','·':'\\cdot','−':'-','∼':'\\sim','→':'\\to',
+      '⟺':'\\iff','⇒':'\\Rightarrow','‖':'\\|','∫':'\\int','∂':'\\partial',
+      '√':'\\sqrt','∞':'\\infty','⊕':'\\oplus','∝':'\\propto'};
+    var SUB={'₀':'0','₁':'1','₂':'2','₃':'3','₄':'4','₅':'5','₆':'6','₇':'7','₈':'8','₉':'9',
+      'ₜ':'t','ₓ':'x','ᵢ':'i','ⱼ':'j','ₙ':'n','ₖ':'k','ₐ':'a','ₑ':'e','ₒ':'o','ₚ':'p','ₛ':'s'};
+    var SUP={'⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','ⁿ':'n','ᵀ':'T'};
+    var WORDS=['fake','real','base','cfg','cond','uncond','data','reg','pseudo','denoise',
+      'train','infer','new','old','out','in','tot','max','min','avg','ref','KL','GAN','DMD',
+      'DM','MSE','LPIPS','FID','CE','sg','stopgrad'];
+
+    function toTex(s){
+      var t=s;
+      // unicode 上下标 → LaTeX
+      t=t.replace(/[\u2080-\u2089\u2093\u209c\u1d62\u2c7c\u2099\u2096\u2090\u2091\u2092\u209a\u209b]/g,
+        function(c){ return SUB[c]!==undefined ? '_{'+SUB[c]+'}' : c; });
+      t=t.replace(/[\u00b2\u00b3\u00b9\u2070\u2074\u2075\u207f\u1d40]/g,
+        function(c){ return SUP[c]!==undefined ? '^{'+SUP[c]+'}' : c; });
+      // 希腊字母与运算符
+      t=t.replace(/[\u0370-\u03ff\u2100-\u22ff\u2190-\u21ff\u2212]/g,
+        function(c){ return GREEK[c]!==undefined ? GREEK[c]+' ' : c; });
+      // 多字母下标/上标 → \mathrm{}。上标这条不能漏：LaTeX 里 ^adv 是
+      // "^a 后面跟正文 dv"，语法完全合法，KaTeX 不报错却渲染成 L^a dv。
+      t=t.replace(/([_^])\{?([A-Za-z]{2,})\}?/g, function(m,op,w){
+        return WORDS.indexOf(w)>=0 || w.length>1 ? op+'{\\mathrm{'+w+'}}' : m; });
+      // 希腊字母后直接跟单词(θbase) → 变下标
+      t=t.replace(/(\\[a-zA-Z]+)\s*([a-z]{2,})\b/g, function(m,g,w){
+        return WORDS.indexOf(w)>=0 ? g+'_{\\mathrm{'+w+'}}' : m; });
+      // 常见函数名
+      t=t.replace(/\b(exp|log|ln|max|min|sin|cos|det|dim)\b/g,'\\$1 ');
+      return t;
+    }
+
+    function looksLikeMath(s){
+      if(!s || s.length>44) return false;
+      if(/[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/.test(s)) return false; // 中日韩
+      if(/[\[\]"'`]/.test(s)) return false;                                     // 索引/字符串=代码
+      if(/^[A-Z][A-Z0-9_]{3,}$/.test(s)) return false;                            // CONST_NAME
+      if(/\s/.test(s) && /^[A-Za-z\s‖|,]+$/.test(s)) return false;              // "fake ‖ real" 词组
+      if(/^(https?:|\/|\.\/)/.test(s)) return false;                            // 路径/URL
+      if(/^<.*>$/.test(s)) return false;                                          // <eos> / <|zh|> 这类 token，不是数学
+      // snake_case 且首段是多字母 = 代码变量名(no_grad / loss_dm / cross_entropy)，
+      // 而数学下标的首段通常只有一个字母(p_fake / w_c / d_1)，予以保留
+      if(/^[a-z][a-z0-9]+(_[a-z0-9]+)+$/.test(s)) return false;
+      return true;
+    }
+
+    var sel='.var code, .symbol code, .vars code, .symbol-grid code, .sym code, .concept-body code';
+    document.querySelectorAll(sel).forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;               // 代码块原样保留
+      var raw=(el.textContent||'').trim();
+      if(!looksLikeMath(raw)) return;
+      // 已经是手写 LaTeX（含反斜杠命令）的，原样送 KaTeX，绝不让 toTex 再改写一遍——
+      // 否则同一条式子在「符号格子」和「.formula 公式」两条渲染路径上会长得不一样。
+      // toTex 那层启发式只服务于存量页里随手写的松散记号(θbase / p_fake / L_G^adv)。
+      var tex = raw.indexOf('\\') >= 0 ? raw : toTex(raw);
+      try{
+        var html=katex.renderToString(tex,{throwOnError:true,displayMode:false});
+        el.innerHTML=html;
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){ /* 转换不了就保持原来的 code 样子 */ }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里「开头那个 code 是标签、要单独成行」的样式(.symbol code{display:block})
+   会连说明文字里的行内 code 一起顶成块级，读起来像莫名其妙的断行。
+   只有第一个 code 该是块级，后面的一律恢复行内。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+</style>
+<!-- mathify:end -->
+</body>
+</html>
