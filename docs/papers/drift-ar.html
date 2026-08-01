@@ -96,11 +96,13 @@ figcaption b{color:var(--amber)}
 .schedule{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.phase{padding:18px;border:1px solid var(--rule);background:var(--card)}.phase b{display:block;color:var(--amber);font:900 25px/1.2 Georgia,serif}.phase strong{display:block;margin:8px 0}.phase .bar{height:12px;margin-top:14px;background:var(--green-soft)}.phase .bar i{display:block;height:100%;background:var(--blue)}.phase.start .bar i{width:95%}.phase.mid .bar i{width:47.5%}.phase.end .bar i{width:0}
 .schedule-key{display:flex;justify-content:center;gap:20px;margin-top:13px;color:var(--muted);font:700 11px/1.4 "JetBrains Mono",monospace}.schedule-key i{display:inline-block;width:14px;height:8px;margin-right:5px}.schedule-key .ar{background:var(--blue)}.schedule-key .drift{background:var(--green-soft)}
 .keep-flow{display:grid;grid-template-columns:1fr 42px 1fr 42px 1fr 42px 1fr;gap:7px;align-items:stretch}.keep-flow .pipe-card{display:flex;flex-direction:column;justify-content:center}.keep-flow .final{background:var(--green-soft);border-color:var(--green)}
-.recipe{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.recipe div{padding:17px;border:1px solid var(--rule);background:var(--card)}.recipe b{display:block;color:var(--blue);font:800 11px/1.5 "JetBrains Mono",monospace;letter-spacing:1px}.recipe span{display:block;margin-top:8px}
+.recipe{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.recipe div{padding:17px;border:1px solid var(--rule);background:var(--card)}.recipe b{display:block;color:var(--blue);font:800 11px/1.5 "JetBrains Mono",monospace;letter-spacing:1px}/* 只作用于卡片自己那个 span：KaTeX 会在里面生成几十个嵌套 <span>，
+   后代选择器会把它们全变成块级，公式就一个原子一行地竖着排。 */
+.recipe>div>span{display:block;margin-top:8px}
 .table-wrap{overflow-x:auto}.table-wrap table{width:100%;border-collapse:collapse;min-width:760px}.table-wrap th,.table-wrap td{padding:11px 12px;border-bottom:1px solid var(--rule);text-align:right;font:600 12px/1.45 "JetBrains Mono",monospace}.table-wrap th:first-child,.table-wrap td:first-child{text-align:left}.table-wrap .win td{background:var(--green-soft);font-weight:800}.table-wrap .caveat td{background:var(--amber-soft)}
 .ab-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.ab-card{padding:17px;border:1px solid var(--rule);background:var(--card)}.ab-card.full{background:var(--green-soft);border-color:var(--green)}.ab-card b{display:block;color:var(--rust);font:900 23px/1.2 Georgia,serif}.ab-card.full b{color:var(--green)}
 .limits{display:grid;grid-template-columns:1fr 1fr;gap:9px}.limits div{padding:17px;border:1px solid var(--rule);background:var(--card)}.limits b{display:block;color:var(--rust);font:800 11px/1.5 "JetBrains Mono",monospace;letter-spacing:1px}.limits p{margin:7px 0 0;font-size:15px}
-.gloss{margin-top:82px;padding-top:32px;border-top:3px double var(--ink)}.gloss h2{margin:0 0 20px;font-size:30px}.gloss ol{padding:0;margin:0;list-style:none;counter-reset:g}.gloss li{position:relative;padding:14px 10px 14px 54px;border-bottom:1px dashed var(--rule);font-size:16px}.gloss li:before{content:counter(g,decimal-leading-zero);counter-increment:g;position:absolute;left:8px;top:15px;color:var(--amber);font:800 11px/1.5 "JetBrains Mono",monospace}.gloss li:target{background:var(--amber-soft)}.term{font-weight:800;color:var(--ink)}
+.gloss{margin-top:82px;padding-top:32px;border-top:3px double var(--ink)}.gloss h2{display:block;margin:0 0 20px;font-size:30px}.gloss ol{padding:0;margin:0;list-style:none;counter-reset:g}.gloss li{position:relative;padding:14px 10px 14px 54px;border-bottom:1px dashed var(--rule);font-size:16px}.gloss li:before{content:counter(g,decimal-leading-zero);counter-increment:g;position:absolute;left:8px;top:15px;color:var(--amber);font:800 11px/1.5 "JetBrains Mono",monospace}.gloss li:target{background:var(--amber-soft)}.term{font-weight:800;color:var(--ink)}
 .sources{margin-top:54px;padding:22px;border:1px solid var(--rule);background:var(--card)}.sources h3{margin-top:0}.sources li{margin:7px 0}
 .colophon{display:flex;justify-content:space-between;gap:20px;margin-top:70px;padding-top:18px;border-top:1px solid var(--rule);color:var(--muted);font:600 11px/1.5 "JetBrains Mono",monospace;letter-spacing:1px}
 @media(max-width:900px){
@@ -741,6 +743,11 @@ a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
 </script>
 <style>
 code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
 .var code.mathified,.symbol code.mathified{color:#7e2e20}
 /* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
    块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
