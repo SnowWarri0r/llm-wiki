@@ -527,11 +527,8 @@ loss          = 1/2 · MSE(gen_data, <span class="hi">stopgrad(pseudo_target)</s
     <p>把中间那截命名一下会清楚很多：记 <code class="m">u=gen-T(gen)</code>，那么 <code class="m">L=\tfrac12u^2</code> 是外层，<code class="m">u</code> 是内层。链式法则说的是<strong>外层对内层求导，再乘上内层对自变量求导</strong>——两层各求各的，然后相乘：</p>
     <div class="formula wide" data-expr="\begin{aligned}\frac{\partial L}{\partial u}&=u=gen-T&&\text{外层 }\tfrac12u^2\text{ 求导得 }u\\[3pt]\frac{\partial u}{\partial gen}&=\frac{\partial\,gen}{\partial gen}-\frac{\partial T}{\partial gen}=1-\frac{\partial T}{\partial gen}&&\text{内层：减号两边各求各的}\\[3pt]\frac{\partial L}{\partial gen}&=\frac{\partial L}{\partial u}\cdot\frac{\partial u}{\partial gen}=(gen-T)\left(1-\frac{\partial T}{\partial gen}\right)&&\text{两层相乘}\end{aligned}"></div>
     <p>这条才是<strong>通用</strong>写法，前面那个 <code class="m">\partial L/\partial gen=gen-T</code> 是它的特例：stopgrad 让 <code class="m">\partial T/\partial gen=0</code>，右边括号变成 1，乘上去等于没乘。反过来不钉住时，<code class="m">T=gen-vsd</code> 里的 <code class="m">vsd</code> 是拿不带梯度的张量算出来的、对求导是常数，于是 <code class="m">\partial T/\partial gen=1</code>，括号变成 0：</p>
-    <pre>不加 stopgrad：dT/dgen = 1
-
- dL/dgen = (gen − T) × (1 − dT/dgen)
-         = vsd × (1 − 1)
-         = <b>0</b>          ← 训练一动不动，而且不会报错，静默失效</pre>
+    <div class="formula wide" data-expr="\begin{aligned}\frac{\partial L}{\partial gen}&=(gen-T)\left(1-\frac{\partial T}{\partial gen}\right)&&\text{上面那条通用式}\\[3pt]&=vsd\times(1-1)&&\text{不钉住时 }\partial T/\partial gen=1\\[3pt]&=0&&\text{梯度整块清零}\end{aligned}"></div>
+    <p>最难受的是<strong>它不会报错</strong>：loss 照样算得出数、<code>backward()</code> 照样跑完，只是参数一动不动——静默失效。</p>
     <p>这个 0 不用微积分也看得出来——不加 stopgrad 时，<code class="m">L</code> 根本就是个跟 <code>gen</code> 无关的常数函数：</p>
     <pre>T(gen) = gen − vsd = gen + 1.0        （沿用下面那组数，vsd = −1.0）
 
