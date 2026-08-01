@@ -358,12 +358,21 @@ N=10,000、d=128 时：路线 A 的中间表 1 亿格，路线 B 的 16,384 格�
     <p>这条上界不是经验观察，是外积那一步直接决定的：<strong>每个 token 写进去的那张表都只有秩 1</strong>（每一行都是同一个向量 <code class="m">\beta_nk_n</code> 的倍数），而秩相加不会超过各自之和，所以 <code class="m">\operatorname{rank}(S)\le\min(N,d_h)</code>。<code class="m">N</code> 一旦超过 <code class="m">d_h</code>，后来的 token 就只能在已有方向里重新配比：</p>
     <pre>给上面那个 S 再写进第三个 token：k₃=[1, 1]，v₃=[1, 1]，β₃=1
 
-   它的表 = [1, 1]      叠加后 S = [3, 1]
-            [1, 1]                [1, 3]
+① 先按外积规则算它自己的表（跟前面两个 token 同一套算法）
+     第 1 行 = v₃ 的第 1 个数 × β₃k₃ = 1 × [1, 1] = [1, 1]
+     第 2 行 = v₃ 的第 2 个数 × β₃k₃ = 1 × [1, 1] = [1, 1]
 
-形状还是 2×2，秩还是 2 —— 第三个 token 没能新开一个方向，
-只是把原来那两个方向重新混了一次。真实模型里这个 2 是 128，
-而 N 是十万级：绝大多数 token 都只是在这 128 个方向上「挤」。</pre>
+② 逐格加到原来的 S 上
+     [2, 0]     [1, 1]     [2+1, 0+1]     [3, 1]
+     [0, 2]  +  [1, 1]  =  [0+1, 2+1]  =  [1, 3]
+
+③ 看秩：两行 [3, 1] 和 [1, 3] 互相不成倍数 → 秩 = 2
+   （行列式 3×3 − 1×1 = 8 ≠ 0，也说明满秩）
+
+形状还是 2×2 —— <b>秩根本不可能超过 2，因为矩阵只有 2 行</b>。
+第三个 token 自己那张表是秩 1 的，加进来也只能被吸收进已有的
+两个方向里，没能新开一个。真实模型里这个 2 是 d_h=128，而 N 是
+十万级：绝大多数 token 都只是在这 128 个方向上「挤」。</pre>
   </section>
 
   <section id="hybrid">
@@ -502,19 +511,9 @@ N=10,000、d=128 时：路线 A 的中间表 1 亿格，路线 B 的 16,384 格�
     </div>
     <p><code class="m">\operatorname{logit}</code> 不是什么新东西，就是把概率换成<strong>赔率</strong>再取对数：<code class="m">\operatorname{logit}(t)=\log\frac{t}{1-t}</code>。<code class="m">t=.5</code> 时赔率 <code class="m">.5/.5=1</code>，取对数是 0，正好落在中间；<code class="m">t</code> 越靠 1，赔率越大。<strong>在 logit 上加 <code class="m">\log s</code>，等价于把赔率乘 <code class="m">s</code></strong>——这就是 shift 的全部含义。</p>
     <div class="formula" data-expr="\operatorname{logit}(t_s)=\operatorname{logit}(t)+\log s\qquad\Longleftrightarrow\qquad t_s=\frac{st}{1+(s-1)t}"></div>
-    <p>右边那个闭式不是另一条规则，是左边解回概率的结果。六步，每步只做一件事：</p>
-    <pre>① 按定义展开    ln[t_s/(1−t_s)] = ln[t/(1−t)] + ln s
-② 右边合成一项  ln[t_s/(1−t_s)] = ln[ s·t/(1−t) ]      ← ln a + ln b = ln(ab)
-③ 两边去掉 ln       t_s/(1−t_s) = s·t/(1−t)            ← 赔率乘了 s
-④ 交叉相乘        t_s(1−t) = s·t(1−t_s)
-⑤ 乘开           t_s − t_s·t = s·t − s·t·t_s
-⑥ 把带 t_s 的项挪到一边、提出 t_s
-                 t_s(1 − t + s·t) = s·t
-                 t_s = s·t / (1 + (s−1)t)     ← 1 − t + s·t 就是 1 + (s−1)t
-
-代进 t=.5, s=3 对账：
-  走赔率：赔率 1 × 3 = 3  →  t_s = 3/(1+3) = <b>.75</b>
-  走闭式：3(.5)/[1+2(.5)] = 1.5/2 = <b>.75</b>   ✓ 一致</pre>
+    <p>右边那个闭式不是另一条规则，是左边解回概率的结果。八步，每步只做一件事：</p>
+    <div class="formula wide" data-expr="\begin{aligned}\ln\frac{t_s}{1-t_s}&=\ln\frac{t}{1-t}+\ln s&&\text{① 按 logit 的定义展开}\\[3pt]&=\ln\frac{st}{1-t}&&\text{② 合成一项：}\ln a+\ln b=\ln(ab)\\[3pt]\frac{t_s}{1-t_s}&=\frac{st}{1-t}&&\text{③ 两边去掉 }\ln\text{：赔率确实乘了 }s\\[3pt]t_s(1-t)&=st\,(1-t_s)&&\text{④ 交叉相乘，去掉分母}\\[3pt]t_s-t_s\,t&=st-st\,t_s&&\text{⑤ 两边各自乘开}\\[3pt]t_s-t_s\,t+st\,t_s&=st&&\text{⑥ 带 }t_s\text{ 的项全挪到左边}\\[3pt]t_s\left(1-t+st\right)&=st&&\text{⑦ 提出 }t_s\\[3pt]t_s&=\frac{st}{1+(s-1)t}&&\text{⑧ }1-t+st=1+(s-1)t\end{aligned}"></div>
+    <p>代进 <code class="m">t=.5</code>、<code class="m">s=3</code>，两条路对账：走赔率是 <code class="m">1\times3=3</code>，于是 <code class="m">t_s=3/(1+3)=.75</code>；走闭式是 <code class="m">3(.5)/[1+2(.5)]=1.5/2=.75</code>。一致。</p>
     <figure>
       <figcaption class="figcap"><span class="n">FIG 06 · 同一个 .5 被推向两侧</span><span>概率倾斜，不是删掉其他时间步</span></figcaption>
       <div class="axis">
