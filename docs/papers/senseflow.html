@@ -211,27 +211,27 @@ td.num{text-align:right;font-family:"DM Mono",monospace;font-weight:500}.best td
 </div>
 <p class="formula-purpose">这条式子回答：学生在自己会生成的位置上，和老师分布差多少？</p>
 <div class="formula math" data-display="true">\min_{p_g}D_{\mathrm{KL}}(p_g\Vert p_r)=\mathbb E_{t,X_t\sim p_g}\left[\log p_g(X_t)-\log p_r(X_t)\right]</div>
-<p>问题出在 <code>log p_g</code> 这一项：学生的密度<strong>根本算不出来</strong>。学生是个生成器，你能从它采样，但拿不到它在某点的概率值。DMD 的办法是<strong>找个替身</strong>——训练一套 fake 网络 <code>p_f</code> 专门去追踪 <code>p_g</code>，然后把上式里算不动的 <code>log p_g</code> 换成能算的 <code>log p_f</code>：</p>
+<p>问题出在 <code class="m">\log p_g</code> 这一项：学生的密度<strong>根本算不出来</strong>。学生是个生成器，你能从它采样，但拿不到它在某点的概率值。DMD 的办法是<strong>找个替身</strong>——训练一套 fake 网络 <code>p_f</code> 专门去追踪 <code>p_g</code>，然后把上式里算不动的 <code class="m">\log p_g</code> 换成能算的 <code class="m">\log p_f</code>：</p>
 <div class="symbols" style="grid-template-columns:repeat(3,1fr)">
   <div class="symbol"><code>\theta</code>生成器参数，改变它会移动学生分布。</div>
   <div class="symbol"><code>\phi</code>fake 网络参数，负责让 <code>p_f</code> 追上 <code>p_g</code>。</div>
   <div class="symbol"><code>V(\theta,\phi)</code>这场博弈的<strong>价值函数</strong>：一个标量，两方朝相反方向拉它。</div>
 </div>
 <div class="formula math" data-display="true">\min_\theta\max_\phi V(\theta,\phi)=\mathbb E_{t,X_t\sim p_g}\left[\log p_f(X_t)-\log p_r(X_t)\right]</div>
-<p class="formula-purpose">这条式子跟上一条只差一个字母，但读法完全变了，逐处对一遍：</p>
-<div class="calc">
-上一条  min<sub>p_g</sub>  E[ log p_g − log p_r ]&nbsp;&nbsp;<span class="hi">← 对着分布本身求最小，理想写法</span><br>
-这一条  min<sub>θ</sub> max<sub>φ</sub>  E[ log p_f − log p_r ]&nbsp;&nbsp;<span class="hi">← p_g 换成 p_f，min 落到真能调的参数 θ 上</span><br><br>
-换掉的那一项就是全部代价：<span class="ans">p_f 追得准不准，直接决定这条式子还算不算数</span>
-</div>
+<p class="formula-purpose">这条式子跟上一条只差一个字母，但读法完全变了，并排看：</p>
+<div class="formula math" data-display="true">\begin{aligned}
+\text{上一条}\quad &\min_{p_g}\ \mathbb E\left[\log p_g-\log p_r\right]\\
+\text{这一条}\quad &\min_\theta\max_\phi\ \mathbb E\left[\log p_f-\log p_r\right]
+\end{aligned}</div>
+<p>上一条对着<strong>分布本身</strong>求最小，是理想写法——但 <code>p_g</code> 算不出来，这个 min 没法执行。下一条做了两件事：把算不动的 <code class="m">\log p_g</code> 换成能算的 <code class="m">\log p_f</code>，并把 min 从分布落到<strong>真正能调的参数 <code class="m">\theta</code></strong> 上。<strong>换掉的那一项就是全部代价</strong>：<code>p_f</code> 追得准不准，直接决定这条式子还算不算数。</p>
 <h3>V 是什么：不是损失，是一场博弈的"分数"</h3>
-<p>平时见到的 loss 是<strong>所有人一起往小里压</strong>。<code>V</code> 不是——它是<strong>价值函数</strong>（value function），博弈论里两方共用的那一个标量分数：</p>
+<p>平时见到的 loss 是<strong>所有人一起往小里压</strong>。<code class="m">V</code> 不是——它是<strong>价值函数</strong>（value function），博弈论里两方共用的那一个标量分数：</p>
 <ul>
-  <li><strong>生成器（调 <code>θ</code>）想让它小。</strong>小意味着学生分布离老师近。</li>
-  <li><strong>fake 网络（调 <code>φ</code>）想让它大。</strong>这一条最反直觉——下面解释。</li>
+  <li><strong>生成器（调 <code class="m">\theta</code>）想让它小。</strong>小意味着学生分布离老师近。</li>
+  <li><strong>fake 网络（调 <code class="m">\phi</code>）想让它大。</strong>这一条最反直觉——下面解释。</li>
 </ul>
-<p>为什么 fake 要<strong>最大化</strong>？因为 <code>V</code> 里只有 <code>log p_f</code> 这一项归它管，而 <code>p_f</code> 是概率密度：把 <code>log p_f(X_t)</code> 在<strong>学生采样点上</strong>顶高，就是让 <code>p_f</code> 把概率质量堆到学生真正会去的地方——这正是"追上学生"的数学写法。所以"最大化"不是跟生成器作对，是在<strong>把自己校准到学生身上</strong>。</p>
-<p>这也是 <code>min_θ max_φ</code> 里外两层的分工：<strong>内层先把尺子校准，外层才用这把尺子去挪学生。</strong>尺子没校准就挪，挪的方向就是错的——那正是 <a href="#failure">§03</a> 要展开的失稳点。到那里会把 <code>V</code> 拆成 <code>KL(目标) − KL(追踪误差)</code> 两块，这个"分数"到底在数什么就完全落地了。</p>
+<p>为什么 fake 要<strong>最大化</strong>？因为 <code class="m">V</code> 里只有 <code class="m">\log p_f</code> 这一项归它管，而 <code>p_f</code> 是概率密度：把 <code class="m">\log p_f(X_t)</code> 在<strong>学生采样点上</strong>顶高，就是让 <code>p_f</code> 把概率质量堆到学生真正会去的地方——这正是"追上学生"的数学写法。所以"最大化"不是跟生成器作对，是在<strong>把自己校准到学生身上</strong>。</p>
+<p>这也是 <code class="m">\min_\theta\ \max_\phi</code> 里外两层的分工：<strong>内层先把尺子校准，外层才用这把尺子去挪学生。</strong>尺子没校准就挪，挪的方向就是错的——那正是 <a href="#failure">§03</a> 要展开的失稳点。到那里会把 <code class="m">V</code> 拆成 <code>KL(目标) − KL(追踪误差)</code> 两块，这个"分数"到底在数什么就完全落地了。</p>
 <p>另一个麻烦：生成器每动一步，学生分布就变，fake 网络面对的是<strong>持续移动的靶</strong>。DMD2 用 <a class="jr" href="#g-03">TTUR</a> 让 fake 网络多更新几次，SenseFlow 发现在 8B / 12B 上这还不够。</p>
 </section>
 
@@ -597,12 +597,26 @@ a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
       return true;
     }
 
-    var sel='.var code, .symbol code, .vars code, .symbol-grid code, .sym code, .concept-body code';
-    document.querySelectorAll(sel).forEach(function(el){
+    // 散文里的 <code> 用更严的形状判定：单个字母 + 下标/上标/括号参数。
+    // 散文不像符号格子那样"里面基本都是数学"，混着 commit hash(fafc81b7)、
+    // 版本号(1e-5)、命令行开关(--apply)，所以这里宁可漏也不能误伤。
+    // 光秃秃一个字母(A / N)不渲染——它可能只是"选项 A"。
+    var TIGHT=/^[A-Za-z\u0370-\u03ff](_\{?[A-Za-z0-9]{1,5}\}?)*(\^\{?[A-Za-z0-9]{1,3}\}?)*(\(.*\))?$/;
+    function proseIsMath(s){ return TIGHT.test(s) && /[_^(]/.test(s); }
+
+    var CELL='.var code, .symbol code, .vars code, .symbol-grid code, .sym code, .concept-body code';
+    var cells=[].slice.call(document.querySelectorAll(CELL));
+    // code.m = 作者显式声明"这是数学"，任何位置都渲染，不受形状限制
+    var opt=[].slice.call(document.querySelectorAll('code.m'));
+    var prose=[].slice.call(document.querySelectorAll('code')).filter(function(el){
+      return cells.indexOf(el)<0 && opt.indexOf(el)<0 && proseIsMath((el.textContent||'').trim());
+    });
+
+    cells.concat(opt).concat(prose).forEach(function(el){
       if(el.dataset.mathified) return;
       if(el.closest('pre')) return;               // 代码块原样保留
       var raw=(el.textContent||'').trim();
-      if(!looksLikeMath(raw)) return;
+      if(!el.classList.contains('m') && !looksLikeMath(raw)) return;
       // 已经是手写 LaTeX（含反斜杠命令）的，原样送 KaTeX，绝不让 toTex 再改写一遍——
       // 否则同一条式子在「符号格子」和「.formula 公式」两条渲染路径上会长得不一样。
       // toTex 那层启发式只服务于存量页里随手写的松散记号(θbase / p_fake / L_G^adv)。
