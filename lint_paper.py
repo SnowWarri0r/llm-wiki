@@ -258,6 +258,28 @@ def check_broken_subscript(html, name, issues):
                            f"下标花括号后面跟冒号，多半是拆错了: {t[:40]!r}（Z_{{1}}:j 应为 Z_{{1:j}}）"))
 
 
+# 符号格的标签是块级的（.sym>code.m:first-child）。要是把标签写成两截
+#   <code class="m">A</code> / <code class="m">B</code> · 说明…
+# 第一截会独占一行，第二截跟说明文字挤在下一行 —— 撞过两次了，交给脚本盯。
+SYM_CELL_2CODE = re.compile(r'<div class="(?:sym|symbol|var)"[^>]*>(.*?)</div>', re.S)
+
+
+def check_split_sym_label(html, name, issues):
+    """符号格标签被拆成两个 code.m，第一个会单独占一行。"""
+    for m in SYM_CELL_2CODE.finditer(visible(html)):
+        inner = m.group(1)
+        if not inner.lstrip().startswith('<code class="m">'):
+            continue
+        if inner.count('<code class="m">') < 2:
+            continue
+        after = inner.split("</code>", 1)[1].lstrip()
+        if after[:1] in "/,\uff0c\u3001" or after.startswith("<code"):
+            flat = html_mod.unescape(re.sub(r"<[^>]+>", "", inner)).strip()
+            issues.append(("ERROR", name,
+                           f"符号格标签被拆成两个 code.m，第一个会单独占一行: {flat[:44]!r}"
+                           "（合成一个，用 ,\\; 分隔）"))
+
+
 def check_glossary(html, name, issues):
     refs = set(re.findall(r'href="#(g-\d+)"', html))
     ids = set(re.findall(r'id="(g-\d+)"', html))
@@ -301,6 +323,7 @@ def lint(path):
     for fn in (check_define_before_use, check_figcaption_symbols, check_unmarked_math,
                check_unmarked_sym_label,
                check_broken_subscript,
+               check_split_sym_label,
                check_glossary, check_markup, check_chat_context):
         fn(html, path.name, issues)
     return issues
