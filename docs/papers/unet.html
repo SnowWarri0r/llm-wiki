@@ -155,8 +155,8 @@ figcaption b{color:var(--blue)}
     <div class="kicker">Pixel-wise prediction · Multi-scale fusion</div>
     <h1>U<em>-Net.</em></h1>
     <div class="byline">Olaf Ronneberger · Philipp Fischer · Thomas Brox · University of Freiburg</div>
-    <p class="dek">分类网络只说“图里有什么”；U-Net 要给每个像素落笔。它一路压缩来弄懂上下文，再一路放大，并从编码器横向取回边界细节——既看清是什么，也记住具体在哪。</p>
-    <div class="tldr"><div class="tag">TL;DR<br>先记这句</div><p>U-Net 的核心不是字母形状，而是三份职责：<b>编码器拿上下文，解码器恢复网格，跳跃连接补精确位置</b>。原版使用 valid convolution，所以 <code>572×572</code> 输入只预测中央 <code>388×388</code>；这也解释了为何 skip 要先 crop、为何大图推理要让输入 tile 重叠。训练再用弹性形变解决小数据，用边界加权交叉熵把粘连细胞之间的窄缝变成高分题。</p></div>
+    <p class="dek">它是干嘛用的？<b>把图里的每一个像素都归好类，然后描出物体的轮廓。</b>最早是给医学影像用的——显微图里哪些像素是细胞、哪些是背景，一张图里几百个细胞，得逐个圈出来数。分类网络只会说“这图里有细胞”，U-Net 要说清“细胞在这儿、边界到这儿为止”。</p>
+    <div class="tldr"><div class="tag">TL;DR<br>先记这句</div><p><b>要解决的矛盾：</b>想认出“这是什么”，就得把图压小、多看上下文，可一压小就不知道“它在哪”了。U-Net 的答案是 <b>U 形走一圈</b>：左边一路压小、认语义，右边一路放大、还原成原图那么大的网格，再从左边把同尺寸的<b>高清特征横拉过来接上</b>，把丢掉的位置信息补回来。另外两件配套的事：医学图标注贵、只有几十张，就用弹性形变把图揉一揉造出更多样本；两个细胞挨在一起时，中间那条缝最难画，就给缝上的像素十倍权重，逼网络把它画准。</p></div>
     <nav class="path" aria-label="章节导航">
       <a href="#task">任务</a><a href="#old">滑窗代价</a><a href="#map">全图</a><a href="#size">尺寸账</a><a href="#skip">跳连</a><a href="#tile">切大图</a><a href="#loss">损失</a><a href="#augment">小数据</a><a href="#results">实验</a><a href="#legacy">今天的 U-Net</a>
     </nav>
@@ -165,8 +165,8 @@ figcaption b{color:var(--blue)}
 
 <section id="task">
 <h2><span class="n">§ 01</span><span>先分清任务：一张图一个答案，还是每个像素一个答案</span></h2>
-<p class="lead">图像分类把整张图压成一个标签；<a href="../concepts/semantic-segmentation.html">语义分割</a><a class="jr" href="#g-01">1</a>必须保留空间网格，让输出位置和输入区域一一对应。</p>
-<figure id="fig-task"><figcaption><span>Fig 01 · 同一张显微图，两种输出契约</span><b>ONE LABEL VS EVERY PIXEL</b></figcaption>
+<p class="lead">图像分类把整张图压成一个标签，输出就一个词；<a href="../concepts/semantic-segmentation.html">语义分割</a><a class="jr" href="#g-01">1</a>得输出一整张和原图一样大的答案图——原图每个像素，答案图对应位置都要写上它属于哪一类。</p>
+<figure id="fig-task"><figcaption><span>Fig 01 · 同一张显微图，两种输出</span><b>ONE LABEL VS EVERY PIXEL</b></figcaption>
   <div class="task-compare">
     <div class="task-card classify reveal"><span class="tag">CLASSIFICATION</span><h4>整张图 → 一个标签</h4><div class="mini-img"><i class="cell"></i><i class="cell"></i><i></i><i></i><i></i><i class="cell"></i><i class="edge"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="task-out">“有细胞”</div></div>
     <div class="big-arrow reveal d2">→</div>
@@ -192,7 +192,7 @@ figcaption b{color:var(--blue)}
 
 <section id="map">
 <h2><span class="n">§ 03</span><span>完整拼图：压缩拿语义，放大还网格，横向连接补位置</span></h2>
-<p class="lead">U-Net 是一套<a href="../concepts/fully-convolutional-network.html">全卷积网络</a><a class="jr" href="#g-02">2</a>。左路通过<a class="jr" href="#g-03">3</a>最大池化扩大<a href="../concepts/receptive-field.html">感受野</a><a class="jr" href="#g-04">4</a>；右路上采样；每个尺度再从左边复制高分辨率特征。</p>
+<p class="lead">U-Net 是一套<a href="../concepts/fully-convolutional-network.html">全卷积网络</a><a class="jr" href="#g-02">2</a>，形状像个 U：<b>下坡</b>不断<a class="jr" href="#g-03">3</a>池化把图缩小，每缩一次，一个特征能看到的原图范围就更大（这叫<a href="../concepts/receptive-field.html">感受野</a><a class="jr" href="#g-04">4</a>变大），于是越来越懂“这是什么”；<b>上坡</b>再一级级放大回去；<b>中间那些横线</b>把下坡时同样大小的清晰特征直接拉过来拼上，告诉上坡"边界具体在哪"。</p>
 <figure id="fig-map"><figcaption><span>Fig 03 · 四级 U 形数据流</span><b>CONTEXT DOWN · LOCATION ACROSS · GRID UP</b></figcaption>
   <div class="unet-map">
     <div class="arch-col enc reveal">
