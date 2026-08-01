@@ -1190,3 +1190,12 @@ skill 更新:
 - 回归测试：把 solaris 的符号表挪回错位置，linter 同时报出 define-before-use 和 figcaption 两条，确认能抓到当初那个 bug。
 - 全站 backlog：13 页有 glossary 孤儿条目（attention 9 条最多，fish-speech 4、fft 2、ode-sde 2，其余各 1），都是"glossary 写了但正文没有 .jr 入口"这个 §8 里记过的老毛病。这次只建账不修。
 - SKILL 加 §7.1 记这条方法论，并把原来那几条肉眼自检换成"跑 lint_paper.py --warn 零输出"；同时写明两条纪律：新写/重写的页 WARN 也要逐条处置不许无视；但不许为了让 linter 闭嘴而改坏内容（define-before-use 有"挪表"和"表本来冗余"两种正解）。
+
+## [2026-07-26] fix | 清掉全站 27 条 glossary 孤儿 + 修符号格子里行内 code 被顶行
+
+- lint_paper.py 查出 13 页共 27 条 glossary 孤儿（写了词条但正文没有 .jr 入口，点不进去）。attention 最惨：12 条词条只有 3 个入口，9 条是死的。这是 SKILL §8 记了很久但一直没人查的老毛病。
+- 写 fix_gloss_orphans.py 批量补入口：自动识别每页用的是包裹式（`<a class="jr">RNN<sup>1</sup></a>`，attention/fish-speech）还是上标式（`术语<a class="jr">1</a>`，其余页）；挂点优先用词条主名（「GSPO（RL 阶段）」该挂 GSPO 不挂「RL 阶段」），主名没安全落点才退到最具体的别名；排除 SVG 内文字、已有链接内部、目录、大标题、figcaption。干跑核对全部落点后才 --apply，自动补了 25 条。
+- 剩 2 条手工：attention g-08「residual connection」正文只写了裸 residual；ode-sde g-05「score 函数」所有出现都包在 concept 链接里，按本仓惯例把 .jr 追加到 </a> 之后。这个限制已写进脚本 docstring。
+- 验证：把新旧两版的全部 .jr 都剥掉后逐字节对比，13 页完全一致 —— 27 处纯增量，正文一个字没动。浏览器实测 attention 12/12 入口都渲染正确、锚点跳转命中词条。
+- 顺带修一个早就存在的排版 bug：`.symbol code{display:block}` 本意是让格子开头那个符号单独成行当标签，却把说明文字里的行内 code 也顶成块级，读起来像莫名其妙的断行（senseflow「负责让 p_f 追上 p_g」被拆成四行）。mathify 给这些 code 上了色之后更显眼。在 render.py 注入的样式里加 `code:not(:first-child){display:inline}` 兜底，影响 senseflow 3 处 + dmd2 1 处。
+- 全站现在 0 ERROR / 24 WARN（WARN 全是 define-before-use 与 figcaption 的启发式提示，当 backlog）。

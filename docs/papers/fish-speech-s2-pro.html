@@ -831,7 +831,7 @@
   </div>
 </section>
 
-<p class="lede">TTS 行业过去 5 年的命题一直是同一道不可能三角：<strong>音质要高 ↔ 模型要大 ↔ 推理要快</strong>。fish-speech S2 的招数是把音频生成做成跟标准 LLM 结构上同构 —— 一旦同构，所有 LLM 推理基建白嫖；分两层 AR 把高采样率 token 流的成本降下来。这是一篇把 Dual-AR / RVQ / GRPO 三件套讲清楚的中文版，配三张可播放的动画图，加一份术语词典。</p>
+<p class="lede">TTS 行业过去 5 年的命题一直是同一道不可能三角：<strong>音质要高 ↔ 模型要大 ↔ 推理要快</strong>。fish-speech S2 的招数是把音频生成做成跟标准 LLM 结构上同构 —— 一旦同构，所有 LLM 推理基建白嫖；分两层 <a class="jr" href="#g-01">AR<sup>1</sup></a> 把高采样率 token 流的成本降下来。这是一篇把 Dual-AR / RVQ / GRPO 三件套讲清楚的中文版，配三张可播放的动画图，加一份术语词典。</p>
 
 <div class="toc">
   <span class="toc-label">contents · 目录</span>
@@ -840,7 +840,7 @@
     <li><span class="toc-num">02</span><a href="#dualar">Dual-AR · 慢 + 快</a><span class="toc-hint">配图 · 数据流</span></li>
     <li><span class="toc-num">03</span><a href="#rvq">RVQ · 10 层残差量化</a><span class="toc-hint">配图 · 层叠加</span></li>
     <li><span class="toc-num">04</span><a href="#grpo">GRPO · 组相对 RL</a><span class="toc-hint">配图 · 组采样</span></li>
-    <li><span class="toc-num">05</span><a href="#streaming">推理工程</a><span class="toc-hint">TTFA / RTF</span></li>
+    <li><span class="toc-num">05</span><a href="#streaming">推理工程</a><span class="toc-hint">TTFA / <a class="jr" href="#g-13">RTF<sup>13</sup></a></span></li>
     <li><span class="toc-num">06</span><a href="#controls">控制与多语言</a><span class="toc-hint">tag / 80+ 语言</span></li>
     <li><span class="toc-num">07</span><a href="#bench">Benchmark</a><span class="toc-hint">配图 · 条形</span></li>
     <li><span class="toc-num">08</span><a href="#takeaway">个人解读</a><span class="toc-hint">能拿走什么</span></li>
@@ -876,7 +876,7 @@
 
 <div class="note">
   <span class="label">背景 · 为什么不用 diffusion</span>
-  <p>diffusion-based TTS（Voicebox / NaturalSpeech 3 等）走的是连续路径：模型不预测离散 token 而是学一个速度场，多步采样到目标 mel。质量天花板高，但<strong>推理要 ODE 求解 N 步</strong>，难做到极低 TTFA（首音延迟）。codec + AR 路线推一步出一帧，延迟可控 —— 这是 fish-speech 选 AR 而不是 flow matching 的关键工程取舍。</p>
+  <p>diffusion-based TTS（Voicebox / NaturalSpeech 3 等）走的是连续路径：模型不预测离散 token 而是学一个速度场，多步采样到目标 mel。质量天花板高，但<strong>推理要 ODE 求解 N 步</strong>，难做到极低 <a class="jr" href="#g-12">TTFA<sup>12</sup></a>（首音延迟）。codec + AR 路线推一步出一帧，延迟可控 —— 这是 fish-speech 选 AR 而不是 flow matching 的关键工程取舍。</p>
 </div>
 
 <!-- ============ 02 ============ -->
@@ -889,7 +889,7 @@
   <li><strong>快 AR (400M)</strong> · 在同一帧上顺序吐 <strong>9 个</strong>残差 codebook —— 决定"怎么发"（音色 / 咬字 / 气声）</li>
 </ul>
 
-<p>RVQ codec 把音频压成 10 路 codebook、~21 Hz 帧率（约 <strong>47ms 一帧</strong>）。慢 AR 算少次但算重；快 AR 算多次但便宜。乘下来推理预算守得住。下图把这个时序展开看：</p>
+<p>RVQ codec 把音频压成 10 路 <a class="jr" href="#g-02">codebook<sup>2</sup></a>、~21 Hz 帧率（约 <strong>47ms 一帧</strong>）。慢 AR 算少次但算重；快 AR 算多次但便宜。乘下来推理预算守得住。下图把这个时序展开看：</p>
 
 <figure>
   <div class="fig-head">
