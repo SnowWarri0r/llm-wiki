@@ -211,12 +211,12 @@ figcaption b{color:var(--blue)}
     <div class="bottom reveal d4"><b>BOTTLENECK · 28² × 1024</b>　最小网格，最宽通道；看得广，但位置最粗</div>
   </div>
 </figure>
-<p>通道从 64 翻到 1024，是让小空间网格能装下更多语义特征；解码时再逐级减半。最后用 <a class="jr" href="#g-05">5</a><code>1×1</code> 卷积把每个位置的 64 维特征映成 `K` 个类别分数。</p>
+<p>通道从 64 翻到 1024，是让小空间网格能装下更多语义特征；解码时再逐级减半。最后用 <a class="jr" href="#g-05">5</a><code>1×1</code> 卷积把每个位置的 64 维特征映成 <code>K</code> 个类别分数。</p>
 </section>
 
 <section id="size">
 <h2><span class="n">§ 04</span><span>572 为什么最后只剩 388：原版每次 3×3 卷积都会吃掉一圈</span></h2>
-<p>原版用不补边的 <a href="../concepts/convolution.html">valid convolution</a><a class="jr" href="#g-06">6</a>。步长 1、卷积核 3 时，输出边长是 `n−3+1=n−2`。连续两次就缩 4；池化再除以 2。</p>
+<p>原版用不补边的 <a href="../concepts/convolution.html">valid convolution</a><a class="jr" href="#g-06">6</a>。步长 1、卷积核 3 时，输出边长是 <code>n−3+1=n−2</code>。连续两次就缩 4；池化再除以 2。</p>
 <div class="vars"><div class="var"><code>n_in / n_out</code>输入 / 输出边长。</div><div class="var"><code>k=3</code>卷积核边长。</div><div class="var"><code>p=0</code>原版不补边。</div><div class="var"><code>s=1</code>卷积每次滑一格。</div></div>
 <p class="formula-purpose">这条式子回答：一维输入经过卷积后还能落下多少个合法窗口。</p>
 <div class="formula math" data-display="true">n_{\mathrm{out}}=\left\lfloor\frac{n_{\mathrm{in}}+2p-k}{s}\right\rfloor+1</div>
@@ -239,7 +239,7 @@ figcaption b{color:var(--blue)}
     </tbody>
   </table></div>
 </figure>
-<p>总共 23 个卷积层：编码与瓶颈 10 个，四次 up-conv 加八个解码卷积共 12 个，最后 `1×1` 再算 1 个。输入每边比输出多 `(572−388)/2=92` 像素上下文。</p>
+<p>总共 23 个卷积层：编码与瓶颈 10 个，四次 up-conv 加八个解码卷积共 12 个，最后 <code>1×1</code> 再算 1 个。输入每边比输出多 <code>(572−388)/2=92</code> 像素上下文。</p>
 </section>
 
 <section id="skip">
@@ -253,13 +253,13 @@ figcaption b{color:var(--blue)}
     <div class="skip-node out reveal d4"><b>保留两份证据</b><code>56×56×1024</code></div>
   </div>
 </figure>
-<p>这里是按通道 <strong>concat</strong>，不是相加。若两份特征各有两个通道，`[10,20] concat [1,2]=[10,20,1,2]`；后续卷积自己学怎么融合。相加只会得到 `[11,22]`。concat 保留信息更完整，但通道翻倍，也更耗显存。</p>
+<p>这里是按通道 <strong>concat</strong>，不是相加。若两份特征各有两个通道，<code>[10,20] concat [1,2]=[10,20,1,2]</code>；后续卷积自己学怎么融合。相加只会得到 <code>[11,22]</code>。concat 保留信息更完整，但通道翻倍，也更耗显存。</p>
 <div class="warning"><b>现代 U-Net 常不需要 crop。</b>如果每个 3×3 卷积都补一圈零，编码和解码的同尺度特征宽高一致，可直接拼接。crop 是原版 valid convolution 的尺寸后果，不是 U-Net 的永恒定义。</div>
 </section>
 
 <section id="tile">
 <h2><span class="n">§ 06</span><span>没有全连接层，为什么就能处理大图；为什么还要重叠切块</span></h2>
-<p>全连接层要求固定展平长度；卷积核只关心局部 `3×3` 和通道数，不绑定绝对坐标。输入变大，核只是多滑几次，输出网格跟着变大。这就是“全卷积支持可变空间输入”的具体原因。</p>
+<p>全连接层要求固定展平长度；卷积核只关心局部 <code>3×3</code> 和通道数，不绑定绝对坐标。输入变大，核只是多滑几次，输出网格跟着变大。这就是“全卷积支持可变空间输入”的具体原因。</p>
 <p>但 2015 年 6 GB 显存装不下任意大显微图，所以作者用 <a class="jr" href="#g-09">9</a>overlap-tile：每块输入 572，只保留中央 388 的可靠预测。</p>
 <figure id="fig-tile"><figcaption><span>Fig 06 · 92 像素 halo 为中央输出提供完整上下文</span><b>INPUT 572 · CORE 388 · OVERLAP 184</b></figcaption>
   <div class="tile-row">
@@ -279,26 +279,51 @@ figcaption b{color:var(--blue)}
 
 <section id="loss">
 <h2><span class="n">§ 07</span><span>相邻细胞之间那条细缝，为什么要算十倍重</span></h2>
-<p class="lead">最后每个像素输出 `K` 个 logits，经<a href="../concepts/softmax.html">softmax</a><a class="jr" href="#g-10">10</a>变成概率，再用<a href="../concepts/weighted-pixelwise-cross-entropy.html">逐像素加权交叉熵</a><a class="jr" href="#g-11">11</a>训练。</p>
-<div class="vars"><div class="var"><code>Ω</code>所有输出像素位置。</div><div class="var"><code>ℓ(x)</code>位置 x 的真实类别。</div><div class="var"><code>p</code>模型给真实类别的概率。</div><div class="var"><code>w_c</code>类别平衡权重。</div><div class="var"><code>d₁,d₂</code>到最近、第二近细胞边界的距离。</div><div class="var"><code>w₀=10, σ≈5</code>原文的边界增强设置。</div></div>
-<p class="formula-purpose">总损失：每个像素的负对数概率，再乘该位置的重要权重。</p>
+<p class="lead">先说这节要解决什么麻烦：两个细胞贴在一起时，中间那条一两像素宽的缝<b>最难画又最要紧</b>——画丢了，两只细胞就粘成一只，前面 §01 说的"靠缝分开"整套就废了。可这条缝在整张图里才占几百个像素，普通训练里它的声音会被淹没。U-Net 的办法：<b>给这些像素的损失乘一个大得多的权重</b>。</p>
+
+<h3>第 1 步 · 先搭好底座：逐像素交叉熵</h3>
+<p>网络最后给每个像素吐 <code>K</code> 个分数（这里 <code>K=2</code>：细胞、背景），经 <a href="../concepts/softmax.html">softmax</a><a class="jr" href="#g-10">10</a> 变成加起来等于 1 的概率。然后看<strong>它给正确答案那一类打了多少概率</strong>——打得越低，罚得越狠，这就是<a href="../concepts/cross-entropy.html">交叉熵</a><a class="jr" href="#g-12">12</a> <code>−log p</code>：<code>p=0.9</code> 罚 <code>0.105</code>，<code>p=0.119</code> 罚 <code>2.13</code>。把每个像素罚的分加起来，再各自乘一个权重 <code>w(x)</code>，就是<a href="../concepts/weighted-pixelwise-cross-entropy.html">逐像素加权交叉熵</a><a class="jr" href="#g-11">11</a>：</p>
 <div class="formula math" data-display="true">\mathcal L=-\sum_{\mathbf x\in\Omega}w(\mathbf x)\log p_{\ell(\mathbf x)}(\mathbf x)</div>
-<p class="formula-purpose">权重图：离最近和第二近细胞边界都很近的位置，额外权重最高。</p>
-<div class="formula math" data-display="true">w(\mathbf x)=w_c(\mathbf x)+w_0\exp\left(-\frac{(d_1(\mathbf x)+d_2(\mathbf x))^2}{2\sigma^2}\right)</div>
-<figure id="fig-loss"><figcaption><span>Fig 07 · 同样答错，关键窄缝更贵</span><b>P_TRUE=.119 · CE=2.127</b></figcaption>
+<div class="vars"><div class="var"><code>Ω</code>所有输出像素位置（原版就是中央 388×388 那些格子）。</div><div class="var"><code>ℓ(x)</code>位置 x 的正确答案：细胞还是背景。</div><div class="var"><code>p_ℓ(x)</code>模型在 x 给<b>正确那一类</b>的概率。</div><div class="var"><code>w(x)</code>这个位置有多要紧；下一步专门造它。</div></div>
+
+<h3>第 2 步 · 权重 w(x) 怎么造：一份打底 + 一份给缝的加急</h3>
+<p>权重由两块加起来，各管一件事：</p>
+<div class="formula math" data-display="true">w(\mathbf x)=\underbrace{w_c(\mathbf x)}_{\text{打底：拉平类别数量}}+\underbrace{w_0\exp\left(-\frac{(d_1(\mathbf x)+d_2(\mathbf x))^2}{2\sigma^2}\right)}_{\text{加急：越靠近两细胞之间的缝越大}}</div>
+<div class="vars"><div class="var"><code>w_c(x)</code>类别平衡权重。背景像素远多于细胞，不拉平的话网络"全猜背景"就能拿高分。</div><div class="var"><code>d₁(x)</code>x 到<b>最近</b>那个细胞边界的距离。</div><div class="var"><code>d₂(x)</code>x 到<b>第二近</b>那个细胞边界的距离（也就是另一只细胞）。</div><div class="var"><code>w₀=10</code>加急项最多能加多少；原文取 10。</div><div class="var"><code>σ≈5</code>控制"多近算近"，单位是像素。</div><div class="var"><code>exp(−·)</code>把距离换成 0~1 的衰减：距离 0 时值为 1，越远越快趋近 0。</div></div>
+<p><b>为什么是 <code>d₁+d₂</code>，而不是只看 <code>d₁</code>？</b>这是整条式子的精髓。只看最近距离 <code>d₁</code> 的话，<strong>每一个细胞的外圈都会被加急</strong>——但孤零零一只细胞的边界并不难画，不值这个钱。要 <code>d₁</code> 和 <code>d₂</code> <strong>同时都小</strong>，才说明这个像素<b>左右两边各有一只细胞、它正卡在两只中间的窄缝里</b>——这才是真正要下猛药的地方。两个距离相加再一起罚，就实现了"两边都得近"这个条件：只要有一边远，和就大，加急立刻衰减掉。</p>
+<p><b>为什么套 <code>exp(−(·)²/2σ²)</code>？</b>因为需要一个<strong>平滑衰减</strong>而不是硬开关。要是写成"距离小于 3 就加 10、否则加 0"，权重图会出现硬边、训练不稳。高斯这个形状让权重从缝中心往外<b>柔和地滑下去</b>，<code>σ</code> 就是滑多快的旋钮。</p>
+
+<h3>第 3 步 · 代数字：看权重怎么随距离掉下去</h3>
+<p>取原文的 <code>w₀=10、σ=5</code>，<code>w_c</code> 按 1 打底。先算最要紧的那种像素（正卡在缝里，两边各 1 像素）：</p>
+<div class="formula math" data-display="true">\begin{aligned}(d_1+d_2)^2&=(1+1)^2=4\\ 2\sigma^2&=2\times5^2=50\\ \exp(-4/50)&=\exp(-0.08)=0.9231\\ w&=1+10\times0.9231=\mathbf{10.231}\end{aligned}</div>
+<p>再把像素往细胞外面挪，看加急项怎么自己退场：</p>
+<div class="table-wrap"><table>
+  <thead><tr><th>位置</th><th><code>d₁=d₂</code></th><th><code>(d₁+d₂)²</code></th><th><code>exp(−·/50)</code></th><th><code>w</code></th></tr></thead>
+  <tbody>
+    <tr class="win"><td>正卡在两细胞之间的缝里</td><td>1</td><td>4</td><td>.9231</td><td><b>10.231</b></td>
+    </tr><tr><td>稍微离开缝</td><td>3</td><td>36</td><td>.4868</td><td>5.868</td></tr>
+    <tr><td>已经在细胞外围</td><td>6</td><td>144</td><td>.0561</td><td>1.561</td></tr>
+    <tr><td>远处大片背景</td><td>10</td><td>400</td><td>.0003</td><td>1.003</td></tr>
+  </tbody>
+</table></div>
+<p>这张表就是"十倍重"的由来：缝里的像素 <code>w≈10.2</code>，远处背景 <code>w≈1.0</code>，<strong>正好差十倍</strong>；中间是平滑过渡，没有突变。</p>
+
+<h3>第 4 步 · 同一个错误，站在缝里要贵多少</h3>
+<p>假设网络在某个像素上答得很差，给正确类别只打了 <code>p=0.119</code>。交叉熵 <code>−ln(0.119)=2.13</code>——<b>这一步跟位置无关</b>，错得一样多。乘上权重才拉开差距：</p>
+<figure id="fig-loss"><figcaption><span>Fig 07 · 同样答错，站在缝里要贵十倍</span><b>SAME p=.119 · 权重决定罚多重</b></figcaption>
   <div class="loss-grid">
-    <div class="loss-card reveal"><span class="tag">普通背景</span><h4>面积大，容易学</h4><div class="num">w=1<br>loss=2.127</div></div>
-    <div class="loss-card boundary reveal d2"><span class="tag">两细胞之间</span><h4>d₁=d₂=1</h4><div class="num">w=10.231<br>loss=21.76</div></div>
-    <div class="loss-card reveal d3"><span class="tag">预测修正后</span><h4>p_true=.9</h4><div class="num">w=10.231<br>loss=1.08</div></div>
+    <div class="loss-card reveal"><span class="tag">远处背景</span><h4>d 很大，w≈1</h4><div class="num">2.13 × 1<br>= <b>2.13</b></div></div>
+    <div class="loss-card boundary reveal d2"><span class="tag">两细胞之间的缝</span><h4>d₁=d₂=1，w=10.231</h4><div class="num">2.13 × 10.231<br>= <b>21.78</b></div></div>
+    <div class="loss-card reveal d3"><span class="tag">网络把缝学准之后</span><h4>同一像素，p 升到 .9</h4><div class="num">0.105 × 10.231<br>= <b>1.08</b></div></div>
   </div>
 </figure>
-<p>手算：`exp(-(1+1)²/(2×5²))=exp(-.08)=.9231`，所以 `w=1+10×.9231=10.231`。真实类别概率 `.119` 时，`-log(.119)=2.127`，相乘得 `21.76`。</p>
-<div class="warning"><b>原论文 Eq. (1) 印成没有负号的 `Σw log p`。</b>若把它当要最小化的 loss，方向会反。等价的正确训练口径是最大化加权 log-likelihood，或像这里一样最小化带负号的交叉熵<a class="jr" href="#g-12">12</a>。</div>
+<p>读法：前两张卡<b>错得一模一样</b>，只因为一个在缝里、一个在空旷背景，罚分就从 <code>2.13</code> 变成 <code>21.78</code>。梯度也跟着大十倍，网络自然优先把缝学准。第三张是学准以后——同一个高权重像素，<code>p</code> 从 <code>.119</code> 升到 <code>.9</code>，罚分掉到 <code>1.08</code>。所以高权重不是永久惩罚，是<b>逼网络先把这块啃下来</b>。</p>
+<div class="warning"><b>原论文 Eq. (1) 印成没有负号的 <code>Σw log p</code>。</b>若把它当要最小化的 loss，方向会反。等价的正确训练口径是最大化加权 log-likelihood，或像这里一样最小化带负号的交叉熵<a class="jr" href="#g-12">12</a>。</div>
 </section>
 
 <section id="augment">
 <h2><span class="n">§ 08</span><span>只有几十张图，靠什么不把训练集背下来</span></h2>
-<p>论文把小数据问题交给任务匹配的数据增强：平移、旋转、灰度变化，以及最关键的<a class="jr" href="#g-13">13</a>弹性形变。它不是让像素各自乱跑，而是在粗 `3×3` 网格上采样位移，再平滑插值到整张图。</p>
+<p>论文把小数据问题交给任务匹配的数据增强：平移、旋转、灰度变化，以及最关键的<a class="jr" href="#g-13">13</a>弹性形变。它不是让像素各自乱跑，而是在粗 <code>3×3</code> 网格上采样位移，再平滑插值到整张图。</p>
 <figure id="fig-aug"><figcaption><span>Fig 08 · 9 个控制点先移动，整张图再平滑跟着变</span><b>GAUSSIAN STD 10 PX · BICUBIC</b></figcaption>
   <div class="aug-flow">
     <div class="warp reveal"><div class="grid9"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><p>规则 3×3 控制网格</p></div>
@@ -311,7 +336,7 @@ figcaption b{color:var(--blue)}
 <div class="recipe"><div><b>DATA</b><span>EM 30 张 · PhC 35 张 · DIC 20 张</span></div><div><b>OPTIMIZER</b><span>Caffe SGD · batch 1 · momentum .99</span></div><div><b>HARDWARE</b><span>NVIDIA Titan 6 GB · 约 10 小时</span></div></div>
 <p class="formula-purpose">He 初始化：<code>N</code> 是一个输出位置接收的输入数，不是样本数；公式让 ReLU 网络各层信号方差别一路爆炸或消失。</p>
 <div class="formula math" data-display="true">\operatorname{std}(W)=\sqrt{\frac{2}{N}},\qquad N=3\times3\times64=576,\qquad \operatorname{std}\approx0.0589</div>
-<p><code>N</code> 是一个输出位置接收的输入数。`0.0589` 是高斯采样的标准差，不是把每个权重都设成这个数。</p>
+<p><code>N</code> 是一个输出位置接收的输入数。<code>0.0589</code> 是高斯采样的标准差，不是把每个权重都设成这个数。</p>
 </section>
 
 <section id="results">
@@ -331,7 +356,7 @@ figcaption b{color:var(--blue)}
   </table></div>
 </figure>
 <p>EM 结果平均了 7 个旋转版本，且不做额外前后处理。U-Net 的 warping error 第一，但 DIVE-SCI 的 Rand 和 pixel error 更低，不能笼统写成“所有指标碾压”。PhC 与 DIC 的 IoU 差距则很大。</p>
-<div class="plain"><b>IoU 手算：</b>预测区域与真值重合 80 个像素，并集 100 个像素，`IoU=80/100=.8`。论文没给逐零件消融，也没有多随机种子均值和方差，所以只能证明整套方案有效，不能精确分摊 skip、增强、边界损失各贡献多少。</div>
+<div class="plain"><b>IoU 手算：</b>预测区域与真值重合 80 个像素，并集 100 个像素，<code>IoU=80/100=.8</code>。论文没给逐零件消融，也没有多随机种子均值和方差，所以只能证明整套方案有效，不能精确分摊 skip、增强、边界损失各贡献多少。</div>
 </section>
 
 <section id="legacy">
@@ -359,7 +384,7 @@ figcaption b{color:var(--blue)}
   <li id="g-09"><span class="term">Overlap-tile</span> · 带重叠的切块推理；每块输入带上下文 halo，只交付中央可靠输出。</li>
   <li id="g-10"><span class="term">Softmax</span> · 把同一像素的 K 个 logits 变成总和为 1 的类别概率。详见 <a href="../concepts/softmax.html">concept</a>。</li>
   <li id="g-11"><span class="term">Weighted pixel-wise cross-entropy</span> · 每个像素先算交叉熵，再乘位置权重。详见 <a href="../concepts/weighted-pixelwise-cross-entropy.html">concept</a>。</li>
-  <li id="g-12"><span class="term">Cross-entropy</span> · 分类常用的 `−log p_true`；正确类概率越低，惩罚越大。详见 <a href="../concepts/cross-entropy.html">concept</a>。</li>
+  <li id="g-12"><span class="term">Cross-entropy</span> · 分类常用的 <code>−log p_true</code>；正确类概率越低，惩罚越大。详见 <a href="../concepts/cross-entropy.html">concept</a>。</li>
   <li id="g-13"><span class="term">Elastic deformation</span> · 弹性形变；移动粗网格控制点，再平滑插值成像素位移场，模拟组织拉伸和挤压。</li>
 </ol>
 </div>
