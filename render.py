@@ -1008,6 +1008,120 @@ def inject_nav_strip(path: Path, category: str, slug: str) -> bool:
 
 
 # ============================================================
+# Mathify (符号表 / 行内 <code> 里的数学 → KaTeX)
+# ============================================================
+# 符号表里的 `w_c(x)` `d₁(x)` `σ≈5` 用等宽 code 显示很费劲，和正文 KaTeX 公式
+# 风格也不统一。这个 pass 在客户端把「看着像数学」的 <code> 转成 KaTeX。
+# 保守优先：碰到中文 / 代码标识符 / 带方括号的索引一律跳过；转换失败(throwOnError)
+# 就保持原样，绝不产生红色报错块。
+
+MATHIFY_START = "<!-- mathify:start -->"
+MATHIFY_END = "<!-- mathify:end -->"
+
+MATHIFY_BLOCK = MATHIFY_START + """
+<script>
+(function(){
+  function run(){
+    if(!window.katex) return;
+    var GREEK={'θ':'\\\\theta','σ':'\\\\sigma','α':'\\\\alpha','μ':'\\\\mu','ε':'\\\\epsilon',
+      'φ':'\\\\phi','ψ':'\\\\psi','γ':'\\\\gamma','λ':'\\\\lambda','ω':'\\\\omega','τ':'\\\\tau',
+      'β':'\\\\beta','δ':'\\\\delta','ρ':'\\\\rho','π':'\\\\pi','η':'\\\\eta','ζ':'\\\\zeta',
+      'Ω':'\\\\Omega','Σ':'\\\\sum','Δ':'\\\\Delta','Φ':'\\\\Phi','Ψ':'\\\\Psi','Θ':'\\\\Theta',
+      'ℓ':'\\\\ell','∇':'\\\\nabla','∈':'\\\\in','≈':'\\\\approx','≠':'\\\\neq','≤':'\\\\le',
+      '≥':'\\\\ge','×':'\\\\times','·':'\\\\cdot','−':'-','∼':'\\\\sim','→':'\\\\to',
+      '⟺':'\\\\iff','⇒':'\\\\Rightarrow','‖':'\\\\|','∫':'\\\\int','∂':'\\\\partial',
+      '√':'\\\\sqrt','∞':'\\\\infty','⊕':'\\\\oplus','∝':'\\\\propto'};
+    var SUB={'₀':'0','₁':'1','₂':'2','₃':'3','₄':'4','₅':'5','₆':'6','₇':'7','₈':'8','₉':'9',
+      'ₜ':'t','ₓ':'x','ᵢ':'i','ⱼ':'j','ₙ':'n','ₖ':'k','ₐ':'a','ₑ':'e','ₒ':'o','ₚ':'p','ₛ':'s'};
+    var SUP={'⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','ⁿ':'n','ᵀ':'T'};
+    var WORDS=['fake','real','base','cfg','cond','uncond','data','reg','pseudo','denoise',
+      'train','infer','new','old','out','in','tot','max','min','avg','ref','KL','GAN','DMD',
+      'DM','MSE','LPIPS','FID','CE','sg','stopgrad'];
+
+    function toTex(s){
+      var t=s;
+      // unicode 上下标 → LaTeX
+      t=t.replace(/[\\u2080-\\u2089\\u2093\\u209c\\u1d62\\u2c7c\\u2099\\u2096\\u2090\\u2091\\u2092\\u209a\\u209b]/g,
+        function(c){ return SUB[c]!==undefined ? '_{'+SUB[c]+'}' : c; });
+      t=t.replace(/[\\u00b2\\u00b3\\u00b9\\u2070\\u2074\\u2075\\u207f\\u1d40]/g,
+        function(c){ return SUP[c]!==undefined ? '^{'+SUP[c]+'}' : c; });
+      // 希腊字母与运算符
+      t=t.replace(/[\\u0370-\\u03ff\\u2100-\\u22ff\\u2190-\\u21ff\\u2212]/g,
+        function(c){ return GREEK[c]!==undefined ? GREEK[c]+' ' : c; });
+      // 多字母下标 → \\mathrm{}
+      t=t.replace(/_\\{?([A-Za-z]{2,})\\}?/g, function(m,w){
+        return WORDS.indexOf(w)>=0 || w.length>1 ? '_{\\\\mathrm{'+w+'}}' : m; });
+      // 希腊字母后直接跟单词(θbase) → 变下标
+      t=t.replace(/(\\\\[a-zA-Z]+)\\s*([a-z]{2,})\\b/g, function(m,g,w){
+        return WORDS.indexOf(w)>=0 ? g+'_{\\\\mathrm{'+w+'}}' : m; });
+      // 常见函数名
+      t=t.replace(/\\b(exp|log|ln|max|min|sin|cos|det|dim)\\b/g,'\\\\$1 ');
+      return t;
+    }
+
+    function looksLikeMath(s){
+      if(!s || s.length>44) return false;
+      if(/[\\u4e00-\\u9fff\\u3000-\\u303f\\uff00-\\uffef]/.test(s)) return false; // 中日韩
+      if(/[\\[\\]"'`]/.test(s)) return false;                                     // 索引/字符串=代码
+      if(/^[A-Z][A-Z0-9_]{3,}$/.test(s)) return false;                            // CONST_NAME
+      if(/\\s/.test(s) && /^[A-Za-z\\s‖|,]+$/.test(s)) return false;              // "fake ‖ real" 词组
+      if(/^(https?:|\\/|\\.\\/)/.test(s)) return false;                            // 路径/URL
+      // snake_case 且首段是多字母 = 代码变量名(no_grad / loss_dm / cross_entropy)，
+      // 而数学下标的首段通常只有一个字母(p_fake / w_c / d_1)，予以保留
+      if(/^[a-z][a-z0-9]+(_[a-z0-9]+)+$/.test(s)) return false;
+      return true;
+    }
+
+    var sel='.var code, .symbol code, .vars code, .symbol-grid code, .concept-body code';
+    document.querySelectorAll(sel).forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;               // 代码块原样保留
+      var raw=(el.textContent||'').trim();
+      if(!looksLikeMath(raw)) return;
+      try{
+        var html=katex.renderToString(toTex(raw),{throwOnError:true,displayMode:false});
+        el.innerHTML=html;
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){ /* 转换不了就保持原来的 code 样子 */ }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+</style>
+""" + MATHIFY_END + "\n"
+
+
+def inject_mathify(path: Path) -> bool:
+    """Inject (or refresh) the <code> → KaTeX pass before </body>. Idempotent."""
+    text = path.read_text()
+    original = text
+    if MATHIFY_START in text:
+        text = re.sub(
+            re.escape(MATHIFY_START) + r".*?" + re.escape(MATHIFY_END) + r"\n*",
+            "",
+            text,
+            flags=re.DOTALL,
+        )
+    if "katex" not in text:          # 页面没加载 KaTeX 就别注入
+        if text != original:
+            path.write_text(text)
+            return True
+        return False
+    block = MATHIFY_BLOCK.rstrip("\n") + "\n"
+    new_text, n = re.subn(r"</body>", lambda m: block + m.group(0), text, count=1)
+    if n == 0 or new_text == original:
+        return False
+    path.write_text(new_text)
+    return True
+
+
+# ============================================================
 # Glossary popover (点术语 → 右侧浮卡，不跳页)
 # ============================================================
 
@@ -1424,7 +1538,8 @@ def render_concept_page(entry: Entry, chapter_nav_top: str = "", chapter_nav_bot
         backlinks_html=backlinks_html,
         chapter_nav_top=chapter_nav_top,
         chapter_nav_bottom=chapter_nav_bottom,
-        math_head=KATEX_PAGE_HEAD if maths else "",
+        # 有行内 code 的页也要加载 KaTeX：mathify pass 要把符号 code 转成公式
+        math_head=KATEX_PAGE_HEAD if (maths or "<code>" in body_html) else "",
         math_script=KATEX_PAGE_SCRIPT if maths else "",
         css_ver=_css_ver(),
     )
@@ -1504,6 +1619,7 @@ def main():
             nav_top, nav_bottom = build_chapter_nav(e, book_chaps, book_titles)
             out_path.write_text(render_concept_page(e, nav_top, nav_bottom))
             inject_nav_strip(out_path, e.category, e.slug)
+            inject_mathify(out_path)
             auto_rendered += 1
 
     # 2. Inject nav strip + resolve [[wikilinks]] in bespoke HTML
@@ -1518,6 +1634,7 @@ def main():
                 linked += 1
             if inject_glossary_popover(e.bespoke_path):
                 popped += 1
+            inject_mathify(e.bespoke_path)
 
     # 3. Render landing index + per-category sub-pages（按时间倒序）
     (HTML_OUT / "index.html").write_text(render_index(entries))
