@@ -100,7 +100,7 @@ figure{margin:34px 0;padding:26px;background:rgba(255,253,245,.72);border:1px so
 .codecard{padding:18px;background:var(--night);color:white;border:3px solid var(--deep)}
 .codecard.new{border-color:var(--teal)}
 .codecard h4{margin:0 0 13px;color:#fff;font:800 13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
-.codecard code{display:block;background:transparent;border:0;color:#fff;padding:0;white-space:normal}
+.codecard code{display:block;background:transparent;border:0;color:#fff;padding:0;white-space:pre;overflow-x:auto}
 .shared{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .shared .lane{background:var(--white);border:1px solid var(--rule);padding:16px;text-align:center}
 .shared .same{grid-column:1/-1;background:var(--goldsoft);border:1px solid var(--gold);padding:12px;text-align:center;font-weight:800}
@@ -501,11 +501,17 @@ gDFD     = −.40−(−.60×.5)     = −.10
     <figure>
       <figcaption class="figcap"><span>Fig 06 · 这一行前后的数据语义</span><span class="n">概率 p 才走 DFD</span></figcaption>
       <div class="codechange">
-        <div class="codecard"><h4>ORIGINAL DMD</h4><code>teacher_data =<br>gen_data.detach()</code></div>
+        <div class="codecard"><h4>ORIGINAL DMD</h4><code>teacher_data = gen_data.detach()</code></div>
         <div class="versus">→</div>
-        <div class="codecard new"><h4>DFD MIX</h4><code>teacher_data = data.detach()<br>if rand() &lt; p<br>else gen_data.detach()</code></div>
+        <div class="codecard new"><h4>DFD MIX</h4><code>teacher_data = (
+    data.detach()
+    if rand() &lt; p
+    else gen_data.detach()
+)</code></div>
       </div>
     </figure>
+    <p>这一行有两处容易读错。第一，它是<strong>条件表达式</strong>（三元式），不是 <code>if</code> 语句——所以没有冒号、也没有缩进块，整行的意思是「<code>rand() &lt; p</code> 成立就取前者，否则取后者」，最后赋给 <code>teacher_data</code>。外面那对括号只是为了换行，不影响语义。</p>
+    <p>第二，<strong>两个分支都带 <code>.detach()</code></strong>，它就是 PyTorch 里的 stop-gradient<a class="jr" href="#g-07">7</a>：teacher 的输入只以数值身份参与，梯度不会顺着它往回流。真实视频那一支本来就没有可训练参数，但学生生成的那一支有——不切断的话，梯度会从 teacher 的输入端绕一条路回到学生，而 DFD 要的只是 teacher 给出的<strong>方向</strong>。</p>
     <p>随后 fake-score 仍读取加噪学生视频，teacher 读取加噪后的 <code>teacher_data</code>。两者做差，乘一个归一化因子，再造伪目标：</p>
     <pre>vsd_grad      = (fake_score − teacher_score) × <span class="hi">w_norm</span>
 pseudo_target = gen_data − vsd_grad
