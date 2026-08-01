@@ -280,9 +280,10 @@ def check_split_sym_label(html, name, issues):
                            "（合成一个，用 ,\\; 分隔）"))
 
 
-# .math-sheet / .calc 是等宽算式块，不走 KaTeX（混进去会毁掉列对齐）。
-# 里面写 τ_global、s_real 这种 ASCII 下划线，读起来就是"没渲染的 LaTeX"。
-# 那里要么用 unicode 下标（x₀ / V⁺），要么直接写中文名（门槛 / 目标点）。
+# .math-sheet / .calc 里写 τ_global、s_real 这种 ASCII 下划线，读起来就是
+# "没渲染的 LaTeX"。正解是包成 <code class="m"> 让它真渲染 —— 曾经以为
+# "混 KaTeX 进等宽块会毁掉列对齐"，实测是错的：只要同一列各行插入相同，
+# 列位置分毫不动（三行 τ_c 右侧列 x 都是 338）。unicode 下标（x₀ / V⁺）同样可以。
 LEDGER = re.compile(r'<div class="(?:math-sheet|calc)"[^>]*>(.*?)</div>', re.S)
 FAKE_SUB = re.compile(r"(?<![A-Za-z0-9])[A-Za-z\u0370-\u03ff][A-Za-z0-9]*_[A-Za-z][A-Za-z0-9]*")
 
@@ -291,14 +292,17 @@ def check_ledger_pseudo_latex(html, name, issues):
     """等宽算式块里出现 X_y 形式的假下标。"""
     seen = set()
     for m in LEDGER.finditer(visible(html)):
-        txt = html_mod.unescape(re.sub(r"<[^>]+>", "", m.group(1)))
+        inner = m.group(1)
+        # 已经包进 <code class="m"> 的会被 KaTeX 渲染，不算假下标——先整段抹掉
+        inner = re.sub(r'<code class="m">.*?</code>', " ", inner, flags=re.S)
+        txt = html_mod.unescape(re.sub(r"<[^>]+>", "", inner))
         for g in FAKE_SUB.finditer(txt):
             if g.group(0) in seen:
                 continue
             seen.add(g.group(0))
             issues.append(("ERROR", name,
                            f"等宽算式块里的假下标不会渲染: {g.group(0)!r}"
-                           "（改用 unicode 下标或中文名，这里不走 KaTeX）"))
+                           "（包成 <code class=\"m\"> 写 LaTeX；实测 KaTeX 不会破坏等宽列对齐）"))
 
 
 def check_glossary(html, name, issues):
