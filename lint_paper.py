@@ -171,6 +171,26 @@ def check_figcaption_symbols(html, name, issues):
             issues.append(("WARN", name, f"figcaption 出现符号 {tok!r}，此前无符号格子定义: {flat}"))
 
 
+def check_raw_latex_in_prose(html, name, issues):
+    """散文里的 <code> 不在 mathify 作用域内，写 LaTeX 命令必然原样显示成裸的
+    `\theta` / `\log p_f`。这条纯机械可判：作用域外的 code 只要含反斜杠命令就是 bug。
+    （SKILL 7.5 写过这条约定，但连写两页都当场违反，所以搬进脚本。）"""
+    body = visible(html)
+    # mathify 作用域：这些容器里的 code 会被渲染，其余都是散文
+    scoped = []
+    for m in re.finditer(r'<(?:div|span|li|section)[^>]*class="[^"]*\b(?:sym|symbol|var|vars|symbol-grid|concept-body)\b[^"]*"[^>]*>', body):
+        depth_end = body.find("</div>", m.end())
+        scoped.append((m.start(), depth_end if depth_end > 0 else m.end()))
+    for m in re.finditer(r"<code>(.*?)</code>", body, re.S):
+        if any(a <= m.start() < b for a, b in scoped):
+            continue
+        t = re.sub(r"<[^>]+>", "", m.group(1))
+        if re.search(r"\\[a-zA-Z]{2,}", t):
+            issues.append(("ERROR", name,
+                           f"散文里的 <code> 含 LaTeX 命令，会原样显示成裸反斜杠: {t.strip()[:40]!r}"
+                           f"（散文不走 mathify，改写成 unicode：θ / σ / xₜ / log p_f）"))
+
+
 def check_glossary(html, name, issues):
     refs = set(re.findall(r'href="#(g-\d+)"', html))
     ids = set(re.findall(r'id="(g-\d+)"', html))
@@ -211,7 +231,7 @@ def check_chat_context(html, name, issues):
 def lint(path):
     html = strip_injected(path.read_text(encoding="utf-8"))
     issues = []
-    for fn in (check_define_before_use, check_figcaption_symbols,
+    for fn in (check_define_before_use, check_figcaption_symbols, check_raw_latex_in_prose,
                check_glossary, check_markup, check_chat_context):
         fn(html, path.name, issues)
     return issues
