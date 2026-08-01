@@ -1210,3 +1210,13 @@ skill 更新:
 - **修 mathify 全局 bug**：toTex 只有多字母下标规则（`_adv` → `_{\mathrm{adv}}`），没有对应的上标规则。于是 `L_G^adv` 里的 `^adv` 原样进 KaTeX，被解析成「`^a` 上标 + 正文 `dv`」，显示成 `L_G^a dv`。这是合法 LaTeX，所以 throwOnError 抓不到、katex-error 计数为 0。已把规则改成同时处理 `[_^]`。
 - senseflow §07 四个 loss 格子写法本来就不统一（L_DMD/L_ISG 被 CONST_NAME 规则跳过保持 code 样式，另两个走 mathify），现统一写成与公式逐字一致的 LaTeX。
 - SKILL 加一条：**katex-error==0 ≠ 渲染对了**，没报错但没亲眼看过的公式不算验过；同一条式子在符号格子和正式公式里出现两次时两处必须逐字一致。
+
+## [2026-07-26] fix | 统一符号格子与公式的渲染路径（手写 LaTeX 走 verbatim）
+
+- 起因：用户问"为啥要用两种不同的渲染方式"。确实是历史遗留——`.formula[data-display]` 由页内脚本直接 katex.render()，输入是手写标准 LaTeX；符号格子的 `<code>` 走 render.py 注入的 mathify，先过一层 toTex() 猜+改写再渲染。toTex 那层只是为了兼容存量页里随手写的松散记号（θbase / p_fake / L_G^adv），却会把我手写的规范 LaTeX 也改写一遍，两条路就分叉了。
+- 改法：mathify 里凡是含反斜杠（= 手写 LaTeX 命令）的原样送 KaTeX，不再过 toTex；toTex 只服务于松散记号。这样同一条式子在格子和公式两处必然逐字一致。
+- 踩坑：MATHIFY_BLOCK 是 Python 非 raw 字符串，源码写 `'\\'` 到 JS 只剩 `'\'`，是未闭合字符串字面量 → 整个 mathify IIFE SyntaxError 不执行 → 全站符号格子静默退化成灰底 code（0/49 mathified）。要写 4 个反斜杠。没 commit 前被浏览器实测抓到。
+- 精确回归范围：全站 mathify 作用域内 8243 个 code，含反斜杠的只有 25 个唯一串（senseflow 8 + solaris 5 + 4 个存量 concept 页）。逐个在浏览器里验过渲染结果，含 unicode 希腊字母的 `\hat x_{t-Δt}^i`、`π(a|s)` 都正常。
+- 顺带查出并修两个真 bug：① markdown 表格里 `` `a\|b` `` 的转义反斜杠 python-markdown 不会在 code span 里还原，留着被 mathify 当成 KaTeX 的 `\|`(‖)——Whisper 的 `<|zh|>` 渲染成 `<‖zh‖>`，rl-for-llm-people 的 `π(a\|s)` 渲染成 `π(a∥s)` 而同页邻居是正确的 `π(a∣s)`。在 md→html 之后加一道还原。② looksLikeMath 加规则：`<...>` 形状的是 token 不是数学，`<eos>` / `<|zh|>` 不再被当公式渲染。
+- senseflow §07 的 `D_KL` 格子被 CONST_NAME 规则误伤（保持灰底 code，与公式里的漂亮下标不一致），改写成 `D_{\mathrm{KL}}` 走 verbatim。
+- 最终验证：lint 80 页 0 ERROR；浏览器 iframe 实扫 22 个 paper（271 格）+ 12 个 concept（483 格），katex-error 全 0。
