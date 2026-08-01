@@ -729,7 +729,7 @@ pre.code {
 <p>Apple 内部的疑问：<strong>能不能不用 codec？</strong> dMel 给了答案。</p>
 
 <h2><span class="num">§ 02</span>从波形到 log-mel · 输入是什么</h2>
-<p>音频原始是 1D 波形（16kHz 采样率 = 每秒 16000 个浮点）。太长。dMel 接受的输入是 <strong>log-mel 频谱图</strong><a class="jr" href="#g-01">1</a> —— 一个 2D 矩阵 `[频道 × 时间]`。</p>
+<p>音频原始是 1D 波形（16kHz 采样率 = 每秒 16000 个浮点）。太长。dMel 接受的输入是 <strong>log-mel 频谱图</strong><a class="jr" href="#g-01">1</a> —— 一个 2D 矩阵 <code>[频道 × 时间]</code>。</p>
 
 <figure class="pl-fig" id="pl-fig">
   <figcaption>
@@ -1055,13 +1055,13 @@ pre.code {
 <div class="gloss">
   <h2>引用 / 术语表</h2>
   <ol>
-    <li id="g-01"><span class="term">Log-mel spectrogram · 对数 Mel 频谱图</span> · 把波形按短时窗 FFT → 转到 Mel scale（人耳对数感知）→ 取 log 后得到 `[80 频道 × N 帧]` 的连续矩阵。10 秒音频 ≈ 80 × 1000 = 80000 浮点。所有现代 speech LLM 的标准输入特征。详见 <a href="../concepts/log-mel-spectrogram.html">log-mel-spectrogram</a>。</li>
+    <li id="g-01"><span class="term">Log-mel spectrogram · 对数 Mel 频谱图</span> · 把波形按短时窗 FFT → 转到 Mel scale（人耳对数感知）→ 取 log 后得到 <code>[80 频道 × N 帧]</code> 的连续矩阵。10 秒音频 ≈ 80 × 1000 = 80000 浮点。所有现代 speech LLM 的标准输入特征。详见 <a href="../concepts/log-mel-spectrogram.html">log-mel-spectrogram</a>。</li>
     <li id="g-02"><span class="term">RVQ codec · Residual Vector Quantization</span> · neural codec 主流方案。用 encoder 把音频编码成向量序列，每个向量在多层 codebook 上做残差量化。EnCodec / SoundStream / fish-speech codec 都用 RVQ。表达力强但要训练 + 跟训练域绑定。详见 <a href="../concepts/rvq-codec.html">rvq-codec</a>。</li>
     <li id="g-03"><span class="term">"性能相当"的实证</span> · dMel paper 在 ASR (Librispeech) / TTS (LibriTTS) / speech LLM (内部 benchmark) 上跟 EnCodec / SoundStream / 自家 RVQ 对照，结果是<strong>多数指标差距 ≤ 2%</strong>。这是个 "good enough" 的对照 —— 不是 dMel 全面胜出，是<strong>没有显著区别</strong>。</li>
     <li id="g-04"><span class="term">"主模型变强 · 预处理塌缩" 范式</span> · 反复出现在 ML 历史里 · NLP 的 task head → prompt，TTS 的 phonemizer → end-to-end，VAD → micro-turn，OCR → VLM，手工 feature → 端到端 CNN/ViT。每次都是同种现象：<strong>外挂的预处理被主模型吸收</strong>。</li>
     <li id="g-05"><span class="term">"端到端"的工程含义</span> · 整条 forward 过程中没有梯度断点 —— 任何中间表示都可以反向传播。dMel + flow matching 组合下 TML 实现真正的端到端：从音频输入到音频输出，loss 可以一路传回所有参数。codec-based 方案因为 codec 的离散步骤打断梯度（要靠 straight-through 近似），<strong>不算严格端到端</strong>。</li>
     <li id="g-06"><span class="term">2024-12 TML</span> · Thinking Machines Lab 的 interaction model paper，用 dMel + flow matching 做实时语音 LLM。这是 dMel 在 frontier 模型里的第一次主要应用。证明"简单 + 端到端"组合在<strong>200ms 实时预算</strong>下能拿到生产可用质量。</li>
-    <li id="g-07"><span class="term">vocabulary 大小取舍</span> · dMel 默认 16 bin × 80 channel = 80 token/帧 · vocab 16 每个 token · 总信息量约等于 `80 × log2(16) = 320 bit/帧`。RVQ codec 通常 1-8 layer × 1024-2048 codebook · 总信息量约 100-300 bit/帧。<strong>同信息密度</strong>但 dMel 用更多更简单的 token 表达，RVQ 用更少更复杂的 token 表达。</li>
+    <li id="g-07"><span class="term">vocabulary 大小取舍</span> · dMel 默认 16 bin × 80 channel = 80 token/帧 · vocab 16 每个 token · 总信息量约等于 <code>80 × log2(16) = 320 bit/帧</code>。RVQ codec 通常 1-8 layer × 1024-2048 codebook · 总信息量约 100-300 bit/帧。<strong>同信息密度</strong>但 dMel 用更多更简单的 token 表达，RVQ 用更少更复杂的 token 表达。</li>
     <li id="g-08"><span class="term">vmin / vmax 是数据集统计值</span> · dMel 不用学，但需要定 bin 范围。具体做法：跑过预训练数据集，取 log-mel 的 1% 和 99% 分位数作为 vmin / vmax（避开极端值）。等距分 K = 16 bin。这是个<strong>1 次性</strong>统计操作，跟"训练 codec"完全不同等级的复杂度。</li>
     <li id="g-09"><span class="term">Vocoder · 把 mel 转回波形</span> · dMel 解决的是<strong>音频 → token</strong>方向。反向（token → 音频）仍需要 vocoder（HiFi-GAN / WaveNet / BigVGAN 等）。这部分跟 dMel 无关，可以是任何成熟方案。TML 的输出端用 flow matching 直接生成连续 mel，再过 vocoder。</li>
     <li id="g-10"><span class="term">Pipeline 简化的工程价值</span> · 不只是代码量。简化带来：调试可视化（每 bin 对应已知能量范围）、版本控制简单（无 codec checkpoint）、新语言上线快（不用训新 codec）、A/B 实验便宜（改 bin 数立即试）。这些<strong>累计起来比 paper SOTA 重要</strong>。</li>

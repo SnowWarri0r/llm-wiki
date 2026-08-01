@@ -109,7 +109,7 @@ figure{margin:38px 0 55px;padding:25px;border:2px solid var(--ink);background:va
 <div class="formula">b_norm = [x₀/W, y₀/H, x₁/W, y₁/H]
        = [64/640, 96/480, 448/640, 384/480]
        = [0.100, 0.200, 0.700, 0.800]</div>
-<p><code>x₀,y₀</code> 是左上角，<code>x₁,y₁</code> 是右下角；横坐标除以宽，纵坐标除以高，让不同分辨率共享 `[0,1]` 空间。论文保留三位小数。解码时分别乘回宽高，正好得到原框。</p>
+<p><code>x₀,y₀</code> 是左上角，<code>x₁,y₁</code> 是右下角；横坐标除以宽，纵坐标除以高，让不同分辨率共享 <code>[0,1]</code> 空间。论文保留三位小数。解码时分别乘回宽高，正好得到原框。</p>
 
 <figure id="fig-bbox" class="reveal"><figcaption><span>Fig 06 · 像素框 ↔ 归一化文本</span><span>ROUND TRIP VERIFIED</span></figcaption><div class="bbox-demo"><div class="canvas rev"><span class="axis">640 × 480</span></div><div class="calc"><div class="calc-row rev"><b>x₀′</b><span>64 / 640 = 0.100</span></div><div class="calc-row rev d2"><b>y₀′</b><span>96 / 480 = 0.200</span></div><div class="calc-row rev d3"><b>x₁′</b><span>448 / 640 = 0.700</span></div><div class="calc-row rev d4"><b>y₁′</b><span>384 / 480 = 0.800</span></div><div class="roundtrip rev d5">&lt;p&gt;person&lt;/p&gt;<br>&lt;bbox&gt;[.100,.200,.700,.800]&lt;/bbox&gt;<br>× [640,480,640,480] → 原像素框</div></div></div><p class="fig-note">三位小数在 640 宽图上的横向量化间隔约 0.64px。若模型写成 0.701，右边界会解成 448.64px：生成误差被协议变成可测的坐标误差。</p></figure>
 
@@ -123,7 +123,7 @@ figure{margin:38px 0 55px;padding:25px;border:2px solid var(--ink);background:va
 
 <figure id="fig-dense" class="reveal"><figcaption><span>Fig 07 · 四种稠密信号借用 RGB 画布</span><span>DETERMINISTIC VISUAL ENCODING</span></figcaption><div class="dense-grid"><div class="dense-card rev"><div class="mini-map depth-map"></div><b>DEPTH</b><small>metric → inverse depth<br>→ normalized gray</small></div><div class="dense-card rev d2"><div class="mini-map normal-map"></div><b>NORMAL</b><small>(nₓ,nᵧ,n_z)<br>→ R,G,B</small></div><div class="dense-card rev d3"><div class="mini-map mask-map"></div><b>BINARY MASK</b><small>fixed foreground<br>+ background colors</small></div><div class="dense-card rev d4"><div class="mini-map point-map"></div><b>POINT MAP</b><small>normalized X,Y,Z<br>→ R,G,B</small></div></div><div class="toy-depth"><div class="depth-val rev">d=1m<br>1/d=1.00<br>gray=255</div><div class="depth-val rev d2">d=2m<br>1/d=.50<br>gray=85</div><div class="depth-val rev d3">d=4m<br>1/d=.25<br>gray=0</div></div><p class="fig-note">灰度 255/85/0 只是在这三个 toy 值内做 min-max，用来解释“近亮远暗”；论文没有公开完整归一化端点，真实复现必须使用发布的转换规则，不能把这个玩具公式当官方实现。</p></figure>
 
-<p>逆深度<a class="jr" href="#g-06">6</a>为什么合理？`1m→2m` 的 `1/d` 差 0.5，`2m→4m` 只差 0.25，更多动态范围留给近处结构。但“图像形式”也带来生成误差：边缘可能模糊、RGB 可能漂移，必须解码后再按 AbsRel、角度误差或 IoU 评价。</p>
+<p>逆深度<a class="jr" href="#g-06">6</a>为什么合理？<code>1m→2m</code> 的 <code>1/d</code> 差 0.5，<code>2m→4m</code> 只差 0.25，更多动态范围留给近处结构。但“图像形式”也带来生成误差：边缘可能模糊、RGB 可能漂移，必须解码后再按 AbsRel、角度误差或 IoU 评价。</p>
 
 <h2><span class="num">§ 08 / Mixed response</span>颜色图例负责“是谁”，mask 负责“在哪里”</h2>
 <p>多区域分割不能只吐一张彩色图：RGB 本身不知道对应 road、person 还是 instance-7。模型先用 <code>&lt;color&gt;</code> 绑定语义和颜色，再渲染 mask，这就是颜色图例掩码<a class="jr" href="#g-07">7</a>。</p>
@@ -204,7 +204,7 @@ xτ=1.25, v*=-3</div></div></div><div class="recipe"><table><thead><tr><th>项�
   <li id="g-03"><span class="term">VAE latent</span> · 图像经冻结 VAE encoder 压缩后的连续表示；mask、depth、normal、point map 都在这里学习生成。</li>
   <li id="g-04"><span class="term">Decodable representation</span> · 生成结果能经确定逆变换恢复成 benchmark 记录，见<a href="../concepts/decodable-vision-representation.html">可解码视觉表示</a>。</li>
   <li id="g-05"><span class="term">Dense prediction</span> · 每个像素都要预测值的任务，如深度、法线、分割与 point map。</li>
-  <li id="g-06"><span class="term">Inverse depth</span> · 深度取倒数 `1/d`，让近处占更多数值动态范围；论文再将其归一化成灰度。</li>
+  <li id="g-06"><span class="term">Inverse depth</span> · 深度取倒数 <code>1/d</code>，让近处占更多数值动态范围；论文再将其归一化成灰度。</li>
   <li id="g-07"><span class="term">Color-legend mask</span> · 文本声明 region↔RGB，图像按颜色铺 mask，见<a href="../concepts/color-legend-mask.html">颜色图例掩码</a>。</li>
   <li id="g-08"><span class="term">Skybox invalid mapping</span> · 把无效深度点沿相机射线推到归一化单位立方体远端，避免另开 mask 训练分支。</li>
   <li id="g-09"><span class="term">Camera-pose tokenization</span> · 四元数、方向和厘米尺度离散成专用 token，见<a href="../concepts/camera-pose-tokenization.html">完整数值例</a>。</li>
