@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Camera Pose Tokenization · 相机位姿 Token 化 · Concept</title>
+<title>Mixture of Students · 四步去噪交给三套学生接力 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,61 +53,65 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · camera-pose-tokenization</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · mixture-of-students</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Camera Pose Tokenization · 相机位姿 Token 化</h1>
+  <h1>Mixture of Students · 四步去噪交给三套学生接力</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>把旋转四元数、平移方向和厘米尺度量化成 <code>[-1000,1000]</code> 的专用 token，让语言解码器像写结构化文本一样写相机位姿，再按确定公式还原成米制平移。</p>
-<h2>表示拆分</h2>
-<p>相对位姿分成三块：</p>
+<p>四次网络调用不变，但粗结构、结构修正和细节收尾由不同 student 负责，避免一套权重把所有噪声阶段都包办。</p>
+<h2>直觉</h2>
+<p>少步蒸馏把双向、多步 teacher 压成四步因果 student。第 1 步面对大噪声，重点是搭出房间和主体；最后一步已经接近干净图，重点变成纹理与边缘。同一套 14B 权重同时服务这些差异很大的输入，容易两头都顾不好。</p>
+<p>Wonder 借用按去噪阶段分专家的思路，但没有让 router 对每个 token 选专家，而是把四个固定时刻直接分给三套完整 generator。</p>
+<h2>怎么做的</h2>
+<div class="tex math-display" data-display="true">\hat x_0=
+G_3^{(4)}\circ G_3^{(3)}\circ G_2^{(2)}\circ G_1^{(1)}(x_{\tau_1}).</div>
+<p>从右往左读：</p>
+<ol>
+<li><span class="tex math-inline" data-display="false">G_1^{(1)}</span>：第 1 步，搭粗结构。</li>
+<li><span class="tex math-inline" data-display="false">G_2^{(2)}</span>：第 2 步，修结构。</li>
+<li><span class="tex math-inline" data-display="false">G_3^{(3)}</span>：第 3 步，补细节。</li>
+<li><span class="tex math-inline" data-display="false">G_3^{(4)}</span>：第 4 步，最终重建。</li>
+</ol>
+<p>上标是去噪步编号，不是网络层数。三套 generator 复用 <span class="tex math-inline" data-display="false">G_3</span> 维护的自回归 KV cache，避免每套学生各存一份视频历史。</p>
+<h2>数字例子</h2>
+<p>下面是教学用的一维 latent，不是论文真实输出。初始噪声 <span class="tex math-inline" data-display="false">x_{\tau_1}=4</span>：</p>
+<pre><code class="language-text">第 1 步：G₁(4.0) = 2.5   粗轮廓
+第 2 步：G₂(2.5) = 1.6   结构修正
+第 3 步：G₃(1.6) = 1.2   细节
+第 4 步：G₃(1.2) = 1.0   干净结果
+</code></pre>
+<p>代回组合式就是：</p>
+<div class="tex math-display" data-display="true">\hat x_0=G_3^{(4)}(G_3^{(3)}(G_2^{(2)}(G_1^{(1)}(4))))=1.</div>
+<p>自检：仍然只调用 4 次网络。变化的是每次查哪套参数，不是把四步变成三步。</p>
+<h2>代价</h2>
 <ul>
-<li><code>q=(qx,qy,qz,qw)</code>：单位四元数，表示旋转；</li>
-<li><code>u=(ux,uy,uz)</code>：单位方向向量，只说明往哪移动；</li>
-<li><span class="tex math-inline" data-display="false">s_{\mathrm{cm}}</span>：移动尺度，单位厘米，范围 1–1000，对应 0.01–10m。</li>
+<li>优点：同样四步下增加有效参数容量，让不同噪声阶段分工。</li>
+<li>代价：部署要驻留三套 14B 权重，参数与显存远大于单 student。</li>
+<li>论文说不增加 inference latency，准确含义是“没有新增去噪步且共享 cache”；v1 没给单 student 与 MoS 的逐项时延/显存消融。</li>
 </ul>
-<p>四元数与方向分量都乘 1000 并取专用数值 token；<code>&lt;1&gt;</code> 在 scale 字段里表示 1cm。边界标签 <code>&lt;frame&gt; / &lt;quat&gt; / &lt;offset&gt; / &lt;scale&gt;</code> 负责结构。</p>
-<h2>完整数字例</h2>
-<p>第二帧相对第一帧不旋转，向 <code>(0.6,0,0.8)</code> 方向移动 <code>1.25m</code>：</p>
-<pre><code class="language-text">q = (0,0,0,1)           → &lt;0&gt;&lt;0&gt;&lt;0&gt;&lt;1000&gt;
-u = (0.6,0,0.8)         → &lt;600&gt;&lt;0&gt;&lt;800&gt;
-s = 1.25m = 125cm       → &lt;125&gt;
-
-&lt;frame&gt;&lt;quat&gt;&lt;0&gt;&lt;0&gt;&lt;0&gt;&lt;1000&gt;&lt;/quat&gt;
-&lt;offset&gt;&lt;600&gt;&lt;0&gt;&lt;800&gt;&lt;/offset&gt;&lt;scale&gt;&lt;125&gt;&lt;/scale&gt;&lt;/frame&gt;
-</code></pre>
-<p>解码先除以 1000：<code>u=(0.6,0,0.8)</code>。再把厘米转米：</p>
-<pre><code class="language-text">t = u × s_cm / 100
-  = (0.6,0,0.8) × 125 / 100
-  = (0.75,0,1.00) m
-</code></pre>
-<p>自检：方向长度 <span class="tex math-inline" data-display="false">\sqrt{0.6^{2}+0.8^{2}}=1</span>；平移长度 <span class="tex math-inline" data-display="false">\sqrt{0.75^{2}+1^{2}}=1.25m</span>，与 scale 一致。</p>
-<h2>为什么不直接输出三个平移数</h2>
-<p>方向和尺度拆开后，方向永远落在 <code>[-1,1]</code>，能复用固定 <code>[-1000,1000]</code> 量化表；尺度则用厘米 token 覆盖 1cm–10m。代价是自回归解码必须同时保证四元数归一、方向单位长度和标签格式正确，模型生成的整数也不天然满足几何约束。</p>
-<h2>工程证据</h2>
-<p>论文为相机位姿复用基础模型词表最后 2,009 项：2,001 个数值 token 加 8 个结构 token。官方当前源码的解析器将 <code>&lt;quat&gt;</code> 与 <code>&lt;offset&gt;</code> 整数除以 1000，再按 <span class="tex math-inline" data-display="false">translation =offset \times scale / 100</span> 还原米制平移。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../concepts/decodable-vision-representation.html">decodable-vision-representation</a> · 连续视觉量如何进入生成接口</li>
-<li><a href="../concepts/tokenization.html">tokenization</a> · 连续值量化成离散符号的通用取舍</li>
-<li><a href="../papers/sensenova-vision.html">sensenova-vision</a> · 多视图 point map 与 pose 的统一训练</li>
+<li><a href="../papers/wonder-video-world-model.html">wonder-video-world-model</a> · 用 MoS 修复四步因果蒸馏的容量瓶颈</li>
+<li><a href="../concepts/dmd-distillation.html">dmd-distillation</a> · 三套学生共同接受的分布匹配训练</li>
+<li>MoE 对照 · MoE 常在层内按 token 路由，MoS 按去噪时刻固定路由</li>
+<li><a href="../concepts/kv-cache.html">kv-cache</a> · 三套学生复用的历史状态</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 5 处</span>
-  <ul><li><a href="../papers/sensenova-vision.html"><span class="cat">paper</span>SenseNova-Vision · 不接任务专用头，怎样让一个模型同时写框、画深度、生成 mask</a></li><li><a href="../concepts/decodable-vision-representation.html"><span class="cat">concept</span>Decodable Vision Representation · 可解码视觉表示</a></li><li><a href="../concepts/pixel-space-coordinate-field.html"><span class="cat">concept</span>Pixel-Space Coordinate Field · 把相机轨迹画成控制视频</a></li><li><a href="../concepts/projective-rope.html"><span class="cat">concept</span>PRoPE · 把相机几何写进注意力</a></li><li><a href="../concepts/raymap.html"><span class="cat">concept</span>Raymap · 用每个像素的一条三维射线表示相机</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/wonder-video-world-model.html"><span class="cat">paper</span>Wonder · 把图片或视频变成能实时移动相机的生成世界</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/camera-pose-tokenization.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/mixture-of-students.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 

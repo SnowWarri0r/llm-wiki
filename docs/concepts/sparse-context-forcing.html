@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Camera Pose Tokenization · 相机位姿 Token 化 · Concept</title>
+<title>Sparse Context Forcing · 先练会“少看历史”，再开稀疏记忆 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,61 +53,84 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · camera-pose-tokenization</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · sparse-context-forcing</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Camera Pose Tokenization · 相机位姿 Token 化</h1>
+  <h1>Sparse Context Forcing · 先练会“少看历史”，再开稀疏记忆</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>把旋转四元数、平移方向和厘米尺度量化成 <code>[-1000,1000]</code> 的专用 token，让语言解码器像写结构化文本一样写相机位姿，再按确定公式还原成米制平移。</p>
-<h2>表示拆分</h2>
-<p>相对位姿分成三块：</p>
+<p>历史完整保存、摘要负责挑块、完整 KV 负责读取；训练时还随机断掉远端连接，让模型提前适应推理时只能看到少数旧块。</p>
+<h2>直觉</h2>
+<p>长视频若让新 chunk 看全部历史，attention 会越来越慢。只留最近窗口又会忘记远处看过的房门。Wonder 把两件事分开：</p>
+<ol>
+<li><strong>存什么</strong>：每块保存完整 K/V，另存很小的 key 摘要。</li>
+<li><strong>本轮算什么</strong>：一定看开头和最近块，再按摘要相似度挑 top-k 旧块；只把这些块的完整 K/V 送进 attention。</li>
+</ol>
+<p>但直接在部署时把历史砍稀会翻车，因为训练时模型一直吃满上下文。Sparse Context Forcing 在 ODE 初始化阶段随机丢掉可选历史边，先把这种缺历史的工作方式练熟。</p>
+<h2>怎么做的</h2>
+<p>活跃块：</p>
+<div class="tex math-display" data-display="true">\mathcal A_t=\{0\}\cup\mathcal N_r(t)\cup
+\operatorname{TopK}_k\{\operatorname{sim}(\bar Q_t,\bar K_c)\mid c\in\mathcal M(t)\}.</div>
 <ul>
-<li><code>q=(qx,qy,qz,qw)</code>：单位四元数，表示旋转；</li>
-<li><code>u=(ux,uy,uz)</code>：单位方向向量，只说明往哪移动；</li>
-<li><span class="tex math-inline" data-display="false">s_{\mathrm{cm}}</span>：移动尺度，单位厘米，范围 1–1000，对应 0.01–10m。</li>
+<li><span class="tex math-inline" data-display="false">\mathcal A_t</span>：当前块 <span class="tex math-inline" data-display="false">t</span> 真正会读取的历史块。</li>
+<li><span class="tex math-inline" data-display="false">\{0\}</span>：首块，作为身份/场景锚点。</li>
+<li><span class="tex math-inline" data-display="false">\mathcal N_r(t)</span>：最近 <span class="tex math-inline" data-display="false">r</span> 块；Wonder 取 <span class="tex math-inline" data-display="false">r=2</span>。</li>
+<li><span class="tex math-inline" data-display="false">\mathcal M(t)</span>：除首块和最近块外的中段历史。</li>
+<li><span class="tex math-inline" data-display="false">\bar Q_t,\bar K_c</span>：池化后的 query/key 摘要。</li>
+<li><span class="tex math-inline" data-display="false">\operatorname{sim}</span>：摘要相似度；论文没公开具体形式。</li>
+<li><span class="tex math-inline" data-display="false">k</span>：从中段挑几块；论文没公开取值。</li>
 </ul>
-<p>四元数与方向分量都乘 1000 并取专用数值 token；<code>&lt;1&gt;</code> 在 scale 字段里表示 1cm。边界标签 <code>&lt;frame&gt; / &lt;quat&gt; / &lt;offset&gt; / &lt;scale&gt;</code> 负责结构。</p>
-<h2>完整数字例</h2>
-<p>第二帧相对第一帧不旋转，向 <code>(0.6,0,0.8)</code> 方向移动 <code>1.25m</code>：</p>
-<pre><code class="language-text">q = (0,0,0,1)           → &lt;0&gt;&lt;0&gt;&lt;0&gt;&lt;1000&gt;
-u = (0.6,0,0.8)         → &lt;600&gt;&lt;0&gt;&lt;800&gt;
-s = 1.25m = 125cm       → &lt;125&gt;
-
-&lt;frame&gt;&lt;quat&gt;&lt;0&gt;&lt;0&gt;&lt;0&gt;&lt;1000&gt;&lt;/quat&gt;
-&lt;offset&gt;&lt;600&gt;&lt;0&gt;&lt;800&gt;&lt;/offset&gt;&lt;scale&gt;&lt;125&gt;&lt;/scale&gt;&lt;/frame&gt;
+<p>训练掩码：</p>
+<div class="tex math-display" data-display="true">M^{(\ell)}_{ij}
+=\mathbf1[a(i,j)\in\mathcal R]
++b^{(\ell)}_{ij}\mathbf1[a(i,j)\in\mathcal O],
+\qquad
+b^{(\ell)}_{ij}\sim\operatorname{Bernoulli}(1-p_\ell).</div>
+<p>必须边 <span class="tex math-inline" data-display="false">\mathcal R</span> 永远开；可选边 <span class="tex math-inline" data-display="false">\mathcal O</span> 以 <span class="tex math-inline" data-display="false">1-p_\ell</span> 的概率保留。每层、每次前向都重抽。</p>
+<h2>数字例子</h2>
+<p>历史块是 0–7，当前生成第 8 块。设 <span class="tex math-inline" data-display="false">r=2,k=2</span>：</p>
+<pre><code class="language-text">固定首块：{0}
+固定最近：{6,7}
+中段候选：{1,2,3,4,5}
+相似度： [.15,.82,.20,.76,.11]
+top-2：   {2,4}
+最终 A₈： {0,2,4,6,7}
 </code></pre>
-<p>解码先除以 1000：<code>u=(0.6,0,0.8)</code>。再把厘米转米：</p>
-<pre><code class="language-text">t = u × s_cm / 100
-  = (0.6,0,0.8) × 125 / 100
-  = (0.75,0,1.00) m
+<p>若每块 8 个 token，当前 query 也有 8 个：</p>
+<pre><code class="language-text">全历史 attention：8 × (8块×8 token) = 512 个分数
+稀疏 active：      8 × (5块×8 token) = 320 个分数
+历史涨到 100 块，只要 active 仍是 5 块，主 attention 仍是 320
 </code></pre>
-<p>自检：方向长度 <span class="tex math-inline" data-display="false">\sqrt{0.6^{2}+0.8^{2}}=1</span>；平移长度 <span class="tex math-inline" data-display="false">\sqrt{0.75^{2}+1^{2}}=1.25m</span>，与 scale 一致。</p>
-<h2>为什么不直接输出三个平移数</h2>
-<p>方向和尺度拆开后，方向永远落在 <code>[-1,1]</code>，能复用固定 <code>[-1000,1000]</code> 量化表；尺度则用厘米 token 覆盖 1cm–10m。代价是自回归解码必须同时保证四元数归一、方向单位长度和标签格式正确，模型生成的整数也不天然满足几何约束。</p>
-<h2>工程证据</h2>
-<p>论文为相机位姿复用基础模型词表最后 2,009 项：2,001 个数值 token 加 8 个结构 token。官方当前源码的解析器将 <code>&lt;quat&gt;</code> 与 <code>&lt;offset&gt;</code> 整数除以 1000，再按 <span class="tex math-inline" data-display="false">translation =offset \times scale / 100</span> 还原米制平移。</p>
+<p>再看训练掩码。取 <span class="tex math-inline" data-display="false">p_\ell=.6</span>，4 条可选边本轮伯努利样本为 <code>[1,0,0,1]</code>：</p>
+<pre><code class="language-text">必须边： [1,1]            → 永远保留
+可选边： [1,0,0,1]        → 只保留第 1、4 条
+最终：   [1,1 | 1,0,0,1]
+</code></pre>
+<p>自检：无论随机数怎样，前两条 required 都不会被关掉。</p>
+<h2>边界</h2>
+<p>固定的是 active attention 大小，不是总内存。完整历史 K/V 存储仍随 rollout 增长，摘要检索也要比较候选。Wonder v1 没公开 top-k、池化、相似度、drop rate 和一分钟后的淘汰策略。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../concepts/decodable-vision-representation.html">decodable-vision-representation</a> · 连续视觉量如何进入生成接口</li>
-<li><a href="../concepts/tokenization.html">tokenization</a> · 连续值量化成离散符号的通用取舍</li>
-<li><a href="../papers/sensenova-vision.html">sensenova-vision</a> · 多视图 point map 与 pose 的统一训练</li>
+<li><a href="../papers/wonder-video-world-model.html">wonder-video-world-model</a> · 提出并用于实时长时记忆</li>
+<li><a href="../concepts/sparse-attention.html">sparse-attention</a> · 更广义的只计算少数 token 对</li>
+<li><a href="../concepts/kv-cache.html">kv-cache</a> · 完整历史 K/V 存储</li>
+<li><a href="../concepts/self-attention.html">self-attention</a> · 最后仍用被选块的完整 K/V 做标准 attention</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 5 处</span>
-  <ul><li><a href="../papers/sensenova-vision.html"><span class="cat">paper</span>SenseNova-Vision · 不接任务专用头，怎样让一个模型同时写框、画深度、生成 mask</a></li><li><a href="../concepts/decodable-vision-representation.html"><span class="cat">concept</span>Decodable Vision Representation · 可解码视觉表示</a></li><li><a href="../concepts/pixel-space-coordinate-field.html"><span class="cat">concept</span>Pixel-Space Coordinate Field · 把相机轨迹画成控制视频</a></li><li><a href="../concepts/projective-rope.html"><span class="cat">concept</span>PRoPE · 把相机几何写进注意力</a></li><li><a href="../concepts/raymap.html"><span class="cat">concept</span>Raymap · 用每个像素的一条三维射线表示相机</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/wonder-video-world-model.html"><span class="cat">paper</span>Wonder · 把图片或视频变成能实时移动相机的生成世界</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/camera-pose-tokenization.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/sparse-context-forcing.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
