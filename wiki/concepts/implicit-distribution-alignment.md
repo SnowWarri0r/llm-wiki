@@ -15,10 +15,10 @@ IDA（Implicit Distribution Alignment，隐式分布对齐）不是直接混合�
 
 DMD / DMD2 同时训练：
 
-- 生成器 \(G_\theta\)，它决定当前学生分布 `p_g`；
+- 生成器 \(G_\theta\)，它决定当前学生分布 \(p_g\)；
 - fake 网络 \(\mu_\phi\)，它要估计当前学生分布的 score。
 
-生成器一更新，`p_g` 就移动。fake 网络若仍描述上一版学生，`s_fake-s_real` 就会给生成器一根过时的梯度。DMD2 的 TTUR 让 fake 网络在生成器两次更新之间多训练几次；模型扩大到 SD 3.5 Large 和 FLUX 后，SenseFlow 发现即使把频率提到 20:1，训练仍会振荡或坍塌。
+生成器一更新，\(p_g\) 就移动。fake 网络若仍描述上一版学生，`s_fake-s_real` 就会给生成器一根过时的梯度。DMD2 的 TTUR 让 fake 网络在生成器两次更新之间多训练几次；模型扩大到 SD 3.5 Large 和 FLUX 后，SenseFlow 发现即使把频率提到 20:1，训练仍会振荡或坍塌。
 
 ## 公式逐项拆开
 
@@ -62,7 +62,7 @@ SenseFlow 的生成器和 fake 网络都从同一个扩散 / flow teacher 复制
 
 ## 理论边界
 
-SenseFlow 证明的是：在参数到速度场局部 Lipschitz、生成器步长趋近于零、score 与速度误差能控制 KL 等假设下，IDA 可让 `p_f` 成为 `p_g` 的 `ε-best response`。这不是“权重接近必然等于分布相同”的无条件定理；离开这些假设，IDA 仍主要是一个有实验支持的稳定化策略。
+SenseFlow 证明的是：在参数到速度场局部 Lipschitz、生成器步长趋近于零、score 与速度误差能控制 KL 等假设下，IDA 可让 \(p_f\) 成为 \(p_g\) 的 `ε-best response`。这不是“权重接近必然等于分布相同”的无条件定理；离开这些假设，IDA 仍主要是一个有实验支持的稳定化策略。
 
 ## 链接
 

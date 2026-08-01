@@ -75,7 +75,7 @@ updated: 2026-05-22
 
 ## 跟 flow matching 的关系
 
-[[flow-matching]] 要做的事：给一族 [[probability-path]]（每个时刻一份分布 `p_t`），找出对应的 [[velocity-field]] `v_t`，让粒子沿 `v_t` 流动时，密度演化正好就是 `p_t`。
+[[flow-matching]] 要做的事：给一族 [[probability-path]]（每个时刻一份分布 \(p_t\)），找出对应的 [[velocity-field]] \(v_t\)，让粒子沿 \(v_t\) 流动时，密度演化正好就是 \(p_t\)。
 
 连续性方程告诉你：**给定 p_t，对应的 v_t 是唯一的**（必须满足这条方程）。所以"选 path = 选 velocity"，flow matching 直接在 path 这一层做选择，velocity 自然定下来。
 
@@ -92,7 +92,7 @@ updated: 2026-05-22
 ⇒  ∂/∂t ∫ p dx = 0
 ```
 
-也就是：**总质量 / 总概率不随时间变化**。这就是 "`p_t` 永远积分为 1" 的数学保证 —— 它是连续性方程的副产品。
+也就是：**总质量 / 总概率不随时间变化**。这就是 "\(p_t\) 永远积分为 1" 的数学保证 —— 它是连续性方程的副产品。
 
 ## 编程角度
 
