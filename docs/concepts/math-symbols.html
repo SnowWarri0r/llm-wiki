@@ -66,67 +66,67 @@
 <article class="concept-body">
 <p>ML paper 里反复出现的数学符号 + 它们对应的"工程意思"。看到不认识的就翻这页。</p>
 <h2>微积分相关</h2>
-<h3><code>∂</code> · 偏导数（partial derivative）</h3>
+<h3><span class="tex math-inline" data-display="false">\partial</span> · 偏导数（partial derivative）</h3>
 <p>"对某个变量求导，把其他变量当常数"。</p>
-<p>例子：<code>∂y/∂x</code> = "y 怎么随 x 变"。当 y 还依赖别的变量（比如 z），∂ 表示<strong>只关心 x 这个轴</strong>，其他变量当固定。</p>
+<p>例子：<span class="tex math-inline" data-display="false">\partial y/\partial x</span> = "y 怎么随 x 变"。当 y 还依赖别的变量（比如 z），∂ 表示<strong>只关心 x 这个轴</strong>，其他变量当固定。</p>
 <p>工程类比：<code>gradient[x]</code> —— 多维空间里只看一个坐标方向的斜率。</p>
-<h3><code>∇</code> · nabla / 梯度（gradient）</h3>
+<h3><span class="tex math-inline" data-display="false">\nabla</span> · nabla / 梯度（gradient）</h3>
 <p>对一个标量函数，<strong>对所有变量都求偏导，打包成一个向量</strong>。</p>
-<p>例子：<code>∇f(x, y, z) = (∂f/∂x, ∂f/∂y, ∂f/∂z)</code> —— 一个 3 维向量，指向 f 增长最快的方向。</p>
+<p>例子：<span class="tex math-inline" data-display="false">\nabla f(x,y,z) = (\partial f/\partial x,\partial f/\partial y,\partial f/\partial z)</span> —— 一个 3 维向量，指向 f 增长最快的方向。</p>
 <p>工程类比：<code>torch.autograd.grad(f, [x, y, z])</code> 返回的那个向量。</p>
-<h3><code>∇·</code> · 散度（divergence）</h3>
+<h3><span class="tex math-inline" data-display="false">\nabla \cdot</span> · 散度（divergence）</h3>
 <p>对一个<strong>向量场</strong> v(x)，∇·v 是<strong>每个点"流出 vs 流入"的差</strong>。</p>
 <p>例子：风场里某点的散度大于 0 → 气流从这点向外发散；小于 0 → 气流向这点汇聚。</p>
-<p>为什么 flow matching 关心散度：<a href="../concepts/continuity-equation.html">continuity-equation</a> <code>∂p/∂t + ∇·(p·v) = 0</code> 就是说"粒子既不凭空冒出来也不凭空消失"（守恒）。</p>
-<h3><code>Δ</code> / <code>δ</code> · delta · 小变化</h3>
-<p><code>Δt</code> = "时间的一小步"，<code>δx</code> = "x 的微小扰动"。在 ODE 里 <code>x_{t+Δt} = x_t + v·Δt</code> 就是"沿速度走一小步"。</p>
+<p>为什么 flow matching 关心散度：<a href="../concepts/continuity-equation.html">continuity-equation</a> <span class="tex math-inline" data-display="false">\partial p/\partial t +\nabla \cdot (p\cdot v) =0</span> 就是说"粒子既不凭空冒出来也不凭空消失"（守恒）。</p>
+<h3><span class="tex math-inline" data-display="false">\Delta</span> / <span class="tex math-inline" data-display="false">\delta</span> · delta · 小变化</h3>
+<p><span class="tex math-inline" data-display="false">\Delta t</span> = "时间的一小步"，<span class="tex math-inline" data-display="false">\delta x</span> = "x 的微小扰动"。在 ODE 里 <span class="tex math-inline" data-display="false">x_{t+\Delta t} =x_t +v\cdot \Delta t</span> 就是"沿速度走一小步"。</p>
 <h2>概率相关</h2>
 <h3><code>p(x)</code> · 概率密度</h3>
 <p>"x 这个值出现的相对密集程度"。不是概率，是密度（在连续情况下）。</p>
-<p>数据分布 <code>p_data(x)</code> = 训练数据的密度，标准高斯 <code>N(0, I)</code> = <code>p_0(x) = (2π)^{-d/2}·exp(-||x||²/2)</code>。</p>
-<h3><code>E[·]</code> 或 <code>𝔼[·]</code> · 期望（expectation）</h3>
+<p>数据分布 <code>p_data(x)</code> = 训练数据的密度，标准高斯 <code>N(0, I)</code> = <span class="tex math-inline" data-display="false">p_0(x) = (2\pi )^{-d/2}\cdot \exp (-||x||^{2}/2)</span>。</p>
+<h3><span class="tex math-inline" data-display="false">E[\cdot ]</span> 或 <span class="tex math-inline" data-display="false">𝔼[\cdot ]</span> · 期望（expectation）</h3>
 <p>"概率加权平均"。</p>
 <pre><code class="language-python">E_{x ~ p}[f(x)]  # 等价于
 # (1/N) * sum(f(x_i) for x_i in samples_from_p)  当 N → ∞
 </code></pre>
-<p>flow matching loss 公式里的 <code>E_{t, x_0, x_1}[...]</code> = "对所有 (t, x_0, x_1) 的组合求平均"。</p>
+<p>flow matching loss 公式里的 <span class="tex math-inline" data-display="false">E_{t,x_0,x_1}[...]</span> = "对所有 (t, x_0, x_1) 的组合求平均"。</p>
 <h3><code>log p(x)</code> · 对数概率</h3>
 <p>直接用 p 数值范围太广（10⁻¹⁰ 到 1.0），取 log 后变成 -23 到 0 这种神经网络友好的范围。</p>
 <p>乘除如何变成加减、指数怎样移到 log 外、换底公式如何推导，见 <a href="../concepts/logarithms.html">logarithms</a>。</p>
-<h3><code>∇log p(x)</code> · score</h3>
+<h3><span class="tex math-inline" data-display="false">\nabla \log p(x)</span> · score</h3>
 <p>就是上面"梯度"应用到"对数概率"。直觉上：<strong>这个向量指向概率密度更大的方向</strong>。详见 <a href="../concepts/score-function.html">score-function</a>。</p>
-<h3><code>ε</code> · epsilon · 噪声</h3>
-<p>通常表示 <code>ε ~ N(0, I)</code> —— 一个标准高斯噪声向量。diffusion 加噪 / flow matching 起点都用它。</p>
+<h3><span class="tex math-inline" data-display="false">\epsilon</span> · epsilon · 噪声</h3>
+<p>通常表示 <span class="tex math-inline" data-display="false">\epsilon ~ N(0,I)</span> —— 一个标准高斯噪声向量。diffusion 加噪 / flow matching 起点都用它。</p>
 <h2>线性代数相关</h2>
 <h3><code>||x||</code> · 向量的 norm（长度）</h3>
-<p>默认是 L2 norm：<code>||x|| = sqrt(x₁² + x₂² + ... + x_d²)</code> —— 欧几里得距离。</p>
-<p><code>||x||²</code> 就是去掉根号：<code>x₁² + ... + x_d²</code>。loss 函数里常见的 <code>||a - b||²</code> 是 MSE 的向量版。</p>
-<h3><code>Q · Kᵀ</code> · 矩阵乘 + 转置</h3>
+<p>默认是 L2 norm：<span class="tex math-inline" data-display="false">||x|| =sqrt(x_{1}^{2} +x_{2}^{2} + ... +x_d^{2})</span> —— 欧几里得距离。</p>
+<p><span class="tex math-inline" data-display="false">||x||^{2}</span> 就是去掉根号：<span class="tex math-inline" data-display="false">x_{1}^{2} + ... +x_d^{2}</span>。loss 函数里常见的 <span class="tex math-inline" data-display="false">||a -b||^{2}</span> 是 MSE 的向量版。</p>
+<h3><span class="tex math-inline" data-display="false">Q \cdot K^{T}</span> · 矩阵乘 + 转置</h3>
 <ul>
-<li><code>·</code> 矩阵乘法（在 numpy/torch 里写成 <code>@</code>）</li>
-<li><code>Kᵀ</code> = K 的转置（行列互换）</li>
+<li><span class="tex math-inline" data-display="false">\cdot</span> 矩阵乘法（在 numpy/torch 里写成 <code>@</code>）</li>
+<li><span class="tex math-inline" data-display="false">K^{T}</span> = K 的转置（行列互换）</li>
 </ul>
-<p>attention 里的 <code>Q · Kᵀ</code> 是 [seq, d] @ [d, seq] = [seq, seq] —— 每对 (i, j) 算一个 attention score。</p>
+<p>attention 里的 <span class="tex math-inline" data-display="false">Q \cdot K^{T}</span> 是 [seq, d] @ [d, seq] = [seq, seq] —— 每对 (i, j) 算一个 attention score。</p>
 <h3><code>I</code> · 单位矩阵 / identity matrix</h3>
 <p>对角线 1，其他位置 0。<code>N(0, I)</code> = 各维独立的标准高斯。</p>
-<h3><code>√</code> · 平方根</h3>
-<p>注意 <code>√d_k</code> 在 attention 里是 d_k 的<strong>标量</strong>平方根，不是矩阵开根。<code>sqrt(64) = 8</code>，用来除 attention score 防 softmax 饱和。</p>
+<h3><span class="tex math-inline" data-display="false">\surd</span> · 平方根</h3>
+<p>注意 <span class="tex math-inline" data-display="false">\sqrt{d}_k</span> 在 attention 里是 d_k 的<strong>标量</strong>平方根，不是矩阵开根。<code>sqrt(64) = 8</code>，用来除 attention score 防 softmax 饱和。</p>
 <h2>函数相关</h2>
-<h3><code>f_θ(x)</code> · 参数化函数</h3>
-<p>下标 θ 表示"这个函数由参数 θ 决定"。神经网络通常写成 <code>u_θ</code>、<code>f_θ</code> —— θ 就是 weights。训练 = 找最优 θ。</p>
+<h3><span class="tex math-inline" data-display="false">f_\theta (x)</span> · 参数化函数</h3>
+<p>下标 θ 表示"这个函数由参数 θ 决定"。神经网络通常写成 <span class="tex math-inline" data-display="false">u_\theta</span>、<span class="tex math-inline" data-display="false">f_\theta</span> —— θ 就是 weights。训练 = 找最优 θ。</p>
 <h3><code>~</code> · 采样自</h3>
 <p><code>x ~ N(0, I)</code> = "x 从标准高斯里采样"。
 <code>t ~ U(0, 1)</code> = "t 从 [0, 1] 均匀分布采样"。</p>
-<h3><code>→</code> / <code>↦</code> · 映射 / 函数</h3>
-<p><code>f: ℝᵈ → ℝᵏ</code> = "f 把 d 维向量映射到 k 维"。</p>
+<h3><span class="tex math-inline" data-display="false">\to</span> / <code>↦</code> · 映射 / 函数</h3>
+<p><span class="tex math-inline" data-display="false">f: ℝᵈ \to ℝᵏ</span> = "f 把 d 维向量映射到 k 维"。</p>
 <h3><code>argmin</code> / <code>argmax</code></h3>
-<p><code>argmin_x f(x)</code> = "让 f 最小的那个 x"。训练 loss 是 <code>argmin_θ L(θ)</code>。</p>
+<p><code>argmin_x f(x)</code> = "让 f 最小的那个 x"。训练 loss 是 <span class="tex math-inline" data-display="false">argmin_\theta L(\theta )</span>。</p>
 <h2>微分方程相关</h2>
 <h3>ODE · 普通微分方程</h3>
 <p><code>dx/dt = v(x, t)</code> —— 给定 v，给定 x_0，<strong>解唯一</strong>。flow matching 用这个。</p>
-<p>求解：欧拉法 <code>x_{t+Δt} = x_t + v(x_t, t)·Δt</code>，或更高阶的 RK4。</p>
+<p>求解：欧拉法 <span class="tex math-inline" data-display="false">x_{t+\Delta t} =x_t +v(x_t,t)\cdot \Delta t</span>，或更高阶的 RK4。</p>
 <h3>SDE · 随机微分方程</h3>
-<p><code>dx = f(x, t)·dt + g(t)·dW</code> —— 比 ODE 多了 <code>dW</code>（Wiener process，布朗运动），<strong>带随机扰动</strong>。同样 x_0 跑两次结果不同。diffusion 用这个。</p>
+<p><span class="tex math-inline" data-display="false">dx =f(x,t)\cdot dt +g(t)\cdot dW</span> —— 比 ODE 多了 <code>dW</code>（Wiener process，布朗运动），<strong>带随机扰动</strong>。同样 x_0 跑两次结果不同。diffusion 用这个。</p>
 <p>详见 <a href="../concepts/ode-vs-sde.html">ode-vs-sde</a>。</p>
 <h3><code>dW</code> · Wiener process 增量</h3>
 <p>布朗运动的微小变化。可理解为 <code>dW ~ N(0, dt)</code> 的小随机扰动。</p>
@@ -230,6 +230,19 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

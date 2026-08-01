@@ -189,7 +189,7 @@ def forward(self, x):
     base_out = self.base(x)                                   # 共享 logits 只算一次
     return [base_out + adapter(x) for adapter in self.adapters]  # 8 层 = 共享 + 各自低秩增量
 </code></pre>
-<p>最后一行就是 LoRA 的式子 <code>W·x + (B·A)·x</code>：8 层共用主体 <code>W</code>，每层只学一个瘦 <code>768→256→vocab</code> 的增量。模型在赌 <strong>8 层的"hidden→码"映射大体相同、差异是低秩的</strong>。输入侧 <code>TalkerEmbedding</code> 对称：每层"共享表 + 低秩 adapter"查嵌入，再<strong>对 8 层求平均</strong>塌成一帧一个向量喂回自回归。</p>
+<p>最后一行就是 LoRA 的式子 <span class="tex math-inline" data-display="false">W\cdot x + (B\cdot A)\cdot x</span>：8 层共用主体 <code>W</code>，每层只学一个瘦 <span class="tex math-inline" data-display="false">768\to 256\to vocab</span> 的增量。模型在赌 <strong>8 层的"hidden→码"映射大体相同、差异是低秩的</strong>。输入侧 <code>TalkerEmbedding</code> 对称：每层"共享表 + 低秩 adapter"查嵌入，再<strong>对 8 层求平均</strong>塌成一帧一个向量喂回自回归。</p>
 <p>为什么省 + 为什么稳：</p>
 <table>
 <thead>
@@ -243,6 +243,19 @@ def forward(self, x):
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

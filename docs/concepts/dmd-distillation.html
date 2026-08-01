@@ -72,10 +72,10 @@
 <p>逐轨迹蒸馏要求同一份噪声 <code>z</code> 经过学生后，必须得到老师几十步采样的那张指定图片。一步学生很难完整拟合这张复杂映射。</p>
 <p>DMD 放松成分布要求：不检查每张作品是不是逐笔临摹，只检查学生交来的一批图，在逼真度和多样性上是否像老师那批。它仍保留少量 <code>(z, 老师图 y)</code> 回归作为稳定器；“不逐样本强制对齐”不等于“完全没有配对数据”。</p>
 <h2>怎么做的</h2>
-<p>学生生成 <code>x=G_θ(z)</code>。DMD 在 <code>x</code> 上随机加噪，再让两套扩散去噪器估计 score：</p>
+<p>学生生成 <span class="tex math-inline" data-display="false">x=G_\theta (z)</span>。DMD 在 <code>x</code> 上随机加噪，再让两套扩散去噪器估计 score：</p>
 <ul>
-<li><code>s_real</code>：冻结老师给出的目标分布方向；</li>
-<li><code>s_fake</code>：额外 fake-score 模型给出的学生当前分布方向；它每轮都用最新学生图继续训练。</li>
+<li><span class="tex math-inline" data-display="false">s_{\mathrm{real}}</span>：冻结老师给出的目标分布方向；</li>
+<li><span class="tex math-inline" data-display="false">s_{\mathrm{fake}}</span>：额外 fake-score 模型给出的学生当前分布方向；它每轮都用最新学生图继续训练。</li>
 </ul>
 <p>生成器梯度的核心是：</p>
 <div class="tex math-display" data-display="true">\nabla_\theta D_{\mathrm{KL}}\approx
@@ -84,7 +84,7 @@
 \frac{\partial G_\theta}{\partial\theta}\right].</div>
 <p>梯度下降会减去它，所以最终效果是“吸向 real、离开 fake 已经堆得过密的区域”。只用 real score，很多样本可能全挤向最近的同一个模式；fake score 提供分散作用。</p>
 <h2>数字例子</h2>
-<p>设某次训练只有一个标量：<code>α=.8</code>，权重 <code>w=1.5</code>，real score <code>1.5</code>，fake score <code>.1667</code>，并令 <code>∂G/∂θ=1</code>：</p>
+<p>设某次训练只有一个标量：<span class="tex math-inline" data-display="false">\alpha =.8</span>，权重 <code>w=1.5</code>，real score <code>1.5</code>，fake score <code>.1667</code>，并令 <span class="tex math-inline" data-display="false">\partial G/\partial \theta =1</span>：</p>
 <pre><code class="language-text">g = 1.5×.8×(.1667−1.5) = −1.6
 θ_new = θ − .1×g = θ + .16
 </code></pre>

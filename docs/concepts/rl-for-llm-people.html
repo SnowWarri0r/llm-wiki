@@ -69,7 +69,7 @@
 <h2>直觉 · 为什么 PPO 那页看着云里雾里</h2>
 <p>PPO / RLHF 那几页默认读者已经有 RL 脑回路。但 RL 跟监督学习不是一套思维: 监督学习数据是死的, RL 的数据是模型自己生出来的、还会过期。这页把地基补上, 全程用 LLM 续写当例子, 不用想"游戏"。</p>
 <h2>§0 顿悟点: LLM 本身就是一个 policy</h2>
-<p><code>policy π(a|s)</code> 听着玄, 其实就是: <strong>给一个局面 state, 吐出"下一步每个动作的概率"</strong>。它就是个神经网络, 输入 state, 输出一个 softmax 分布。</p>
+<p><span class="tex math-inline" data-display="false">policy \pi (a|s)</span> 听着玄, 其实就是: <strong>给一个局面 state, 吐出"下一步每个动作的概率"</strong>。它就是个神经网络, 输入 state, 输出一个 softmax 分布。</p>
 <p>对 LLM 直接对号入座:</p>
 <table>
 <thead>
@@ -123,21 +123,21 @@
 <li><strong>把"想要 reward"翻译成"调每个 token 的概率"</strong>, 靠的是 advantage <code>A</code> (见 <a href="../concepts/advantage-function.html">advantage-function</a>):
    - <code>A &gt; 0</code>: 这个 action 比平均好 → 想让模型下次<strong>更可能</strong>选它 (概率往上推)
    - <code>A &lt; 0</code>: 比平均差 → 想让它<strong>更不可能</strong> (概率往下压)</li>
-<li><strong>怎么推概率?</strong> 看简化目标 <code>L = r · A</code>, 其中 <code>r = π_new(a)/π_old(a)</code> = "新模型把这个 token 的概率, 相对老模型放大/缩小了多少倍"。<code>A&gt;0</code> 时把 r 调大 (概率调高) → L 变大 → 梯度上升就去顶大 L → 它就真把这个 token 概率往上拧; <code>A&lt;0</code> 反过来往下压。</li>
+<li><strong>怎么推概率?</strong> 看简化目标 <span class="tex math-inline" data-display="false">L =r \cdot A</span>, 其中 <code>r = π_new(a)/π_old(a)</code> = "新模型把这个 token 的概率, 相对老模型放大/缩小了多少倍"。<code>A&gt;0</code> 时把 r 调大 (概率调高) → L 变大 → 梯度上升就去顶大 L → 它就真把这个 token 概率往上拧; <code>A&lt;0</code> 反过来往下压。</li>
 <li><strong>clip 只是限幅器</strong>: 想往上拧?行, 拧到 1.2 倍就够了, 再拧 loss 就 flat、梯度归零、不再给动力。防的就是 §1 那个"推太远数据作废"。</li>
 <li><strong>reward 怎么涨的?</strong> 不是某一个 token 让它涨, 而是成千上万条 rollout, 每条里好 token 往上推一点、坏 token 往下压一点, <strong>统计平均下来整个分布慢慢往高分区域挪</strong>。reward 曲线往上爬, 是这个挪移累积的结果。</li>
 </ol>
 <p>一句话: <strong>advantage 决定每个 token 往哪拧, clip 限制拧多猛, 海量样本平均后分布整体偏向高分。</strong> 详见 <a href="../concepts/policy-gradient.html">policy-gradient</a>。</p>
 <h2>§3 KL(LLM ‖ SFT) 是个啥</h2>
 <p>KL 散度 = <strong>量两个概率分布差多远</strong>的尺子。一模一样 → KL = 0; 越不一样 → 越大 (只增不减, 没有负数)。</p>
-<p><code>KL(LLM ‖ SFT)</code>:</p>
+<p><span class="tex math-inline" data-display="false">KL(LLM \| SFT)</span>:</p>
 <ul>
 <li><code>SFT</code> = PPO 开训前那个冻结的模型 (出发点)</li>
 <li><code>LLM</code> = 正在被 PPO 拧的这个</li>
 <li>这一项 = "现在的模型, 输出分布<strong>离出发点漂了多远</strong>"</li>
 </ul>
 <p>为什么要它? 因为 PPO 一门心思冲 reward model 高分, 会把模型训畸形 (只会开头喊 "Certainly!"、疯狂凑字数 —— 这叫 reward hacking, 模型在钻 RM 的 bug)。</p>
-<p>把它想成<strong>一根拴在 SFT 上的橡皮筋</strong>: <code>reward - β·KL</code>。你想往高分跑可以, 但离基线越远橡皮筋拽得越狠; <code>β</code> 是橡皮筋松紧。结果是模型只能"在正常说话的范围内尽量讨喜", 而不是变成只会刷分的怪物。详见 <a href="../concepts/rlhf.html">rlhf</a>。</p>
+<p>把它想成<strong>一根拴在 SFT 上的橡皮筋</strong>: <span class="tex math-inline" data-display="false">reward -\beta \cdot KL</span>。你想往高分跑可以, 但离基线越远橡皮筋拽得越狠; <span class="tex math-inline" data-display="false">\beta</span> 是橡皮筋松紧。结果是模型只能"在正常说话的范围内尽量讨喜", 而不是变成只会刷分的怪物。详见 <a href="../concepts/rlhf.html">rlhf</a>。</p>
 <h2>§4 这几个 loss 函数的走势</h2>
 <p>你说对这些函数"没概念", 这是最该补的。形状其实很简单:</p>
 <figure style="margin:32px 0; padding:24px; background:#f7f1de; border:1px solid #bfb398; border-radius:4px;">
@@ -203,9 +203,9 @@
 
 <ul>
 <li><strong>① cross-entropy <code>-log(p)</code></strong>: p 是模型给正确答案的概率。p=1 → loss=0; p→0 → loss 冲上天 (没上限)。一条从右下飙到左上的曲线。直觉: <strong>答对越没把握, 惩罚越狠。</strong></li>
-<li><strong>② policy gradient <code>-log(p)·R</code></strong>: 跟 ① 同形状, 只是整体乘了权重 <code>R</code>。<code>R</code> 大 = 这条样本特别值得学 → 整条曲线拉高 R 倍, 梯度也放大 R 倍。cross-entropy 管"对不对", <code>R</code> 管"这条值不值得使劲学"。</li>
-<li><strong>③ KL</strong>: 两分布重合 = 0, 越分叉越大 (想成两条概率曲线不重叠的那块面积)。<code>KL(LLM‖SFT)</code> 就是 §3 那根橡皮筋的拉力。</li>
-<li><strong>④ PPO 的 clipped L</strong>: 本该一路线性涨 (<code>r·A</code>), 但 clip 在 <code>1±ε</code> 把它削平, 削平处梯度=0、不再推。它是 ① 那种"无限放大"的反面。走势见 <a href="../papers/ppo.html">ppo</a> 页 Fig 03。</li>
+<li><strong>② policy gradient <span class="tex math-inline" data-display="false">-\log (p)\cdot R</span></strong>: 跟 ① 同形状, 只是整体乘了权重 <code>R</code>。<code>R</code> 大 = 这条样本特别值得学 → 整条曲线拉高 R 倍, 梯度也放大 R 倍。cross-entropy 管"对不对", <code>R</code> 管"这条值不值得使劲学"。</li>
+<li><strong>③ KL</strong>: 两分布重合 = 0, 越分叉越大 (想成两条概率曲线不重叠的那块面积)。<span class="tex math-inline" data-display="false">KL(LLM\| SFT)</span> 就是 §3 那根橡皮筋的拉力。</li>
+<li><strong>④ PPO 的 clipped L</strong>: 本该一路线性涨 (<span class="tex math-inline" data-display="false">r\cdot A</span>), 但 clip 在 <span class="tex math-inline" data-display="false">1±\epsilon</span> 把它削平, 削平处梯度=0、不再推。它是 ① 那种"无限放大"的反面。走势见 <a href="../papers/ppo.html">ppo</a> 页 Fig 03。</li>
 </ul>
 <h2>链接</h2>
 <ul>
@@ -230,6 +230,19 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

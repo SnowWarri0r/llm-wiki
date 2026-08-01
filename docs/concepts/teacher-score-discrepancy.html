@@ -72,7 +72,7 @@
 <p>它不是把一条参考视频当成这份随机噪声的像素级标准答案。两条视频只要求条件相同，并且在 DFD 后训练开始时已经足够接近。</p>
 <p>这里的 <code>real</code> 是相对学生分布而言的“参考数据分布”，不保证素材一定由摄像机拍摄。DFD 实验采用的 ViPE 源视频本身由 Wan2.1-14B 生成；关键是它们来自学生要追赶的训练集，而不是学生当前输出。</p>
 <h2>怎么做的</h2>
-<p>真实视频 <code>x</code> 和学生视频 <code>x̃=Gθ(z,c)</code> 共享条件 <code>c</code>、噪声时刻 <code>t</code> 与高斯噪声 <code>ε</code>：</p>
+<p>真实视频 <code>x</code> 和学生视频 <span class="tex math-inline" data-display="false">\tilde{x}=G_\theta (z,c)</span> 共享条件 <code>c</code>、噪声时刻 <code>t</code> 与高斯噪声 <span class="tex math-inline" data-display="false">\epsilon</span>：</p>
 <div class="tex math-display" data-display="true">x_t=\alpha_tx+\sigma_t\epsilon,\qquad
 \tilde x_t=\alpha_t\tilde x+\sigma_t\epsilon.</div>
 <p>冻结 teacher 的 score discrepancy 是：</p>
@@ -82,16 +82,16 @@
 <ul>
 <li><code>x</code>：从真实条件分布抽到的视频；</li>
 <li><code>x̃</code>：学生生成的视频；</li>
-<li><code>αt / σt</code>：当前噪声尺度的信号与噪声系数；</li>
-<li><code>ε</code>：两条支路共用的标准高斯噪声；</li>
+<li><span class="tex math-inline" data-display="false">\alpha t / \sigma t</span>：当前噪声尺度的信号与噪声系数；</li>
+<li><span class="tex math-inline" data-display="false">\epsilon</span>：两条支路共用的标准高斯噪声；</li>
 <li><code>sreal</code>：冻结扩散 teacher 估计的目标分布 score；</li>
-<li><code>Δteacher</code>：两处 score 的差，与视频 latent 同形状。</li>
+<li><span class="tex math-inline" data-display="false">\Delta teacher</span>：两处 score 的差，与视频 latent 同形状。</li>
 </ul>
 <p>DFD 用它修正 DMD：</p>
 <div class="tex math-display" data-display="true">g_{\mathrm{DFD}}
 =g_{\mathrm{DMD}}
 -\mathbb E[\Delta_{\mathrm{teacher}}J_\theta].</div>
-<p>展开后，DMD 里的 <code>−sreal(x̃t)</code> 与正则产生的 <code>+sreal(x̃t)</code> 抵消：</p>
+<p>展开后，DMD 里的 <span class="tex math-inline" data-display="false">-sreal(\tilde{x}t)</span> 与正则产生的 <code>+sreal(x̃t)</code> 抵消：</p>
 <div class="tex math-display" data-display="true">g_{\mathrm{DFD}}
 =
 \mathbb E[

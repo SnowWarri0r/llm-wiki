@@ -13,8 +13,8 @@ updated: 2026-07-22
 ## 直觉
 扩散模型每一步要预测"往哪个方向去噪"。问题：光按 prompt 算一遍，模型对 prompt 的"听话程度"不够。CFG（Ho & Salimans 2022）的招很贼：
 
-- **条件支**：带着 prompt 算一个方向 `v_cond`
-- **无条件支**：不给 prompt 算一个方向 `v_uncond`
+- **条件支**：带着 prompt 算一个方向 \(v_{\mathrm{cond}}\)
+- **无条件支**：不给 prompt 算一个方向 \(v_{\mathrm{uncond}}\)
 - **放大差值**：`v = v_uncond + w · (v_cond − v_uncond)`，`w` 是 guidance scale
 
 `v_cond − v_uncond` 就是"因为有了 prompt 而多走的那部分"。把它乘 `w`（常 7 左右）放大，模型就更贴 prompt。代价是 `w` 太大画面会过饱和、失真。

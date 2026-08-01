@@ -23,7 +23,7 @@ Teacher score discrepancy 多问一次：在同一文本或首帧条件下，老
 
 ## 怎么做的
 
-真实视频 `x` 和学生视频 `x̃=Gθ(z,c)` 共享条件 `c`、噪声时刻 `t` 与高斯噪声 `ε`：
+真实视频 `x` 和学生视频 \(\tilde{x}=G_\theta (z,c)\) 共享条件 `c`、噪声时刻 `t` 与高斯噪声 \(\epsilon\)：
 
 \[
 x_t=\alpha_tx+\sigma_t\epsilon,\qquad
@@ -40,10 +40,10 @@ x_t=\alpha_tx+\sigma_t\epsilon,\qquad
 
 - `x`：从真实条件分布抽到的视频；
 - `x̃`：学生生成的视频；
-- `αt / σt`：当前噪声尺度的信号与噪声系数；
-- `ε`：两条支路共用的标准高斯噪声；
+- \(\alpha t / \sigma t\)：当前噪声尺度的信号与噪声系数；
+- \(\epsilon\)：两条支路共用的标准高斯噪声；
 - `sreal`：冻结扩散 teacher 估计的目标分布 score；
-- `Δteacher`：两处 score 的差，与视频 latent 同形状。
+- \(\Delta teacher\)：两处 score 的差，与视频 latent 同形状。
 
 DFD 用它修正 DMD：
 
@@ -53,7 +53,7 @@ g_{\mathrm{DFD}}
 -\mathbb E[\Delta_{\mathrm{teacher}}J_\theta].
 \]
 
-展开后，DMD 里的 `−sreal(x̃t)` 与正则产生的 `+sreal(x̃t)` 抵消：
+展开后，DMD 里的 \(-sreal(\tilde{x}t)\) 与正则产生的 `+sreal(x̃t)` 抵消：
 
 \[
 g_{\mathrm{DFD}}

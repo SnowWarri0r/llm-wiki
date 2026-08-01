@@ -13,7 +13,7 @@ updated: 2026-07-24
 ## 直觉
 跟 diffusion 是近亲：
 - **Diffusion**：学"去噪"，每步把噪声减一点
-- **Flow matching**：学"速度场" `v(x, t)`，从 `x₀ = noise` 出发解 ODE `dx/dt = v(x, t)` 到 `x₁ = target`
+- **Flow matching**：学"速度场" `v(x, t)`，从 \(x_{0} =noise\) 出发解 ODE `dx/dt = v(x, t)` 到 \(x_{1} =target\)
 
 类比：
 - Diffusion 是离散的"一步一步擦掉雾气"
@@ -27,7 +27,7 @@ updated: 2026-07-24
 - **比 VQ codec 平滑** → 不需要量化误差恢复
 - **跟 transformer 接口干净** → flow head 拼在 transformer 输出上
 
-TML 用它生成连续音频特征；Solaris 则在双人视频 latent 上学习 `ε−x`，让动作条件决定两路画面怎样共同变化。
+TML 用它生成连续音频特征；Solaris 则在双人视频 latent 上学习 \(\epsilon -x\)，让动作条件决定两路画面怎样共同变化。
 
 ## 跟 RVQ 的对比
 | 维度 | RVQ codec | Flow matching |

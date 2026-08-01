@@ -65,8 +65,8 @@
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>普通注意力常拆成三次 GPU 计算：先算分数矩阵，再做 softmax，最后乘 <code>V</code>。三次计算之间，前一步的结果要先写回 HBM，后一步再读出来。最占地方的恰好是两个 <code>N × N</code> 中间矩阵。</p>
-<p>FlashAttention 把三步合成一次计算，并把 <code>Q/K/V</code> 分块：一小块分数在片上高速存储中算出来，立刻完成 softmax 更新和 <code>V</code> 的加权累加，用完就丢。它仍然计算所有 token 对，也仍会按分块顺序重复读写一部分输入或输出块；省掉的是两个完整 <code>N × N</code> 中间矩阵的落地读写。</p>
+<p>普通注意力常拆成三次 GPU 计算：先算分数矩阵，再做 softmax，最后乘 <code>V</code>。三次计算之间，前一步的结果要先写回 HBM，后一步再读出来。最占地方的恰好是两个 <span class="tex math-inline" data-display="false">N \times N</span> 中间矩阵。</p>
+<p>FlashAttention 把三步合成一次计算，并把 <code>Q/K/V</code> 分块：一小块分数在片上高速存储中算出来，立刻完成 softmax 更新和 <code>V</code> 的加权累加，用完就丢。它仍然计算所有 token 对，也仍会按分块顺序重复读写一部分输入或输出块；省掉的是两个完整 <span class="tex math-inline" data-display="false">N \times N</span> 中间矩阵的落地读写。</p>
 <blockquote>
 <p><strong>先把最容易误解的地方说死：只把矩阵切小，并不会自动减少 IO。真正起作用的是「分块 + kernel 融合 + 在线 softmax」这套组合。</strong></p>
 </blockquote>
@@ -78,7 +78,7 @@
 </ul>
 <p>这里的 <strong>kernel</strong>，可以先理解成“一次提交给 GPU 的完整函数”。普通注意力通常是三次函数调用：</p>
 <ol>
-<li>矩阵乘 kernel：读 <code>Q,K</code>，算出 <code>S = QKᵀ</code>。</li>
+<li>矩阵乘 kernel：读 <code>Q,K</code>，算出 <span class="tex math-inline" data-display="false">S =QK^{T}</span>。</li>
 <li>softmax kernel：读 <code>S</code>，算出概率矩阵 <code>P = softmax(S)</code>。</li>
 <li>矩阵乘 kernel：读 <code>P,V</code>，算出 <code>O = PV</code>。</li>
 </ol>
@@ -110,7 +110,7 @@
 </figure>
 
 <h2>算一笔最小的 IO 账</h2>
-<p>假设序列只有 4 个 token，先不管每个 token 的向量有多宽。分数矩阵 <code>S</code> 和概率矩阵 <code>P</code> 都是 <code>4 × 4</code>，各有 16 个数。</p>
+<p>假设序列只有 4 个 token，先不管每个 token 的向量有多宽。分数矩阵 <code>S</code> 和概率矩阵 <code>P</code> 都是 <span class="tex math-inline" data-display="false">4 \times 4</span>，各有 16 个数。</p>
 <p>普通三-kernel 写法仅为了交接这两个中间矩阵，就要搬：</p>
 <table>
 <thead>
@@ -142,30 +142,30 @@
 </tr>
 </tbody>
 </table>
-<p>FlashAttention 若每次处理 <code>2 × 2</code> 的分数小块，会依次算 4 块。每块 <code>Sᵢⱼ</code> 都只在片上短暂停留：算出 4 个分数，马上更新这一行的 softmax 统计量和输出累加值，然后覆盖这 4 个位置去算下一块。于是上面那 <strong>64 个中间数的 HBM 搬运变成 0</strong>。</p>
+<p>FlashAttention 若每次处理 <span class="tex math-inline" data-display="false">2 \times 2</span> 的分数小块，会依次算 4 块。每块 <span class="tex math-inline" data-display="false">S_{\mathrm{ij}}</span> 都只在片上短暂停留：算出 4 个分数，马上更新这一行的 softmax 统计量和输出累加值，然后覆盖这 4 个位置去算下一块。于是上面那 <strong>64 个中间数的 HBM 搬运变成 0</strong>。</p>
 <p>这不等于总 IO 为 0。片上空间放不下全部 <code>Q/K/V/O</code>，扫下一块时仍要重新读写其中一部分。具体哪一边重复，取决于循环顺序：原始论文把 <code>K/V</code> 块放在外层，所以每块 <code>K/V</code> 只读一次，<code>Q</code> 和尚未完成的 <code>O</code> 会分批重读；一些后续实现会换一种排法。</p>
 <p>FlashAttention 做的是一笔交换：</p>
 <ul>
 <li>多付一些输入/输出块的重复读写，反向传播时再多付一点重算；</li>
 <li>换掉完整 <code>S</code> 和 <code>P</code> 的写回、读出，以及训练时对它们的长期保存。</li>
 </ul>
-<p>当 <code>N</code> 很大时，这笔账很划算。比如 <code>N = 8000</code>，一个 <code>N × N</code> 矩阵有 6400 万个数。若每个数占 2 字节，一张就是约 128 MB；按上面“<code>S</code> 写一次读一次、<code>P</code> 写一次读一次”的直观实现，单个注意力头光中间矩阵就要搬约 <strong>512 MB</strong>，还没算 <code>Q/K/V/O</code>。</p>
+<p>当 <code>N</code> 很大时，这笔账很划算。比如 <code>N = 8000</code>，一个 <span class="tex math-inline" data-display="false">N \times N</span> 矩阵有 6400 万个数。若每个数占 2 字节，一张就是约 128 MB；按上面“<code>S</code> 写一次读一次、<code>P</code> 写一次读一次”的直观实现，单个注意力头光中间矩阵就要搬约 <strong>512 MB</strong>，还没算 <code>Q/K/V/O</code>。</p>
 <h3>三笔账不要混在一起</h3>
 <ul>
-<li><strong>计算量</strong>没有从平方变线性：每个 query 仍然要和所有 key 做点积，仍是 <code>O(N²d)</code>。这里的 <code>d</code> 是一个注意力头的向量宽度。</li>
-<li><strong>额外中间存储</strong>从完整的 <code>S/P</code> 两张 <code>N × N</code> 矩阵，降成每行少量统计量。论文给出的结论是：不计输入和最终输出，只需 <code>O(N)</code> 额外空间。</li>
-<li><strong>HBM 搬运量</strong>大幅减少，但也不是 0，更不是简单的 <code>O(N)</code>。论文把普通注意力写成 <code>Θ(Nd + N²)</code> 次 HBM 访问，把 FlashAttention 写成 <code>Θ(N²d²/M)</code>；<code>M</code> 表示片上 SRAM 能容纳多少个数。<code>M</code> 越大，一块能装得越多，重复扫描就越少。</li>
+<li><strong>计算量</strong>没有从平方变线性：每个 query 仍然要和所有 key 做点积，仍是 <span class="tex math-inline" data-display="false">O(N^{2}d)</span>。这里的 <code>d</code> 是一个注意力头的向量宽度。</li>
+<li><strong>额外中间存储</strong>从完整的 <code>S/P</code> 两张 <span class="tex math-inline" data-display="false">N \times N</span> 矩阵，降成每行少量统计量。论文给出的结论是：不计输入和最终输出，只需 <code>O(N)</code> 额外空间。</li>
+<li><strong>HBM 搬运量</strong>大幅减少，但也不是 0，更不是简单的 <code>O(N)</code>。论文把普通注意力写成 <span class="tex math-inline" data-display="false">\Theta (Nd +N^{2})</span> 次 HBM 访问，把 FlashAttention 写成 <span class="tex math-inline" data-display="false">\Theta (N^{2}d^{2}/M)</span>；<code>M</code> 表示片上 SRAM 能容纳多少个数。<code>M</code> 越大，一块能装得越多，重复扫描就越少。</li>
 </ul>
 <p>这三个结论可以同时成立：<strong>算的 token 对一样多，临时存下来的东西少得多，跨 HBM 搬的数据也少得多。</strong></p>
 <h2>为什么切块以后片上放得下？</h2>
-<p>完整 <code>S</code> 的形状是 <code>N × N</code>。<code>N = 8000</code> 时，它有 6400 万个位置，片上存储当然塞不下。</p>
-<p>但如果一次只取 64 行 <code>Q</code> 和 64 行 <code>K</code>，临时分数块只有 <code>64 × 64 = 4096</code> 个位置。它可以在片上完成三件事：</p>
+<p>完整 <code>S</code> 的形状是 <span class="tex math-inline" data-display="false">N \times N</span>。<code>N = 8000</code> 时，它有 6400 万个位置，片上存储当然塞不下。</p>
+<p>但如果一次只取 64 行 <code>Q</code> 和 64 行 <code>K</code>，临时分数块只有 <span class="tex math-inline" data-display="false">64 \times 64 =4096</span> 个位置。它可以在片上完成三件事：</p>
 <ol>
-<li>算 <code>QᵢKⱼᵀ</code>，得到这一小块分数；</li>
+<li>算 <span class="tex math-inline" data-display="false">Q_{i}K_{j}^{T}</span>，得到这一小块分数；</li>
 <li>把这块分数并入当前行的 softmax；</li>
-<li>立刻乘对应的 <code>Vⱼ</code>，并入输出累加值。</li>
+<li>立刻乘对应的 <span class="tex math-inline" data-display="false">V_{j}</span>，并入输出累加值。</li>
 </ol>
-<p>随后这块分数就没用了，可以直接覆盖。继续读下一块 <code>Kⱼ,Vⱼ</code> 即可。</p>
+<p>随后这块分数就没用了，可以直接覆盖。继续读下一块 <span class="tex math-inline" data-display="false">K_{j},V_{j}</span> 即可。</p>
 <p>所以，“切块能省 IO”还差半句话：<strong>切到片上放得下之后，趁数据还在片上，把后续计算一口气做完。</strong> 如果只是把 <code>S</code> 切成小块，算完仍逐块写回 HBM，最后再读回来做 softmax，IO 并没有消失。</p>
 <h2>softmax 明明要看完整一行，为什么能一块块算？</h2>
 <p>这正是在线 softmax 解决的问题。</p>
@@ -175,7 +175,7 @@
 <li><code>l</code>：以 <code>m</code> 为基准的指数和，也就是 softmax 分母的累计值；</li>
 <li><code>a</code>：以同样权重累计的 <code>V</code>，也就是输出的分子；全部块处理完后，最终输出 <code>o = a/l</code>。</li>
 </ul>
-<p>状态的数量只跟 query 行数和 <code>V</code> 的宽度有关，不需要保存 <code>N × N</code> 张量。</p>
+<p>状态的数量只跟 query 行数和 <code>V</code> 的宽度有关，不需要保存 <span class="tex math-inline" data-display="false">N \times N</span> 张量。</p>
 <h2>数字例子 · 不保存权重，也能直接得到最终输出</h2>
 <p>只看一个 query。它对 4 个 key 的分数是：</p>
 <pre><code class="language-text">s = [1, 3 | 2, 5]       竖线表示分成两块
@@ -205,7 +205,7 @@ a₁ = e^(1−3)×10 + e^(3−3)×20
    = 0.1353×10 + 1×20
    = 21.3534
 </code></pre>
-<p>第二块出现了更大的分数 5，所以新的基准从 3 改成 5。旧结果原来以 3 为基准，现在要乘 <code>e^(3−5) = 0.1353</code>，统一换成以 5 为基准：</p>
+<p>第二块出现了更大的分数 5，所以新的基准从 3 改成 5。旧结果原来以 3 为基准，现在要乘 <span class="tex math-inline" data-display="false">e^(3-5) =0.1353</span>，统一换成以 5 为基准：</p>
 <pre><code class="language-text">m₂ = 5
 
 l₂ = l₁×e^(3−5) + e^(2−5) + e^(5−5)
@@ -221,7 +221,7 @@ a₂ = a₁×e^(3−5) + e^(2−5)×30 + e^(5−5)×40
 <p>它和一次看全得到的 <code>36.8806</code> 对上了。更重要的是：每块的权重已经乘进 <code>V</code>，因此不必把完整概率矩阵 <code>P</code> 留给最后一步。</p>
 <h2>为什么“多算一点”反而更快？</h2>
 <p>GPU 的矩阵计算单元很强，但前提是数据及时送到。若计算单元算完一小步，就得等几百 MB 数据从 HBM 进出，再高的峰值算力也会闲着。这叫 <strong>memory-bound</strong>：速度受数据搬运限制，不是受乘加次数限制。</p>
-<p>FlashAttention 提高了“每搬一个字节，顺手完成多少计算”。工程上把这个比例叫<strong>算术强度</strong>。它还会在反向传播时根据 <code>Q/K/V</code> 重算某些分数，看起来多算了一遍；但矩阵乘很适合 GPU，而保存和读回 <code>N × N</code> 中间矩阵更贵，所以实际用时反而更短。</p>
+<p>FlashAttention 提高了“每搬一个字节，顺手完成多少计算”。工程上把这个比例叫<strong>算术强度</strong>。它还会在反向传播时根据 <code>Q/K/V</code> 重算某些分数，看起来多算了一遍；但矩阵乘很适合 GPU，而保存和读回 <span class="tex math-inline" data-display="false">N \times N</span> 中间矩阵更贵，所以实际用时反而更短。</p>
 <p>一句话：<strong>它用 GPU 富余的计算，换掉更稀缺的 HBM 带宽和显存容量。</strong></p>
 <h2>它到底有没有改变注意力结果？</h2>
 <p>没有改变注意力的数学定义：每个 query 仍然和所有 key 做点积，也仍然计算完整 softmax；它不是稀疏化，也没有删 token 对。因此论文称它为 <strong>exact attention</strong>。</p>
@@ -239,7 +239,7 @@ a₂ = a₁×e^(3−5) + e^(2−5)×30 + e^(5−5)×40
 </ul>
 <h2>链接</h2>
 <ul>
-<li><a href="../concepts/self-attention.html">self-attention</a> · 被重新排布的原始计算：<code>softmax(QKᵀ)V</code></li>
+<li><a href="../concepts/self-attention.html">self-attention</a> · 被重新排布的原始计算：<span class="tex math-inline" data-display="false">\operatorname{softmax}(QK^{T})V</span></li>
 <li><a href="../concepts/softmax.html">softmax</a> · 在线 softmax 仍是“减最大值防溢出”，只是把一次看全改成边看边更新</li>
 <li><a href="../concepts/ai-memory-hierarchy.html">ai-memory-hierarchy</a> · 为什么片上 SRAM 快但小、HBM 大却更远</li>
 <li><a href="../concepts/gpu-kernels-and-compilation.html">gpu-kernels-and-compilation</a> · kernel 融合为什么能少一次中间结果交接</li>
@@ -259,6 +259,19 @@ a₂ = a₁×e^(3−5) + e^(2−5)×30 + e^(5−5)×40
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

@@ -65,9 +65,9 @@
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p><a href="../concepts/eigenvector.html">eigenvector</a> 只对方阵、还不一定正交。SVD 是它对<strong>任意矩阵</strong>的推广:任何 <code>W</code> 都能拆成 <strong><code>W = U Σ Vᵀ</code></strong>——一组<strong>入方向</strong> <code>V</code>、各自拉伸 <code>Σ</code>(对角线是奇异值 σ≥0)、再落到一组<strong>出方向</strong> <code>U</code>。σ 排序就是各方向的强度;<strong>留前 r 个 = 最佳低秩近似</strong>,这是 <a href="../concepts/matrix-rank.html">matrix-rank</a> / 压缩 / PCA 的同一台机器。</p>
+<p><a href="../concepts/eigenvector.html">eigenvector</a> 只对方阵、还不一定正交。SVD 是它对<strong>任意矩阵</strong>的推广:任何 <code>W</code> 都能拆成 <strong><span class="tex math-inline" data-display="false">W =U \Sigma V^{T}</span></strong>——一组<strong>入方向</strong> <code>V</code>、各自拉伸 <span class="tex math-inline" data-display="false">\Sigma</span>(对角线是奇异值 σ≥0)、再落到一组<strong>出方向</strong> <code>U</code>。σ 排序就是各方向的强度;<strong>留前 r 个 = 最佳低秩近似</strong>,这是 <a href="../concepts/matrix-rank.html">matrix-rank</a> / 压缩 / PCA 的同一台机器。</p>
 <h2>直觉 · 上承特征向量,补它的两个短板</h2>
-<p>先回 <a href="../concepts/eigenvector.html">eigenvector</a>:对方阵,特征向量是"喂进去<strong>只缩放不转向</strong>"的方向,<code>Wv=λv</code>。沿这些方向看,矩阵退化成"各轴各乘个数",最简单。</p>
+<p>先回 <a href="../concepts/eigenvector.html">eigenvector</a>:对方阵,特征向量是"喂进去<strong>只缩放不转向</strong>"的方向,<span class="tex math-inline" data-display="false">Wv=\lambda v</span>。沿这些方向看,矩阵退化成"各轴各乘个数",最简单。</p>
 <p>但特征分解<strong>挑食</strong>:</p>
 <ul>
 <li>只对<strong>方阵</strong>——长方形矩阵(d×k)根本没有特征向量;</li>
@@ -77,43 +77,43 @@
 <ul>
 <li><strong>入方向</strong> <code>V</code>(右奇异向量):你沿它喂进去;</li>
 <li><strong>出方向</strong> <code>U</code>(左奇异向量):它从这边出来;</li>
-<li>中间 <code>Σ</code>:沿第 i 对方向拉伸 σᵢ 倍(σ 一定 ≥0)。</li>
+<li>中间 <span class="tex math-inline" data-display="false">\Sigma</span>:沿第 i 对方向拉伸 σᵢ 倍(σ 一定 ≥0)。</li>
 </ul>
-<p>特征分解是"进出同一条线"(<code>Wv=λv</code>,一套 <code>Q</code>);SVD 是"<strong>进沿 vᵢ、出沿 uᵢ,拉 σᵢ 倍</strong>"(<code>Wvᵢ=σᵢuᵢ</code>,两套)。多给一套方向,就能套到任何矩阵上。</p>
+<p>特征分解是"进出同一条线"(<span class="tex math-inline" data-display="false">Wv=\lambda v</span>,一套 <code>Q</code>);SVD 是"<strong>进沿 vᵢ、出沿 uᵢ,拉 σᵢ 倍</strong>"(<span class="tex math-inline" data-display="false">Wv_{i}=\sigma_{i}u_{i}</span>,两套)。多给一套方向,就能套到任何矩阵上。</p>
 <h2>怎么从特征向量造出 SVD · 配方</h2>
-<p>诀窍:<code>W</code> 本身可能歪,但 <strong><code>WᵀW</code> 一定是对称半正定方阵</strong>——它必有<strong>正交</strong>特征向量、特征值 <strong>≥0</strong>。于是:</p>
+<p>诀窍:<code>W</code> 本身可能歪,但 <strong><span class="tex math-inline" data-display="false">W^{T}W</span> 一定是对称半正定方阵</strong>——它必有<strong>正交</strong>特征向量、特征值 <strong>≥0</strong>。于是:</p>
 <pre><code>① V（入方向）= WᵀW 的特征向量（正交！）
 ② σ = √(WᵀW 的特征值)            # 奇异值 = 特征值开根号，必≥0
 ③ U（出方向）= W·vᵢ / σᵢ          # 把入方向喂进 W、归一化，就是出方向
 ④ 拼起来：W = U Σ Vᵀ
 </code></pre>
-<p>一句话:<strong>把求 <code>W</code> 的特征向量,换成求 <code>WᵀW</code> 的特征向量</strong>——后者性质好得多,代价是分出"入/出"两套方向。</p>
+<p>一句话:<strong>把求 <code>W</code> 的特征向量,换成求 <span class="tex math-inline" data-display="false">W^{T}W</span> 的特征向量</strong>——后者性质好得多,代价是分出"入/出"两套方向。</p>
 <h2>数字例子 · 全程手算(一个能看出 U≠V 的)</h2>
 <pre><code>W = [0 2]      它干的事：把 y 轴方向搬到 x 轴(放大 2 倍)、把 x 轴方向搬到 y 轴(不变)
     [1 0]      —— 是个&quot;交换+缩放&quot;，进出方向明显不同，正好考验 SVD
 </code></pre>
-<p><strong>① 算 <code>WᵀW</code></strong>(<code>Wᵀ</code> 是 W 转置 = <code>[[0,1],[2,0]]</code>):</p>
+<p><strong>① 算 <span class="tex math-inline" data-display="false">W^{T}W</span></strong>(<span class="tex math-inline" data-display="false">W^{T}</span> 是 W 转置 = <code>[[0,1],[2,0]]</code>):</p>
 <pre><code>WᵀW = [0 1][0 2] = [1 0]      （正好是对角阵，省事）
       [2 0][1 0]   [0 4]
 </code></pre>
 <p><strong>② 它的特征值/特征向量</strong>(对角阵一眼看出):对角线就是特征值 <code>1</code> 和 <code>4</code>,对应特征向量就是坐标轴 <code>[1,0]</code> 和 <code>[0,1]</code>。</p>
-<p><strong>③ 奇异值 σ = √特征值</strong>:<code>√4 = 2</code>、<code>√1 = 1</code>。按大到小:<strong>σ₁=2(配 v₁=[0,1])、σ₂=1(配 v₂=[1,0])</strong>。这就是入方向 <code>V</code>。</p>
-<p><strong>④ 出方向 <code>U = W·vᵢ/σᵢ</code></strong>:</p>
+<p><strong>③ 奇异值 σ = √特征值</strong>:<span class="tex math-inline" data-display="false">\sqrt{4} =2</span>、<span class="tex math-inline" data-display="false">\sqrt{1} =1</span>。按大到小:<strong>σ₁=2(配 v₁=[0,1])、σ₂=1(配 v₂=[1,0])</strong>。这就是入方向 <code>V</code>。</p>
+<p><strong>④ 出方向 <span class="tex math-inline" data-display="false">U =W\cdot v_{i}/\sigma_{i}</span></strong>:</p>
 <pre><code>u₁ = W·[0,1]ᵀ / 2 = [0·0+2·1, 1·0+0·1]/2 = [2,0]/2 = [1,0]
 u₂ = W·[1,0]ᵀ / 1 = [0·1+2·0, 1·1+0·0]/1 = [0,1]/1 = [0,1]
 </code></pre>
-<p><strong>读出来的故事</strong>:沿 <code>v₁=[0,1]</code>(y 轴)喂进去 → 出来沿 <code>u₁=[1,0]</code>(x 轴)、拉 2 倍。<strong>入方向 ≠ 出方向</strong>——这正是 SVD 比特征分解多给一套方向的意义(特征分解只有一套 <code>Q</code>,套不了这种"搬家"矩阵)。</p>
+<p><strong>读出来的故事</strong>:沿 <span class="tex math-inline" data-display="false">v_{1}=[0,1]</span>(y 轴)喂进去 → 出来沿 <span class="tex math-inline" data-display="false">u_{1}=[1,0]</span>(x 轴)、拉 2 倍。<strong>入方向 ≠ 出方向</strong>——这正是 SVD 比特征分解多给一套方向的意义(特征分解只有一套 <code>Q</code>,套不了这种"搬家"矩阵)。</p>
 <blockquote>
-<p>对照:如果 <code>W</code> 本身就对称(比如 <a href="../concepts/eigenvector.html">eigenvector</a> 里的 <code>[[2,1],[1,2]]</code>),入方向=出方向(<code>U=V</code>),σ 就等于 <code>|λ|</code>,SVD 退回特征分解。非对称才显出 U、V 两套的必要。</p>
+<p>对照:如果 <code>W</code> 本身就对称(比如 <a href="../concepts/eigenvector.html">eigenvector</a> 里的 <code>[[2,1],[1,2]]</code>),入方向=出方向(<code>U=V</code>),σ 就等于 <span class="tex math-inline" data-display="false">|\lambda |</span>,SVD 退回特征分解。非对称才显出 U、V 两套的必要。</p>
 </blockquote>
 <h2>U Σ Vᵀ · 三步几何</h2>
-<p><code>W = U Σ Vᵀ</code>,从右往左读 <code>Wx</code>:</p>
+<p><span class="tex math-inline" data-display="false">W =U \Sigma V^{T}</span>,从右往左读 <code>Wx</code>:</p>
 <pre><code>x ──Vᵀ──&gt; 换到&quot;入方向&quot;坐标 ──Σ──&gt; 沿每根轴各拉 σ 倍 ──U──&gt; 摆到&quot;出方向&quot;
    (纯旋转)                  (只缩放,σ₁≥σ₂≥…≥0)        (纯旋转)
 </code></pre>
 <p>任何线性变换,本质都是<strong>转一下 → 沿正交轴各自拉伸 → 再转一下</strong>。中间那步的拉伸倍数,就是奇异值。</p>
 <h2>秩 + 低秩近似(σ 的真正用处)</h2>
-<p>把 <code>W</code> 写成<strong>按 σ 从大到小排的"秩 1 块"之和</strong>:<code>W = σ₁u₁v₁ᵀ + σ₂u₂v₂ᵀ + …</code>。只<strong>留前 k 个、丢掉小 σ 的尾巴</strong>,得到的就是 W 的<strong>最佳秩 k 近似</strong>(Eckart–Young:所有秩 k 矩阵里它误差最小)。</p>
+<p>把 <code>W</code> 写成<strong>按 σ 从大到小排的"秩 1 块"之和</strong>:<span class="tex math-inline" data-display="false">W =\sigma_{1}u_{1}v_{1}^{T} +\sigma_{2}u_{2}v_{2}^{T} + …</span>。只<strong>留前 k 个、丢掉小 σ 的尾巴</strong>,得到的就是 W 的<strong>最佳秩 k 近似</strong>(Eckart–Young:所有秩 k 矩阵里它误差最小)。</p>
 <p>上面例子留 σ₁=2 那块(秩 1 近似):</p>
 <pre><code>W₁ = σ₁ u₁ v₁ᵀ = 2·[1,0]ᵀ·[0,1] = [0 2]      丢掉的 σ₂=1 那块([0,0;1,0])就是全部误差
                                   [0 0]      σ 越小、丢了越不心疼
@@ -122,11 +122,11 @@ u₂ = W·[1,0]ᵀ / 1 = [0·1+2·0, 1·1+0·0]/1 = [0,1]/1 = [0,1]
 <ul>
 <li><strong><a href="../concepts/matrix-rank.html">matrix-rank</a></strong>:秩 = 非零 σ 的个数;低秩 = 尾巴 σ 都≈0。</li>
 <li><strong>压缩/降维</strong>:一张图做 SVD,常<strong>前 5%~10% 的 σ 就还原出肉眼几乎一样的图</strong>,剩下都是细枝末节;PCA 就是对(中心化)数据做 SVD 取前几个主轴。</li>
-<li><strong><a href="../concepts/lora.html">lora</a></strong>:微调增量近似低秩,所以拿秩 r 的 <code>B·A</code> 就够。</li>
+<li><strong><a href="../concepts/lora.html">lora</a></strong>:微调增量近似低秩,所以拿秩 r 的 <span class="tex math-inline" data-display="false">B\cdot A</span> 就够。</li>
 </ul>
 <h2>代码出处 / 来源</h2>
 <ul>
-<li>线性代数标准结论:SVD、<code>WᵀW</code> 桥、Eckart–Young 最优低秩近似</li>
+<li>线性代数标准结论:SVD、<span class="tex math-inline" data-display="false">W^{T}W</span> 桥、Eckart–Young 最优低秩近似</li>
 <li>落点:PCA、图像压缩、<a href="../concepts/lora.html">lora</a>、推荐系统矩阵分解</li>
 </ul>
 <h2>链接</h2>
@@ -150,6 +150,19 @@ u₂ = W·[1,0]ᵀ / 1 = [0·1+2·0, 1·1+0·0]/1 = [0,1]/1 = [0,1]
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

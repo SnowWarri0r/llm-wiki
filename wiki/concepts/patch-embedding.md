@@ -62,7 +62,7 @@ x = x + pos_embed
 | NLP (BERT/GPT) | ViT |
 |---|---|
 | 把字符串 tokenize → token id | 把图切成 patch |
-| Embedding 矩阵 `(vocab_size, hidden)` 查表 | Linear 投影 `(patch_size² × 3, hidden)` |
+| Embedding 矩阵 \((vocab_{\mathrm{size}},hidden)\) 查表 | Linear 投影 \((patch_{\mathrm{size}}^{2} \times 3,hidden)\) |
 | 加位置编码（学习式 or RoPE） | 加位置编码（学习式 1D 或 2D） |
 | `[CLS]` token 用于分类 | `[CLS]` token 用于分类 |
 | 输出: (B, seq_len, hidden) | 输出: (B, num_patches+1, hidden) |

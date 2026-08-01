@@ -78,7 +78,7 @@
 ·▣▣▣···  →   ·■·       →     ·■        →   越深，一个点
 ·▣▣▣···      ···             ··            覆盖原图越大
 </code></pre>
-<p>直觉公式（stride 1、k×k 核、堆 L 层）：感受野 ≈ <code>1 + L·(k−1)</code>，线性增长。</p>
+<p>直觉公式（stride 1、k×k 核、堆 L 层）：感受野 ≈ <span class="tex math-inline" data-display="false">1 +L\cdot (k-1)</span>，线性增长。</p>
 <h2>为什么 pooling / stride 让它长得快</h2>
 <p>光靠堆卷积，感受野<strong>线性</strong>长，要看全图得堆很多层。<strong>下采样</strong>（<a href="../concepts/pooling.html">pooling</a> 或 stride=2 卷积）一步把分辨率砍半 → 之后每个点在原图的"覆盖步长"翻倍，感受野<strong>指数级</strong>往上窜。这就是 CNN 典型结构"卷积几层 → 下采样 → 再卷积几层 → 再下采样"的原因：用下采样高效地把感受野撑到覆盖全图。</p>
 <h2>为什么这事很关键</h2>
@@ -113,6 +113,19 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

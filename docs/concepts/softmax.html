@@ -74,9 +74,9 @@
 <li><strong>exp</strong>:把分数指数放大,大的拉得更开 → 倾向于"最大那个占大头"。</li>
 <li><strong>除以总和</strong>:归一化成概率(都正、加起来 1)。</li>
 </ul>
-<p>为什么用 <code>exp</code> 而不是直接归一化?因为指数能<strong>拉开差距 + 永远为正</strong>,且配 <a href="../concepts/cross-entropy.html">cross-entropy</a> 损失时梯度特别干净(<code>p − onehot</code>)。</p>
+<p>为什么用 <code>exp</code> 而不是直接归一化?因为指数能<strong>拉开差距 + 永远为正</strong>,且配 <a href="../concepts/cross-entropy.html">cross-entropy</a> 损失时梯度特别干净(<span class="tex math-inline" data-display="false">p -onehot</span>)。</p>
 <h2>温度 T · 尖锐 ↔ 平滑的旋钮</h2>
-<p>把 logits 先除以温度 <code>T</code> 再 softmax:<code>pᵢ = softmax(zᵢ / T)</code>。</p>
+<p>把 logits 先除以温度 <code>T</code> 再 softmax:<span class="tex math-inline" data-display="false">p_{i} =\operatorname{softmax}(z_{i} / T)</span>。</p>
 <ul>
 <li><strong>T → 小(&lt;1)</strong>:差距被放大 → 分布<strong>尖锐</strong>,几乎把全部概率给最大那个(接近 argmax、更确定、更死板)。</li>
 <li><strong>T → 大(&gt;1)</strong>:差距被压平 → 分布<strong>平滑</strong>,各选项概率拉近(更随机、更有创造性/多样)。</li>
@@ -95,10 +95,10 @@ T=0.5: 等于把 z 翻倍 [4,2,0]
 T=2:   等于把 z 减半 [1,0.5,0]
        softmax=[0.506, 0.307, 0.186]  更平
 </code></pre>
-<p>(还有个工程细节:实现时先减去最大值 <code>exp(zᵢ − max z)</code> 防 <code>exp</code> 溢出,结果不变。)</p>
+<p>(还有个工程细节:实现时先减去最大值 <span class="tex math-inline" data-display="false">\exp (z_{i} -\max z)</span> 防 <code>exp</code> 溢出,结果不变。)</p>
 <h2>落点</h2>
 <ul>
-<li><strong><a href="../concepts/self-attention.html">self-attention</a></strong>:<code>softmax(Q·Kᵀ/√d)</code> 把注意力分数变成"分配给每个位置的权重",和为 1。那个 <code>√d</code> 就是防分数过大、softmax 太尖(同 <a href="../concepts/qk-rmsnorm.html">qk-rmsnorm</a> 一类稳定动机)。</li>
+<li><strong><a href="../concepts/self-attention.html">self-attention</a></strong>:<span class="tex math-inline" data-display="false">\operatorname{softmax}(Q\cdot K^{T}/\sqrt{d})</span> 把注意力分数变成"分配给每个位置的权重",和为 1。那个 <span class="tex math-inline" data-display="false">\sqrt{d}</span> 就是防分数过大、softmax 太尖(同 <a href="../concepts/qk-rmsnorm.html">qk-rmsnorm</a> 一类稳定动机)。</li>
 <li><strong>分类输出 / <a href="../concepts/cross-entropy.html">cross-entropy</a></strong>:最后一层 logits 过 softmax 得类别概率。</li>
 <li><strong>采样</strong>:温度 + top-k/top-p 控制生成的随机性。</li>
 </ul>
@@ -126,6 +126,19 @@ T=2:   等于把 z 减半 [1,0.5,0]
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

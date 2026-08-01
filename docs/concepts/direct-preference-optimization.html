@@ -69,19 +69,19 @@
 <h2>直觉 · 它把 RLHF 的两步压成一步</h2>
 <p><a href="../concepts/rlhf.html">rlhf</a> 的老套路是两步：先用人类偏好训一个<strong>奖励模型</strong>（打分器），再用 <a href="../papers/ppo.html">ppo</a> 拿这个奖励去调模型。两步、要额外一个网络、还容易训崩。</p>
 <p>DPO 的洞见：<strong>偏好这件事，不必先变成一个分数再去优化</strong>。给一对样本（同一个 prompt 下，人选出来的赢家 <code>y_w</code> 和输家 <code>y_l</code>），直接让模型"更想生成赢家、更不想生成输家"就行——写成一道<strong>二分类</strong>题：模型给赢家的相对概率应该高于输家。</p>
-<p>关键巧思是"相对谁"：相对一个<strong>冻结的参考模型</strong> <code>π_ref</code>（通常就是没对齐前的自己）。DPO 不看绝对概率，看<strong>你比参考模型多偏向某个样本多少</strong>，这个量就是它的<strong>隐式奖励</strong>：</p>
+<p>关键巧思是"相对谁"：相对一个<strong>冻结的参考模型</strong> <span class="tex math-inline" data-display="false">\pi_{\mathrm{ref}}</span>（通常就是没对齐前的自己）。DPO 不看绝对概率，看<strong>你比参考模型多偏向某个样本多少</strong>，这个量就是它的<strong>隐式奖励</strong>：</p>
 <pre><code>隐式奖励  r(y) = β · log[ πθ(y) / π_ref(y) ]
                   = β · ( logπθ(y) − logπ_ref(y) )
 </code></pre>
-<p><code>β</code> 是温度（管偏离参考的力度）。直觉：<code>r(y)</code> 大 = "我比原来的自己更爱生成 y"。</p>
+<p><span class="tex math-inline" data-display="false">\beta</span> 是温度（管偏离参考的力度）。直觉：<code>r(y)</code> 大 = "我比原来的自己更爱生成 y"。</p>
 <h2>怎么做的 · 一道 sigmoid 二分类</h2>
 <p>DPO 的损失就是"赢家隐式奖励要高过输家"的逻辑回归：</p>
 <pre><code>loss = − log σ( r(y_w) − r(y_l) )
      = − log σ( β·[(logπθ(y_w) − logπ_ref(y_w)) − (logπθ(y_l) − logπ_ref(y_l))] )
 </code></pre>
-<p><code>σ</code> 是 sigmoid。赢输的奖励差越大 → <code>σ</code> 越接近 1 → loss 越小。梯度会<strong>抬高赢家的对数概率、压低输家的</strong>。</p>
+<p><span class="tex math-inline" data-display="false">\sigma</span> 是 sigmoid。赢输的奖励差越大 → <span class="tex math-inline" data-display="false">\sigma</span> 越接近 1 → loss 越小。梯度会<strong>抬高赢家的对数概率、压低输家的</strong>。</p>
 <h2>数字例子 · 算给你看，顺带看出它的坑</h2>
-<p>取 <code>β=1</code>，参考模型对赢家、输家初始都给 <code>logπ_ref = −2.0</code>（即一开始一样喜欢）。</p>
+<p>取 <span class="tex math-inline" data-display="false">\beta =1</span>，参考模型对赢家、输家初始都给 <span class="tex math-inline" data-display="false">\log \pi_{\mathrm{ref}} = -2.0</span>（即一开始一样喜欢）。</p>
 <p><strong>第 0 步（还没动）</strong>：模型 = 参考，<code>r(y_w)=0</code>、<code>r(y_l)=0</code>，差 = 0。</p>
 <pre><code>σ(0) = 0.5      loss = −ln(0.5) = 0.693
 </code></pre>
@@ -137,6 +137,19 @@ logπθ(y_l) = −4.5   → r(y_l) = −4.5 −(−2.0) = −2.5
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

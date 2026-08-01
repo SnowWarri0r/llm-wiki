@@ -67,7 +67,7 @@
 <h2>一句话</h2>
 <p>所有归一化做的事一样——把一组激活拉回均值 0、方差 1，再配可学的缩放 γ 和偏移 β；<strong>唯一区别是：对<u>哪一组数</u>求那个均值/方差</strong>。</p>
 <h2>直觉 · 对哪根轴平均</h2>
-<p>训练时每层激活会乱飘(太大/太小/分布漂移)，不稳难训。归一化把一组数 <code>x</code> 拉回 <code>(x−μ)/σ</code> 再 <code>·γ+β</code>。把激活看成张量 <strong>[N 批量, C 通道, 空间]</strong>，各变体只是圈不同切片去算 μ/σ：</p>
+<p>训练时每层激活会乱飘(太大/太小/分布漂移)，不稳难训。归一化把一组数 <code>x</code> 拉回 <span class="tex math-inline" data-display="false">(x-\mu )/\sigma</span> 再 <span class="tex math-inline" data-display="false">\cdot \gamma +\beta</span>。把激活看成张量 <strong>[N 批量, C 通道, 空间]</strong>，各变体只是圈不同切片去算 μ/σ：</p>
 <p>一张成绩表 <code>[学生 × 科目]</code> 的类比：</p>
 <ul>
 <li><strong>BatchNorm</strong>：每一<strong>科</strong>在全班拉曲线(按列) → 要全班在场。</li>
@@ -167,6 +167,19 @@ RMSNorm     不减均值，只除 RMS：y = γ · x / sqrt(mean(x²)+ε)
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

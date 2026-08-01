@@ -83,7 +83,7 @@ y1' = y1 / H = 384 / 480 = 0.800
 
 文本 = &lt;p&gt;person&lt;/p&gt;&lt;bbox&gt;[0.100,0.200,0.700,0.800]&lt;/bbox&gt;
 </code></pre>
-<p>其中 <code>x0,y0</code> 是左上角，<code>x1,y1</code> 是右下角；<code>W,H</code> 是输入图像像素尺寸；带撇号的是 <code>[0,1]</code> 归一化坐标。解码时反乘宽高，正好回到 <code>[64,96,448,384]</code>。三位小数意味着 640 宽图上的横向量化间隔约为 <code>0.001×640=0.64 px</code>。</p>
+<p>其中 <code>x0,y0</code> 是左上角，<code>x1,y1</code> 是右下角；<code>W,H</code> 是输入图像像素尺寸；带撇号的是 <code>[0,1]</code> 归一化坐标。解码时反乘宽高，正好回到 <code>[64,96,448,384]</code>。三位小数意味着 640 宽图上的横向量化间隔约为 <span class="tex math-inline" data-display="false">0.001\times 640=0.64 px</span>。</p>
 <h2>图像编码也是协议</h2>
 <ul>
 <li>深度：有效 metric depth 先转 inverse depth，再归一化成灰度；近处更亮、远处更暗。</li>
@@ -91,7 +91,7 @@ y1' = y1 / H = 384 / 480 = 0.800
 <li>二值 mask：固定前景色与背景色。</li>
 <li>point map：归一化 XYZ 分别写入 RGB。</li>
 </ul>
-<p>论文没有公开深度归一化的完整端点公式，所以不能把任意 min-max 公式冒充官方实现。只看“逆深度”这一步的直觉例：三个像素深度 <code>d=[1,2,4]m</code>，逆深度 <code>1/d=[1,0.5,0.25]m⁻¹</code>；若仅为演示而在这三个值内做 min-max，灰度会是 <code>[255,85,0]</code>。这说明为什么近处更亮，但真实数据的归一化边界必须以转换脚本为准。</p>
+<p>论文没有公开深度归一化的完整端点公式，所以不能把任意 min-max 公式冒充官方实现。只看“逆深度”这一步的直觉例：三个像素深度 <code>d=[1,2,4]m</code>，逆深度 <span class="tex math-inline" data-display="false">1/d=[1,0.5,0.25]m^{-1}</span>；若仅为演示而在这三个值内做 min-max，灰度会是 <code>[255,85,0]</code>。这说明为什么近处更亮，但真实数据的归一化边界必须以转换脚本为准。</p>
 <h2>失败边界</h2>
 <p>可解码不等于无损：坐标有量化误差，生成文本可能漏标签，生成图像可能出现边缘模糊或颜色漂移。协议把错误变得<strong>可定位、可度量</strong>，并没有消灭错误。</p>
 <h2>链接</h2>
@@ -113,6 +113,19 @@ y1' = y1 / H = 384 / 480 = 0.800
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

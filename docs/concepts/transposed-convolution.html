@@ -67,21 +67,21 @@
 <h2>一句话</h2>
 <p>普通卷积把一片输入汇成较少输出；转置卷积把每个输入值按可学习卷积核“铺”到更大的输出网格，并把重叠贡献相加。</p>
 <h2>先纠正名字</h2>
-<p>它不是把普通卷积的结果精确还原，也不是真正的逆卷积。名字里的“转置”来自线性代数：把普通卷积写成矩阵乘法 <code>y=Ax</code> 后，转置卷积执行形状相反的 <code>Aᵀy</code>。</p>
+<p>它不是把普通卷积的结果精确还原，也不是真正的逆卷积。名字里的“转置”来自线性代数：把普通卷积写成矩阵乘法 <code>y=Ax</code> 后，转置卷积执行形状相反的 <span class="tex math-inline" data-display="false">A^{T}y</span>。</p>
 <h2>怎么做的</h2>
 <p>最小一维例子，输入 <code>[2,3]</code>，核 <code>[1,2]</code>，stride=1：</p>
 <pre><code class="language-text">输入 2 铺出：2×[1,2] = [2,4,0]
 输入 3 铺出：3×[1,2] = [0,3,6]
 重叠相加：              [2,7,6]
 </code></pre>
-<p>输出从长度 2 变成 3。二维同理：每个输入位置把一个 <code>k×k</code> 小块写进更大的平面，重叠处求和。</p>
+<p>输出从长度 2 变成 3。二维同理：每个输入位置把一个 <span class="tex math-inline" data-display="false">k\times k</span> 小块写进更大的平面，重叠处求和。</p>
 <h2>数字例子 · stride=2 怎样放大</h2>
 <p>输入 <code>[2,3]</code>，核仍为 <code>[1,2]</code>，stride=2：</p>
 <pre><code class="language-text">2 的小块从位置 0 开始：[2,4,0,0]
 3 的小块从位置 2 开始：[0,0,3,6]
 相加：                 [2,4,3,6]
 </code></pre>
-<p>输出长度翻到 4。真实 U-Net 用二维 <code>2×2</code> 上采样把宽高各放大 2 倍。</p>
+<p>输出长度翻到 4。真实 U-Net 用二维 <span class="tex math-inline" data-display="false">2\times 2</span> 上采样把宽高各放大 2 倍。</p>
 <h2>它和插值有什么差别</h2>
 <ul>
 <li>最近邻 / 双线性插值：放大规则固定，没有可学习参数；</li>
@@ -113,6 +113,19 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

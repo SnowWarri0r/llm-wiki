@@ -38,7 +38,7 @@ TML 也是双层结构，但**边界不一样**：
 - TML：[[dual-model-architecture]] 是前台 always-on + 后台异步深推理，分工是"谁负责说话 / 谁负责想"
 
 ## 代码出处
-- 本地 clone 软链至 `raw/fish-speech/fish_speech/models/`（具体文件待查 ingest）
+- 本地 clone 软链至 \(raw/fish-speech/fish_{\mathrm{speech}}/models/\)（具体文件待查 ingest）
 - 技术报告：https://arxiv.org/abs/2603.08823
 
 ## 链接

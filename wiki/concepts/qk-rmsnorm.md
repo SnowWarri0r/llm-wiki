@@ -12,7 +12,7 @@ updated: 2026-07-22
 
 ## 直觉 · 麦克风别开到爆音
 
-attention 的核心是 `softmax(Q·K^T / √d)`。点积 Q·K 越大，softmax 出来的分布越尖。
+attention 的核心是 \(\operatorname{softmax}(Q\cdot K^T / \sqrt{d})\)。点积 Q·K 越大，softmax 出来的分布越尖。
 
 深层大模型训着训着会出一个毛病：**Q 和 K 的数值幅度悄悄涨上去**（logit drift）。点积是两个大向量相乘，结果更大。一旦某个 logit 远超其它，softmax 几乎把全部权重压到一个 token 上 → attention 变成**near one-hot**：每个位置只盯死一个邻居，别的全看不见。
 
@@ -52,7 +52,7 @@ RMSNorm 做的事：把向量除以它自己的均方根，**模长被拉到一�
 
 ## 代码出处
 - 提出：Scaling ViT to 22B Parameters, arXiv 2302.05442（QK-Norm 是其能稳训的关键之一）
-- 现代实现：几乎所有新 LLM / DiT 的 attention 模块里都有 `q_norm` / `k_norm`
+- 现代实现：几乎所有新 LLM / DiT 的 attention 模块里都有 \(q_{\mathrm{norm}}\) / \(k_{\mathrm{norm}}\)
 
 ## 链接
 - [[layernorm]] · 归一化家族，RMSNorm 是它的简化版
