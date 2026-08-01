@@ -448,17 +448,17 @@ figcaption b{color:var(--amber)}
 <p>这三条式子是串起来用的，中间有一步容易被跳过：<code class="m">\tau_{\mathrm{global}}</code> 算出来之后<strong>不是直接当门槛</strong>，而是<strong>除以 <code class="m">\gamma</code> 反推成 EMA 的初值</strong>——这样第一个位置的门槛正好等于 <code class="m">\tau_{\mathrm{global}}</code>，EMA 从一个合理的地方起步，而不是从 0 慢慢爬。</p>
 <div class="math-sheet">训练统计：熵均值 = 0.6，标准差 = 0.1
 
-① 全局基线
+① 全局基线 <code class="m">\tau_{\mathrm{global}}</code>
    0.3×0.6 − 0.1×0.1 = 0.18 − 0.01 = <b>0.17</b>
 
-② EMA 初值 —— 拿上一步那个 0.17 除以 0.8 反推
+② EMA 初值 —— 拿上一步那个 0.17 除以 <code class="m">\gamma</code> = 0.8 反推
    0.17 / 0.8 = <b>0.2125</b>
-   这么定初值，是为了让第一个位置的门槛正好等于全局基线
+   这么定初值，是为了让第一个位置的门槛正好等于 <code class="m">\tau_{\mathrm{global}}</code>
 
-③ 更新 EMA —— 收到当前位置的目标熵 0.5
+③ 更新 EMA <code class="m">\bar{\mathcal E}^{\,\mathrm{target}}_c</code> —— 收到当前位置的目标熵 <code class="m">\mathcal E^{\mathrm{target}}_c</code> = 0.5
    0.9 × 0.2125 + 0.1 × 0.5 = 0.19125 + 0.05 = <b>0.24125</b>
 
-④ 当前门槛
+④ 当前门槛 <code class="m">\tau_c</code> = <code class="m">\gamma</code><code class="m">\bar{\mathcal E}^{\,\mathrm{target}}_c</code>
    0.8 × 0.24125 = <b>0.193</b>
 
 ⑤ 判定 —— 草稿这一位的熵 = 0.15
@@ -477,12 +477,12 @@ figcaption b{color:var(--amber)}
 <h3>5.4 同一个草稿熵，两种区域相反的判决</h3>
 <p>门槛跟着目标走，效果就是<strong>同样一个草稿熵，在不同区域会被判成不同的事</strong>。把草稿熵固定在 0.15，看两种稳定下来的区域：</p>
 <div class="math-sheet">平滑区 · 目标熵长期在 0.16
-    EMA 收敛到 0.16   →   门槛 = 0.8 × 0.16 = <b>0.128</b>
+    EMA 收敛到 0.16   →   门槛 <code class="m">\tau_c</code> = 0.8 × 0.16 = <b>0.128</b>
     草稿熵 0.15 &gt; 0.128   →   <b>继续起草</b>
     （目标自己也很自信，草稿跟着自信，没毛病）
 
 纹理区 · 目标熵长期在 0.50
-    EMA 收敛到 0.50   →   门槛 = 0.8 × 0.50 = <b>0.400</b>
+    EMA 收敛到 0.50   →   门槛 <code class="m">\tau_c</code> = 0.8 × 0.50 = <b>0.400</b>
     草稿熵 0.15 &lt; 0.400   →   <b>停止</b>
     （目标都拿不准，草稿却咬定，判成假自信）
 
@@ -490,9 +490,9 @@ figcaption b{color:var(--amber)}
 <p>再看 5.2 说的那个惯性代价。假设一路从平滑区（EMA 稳在 0.16）走进纹理区，目标熵一下跳到 0.50：</p>
 <div class="math-sheet">刚从平滑区（EMA 稳在 0.16）走进纹理区，目标熵跳到 0.50：
 
-  第 1 位   EMA = .9×0.16 + .1×0.50 = 0.1940   门槛 = <b>0.1552</b>   草稿 .15 → 停
-  第 2 位   EMA = 0.2246                       门槛 = <b>0.1797</b>   → 停
-  第 3 位   EMA = 0.2521                       门槛 = <b>0.2017</b>   → 停
+  第 1 位   EMA = .9×0.16 + .1×0.50 = 0.1940   <code class="m">\tau_c</code> = <b>0.1552</b>   草稿 .15 → 停
+  第 2 位   EMA = 0.2246                       <code class="m">\tau_c</code> = <b>0.1797</b>   → 停
+  第 3 位   EMA = 0.2521                       <code class="m">\tau_c</code> = <b>0.2017</b>   → 停
 
 门槛虽然要十几个位置才爬到 0.40 的稳态，但第 1 个位置就已经越过 0.15 了。
 惯性拖的是「门槛升到多高」，不是「什么时候开始拦」。</div>
@@ -594,7 +594,7 @@ E = 0.8805    0.4403          <b>0.4263</b>        低  3%
 <div class="vars">
   <div class="var"><code class="m">x</code> · 当前生成样本在特征空间里的位置。</div><div class="var"><code class="m">y^{+}\sim p,\;\; y^{-}\sim q</code> · 分别从真实分布和当前生成分布抽到的邻居。</div>
   <div class="var"><code class="m">y-x</code> · 从我指向那个邻居的位移向量，也就是“往那边挪”的方向。</div><div class="var"><code class="m">k(x,y)</code> · 相似度权重，越近越大。</div>
-  <div class="var"><code class="m">Z_p=\mathbb E_p[k(x,y^{+})]</code> · 权重之和，除掉它是为了让权重加起来为 1，步长不随样本个数变。</div><div class="var"><code class="m">V_q^{-}</code> · 同一套算法换成生成邻居；总式把它减掉，效果就是远离生成团块。</div>
+  <div class="var"><code class="m">Z_p=\mathbb E_p[k(x,y^{+})]</code> · 权重的<strong>平均</strong>（不是和——注意它带着 <code class="m">\mathbb E</code>）。分子分母都是期望，样本数在上下约掉，所以整体等价于「按权重加权求和、再除以权重总和」，结果不随取了几个邻居而变。</div><div class="var"><code class="m">V_q^{-}</code> · 同一套算法换成生成邻居；总式把它减掉，效果就是远离生成团块。</div>
 </div>
 <p>核函数取的是<strong>距离越远、权重指数级衰减</strong>：</p>
 <div class="formula"><span data-tex="k(x,y)=\exp\!\left(-\frac{\lVert x-y\rVert_2}{\tau}\right)"></span></div>
@@ -603,7 +603,7 @@ E = 0.8805    0.4403          <b>0.4263</b>        低  3%
 <div class="math-sheet">τ = 0.2（只看很近的）
     到 1.6 的距离 0.6131  →  k = exp(−0.6131/0.2) = 0.04661
     到 1.2 的距离 0.2131  →  k = exp(−0.2131/0.2) = 0.34459
-    归一化                    w = 0.1192、0.8808
+    归一化   w = k / Σk      w = 0.1192、0.8808   （加起来正好 1）
     V⁺ = 0.1192×(1.6−0.9869) + 0.8808×(1.2−0.9869) = <b>0.2608</b>
                               近邻 1.2 拿走了 88% 的话语权
 
@@ -655,11 +655,11 @@ E = 0.8805    0.4403          <b>0.4263</b>        低  3%
     dL/dw = 2 × (.9869 − 1.7869) × .9869 = 2 × (−.8) × .9869 = <b>−1.5790</b>
 
 梯度下降，学习率 .1
-    新 w  = 1 − .1 × (−1.5790) = <b>1.1579</b>
-    新 x̂ = 1.1579 × .9869 = <b>1.1427</b>
+    <code class="m">w_{\mathrm{new}}</code>  = 1 − .1 × (−1.5790) = <b>1.1579</b>
+    <code class="m">\hat x_{\mathrm{new}}</code> = 1.1579 × .9869 = <b>1.1427</b>
 
 拿旧靶子验一下方向对不对
-    新 L = (1.1427 − 1.7869)² = <b>.4150</b>  &lt;  .64   ✓ 确实在降</div>
+    <code class="m">L_{\mathrm{new}}</code> = (1.1427 − 1.7869)² = <b>.4150</b>  &lt;  .64   ✓ 确实在降</div>
 <p>下一轮会重新采样、重算 <code class="m">q</code> 和 <code class="m">V</code>，靶子跟着动，不会永远追这一个旧靶。所以 stopgrad 冻的只是“本轮”，不是“永久”。</p>
 </section>
 
@@ -851,9 +851,9 @@ a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
 </style>
 <script>
 (function(){
-  var items={};
-  document.querySelectorAll('.gloss ol li[id^="g-"]').forEach(function(li){items[li.id]=li.innerHTML;});
-  if(!Object.keys(items).length)return;
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
   var pop=document.createElement('div');pop.className='jr-pop';
   pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
   document.body.appendChild(pop);
@@ -863,9 +863,10 @@ a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
   document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
     a.addEventListener('click',function(e){
       var id=a.getAttribute('href').slice(1);
-      if(!items[id])return;
+      if(!document.getElementById(id))return;
       e.preventDefault();
-      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+items[id];
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
       pop.classList.add('show');
       if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
     });
