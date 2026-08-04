@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>分布式训练并行 · 模型、数据和长序列分别怎么切 · Concept</title>
+<title>Thinker–Performer Streaming · 状态更新与连续 latent 生成分工 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,60 +53,69 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · distributed-training-parallelism</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · thinker-performer-streaming</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>分布式训练并行 · 模型、数据和长序列分别怎么切</h1>
+  <h1>Thinker–Performer Streaming · 状态更新与连续 latent 生成分工</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>显存不够时不要只说“多加几张卡”：参数、矩阵乘和 token 是三种不同的东西，要用三种切法。</p>
-<h2>先认清三个瓶颈</h2>
+<p>Thinker 维护因果上下文和 KV cache，Performer 在同一时间预算里生成更耗算力的视频、音频 latent；两边用流水线重叠，而不是等整段做完再交棒。</p>
+<h2>先别和 Thinker–Talker 混淆</h2>
 <ul>
-<li><strong>FSDP2 / HSDP：切模型状态。</strong> 参数、梯度和优化器状态分散到多张卡；算某层前临时把那层参数凑齐，算完再释放。它解决“整套模型状态放不下”。</li>
-<li><strong>Tensor Parallel，简称 TP：切一层计算。</strong> 同一个大矩阵乘拆给多张卡，每张卡算一部分输出。它解决“单层太大或单层计算太慢”。</li>
-<li><strong>Context Parallel，简称 CP：切长序列。</strong> 同一条超长序列的 token 分给多张卡。Ulysses 是一种 CP 实现，通过 all-to-all 交换，让每张卡轮流拿到完成注意力所需的 head 或序列片段。</li>
+<li><strong>Thinker–Performer</strong>：Wan-Streamer 的服务分工。Thinker 管流式状态与编解码，Performer 管条件流匹配的连续 latent 生成。</li>
+<li><strong>Thinker–Talker</strong>：DuplexOmni 等语音模型里“先出语义文字、再渲染语音 codec”的模型结构。</li>
 </ul>
-<p>它们可以叠加：外层 HSDP 切模型状态，内层 TP 切矩阵，CP 再切 token。代价是每多切一刀，就多一种跨卡通信和故障点。</p>
-<h2>数字例子</h2>
-<p>假设训练状态共占 24 GB，一条视频有 8000 个 token，一层线性变换要算 4096 个输出通道，现有 4 张 GPU：</p>
-<pre><code class="language-text">普通数据并行：每卡都放完整 24 GB 状态
-FSDP2：       24 ÷ 4 = 每卡常驻约 6 GB 状态
-
-Context Parallel：8000 ÷ 4 = 每卡先处理约 2000 个 token
-Tensor Parallel： 4096 ÷ 4 = 每卡先算约 1024 个输出通道
-</code></pre>
-<p>这不是白省：FSDP2 算某层前要 all-gather 参数；TP 算完要合并局部结果；CP 做注意力时要交换 token 或 head。若网络来不及搬数据，GPU 就会等通信。</p>
-<h2>HSDP 为什么多一个 H</h2>
-<p>全局有 16 张卡时，可以分成 4 组，每组 4 卡：组内像 FSDP 一样切成四份，组间复制一套。这样组内通信更密集，跨组通信更少。它用一些重复存储换更符合机器拓扑的通信量。</p>
-<h2>async-TP 在做什么</h2>
-<p>普通 TP 是“先通信，再计算”；async-TP 尽量让第 N 块的通信与第 N−1 块的矩阵乘同时进行。只有计算时间足以盖住通信时间，异步才真能变快。</p>
+<p>名字相似，解决的问题不同。</p>
+<h2>一次 160 ms 单元里发生什么</h2>
+<p>把当前单元记作 <span class="tex math-inline" data-display="false">k</span>：</p>
+<ol>
+<li>Thinker 编码当前用户音视频，更新因果序列和 KV cache；</li>
+<li>Performer 根据已经准备好的条件生成下一个单元的音视频 latent；</li>
+<li>Thinker 同时可以解码上一个单元的 latent；</li>
+<li>三段工作尽量重叠，整个流水线才跟得上 160 ms 的交付节奏。</li>
+</ol>
+<p>这里要分清 <strong>吞吐约束</strong> 和 <strong>响应延迟</strong>：每个单元的稳态工作量必须在 160 ms 节拍内消化，论文报告的模型侧端到端信号延迟则约为 200 ms。前者像流水线每分钟能做多少件，后者像一件产品从入口到出口走多久。</p>
+<h2>v0.2 为什么给 Performer 多卡</h2>
+<p>高分辨率视频 latent 序列较长，v0.2 用 Ulysses 上下文并行把它切给多张 GPU；音频 latent 短，不必同样切分。Thinker 仍放在单卡，避免因果状态和频繁的小块调度被额外通信拖慢。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/krea-2.html">krea-2</a> · FSDP2、Megatron TP 与 async-TP</li>
-<li><a href="../papers/cosmos-3.html">cosmos-3</a> · HSDP 与 Ulysses Context Parallel</li>
-<li><a href="../concepts/gpu-interconnects-and-collectives.html">gpu-interconnects-and-collectives</a> · 这些切法依赖的跨卡搬运</li>
-<li><a href="../concepts/activation-checkpointing.html">activation-checkpointing</a> · 不加卡时，另一种省显存办法</li>
-<li><a href="../papers/wan-streamer-v03.html">wan-streamer-v03</a> · v0.2/v0.3 的 Performer 用 Ulysses 切长视频 latent，短音频 latent 不照搬同一切法</li>
+<li><a href="../papers/wan-streamer-v03.html">wan-streamer-v03</a> · v0.3 沿用了哪一段服务路径</li>
+<li><a href="../concepts/distributed-training-parallelism.html">distributed-training-parallelism</a> · Ulysses 怎样沿 token 维切长序列</li>
+<li><a href="../concepts/conditional-flow-matching.html">conditional-flow-matching</a> · Performer 实际回归什么连续目标</li>
+<li><a href="../concepts/kv-cache.html">kv-cache</a> · Thinker 保存的历史状态</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 9 处</span>
-  <ul><li><a href="../papers/cosmos-3.html"><span class="cat">paper</span>Cosmos 3 · 把“看懂、想象、行动”塞进同一个世界模型</a></li><li><a href="../papers/krea-2.html"><span class="cat">paper</span>Krea 2 · 先保住视觉多样性，再提高生成可控性</a></li><li><a href="../papers/qwen3-vl-report.html"><span class="cat">paper</span>Qwen3-VL · 一张图片怎样进入语言模型</a></li><li><a href="../papers/senseflow.html"><span class="cat">paper</span>SenseFlow · DMD2 扩到 SD 3.5 与 FLUX，为什么突然训不动了</a></li><li><a href="../papers/wan-streamer-v03.html"><span class="cat">paper</span>Wan-Streamer v0.3 · 把视频拆成稳定的世界与持续发生的事件</a></li><li><a href="../papers/wonder-video-world-model.html"><span class="cat">paper</span>Wonder · 把图片或视频变成能实时移动相机的生成世界</a></li><li><a href="../concepts/gpu-interconnects-and-collectives.html"><span class="cat">concept</span>GPU 互联与集合通信 · 多卡训练为什么常卡在“搬”而不是“算”</a></li><li><a href="../concepts/model-serving-stack.html"><span class="cat">concept</span>模型服务栈 · PyTorch、TensorRT、vLLM 和 vLLM-Omni 各管什么</a></li><li><a href="../concepts/thinker-performer-streaming.html"><span class="cat">concept</span>Thinker–Performer Streaming · 状态更新与连续 latent 生成分工</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/wan-streamer-v03.html"><span class="cat">paper</span>Wan-Streamer v0.3 · 把视频拆成稳定的世界与持续发生的事件</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/distributed-training-parallelism.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/thinker-performer-streaming.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

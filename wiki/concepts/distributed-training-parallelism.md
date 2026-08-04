@@ -1,8 +1,8 @@
 ---
 name: distributed-training-parallelism
 type: concept
-sources: [krea-2, cosmos-3, qwen3-vl-report, senseflow]
-updated: 2026-07-24
+sources: [krea-2, cosmos-3, qwen3-vl-report, senseflow, wan-streamer-v03]
+updated: 2026-08-04
 ---
 
 # 分布式训练并行 · 模型、数据和长序列分别怎么切
@@ -46,3 +46,4 @@ Tensor Parallel： 4096 ÷ 4 = 每卡先算约 1024 个输出通道
 - [[cosmos-3]] · HSDP 与 Ulysses Context Parallel
 - [[gpu-interconnects-and-collectives]] · 这些切法依赖的跨卡搬运
 - [[activation-checkpointing]] · 不加卡时，另一种省显存办法
+- [[wan-streamer-v03]] · v0.2/v0.3 的 Performer 用 Ulysses 切长视频 latent，短音频 latent 不照搬同一切法

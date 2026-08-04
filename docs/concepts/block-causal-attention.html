@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>分布式训练并行 · 模型、数据和长序列分别怎么切 · Concept</title>
+<title>Block-Causal Attention · 块因果注意力 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,56 +53,51 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · distributed-training-parallelism</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · block-causal-attention</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>分布式训练并行 · 模型、数据和长序列分别怎么切</h1>
+  <h1>Block-Causal Attention · 块因果注意力</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>显存不够时不要只说“多加几张卡”：参数、矩阵乘和 token 是三种不同的东西，要用三种切法。</p>
-<h2>先认清三个瓶颈</h2>
-<ul>
-<li><strong>FSDP2 / HSDP：切模型状态。</strong> 参数、梯度和优化器状态分散到多张卡；算某层前临时把那层参数凑齐，算完再释放。它解决“整套模型状态放不下”。</li>
-<li><strong>Tensor Parallel，简称 TP：切一层计算。</strong> 同一个大矩阵乘拆给多张卡，每张卡算一部分输出。它解决“单层太大或单层计算太慢”。</li>
-<li><strong>Context Parallel，简称 CP：切长序列。</strong> 同一条超长序列的 token 分给多张卡。Ulysses 是一种 CP 实现，通过 all-to-all 交换，让每张卡轮流拿到完成注意力所需的 head 或序列片段。</li>
-</ul>
-<p>它们可以叠加：外层 HSDP 切模型状态，内层 TP 切矩阵，CP 再切 token。代价是每多切一刀，就多一种跨卡通信和故障点。</p>
-<h2>数字例子</h2>
-<p>假设训练状态共占 24 GB，一条视频有 8000 个 token，一层线性变换要算 4096 个输出通道，现有 4 张 GPU：</p>
-<pre><code class="language-text">普通数据并行：每卡都放完整 24 GB 状态
-FSDP2：       24 ÷ 4 = 每卡常驻约 6 GB 状态
-
-Context Parallel：8000 ÷ 4 = 每卡先处理约 2000 个 token
-Tensor Parallel： 4096 ÷ 4 = 每卡先算约 1024 个输出通道
+<p>同一个时间块里的 token 可以互相看，后面的时间块只能看自己和过去，不能偷看未来。</p>
+<h2>为什么不只用普通 causal mask</h2>
+<p>连续音视频在同一个 160 ms 时间段里会产生一批 token。它们表示同一小段画面和声音，没有必要像文字那样一个 token 接一个 token 串行等待。块因果注意力把时间线切成块：</p>
+<pre><code class="language-text">块 1：块内互相可见
+块 2：可看块 1，也可看块 2 内部
+块 3：可看块 1、2，也可看块 3 内部
+未来块：不可见
 </code></pre>
-<p>这不是白省：FSDP2 算某层前要 all-gather 参数；TP 算完要合并局部结果；CP 做注意力时要交换 token 或 head。若网络来不及搬数据，GPU 就会等通信。</p>
-<h2>HSDP 为什么多一个 H</h2>
-<p>全局有 16 张卡时，可以分成 4 组，每组 4 卡：组内像 FSDP 一样切成四份，组间复制一套。这样组内通信更密集，跨组通信更少。它用一些重复存储换更符合机器拓扑的通信量。</p>
-<h2>async-TP 在做什么</h2>
-<p>普通 TP 是“先通信，再计算”；async-TP 尽量让第 N 块的通信与第 N−1 块的矩阵乘同时进行。只有计算时间足以盖住通信时间，异步才真能变快。</p>
+<p>这同时保留两件事：块之间遵守时间因果，块内利用 GPU 并行计算。</p>
+<h2>四格 mask</h2>
+<p>若每块只有一个简化 token，注意力可见关系是下三角；若每块有很多 token，下三角的每个小格会扩展成一个全可见方块：</p>
+<pre><code class="language-text">查询块 1  [看 1] [禁止] [禁止]
+查询块 2  [看 1] [看 2] [禁止]
+查询块 3  [看 1] [看 2] [看 3]
+</code></pre>
+<h2>与全双工的关系</h2>
+<p>Wan-Streamer 的 25 FPS 视频每帧 40 ms；160 ms 流式单元包含 4 帧。模型每处理完一块，就能吸收新的用户音视频并生成下一块。块越短，反应机会越频繁；块太短又会增加调度、通信和解码开销。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/krea-2.html">krea-2</a> · FSDP2、Megatron TP 与 async-TP</li>
-<li><a href="../papers/cosmos-3.html">cosmos-3</a> · HSDP 与 Ulysses Context Parallel</li>
-<li><a href="../concepts/gpu-interconnects-and-collectives.html">gpu-interconnects-and-collectives</a> · 这些切法依赖的跨卡搬运</li>
-<li><a href="../concepts/activation-checkpointing.html">activation-checkpointing</a> · 不加卡时，另一种省显存办法</li>
-<li><a href="../papers/wan-streamer-v03.html">wan-streamer-v03</a> · v0.2/v0.3 的 Performer 用 Ulysses 切长视频 latent，短音频 latent 不照搬同一切法</li>
+<li><a href="../papers/wan-streamer-v03.html">wan-streamer-v03</a> · 160 ms 流式单元怎样进入完整系统</li>
+<li><a href="../concepts/causal-language-model.html">causal-language-model</a> · token 级因果注意力与自回归预测的基础</li>
+<li><a href="../concepts/kv-cache.html">kv-cache</a> · 历史块为什么不必反复重算</li>
+<li><a href="../concepts/full-duplex-multimodal-interaction.html">full-duplex-multimodal-interaction</a> · 输入输出并行的产品目标</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 9 处</span>
-  <ul><li><a href="../papers/cosmos-3.html"><span class="cat">paper</span>Cosmos 3 · 把“看懂、想象、行动”塞进同一个世界模型</a></li><li><a href="../papers/krea-2.html"><span class="cat">paper</span>Krea 2 · 先保住视觉多样性，再提高生成可控性</a></li><li><a href="../papers/qwen3-vl-report.html"><span class="cat">paper</span>Qwen3-VL · 一张图片怎样进入语言模型</a></li><li><a href="../papers/senseflow.html"><span class="cat">paper</span>SenseFlow · DMD2 扩到 SD 3.5 与 FLUX，为什么突然训不动了</a></li><li><a href="../papers/wan-streamer-v03.html"><span class="cat">paper</span>Wan-Streamer v0.3 · 把视频拆成稳定的世界与持续发生的事件</a></li><li><a href="../papers/wonder-video-world-model.html"><span class="cat">paper</span>Wonder · 把图片或视频变成能实时移动相机的生成世界</a></li><li><a href="../concepts/gpu-interconnects-and-collectives.html"><span class="cat">concept</span>GPU 互联与集合通信 · 多卡训练为什么常卡在“搬”而不是“算”</a></li><li><a href="../concepts/model-serving-stack.html"><span class="cat">concept</span>模型服务栈 · PyTorch、TensorRT、vLLM 和 vLLM-Omni 各管什么</a></li><li><a href="../concepts/thinker-performer-streaming.html"><span class="cat">concept</span>Thinker–Performer Streaming · 状态更新与连续 latent 生成分工</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/wan-streamer-v03.html"><span class="cat">paper</span>Wan-Streamer v0.3 · 把视频拆成稳定的世界与持续发生的事件</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/distributed-training-parallelism.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/block-causal-attention.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
