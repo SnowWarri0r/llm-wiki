@@ -243,11 +243,12 @@ table.recap td:first-child{white-space:nowrap}
   <figure>
     <figcaption><span>Fig 06 · 两层能力迁移</span><b>先学四个落点，再学吃自己的输出</b></figcaption>
     <div class="timeline">
-      <div class="phase"><b>TEACHER CURRICULUM</b><strong>5s → 10s → 20s</strong><p>先联合训练短 I2V/V2V，再主要把 I2V horizon 拉长；RoPE 用 YaRN 外推。</p></div>
+      <div class="phase"><b>TEACHER CURRICULUM</b><strong>5s → 10s → 20s</strong><p>先联合训练短 I2V/V2V，再主要把 I2V horizon 拉长；RoPE<a class="jr" href="#g-19">19</a> 用 YaRN<a class="jr" href="#g-20">20</a> 外推。</p></div>
       <div class="phase"><b>ODE INITIALIZATION</b><strong>回归四个 teacher 落点</strong><p>teacher 预先算好多步 ODE 轨迹，student 在四个指定时刻模仿，先获得稳定起点。</p></div>
       <div class="phase"><b>SELF-FORCING + DMD</b><strong>改吃自己的历史</strong><p>student 自己 rollout；冻结 teacher 与 critic 估 score 差，让生成分布继续靠近真实视频。</p></div>
     </div>
   </figure>
+  <p>那半句「RoPE 用 YaRN 外推」值得展开一下。RoPE 给每个 token 按位置编号旋转，模型只在 5 秒的位置范围上训过；horizon 拉到 20 秒后，后段 token 的位置编号是它从没见过的，注意力会读错相对距离。YaRN 的做法是<strong>按频率分段处理</strong>：管近距离关系的高频旋转保持不动（相邻帧的相对位置还是老样子），管远距离的低频旋转按比例压缩，把没见过的大编号折回训练时熟悉的区间——于是不用从头重训就能吃更长的序列。细节和数字例在 <a href="rope.html">RoPE 那页</a>的上下文扩展一节。</p>
   <p>Self-Forcing<a class="jr" href="#g-07">07</a> 的生活类比是练车：只在教练替你修正好方向后继续开，考试时一旦自己偏了就不知道如何救；训练时让 student 真正接着自己的旧输出开，才会遇到部署时的误差分布。</p>
 </section>
 
@@ -345,7 +346,7 @@ table.recap td:first-child{white-space:nowrap}
   <figure>
     <figcaption><span>Fig 11 · 运行时的三本账</span><b>计算、通信、显存一起压</b></figcaption>
     <div class="infra">
-      <div class="card"><b>COMPUTE</b><strong>少算和快算</strong><ul><li>编译并重放固定执行图</li><li>FlashAttention-3</li><li>fused QKV、BF16 RMSNorm</li><li>缓存 RoPE 与 timestep modulation</li></ul></div>
+      <div class="card"><b>COMPUTE</b><strong>少算和快算</strong><ul><li>编译并重放固定执行图</li><li>FlashAttention-3</li><li>fused QKV、BF16 RMSNorm</li><li>缓存 RoPE<a class="jr" href="#g-19">19</a> 与 timestep modulation</li></ul></div>
       <div class="card"><b>CACHE</b><strong>别重复算历史</strong><ul><li>self-attention 历史 K/V</li><li>文本 cross-attention K/V</li><li>检索用 pooled key</li><li>输出使用 Tiny VAE</li></ul></div>
       <div class="card"><b>MULTI-GPU</b><strong>把不同算子切对维度</strong><ul><li>FFN / cross-attention 按序列切</li><li>self-attention 按 head 切</li><li>NCCL All-to-All 转换布局</li><li>KV cache 也按 head 分片</li></ul></div>
     </div>
@@ -426,6 +427,8 @@ table.recap td:first-child{white-space:nowrap}
     <li id="g-16"><span class="term">FSDP2</span>：把模型参数、梯度和优化器状态分片到多张 GPU，降低单卡训练显存。</li>
     <li id="g-17"><span class="term">RPE</span>：Relative Pose Error，比较相邻相机位姿变化是否和目标轨迹一致，越低越好。</li>
     <li id="g-18"><span class="term">Umeyama alignment</span>：用闭式解把估计轨迹旋转、平移并统一尺度，再公平计算轨迹误差。</li>
+    <li id="g-19"><span class="term">RoPE</span>：按 token 位置旋转 query/key，让注意力点积天然携带相对位置；每个维度用不同旋转频率。详见 <a href="rope.html">RoPE 一页</a>。</li>
+    <li id="g-20"><span class="term">YaRN</span>：RoPE 的长度外推方案。按波长分段：管近距离的高频不动，管远距离的低频按比例压缩回训练见过的范围，再配注意力温度补偿；不重训就能在更长序列上读对相对位置。</li>
   </ol>
 </section>
 <footer class="colophon"><span>WONDER · BEGINNER-FIRST TECHNICAL READING</span><span>INGESTED 2026-07-29 · SOURCE v1</span></footer>
