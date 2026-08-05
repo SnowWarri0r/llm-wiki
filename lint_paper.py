@@ -316,6 +316,24 @@ def check_pre_ascii_math(html, name, issues):
                            f"<pre> 里的 {tok!r} 转不了 unicode（改 KaTeX aligned 或换记号）{mixed}"))
 
 
+# markdown 的数学定界符 \(...\) / \[...\] 不是任何载体——bespoke 页直接写 HTML，
+# 谁写谁露原文（duplexomni 初版一口气写了 10 处，人工修了两轮才清完）。机械可判。
+MD_MATH_DELIM = re.compile(r"\\[\(\[].{1,80}?\\[\)\]]", re.S)
+
+
+def check_md_math_delimiters(html, name, issues):
+    """bespoke 页里残留 markdown 数学定界符 = 原样显示。"""
+    body = visible(html)
+    pre = [(m.start(), m.end()) for m in re.finditer(r"<pre\b.*?</pre>", body, re.S)]
+    for m in MD_MATH_DELIM.finditer(body):
+        if any(a <= m.start() < b for a, b in pre):
+            continue
+        frag = " ".join(m.group(0).split())
+        issues.append(("ERROR", name,
+                       f"markdown 数学定界符不会渲染: {frag[:50]!r}"
+                       "（改成 <code class=\"m\"> 或 data-expr）"))
+
+
 # 标题也是一种载体，而 mathify 只认 code.m / .tex / [data-expr] / .math —— <h3> 从来
 # 不在扫描范围里。所以 "那个 w_norm 是干什么的" 会把下划线原样印在正文衬线字里。
 #
@@ -432,6 +450,7 @@ def lint(path):
                check_broken_subscript,
                check_split_sym_label,
                check_unrendered_math_in_heading,
+               check_md_math_delimiters,
                check_pre_ascii_math,
                check_ledger_pseudo_latex,
                check_sticky_nav_killer,
