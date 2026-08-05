@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LongCat-Video-Avatar 1.5 · 从音频到长视频、多人物与 8 步生成</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../vendor/katex/katex-swap.min.css">
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+:root{--paper:#f2ecdc;--paper2:#e8dfc9;--card:#fbf7ea;--ink:#171712;--ink2:#403a30;--muted:#786f60;--rule:#b9ad94;--navy:#10283d;--blue:#16698a;--blue2:#d5eaf0;--cyan:#138ba1;--cyan2:#ccecf0;--lime:#a8d632;--lime2:#e7efc4;--orange:#d65c2d;--orange2:#f5d5c6;--gold:#b27a12;--gold2:#f0e1af;--green:#34705d;--green2:#d1e5dc;--red:#a5362d;--red2:#f2d5cf}
+*{box-sizing:border-box}html,body{margin:0;background:var(--paper);color:var(--ink);scroll-behavior:smooth}body{font:18px/1.74 Newsreader,"Noto Serif SC",Georgia,serif;-webkit-font-smoothing:antialiased;background-image:linear-gradient(rgba(16,40,61,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(16,40,61,.035) 1px,transparent 1px);background-size:40px 40px}.page{max-width:1120px;margin:auto;padding:54px 34px 120px}.mast{display:flex;justify-content:space-between;border-top:4px double var(--ink);border-bottom:1px solid var(--rule);padding:12px 0;margin-bottom:48px;font:500 11px/1.4 "DM Mono",monospace;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted)}.kicker{font:500 11px/1.4 "DM Mono",monospace;letter-spacing:2.4px;text-transform:uppercase;color:var(--cyan);margin-bottom:18px}.hero{margin-bottom:72px}.hero h1{font:750 clamp(52px,8.8vw,98px)/.91 Fraunces,"Noto Serif SC",serif;letter-spacing:-.045em;margin:0}.hero h1 em{display:block;color:var(--cyan);font-weight:650}.dek{max-width:850px;font:300 italic clamp(20px,2.3vw,27px)/1.45 Fraunces,"Noto Serif SC",serif;color:var(--ink2);margin:24px 0 18px}.meta{font:500 11px/1.6 "DM Mono",monospace;letter-spacing:1px;color:var(--muted)}.tldr{margin:30px 0 0;border:1px solid var(--rule);border-left:6px solid var(--lime);background:rgba(251,247,234,.86);padding:22px 24px}.tldr b,.label{font:500 10px/1.2 "DM Mono",monospace;letter-spacing:1.6px;text-transform:uppercase;color:var(--cyan);display:block;margin-bottom:8px}h2{font:700 clamp(30px,4vw,42px)/1.08 Fraunces,"Noto Serif SC",serif;letter-spacing:-.02em;margin:78px 0 22px;display:flex;align-items:baseline;gap:16px}h2 .n{font:500 10px/1 "DM Mono",monospace;letter-spacing:2px;color:var(--cyan);min-width:54px}h3{font:650 23px/1.2 Fraunces,"Noto Serif SC",serif;margin:34px 0 12px}.lead{font-size:21px;line-height:1.58;color:var(--ink2)}p{margin:12px 0}strong{font-weight:700}a{color:var(--blue);text-decoration-thickness:1px;text-underline-offset:3px}code{font:500 .85em/1.2 "DM Mono",monospace;background:#fffaf0;border:1px solid var(--rule);padding:1px 5px;border-radius:3px}code.mathified{background:none;border:0;padding:0}.jr{font:500 9px/1 "DM Mono",monospace;vertical-align:super;text-decoration:none;background:var(--lime2);color:#355209;border:1px solid #8eb92b;border-radius:8px;padding:2px 5px;margin:0 2px}.note,.warning,.claim{margin:22px 0;padding:18px 20px;border-left:5px solid var(--cyan);background:rgba(213,234,240,.48)}.warning{border-left-color:var(--orange);background:rgba(245,213,198,.53)}.claim{border-left-color:var(--gold);background:rgba(240,225,175,.45)}.note .label,.warning .label,.claim .label{display:inline;margin-right:8px}.bridge{margin:26px 0;padding:13px 18px;border-top:1px dashed var(--rule);border-bottom:1px dashed var(--rule);font-size:15px;color:var(--muted)}figure{margin:38px 0;padding:28px;background:rgba(251,247,234,.87);border:1px solid var(--rule);box-shadow:8px 8px 0 rgba(16,40,61,.06);overflow:hidden}figcaption{display:flex;justify-content:space-between;gap:18px;padding-bottom:13px;margin-bottom:24px;border-bottom:1px dashed var(--rule);font:500 10px/1.45 "DM Mono",monospace;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}figcaption b{color:var(--cyan);text-align:right}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.card{padding:19px;border:1px solid var(--rule);background:rgba(255,255,255,.64);min-width:0}.card h3,.card h4{margin:4px 0 8px}.card h4{font:700 17px/1.25 Fraunces,"Noto Serif SC",serif}.card p,.card li{font-size:15px;line-height:1.55;color:var(--ink2)}.tag{display:inline-block;font:500 9px/1 "DM Mono",monospace;letter-spacing:1.2px;text-transform:uppercase;color:var(--blue);background:var(--blue2);padding:6px 8px;margin-bottom:10px}.tag.new{color:#47680a;background:var(--lime2)}.tag.warn{color:#7c261e;background:var(--red2)}.big{display:block;font:500 30px/1 "DM Mono",monospace;color:var(--cyan);margin:8px 0}.flow{display:grid;grid-template-columns:minmax(0,1fr) 38px minmax(0,1fr) 38px minmax(0,1fr);align-items:stretch}.node{border:1px solid var(--rule);border-top:5px solid var(--cyan);padding:17px;background:#fffdf6;min-width:0}.node b{display:block;font-size:17px;margin-bottom:7px}.node small{display:block;color:var(--muted);line-height:1.45}.arrow{display:grid;place-items:center;color:var(--orange);font:500 24px/1 "DM Mono",monospace}.stack{display:grid;grid-template-columns:1fr;gap:10px}.stack .node{border-top-width:1px;border-left:5px solid var(--cyan)}.stage-line{display:grid;grid-template-columns:repeat(8,minmax(82px,1fr));gap:7px;overflow-x:auto;padding-bottom:6px}.stage{min-height:116px;padding:12px 8px;background:#fffdf6;border:1px solid var(--rule);border-top:7px solid var(--cyan);text-align:center}.stage b{display:block;font:500 16px/1.2 "DM Mono",monospace;margin:5px 0}.stage span{font-size:12px;line-height:1.35;color:var(--muted)}.stage.drop{border-top-color:var(--orange)}.axisflow{display:grid;grid-template-columns:1fr 34px 1fr 34px 1fr;align-items:center}.tensor{text-align:center;padding:20px 12px;border:1px solid var(--rule);background:#fffdf6}.tensor strong{display:block;font:500 24px/1.2 "DM Mono",monospace;color:var(--cyan);margin:4px 0}.tensor span{font-size:13px;color:var(--muted)}.layerstrip{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-top:16px}.layerstrip div{padding:12px 4px;text-align:center;background:var(--blue2);border:1px solid #92bdca;font:500 12px/1.35 "DM Mono",monospace}.formula{margin:22px 0;padding:22px 18px;background:var(--navy);color:#fff;border-left:6px solid var(--lime);overflow-x:auto;text-align:center}.formula .katex{font-size:1.08em}.purpose{font:500 10px/1.4 "DM Mono",monospace;letter-spacing:1.3px;text-transform:uppercase;color:var(--cyan);margin-top:28px}.vars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 22px;margin:15px 0;padding:18px;border:1px solid var(--rule);background:rgba(255,255,255,.45)}.vars div{font-size:15px;line-height:1.55}.vars code{margin-right:5px}.calc{margin:20px 0;border:1px solid var(--rule);background:#fffdf6}.calc .step{display:grid;grid-template-columns:125px 1fr;gap:16px;padding:13px 16px;border-bottom:1px dashed var(--rule);font-size:15px}.calc .step:last-child{border-bottom:0}.calc .step b{font:500 10px/1.5 "DM Mono",monospace;color:var(--cyan);letter-spacing:1px;text-transform:uppercase}.heat{display:grid;grid-template-columns:96px repeat(4,1fr);gap:4px}.heat>div{padding:12px 8px;text-align:center;border:1px solid rgba(16,40,61,.15);font:500 12px/1.3 "DM Mono",monospace}.heat .head{background:var(--navy);color:#fff}.heat .row{background:var(--paper2);text-align:left}.heat .bad{background:var(--red2);color:var(--red)}.heat .good{background:var(--lime2);color:#45650c}.roleflow{display:grid;grid-template-columns:1fr 36px 1fr;align-items:stretch}.roles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.role{padding:14px 10px;border:1px solid var(--rule);text-align:center;background:#fffdf6}.role b{display:block;font-size:15px}.role small{display:block;color:var(--muted);font-size:12px;line-height:1.45;margin-top:5px}.shared{border:2px solid var(--cyan);padding:16px;background:var(--cyan2)}.adapter{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.adapter span{padding:10px;text-align:center;background:#fff;border:1px solid #85b9c5;font:500 11px/1.3 "DM Mono",monospace}.people{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.person{padding:18px;text-align:center;border:2px solid var(--rule);background:#fffdf6}.person .face{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:var(--blue2);margin:0 auto 10px;font:500 16px/1 "DM Mono",monospace}.person b{display:block}.person code{display:inline-block;margin-top:7px}.person.silent{border-color:var(--green);background:var(--green2)}.curriculum{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:8px;overflow-x:auto}.course{min-height:190px;padding:16px 12px;border:1px solid var(--rule);border-top:6px solid var(--cyan);background:#fffdf6}.course b{display:block;font:500 13px/1.3 "DM Mono",monospace;color:var(--cyan)}.course strong{display:block;margin:9px 0;font-size:18px}.course span{display:block;font-size:13px;line-height:1.5;color:var(--muted)}.scroll{overflow-x:auto}.results{width:100%;border-collapse:collapse;font-size:14px;line-height:1.4}.results th,.results td{padding:10px 9px;border-bottom:1px solid var(--rule);vertical-align:middle}.results th{font:500 10px/1.4 "DM Mono",monospace;letter-spacing:.5px;text-align:left;color:var(--muted)}.results td:not(:first-child),.results th:not(:first-child){text-align:right;font-family:"DM Mono",monospace}.results .ours{background:var(--lime2)}.results .best{font-weight:700;color:#3c6203}.metric-bars{display:grid;grid-template-columns:145px 1fr 50px;gap:8px 12px;align-items:center}.metric-bars .name{font-size:14px}.bar{height:22px;background:var(--paper2);position:relative}.bar i{display:block;height:100%;background:var(--cyan)}.bar.bad i{background:var(--orange)}.val{text-align:right;font:500 11px/1 "DM Mono",monospace}.trade{display:grid;grid-template-columns:1fr 1fr;gap:16px}.trade .base{border-top:6px solid var(--gold)}.trade .fast{border-top:6px solid var(--lime)}.delta{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:13px}.delta div{padding:12px;text-align:center;background:var(--paper2);font-size:13px}.delta b{display:block;font:500 18px/1.2 "DM Mono",monospace;color:var(--cyan)}ul{padding-left:1.2em}li{margin:7px 0}.coverage{width:100%;border-collapse:collapse;font-size:14px}.coverage td{border-bottom:1px solid var(--rule);padding:9px}.coverage td:first-child{font:500 10px/1.4 "DM Mono",monospace;color:var(--cyan);width:26%}.gloss{margin-top:82px;padding-top:28px;border-top:4px double var(--ink)}.gloss ol{list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:0 24px;counter-reset:g}.gloss li{counter-increment:g;position:relative;padding:13px 0 13px 42px;border-bottom:1px dashed var(--rule);font-size:14px;line-height:1.55}.gloss li:before{content:counter(g,decimal-leading-zero);position:absolute;left:0;top:16px;font:500 10px/1 "DM Mono",monospace;color:var(--cyan)}.gloss li:target{background:var(--lime2)}.sources{margin-top:48px;padding:20px;border:1px solid var(--rule);background:rgba(255,255,255,.42);font-size:15px}.reveal{opacity:0;transform:translateY(8px);transition:.5s ease}.play .reveal{opacity:1;transform:none}.d2{transition-delay:.1s}.d3{transition-delay:.2s}.d4{transition-delay:.3s}
+@media(max-width:780px){body{font-size:16px}.page{padding:34px 17px 80px}.mast span:last-child{display:none}.hero h1{font-size:49px}h2{margin-top:62px;font-size:30px;display:block}h2 .n{display:block;margin-bottom:8px}figure{margin:28px -2px;padding:18px 12px;box-shadow:4px 4px 0 rgba(16,40,61,.06)}figcaption{display:block}figcaption b{display:block;text-align:left;margin-top:6px}.grid2,.grid3,.grid4,.vars,.trade,.gloss ol,.roleflow{grid-template-columns:1fr}.flow,.axisflow{grid-template-columns:1fr}.arrow{height:32px;font-size:0}.arrow:before{content:"↓";font:500 20px/1 "DM Mono",monospace}.roles,.people{grid-template-columns:1fr}.calc .step{grid-template-columns:1fr;gap:3px}.heat{grid-template-columns:74px repeat(4,minmax(70px,1fr));overflow-x:auto}.stage-line{grid-template-columns:repeat(8,86px)}.layerstrip{grid-template-columns:1fr}.delta{grid-template-columns:1fr}.results{min-width:720px}.coverage{min-width:620px}}
+</style>
+<style>
+.reveal,.play .reveal{opacity:1;transform:none;transition:none}
+.d2,.d3,.d4{transition-delay:0s}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · longcat-video-avatar-1-5</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+  <header class="mast"><span>Connectionism · Paper Notes</span><span>arXiv 2605.26486 · 24 pages</span></header>
+  <section class="hero">
+    <div class="kicker">Audio-driven video · field notes 56</div>
+    <h1>不只是对嘴，<em>还要稳、快、多人不串嘴</em></h1>
+    <p class="dek">LongCat-Video-Avatar 1.5 没有另造一副视频骨架。它围绕真实产品最容易坏的四处动刀：音频听得更细、局部错误能定位、50 步生成压到 8 次前向、多人声音能各归其主。</p>
+    <p class="meta">Meituan LongCat Team · 13.6B DiT · Whisper-large · 8 NFE Fast model</p>
+    <div class="tldr"><b>TL;DR</b>先用分层清洗的数据教会模型“谁在什么时候怎样说话”，再用逐帧 GRPO 修具体时段的坏手与不同步，用共享 DiT + 两套 LoRA 做 DMD2 蒸馏，最后用人物 Label-RoPE 和背景静音轨避免多人串嘴。论文最强的是完整工程闭环；最缺的是数据规模、算力、真实延迟和安全证据。</div>
+  </section>
+
+  <h2><span class="n">§ 01</span>先看完整系统：哪些东西训练完就拆掉</h2>
+  <p class="lead">给一张人物图、一段音频和文字，Avatar<a class="jr" href="#g-01">01</a> 最终要生成一段连贯视频。先把数据经过哪里、谁负责监督、部署还剩什么拼起来，后面每个公式才有位置。</p>
+  <figure id="fig-1">
+    <figcaption><span>Fig 01 · 从输入到成片</span><b>奖励模型与双 score 只在训练时出现</b></figcaption>
+    <div class="flow">
+      <div class="node reveal"><span class="tag">输入条件</span><b>参考图 · 文本 · 音频</b><small>3D VAE 编参考与上下文；UMT5 编文字；Whisper-large 编声音。</small></div>
+      <div class="arrow reveal d2">→</div>
+      <div class="node reveal d2" style="border-top-color:var(--lime)"><span class="tag new">核心生成器</span><b>13.6B Video DiT<a class="jr" href="#g-03">03</a></b><small>噪声、参考、上下文 latent<a class="jr" href="#g-02">02</a> 进入同一骨干；每个 block 读取文本与音频。</small></div>
+      <div class="arrow reveal d3">→</div>
+      <div class="node reveal d3" style="border-top-color:var(--green)"><span class="tag">部署输出</span><b>3D VAE 解码视频</b><small>Fast 版保留 Generator LoRA，8 次网络调用后解码成画面。</small></div>
+    </div>
+    <div class="grid3" style="margin-top:15px">
+      <div class="card reveal d2"><span class="tag warn">训练老师</span><h4>逐帧奖励</h4><p>告诉生成器哪一段手、嘴、动作或画质有问题。</p></div>
+      <div class="card reveal d3"><span class="tag warn">训练老师</span><h4>Real / Fake score</h4><p>一个指向目标分布，一个描述学生当前分布，用来蒸馏少步学生。</p></div>
+      <div class="card reveal d4"><span class="tag warn">数据工具</span><h4>跟踪与说话人检测</h4><p>只负责筛数据和生标注，不跟着生成模型部署。</p></div>
+    </div>
+    <p class="note reveal d4"><span class="label">部署边界</span>开源仓库当前模型包约 74.9 GB，基础权重约 31.7 GB；这些是当前 Hugging Face 文件事实，不是论文正文报告的训练显存。</p>
+  </figure>
+
+  <h2><span class="n">§ 02</span>1.0 已经有什么，1.5 又补了什么</h2>
+  <div class="grid2">
+    <div class="card"><span class="tag">继承 1.0</span><h3>底座没有推倒重来</h3><ul><li>统一 13.6B Video DiT 与 3D VAE；</li><li>Disentangled Unconditional Guidance：静音条件与“无条件”分开；</li><li>Reference Skip Attention：保身份，又减少死抄参考图；</li><li>Cross-Chunk Latent Stitching：跨段续写不反复 VAE 编解码。</li></ul></div>
+    <div class="card"><span class="tag new">新增 1.5</span><h3>围绕四个失败点补课</h3><ul><li>Wav2Vec2 94M → Whisper-large 1.5B；</li><li>整段 reward → 逐帧 GRPO；</li><li>Base 150 NFE → DMD2 Fast 8 NFE；</li><li>人物框 + L-RoPE + 背景静音轨；</li><li>多人、静音、情绪专项数据链。</li></ul></div>
+  </div>
+  <p class="bridge">底座边界清楚了。下一步不急着看网络，而是先看模型真正吃到什么数据；这篇报告的大部分产品质量来自数据筛选，而不是一条神奇 loss。</p>
+
+  <h2><span class="n">§ 03</span>数据漏斗：整段先筛，抽到片段后再查一次</h2>
+  <p>离线阶段处理完整视频，适合缓存人物结构、画质、镜头、语义、音频分离与同步标注；在线阶段抽到约 3.7 秒训练片段后，再检查这一个切片的同步、运动、缺陷和 mask 面积。原视频合格，不代表随机切出的片段也合格。</p>
+  <figure id="fig-2">
+    <figcaption><span>Fig 02 · 论文数据漏斗</span><b>最终累计保留 42.63%</b></figcaption>
+    <div class="stage-line">
+      <div class="stage reveal"><span>原始候选</span><b>100.00%</b><span>完整视频进入管线</span></div>
+      <div class="stage drop reveal d2"><span>第 1 关后</span><b>83.28%</b><span>图标淘汰写 16.73</span></div>
+      <div class="stage reveal d2"><span>第 2 关后</span><b>77.53%</b><span>再淘汰 5.75</span></div>
+      <div class="stage drop reveal d3"><span>第 3 关后</span><b>68.13%</b><span>再淘汰 9.40</span></div>
+      <div class="stage reveal d3"><span>第 4 关后</span><b>62.18%</b><span>图标写 5.73</span></div>
+      <div class="stage drop reveal d4"><span>第 5 关后</span><b>51.95%</b><span>再淘汰 10.23</span></div>
+      <div class="stage reveal d4"><span>第 6 关后</span><b>43.78%</b><span>图标写 8.18</span></div>
+      <div class="stage" style="border-top-color:var(--lime)"><span>最终入池</span><b>42.63%</b><span>最后淘汰 1.15</span></div>
+    </div>
+    <div class="warning"><span class="label">原图核算异常</span>相邻保留率实际差值是 16.72、5.75、9.40、5.95、10.23、8.17、1.15，并不完全等于图上打印的 16.73、5.75、9.40、5.73、10.23、8.18、1.15。报告没解释分母；本页不擅自改数。</div>
+  </figure>
+
+  <h3>三类专项数据，各修一个不同问题</h3>
+  <div class="grid3">
+    <div class="card"><span class="tag">多人</span><h4>先跟踪，再判断谁说话</h4><p>ByteTrack<a class="jr" href="#g-15">15</a> 建人物轨迹；基于 TalkNet / UniTalk、YOLOv6 backbone 的主动说话人检测器<a class="jr" href="#g-16">16</a> 判断谁在说；只保留没有多人同时发声的片段。</p></div>
+    <div class="card"><span class="tag">静音</span><h4>两个模型独立复核</h4><p>Qwen3-Omni 初判，Qwen3-VL 再查；两者都同意才算静音。整段任一位置有人说话，就排除出严格静音集。</p></div>
+    <div class="card"><span class="tag">情绪</span><h4>不只识别“大笑大哭”</h4><p>六类覆盖高唤醒、情境反应、细微表达、非语言主导、压抑/微表情和情绪转折；最终主情绪置信度需大于 .7。</p></div>
+  </div>
+  <div class="claim"><span class="label">情绪优先级</span>6 > 5 > 4 > 2 > 1 > 3；合成视频、超过两人、身份跳变或主体太小直接剔除。EmotiEffLib 看 Top-10/20 关键帧，若第一名为 Neutral，改用第二情绪。</div>
+
+  <h2><span class="n">§ 04</span>8 秒音频怎样变成 50 个视频 latent 时刻</h2>
+  <p class="lead">最容易读错的一句是“把 33 层池化成 5 个通道”。Whisper layer pooling<a class="jr" href="#g-04">04</a> 的 33→5 沿网络层轴发生；50 Hz→25 FPS 才沿时间轴发生。</p>
+  <figure id="fig-3">
+    <figcaption><span>Fig 03 · 两根轴分别变换</span><b>层池化 ≠ 时间下采样</b></figcaption>
+    <div class="axisflow">
+      <div class="tensor reveal"><span>Whisper-large · 8 秒</span><strong>400 × 33 × 1280</strong><span>400 个时间位置 · 33 份层表征</span></div>
+      <div class="arrow reveal d2">→</div>
+      <div class="tensor reveal d2"><span>每 8 层平均 + 最后一份</span><strong>400 × 5 × 1280</strong><span>只压“层”轴，时间仍是 50 Hz</span></div>
+      <div class="arrow reveal d3">→</div>
+      <div class="tensor reveal d3"><span>线性插值到 25 FPS</span><strong>200 × 5 × 1280</strong><span>再由 audio projector 对齐约 50 个 VAE 时刻</span></div>
+    </div>
+    <div class="layerstrip reveal d4"><div>层 1–8<br><b>均值 4.5</b></div><div>层 9–16<br><b>均值 12.5</b></div><div>层 17–24<br><b>均值 20.5</b></div><div>层 25–32<br><b>均值 28.5</b></div><div>singleton<br><b>33</b></div></div>
+    <p class="note reveal d4"><span class="label">为什么保留五档</span>浅层偏声学细节，深层偏语言上下文；数字人同时需要“说了什么”和“怎样说”。但论文没有单独做只用最后层的消融，因此这是合理设计动机，不是已被隔离证明的收益。</p>
+  </figure>
+  <p>Whisper 的 30 秒输入上限由滑动窗口处理。每个 DiT block 在文本 cross-attention 后加入音频 cross-attention<a class="jr" href="#g-05">05</a>：视频 token 产 Query，音频特征产 Key/Value。前置 adaLN<a class="jr" href="#g-06">06</a> 根据条件调节归一化后的尺度与偏移，让新音频分支更平稳地接入旧骨干。</p>
+
+  <h2><span class="n">§ 05</span>基础训练：模型到底在预测什么</h2>
+  <p>Flow matching<a class="jr" href="#g-07">07</a> 先把干净视频 latent <code class="m">x_0</code> 与高斯噪声 <code class="m">\epsilon</code> 按时刻 <code class="m">t</code> 线性混合。模型看到中间点 <code class="m">x_t</code> 与条件 <code class="m">c</code>，学习往干净视频方向走的速度。</p>
+  <div class="purpose">公式 1 · 造一个训练输入</div>
+  <div class="formula">\begin{aligned}x_t&amp;=(1-t)x_0+t\epsilon\\v_t&amp;=x_0-\epsilon\end{aligned}</div>
+  <div class="purpose">公式 2 · 预测方向与目标方向的平方误差</div>
+  <div class="formula">\mathcal L=\mathbb E_{\epsilon,x_0,c,t}\left\|v_{\mathrm{pred}}(x_t,c,t;\theta)-v_t\right\|_2^2</div>
+  <div class="vars">
+    <div><code class="m">x_0</code>干净视频 latent，训练答案</div><div><code class="m">\epsilon</code>同形状高斯噪声</div>
+    <div><code class="m">t\in[0,1]</code>本次抽到的噪声强度</div><div><code class="m">x_t</code>实际送进 DiT 的中间状态</div>
+    <div><code class="m">c</code>文本、音频、参考图等条件</div><div><code class="m">\theta</code>要更新的模型参数</div>
+    <div><code class="m">v_{\mathrm{pred}}</code>模型猜的去噪方向</div><div><code class="m">v_t</code>监督目标 <code class="m">x_0-\epsilon</code></div>
+    <div><code class="m">\|\cdot\|_2^2</code>逐元素误差平方后求和</div><div><code class="m">\mathbb E</code>对样本、噪声、条件与时刻平均</div>
+  </div>
+  <div class="calc">
+    <div class="step"><b>取一组数</b><span><code class="m">x_0=2,\ \epsilon=-1,\ t=.25</code></span></div>
+    <div class="step"><b>先造输入</b><span><code class="m">x_t=.75\times2+.25\times(-1)=1.25</code></span></div>
+    <div class="step"><b>监督目标</b><span><code class="m">v_t=2-(-1)=3</code>；这是从噪声往数据走的方向。</span></div>
+    <div class="step"><b>初始误差</b><span>若 <code class="m">v_{pred}=wx_t,\ w=2</code>，预测 2.5，损失 <code class="m">(2.5-3)^2=.25</code>。</span></div>
+    <div class="step"><b>更新一次</b><span><code class="m">\frac{dL}{dw}=2(2.5-3)1.25=-1.25</code>；学习率 .1 后 <code class="m">w_{new}=2.125</code>。</span></div>
+    <div class="step"><b>验证变好</b><span>新预测 2.65625，新损失约 .1182，比 .25 更小。</span></div>
+  </div>
+  <div class="warning"><span class="label">符号方向</span>沿 <code class="m">t:0\to1</code> 的数据→噪声路径，导数是 <code class="m">\epsilon-x_0</code>。论文的 <code class="m">x_0-\epsilon</code> 是相反的去噪方向，对应生成时从 <code class="m">t=1</code> 往 0 走；不是无缘无故换了符号。</div>
+
+  <h2><span class="n">§ 06</span>逐帧 GRPO：哪一秒坏，哪一秒承担梯度</h2>
+  <p>普通 GRPO<a class="jr" href="#g-08">08</a> 给整段视频一个 reward，会把短暂错误平均掉。四段里三段手正常、一段手畸形，若四段都共享同一个 advantage，模型不知道到底该改哪一秒。Per-frame GRPO<a class="jr" href="#g-09">09</a> 把时间分区 <code class="m">j</code> 留在 advantage 里。</p>
+  <div class="formula">\hat A^i_{k,j}=\frac{r^i_{k,j}-\mu_{k,j}}{\sigma^{\max}_{k,j}},\qquad \hat A^i_{\mathrm{total},j}=\sum_k w_k\hat A^i_{k,j}</div>
+  <div class="vars">
+    <div><code class="m">i</code>同一条件下第几条采样视频</div><div><code class="m">j</code>第几个帧组 / 时间分区</div>
+    <div><code class="m">k</code>第几个奖励维度</div><div><code class="m">r^i_{k,j}</code>样本 i 在该时段的该项分数</div>
+    <div><code class="m">\mu_{k,j}</code>同组、同时间、同奖励的均值</div><div><code class="m">\sigma^{\max}_{k,j}</code>稳定化标准差分母；报告未写全 max 轴</div>
+    <div><code class="m">w_k</code>各奖励权重</div><div><code class="m">\hat A</code>相对同组平均好多少</div>
+  </div>
+  <figure id="fig-4">
+    <figcaption><span>Fig 04 · 同一秒的四条采样</span><b>示例分母 .25 只是为了手算</b></figcaption>
+    <div class="heat">
+      <div class="head">样本</div><div class="head">video 1</div><div class="head">video 2</div><div class="head">video 3</div><div class="head">video 4</div>
+      <div class="row">手部 reward</div><div class="bad">.20</div><div class="good">.80</div><div>.50</div><div>.50</div>
+      <div class="row">减均值 .50</div><div class="bad">−.30</div><div class="good">+.30</div><div>0</div><div>0</div>
+      <div class="row">÷ .25</div><div class="bad">−1.20</div><div class="good">+1.20</div><div>0</div><div>0</div>
+      <div class="row">动作 A</div><div>+.80</div><div class="bad">−.40</div><div>+.40</div><div>−.80</div>
+      <div class="row">总 A</div><div>−.40</div><div class="good">+.56</div><div>+.16</div><div>−.32</div>
+    </div>
+    <p class="note"><span class="label">第二条怎么算</span>手部权重 .6、动作权重 .4，所以 <code class="m">.6\times1.2+.4\times(-.4)=.56</code>。手明显好，动作略差，合并后仍强化但幅度变小。</p>
+  </figure>
+  <p>图生视频和续写还用 MediaPipe 检查条件首帧有没有可见手，优先训练有手样本；multi-clip rollout 最多连生成 5 段，前段只造上下文，最后一段接受 GRPO 更新。报告没有公开奖励模型、各权重和 <code class="m">\sigma^{max}</code> 的完整定义。</p>
+
+  <h2><span class="n">§ 07</span>DMD2：三种训练角色，共用一套 13.6B 骨干</h2>
+  <p class="lead">DMD2<a class="jr" href="#g-11">11</a> 的少步学生需要两股方向：real score 告诉它目标分布往哪边，fake score 告诉它自己当前在哪些画法上已经挤得太密。生成器则根据二者之差更新。</p>
+  <figure id="fig-5">
+    <figcaption><span>Fig 05 · 标准三套模型 vs LongCat 共享 backbone</span><b>省权重副本，不等于省掉三种前向</b></figcaption>
+    <div class="roleflow">
+      <div class="roles reveal">
+        <div class="role"><b>Generator</b><small>学生，最终部署</small></div>
+        <div class="role"><b>Fake score</b><small>追踪学生分布</small></div>
+        <div class="role"><b>Real score</b><small>冻结目标方向</small></div>
+      </div>
+      <div class="arrow reveal d2">→</div>
+      <div class="shared reveal d2"><span class="tag">LongCat</span><h4>一套基础 DiT 权重</h4><p>原始 base 参数直接作冻结 real score。</p><div class="adapter"><span>Generator LoRA<br>学生身份</span><span>Fake-Score LoRA<br>追踪身份</span></div></div>
+    </div>
+    <div class="grid4" style="margin-top:14px">
+      <div class="card"><span class="big">8</span><p>总 NFE</p></div><div class="card"><span class="big">1 : 5</span><p>Generator : fake 更新频率</p></div><div class="card"><span class="big">400</span><p>蒸馏步数；更久真实感下降</p></div><div class="card"><span class="big">4.0</span><p>文本与音频 CFG scale</p></div>
+    </div>
+  </figure>
+  <p>Generator 学习率 <code class="m">2\times10^{-5}</code>，fake score 学习率 <code class="m">4\times10^{-6}</code>。文本与音频 CFG<a class="jr" href="#g-13">13</a> 都取 4.0。Base 是 50 步、每步 3 次前向，共 150 NFE；Fast 总计 8 NFE，网络调用减少 <code class="m">150/8=18.75</code> 倍。NFE<a class="jr" href="#g-10">10</a> 不是墙钟延迟；VAE、传输、batch 和硬件都仍算时间。</p>
+  <div class="warning"><span class="label">报告未交代</span>完整 DMD2 目标、LoRA rank、实际显存、同硬件吞吐，以及 Base 三次前向的精确分支和 Fast 的 CFG 计算口径。不能从“共享权重”外推成“三个角色只算一次”。</div>
+
+  <h2><span class="n">§ 08</span>多人不串嘴：Label 分流，静音轨兜住背景人物</h2>
+  <p>L-RoPE<a class="jr" href="#g-12">12</a> 的 L 是 Label，不是 Location。人物区域和对应音频使用相同或相近标签，旋转编码后，匹配的视觉 Query 与音频 Key 更容易互相注意。</p>
+  <figure id="fig-6">
+    <figcaption><span>Fig 06 · 三个人物的音频归属</span><b>标签负责“给谁”，静音轨负责“别说”</b></figcaption>
+    <div class="people">
+      <div class="person reveal"><div class="face">A</div><b>人物 A 区域</b><p>视觉 label 0–4</p><code class="m">audio_A: 2</code></div>
+      <div class="person reveal d2"><div class="face" style="background:var(--gold2)">B</div><b>人物 B 区域</b><p>视觉 label 20–24</p><code class="m">audio_B: 22</code></div>
+      <div class="person silent reveal d3"><div class="face" style="background:#fff">C</div><b>背景人物 C</b><p>独立类别 · label 12</p><code>silent track</code></div>
+    </div>
+    <p class="note reveal d4"><span class="label">为什么两样都要</span>只做标签分流，能减少 A 的声音跑到 B；但 C 仍缺一个明确“此刻无声”的条件。静音轨让模型知道 C 不应该被任何说话音频驱动。</p>
+  </figure>
+
+  <h2><span class="n">§ 09</span>训练课程：先低清学规律，再加参考、多分辨率和多人</h2>
+  <figure id="fig-7">
+    <figcaption><span>Fig 07 · 五阶段训练课程</span><b>总计 211k 次迭代 · 93 帧≈3.72 秒</b></figcaption>
+    <div class="curriculum">
+      <div class="course"><b>S1 · 130K</b><strong>256p × 93</strong><span>AT2V + AI2V + VC<br>batch 64<br>lr 2e−5</span></div>
+      <div class="course"><b>S2 · 45K</b><strong>480p × 93</strong><span>同三任务<br>batch 32<br>lr 2e−5</span></div>
+      <div class="course"><b>S3 · 28K</b><strong>+ Reference</strong><span>480p × 93<br>batch 32<br>lr 2e−5</span></div>
+      <div class="course"><b>S4 · 6K</b><strong>480p / 720p</strong><span>+ Reference<br>93 帧<br>batch 32</span></div>
+      <div class="course" style="border-top-color:var(--lime)"><b>S5 · 2K</b><strong>+ MultiTalk</strong><span>480p / 720p<br>93 帧<br>batch 32</span></div>
+    </div>
+  </figure>
+  <div class="grid2"><div class="card"><span class="tag">缩写</span><p><b>AT2V</b> 音频+文字到视频；<b>AI2V</b> 音频+图像到视频；<b>VC</b> 视频续写；<b>Ref</b> 额外参考图；<b>MultiTalk</b> 多人对话。</p></div><div class="card"><span class="tag warn">没有报告</span><p>数据小时数、各任务占比、optimizer、训练 GPU、总 FLOPs、总时长和完整后训练顺序。</p></div></div>
+
+  <h2><span class="n">§ 10</span>评测口径：所谓“objective”仍然是专家人评</h2>
+  <div class="grid4">
+    <div class="card"><span class="big">508</span><p>图像—音频对；400+ 真人，50+ 风格化。</p></div><div class="card"><span class="big">770</span><p>群众评审，1–5 分拟人度。</p></div><div class="card"><span class="big">13,240</span><p>总人类判断数量。</p></div><div class="card"><span class="big">10</span><p>专家逐项找问题；唇音用 .5× 速度。</p></div>
+  </div>
+  <p>专家轨按四大维度记录 Issue Rate<a class="jr" href="#g-14">14</a>：Rationality 看物理与场景是否合理；Harmony 看音唇、脸身和表情动作；Stability 看跳帧、色调与清晰度；Consistency 看身份。Issue Rate 越低越好，雷达图画的是 <code class="m">100-\mathrm{IssueRate}</code>。这比单一主观分更结构化，但仍不是自动客观指标。</p>
+
+  <h2><span class="n">§ 11</span>结果：综合更稳，但不是每一列都第一</h2>
+  <h3>总体拟人度</h3>
+  <div class="scroll"><table class="results">
+    <thead><tr><th>模型</th><th>单人 ↑</th><th>多人 ↑</th><th>应怎样读</th></tr></thead>
+    <tbody>
+      <tr class="ours"><td>LongCat v1.5 Fast</td><td>3.336</td><td class="best">2.730</td><td>单人几乎打平 InfiniteTalk；多人明显领先它</td></tr>
+      <tr><td>LongCat v1.0</td><td class="best">3.367</td><td class="best">2.768</td><td>两列都略高于 v1.5</td></tr>
+      <tr><td>InfiniteTalk</td><td>3.334</td><td>2.339</td><td>单人与 v1.5 只差 .002</td></tr>
+      <tr><td>HeyGen</td><td>3.208</td><td>—</td><td>商业系统</td></tr><tr><td>OmniHuman 1.5</td><td>3.052</td><td>—</td><td>商业系统</td></tr><tr><td>Hedra</td><td>2.908</td><td>—</td><td>商业系统</td></tr><tr><td>Kling</td><td>2.953</td><td>—</td><td>商业系统</td></tr><tr><td>OmniAvatar</td><td>2.933</td><td>—</td><td>商业系统</td></tr>
+    </tbody>
+  </table></div>
+  <p class="claim"><span class="label">结论边界</span>v1.5 的单人分低于 v1.0，只比 InfiniteTalk 高 .002；多人也略低于 v1.0。更准确的说法是“在 8 NFE 下做到了接近最优的综合折中”，不是“所有指标全面第一”。</p>
+
+  <h3>v1.5 的八项缺陷率</h3>
+  <figure id="fig-8">
+    <figcaption><span>Fig 08 · Issue Rate，越短越好</span><b>唇音 31.6% 仍是最大缺口</b></figcaption>
+    <div class="metric-bars">
+      <div class="name">背景畸变</div><div class="bar"><i style="width:26.6%"></i></div><div class="val">8.4</div>
+      <div class="name">主体畸变</div><div class="bar bad"><i style="width:73.1%"></i></div><div class="val">23.1</div>
+      <div class="name">色调累积</div><div class="bar"><i style="width:8.5%"></i></div><div class="val">2.7</div>
+      <div class="name">跳帧</div><div class="bar"><i style="width:2.5%"></i></div><div class="val">0.8</div>
+      <div class="name">唇音问题</div><div class="bar bad"><i style="width:100%"></i></div><div class="val">31.6</div>
+      <div class="name">脸身不同步</div><div class="bar"><i style="width:16.1%"></i></div><div class="val">5.1</div>
+      <div class="name">肢体不自然</div><div class="bar"><i style="width:22.2%"></i></div><div class="val">7.0</div>
+      <div class="name">表情不自然</div><div class="bar"><i style="width:22.2%"></i></div><div class="val">7.0</div>
+    </div>
+  </figure>
+  <details><summary>展开查看 8 个模型的完整 Issue Rate</summary><div class="scroll"><table class="results">
+    <thead><tr><th>模型</th><th>背景</th><th>主体</th><th>色调</th><th>跳帧</th><th>唇音</th><th>脸身</th><th>肢体</th><th>表情</th></tr></thead>
+    <tbody><tr class="ours"><td>LC v1.5</td><td>8.4</td><td>23.1</td><td>2.7</td><td>.8</td><td>31.6</td><td>5.1</td><td>7.0</td><td>7.0</td></tr><tr><td>LC v1.0</td><td>16.1</td><td>45.8</td><td>.8</td><td>7.0</td><td>37.0</td><td>7.8</td><td>5.4</td><td>6.7</td></tr><tr><td>InfiniteTalk</td><td>7.9</td><td>40.1</td><td>4.0</td><td>13.9</td><td>32.7</td><td>11.4</td><td>6.4</td><td>5.5</td></tr><tr><td>HeyGen</td><td>9.0</td><td>26.5</td><td>2.6</td><td>1.1</td><td>33.3</td><td>12.2</td><td>9.5</td><td>3.7</td></tr><tr><td>OmniHuman 1.5</td><td>17.4</td><td>55.1</td><td>15.6</td><td>3.6</td><td>40.7</td><td>13.2</td><td>10.8</td><td>1.2</td></tr><tr><td>Hedra</td><td>11.1</td><td>25.1</td><td>1.5</td><td>5.0</td><td>61.8</td><td>17.1</td><td>23.6</td><td>5.0</td></tr><tr><td>Kling</td><td>14.0</td><td>47.7</td><td>3.0</td><td>3.8</td><td>38.1</td><td>8.8</td><td>11.0</td><td>9.0</td></tr><tr><td>OmniAvatar</td><td>13.4</td><td>46.0</td><td>10.9</td><td>6.4</td><td>58.4</td><td>14.8</td><td>11.9</td><td>2.5</td></tr></tbody>
+  </table></div></details>
+
+  <h3>与商业系统的单人 A/B 对比</h3>
+  <div class="grid3"><div class="card"><span class="tag">vs HeyGen</span><span class="big">48.7 / 11.1 / 40.1</span><p>win / tie / lose；去掉平局后胜出份额约 54.8%。</p></div><div class="card"><span class="tag">vs Kling</span><span class="big">60.5 / 10.7 / 28.8</span><p>去平局后约 67.7%。</p></div><div class="card"><span class="tag">vs OmniHuman</span><span class="big">55.3 / 11.5 / 33.1</span><p>去平局后约 62.6%。</p></div></div>
+
+  <h2><span class="n">§ 12</span>Base vs Fast：蒸馏改变的不只是速度</h2>
+  <figure id="fig-9">
+    <figcaption><span>Fig 09 · 两个版本的取舍</span><b>Fast 稳定性更好，Base 表达与唇音更丰富</b></figcaption>
+    <div class="trade">
+      <div class="card base"><span class="tag">Base · 150 NFE</span><h3>更丰富</h3><p>单人拟人度 3.389；论文观察动作、表情、镜头更丰富，唇音更好。</p><div class="delta"><div><b>51.5</b>合理性 issue</div><div><b>12.3</b>稳定性 issue</div><div><b>2.676</b>多人拟人度</div></div></div>
+      <div class="card fast"><span class="tag new">Fast · 8 NFE</span><h3>更稳定</h3><p>单人 3.336，略降 .053；多人升到 2.730，畸变与跳变显著减少。</p><div class="delta"><div><b>32.4</b>少 19.1 点</div><div><b>4.3</b>少 8.0 点</div><div><b>2.730</b>多 .054</div></div></div>
+    </div>
+    <p class="warning"><span class="label">别写成无损加速</span>Fast 的 Harmony issue 从 44.2 变 45.0，单人拟人度也下降；它用一部分细腻表现换来了稳定性与计算量。蒸馏改变了学生分布，不是把完全相同的 50 步轨迹快进。</p>
+  </figure>
+
+  <h2><span class="n">§ 13</span>论文没告诉我们的，和我的判断</h2>
+  <div class="grid2">
+    <div class="card"><span class="tag warn">证据缺口</span><ul><li>数据总小时数、来源许可、去重与类别占比；</li><li>optimizer、GPU、总 FLOPs、训练时长；</li><li>reward 模型、权重、稳定化分母；</li><li>DMD2 完整目标、LoRA rank、显存和真实延迟；</li><li>统计显著性、评审一致性、公开自动 benchmark；</li><li>深伪检测、水印和滥用防护。</li></ul></div>
+    <div class="card"><span class="tag">论文承认</span><ul><li>物理合理性与精细音画同步仍待提高；</li><li>固定参考帧虽保身份，却会诱发重复动作；</li><li>镜头转场可能不自然；</li><li>未来希望摆脱刚性参考，支持真正无限长生成。</li></ul></div>
+  </div>
+  <div class="claim"><span class="label">我的判断</span>这篇最扎实的价值，是把产品失败模式拆成可训练部件：局部坏手→逐帧 reward，多人串嘴→区域标签+静音轨，跨段退化→latent stitching，速度→DMD2。最需要打折的是 “commercial-grade” 和 “18.75×”：前者是作者定位，后者只是 NFE 比例，都不能代替真实部署成本、安全与用户研究。</div>
+
+  <h2><span class="n">§ 14</span>回到一条样本：现在整条链路能拼起来了</h2>
+  <figure id="fig-10">
+    <figcaption><span>Fig 10 · 8 秒双人对话的端到端旅程</span><b>上一节输出，就是下一节输入</b></figcaption>
+    <div class="stack">
+      <div class="node"><b>① 数据</b><small>完整视频先筛；抽出 8 秒片段再复检；A/B 人物框、主动说话人、静音背景与情绪 caption 都已标好。</small></div>
+      <div class="node"><b>② 条件编码</b><small>Whisper 约 400 个位置 × 33 层 → 400×5×1280 → 插值成 200 帧 → 对齐约 50 个视频 latent 时刻。</small></div>
+      <div class="node"><b>③ 基础学习</b><small>某个 latent 坐标从 <code class="m">x_0=2</code> 与 <code class="m">\epsilon=-1</code> 混成 1.25，DiT 学去噪目标 3。</small></div>
+      <div class="node"><b>④ 局部纠错</b><small>若第 3 秒手部异常，逐帧 GRPO 只让对应时间区间承担负 advantage；五段 rollout 的最后一段接受更新。</small></div>
+      <div class="node"><b>⑤ 多人分流</b><small>A 区域读 A 音频标签，B 区域读 B，背景 C 读静音轨，不让一条声音驱动所有嘴。</small></div>
+      <div class="node" style="border-left-color:var(--lime)"><b>⑥ Fast 部署</b><small>Generator LoRA 挂在基础 DiT 上，8 NFE 得到干净 latent，3D VAE 解码视频；奖励、real/fake score 与数据检测器全部拆掉。</small></div>
+    </div>
+  </figure>
+
+  <section class="gloss">
+    <h2>术语直接触达</h2>
+    <ol>
+      <li id="g-01"><strong>Avatar / 数字人</strong>：由参考人物与驱动信号生成会说话、做表情和动作的视频角色。</li>
+      <li id="g-02"><strong>latent</strong>：VAE 压缩后的小型连续张量；DiT 在这里去噪，比直接处理每个像素省算力。</li>
+      <li id="g-03"><strong>DiT</strong>：把扩散/flow 的去噪器做成 Transformer。详见 <a href="dit.html">DiT</a>。</li>
+      <li id="g-04"><strong>Whisper layer pooling</strong>：同一音频时刻的 33 份层输出压成 5 组，不是把 33 个时间片变成 5 个。详见 <a href="../concepts/whisper-layer-pooling.html">概念页</a>。</li>
+      <li id="g-05"><strong>Cross-attention</strong>：视频 token 出 Query，去音频或文本序列里查 Key/Value。详见 <a href="../concepts/cross-attention.html">概念页</a>。</li>
+      <li id="g-06"><strong>adaLN</strong>：用条件动态调节归一化后的缩放与平移；常兼作条件入口或门控。详见 <a href="../concepts/adaptive-layernorm.html">概念页</a>。</li>
+      <li id="g-07"><strong>Flow matching</strong>：训练网络预测从噪声走向数据的速度场。详见 <a href="../concepts/flow-matching.html">概念页</a>。</li>
+      <li id="g-08"><strong>GRPO</strong>：同一条件采一组结果，用各自相对组均值的得分作 advantage。详见 <a href="../concepts/grpo.html">概念页</a>。</li>
+      <li id="g-09"><strong>Per-frame GRPO</strong>：把 reward 与 advantage 保留到时间分区，局部错误不再污染整段。详见 <a href="../concepts/per-frame-grpo.html">概念页</a>。</li>
+      <li id="g-10"><strong>NFE</strong>：Number of Function Evaluations，生成一次调用去噪网络多少次；不等于完整墙钟延迟。</li>
+      <li id="g-11"><strong>DMD2</strong>：用 real/fake score 匹配目标与学生分布的少步蒸馏家族。详见 <a href="dmd2.html">论文讲解</a>。</li>
+      <li id="g-12"><strong>L-RoPE</strong>：Label Rotary Position Embedding，用人物标签的旋转相位绑定视觉区域与对应音频；L 不是 Location。</li>
+      <li id="g-13"><strong>CFG</strong>：把有条件与弱/无条件预测组合，增强条件遵循；scale 过高可能导致过饱和。详见 <a href="../concepts/classifier-free-guidance.html">概念页</a>。</li>
+      <li id="g-14"><strong>Issue Rate</strong>：专家检查中某类问题出现的比例，越低越好；本论文雷达图使用 100−Issue Rate。</li>
+      <li id="g-15"><strong>ByteTrack</strong>：跨视频帧给同一个人保持一致轨迹 ID 的多目标跟踪器。</li>
+      <li id="g-16"><strong>主动说话人检测</strong>：结合脸部运动和声音，判断画面中此刻到底是谁在讲话。</li>
+    </ol>
+  </section>
+
+  <section class="sources"><span class="label">Sources · accessed 2026-08-05</span><ul><li><a href="https://arxiv.org/abs/2605.26486">LongCat-Video-Avatar 1.5 Technical Report · arXiv</a></li><li><a href="https://meigen-ai.github.io/LongCat-Video-Avatar-1.5-Page/">官方项目页</a></li><li><a href="https://github.com/meituan-longcat/LongCat-Video">官方 GitHub</a></li><li><a href="https://huggingface.co/meituan-longcat/LongCat-Video-Avatar-1.5">官方权重与模型卡</a></li><li><a href="https://arxiv.org/html/2505.22647">MultiTalk · L-RoPE 来源</a></li></ul></section>
+</div>
+<script>
+document.querySelectorAll("figure").forEach((fig)=>{const obs=new IntersectionObserver((entries)=>{entries.forEach((e)=>{if(e.isIntersecting){fig.classList.add("play");obs.disconnect();}})},{threshold:.12});obs.observe(fig)});
+function renderMath(){if(!window.katex){setTimeout(renderMath,40);return}document.querySelectorAll(".formula").forEach((el)=>{if(el.dataset.done)return;try{katex.render(el.textContent.trim(),el,{displayMode:true,throwOnError:true});el.dataset.done="1"}catch(err){el.style.color="#ffb2a0"}})}
+window.addEventListener("DOMContentLoaded",renderMath);
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!document.getElementById(id))return;
+      e.preventDefault();
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>
