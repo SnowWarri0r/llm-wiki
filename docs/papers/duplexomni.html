@@ -82,6 +82,12 @@ figcaption b{color:var(--teal)}
 .results .win{background:var(--teal2)}.results .weak{background:var(--red2)}
 .scriptbox{background:var(--navy);color:#eaf5f3;padding:20px;font:500 13px/1.9 "DM Mono",monospace}
 .scriptbox .u{color:#acd6ff}.scriptbox .a{color:#c9f0d1}.scriptbox .ctl{color:#ffd47b;font-weight:700}
+.event-flow{display:grid;grid-template-columns:1fr 28px 1fr 28px 1fr 28px 1fr;align-items:stretch;margin:20px 0}
+.event-flow .event{border:1px solid var(--rule);border-top:4px solid var(--teal);background:#fffdf5;padding:14px 13px;min-height:132px}
+.event-flow .event.return{border-top-color:var(--amber)}.event-flow .event.cut{border-top-color:var(--red)}.event-flow .event.reset{border-top-color:var(--green)}
+.event-flow .event b{display:block;font:600 11px/1.45 "DM Mono",monospace;color:var(--teal);margin-bottom:8px}
+.event-flow .event p{font-size:13px;line-height:1.55;margin:0;color:var(--ink2)}
+.event-flow .arrow{display:grid;place-items:center;color:var(--amber);font:700 20px/1 "DM Mono",monospace}
 .bars{display:grid;grid-template-columns:90px 1fr 54px;gap:8px 12px;align-items:center}
 .bars .name{font:500 11px/1.2 "DM Mono",monospace}.bar{height:22px;background:var(--paper2);position:relative}.bar i{display:block;height:100%;background:var(--teal)}.bars .val{font:600 11px/1 "DM Mono",monospace;text-align:right}
 .evidence{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.evidence .card{min-height:144px}.evidence .big{font:700 29px/1.1 "DM Mono",monospace;color:var(--teal);display:block;margin:6px 0 12px}
@@ -98,9 +104,12 @@ figure.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{trans
   body{font-size:16px}.page{padding:34px 18px 80px}.mast{margin-bottom:35px}.mast span:last-child{display:none}
   h1{font-size:48px}.dek{font-size:19px}h2{font-size:29px;margin-top:62px}
   figure{margin:28px -4px;padding:18px 13px}.grid2,.grid3,.compare,.evidence,.vars,.gloss ol{grid-template-columns:1fr}
-  .flow{grid-template-columns:1fr}.flow .arrow{height:30px;transform:rotate(90deg)}
+  .flow{grid-template-columns:1fr}.flow .arrow,.event-flow .arrow{height:30px;transform:none;font-size:0}
+  .flow .arrow:before,.event-flow .arrow:before{content:"↓";font:700 20px/1 "DM Mono",monospace}
+  .event-flow{grid-template-columns:1fr}
   .timeline{grid-template-columns:72px repeat(4,minmax(135px,1fr));overflow-x:auto}.timeline>div{min-width:0}
   .scroll{overflow-x:auto}.token-table,.results{min-width:680px}
+  .token-table.mini-table{min-width:0}
   .calc .step{grid-template-columns:1fr;gap:3px}.codec-row{grid-template-columns:70px 1fr}
   figcaption{display:block}figcaption b{display:block;margin-top:6px}
 }
@@ -206,6 +215,7 @@ figure.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{trans
     <div><code class="m">h_{t,\ell}</code>Thinker 同位置隐状态</div><div><code class="m">f_{\mathrm{text}},f_{\mathrm{hidden}}</code>可学习投影</div>
     <div><code class="m">c_{t,\ell}</code>Talker 最终拿到的条件向量</div><div><code class="m">C_t</code>本片全部条件向量排成的序列</div>
   </div>
+  <p class="note"><code class="m">e_{t,\ell}</code>、<code class="m">h_{t,\ell}</code> 和 <code class="m">c_{t,\ell}</code> 都是向量；两次投影后的维度必须相同，才能逐元素相加。论文没有给这个宽度的具体数值。</p>
   <div class="calc">
     <div class="step"><b>第 4 片首词</b><span>把“好”当第 1 个 token。设 <code class="m">f_{\mathrm{text}}(e_{4,1})=[0.6,-0.2]</code>，<code class="m">f_{\mathrm{hidden}}(h_{4,1})=[0.1,0.5]</code></span></div>
     <div class="step"><b>逐位相加</b><span><code class="m">c_{4,1}=[0.6+0.1,-0.2+0.5]=[0.7,0.3]</code></span></div>
@@ -220,6 +230,11 @@ figure.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{trans
   <p>再把每个历史片的文字条件、声音起点、声音帧、声音终点依次排好；最后放当前 <code class="m">C_t</code> 和一个新的声音起点。</p>
   <span class="tag">角色 2 · 定义 Talker 输入</span>
   <div class="math" data-expr="P_t=\bigl[(C_i,b_{\mathrm{BOS}},R_i,b_{\mathrm{EOS}})_{i=1}^{t-1},\ C_t,b_{\mathrm{BOS}}\bigr]"></div>
+  <div class="vars">
+    <div><code class="m">R_i</code>第 i 个历史片已经生成的声音帧序列</div><div><code class="m">L_i</code>第 i 片的声音帧数</div>
+    <div><code class="m">b_{\mathrm{BOS}}</code>一段 codec 开始的边界向量</div><div><code class="m">b_{\mathrm{EOS}}</code>一段 codec 结束的边界向量</div>
+    <div><code class="m">P_t</code>第 t 片开始发声前的有序输入前缀</div><div><code class="m">(\cdot)_{i=1}^{t-1}</code>把每个历史片按时间依次拼接</div>
+  </div>
   <p>这里没有额外概率技巧。BOS/EOS 只是每段声音的开始和结束标记。继续取 <code class="m">t=4</code>，直接展开：</p>
   <div class="prefix">
     <span class="cond">(C₁, BOS, R₁, EOS)</span><span>…</span><span class="cond">(C₃, BOS, R₃, EOS)</span><span class="cond">C₄ · 当前条件</span><span class="mark">BOS</span>
@@ -262,6 +277,15 @@ figure.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{trans
       <div><span class="a">Assistant:</span> 这确实需要仔<span class="ctl">^</span>细<span class="ctl">[CUT]</span>分析。</div>
       <div><span class="u">User:</span> 等等，我漏了一个条件。<span class="ctl">[WAIT]</span></div>
     </div>
+    <div class="event-flow reveal d2">
+      <div class="event"><b>① [THINK] · 启动</b><p>S1 把当前问题交给 S2；自己不等结果，继续听用户并维持对话。</p></div>
+      <div class="arrow">→</div>
+      <div class="event return"><b>② &lt;...&gt; · 回传</b><p>S2 结果到达后，放在相关事实前。S1 再把它改写成当前语境里能说的话。</p></div>
+      <div class="arrow">→</div>
+      <div class="event cut"><b>③ ^ + [CUT] · 抢话</b><p><code>^</code> 记用户何时开口；<code>[CUT]</code> 记助手声音真正停在哪。</p></div>
+      <div class="arrow">→</div>
+      <div class="event reset"><b>④ [WAIT] · 作废</b><p>用户改条件，旧 S2 状态清掉；若还要查，必须用新的 <code>[THINK]</code> 重开。</p></div>
+    </div>
     <div class="scroll">
       <table class="token-table">
         <thead><tr><th>标记</th><th>谁放</th><th>它告诉模型什么</th><th>精确限制</th></tr></thead>
@@ -275,7 +299,8 @@ figure.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{trans
         </tbody>
       </table>
     </div>
-    <p>控制标记先删除，再做 TTS 和强制对齐<a class="jr" href="#g-09">09</a>，把每个字落到真实音频时间上，最终切成与推理相同的 480 ms 片。</p>
+    <div class="note"><span class="label">ghost text（未播文本）为什么还留着</span><code>[CUT]</code> 后面的字不会进入最终播放，但会留在训练文本里，表示助手原本准备继续说什么。控制标记删掉后，管线再做 TTS 和字符对齐，并按 <code>[CUT]</code> 对应的时间点裁出最终音频：声音能严格停住，语言计划也没有丢。</div>
+    <p>随后先删除控制标记，再做 TTS 和强制对齐<a class="jr" href="#g-09">09</a>，把每个字落到真实音频时间上，最终切成与推理相同的 480 ms 片。上面的四步是把论文附录中的多种行为串成一条教学线，不是原文逐字对话。</p>
   </figure>
 
   <h2><span class="n">§ 08</span>620K 场景不是 620K 段真实电话</h2>
@@ -289,15 +314,56 @@ figure.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{trans
     <div class="card"><h3>Writer / Director</h3><p>Qwen3.5-397B-A27B 负责生成与标注；一致性检查会删掉缺触发、无来源结果和不合理打断。</p></div>
     <div class="card"><h3>声音</h3><p>Qwen3-TTS 合成语音，Mimi 编成 codec；控制标记本身不会被念出来。</p></div>
   </div>
-  <p>94.3% 样本有延迟推理，68.2% 有共同沉默，49.8% 有重叠说话，90.7% 同时含至少两种模式。这些比例可重叠，不能相加成 100%。</p>
+  <div class="grid2" style="margin-top:16px">
+    <div class="card">
+      <h3>每条种子的主场景</h3>
+      <table class="token-table mini-table">
+        <tbody>
+          <tr><td>逐步指导</td><td style="text-align:right">32.1%</td></tr>
+          <tr><td>标准轮流说话</td><td style="text-align:right">31.3%</td></tr>
+          <tr><td>中途改条件</td><td style="text-align:right">18.4%</td></tr>
+          <tr><td>故障排查 / 长时间倾听</td><td style="text-align:right">13.9% / 4.4%</td></tr>
+        </tbody>
+      </table>
+      <p>这里一条种子只选一个主类型，所以各项约等于 100%。</p>
+    </div>
+    <div class="card">
+      <h3>S2 参与强度</h3>
+      <table class="token-table mini-table">
+        <tbody>
+          <tr><td>高 / 中</td><td style="text-align:right">23.6% / 46.0%</td></tr>
+          <tr><td>低 / 关闭</td><td style="text-align:right">24.9% / 5.5%</td></tr>
+        </tbody>
+      </table>
+      <p>不是每句话都查后台；这意味着 S1 也会见到“简单问题自己处理”的样本。</p>
+    </div>
+  </div>
+  <p>另一组统计是在同一条对话上检查行为：94.3% 有延迟推理，68.2% 有共同沉默，49.8% 有重叠说话，90.7% 同时含至少两种模式。它们可以重叠，不能相加成 100%。</p>
 
   <h2><span class="n">§ 09</span>训练：两阶段 SFT，论文和开源 recipe 口径不同</h2>
-  <p>数据准备好后，DuplexOmni 才进入参数训练。这里讨论的是权重怎样更新；下一节再单独核算部署时能不能跟上音频播放。</p>
+  <p>数据准备好后，DuplexOmni 才进入参数训练。SFT<a class="jr" href="#g-16">16</a> 就是监督微调：样本已经给出正确的文字、控制动作和声音码，模型逐个位置去猜；猜中正确答案的概率越高，损失越小。</p>
+  <div class="note"><span class="label">从 Qwen3-Omni 初始化，到底复用了什么</span>多模态 Thinker、Talker、attention 和 FFN 仍按原来的方式变换特征，它们不是突然“变成了全双工权重”。变化的是训练样本和监督目标：新的数据继续更新同一套参数，让它学会每 480 ms 听、说、停和调用 S2。论文没有逐项披露哪些 embedding 或输出头是新建的。</div>
+  <p>Thinker 和 Talker 预测的对象不同，但都用交叉熵<a class="jr" href="#g-17">17</a>。下面先写共同骨架；它回答“模型给正确答案的概率有多高”。</p>
+  <span class="tag">角色 · 定义逐 token 训练损失</span>
+  <div class="math" data-expr="\mathcal L_{\mathrm{CE}}=-\frac{1}{M}\sum_{n=1}^{M}\log p_\theta\!\left(y_n\mid x,y_{&lt;n}\right)"></div>
+  <div class="vars">
+    <div><code class="m">M</code>本轮参与损失计算的目标位置数</div><div><code class="m">n</code>当前正在算第几个位置</div>
+    <div><code class="m">x</code>已知输入：音频、视频、历史和控制状态</div><div><code class="m">y_n</code>第 n 个正确 token</div>
+    <div><code class="m">y_{&lt;n}</code>当前目标之前的正确 token</div><div><code class="m">p_\theta(\cdot)</code>当前分支给目标 token 的条件概率</div>
+    <div><code class="m">\theta</code>这一轮允许更新的参数</div><div><code class="m">\log</code>自然对数；负号让高概率对应低损失</div>
+  </div>
+  <div class="calc">
+    <div class="step"><b>两个位置</b><span>正确 token 的概率分别是 <code class="m">0.8</code> 和 <code class="m">0.5</code>。</span></div>
+    <div class="step"><b>各自损失</b><span><code class="m">-\log 0.8\approx0.223</code>，<code class="m">-\log 0.5\approx0.693</code>。没把握的第二个位置罚得更重。</span></div>
+    <div class="step"><b>取平均</b><span><code class="m">\mathcal L_{\mathrm{CE}}=(0.223+0.693)/2=0.458</code>。若两处都提高到 0.8，损失会降到 0.223。</span></div>
+    <div class="step"><b>换目标</b><span>Thinker 轮里的 <code class="m">y_n</code> 是文本或控制 token；Talker 轮里换成主 codec 与残差 codec。</span></div>
+  </div>
   <div class="grid2">
     <div class="card">
       <span class="tag">论文 v1</span>
       <h3>两阶段 SFT，交替优化</h3>
-      <p>先学基本边听边说，再补复杂交互与视频。训 Thinker 时冻结 Talker；训 Talker 时反过来。学习率 \(10^{-5}/10^{-4}\)，batch 128，128 张 H20。</p>
+      <p>阶段 1 用大规模语音交互学基本边听边说；阶段 2 用高质量复杂交互和视频通话，补改条件、后台任务与视觉场景。</p>
+      <p>Thinker / Talker 学习率分别为 <code class="m">10^{-5}</code> / <code class="m">10^{-4}</code>，batch 128，训练用 128 张 H20。</p>
     </div>
     <div class="card">
       <span class="tag slow">当前开源 recipe</span>
@@ -305,16 +371,30 @@ figure.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{trans
       <p>标准说明给出顺序训练，示例 global batch 256。它是后续公开实现，不应倒填成论文实验原配置。</p>
     </div>
   </div>
+  <div class="grid2" style="margin-top:16px">
+    <div class="card">
+      <span class="tag">Thinker 轮</span>
+      <h3>这一轮只改 Thinker</h3>
+      <p>冻结<a class="jr" href="#g-18">18</a> Talker，只让 Thinker 参数接收梯度；交叉熵盯住助手文字和控制 token。</p>
+    </div>
+    <div class="card">
+      <span class="tag voice">Talker 轮</span>
+      <h3>Thinker 提供条件，但本轮不改</h3>
+      <p>冻结 Thinker，只更新 Talker 的 MoE<a class="jr" href="#g-19">19</a> 与 MTP；正确答案换成主 codec 和残差 codec。两类训练数据按 1:1 使用。</p>
+    </div>
+  </div>
+  <div class="warn"><span class="label">原文没有给出的部分</span>论文没有公开主 codec 与残差 codec 损失的精确权重、归一化方式或完整目标函数。上面的式子解释共同的交叉熵骨架，不冒充作者未披露的最终 loss。“冻结”也不是删除模块：它仍可提供前向结果，只是这一轮优化器不改它；换到下一轮再重新前向。</div>
 
   <h2><span class="n">§ 10</span>部署：RTF 只回答“能不能跟上播放”</h2>
   <p>训练结束后，部署侧关心的是每片生成速度。RTF<a class="jr" href="#g-10">10</a> 只比较生成耗时与播放时长；它不是模型质量分数，也不等于首包延迟。</p>
   <span class="tag">角色 · 实时决策指标</span>
   <div class="math" data-expr="\mathrm{RTF}=\frac{\text{生成音频耗时}}{\text{音频播放时长}}"></div>
   <div class="calc">
-    <div class="step"><b>能跟上播放</b><span>生成 480 ms 音频花 240 ms：<code>RTF=.24÷.48=.5&lt;1</code></span></div>
-    <div class="step"><b>会越说越卡</b><span>生成同一片花 600 ms：<code>RTF=.60÷.48=1.25</code>，每片欠 120 ms</span></div>
-    <div class="step"><b>如何压账</b><span>Thinker/Talker 异步流水；Talker 用 KV cache<a class="jr" href="#g-11">11</a>、增量解码和图执行优化。</span></div>
+    <div class="step"><b>能跟上播放</b><span>生成 480 ms 音频花 240 ms：<code class="m">\mathrm{RTF}=0.24/0.48=0.5&lt;1</code></span></div>
+    <div class="step"><b>会越说越卡</b><span>生成同一片花 600 ms：<code class="m">\mathrm{RTF}=0.60/0.48=1.25</code>，每片欠 120 ms</span></div>
+    <div class="step"><b>如何压账</b><span>Thinker/Talker 异步流水；Talker 用 KV cache<a class="jr" href="#g-11">11</a>、增量解码和图执行<a class="jr" href="#g-20">20</a>。</span></div>
   </div>
+  <p>图执行会预先记录每帧反复出现的 GPU 运算和依赖关系，后面整段提交，少做逐个算子的启动与调度。它减少的是调度开销，不会改 Talker 的概率公式，也不会凭空减少本来就必须做的矩阵计算。</p>
   <p>论文只写目标 <code class="m">\mathrm{RTF}&lt;1</code>，没有给实测 RTF 表。下一节的 0.506 s 是响应延迟，不能拿来代替这条分数。</p>
 
   <h2><span class="n">§ 11</span>实验结果：每列都在测不同的事</h2>
@@ -418,11 +498,16 @@ figure.play .reveal{opacity:1;transform:none}.d2{transition-delay:.12s}.d3{trans
       <li id="g-13"><strong>ToR</strong>：Turn-taking Rating，衡量系统处理抢话、停顿、打断和恢复说话的能力；越高越好。</li>
       <li id="g-14"><strong>Big Bench Audio</strong>：面向音频输入的理解与推理评测；分数越高，说明从声音中提取信息并回答问题的能力越强。</li>
       <li id="g-15"><strong>Daily-Omni</strong>：覆盖日常音频、图像、视频等输入的综合多模态评测；它和专测轮次控制的 ToR 不是一回事。</li>
+      <li id="g-16"><strong>SFT</strong>：监督微调。训练数据直接给出每个位置的正确答案，模型用这些答案继续更新预训练权重。</li>
+      <li id="g-17"><strong>交叉熵</strong>：查看模型给正确 token 的概率；概率越低，负对数损失越大。详见 <a href="../concepts/cross-entropy.html">cross-entropy</a>。</li>
+      <li id="g-18"><strong>冻结</strong>：本轮不更新某个模块的参数；不等于永久删除。下一轮仍可重新前向、重新选择更新对象。</li>
+      <li id="g-19"><strong>MoE</strong>：混合专家。每个 token 只路由到少量专家 FFN，以较少实际计算承载更大的参数容量。详见 <a href="../concepts/moe.html">moe</a>。</li>
+      <li id="g-20"><strong>图执行</strong>：预先记录一串反复执行的 GPU 运算，后续整段提交，减少逐算子启动和调度开销；不改变模型数学结果。</li>
     </ol>
   </section>
 
   <section class="sources">
-    <span class="label">Sources · accessed 2026-07-29</span>
+    <span class="label">Sources · accessed 2026-08-05</span>
     <ul>
       <li><a href="https://arxiv.org/html/2606.09186v1">DuplexOmni · arXiv HTML v1</a></li>
       <li><a href="https://github.com/MuyeHuang/DuplexOmni">官方 GitHub · 本页核对 commit 33bfba1a821b09c5aa66790944f9098584979d34</a></li>
