@@ -1367,3 +1367,19 @@ skill 更新:
 - 完整录入五阶段 211k 训练、508 对 EvalTalker、770 群众、10 专家、13,240 判断、八项缺陷率与 Base/Fast 表；保留 v1.5 单人/多人均略低于自家 v1.0 的非整齐结果。
 - 核算并披露数据漏斗的原图不一致：累计保留率的相邻差值与标注淘汰率有 .01–.22 点偏差；没有原始数据时不擅自修数。
 - 新增 whisper-layer-pooling、per-frame-grpo、multi-person-audio-region-binding、multi-stage-video-data-curation 四个概念页；flow matching、DMD、GRPO、cross-attention 与 video VAE 补来源。
+
+## [2026-08-06] ingest | Towards Physics of Multimodal Pretraining
+
+- 新增论文精读与 bespoke HTML；按“统一模型 → 知识怎样流动 → 协同与竞争 → 为什么要早联合 → 70/25/5 配方 → 2T 放大与边界”组织，不照论文目录平铺。
+- 用同一组标量走完 rectified-flow 的加噪位置与速度目标；逐符号解释增量 token 比例、PPL、混合损失、ΔPPL、L2/RMS 和图像注意力占比，并把 5% generation-token share 与真实算力占比严格分开。
+- 把早联合证据拆成三层：1T timing sweep 存在视觉 token 总量混杂；固定 200B continuation 是可核对的更强证据；2T late 对照虽由作者声明视觉 token 等量，但公开排程不足以独立复算。
+- 完整覆盖 CLEVR 概念剔除、六种顺序、四档共享结构、23 组比例、13.5B MoE/2T、训练与评测基础设施；保留单 seed、无置信区间、自动判分、复杂度阶梯非严格标尺和 MoE 总参不匹配等限制。
+- 新增 multimodal-knowledge-flow、modality-synergy-competition、vision-laziness、asymmetric-multimodal-pretraining-recipe 四个概念页，并重写 early-fusion，分清训练时机上的 early unification 与 encoder-free 架构意义上的 early fusion。
+
+## [2026-08-06] revise | Towards Physics of Multimodal Pretraining · 二次复审
+
+- 把所有展示公式统一成“符号先定义、公式再出现”：补齐 flow 位移展开与约分、增量比例由来、PPL、ΔPPL、L2/RMS 和 attention 占比的定义顺序。
+- 补全 Raw Pixels、CLIP+VAE、AR UniTok 三组对照各自拆掉的假设，以及六个知识流方向并非完全同初始化的实验细节。
+- 2T 表补回语言 PPL，基础设施补回 16 层控制骨干、GQA、RoPE、QK-Norm、FlashAttention 等配置；概念页新增 ΔPPL 与损失权重的数字例子。
+- 将 2T late 的“等量视觉 token”降级为作者声明：论文未披露最后 40% 的具体 L/U/G 排程，读者无法独立复算。误差分析新增专门限制卡。
+- 桌面 1440 px 与手机 390 px 实看；手机端 8 列规模表改成四张纵向指标卡，公式、箭头、术语弹层和所有指标无需隐藏式横向滚动即可阅读。

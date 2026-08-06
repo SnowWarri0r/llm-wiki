@@ -1,56 +1,47 @@
 ---
 name: early-fusion
 type: concept
-sources: [interaction-models-tml]
-updated: 2026-05-20
+sources: [interaction-models-tml, physics-of-multimodal-pretraining]
+updated: 2026-08-06
 ---
 
-# Early Fusion · 无独立编码器的早融合
+# Early Fusion · 早融合不只一种
 
 ## 一句话
-各模态用**轻量预处理**直接进同一个 transformer，不用 Whisper / ViT 那种独立大编码器再拼。
 
-## 直觉
-传统多模态架构（late fusion）：
-- 音频 → Whisper encoder → 特征
-- 视频 → ViT encoder → 特征
-- 各路特征拼一起 → LLM
+**在模型还没把某一种模态的处理方式练死之前，就让多种模态进入同一个主干并共同更新。**它强调“什么时候开始一起学”；至于前面有没有视觉编码器，是另一条设计轴。
 
-问题：
-1. 编码器**冻结** → 没法跟着主模型一起 scale
-2. 编码器**单独训** → 跟主任务目标脱节
-3. **延迟链路长** → 音频要等 Whisper 跑完才能进 transformer
+## 先拆掉一个常见误会
 
-Early fusion = 把编码器砍到最小，让主 transformer 自己吃近似原始的 token。
+“早融合”在不同论文里至少有两种用法：
 
-## TML 怎么做的
-| 模态 | 预处理 | 进 transformer 时 |
-|---|---|---|
-| 音频输入 | [[dmel]] 离散 Mel → 轻 embedding | embed token |
-| 视频输入 | 切 40×40 patch → [[hmlp]] 分层 MLP | patch token |
-| 文本 | 常规 tokenize | text token |
-| 音频输出 | —— | [[flow-matching]] head 解 |
+1. **训练时机上的早融合**：文字和图像从预训练早期就一起进入共享 Transformer。前面可以仍有冻结的 SigLIP、VAE 或 RAE；关键是主干没有先做完几千亿 token 的纯语言训练。
+2. **输入结构上的 encoder-free early fusion**：尽量砍掉独立大编码器，只留 patchify、Mel 变换、小 MLP 等轻量预处理，让主 Transformer 更接近原始模态。
 
-这些预处理组件**跟主 transformer 一起端到端训练**，不是冻结。
+第二种比第一种更激进。一个模型可以“训练得很早”，却仍然有视觉编码器；也可以把编码器做得很轻，却在语言模型成熟后才接进去。不能把两件事混成一句“有没有 ViT”。
 
-## 为什么"轻量预处理"还要保留
-你可能问：为什么不让 transformer 直接吃 raw 16kHz waveform？因为：
-- 序列太长（1 秒 = 16000 个采样点）
-- 没有局部相关性的归纳偏置 = 学习效率低
-- 计算资源浪费在"再发明 Mel 频谱"上
+## 和 late fusion 对照
 
-dMel / hMLP 这种轻预处理 = **保留必要的归纳偏置**（频域 / 空间局部性），同时让后续表征跟着主模型学。
+晚融合常见流程是：先把 LLM 练成熟，再接冻结视觉编码器和 projector，用一小段多模态训练把视觉特征塞进既有语言空间。它便宜、能复用成熟 LLM，但视觉容易变成外挂：模型碰到困难时，可能靠文本先验猜答案，而不是认真读取图像。
 
-## 重要 trade-off
-Early fusion 听起来全好处，但：
-- 训练数据要求**齐全的多模态对齐数据**（音视频文本同步），获取贵
-- 模型规模必须够大才能吃下原始模态，小模型反而 late fusion 更好
+早融合则让语言和视觉表征一起成形。共享注意力从一开始就见过两种 token，视觉分支也有足够长的训练窗口学会承担任务。
 
-TML 是 276B MoE 量级才合算。
+## 论文里的三个证据层级
+
+- 1T 固定总 token 的时间 sweep：视觉引入越晚，视觉能力越差；但越晚也意味着视觉 token 总量越少，所以它是现实配方对照，不是纯粹的“时机”因果实验。
+- 固定 200B 联合训练的内部探针：只改变语言 checkpoint 的成熟程度，越晚接视觉，视觉 FFN 激活和图像注意力越弱。
+- 2T 规模对照：早、晚方案看到同样多的视觉 token，只改变这些 token 是从头分散出现，还是集中到最后 40%；早融合仍更好。
+
+## 代价
+
+- 从头训练成本高，不能直接继承一个已经很强的闭源或开源 LLM 成品。
+- 数据管线必须很早就能稳定供应多模态样本。
+- 联合训练并不自动带来协同；若所有模态硬挤同一套 FFN，仍会争容量。
 
 ## 链接
-- [[interaction-models-tml]] · 论文
-- [[dmel]] · 音频预处理
-- [[hmlp]] · 视频预处理
-- [[flow-matching]] · 音频输出
-- [[replace-heuristics-with-weights]] · "把 pipeline 吃进权重"模式
+
+- [[physics-of-multimodal-pretraining]] · 系统比较早引入、晚引入、顺序训练与联合训练
+- [[interaction-models-tml]] · encoder-free early fusion 的更激进版本
+- [[vision-laziness]] · 视觉接得太晚时，模型内部具体怎样“少看图”
+- [[modality-synergy-competition]] · 什么时候一起训练会互相帮助，什么时候会抢容量
+- [[unified-transformer]] · 把多种 token 放进同一 Transformer 的结构路线

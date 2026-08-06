@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Unified Transformer · 一个 transformer 同时当 LLM 和 DiT · Concept</title>
+<title>Vision Laziness · 视觉惰性 · 图在眼前，模型却更愿意靠文字猜 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,68 +53,71 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · unified-transformer</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · vision-laziness</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Unified Transformer · 一个 transformer 同时当 LLM 和 DiT</h1>
+  <h1>Vision Laziness · 视觉惰性 · 图在眼前，模型却更愿意靠文字猜</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>把文本、条件图、要生成的像素<strong>全塞进一条 token 序列</strong>，用<strong>混合注意力</strong>——文本/条件 token 走 causal（像 LLM 读 prompt）、生成 token 走 full（像 DiT 双向去噪）——一个 transformer 同时干理解和生成，不要独立文本编码器。</p>
-<h2>直觉 · 别让"读 prompt"和"画图"分两个空间</h2>
-<p>传统 T2I 是拼起来的：一个<strong>文本编码器</strong>（T5/CLIP/或 VLM）把 prompt 编码，再喂给一个<strong>单独的图像生成器</strong>。两个模型、两套语义空间，对齐全靠中间那点接口，容易<strong>语义错位</strong>（编码器理解的和生成器吃到的不是一回事）。</p>
-<p>Unified Transformer（HiDream-O1 的 UiT）的办法：<strong>取消这个分界</strong>。文本、条件图、生成像素都变成 token，<strong>放进同一条序列、过同一套 attention</strong>——理解和生成在一个空间里联合发生，语义天然对齐。它的 backbone 干脆<strong>直接是一个 LLM</strong>（HiDream 8B 从 <a href="../concepts/qwen3-vl.html">qwen3-vl</a>-8B-Instruct 初始化），文本走 LLM 自己的原生词表 embedding——所以"没有独立文本编码器"= <strong>LLM 自己就是编码器</strong>。</p>
-<h2>怎么做的 · 三类 token + 混合注意力 mask</h2>
-<pre><code>一条序列： [ 文本 token y | 条件图 token c | 生成 token x_t ]
-              causal          causal           full
-            （只看左边）     （只看左边）    （双向, 每个 patch 看所有）
-</code></pre>
-<ul>
-<li><strong>文本 token</strong>：用 backbone（Qwen3）原生词表 embedding。</li>
-<li><strong>条件 token</strong>（编辑/personalization 的输入图）：SigLIP-2 编码 → 一层投影对齐进共享空间。</li>
-<li><strong>生成 token</strong>：噪声样本切 patch（见 <a href="../concepts/pixel-space-diffusion.html">pixel-space-diffusion</a>）→ 投影进同一空间。</li>
-<li><strong>混合注意力</strong>：文本/条件用 <strong>causal mask</strong>（自回归式，像 LLM 读输入）；生成 token 用 <strong>full attention</strong>（双向，像 <a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> 一起去噪）。</li>
-</ul>
-<p>为什么这么分：文本和条件是"<strong>给定的、要被理解</strong>"的——causal 像顺着读 prompt（<a href="../concepts/causal-language-model.html">causal-language-model</a>）；生成像素是"<strong>要一起被去噪</strong>"的——full 像 DiT 让每个 patch 互看。一条流里两种 mask，等于把 LLM 和 DiT 缝进同一个 transformer。</p>
-<h2>它买到什么</h2>
-<ul>
-<li><strong>无语义错位</strong>：文图在一个空间，不用跨两个模型对齐。</li>
-<li><strong>一套架构多任务</strong>：T2I / 指令编辑 / 主体personalization / storyboard 都变成"在 context 里推理生成"，同一个模型吃下，不为每个任务单训。</li>
-</ul>
-<h2>跟单流 DiT 的区别</h2>
-<p><a href="../papers/ideogram-4.html">ideogram-4</a> 也叫"单流"，但它的"单流"指文本+图像 token 共享投影，<strong>文本编码器仍是外挂的 Qwen3-VL</strong>。HiDream 更彻底：<strong>连文本编码器都收进主干</strong>，backbone 本身就是 LLM，且用混合 mask 区分理解/生成。</p>
-<h2>代码出处</h2>
-<ul>
-<li>HiDream-O1-Image：arXiv 2605.11061（Unified Transformer，hybrid attention）</li>
-</ul>
+<p>如果语言主干先练得很成熟，再把视觉接进来，优化器容易沿用现成的语言捷径：视觉分支虽然存在，激活更弱、被注意得更少，最终没有学成与语言平级的能力。</p>
+<h2>生活直觉</h2>
+<p>一道带图选择题里，题干出现“沙漠动物”，模型不看图片也能猜骆驼。这个捷径短期能降低损失；但它让“认真读取图中究竟是什么”得到的梯度更少。久而久之，视觉模块像公司里总被老员工代做工作的新人：在岗，却一直没有真正承担任务。</p>
+<h2>论文不是只看最终分数</h2>
+<p>它给不同成熟度的语言 checkpoint 同样的 200B 联合训练，再从四个角度检查视觉到底有没有被使用：</p>
+<ol>
+<li>训练时图像 FFN 输出的 L2 范数；</li>
+<li>图像起止标记 embedding 的 L2 范数；</li>
+<li>真正推理时图像 FFN 的逐元素 RMS；</li>
+<li>注意力落到图像 token 上的比例。</li>
+</ol>
+<p>四项都随语言预训练起点从 0B 推迟到 800B 而下降，才构成“视觉惰性”的内部证据链。</p>
+<h2>L2 和 RMS 到底在量什么</h2>
+<p>给激活向量 $h=(h_1,\ldots,h_n)$：</p>
+<div class="tex math-display" data-display="true">\lVert h\rVert_2=\sqrt{\sum_{i=1}^{n}h_i^2},\qquad
+\operatorname{RMS}(h)=\frac{\lVert h\rVert_2}{\sqrt n}.</div>
+<p>例如 $h=[3,4,0,0]$，L2 是 $5$，RMS 是 $5/\sqrt4=2.5$。L2 会随张量元素数量变大；除以 $\sqrt n$ 后得到平均每个元素的典型幅度，才适合比较形状不同的激活。</p>
+<p>数值变小不自动等于能力差；但当训练激活、推理激活、wrapper embedding、图像注意力和最终视觉指标一起下降时，解释就更可信。</p>
+<h2>边界</h2>
+<p>“惰性”是这篇论文给一组相关内部现象起的名字，不是已经证明的普遍定律。不同架构、数据规模和更强视觉监督下是否仍成立，还需要重复实验。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../concepts/pixel-space-diffusion.html">pixel-space-diffusion</a> · 生成 token 怎么从原始像素来</li>
-<li><a href="../concepts/self-attention.html">self-attention</a> · 混合的是它的 mask（causal vs full）</li>
-<li><a href="../concepts/causal-language-model.html">causal-language-model</a> · 文本/条件那半的 causal 来历</li>
-<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · 生成那半的 full attention 来历</li>
-<li><a href="../concepts/qwen3-vl.html">qwen3-vl</a> · backbone 直接用它初始化</li>
-<li><a href="../papers/ideogram-4.html">ideogram-4</a> · 也叫单流，但文本编码器仍外挂，对照</li>
-<li><a href="../papers/hidream-o1.html">hidream-o1</a> · 用 UiT 的统一生成模型</li>
+<li><a href="../papers/physics-of-multimodal-pretraining.html">physics-of-multimodal-pretraining</a> · 四类探针与早/晚训练对照</li>
+<li><a href="../concepts/early-fusion.html">early-fusion</a> · 怎样从训练时机上减少视觉惰性</li>
+<li><a href="../concepts/self-attention.html">self-attention</a> · 图像注意力比例的底层来源</li>
+<li><a href="../concepts/layernorm.html">layernorm</a> · 别把激活幅度和归一化层的作用混成一件事</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 6 处</span>
-  <ul><li><a href="../papers/cosmos-3.html"><span class="cat">paper</span>Cosmos 3 · 把“看懂、想象、行动”塞进同一个世界模型</a></li><li><a href="../papers/hidream-o1.html"><span class="cat">paper</span>HiDream-O1-Image · Pixel-level Unified Transformer</a></li><li><a href="../topics/joint-attention-lineage.html"><span class="cat">topic</span>Joint-Attention 谱系 · 从 cross-attention 到 MMDiT / Unified / MoT</a></li><li><a href="../concepts/early-fusion.html"><span class="cat">concept</span>Early Fusion · 早融合不只一种</a></li><li><a href="../concepts/mixture-of-transformers.html"><span class="cat">concept</span>Mixture-of-Transformers · MoT · 按 token 类型分开的两套 Transformer 权重</a></li><li><a href="../concepts/pixel-space-diffusion.html"><span class="cat">concept</span>Pixel-Space Diffusion · 直接在原始像素上扩散</a></li></ul>
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/physics-of-multimodal-pretraining.html"><span class="cat">paper</span>多模态预训练的经验规律 · 文字、看图和画图怎样互相帮忙，又怎样争参数</a></li><li><a href="../concepts/early-fusion.html"><span class="cat">concept</span>Early Fusion · 早融合不只一种</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/unified-transformer.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/vision-laziness.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

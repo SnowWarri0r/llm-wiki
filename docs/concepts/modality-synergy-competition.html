@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Unified Transformer · 一个 transformer 同时当 LLM 和 DiT · Concept</title>
+<title>模态协同与容量竞争 · 一起训练为什么有时赚、有时亏 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,68 +53,74 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · unified-transformer</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · modality-synergy-competition</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Unified Transformer · 一个 transformer 同时当 LLM 和 DiT</h1>
+  <h1>模态协同与容量竞争 · 一起训练为什么有时赚、有时亏</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>把文本、条件图、要生成的像素<strong>全塞进一条 token 序列</strong>，用<strong>混合注意力</strong>——文本/条件 token 走 causal（像 LLM 读 prompt）、生成 token 走 full（像 DiT 双向去噪）——一个 transformer 同时干理解和生成，不要独立文本编码器。</p>
-<h2>直觉 · 别让"读 prompt"和"画图"分两个空间</h2>
-<p>传统 T2I 是拼起来的：一个<strong>文本编码器</strong>（T5/CLIP/或 VLM）把 prompt 编码，再喂给一个<strong>单独的图像生成器</strong>。两个模型、两套语义空间，对齐全靠中间那点接口，容易<strong>语义错位</strong>（编码器理解的和生成器吃到的不是一回事）。</p>
-<p>Unified Transformer（HiDream-O1 的 UiT）的办法：<strong>取消这个分界</strong>。文本、条件图、生成像素都变成 token，<strong>放进同一条序列、过同一套 attention</strong>——理解和生成在一个空间里联合发生，语义天然对齐。它的 backbone 干脆<strong>直接是一个 LLM</strong>（HiDream 8B 从 <a href="../concepts/qwen3-vl.html">qwen3-vl</a>-8B-Instruct 初始化），文本走 LLM 自己的原生词表 embedding——所以"没有独立文本编码器"= <strong>LLM 自己就是编码器</strong>。</p>
-<h2>怎么做的 · 三类 token + 混合注意力 mask</h2>
-<pre><code>一条序列： [ 文本 token y | 条件图 token c | 生成 token x_t ]
-              causal          causal           full
-            （只看左边）     （只看左边）    （双向, 每个 patch 看所有）
-</code></pre>
+<p>两种模态共享模型时同时发生两股力：<strong>共享结构让它们互相借知识，有限参数又让它们争同一块计算容量。</strong>最后分数升还是降，取决于哪股力更强。</p>
+<h2>一个容易想象的类比</h2>
+<p>两门课共用一间教室：投影仪、白板和讨论区可以共享，这叫协同；但如果两门课要同一个老师同时讲两套完全不同的细节，就会抢时间，这叫竞争。</p>
+<p>映射到 Transformer：</p>
 <ul>
-<li><strong>文本 token</strong>：用 backbone（Qwen3）原生词表 embedding。</li>
-<li><strong>条件 token</strong>（编辑/personalization 的输入图）：SigLIP-2 编码 → 一层投影对齐进共享空间。</li>
-<li><strong>生成 token</strong>：噪声样本切 patch（见 <a href="../concepts/pixel-space-diffusion.html">pixel-space-diffusion</a>）→ 投影进同一空间。</li>
-<li><strong>混合注意力</strong>：文本/条件用 <strong>causal mask</strong>（自回归式，像 LLM 读输入）；生成 token 用 <strong>full attention</strong>（双向，像 <a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> 一起去噪）。</li>
+<li><strong>Attention</strong> 像讨论区，适合共享：文字 token 和图像 token 能直接交换上下文。</li>
+<li><strong>Norm</strong> 像统一的音量标尺，适合保留一定共享，让两种特征处在可交流的数值尺度。</li>
+<li><strong>FFN</strong> 像每门课真正消化知识的老师，模态差异大时最好分开，避免同一组参数既记语言模式又拟合图像分布。</li>
 </ul>
-<p>为什么这么分：文本和条件是"<strong>给定的、要被理解</strong>"的——causal 像顺着读 prompt（<a href="../concepts/causal-language-model.html">causal-language-model</a>）；生成像素是"<strong>要一起被去噪</strong>"的——full 像 DiT 让每个 patch 互看。一条流里两种 mask，等于把 LLM 和 DiT 缝进同一个 transformer。</p>
-<h2>它买到什么</h2>
+<p>论文的小规模消融里，完全共享的 dense 模型同时拖累语言困惑度和图像扩散损失；只拆 FFN 的 <code>split_ffn</code> 最好；连 attention 一起拆后，跨模态收益明显缩小；全部拆开则退回两套独立模型，既不冲突，也没有协同。</p>
+<h2>“数据复杂度”结论要谨慎读</h2>
+<p>论文把纯色背景、图案、噪声、文字渲染、OCR、视频、自然图像排成一个大致更难的序列。简单视觉任务能改善语言困惑度，复杂视频和自然图像则让语言变差。这里的“复杂度”不是一个算出来的物理量；数据集、目标结构和语义密度一起变了。它更像一组压力测试，说明任务越吃容量，竞争越可能盖过协同。</p>
+<h2>常用差值</h2>
+<p>若比较语言困惑度：</p>
+<div class="tex math-display" data-display="true">\Delta \mathrm{PPL}=\mathrm{PPL}_{\text{joint}}-\mathrm{PPL}_{\text{language-only}}.</div>
+<p>$\Delta\mathrm{PPL}&lt;0$ 表示联合训练反而帮助语言；大于 0 表示视觉任务造成净干扰。图像扩散损失也按同样方向读：差值越负越好。</p>
+<h2>数字例子</h2>
+<p>为了只演示差值怎样读，先假设语言单独训练的 PPL 是 16.000；这个 16.000 是教学用基线，不是论文报告值。论文报告的真实差值可以直接加到它上面：</p>
 <ul>
-<li><strong>无语义错位</strong>：文图在一个空间，不用跨两个模型对齐。</li>
-<li><strong>一套架构多任务</strong>：T2I / 指令编辑 / 主体personalization / storyboard 都变成"在 context 里推理生成"，同一个模型吃下，不为每个任务单训。</li>
+<li>只拆 FFN、配纯色背景时，$\Delta\mathrm{PPL}=-.211$，所以联合模型会是 $16.000-.211=15.789$。更低，说明协同盖过了竞争。</li>
+<li>全共享 dense 时，$\Delta\mathrm{PPL}=+.272$，所以联合模型会是 $16.000+.272=16.272$。更高，说明参数冲突盖过了协同。</li>
 </ul>
-<h2>跟单流 DiT 的区别</h2>
-<p><a href="../papers/ideogram-4.html">ideogram-4</a> 也叫"单流"，但它的"单流"指文本+图像 token 共享投影，<strong>文本编码器仍是外挂的 Qwen3-VL</strong>。HiDream 更彻底：<strong>连文本编码器都收进主干</strong>，backbone 本身就是 LLM，且用混合 mask 区分理解/生成。</p>
-<h2>代码出处</h2>
-<ul>
-<li>HiDream-O1-Image：arXiv 2605.11061（Unified Transformer，hybrid attention）</li>
-</ul>
+<p>这里比较的是“相对同一条语言基线移动了多少”，不是把 PPL 当 accuracy：PPL 下降才是好事。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../concepts/pixel-space-diffusion.html">pixel-space-diffusion</a> · 生成 token 怎么从原始像素来</li>
-<li><a href="../concepts/self-attention.html">self-attention</a> · 混合的是它的 mask（causal vs full）</li>
-<li><a href="../concepts/causal-language-model.html">causal-language-model</a> · 文本/条件那半的 causal 来历</li>
-<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · 生成那半的 full attention 来历</li>
-<li><a href="../concepts/qwen3-vl.html">qwen3-vl</a> · backbone 直接用它初始化</li>
-<li><a href="../papers/ideogram-4.html">ideogram-4</a> · 也叫单流，但文本编码器仍外挂，对照</li>
-<li><a href="../papers/hidream-o1.html">hidream-o1</a> · 用 UiT 的统一生成模型</li>
+<li><a href="../papers/physics-of-multimodal-pretraining.html">physics-of-multimodal-pretraining</a> · 复杂度阶梯、参数共享和四种视觉 tokenizer 的实验</li>
+<li><a href="../concepts/multimodal-knowledge-flow.html">multimodal-knowledge-flow</a> · 协同背后的正向知识转移</li>
+<li><a href="../concepts/mixture-of-transformers.html">mixture-of-transformers</a> · 比“只拆 FFN”更彻底，连整套 Transformer 通路都按模态拆开</li>
+<li><a href="../concepts/moe.html">moe</a> · 用稀疏 FFN 专家扩大总容量，同时控制每个 token 的实际计算量</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 6 处</span>
-  <ul><li><a href="../papers/cosmos-3.html"><span class="cat">paper</span>Cosmos 3 · 把“看懂、想象、行动”塞进同一个世界模型</a></li><li><a href="../papers/hidream-o1.html"><span class="cat">paper</span>HiDream-O1-Image · Pixel-level Unified Transformer</a></li><li><a href="../topics/joint-attention-lineage.html"><span class="cat">topic</span>Joint-Attention 谱系 · 从 cross-attention 到 MMDiT / Unified / MoT</a></li><li><a href="../concepts/early-fusion.html"><span class="cat">concept</span>Early Fusion · 早融合不只一种</a></li><li><a href="../concepts/mixture-of-transformers.html"><span class="cat">concept</span>Mixture-of-Transformers · MoT · 按 token 类型分开的两套 Transformer 权重</a></li><li><a href="../concepts/pixel-space-diffusion.html"><span class="cat">concept</span>Pixel-Space Diffusion · 直接在原始像素上扩散</a></li></ul>
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/physics-of-multimodal-pretraining.html"><span class="cat">paper</span>多模态预训练的经验规律 · 文字、看图和画图怎样互相帮忙，又怎样争参数</a></li><li><a href="../concepts/asymmetric-multimodal-pretraining-recipe.html"><span class="cat">concept</span>非对称多模态预训练配方 · 70% 语言、25% 理解、5% 生成</a></li><li><a href="../concepts/early-fusion.html"><span class="cat">concept</span>Early Fusion · 早融合不只一种</a></li><li><a href="../concepts/multimodal-knowledge-flow.html"><span class="cat">concept</span>多模态知识流 · 一项能力学到的东西，能不能帮另一项能力</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/unified-transformer.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/modality-synergy-competition.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {
@@ -164,7 +170,7 @@
 </script>
 <style>
 code.mathified{border:none;background:none;padding:0;font-size:1em}
-/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+/* 很多页会用 class 后代选择器把 span 设为 block；KaTeX 内部也大量使用 span，
    会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
    .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
    又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
