@@ -1,8 +1,8 @@
 ---
 name: teacher-forcing-video-diffusion
 type: concept
-sources: [minwm, solaris-multiplayer-world-model]
-updated: 2026-07-24
+sources: [minwm, solaris-multiplayer-world-model, wan-streamer-v01]
+updated: 2026-08-06
 ---
 
 # 视频扩散里的 Teacher Forcing · 训练时喂真历史
@@ -35,3 +35,4 @@ LLM 训练时用真实前词预测下一个词，推理时读取自己刚生成�
 - [[minwm]] · Stage 1 用 teacher forcing 获得因果能力，Stage 3 用 self-rollout 修正分布错位
 - [[solaris-multiplayer-world-model]] · Diffusion Forcing 与 Checkpointed Self Forcing
 - [[autoregressive-vs-bidirectional-video-diffusion]] · 因果生成与整段双向去噪的取舍
+- [[wan-streamer-v01]] · rolling distillation 让少步学生连续读取自己的生成历史

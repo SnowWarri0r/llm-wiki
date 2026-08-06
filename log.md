@@ -1406,3 +1406,11 @@ skill 更新:
 - 补齐 226 test + 11 validation、时长、技术规格、130 位说话者与三轮标注；补三 judge 的 Within-1pt、ICC(A,k) 和 Visual Grounding 一致性较弱的边界。
 - 录入主表、MiniCPM FPS sweep、captioning collapse、visual-stream ignorance、token doubling，以及 Anam/Keyframe 级联头像的 2.8–3.5 秒时序缺口；保留正文 87% 与图中 91% captioning 口径差异。
 - 新增 conversational-nonverbal-dynamics 与 tor-alignment 概念页，并补全 full-duplex、rubric 与 LM-as-judge 的 VideoFDB 来源。
+
+## [2026-08-06] ingest | Wan-Streamer v0.1
+
+- 新增独立精读与六路线号风格 bespoke HTML；按“现实交谈问题 → 全系统 → 条件概率 → 块因果 → 两类输出 → flow 手算 → 三阶段训练 → 两卡服务 → 证据边界”重排，不照原论文目录逐段翻译。
+- 把三个正式公式逐符号拆开：三段条件概率算到 0.24；沿用 z₀=2、ε=−1、τ=.25 的 running example，算出 zτ=1.25、目标速度 −3 与平方损失 .36。
+- 重画六路因果闭环、三块可见矩阵、流路径、训练课程表和相邻单元服务时间线；明确第 k 拍生成 yₖ，第 k+1 拍才解码播出，避免箭头提前连接。
+- 新增 native-streaming-contract、causal-streaming-vae、rolling-streaming-distillation 三个概念页；回链 block-causal、conditional-flow、CFG、teacher forcing、full-duplex 与 thinker-performer。
+- 实验按测量边界拆开 160/200/550 ms，保留 192×336@25 FPS 的原型定位；模型规模、数据量、GPU 型号、蒸馏配方与自然度量化全部列为未公开。

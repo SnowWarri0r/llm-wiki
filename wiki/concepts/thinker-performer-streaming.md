@@ -1,7 +1,7 @@
 ---
 name: thinker-performer-streaming
 type: concept
-sources: [wan-streamer-v02, wan-streamer-v03]
+sources: [wan-streamer-v01, wan-streamer-v02, wan-streamer-v03]
 updated: 2026-08-06
 ---
 
@@ -37,6 +37,7 @@ Thinker 维护因果上下文和 KV cache，Performer 在同一时间预算里�
 
 ## 链接
 
+- [[wan-streamer-v01]] · 初版两卡时间线与第 k 段何时生成、何时播出
 - [[wan-streamer-v03]] · v0.3 沿用了哪一段服务路径
 - [[wan-streamer-v02]] · v0.2 为什么改服务拓扑，以及三种延迟口径
 - [[distributed-training-parallelism]] · Ulysses 怎样沿 token 维切长序列

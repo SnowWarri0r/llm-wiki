@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>视频扩散里的 Teacher Forcing · 训练时喂真历史 · Concept</title>
+<title>滚动式流媒体蒸馏 · 让少步学生练习读取自己的历史 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,45 +53,45 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · teacher-forcing-video-diffusion</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · rolling-streaming-distillation</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>视频扩散里的 Teacher Forcing · 训练时喂真历史</h1>
+  <h1>滚动式流媒体蒸馏 · 让少步学生练习读取自己的历史</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>训练因果视频模型时，第 <code>i</code> 段只生成当前 noisy chunk，但把此前的真实干净视频段当历史条件；这样容易学会下一段，却会造成训练看真历史、推理看自己历史的 exposure bias。</p>
-<h2>用四段视频看懂</h2>
-<p>假设视频 latent 被切成 <code>A、B、C、D</code> 四段，当前训练目标是 <code>C</code>：</p>
-<pre><code class="language-text">训练：真实 A + 真实 B + noisy C → 还原真实 C
-推理：生成 A + 生成 B + noisy C → 生成 C
+<p>教师用更多去噪步给方向，学生用更少步连续生成多段，并在自己已经出现误差的历史上继续练。</p>
+<h2>为什么逐段蒸馏还不够</h2>
+<p>若每次训练都给学生真实的干净历史，它只会处理“完美过去”。部署时前一段却是学生自己生成的，轻微色偏、口型误差或姿态漂移都会进入下一段，形成训练—推理分布差距。</p>
+<h2>一个三段例子</h2>
+<p>假设学生每段都把脸部位置向右偏 0.1：</p>
+<pre><code class="language-text">只做单段训练：每次都从真实位置 0 开始，只看见误差 0.1
+连续 rollout：第 1 段 0.1 → 第 2 段 0.2 → 第 3 段 0.3
 </code></pre>
-<p>因果 mask 保证 <code>C</code> 看不到未来的 <code>D</code>。但训练时的 <code>A、B</code> 没有任何生成误差，推理时则可能已经漂色、变形或偏离相机轨迹。模型从没在这种有瑕疵的历史上练过，误差便会一段段放大。</p>
-<h2>为什么还要先这样训</h2>
-<p>如果一开始就让未训练好的模型反复读取自己的烂输出，后续每段的输入分布会不断变化，学习很不稳定。Teacher forcing 先把“只看过去、续写下一段”的基本能力教会，再由 self-rollout / self forcing 阶段让模型适应自己的历史。</p>
-<h2>它和文字自回归的关系</h2>
-<p>LLM 训练时用真实前词预测下一个词，推理时读取自己刚生成的词；视频版本的矛盾相同，只是一个 token 换成了一小段 noisy latent，而且每段内部还要进行多步或少步去噪。</p>
+<p>滚动训练让学生真的看到 0.1、0.2 这类自己制造的历史，再由教师或分布匹配信号教它往回修。这样优化的不是孤立一帧，而是整条长期轨迹。</p>
+<h2>Wan-Streamer 公开到哪</h2>
+<p>v0.1 说明强教师带 CFG 和更多 flow-matching solver 步，学生用 self-forcing 与 distribution matching 做 rolling distillation。论文没有给完整损失、教师与学生步数、CFG scale、rollout 长度或误差权重，因此不能据此写出一条“官方蒸馏公式”。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/minwm.html">minwm</a> · Stage 1 用 teacher forcing 获得因果能力，Stage 3 用 self-rollout 修正分布错位</li>
-<li><a href="../papers/solaris-multiplayer-world-model.html">solaris-multiplayer-world-model</a> · Diffusion Forcing 与 Checkpointed Self Forcing</li>
-<li><a href="../concepts/autoregressive-vs-bidirectional-video-diffusion.html">autoregressive-vs-bidirectional-video-diffusion</a> · 因果生成与整段双向去噪的取舍</li>
-<li><a href="../papers/wan-streamer-v01.html">wan-streamer-v01</a> · rolling distillation 让少步学生连续读取自己的生成历史</li>
+<li><a href="../papers/wan-streamer-v01.html">wan-streamer-v01</a> · 三阶段训练和长会话的落点</li>
+<li><a href="../concepts/teacher-forcing-video-diffusion.html">teacher-forcing-video-diffusion</a> · 为什么真实历史会制造 exposure bias</li>
+<li><a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a> · 教师额外使用的条件引导</li>
+<li><a href="../concepts/dmd-distillation.html">dmd-distillation</a> · distribution matching 的基础思路</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 4 处</span>
-  <ul><li><a href="../papers/minwm.html"><span class="cat">paper</span>minWM · 把离线视频扩散模型改造成可操控、能逐段输出的世界模型</a></li><li><a href="../papers/wan-streamer-v01.html"><span class="cat">paper</span>Wan-Streamer v0.1 · 一个模型怎样边听、边看、边说、边生成画面</a></li><li><a href="../concepts/causal-consistency-distillation.html"><span class="cat">concept</span>Causal Consistency Distillation · 不存整条 ODE 轨迹也能学少步</a></li><li><a href="../concepts/rolling-streaming-distillation.html"><span class="cat">concept</span>滚动式流媒体蒸馏 · 让少步学生练习读取自己的历史</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/wan-streamer-v01.html"><span class="cat">paper</span>Wan-Streamer v0.1 · 一个模型怎样边听、边看、边说、边生成画面</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/teacher-forcing-video-diffusion.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/rolling-streaming-distillation.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
