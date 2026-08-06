@@ -1383,3 +1383,26 @@ skill 更新:
 - 2T 表补回语言 PPL，基础设施补回 16 层控制骨干、GQA、RoPE、QK-Norm、FlashAttention 等配置；概念页新增 ΔPPL 与损失权重的数字例子。
 - 将 2T late 的“等量视觉 token”降级为作者声明：论文未披露最后 40% 的具体 L/U/G 排程，读者无法独立复算。误差分析新增专门限制卡。
 - 桌面 1440 px 与手机 390 px 实看；手机端 8 列规模表改成四张纵向指标卡，公式、箭头、术语弹层和所有指标无需隐藏式横向滚动即可阅读。
+
+## [2026-08-06] ingest | Wan-Streamer v0.2
+
+- 新增独立精读与 bespoke HTML，不再只在 v0.3 页用两段话代过；按“延迟三口径 → 全系统 → 成本来源 → Thinker → Performer → KV → 时间线 → 证据边界”重排。
+- 核算 640×368 相对 192×336 为约 3.65× 像素量、25 FPS 下 160 ms=4 帧，以及 200+350=550 ms；用灌装线区分吞吐节拍与单件响应时间。
+- 用 16 token / 4 rank 和 12 段 K/V 的教学例解释 Ulysses、视频分片/音频不分片与预分片本地 cache；明确这些数字不是论文配置。
+- 按真实依赖重画相邻单元时间线，避免箭头把第 k 段生成误画成同拍已经解码；补齐参数量、GPU、互联、去噪步数、训练配方和统一画质评测缺口。
+
+## [2026-08-06] ingest | KlingAvatar 2.0
+
+- 新增技术报告精读与影院分镜式 bespoke HTML；先给完整级联，再依次拆低清蓝图、高清锚帧、首尾帧短片、音频插帧与空间超分。
+- 把音频/视觉/文本三专家的职责、模态冲突和分镜级 Negative Director 写成生活化例子；明确具体专家、prompt、轮数与冲突规则未公开。
+- 用教学公式解释深层 DiT mask 如何门控身份特定音频，并标清它是对论文文字机制的转写；补完整 YOLO→DWPose→SAM2→复核的数据链。
+- 用 HeyGen Overall 的 43.2/28.2/28.6 完整算出 GSB 1.26，并录入六轴全表；保留 Face–Lip 对 HeyGen/旧 Kling、Motion 对 HeyGen 低于 1 的非整齐结果。
+- 证据边界单列模型规模、分辨率、FPS、五分钟耗时、GPU、蒸馏步数、数据与训练配方缺失；“更高效”不冒充已有测速结论。
+
+## [2026-08-06] ingest | VideoFDB
+
+- 新增 benchmark 精读与对话实验室风格 bespoke HTML；从“句中停顿别抢话”的生活例开始，再拼 AV2A/AV2AV、数据、agent、caption、judge 与硬时序全流程。
+- 完整列出 11 类动态与感知/生成归属；逐一定义五种 timing policy、TO、期望 takeover、指示量和 TOR-Alignment，并用五条样本算出 80%。
+- 补齐 226 test + 11 validation、时长、技术规格、130 位说话者与三轮标注；补三 judge 的 Within-1pt、ICC(A,k) 和 Visual Grounding 一致性较弱的边界。
+- 录入主表、MiniCPM FPS sweep、captioning collapse、visual-stream ignorance、token doubling，以及 Anam/Keyframe 级联头像的 2.8–3.5 秒时序缺口；保留正文 87% 与图中 91% captioning 口径差异。
+- 新增 conversational-nonverbal-dynamics 与 tor-alignment 概念页，并补全 full-duplex、rubric 与 LM-as-judge 的 VideoFDB 来源。

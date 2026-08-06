@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>时空级联数字人 · 先定长片骨架，再并行补高清细节 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · spatio-temporal-cascade-avatar</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>时空级联数字人 · 先定长片骨架，再并行补高清细节</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>先用低成本模型覆盖整段视频、决定故事与关键动作，再把相邻关键帧之间的短片并行生成并空间超分，避免一个高清模型顺序生成几分钟、让误差逐段积累。</p>
+<h2>直觉</h2>
+<p>像动画制作：分镜负责“整场戏发生什么”，原画负责关键姿势，中间画负责把动作连起来，上色与精修最后补细节。每一层只解决最适合自己的时间或空间尺度。</p>
+<h2>一条教学时间线</h2>
+<p>24 秒成片每 4 秒放一个锚点，会有 7 个锚帧和 6 段区间。全局蓝图先保证人物从左走到右；六个局部模型分别填 0–4、4–8…20–24 秒。相邻段共享边界锚帧，最后再做过渡与超分。</p>
+<p>这组数字只用于解释。真正系统的锚点间隔、重叠宽度和采样步数必须由论文或实现公开，不能从“级联”一词猜出来。</p>
+<h2>代价</h2>
+<p>它增加了多个模型阶段、条件转换和边界管理；全局蓝图若一开始就错，后面的高清精修只会把错误画得更清楚。并行生成缩短墙钟时间的前提，是 GPU 足够且拼接与通信不成为新瓶颈。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/klingavatar-2.html">klingavatar-2</a> · KlingAvatar 2.0 的蓝图、锚帧、首尾帧短片与超分</li>
+<li><a href="../concepts/autoregressive-vs-bidirectional-video-diffusion.html">autoregressive-vs-bidirectional-video-diffusion</a> · 长视频顺序续写为什么会漂</li>
+<li><a href="../concepts/diffusion-transformer.html">diffusion-transformer</a> · 各级生成器的常见骨干</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/klingavatar-2.html"><span class="cat">paper</span>KlingAvatar 2.0 · 先画低清分镜，再并行补成五分钟高清数字人</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/spatio-temporal-cascade-avatar.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
