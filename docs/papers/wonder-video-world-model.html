@@ -64,6 +64,9 @@ figcaption span:first-child{color:var(--violet)}figcaption b{color:var(--coral)}
 .steps{display:grid;grid-template-columns:1fr 38px 1fr 38px 1fr 38px 1fr;gap:6px}.step{padding:18px;background:white;border:1px solid var(--line);border-top:6px solid var(--violet);min-height:185px}.step:nth-of-type(3){border-top-color:var(--coral)}.step:nth-of-type(5),.step:nth-of-type(7){border-top-color:var(--cyan)}.step b{font:700 10px/1.4 "DM Mono",monospace;color:var(--violet)}.step strong{display:block;margin:8px 0;font-size:20px}.step p{font:400 13px/1.6 "Noto Sans SC",sans-serif}
 .gan{display:grid;grid-template-columns:1fr 44px 1fr 44px 1fr;gap:7px}.gan .node{min-height:190px}.pair{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}.pair span{padding:9px;text-align:center;font:600 11px/1.4 "DM Mono",monospace}.pair .real{background:var(--green2)}.pair .fake{background:var(--coral2)}
 .infra{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.infra .card{min-height:235px}.infra ul{padding-left:18px;font:400 13px/1.65 "Noto Sans SC",sans-serif}
+table.recap{width:100%;min-width:0;border-collapse:collapse;background:var(--sheet);font:400 14px/1.62 "Noto Sans SC",sans-serif;margin:14px 0}
+table.recap td{padding:10px 13px;border:1px solid var(--line);text-align:left;background:var(--sheet)}
+table.recap td:first-child{white-space:nowrap}
 .table-wrap{overflow-x:auto}table{width:100%;min-width:980px;border-collapse:collapse;background:white;font:400 12px/1.5 "Noto Sans SC",sans-serif}th,td{padding:10px 9px;border-bottom:1px solid var(--line);text-align:right}th{background:var(--ink);color:white;font:500 10px/1.4 "DM Mono",monospace}th:first-child,td:first-child{text-align:left}.best{background:var(--green2);font-weight:700}.group td{background:var(--violet2);color:var(--violet);font-weight:700;text-align:left}
 .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.metric{padding:17px;background:var(--ink);color:white;text-align:center;font:500 11px/1.5 "DM Mono",monospace}.metric strong{display:block;color:#a6e9e9;font-size:26px}.metric.coral strong{color:#ffb09a}
 .limits{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.limit{padding:17px;background:white;border:1px solid var(--line);min-height:160px}.limit b{display:block;color:var(--coral);font:700 11px/1.4 "DM Mono",monospace}.limit p{font:400 13px/1.62 "Noto Sans SC",sans-serif}
@@ -180,7 +183,7 @@ figcaption span:first-child{color:var(--violet)}figcaption b{color:var(--coral)}
     取 f=100，点 (X,Z)=(2,4)：u = 100×2/4 = <span class="ans">50</span><br>
     相机向右 1，点相对相机变成 X=1：u' = 100×1/4 = <span class="ans">25</span><br>
     屏幕位移 = 25−50 = <span class="ans">−25</span>（向左）<br><br>
-    同样的点若只有 Z=2 米：50 → 0，位移是 <span class="ans">−50</span><br>
+    同样的点若离相机只有 Z=2 米：u = 100×2/2 = 100，右移后 = 100×1/2 = 50，位移是 <span class="ans">−50</span><br>
     <span class="hi">近处动 50，远处动 25；控制视频把“平移会产生视差”直接画给模型看。</span>
   </div>
   <p>它比位姿 embedding 多了像素对齐的视觉后果，又比输入点云更能外推：格点和环境球本来就是人工搭的完整空间，不会因为原图没拍到右边就断掉。</p>
@@ -189,18 +192,27 @@ figcaption span:first-child{color:var(--violet)}figcaption b{color:var(--coral)}
 <section id="s4">
   <h2><span class="n">SECTION 04</span><span>一条输入公式怎样同时装下 I2V 和 V2V</span></h2>
   <p>底座是 Wan2.1-I2V-14B。3D causal VAE 在空间压 8 倍、时间压 4 倍；DiT<a class="jr" href="#g-06">06</a> 在 latent<a class="jr" href="#g-04">04</a> 上工作，umT5 文本通过 cross-attention 注入。</p>
-  <div class="symbols">
-    <div class="sym"><b><code class="m">z^s</code></b>可选的干净 source 视频 latent；I2V 没有</div>
-    <div class="sym"><b><code class="m">z^a</code></b>干净 anchor 首帧 latent</div>
-    <div class="sym"><b><code class="m">z^p</code></b>等待生成的目标帧 latent</div>
-    <div class="sym"><b><code class="m">\alpha_\tau,\sigma_\tau</code></b>时刻 <code class="m">\tau</code> 的信号与噪声系数</div>
-    <div class="sym"><b><code class="m">\epsilon</code></b>和目标 latent 同形状的高斯噪声</div>
-    <div class="sym"><b><code class="m">[\cdot]_T,[\cdot]_C</code></b>沿时间拼 / 沿通道拼</div>
-    <div class="sym"><b><code class="m">m</code></b>source / target mask，告诉模型哪里要生成</div>
-    <div class="sym"><b><code class="m">z^c</code></b>相机控制视频的 latent</div>
-  </div>
-  <p class="formula-purpose">先沿时间排三条流，再沿通道把三条流叠起来：</p>
+  <p><strong>先拆掉一个最大的坑：这条式子里有两种“时间”，别混。</strong>下标 <code class="m">\tau</code> 是<strong>去噪时刻</strong>——现在噪声还剩多少，四步生成里它只取四个值；而 <code class="m">[\cdot]_T</code> 的 T 是<strong>视频时间轴</strong>——先播 source、再播 anchor、再播待生成的目标段。整条输入 <code class="m">u_\tau</code> 里，<code class="m">\tau</code> 变一次只有目标段那一截跟着变，前两截永远是干净的。</p>
+  <h3>一条流一条流搭</h3>
+  <p><strong>第 1 条 · 场景流：把三段视频在时间轴上排成一列。</strong>source 是原视频（V2V 才有），anchor 是首帧，目标段是真正要生成的部分——只有它加噪，因为只有它是「考题」，前两段是「已知条件」：</p>
+  <div class="formula" data-expr="\left[\,z^s,\;z^a,\;\alpha_\tau z^p+\sigma_\tau\epsilon\,\right]_T"></div>
+  <p><strong>第 2 条 · mask 流：告诉模型哪一段是要生成的。</strong>记号 <code class="m">0_m^s</code> 读作「一块<strong>全填 0</strong> 的东西，形状对齐 source 段（上标 <code class="m">s</code>），属于 mask 流（下标 <code class="m">m</code>）」——0 和 1 不是数值信号，是<strong>整段的标签</strong>：0 = 这段是给定条件，1 = 这段属于目标域。anchor 虽然是干净的，但它是<strong>输出视频的第一帧</strong>，属于目标域，所以标 1：</p>
+  <div class="formula" data-expr="\left[\,0_m^s,\;1_m^a,\;1_m^p\,\right]_T"></div>
+  <p><strong>第 3 条 · 相机流：§ 03 渲染的控制视频，按段对齐。</strong>source 段填 0——控制信号描述的是<strong>目标轨迹</strong>，原视频那段没有目标轨迹可言；anchor 和目标段各自对上自己的控制 latent：</p>
+  <div class="formula" data-expr="\left[\,0_c^s,\;z^{c,a},\;z^{c,p}\,\right]_T"></div>
+  <p><strong>最后一步 · 沿通道把三条流叠起来。</strong>三条流现在共用同一条视频时间轴，长度一样；<code class="m">[\cdot]_C</code> 是把<strong>同一时刻</strong>的三份内容像 RGB 三层一样叠在一起——每个时间位置上，模型一眼同时看到「画面长什么样、这里要不要生成、镜头要怎么走」：</p>
   <div class="formula" data-expr="u_\tau=\left[\left[z^s,z^a,\alpha_\tau z^p+\sigma_\tau\epsilon\right]_T,\left[0_m^s,1_m^a,1_m^p\right]_T,\left[0_c^s,z^{c,a},z^{c,p}\right]_T\right]_C"></div>
+  <p>符号速查（每个都已在上面搭建时就地讲过）：</p>
+  <table class="recap">
+    <tr><td><code class="m">z^s</code></td><td>可选的干净 source 视频 latent；I2V 没有</td></tr>
+    <tr><td><code class="m">z^a</code></td><td>干净 anchor 首帧 latent</td></tr>
+    <tr><td><code class="m">z^p</code></td><td>等待生成的目标帧 latent；三段里唯一加噪的</td></tr>
+    <tr><td><code class="m">\alpha_\tau,\sigma_\tau</code></td><td>去噪时刻 <code class="m">\tau</code> 的信号与噪声系数；<code class="m">\tau</code> 不是视频时间</td></tr>
+    <tr><td><code class="m">\epsilon</code></td><td>和目标 latent 同形状的高斯噪声</td></tr>
+    <tr><td><code class="m">[\cdot]_T,[\cdot]_C</code></td><td>沿视频时间接龙 / 同一时刻按通道叠放</td></tr>
+    <tr><td><code class="m">0_m^s,1_m^a</code></td><td>全 0 / 全 1 的整段标签：下标 = 属于哪条流，上标 = 对齐哪一段</td></tr>
+    <tr><td><code class="m">z^{c,a},z^{c,p}</code></td><td>anchor / 目标段各自的相机控制 latent</td></tr>
+  </table>
   <figure>
     <figcaption><span>Fig 05 · 同一时间轴上的三条输入流</span><b>I2V 只是删掉 source 那一列</b></figcaption>
     <div class="streams">
@@ -210,12 +222,15 @@ figcaption span:first-child{color:var(--violet)}figcaption b{color:var(--coral)}
     </div>
   </figure>
   <div class="calc">
-    取 z^s=.4, z^a=.8, z^p=2, α=.75, σ=.25, ε=−2<br>
-    带噪目标 = αz^p + σε = .75×2 + .25×(−2) = <span class="ans">1</span><br><br>
-    场景流 = [.4, .8, 1]<br>
-    mask 流 = [0, 1, 1]<br>
-    相机流 = [0, <code class="m">c_a</code>, <code class="m">c_p</code>]<br><br>
-    <span class="hi">I2V：删掉第一列 .4 / 0 / 0；公式和网络接口不用另写一套。</span>
+    取 zˢ=.4, zᵃ=.8, zᵖ=2, α=.75, σ=.25, ε=−2<br>
+    带噪目标 = αzᵖ + σε = .75×2 + .25×(−2) = <span class="ans">1</span><br><br>
+    三条流排在同一条时间轴上，再按列（同一时刻）叠起来：<br><br>
+    时间位置　　source　anchor　target<br>
+    场景通道　　 .4　　　.8　　　1<br>
+    mask 通道　　0　　　 1　　　 1<br>
+    相机通道　　 0　　　 <code class="m">c_a</code>　　 <code class="m">c_p</code><br>
+    　　　　　　 ↑ 每一列就是 u_τ 在该时刻喂给 DiT 的通道向量<br><br>
+    <span class="hi">I2V：删掉 source 那一整列 .4 / 0 / 0；公式和网络接口不用另写一套。</span>
   </div>
 </section>
 
@@ -241,6 +256,7 @@ figcaption span:first-child{color:var(--violet)}figcaption b{color:var(--coral)}
   <p>Wonder 不把旧帧压成几枚 token 后就丢掉原文。每个历史 chunk 保留完整 K/V，另存一个 pooled key 摘要。当前 query 先用摘要检索，选中后再拿对应 chunk 的完整 K/V 做 attention。</p>
   <div class="symbols"><div class="sym"><b><code class="m">\mathcal A_t</code></b>当前第 <code class="m">t</code> 块真正激活的历史块集合</div><div class="sym"><b><code class="m">\mathcal N_r(t)</code></b>最近 <code class="m">r</code> 个块，论文取 <code class="m">r=2</code></div><div class="sym"><b><code class="m">\mathcal M(t)</code></b>除首块和最近块外的中段历史</div><div class="sym"><b><code class="m">\bar Q_t,\bar K_c</code></b>当前 query 与历史 chunk 的池化摘要</div><div class="sym"><b><code class="m">\operatorname{sim}</code></b>摘要相似度函数；v1 未给具体形式</div><div class="sym"><b><code class="m">k</code></b>从中段历史取多少个最相关块</div></div>
   <div class="formula" data-expr="\mathcal A_t=\{0\}\cup\mathcal N_r(t)\cup\operatorname{TopK}_k\left\{\operatorname{sim}(\bar Q_t,\bar K_c)\mid c\in\mathcal M(t)\right\}"></div>
+  <p>整条读作：本轮激活 = 首块 <code class="m">\{0\}</code>（永远保留的 sink）∪ 最近 <code class="m">r</code> 块 ∪ 中段历史里摘要相似度最高的 <code class="m">k</code> 块。TopK 那一项写的是相似度集合，取的是<strong>得分最高的那 k 个块本身</strong>。</p>
   <figure>
     <figcaption><span>Fig 07 · 历史 0–7，当前生成第 8 块</span><b>固定首块 + 检索中段 + 最近两块</b></figcaption>
     <div class="chunks">
@@ -269,6 +285,7 @@ figcaption span:first-child{color:var(--violet)}figcaption b{color:var(--coral)}
       <div class="head">query 7</div><div class="keep">必留</div><div class="drop">丢</div><div class="maybe">保留</div><div class="drop">丢</div><div class="maybe">保留</div><div class="keep">最近</div><div class="keep">最近</div><div class="keep">自身</div>
     </div></div>
   </figure>
+  <p>式子里的 <code class="m">\mathbf 1[\cdot]</code> 是指示函数：方括号里的条件成立就取 1，不成立取 0。所以整条式子只是在说两句话：这条边属于必留集合 <code class="m">\mathcal R</code> → mask 恒为 1；属于可选集合 <code class="m">\mathcal O</code> → mask 由抛硬币 <code class="m">b</code> 决定。<code class="m">a(i,j)</code> 就是「query 块 <code class="m">i</code> 到 KV 块 <code class="m">j</code> 这条边」本身，用来查它归哪个集合。</p>
   <p>若 <code class="m">p_\ell=.6</code>，每条可选边保留概率是 <code class="m">1-.6=.4</code>。必须边不乘 <code class="m">b</code>，所以永远为 1。这里的随机 mask 是<strong>训练课程</strong>；推理时真正用的是 §06 的确定性 top-k 检索，两者不是同一个动作。</p>
 </section>
 
@@ -276,6 +293,11 @@ figcaption span:first-child{color:var(--violet)}figcaption b{color:var(--coral)}
   <h2><span class="n">SECTION 08</span><span>Mixture of Students：仍做四步，只是每步换更合适的权重</span></h2>
   <p>第 1 步面对大噪声，主要搭房间与主体；最后一步接近干净图，主要补纹理和边缘。让同一套 14B 参数包办所有阶段，容量容易不够。Mixture of Students<a class="jr" href="#g-15">15</a> 直接按固定去噪时刻分工，不需要 token router。</p>
   <div class="formula" data-expr="\hat x_0=G_3^{(4)}\circ G_3^{(3)}\circ G_2^{(2)}\circ G_1^{(1)}(x_{\tau_1})"></div>
+  <div class="symbols">
+    <div class="sym"><b><code class="m">\circ</code></b>函数复合：先算右边、把结果喂给左边，所以从右往左读</div>
+    <div class="sym"><b><code class="m">G_2^{(3)}</code> 这类记号</b>下标 = 用哪套学生权重，上标 = 这是第几次前向</div>
+    <div class="sym"><b><code class="m">x_{\tau_1}</code></b>起点：噪声最大的那个去噪时刻的输入</div>
+  </div>
   <figure>
     <figcaption><span>Fig 09 · 三套 generator 接力四次前向</span><b>从右往左读组合式</b></figcaption>
     <div class="steps">
