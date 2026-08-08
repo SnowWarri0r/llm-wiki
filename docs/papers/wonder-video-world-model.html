@@ -324,27 +324,40 @@ table.recap td:first-child{white-space:nowrap}
 
 <section id="s9">
   <h2><span class="n">SECTION 09</span><span>GAN Control Regularization：DMD 修画面，这一项专门盯镜头</span></h2>
-  <p>DMD score 差更容易抓到边缘和纹理；镜头飞太快、方向慢慢偏则是低频整体布局。逐像素 L2 会把不确定的画外内容平均成模糊图，所以作者改用冻结 teacher 的中间特征当观察器。</p>
+  <p>先看不加这一项会发生什么。论文描述的失败模式很具体：只用 DMD 训下去，student <strong>镜头越跑越快、逐渐偏离目标轨迹，最终模糊甚至场景坍塌</strong>。根子在 DMD 的梯度口味：score 残差主要强调<strong>高频局部伪影</strong>——边缘、纹理这类逐点就能看出错的东西；而相机运动造成的是<strong>低频布局变化</strong>（整个画面往哪边流、流多快），这类错误在 score 差里拿到的梯度很弱。</p>
+  <p>那为什么不直接对镜头加一个逐像素 L2？因为画外内容本来就没有唯一正确答案，逐像素回归会把所有合理可能平均成一张模糊图。作者的选择是第三条路：拿<strong>冻结 teacher 的中间特征</strong>当观察器，用一个判别器只盯「镜头是否照着轨迹走」这一件事。</p>
   <p class="formula-purpose">真实和 student latent 加同一份高噪声：</p>
   <div class="formula" data-expr="z_\tau^r=\alpha_\tau z_0+\sigma_\tau\epsilon,\qquad z_\tau^f=\alpha_\tau\hat z_0+\sigma_\tau\epsilon"></div>
   <div class="symbols"><div class="sym"><b><code class="m">z_0</code></b>真实视频 latent</div><div class="sym"><b><code class="m">\hat z_0</code></b>student rollout latent</div><div class="sym"><b><code class="m">r/f</code></b>real / fake 标签，不是指数</div><div class="sym"><b><code class="m">\epsilon</code></b>两支共享的同一份高斯噪声</div><div class="sym"><b><code class="m">d^r,d^f</code></b>判别器给真实/生成轨迹的控制一致性分数</div></div>
+  <p><strong>「高」字是设计的一半。</strong>加噪本身就是一次低通过滤：噪声一大，边缘纹理这些高频细节最先被淹没，能在高噪声下存活的只剩大结构——画面布局、整体运动。所以在高噪声位置比较 real/fake，判别器<strong>想看纹理也看不见</strong>，只能去比镜头和布局；这正好和 DMD 的高频口味互补。至于两支共享同一份 <code class="m">\epsilon</code> 的作用，见本节末尾的抵消式。</p>
   <figure>
     <figcaption><span>Fig 10 · 控制判别器真正比较什么</span><b>不是直接比较两张像素图</b></figcaption>
     <div class="gan">
       <div class="node coral"><b>PAIR</b><strong>同噪声 real / fake</strong><div class="pair"><span class="real">真实 z<sub>0</sub></span><span class="fake">student ẑ<sub>0</sub></span></div><p>共享噪声让随机扰动在两者差值中抵消。</p></div><div class="arrow"></div>
-      <div class="node"><b>FROZEN TEACHER</b><strong>浅层与中层特征作差</strong><p>线性投影后做“中层 − 第 1 层”，stride conv 压掉高频纹理。</p></div><div class="arrow"></div>
-      <div class="node cyan"><b>REGISTER TOKENS</b><strong>汇总低频布局</strong><p>三枚 token 分别 cross-attend 三张低频图，输出 real / fake 控制分数。</p></div>
+      <div class="node"><b>FROZEN TEACHER</b><strong>三个中层各自减第一层</strong><p>第 1 层特征当参照，三个选定中层各自与它作差，得到三张低频差值图。</p></div><div class="arrow"></div>
+      <div class="node cyan"><b>REGISTER TOKENS</b><strong>汇总低频布局</strong><p>三枚可学习 token 各自 cross-attend 一张差值图，结果求和，输出控制分数。</p></div>
     </div>
   </figure>
+  <p class="formula-purpose">每张「低频差值图」是这样算出来的：</p>
+  <div class="formula" data-expr="\Delta F_{M_i}=\psi_i\!\left(\eta_i(F_{M_i})-\eta_1(F_1)\right)"></div>
+  <div class="symbols">
+    <div class="sym"><b><code class="m">F_1</code></b>冻结 teacher 第 1 层特征，当参照</div>
+    <div class="sym"><b><code class="m">F_{M_i}</code></b>三个选定中层的特征，<code class="m">i=1,2,3</code></div>
+    <div class="sym"><b><code class="m">\eta_i,\eta_1</code></b>线性投影，把两层特征对齐到同一通道空间</div>
+    <div class="sym"><b><code class="m">\psi_i</code></b>带步长的卷积下采样，把残余高频纹理再压一遍</div>
+  </div>
+  <p><strong>为什么是「中层减第一层」而不是直接用中层？</strong>第 1 层特征基本还是网络刚接住的输入本身——控制视频的通道刚刚注入、还没被消化；中层则是读懂之后的场景表示。两者作差，剩下的就是「网络把这段输入（含相机指令）消化成了什么」，输入里长得一样的部分被减掉了。三枚可学习的 register token 各自用 cross-attention 读一张差值图，把整张图的布局信息收进一枚 token，三枚求和后打出一个分数。</p>
   <p class="formula-purpose">相对 softplus 让判别器拉开分数，generator 追上真实：</p>
   <div class="formula" data-expr="\mathcal L_{\mathrm{ctrl}}^D=\mathbb E[\operatorname{softplus}(d^f-d^r)],\qquad \mathcal L_{\mathrm{ctrl}}^G=\mathbb E[\operatorname{softplus}(d^r-d^f)]"></div>
   <p><code class="m">\operatorname{softplus}(x)=\log(1+e^x)</code>。若 <code class="m">d^r=1.2,d^f=.3</code>，generator 损失是：</p>
   <div class="formula" data-expr="\log(1+e^{1.2-.3})=\log(1+e^{.9})\approx1.241"></div>
   <p>fake 分数升到 1.0 后，损失下降为：</p>
   <div class="formula" data-expr="\log(1+e^{1.2-1.0})=\log(1+e^{.2})\approx.798"></div>
+  <p>两条损失是同一个差值的两个方向：判别器希望 <code class="m">d^r</code> 高过 <code class="m">d^f</code>（把差拉开），generator 希望 <code class="m">d^f</code> 追上 <code class="m">d^r</code>（把差追平）。<strong>只看差值、不看绝对分</strong>是「相对」二字的含义——两边分数一起漂移不影响梯度，博弈只围绕差距进行。</p>
   <p>总目标为：</p>
   <div class="formula" data-expr="\mathcal L_G=\mathcal L_{\mathrm{DMD}}+\lambda_{\mathrm{ctrl}}\mathcal L_{\mathrm{ctrl}}^G"></div>
   <div class="note"><strong>为什么必须共享噪声：</strong><div class="formula" data-expr="z_\tau^r-z_\tau^f=\alpha_\tau(z_0-\hat z_0)+\sigma_\tau(\epsilon-\epsilon)=\alpha_\tau(z_0-\hat z_0)"></div>随机噪声不再成为 real/fake 的额外差异，判别器更专注于视频和相机控制。</div>
+  <div class="warn"><strong>论文没给的数：</strong>「高噪声」的具体 <code class="m">\tau</code> 区间和总目标里的 <code class="m">\lambda_{\mathrm{ctrl}}</code> 取值都未公开；选哪三个中层也没说。本节机制可读，超参不可复现。</div>
 </section>
 
 <section id="s10">
@@ -357,7 +370,25 @@ table.recap td:first-child{white-space:nowrap}
       <div class="card"><b>MULTI-GPU</b><strong>把不同算子切对维度</strong><ul><li>FFN / cross-attention 按序列切</li><li>self-attention 按 head 切</li><li>NCCL All-to-All 转换布局</li><li>KV cache 也按 head 分片</li></ul></div>
     </div>
   </figure>
-  <p>超过 20 秒训练窗口后，active cache 组织成 <code>[sink, top-k, recent]</code>，并把相对 frame index 映射回训练时见过的位置范围。训练则用 FSDP2<a class="jr" href="#g-16">16</a>、sequence parallel、tensor parallel、activation checkpointing、梯度累积和 replayed back-propagation，公开配置为 32 张 H200、global batch 64。</p>
+  <h3>先算预算：一个 chunk 只有约半秒</h3>
+  <p>论文给了一个关键数：<strong>chunk 取 2 个 latent 帧</strong>。§ 04 说过 VAE 时间压 4 倍，所以一个 chunk 约合 8 个像素帧；16 FPS 下这是 <strong>0.5 秒的画面</strong>。也就是说，从收到镜头动作到吐出下一个 chunk，检索 + 4 次 14B 前向 + 通信 + 解码全加起来必须压进约半秒——项目页那句「0.5 秒 constant latency」正好就是一个 chunk 的滞后。论文没公开逐模块耗时，下面三本账讲的是每一项<strong>为什么</strong>能省。</p>
+  <h3>COMPUTE 账：省的全是「重复付的钱」</h3>
+  <p><strong>编译并重放固定执行图</strong>——一次 14B 前向由几千个 GPU kernel 组成，每次 launch 都有 CPU 侧固定开销；四步生成每半秒重来一遍，这笔小钱乘起来不小。好在每个 chunk 的计算图形状完全一样，编译一次、之后按录好的模式重放即可。<strong>fused QKV</strong> 是把 Q、K、V 三次投影并成一次矩阵乘：省两次 kernel launch，更省两次把同一份输入从显存里搬进搬出。<strong>缓存 RoPE 与 timestep modulation</strong> 能成立是因为这两样都和画面内容无关：RoPE 的旋转角只由位置编号决定，算一次躺着用；timestep modulation（AdaLN 的 scale/shift）只由去噪时刻 <code class="m">\tau</code> 决定，而四步采样的 <code class="m">\tau</code> 是四个固定值——预计算四套查表即可。FlashAttention-3<a class="jr" href="#g-21">21</a> 负责让 attention 本身不把 <code class="m">N\times N</code> 中间表写进显存。</p>
+  <h3>CACHE 账：凡是不随本轮变化的都别再算</h3>
+  <p>历史 chunk 的 self-attention K/V（§ 06 的记忆本体）、文本 cross-attention 的 K/V（prompt 全程不变，编一次用到底）、检索用的 pooled key，都算一次就存。输出端用 <strong>Tiny VAE</strong>——一个小得多的解码器，条件输入和生成结果都用它编解，把每个 chunk 的解码时间从预算里压下去。</p>
+  <h3>MULTI-GPU 账：为什么 FFN 按序列切、attention 却按 head 切</h3>
+  <p>这是三本账里最值得懂的一条。<strong>FFN 对每个 token 是独立的</strong>——一个 token 过 FFN 不需要看别的 token，所以把序列切成几段分给几张卡，各算各的零通信。cross-attention 同理：video token 只看文本 K/V（很小，每卡复制一份），token 之间互不相干。<strong>但 self-attention 里每个 token 要看所有 token</strong>，按序列切就得把别人卡上的 K/V 都搬过来，通信立刻爆炸；好在 head 之间是独立的——改成每张卡拿全部 token 的<strong>一部分 head</strong>，卡内自己算完整 attention，零跨卡读取。</p>
+  <div class="calc">
+    4 张卡、16 个 head、N 个 token：<br>
+    FFN 布局　　　每卡 N/4 个 token × 全部 16 head 的通道<br>
+    attention 布局　每卡 N 个 token × 4 个 head<br><br>
+    两种布局之间靠 <span class="hi">NCCL All-to-All</span> 互倒：每张卡把手里的数据按目标卡切成 4 份，<br>
+    同时收下其他卡发来的 4 份——一进 self-attention 倒一次，出来再倒回去。<br>
+    KV cache 也按 head 分片存，正好躺在 attention 布局里，检索读取不用再搬。
+  </div>
+  <h3>超过训练窗口之后：位置编号折回去</h3>
+  <p>训练最长只见过 20 秒，往后生成时 frame index 会超出 RoPE 见过的范围（§ 05 的 YaRN 管的是 teacher 拉长课程，这里是推理期的另一道保险）。做法是把 active cache 组织成 <code>[sink, top-k, recent]</code>，再<strong>按相对距离把这几块的编号重新映射回训练见过的区间</strong>——反正本轮只有这几块在场，编号只要保住它们之间的先后和远近关系即可。论文没给具体映射公式，只说 by relative distance。</p>
+  <p>训练侧那串配置也各有各的账：FSDP2<a class="jr" href="#g-16">16</a> 把参数/梯度/优化器状态分片省显存；sequence / tensor parallel 就是上面推理侧那两种切法；activation checkpointing 不存中间激活、反传时重算，拿计算换显存；梯度累积用多个小 batch 凑出 global batch 64；<strong>replayed back-propagation</strong> 用于给自回归 rollout 求导时省显存——论文只给了引用（Hong et al. 2025）没讲机制，思路上属于「rollout 时不存、反传时重放」一族。公开配置为 32 张 H200。</p>
   <div class="warn"><strong>项目页的性能口径：</strong>16 FPS、0.5 秒 constant latency。论文没有同时给出分辨率、推理 GPU 型号与数量、显存、batch、首块延迟和各模块耗时，因此不能拿这两个数直接和单卡模型横比。</div>
 </section>
 
@@ -435,6 +466,7 @@ table.recap td:first-child{white-space:nowrap}
     <li id="g-18"><span class="term">Umeyama alignment</span>：用闭式解把估计轨迹旋转、平移并统一尺度，再公平计算轨迹误差。</li>
     <li id="g-19"><span class="term">RoPE</span>：按 token 位置旋转 query/key，让注意力点积天然携带相对位置；每个维度用不同旋转频率。详见 <a href="rope.html">RoPE 一页</a>。</li>
     <li id="g-20"><span class="term">YaRN</span>：RoPE 的长度外推方案。按波长分段：管近距离的高频不动，管远距离的低频按比例压缩回训练见过的范围，再配注意力温度补偿；不重训就能在更长序列上读对相对位置。</li>
+    <li id="g-21"><span class="term">FlashAttention-3</span>：精确 attention 的 IO 优化——分块计算、不把 <code class="m">N\times N</code> 中间表写回显存，并利用 Hopper 架构的异步执行；算的还是同一套 attention。</li>
   </ol>
 </section>
 <footer class="colophon"><span>WONDER · BEGINNER-FIRST TECHNICAL READING</span><span>INGESTED 2026-07-29 · SOURCE v1</span></footer>
