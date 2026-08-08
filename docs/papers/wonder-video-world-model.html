@@ -388,7 +388,8 @@ table.recap td:first-child{white-space:nowrap}
   </div>
   <h3>超过训练窗口之后：位置编号折回去</h3>
   <p>训练最长只见过 20 秒，往后生成时 frame index 会超出 RoPE 见过的范围（§ 05 的 YaRN 管的是 teacher 拉长课程，这里是推理期的另一道保险）。做法是把 active cache 组织成 <code>[sink, top-k, recent]</code>，再<strong>按相对距离把这几块的编号重新映射回训练见过的区间</strong>——反正本轮只有这几块在场，编号只要保住它们之间的先后和远近关系即可。论文没给具体映射公式，只说 by relative distance。</p>
-  <p>训练侧那串配置也各有各的账：FSDP2<a class="jr" href="#g-16">16</a> 把参数/梯度/优化器状态分片省显存；sequence / tensor parallel 就是上面推理侧那两种切法；activation checkpointing 不存中间激活、反传时重算，拿计算换显存；梯度累积用多个小 batch 凑出 global batch 64；<strong>replayed back-propagation</strong> 用于给自回归 rollout 求导时省显存——论文只给了引用（Hong et al. 2025）没讲机制，思路上属于「rollout 时不存、反传时重放」一族。公开配置为 32 张 H200。</p>
+  <p>训练侧那串配置也各有各的账：FSDP2<a class="jr" href="#g-16">16</a> 把参数/梯度/优化器状态分片省显存；sequence / tensor parallel 就是上面推理侧那两种切法；activation checkpointing 不存中间激活、反传时重算，拿计算换显存；梯度累积用多个小 batch 凑出 global batch 64；<strong>replayed back-propagation</strong> 用于给自回归 rollout 求导时省显存。公开配置为 32 张 H200。</p>
+  <p>这个「重放」容易读歪，两个常见误解先排掉：<strong>省下的不是梯度，是中间激活</strong>——梯度本来就是边算边往回传、不需要囤，要囤的是反传时用到的每层前向激活；<strong>它也不省计算，反而主动多算</strong>——rollout 先整体跑完不留计算图（只留各段输出这类最小状态），反传时一段一段重放：这段重新前向、这次留激活，算完梯度就丢，再下一段。峰值显存从「整条 rollout 的激活」降到「一段的激活」，代价是前向整体多跑一遍——跟 activation checkpointing 同一笔买卖，只是把范围从单个网络的层间推广到整条 rollout 的段间。论文只给了引用（Hong et al. 2025）没讲机制细节，跨段梯度是否截断也没说。</p>
   <div class="warn"><strong>项目页的性能口径：</strong>16 FPS、0.5 秒 constant latency。论文没有同时给出分辨率、推理 GPU 型号与数量、显存、batch、首块延迟和各模块耗时，因此不能拿这两个数直接和单卡模型横比。</div>
 </section>
 
