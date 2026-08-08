@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wan-Streamer v0.1 · 一个模型边听边看边说边生成画面</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet">
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+:root{--paper:#f8f1e8;--paper2:#efe2d5;--ink:#201a21;--muted:#6f626d;--rule:#c9b7bd;--accent:#a93468;--accent2:#156f7a;--gold:#d48b25;--red:#b33b2f;--green:#397653;--dark:#241829;--white:#fffaf4;--shadow:rgba(53,31,46,.12)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;color:var(--ink);background:var(--paper);font:400 17px/1.78 "Noto Sans SC",sans-serif}body:before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 12% 8%,rgba(169,52,104,.08),transparent 28%),linear-gradient(rgba(32,26,33,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(32,26,33,.025) 1px,transparent 1px);background-size:auto,32px 32px,32px 32px}.page{position:relative;max-width:1160px;margin:auto;padding:48px 40px 100px}.mast{display:flex;justify-content:space-between;border-top:4px solid var(--dark);border-bottom:1px solid var(--rule);padding:12px 0;color:var(--muted);font:500 11px/1.4 "DM Mono",monospace;letter-spacing:1.7px;text-transform:uppercase}.hero{padding:70px 0 48px}.eyebrow,.num,.tag,.label{font:500 11px/1.4 "DM Mono",monospace;letter-spacing:1.4px;text-transform:uppercase}.eyebrow,.num{color:var(--accent)}h1{font:800 clamp(48px,8.2vw,98px)/.94 "Manrope","Noto Sans SC",sans-serif;letter-spacing:-4.5px;margin:18px 0 25px;max-width:1050px}h1 em{color:var(--accent);font-style:normal}.dek{max-width:920px;font-size:23px;line-height:1.58;color:#4f424c}.tldr{margin-top:28px;padding:20px 23px;background:var(--white);border:1px solid var(--rule);border-left:6px solid var(--accent);box-shadow:7px 7px 0 var(--paper2)}.tldr b{color:var(--accent);font:500 11px "DM Mono",monospace;letter-spacing:1px}.section{margin-top:88px}.num{display:block;margin-bottom:10px}h2{font:800 38px/1.24 "Manrope","Noto Sans SC",sans-serif;letter-spacing:-1px;margin:0 0 21px}h3{font:800 22px/1.35 "Manrope","Noto Sans SC",sans-serif;margin:0 0 10px}p{margin:13px 0}.lead{font-size:21px;max-width:920px;color:#544752}a{color:var(--accent);text-underline-offset:3px}a.jr{display:inline-flex;justify-content:center;align-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:white;text-decoration:none;font:700 10px/1 "DM Mono",monospace;vertical-align:super;margin-left:3px}code{font:500 .86em "DM Mono",monospace;background:#fff7f0;border:1px solid var(--rule);padding:1px 5px;border-radius:3px}.formula{margin:21px 0;padding:25px 14px;background:var(--dark);color:var(--white);border-left:6px solid var(--accent);overflow-x:auto;text-align:center}.formula .katex{font-size:1.16em}.grid2,.grid3,.grid4{display:grid;gap:14px}.grid2{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:repeat(3,1fr)}.grid4{grid-template-columns:repeat(4,1fr)}.card{background:var(--white);border:1px solid var(--rule);padding:20px;min-width:0;box-shadow:4px 4px 0 var(--paper2)}.card .big{display:block;color:var(--accent);font:800 29px/1.1 "DM Mono",monospace;margin-bottom:10px}.card.warn{border-top:5px solid var(--gold)}.tag{display:inline-block;padding:5px 8px;margin-bottom:11px;color:white;background:var(--accent)}.tag.teal{background:var(--accent2)}.tag.gold{background:var(--gold);color:var(--ink)}figure{margin:34px 0;padding:24px;border:1px solid var(--rule);background:rgba(255,250,244,.92);box-shadow:8px 8px 0 var(--shadow);overflow:hidden}figcaption{display:flex;justify-content:space-between;gap:20px;padding-bottom:13px;margin-bottom:23px;border-bottom:1px dashed var(--rule);color:var(--muted);font:500 11px/1.5 "DM Mono",monospace;letter-spacing:1.1px;text-transform:uppercase}figcaption b{color:var(--accent)}.overview{display:grid;grid-template-columns:1fr 34px 1.25fr 34px 1fr;gap:8px;align-items:stretch}.node{padding:18px;background:var(--paper);border-top:6px solid var(--accent)}.node:nth-of-type(3){border-color:var(--accent2)}.node:nth-of-type(5){border-color:var(--gold)}.node small{font:500 10px "DM Mono",monospace;color:var(--muted)}.arr{display:grid;place-items:center;color:var(--accent);font:800 24px "DM Mono",monospace}.streams{display:grid;grid-template-columns:120px repeat(6,1fr);border-left:1px solid var(--rule);border-top:1px solid var(--rule);min-width:800px}.streams>div{padding:11px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);min-height:58px;font-size:13px}.streams .head{min-height:auto;background:var(--paper2);font:500 10px "DM Mono",monospace;color:var(--muted)}.streams .who{font:700 12px "DM Mono",monospace}.streams .text{background:#f5dce7}.streams .audio{background:#d8ecee}.streams .video{background:#f4e5bf}.scroll{overflow-x:auto}.vars{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:18px 0}.vars>div{padding:12px 14px;background:var(--white);border:1px solid var(--rule);font-size:14px}.vars>div>code:first-child{display:block;color:var(--accent);font-size:14px;margin-bottom:4px}.mask{display:grid;grid-template-columns:90px repeat(3,1fr);max-width:650px;margin:12px auto;border-left:1px solid var(--rule);border-top:1px solid var(--rule)}.mask>div{padding:15px 10px;text-align:center;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);font-size:13px}.mask .head{background:var(--paper2);font:500 10px "DM Mono",monospace}.mask .yes{background:#d9ebe2;color:#28523b;font-weight:700}.mask .no{background:#eadfe3;color:#8d707a}.flowline{display:grid;grid-template-columns:1fr 70px 1fr;gap:10px;align-items:center}.endpoint{padding:22px;background:var(--paper);border:1px solid var(--rule);text-align:center}.endpoint b{display:block;font:800 30px "DM Mono",monospace;color:var(--accent)}.mid{display:grid;place-items:center;color:var(--accent2);font:800 17px "DM Mono",monospace}.calc{margin:19px 0;border:1px solid var(--rule);background:var(--white)}.step{display:grid;grid-template-columns:160px 1fr;gap:14px;padding:13px 16px;border-bottom:1px solid var(--rule)}.step:last-child{border-bottom:0}.step b{color:var(--accent);font:700 12px "DM Mono",monospace}.train{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;counter-reset:s}.stage{position:relative;padding:21px;background:var(--white);border:1px solid var(--rule);border-top:6px solid var(--accent)}.stage:nth-child(2){border-color:var(--accent2)}.stage:nth-child(3){border-color:var(--gold)}.stage:before{counter-increment:s;content:"0" counter(s);display:block;color:var(--muted);font:500 11px "DM Mono",monospace;margin-bottom:10px}.schedule{min-width:840px;display:grid;grid-template-columns:120px repeat(4,1fr);border-left:1px solid var(--rule);border-top:1px solid var(--rule)}.schedule>div{padding:12px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);min-height:72px;font-size:13px}.schedule .head{min-height:auto;background:var(--paper2);color:var(--muted);font:500 10px "DM Mono",monospace}.schedule .role{font:700 13px "DM Mono",monospace;color:var(--accent)}.schedule .think{background:#f2dce5}.schedule .perform{background:#dceced}.latency{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.clock{background:var(--white);border:1px solid var(--rule);padding:20px;border-top:6px solid var(--accent)}.clock:nth-child(2){border-color:var(--accent2)}.clock:nth-child(3){border-color:var(--gold)}.clock strong{display:block;font:800 37px/1 "DM Mono",monospace;margin:10px 0}.note,.warning{margin:18px 0;padding:17px 19px;background:#f0dce5;border-left:5px solid var(--accent)}.warning{background:#f1ddd8;border-color:var(--red)}.label{display:block;color:var(--accent);margin-bottom:5px}.warning .label{color:var(--red)}table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:12px;border-bottom:1px solid var(--rule);text-align:left;vertical-align:top}th{color:var(--muted);font:500 10px "DM Mono",monospace;text-transform:uppercase}.yes-t{color:var(--green);font-weight:700}.no-t{color:var(--red);font-weight:700}.gloss{margin-top:86px;padding-top:30px;border-top:3px double var(--rule)}.gloss ol{list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:0 26px;counter-reset:g}.gloss li{position:relative;padding:14px 0 14px 43px;border-bottom:1px dashed var(--rule);font-size:14px}.gloss li:before{counter-increment:g;content:counter(g,decimal-leading-zero);position:absolute;left:0;top:18px;color:var(--accent);font:500 10px "DM Mono",monospace}.gloss li:target{background:#f3dce7}.sources{margin-top:48px;padding:20px;border:1px solid var(--rule);background:var(--white);font-size:14px}.sources li{margin:7px 0}
+@media(max-width:800px){.page{padding:32px 17px 75px}.mast span:last-child{display:none}.hero{padding-top:50px}h1{font-size:49px;letter-spacing:-3px}.dek{font-size:19px}.section{margin-top:68px}h2{font-size:31px}.grid2,.grid3,.grid4,.train,.latency,.gloss ol,.vars{grid-template-columns:1fr}.overview{grid-template-columns:1fr}.arr{height:26px;transform:rotate(90deg)}figure{padding:17px 13px;margin-left:-3px;margin-right:-3px}figcaption{display:block}figcaption b{display:block;margin-top:6px}.flowline{grid-template-columns:1fr}.mid{padding:7px;transform:rotate(90deg)}.step{grid-template-columns:1fr;gap:4px}.mask{grid-template-columns:70px repeat(3,1fr)}.mask>div{padding:12px 4px;font-size:11px}.formula .katex{font-size:.98em}}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · wan-streamer-v01</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+  <header class="mast"><span>Native streaming · full duplex</span><span>arXiv 2606.25041v3 · 29 Jun 2026</span></header>
+  <section class="hero">
+    <div class="eyebrow">Wan Team · the foundation</div>
+    <h1>一个模型<br><em>边听边看，也边说边画</em></h1>
+    <p class="dek">给实时视频助手用：用户还在说话，它仍能看见、听见并做出可见反应；智能体自己说话时，用户也能随时打断。v0.1 把这些要求写进训练结构，而不是用一串外部模块临时拼起来。</p>
+    <div class="tldr"><b>TL;DR</b>　双方的文字、声音和画面共六路信号，被排进一条因果时间线。文本预测下一个 token；音频和视频 latent 联合做条件流匹配；每 160 ms 处理一次，新输出立即播出并写回历史。原型在 192×336、25 FPS 下报告约 200 ms 模型侧延迟，量化质量证据仍很少。</div>
+  </section>
+
+  <section class="section"><span class="num">00 · Read this first</span><h2>先排除四种误读</h2>
+    <div class="grid4">
+      <div class="card"><span class="big">01</span><h3>不是一块裸 Transformer</h3><p>仍有文字 tokenizer、因果音视频编码器、VAE<a class="jr" href="#g-01">01</a>和解码器。统一的是中间状态与交互建模。</p></div>
+      <div class="card"><span class="big">02</span><h3>文本不做去噪</h3><p>离散文字走 next-token<a class="jr" href="#g-02">02</a>；连续音视频 latent 才走 flow matching。</p></div>
+      <div class="card"><span class="big">03</span><h3>不是两套独立模型</h3><p>Thinker–Performer<a class="jr" href="#g-03">03</a>是同一模型上线时的两卡分工。</p></div>
+      <div class="card warn"><span class="big">04</span><h3>不是完整 SOTA 证明</h3><p>自然倾听、打断、主动说话主要靠 demo；没有统一量化 benchmark。</p></div>
+    </div>
+  </section>
+
+  <section class="section"><span class="num">01 · The real problem</span><h2>级联数字人为什么“能说话”却不像在交谈</h2>
+    <p class="lead">常见管线是 VAD → ASR → LLM → TTS → 动画。每个模块各自都能很强，但交接处会等待；文字还把语气、停顿、目光和手势压扁成一句话。</p>
+    <div class="grid3">
+      <div class="card"><span class="tag">等待</span><h3>上一环没吐完，下一环不开工</h3><p>识别、思考、合成、渲染逐段排队，首个可感知回应越来越晚。</p></div>
+      <div class="card"><span class="tag teal">误差</span><h3>识别错，整条链跟着错</h3><p>文字中间表示丢掉声调和视觉线索，后面的语音与动画无法补回。</p></div>
+      <div class="card"><span class="tag gold">行为</span><h3>没人统一学习“何时回应”</h3><p>倾听、停顿、重叠、让出话轮和打断落在外部规则里，模型学不到完整行为。</p></div>
+    </div>
+    <div class="note"><span class="label">关键转折</span>全双工<a class="jr" href="#g-04">04</a>不是“把响应再压快一点”。用户说话时，智能体仍要生成倾听表情；智能体说话时，感知链也不能停。这要求训练和推理都从一开始遵守原生流式契约。</div>
+  </section>
+
+  <section class="section"><span class="num">02 · System map</span><h2>完整拼图：六路信号，只有一份持续更新的历史</h2>
+    <p>先只认顺序，不要求现在理解每个名词。用户的文字、声音和画面先被编码；统一 Transformer 更新状态；文字和连续 latent 走两种输出目标；声音与画面解码后播出，同时把干净 latent 写回历史。</p>
+    <figure id="fig-1"><figcaption><span>Fig 01 · 端到端闭环</span><b>感知、决定、生成、播出、写回</b></figcaption>
+      <div class="overview">
+        <div class="node"><small>USER · CURRENT UNIT</small><h3>文字 + 声音 + 画面</h3><p>只编码当前已经到达的信号，不等未来。</p></div><div class="arr">→</div>
+        <div class="node"><small>ONE CAUSAL STATE</small><h3>统一 Transformer</h3><p>读取双方历史，更新语言、响应时机与音视频条件。</p></div><div class="arr">→</div>
+        <div class="node"><small>AGENT · NEXT RESPONSE</small><h3>文字 + 声音 + 画面</h3><p>播出后立即写回，下一单元能看见自己刚做过什么。</p></div>
+      </div>
+    </figure>
+    <div class="scroll"><div class="streams">
+      <div class="head">时间 / 信号</div><div class="head">用户文字</div><div class="head">用户音频</div><div class="head">用户视频</div><div class="head">智能体文字</div><div class="head">智能体音频</div><div class="head">智能体视频</div>
+      <div class="who">unit k</div><div class="text">“等一下”</div><div class="audio">新声音</div><div class="video">4 帧画面</div><div class="text">缩短回答</div><div class="audio">收尾语气</div><div class="video">停住并看向用户</div>
+      <div class="who">写回后</div><div>进入历史</div><div>进入历史</div><div>进入历史</div><div>进入历史</div><div>干净 latent</div><div>干净 latent</div>
+    </div></div>
+    <p>这三条约束合起来就是<a href="../concepts/native-streaming-contract.html">原生流式契约</a>：所有组件只读过去；新观测立即能用；生成结果马上提交回历史。</p>
+  </section>
+
+  <section class="section"><span class="num">03 · Probability</span><h2>那条条件概率，只是在写“每一段都接着历史算”</h2>
+    <p>先定义符号，再看公式。这里没有扩散，也没有训练损失；它只描述整段交互怎样按时间拆开。</p>
+    <div class="vars">
+      <div><code class="m">u_k=(u_k^t,u_k^a,u_k^v)</code>第 <code class="m">k</code> 个单元到达的用户文字、音频和视频。</div>
+      <div><code class="m">y_k=(y_k^t,y_k^a,y_k^v)</code>第 <code class="m">k</code> 个单元生成的智能体三模态回应。</div>
+      <div><code class="m">K</code>整段交互包含多少个流式单元；是正整数。</div>
+      <div><code class="m">\theta</code>模型全部可训练参数；下标表示概率由这套参数给出。</div>
+      <div><code class="m">u_{\le k}</code>用户从开始到当前单元的全部观测。</div>
+      <div><code class="m">y_{\lt k}</code>智能体在当前单元之前已经生成并写回的历史。</div>
+    </div>
+    <div class="formula" data-display="true">p_\theta(y_{1:K}\mid u_{1:K})=\prod_{k=1}^{K}p_\theta\!\left(y_k^t,y_k^a,y_k^v\,\middle|\,\substack{u_{\le k}^t,u_{\le k}^a,u_{\le k}^v,\\y_{\lt k}^t,y_{\lt k}^a,y_{\lt k}^v}\right)</div>
+    <div class="calc">
+      <div class="step"><b>左边问什么</b><span>已知整段用户输入，整串智能体回应出现的概率是多少。</span></div>
+      <div class="step"><b>右边怎样算</b><span>第 <code class="m">k</code> 段只根据已经到达的用户信号和已经提交的回应历史，算当前三模态回应的条件概率。</span></div>
+      <div class="step"><b>为什么相乘</b><span>概率链式法则把整条路径拆成逐段条件概率；不是说各段互相独立。</span></div>
+      <div class="step"><b>数字验算</b><span>三段概率为 <code>0.8、0.6、0.5</code>，整条路径为 <code class="m">0.8\times0.6\times0.5=0.24</code>。</span></div>
+    </div>
+  </section>
+
+  <section class="section"><span class="num">04 · Block causal</span><h2>160 ms 一块：块内并行，块间不偷看未来</h2>
+    <p>文字按 token 一个接一个预测；同一小段音视频却包含很多同时刻附近的 token。若全部强行逐 token 串行，GPU 并行度太差。块因果注意力<a class="jr" href="#g-05">05</a>把“时间先后”放在块之间，把“并行计算”留在块内部。</p>
+    <figure id="fig-2"><figcaption><span>Fig 02 · 三块可见性</span><b>行是当前查询，列是允许读取的块</b></figcaption>
+      <div class="mask">
+        <div class="head">查询 / 读取</div><div class="head">块 1</div><div class="head">块 2</div><div class="head">块 3</div>
+        <div class="head">块 1</div><div class="yes">可见</div><div class="no">未来</div><div class="no">未来</div>
+        <div class="head">块 2</div><div class="yes">可见</div><div class="yes">块内可见</div><div class="no">未来</div>
+        <div class="head">块 3</div><div class="yes">可见</div><div class="yes">可见</div><div class="yes">块内可见</div>
+      </div>
+    </figure>
+    <p>25 FPS 表示一帧 40 ms，因此一个 160 ms streaming unit<a class="jr" href="#g-06">06</a>正好包含 4 帧。块越长，模型看到新用户信号的机会越少；块越短，调度、通信和解码次数越多。160 ms 是论文报告的运行点，不是普适最优值。</p>
+  </section>
+
+  <section class="section"><span class="num">05 · Two output targets</span><h2>为什么文字预测编号，音频和视频却要学速度</h2>
+    <div class="grid2">
+      <div class="card"><span class="tag">离散输出</span><h3>文字：从有限词表选下一个 token</h3><p>模型给每个词表编号一个概率，用交叉熵<a class="jr" href="#g-07">07</a>提高正确编号的概率。</p></div>
+      <div class="card"><span class="tag teal">连续输出</span><h3>音视频：从噪声沿速度场走回 latent</h3><p>像素压缩后的 latent<a class="jr" href="#g-08">08</a>是连续向量，无法把所有可能值列成词表。</p></div>
+    </div>
+    <p>两条路共享同一份干净历史。声音和画面还一起进入统一 Transformer，所以语调、口型、动作和场景变化在解码之前就能互相影响。这里的“联合”是建模结构，不等于论文已经用量化实验证明每类音画同步都准确。</p>
+  </section>
+
+  <section class="section"><span class="num">06 · Flow matching</span><h2>条件流匹配：先造直线路径，再让模型回归速度</h2>
+    <p>本节沿用一组标量，从路径一直算到损失。真实模型处理的是高维音频和视频 latent，算法相同。</p>
+    <div class="vars">
+      <div><code class="m">m\in\{a,v\}</code>当前讨论音频 <code class="m">a</code> 或视频 <code class="m">v</code>。</div>
+      <div><code class="m">z_0^m</code>数据给出的干净目标 latent；下标 0 指路径的数据端。</div>
+      <div><code class="m">\epsilon^m\sim\mathcal N(0,I)</code>从标准高斯采样的噪声；不是模型误差。</div>
+      <div><code class="m">\tau\in[0,1]</code>流路径上的位置；0 在数据端，1 在噪声端。</div>
+      <div><code class="m">c_k</code>当前已经到达的用户观测与已经提交的智能体历史。</div>
+      <div><code class="m">f_\theta</code>统一 Transformer 给出的速度预测。</div>
+    </div>
+    <div class="formula" data-display="true">\begin{aligned}z_\tau^m&=(1-\tau)z_0^m+\tau\epsilon^m,\\[4pt]\frac{\partial z_\tau^m}{\partial\tau}&=\epsilon^m-z_0^m\end{aligned}</div>
+    <figure id="fig-3"><figcaption><span>Fig 03 · 一维教学路径</span><b>干净端 2 · 噪声端 −1 · 路径位置 0.25</b></figcaption>
+      <div class="flowline"><div class="endpoint"><small>干净数据端</small><b>2</b><span><code class="m">z_0</code></span></div><div class="mid">1.25 ←</div><div class="endpoint"><small>高斯噪声端</small><b>−1</b><span><code class="m">\epsilon</code></span></div></div>
+    </figure>
+    <div class="calc">
+      <div class="step"><b>路径中间点</b><span><code class="m">z_\tau=(1-0.25)\times2+0.25\times(-1)=1.5-0.25=1.25</code></span></div>
+      <div class="step"><b>目标速度</b><span><code class="m">\epsilon-z_0=-1-2=-3</code>；负号表示从 1.25 往干净数据端走。</span></div>
+      <div class="step"><b>模型预测</b><span>假设 <code class="m">f_\theta=-2.4</code>，比目标速度慢了 <code>0.6</code>。</span></div>
+    </div>
+    <p>速度有了，损失只需要衡量预测与目标差多少：</p>
+    <div class="formula" data-display="true">\mathcal L_{\mathrm{FM}}^m=\mathbb E_{\epsilon^m}\left[\left\|f_\theta(z_\tau^a,z_\tau^v,c_k,\tau)-\frac{\partial z_\tau^m}{\partial\tau}\right\|_2^2\right]</div>
+    <div class="vars">
+      <div><code class="m">\mathbb E_{\epsilon^m}[\cdot]</code>换不同噪声样本重复计算，再取平均。</div>
+      <div><code class="m">\|r\|_2^2</code>误差向量每个分量先平方再相加；标量时就是 <code class="m">r^2</code>。</div>
+      <div><code class="m">\partial z_\tau^m/\partial\tau</code>上一条路径公式求出的目标速度，不是另一个网络。</div>
+      <div><code class="m">\mathcal L_{\mathrm{FM}}^m</code>模态 <code class="m">m</code> 的 flow-matching 损失；越小越接近目标方向。</div>
+    </div>
+    <div class="note"><span class="label">代入上面的同一组数</span><code class="m">((-2.4)-(-3))^2=0.6^2=0.36</code>。若视频分支误差为 <code>0.5</code>，它的平方损失是 <code>0.25</code>；等权相加的教学总损失为 <code>0.61</code>。论文没有公开两种模态的实际权重，不能把等权当成实现事实。</div>
+  </section>
+
+  <section class="section"><span class="num">07 · Training</span><h2>三阶段训练：先会各项能力，再练交谈，最后压缩推理</h2>
+    <figure id="fig-4"><figcaption><span>Fig 04 · 训练课程表</span><b>每一阶段都解决前一阶段留下的问题</b></figcaption>
+      <div class="train">
+        <div class="stage"><h3>独立任务预训练</h3><p>从 Qwen 权重初始化 Transformer；混合理解、ASR/TTS、对话、图像/音频/视频与联合生成任务。</p></div>
+        <div class="stage"><h3>端到端交互</h3><p>把六路信号按真实时间交错，学习何时说、何时听、怎样打断以及怎样把输出写回历史。</p></div>
+        <div class="stage"><h3>低延迟蒸馏</h3><p>强教师用 CFG<a class="jr" href="#g-09">09</a>和更多求解步；学生吸收引导并减少步数，再连续读取自己的历史训练。</p></div>
+      </div>
+    </figure>
+    <h3>为什么还要 rolling distillation</h3>
+    <p>若学生训练时永远读取真实历史，部署时却读取自己生成的历史，轻微色偏和姿态误差会越滚越大。self-forcing<a class="jr" href="#g-10">10</a>让学生连续 rollout；distribution matching<a class="jr" href="#g-11">11</a>再把学生轨迹往教师分布拉。假设学生每段把脸向右偏 0.1，单段训练永远只见 0.1；连续三段会真的暴露 <code class="m">0.1\to0.2\to0.3</code> 的累积偏移。</p>
+    <div class="warning"><span class="label">论文没有给蒸馏公式</span>公开文字只到“强教师 + CFG + 更多步 → 少步学生；再用 self-forcing 与 distribution matching 做 rolling distillation”。教师/学生步数、CFG scale、rollout 长度与完整损失都没公开，不能补一条看似合理的“官方公式”。</div>
+  </section>
+
+  <section class="section"><span class="num">08 · Serving</span><h2>两卡流水：第 k 拍生成，第 k+1 拍才解码播出</h2>
+    <p>训练时是一套模型，上线才按工作性质拆开。Thinker 做短而急的感知、状态、KV cache<a class="jr" href="#g-12">12</a>与解码；Performer 只跑昂贵的 flow-matching solver<a class="jr" href="#g-13">13</a>。</p>
+    <figure id="fig-5"><figcaption><span>Fig 05 · 相邻单元的真实依赖</span><b>列是同时发生的实际时间拍</b></figcaption><div class="scroll"><div class="schedule">
+      <div class="head">角色 / 拍</div><div class="head">unit k</div><div class="head">unit k+1</div><div class="head">unit k+2</div><div class="head">unit k+3</div>
+      <div class="role">Thinker</div><div class="think">编码 <code class="m">u_k</code><br>更新 <code class="m">KV_k</code><br>解码 <code class="m">y_{k-1}</code></div><div class="think">编码 <code class="m">u_{k+1}</code><br>更新 <code class="m">KV_{k+1}</code><br>解码 <code class="m">y_k</code></div><div class="think">编码 <code class="m">u_{k+2}</code><br>解码 <code class="m">y_{k+1}</code></div><div class="think">继续流水</div>
+      <div class="role">Performer</div><div class="perform">依据 <code class="m">KV_k</code><br>生成 <code class="m">y_k</code></div><div class="perform">依据 <code class="m">KV_{k+1}</code><br>生成 <code class="m">y_{k+1}</code></div><div class="perform">生成 <code class="m">y_{k+2}</code></div><div class="perform">继续流水</div>
+    </div></div></figure>
+    <p>Thinker 在第 <code class="m">k</code> 拍收到当前用户单元，同时解码上一段 <code class="m">y_{k-1}</code>；Performer 依据新 KV 生成 <code class="m">y_k</code>。所以图里的箭头不能把“生成 <code class="m">y_k</code>”直接连到同拍的“解码 <code class="m">y_k</code>”。</p>
+  </section>
+
+  <section class="section"><span class="num">09 · Three clocks</span><h2>160 ms、200 ms、550 ms 分别在算什么</h2>
+    <div class="latency">
+      <div class="clock"><span class="tag">吞吐节拍</span><strong>160 ms</strong><p>Performer 计算加通信要压进一个单元，否则队列持续积压。</p></div>
+      <div class="clock"><span class="tag teal">模型响应</span><strong>≈200 ms</strong><p>输入经过编码、状态更新、latent 生成和解码的 signal-to-signal<a class="jr" href="#g-14">14</a>路径。</p></div>
+      <div class="clock"><span class="tag gold">远程总计</span><strong>≈550 ms</strong><p>约 200 ms 模型侧 + 论文预留的 350 ms 双向网络预算。</p></div>
+    </div>
+    <div class="note"><span class="label">流水线类比</span>工厂每 160 ms 能下线一件，不代表一件产品从进厂到出厂只花 160 ms。多件产品在不同工位重叠，稳态节拍可以短于单件全路径时间。</div>
+  </section>
+
+  <section class="section"><span class="num">10 · Evidence</span><h2>实验真正证明了什么</h2>
+    <table><thead><tr><th>结论</th><th>证据级别</th><th>怎样读</th></tr></thead><tbody>
+      <tr><td>192×336、25 FPS、160 ms 单元</td><td class="yes-t">明确报告</td><td>v0.1 proof of concept 的运行点。</td></tr>
+      <tr><td>模型侧约 200 ms</td><td class="yes-t">两 GPU 路径</td><td>从用户单元可用到对应音视频单元解码完成。</td></tr>
+      <tr><td>远程总交互约 550 ms</td><td>带假设</td><td>额外加入 350 ms 双向网络预算。</td></tr>
+      <tr><td>自然倾听、打断、主动说话</td><td>定性演示</td><td>论文描述并给 demo，没有成功率或人评。</td></tr>
+      <tr><td>比所有竞品更快</td><td class="no-t">不能直接下结论</td><td>竞品混有模型延迟、first packet、TTFB、FPS 和渲染阶段口径。</td></tr>
+    </tbody></table>
+    <h3>两张对比表为什么不能只挑最小数字</h3>
+    <p>语音系统可能报告 model latency、first token、first packet 或 API TTFB；视觉系统常报告 20–40 FPS、首帧等待或 audio-to-visual delay。前者不输出同步视频，后者往往不包含外部 ASR、LLM 和 TTS。Wan-Streamer 报的是完整音视频响应路径，但这也不是第三方统一硬件复测。</p>
+  </section>
+
+  <section class="section"><span class="num">11 · Qualitative behavior</span><h2>空闲、倾听、打断、主动开口：目前都是什么证据</h2>
+    <div class="grid4">
+      <div class="card"><span class="tag">空闲</span><p>保持视线、姿态、呼吸和微表情，不冻结成头像。</p></div>
+      <div class="card"><span class="tag teal">倾听</span><p>根据用户声音与画面出现点头、目光变化和姿态反馈。</p></div>
+      <div class="card"><span class="tag gold">打断</span><p>自己说话时仍持续感知，用户插话后可停止、缩短或转向。</p></div>
+      <div class="card"><span class="tag">主动</span><p>看到新物体、动作或表情时，可以不等明确口令就评论。</p></div>
+    </div>
+    <p>这些行为说明统一时间线有合理的能力出口，但论文本身没有给长时身份一致性、打断响应率、错误主动发言率、唇音同步或自然度人评。正确结论是“定性样例支持机制可行”，不是“已由 benchmark 证明接近真人”。</p>
+  </section>
+
+  <section class="section"><span class="num">12 · Missing evidence</span><h2>报告没有告诉我们的事</h2>
+    <div class="grid2">
+      <div class="card"><h3>模型与数据</h3><p>参数量、具体 Qwen 初始化版本、模块尺寸、三类数据规模与配比、清洗流程。</p></div>
+      <div class="card"><h3>训练与蒸馏</h3><p>求解步数、CFG scale、rollout 长度、完整损失、训练卡数和超参数。</p></div>
+      <div class="card"><h3>部署硬件</h3><p>两张 GPU 的型号、显存、互联、各阶段耗时、CUDA graph 与优化 kernel 的细节。</p></div>
+      <div class="card"><h3>质量与复现</h3><p>统一画质/自然度指标、消融、统计显著性、开源权重和可运行代码。</p></div>
+    </div>
+  </section>
+
+  <section class="section"><span class="num">13 · Version map</span><h2>三代各自解决哪一层问题</h2>
+    <div class="grid3">
+      <div class="card"><span class="tag">v0.1 · 地基</span><h3>怎样实时边听边生成</h3><p>统一因果时间线、联合音视频流匹配、生成写回历史与两卡流水。</p></div>
+      <div class="card"><span class="tag teal">v0.2 · 算力</span><h3>怎样更高清还不涨延迟</h3><p>192×336 → 640×368，Thinker 保持单卡，Performer 改为多卡 Ulysses。</p></div>
+      <div class="card"><span class="tag gold">v0.3 · 表示</span><h3>怎样从普通视频学开放行为</h3><p>把持久世界与局部事件拆开，让普通录像预训练接到实时交互。</p></div>
+    </div>
+  </section>
+
+  <section class="gloss"><h2>术语直接补全</h2><ol>
+    <li id="g-01"><b>VAE</b>：把高维音频或视频压成连续 latent，再从 latent 还原；v0.1 要求时间方向严格因果。</li>
+    <li id="g-02"><b>Next-token prediction</b>：根据已知 token 给词表里下一个编号分配概率。</li>
+    <li id="g-03"><b>Thinker–Performer</b>：同一模型的部署分工；前者管感知、状态和解码，后者管连续 latent 生成。</li>
+    <li id="g-04"><b>Full duplex</b>：输入与输出同时保持工作；模型说话时仍能听见和看见用户。</li>
+    <li id="g-05"><b>Block-causal attention</b>：同一时间块内部并行互看，后面的块只能读取当前与过去。</li>
+    <li id="g-06"><b>Streaming unit</b>：固定时长的流式工作单元；本报告为 160 ms，即 25 FPS 下 4 帧。</li>
+    <li id="g-07"><b>Cross entropy</b>：提高正确离散 token 概率的训练损失。</li>
+    <li id="g-08"><b>Latent</b>：VAE 压缩后的连续表示；比原始波形或像素更适合生成。</li>
+    <li id="g-09"><b>CFG</b>：把有条件和无条件预测的差值放大，提高条件遵循；代价通常是两次前向。</li>
+    <li id="g-10"><b>Self-forcing</b>：训练时让模型继续读取自己生成的历史，贴近真实部署输入。</li>
+    <li id="g-11"><b>Distribution matching</b>：把学生生成分布向教师或真实目标分布拉近，而不只逐样本对齐。</li>
+    <li id="g-12"><b>KV cache</b>：attention 历史 Key/Value；新单元追加，过去不用整段重算。</li>
+    <li id="g-13"><b>Flow-matching solver</b>：沿模型预测的速度场做若干更新，把噪声变成干净 latent。</li>
+    <li id="g-14"><b>Signal-to-signal latency</b>：用户信号进入，到对应可感知音视频回应完成解码的全路径时间。</li>
+  </ol></section>
+  <section class="sources"><b>Sources</b><ul>
+    <li><a href="https://arxiv.org/abs/2606.25041">Wan-Streamer v0.1 · arXiv 2606.25041v3</a></li>
+    <li><a href="https://wan-streamer.com/v0.1/">官方项目页、延迟口径与定性演示</a></li>
+    <li><a href="wan-streamer-v02.html">下一篇：Wan-Streamer v0.2 · 高分辨率同延迟</a></li>
+    <li><a href="wan-streamer-v03.html">再下一篇：Wan-Streamer v0.3 · World + Event Stream</a></li>
+  </ul></section>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('.formula[data-display="true"]').forEach(function(el){
+    if(!window.katex||el.dataset.rendered)return;
+    katex.render((el.textContent||'').trim(),el,{throwOnError:true,displayMode:true});
+    el.dataset.rendered='1';
+  });
+});
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!document.getElementById(id))return;
+      e.preventDefault();
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>

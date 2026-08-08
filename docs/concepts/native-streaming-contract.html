@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>视频扩散里的 Teacher Forcing · 训练时喂真历史 · Concept</title>
+<title>原生流式契约 · 从训练开始就不等未来 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,45 +53,49 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · teacher-forcing-video-diffusion</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · native-streaming-contract</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>视频扩散里的 Teacher Forcing · 训练时喂真历史</h1>
+  <h1>原生流式契约 · 从训练开始就不等未来</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>训练因果视频模型时，第 <code>i</code> 段只生成当前 noisy chunk，但把此前的真实干净视频段当历史条件；这样容易学会下一段，却会造成训练看真历史、推理看自己历史的 exposure bias。</p>
-<h2>用四段视频看懂</h2>
-<p>假设视频 latent 被切成 <code>A、B、C、D</code> 四段，当前训练目标是 <code>C</code>：</p>
-<pre><code class="language-text">训练：真实 A + 真实 B + noisy C → 还原真实 C
-推理：生成 A + 生成 B + noisy C → 生成 C
+<p>所有模块只读过去；新观测立刻能用；刚生成的结果马上写回历史。</p>
+<h2>为什么不是把离线模型切成小块</h2>
+<p>离线视频编码器可能为了理解当前帧偷看未来帧；回合制对话会等用户说完一句才开始回答；视频生成器可能整段双向去噪。把这些模块外面套一层流式接口，内部仍在等未来，延迟降不下来，也无法在自己说话时继续听用户。</p>
+<p>原生流式契约同时约束三件事：</p>
+<ol>
+<li>因果：编码器、Transformer、VAE 与解码器不读取未来。</li>
+<li>即时：每个新到的 160 ms 单元立刻进入上下文。</li>
+<li>提交：每个生成单元播出的同时写回历史，下一单元能看见自己刚做过什么。</li>
+</ol>
+<h2>三个单元的例子</h2>
+<pre><code class="language-text">unit 1：看到用户抬手 → 生成“看向手部” → 写回历史
+unit 2：听到“等一下” → 读取 unit 1 的动作 → 停住并倾听 → 写回历史
+unit 3：用户继续解释 → 读取前两步 → 改写下一句回应
 </code></pre>
-<p>因果 mask 保证 <code>C</code> 看不到未来的 <code>D</code>。但训练时的 <code>A、B</code> 没有任何生成误差，推理时则可能已经漂色、变形或偏离相机轨迹。模型从没在这种有瑕疵的历史上练过，误差便会一段段放大。</p>
-<h2>为什么还要先这样训</h2>
-<p>如果一开始就让未训练好的模型反复读取自己的烂输出，后续每段的输入分布会不断变化，学习很不稳定。Teacher forcing 先把“只看过去、续写下一段”的基本能力教会，再由 self-rollout / self forcing 阶段让模型适应自己的历史。</p>
-<h2>它和文字自回归的关系</h2>
-<p>LLM 训练时用真实前词预测下一个词，推理时读取自己刚生成的词；视频版本的矛盾相同，只是一个 token 换成了一小段 noisy latent，而且每段内部还要进行多步或少步去噪。</p>
+<p>如果第二步只读用户输入、不读模型自己的上一动作，它可能一边“停住”一边继续执行原来的动作，长会话会逐渐自相矛盾。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/minwm.html">minwm</a> · Stage 1 用 teacher forcing 获得因果能力，Stage 3 用 self-rollout 修正分布错位</li>
-<li><a href="../papers/solaris-multiplayer-world-model.html">solaris-multiplayer-world-model</a> · Diffusion Forcing 与 Checkpointed Self Forcing</li>
-<li><a href="../concepts/autoregressive-vs-bidirectional-video-diffusion.html">autoregressive-vs-bidirectional-video-diffusion</a> · 因果生成与整段双向去噪的取舍</li>
-<li><a href="../papers/wan-streamer-v01.html">wan-streamer-v01</a> · rolling distillation 让少步学生连续读取自己的生成历史</li>
+<li><a href="../papers/wan-streamer-v01.html">wan-streamer-v01</a> · 三条契约如何落到六路信号与两卡部署</li>
+<li><a href="../concepts/block-causal-attention.html">block-causal-attention</a> · 块内并行、块间只看过去</li>
+<li><a href="../concepts/kv-cache.html">kv-cache</a> · 已提交历史怎样避免重复计算</li>
+<li><a href="../concepts/full-duplex-multimodal-interaction.html">full-duplex-multimodal-interaction</a> · 为什么输入与输出必须重叠</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 4 处</span>
-  <ul><li><a href="../papers/minwm.html"><span class="cat">paper</span>minWM · 把离线视频扩散模型改造成可操控、能逐段输出的世界模型</a></li><li><a href="../papers/wan-streamer-v01.html"><span class="cat">paper</span>Wan-Streamer v0.1 · 一个模型怎样边听、边看、边说、边生成画面</a></li><li><a href="../concepts/causal-consistency-distillation.html"><span class="cat">concept</span>Causal Consistency Distillation · 不存整条 ODE 轨迹也能学少步</a></li><li><a href="../concepts/rolling-streaming-distillation.html"><span class="cat">concept</span>滚动式流媒体蒸馏 · 让少步学生练习读取自己的历史</a></li></ul>
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/wan-streamer-v01.html"><span class="cat">paper</span>Wan-Streamer v0.1 · 一个模型怎样边听、边看、边说、边生成画面</a></li><li><a href="../concepts/causal-streaming-vae.html"><span class="cat">concept</span>因果流式 VAE · 压缩当前音视频时不偷看未来</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/teacher-forcing-video-diffusion.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/native-streaming-contract.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
