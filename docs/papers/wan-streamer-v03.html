@@ -116,10 +116,65 @@ figcaption{display:flex;justify-content:space-between;gap:18px;padding-bottom:13
     <div class="note reveal d4"><span class="label">一条因果链</span>预训练阶段回答“录像里接下来发生了什么”；交互阶段回答“用户刚这样说，角色接下来该做什么”。输出角色变了，但“根据世界和历史预测下一变化”的骨架没有变。</div>
   </figure>
 
-  <h2><span class="n">§ 02</span>为什么要拆：背景不是每一刻都在重新发生</h2>
+
+  <h2><span class="n">§ 02</span>前置 · v0.1 是地基：一个 Transformer 边听边看边说边画</h2>
+  <p>v0.3 论文把架构写成「沿用前代，不再重述」，而 wiki 里没有 v0.1/v0.2 的单独页——所以这两节把地基补齐。内容取自官方 v0.1/v0.2 报告与项目页（见文末 Sources），不是 v0.3 论文原文。</p>
+
+  <h3>级联管线输在哪</h3>
+  <p>实时数字人此前的主流做法是拼装：ASR 把用户语音转文字 → 大模型写回复 → TTS 合成语音 → 动画模块驱动口型表情。三个毛病是结构性的：<strong>每个模块边界都在等</strong>——上一环吐出完整结果，下一环才能开工；<strong>误差沿链累积</strong>——识别错一个词，后面全链跟着错；最要命的是<strong>响应时机、轮次交接、身份保持没有任何一环负责学</strong>——「像不像在跟人说话」恰恰取决于这些，它们却被文本这个隐藏的中间表示切断了。</p>
+  <p>全双工<a class="jr" href="#g-16">16</a>的要求更进一步：<strong>输出的同时必须仍在感知</strong>——用户说话时角色要有可见的倾听反应，角色说话时用户随时能打断让它改口。v0.1 的核心论点是：这是<strong>建模约束，不是部署优化</strong>。底子若是离线编码器、双向解码器或回合制对话，靠工程手段救不回真正的低延迟全双工。</p>
+
+  <h3>一条交错的因果序列</h3>
+  <p>v0.1 的答案是把六路信号——用户侧与角色侧各自的文本、音频、视频——<strong>交错排进同一条因果时间线</strong>，由一个 Transformer 处理；没有外部 VAD<a class="jr" href="#g-18">18</a>、ASR、语言模型、TTS 或动画模块。整个系统只遵守一份流式契约：</p>
+  <figure id="fig-2">
+    <figcaption><span>Fig 02 · v0.1 的流式契约</span><b>每个 160 ms 单元走完一整圈</b></figcaption>
+    <div class="grid3">
+      <div class="card reveal"><span class="tag">契约 ①</span><h3>全因果</h3><p>每个组件——VAE、编码器、Transformer、解码器——都只依赖过去，任何位置都不等未来。</p></div>
+      <div class="card reveal d2"><span class="tag teal">契约 ②</span><h3>立即可用</h3><p>新观测到的每个单元马上进入上下文参与预测，不攒批、不等句子说完。</p></div>
+      <div class="card reveal d3"><span class="tag amber">契约 ③</span><h3>生成即历史</h3><p>每个输出单元发出的同时写回序列，成为下一单元的条件。</p></div>
+    </div>
+    <div class="tokenflow reveal d4"><span>用户音频 + 视频 token 进</span><span class="sep">→</span><span class="act">行为 / 台词 token</span><span class="sep">→</span><span class="latent">音频 latent</span><span class="latent">视频 latent</span><span class="sep">→</span><span>解码播出 + 写回历史</span></div>
+  </figure>
+
+  <h3>离散和连续怎么住在同一个模型里</h3>
+  <p>文本走 next-token prediction<a class="jr" href="#g-09">09</a>；音频和视频是连续 latent<a class="jr" href="#g-12">12</a>，走条件流匹配<a class="jr" href="#g-10">10</a>。关键不在「两种损失并存」，在两条设计上：</p>
+  <p><strong>① 音频和视频是一起去噪的。</strong>语音、口型、表情、场景演化以同一份干净上下文为条件，作为<strong>一个耦合响应</strong>联合生成——说与动在解码之前就已经同步，而不是先出声音、再让另一个模块事后对口型。级联管线里最难修的音画错位，在这个结构里没有产生的位置。</p>
+  <p><strong>② 去噪出的干净 latent 直接写回历史。</strong>它立刻成为后续单元的条件：「角色前一单元说了什么、做了什么」与「用户前一单元说了什么」在同一条序列里，模型天然记得自己的输出——这就是契约 ③ 在训练上的意义。</p>
+  <div class="note"><span class="label">整栈因果，一直到 VAE</span>普通视频 VAE 编码一帧要看前后帧，流式场景等不到未来。v0.1 把音视频 VAE<a class="jr" href="#g-17">17</a>、编码器、解码器全部换成严格因果版本，Transformer 用块因果注意力协调——块内怎么可见、块间怎么禁止，§ 08 有逐格矩阵。</div>
+
+  <h3>v0.1 交出的数字，和对比口径的坑</h3>
+  <div class="calc">
+    <div class="step"><b>分辨率</b><span>192×336——官方自称 proof of concept，验证端到端设计。</span></div>
+    <div class="step"><b>延迟</b><span>模型侧约 200 ms；计入 350 ms 双向网络后总约 550 ms。</span></div>
+  </div>
+  <div class="warning"><span class="label">官方对比图的两组不能直接比</span>上组是端到端闭环：GPT-4o Realtime、豆包只有<strong>语音</strong>输出；下组 LPM、StreamAvatar 等只计<strong>渲染阶段</strong>——外部 LLM / ASR / TTS 的时间没算进去，用户实际等待高于标注值。v0.1 给自己的定位是「唯一端到端输出同步音视频、总延迟 0.6 秒内」；这是官方页的自评口径，不是第三方统一测量。</div>
+
+  <h2><span class="n">§ 03</span>前置 · 部署拆两半：Thinker 管状态，Performer 管去噪</h2>
+  <p>训练时是一个端到端模型，上线时同一个模型拆成跨 GPU 的流水线。这里的 Thinker–Performer<a class="jr" href="#g-13">13</a>是<strong>服务分工</strong>，不是语音模型里的 Thinker–Talker。会话 prefill<a class="jr" href="#g-07">07</a>完成后，Thinker 把初始 KV cache<a class="jr" href="#g-08">08</a><strong>广播</strong>给 Performer——两侧从同一份全历史状态出发，统一模型的行为被完整保留。每个 160 ms 单元里（v0.1 一卡一角色）：</p>
+  <div class="grid2">
+    <div class="card"><span class="tag">Thinker · 状态卡</span><h3>小而频繁的活全在这</h3><p>因果编码当前用户观测 → 一次短 token-causal 前向（语言/行为预测 + 状态更新）→ 构建 KV → 把<strong>上一单元</strong>的 latent 解码成音视频立即播出。</p></div>
+    <div class="card"><span class="tag teal">Performer · 算力卡</span><h3>只跑一件事</h3><p>拿最新 KV 切片，运行流匹配求解器，为<strong>下一单元</strong>生成音频 + 视频 latent，下个单元交回。</p></div>
+  </div>
+  <p><strong>互不阻塞是拆分的全部目的</strong>：Performer 从不碰解码器，Thinker 从不碰昂贵的求解器，解码与生成永远并行。由此两笔预算分开成立——<strong>吞吐</strong>要求 Performer 计算加通信压进一个 160 ms 单元，否则队列越积越长；<strong>延迟</strong>是信号穿过「编码 → 状态更新 → latent 生成 → 解码」这条路径的时间，约 200 ms。三笔账在 § 11 分开细算。</p>
+  <figure id="fig-7">
+    <figcaption><span>Fig 03 · 稳态流水线</span><b>每一列是同一段实际时间；不同颜色可以并行</b></figcaption>
+    <div class="scroll">
+      <div class="pipeline">
+        <div class="head"></div><div class="head">时间窗 A</div><div class="head">时间窗 B</div><div class="head">时间窗 C</div><div class="head">时间窗 D</div>
+        <div class="head">Thinker</div><div class="think">编码 / 更新块 k</div><div class="think">编码 / 更新 k+1</div><div class="think">编码 / 更新 k+2</div><div class="think">编码 / 更新 k+3</div>
+        <div class="head">Performer</div><div class="perform">生成 latent k+1</div><div class="perform">生成 latent k+2</div><div class="perform">生成 latent k+3</div><div class="perform">生成 latent k+4</div>
+        <div class="head">Decoder</div><div class="decode">解码 k−1</div><div class="decode">解码 k</div><div class="decode">解码 k+1</div><div class="decode">解码 k+2</div>
+      </div>
+    </div>
+  </figure>
+  <h3>v0.2：像素 ×3.65，Thinker 不动，Performer 变多卡</h3>
+  <p>640×368 的像素量约是 192×336 的 3.65 倍（算式见 § 11），增量几乎全落在视频 latent 生成上。v0.2 的处置有很强的针对性：<strong>Thinker 保持单卡</strong>——它的工作是频繁的小块（编码、状态、KV、解码），切多卡的通信开销得不偿失；<strong>Performer 扩成多卡</strong>，用 Ulysses 上下文并行<a class="jr" href="#g-14">14</a>把长的视频 latent 序列切给多张卡，短的音频 latent 不照搬同一切法。All-to-all / gather 只发生在 Performer 组内，Thinker 只需广播 performer 可用的 KV 切片。「哪类算子能按序列切、哪类必须换布局」这笔并行账，<a href="wonder-video-world-model.html">Wonder 页 § 10</a> 有逐项拆解。</p>
+  <div class="note"><span class="label">场景冷启动</span>官方 demo 口径：一句自然语言 prompt 起一个新场景，约 0.5 秒内 Thinker 与 Performer 都完成 prefill，会话进入用户可见的实时状态。</div>
+
+  <h2><span class="n">§ 04</span>为什么要拆：背景不是每一刻都在重新发生</h2>
   <p>用一个贯穿全文的例子。女生坐在明亮的家庭工作室，桌上有水。用户说：“说了很久，喝点水吧。”</p>
   <figure id="fig-2">
-    <figcaption><span>Fig 02 · 同一段视频的两层记录</span><b>世界负责“是什么”，事件负责“变了什么”</b></figcaption>
+    <figcaption><span>Fig 04 · 同一段视频的两层记录</span><b>世界负责“是什么”，事件负责“变了什么”</b></figcaption>
     <div class="split">
       <div class="card world reveal">
         <span class="tag">World · 持续生效</span>
@@ -136,7 +191,7 @@ figcaption{display:flex;justify-content:space-between;gap:18px;padding-bottom:13
     <p class="note reveal d3"><span class="label">教学数字</span>这里的三段时长是为了讲清结构而设，不是论文实测。事件流<a class="jr" href="#g-02">02</a>可以有重叠，也不要求每个 160 ms 单元都正好开始一个新事件。</p>
   </figure>
 
-  <h2><span class="n">§ 03</span>把“世界”和“事件”写成模型能处理的记录</h2>
+  <h2><span class="n">§ 05</span>把“世界”和“事件”写成模型能处理的记录</h2>
   <p>论文没有强制每个视频都填同一张表。它允许世界采用灵活 schema<a class="jr" href="#g-03">03</a>：有人物就写人物，没有人物的风景视频可以只写场景、天气和环境声。</p>
   <span class="tag">公式 1 · 世界是字段集合</span>
   <div class="math" data-expr="W=\{w_j\}_{j\in S(W)}"></div>
@@ -167,7 +222,7 @@ figcaption{display:flex;justify-content:space-between;gap:18px;padding-bottom:13
     <div class="step"><b>环境事件</b><span><code class="m">e_4=([4.8,6.0],\varnothing,\text{灯光变暗})</code>：场景变了，不归某个角色执行。</span></div>
   </div>
 
-  <h2><span class="n">§ 04</span>那一长串条件概率，其实只是“每一步接着算”</h2>
+  <h2><span class="n">§ 06</span>那一长串条件概率，其实只是“每一步接着算”</h2>
   <p>模型不会一次列举所有可能的视频。它像写句子一样，先给第一个事件概率，再在已知第一件事的前提下给第二件事概率。条件概率<a class="jr" href="#g-04">04</a>的竖线读作“在右边这些信息已经知道的情况下”。</p>
   <span class="tag">公式 3 · 流式事件分解</span>
   <div class="math" data-expr="p_\theta(e_{1:K}\mid W,x_{1:K})=\prod_{k=1}^{K}p_\theta(e_k\mid W,x_{\le k},e_{<k})"></div>
@@ -183,7 +238,7 @@ figcaption{display:flex;justify-content:space-between;gap:18px;padding-bottom:13
   </div>
   <div class="warning"><span class="label">不是独立假设</span>右边每一项都看得到过去事件 <code class="m">e_{&lt;k}</code>。这正是概率链式法则：联合概率等于“一步的概率 × 下一步在前一步已发生时的概率 × ……”。</div>
   <figure id="fig-3">
-    <figcaption><span>Fig 03 · 三步教学手算</span><b>0.8 × 0.6 × 0.5 = 0.24</b></figcaption>
+    <figcaption><span>Fig 05 · 三步教学手算</span><b>0.8 × 0.6 × 0.5 = 0.24</b></figcaption>
     <div class="chain">
       <div class="prob reveal"><span>拿起杯子</span><b>0.80</b></div><div class="mul reveal d2">×</div>
       <div class="prob reveal d2"><span>喝水后道谢</span><b>0.60</b></div><div class="mul reveal d3">×</div>
@@ -197,10 +252,10 @@ figcaption{display:flex;justify-content:space-between;gap:18px;padding-bottom:13
     </div>
   </figure>
 
-  <h2><span class="n">§ 05</span>普通录像怎么变成实时交互能力</h2>
+  <h2><span class="n">§ 07</span>普通录像怎么变成实时交互能力</h2>
   <p>这一步是 v0.3 的关键桥。预训练没有“用户要求角色喝水”这种真实交互日志，只有已经录好的视频。论文先让录像提供世界与事件监督，再在下游后训练里替换输入来源。</p>
   <figure id="fig-4">
-    <figcaption><span>Fig 04 · 训练迁移不是把目标彻底换掉</span><b>相同的是“预测下一变化”，变化的是输入与用途</b></figcaption>
+    <figcaption><span>Fig 06 · 训练迁移不是把目标彻底换掉</span><b>相同的是“预测下一变化”，变化的是输入与用途</b></figcaption>
     <div class="transfer">
       <div class="dataset reveal">
         <span class="tag">预训练 · 看录像</span><h3>从发生过的事学习</h3>
@@ -215,10 +270,10 @@ figcaption{display:flex;justify-content:space-between;gap:18px;padding-bottom:13
     <div class="note reveal d3"><span class="label">为什么能迁移</span>模型在录像中学到“人在什么情境下会做什么”。下游再把“观察到的历史”换成“用户正在发来的输入”，仍然预测下一变化。论文没有公开自动标注器、过滤规则或下游增益消融，所以这条迁移链在方法上清楚，在证据上仍有缺口。</div>
   </figure>
 
-  <h2><span class="n">§ 06</span>160 ms 一块：既不偷看未来，也不让块内逐 token 等待</h2>
+  <h2><span class="n">§ 08</span>160 ms 一块：既不偷看未来，也不让块内逐 token 等待</h2>
   <p>离散语言与行为走 next-token prediction<a class="jr" href="#g-09">09</a>；音视频的连续 latent<a class="jr" href="#g-12">12</a>沿用条件流匹配<a class="jr" href="#g-10">10</a>。它们被排在同一条流式时间线上。</p>
   <figure id="fig-5">
-    <figcaption><span>Fig 05 · 块因果可见关系</span><b>行是“谁在看”，列是“能看谁”</b></figcaption>
+    <figcaption><span>Fig 07 · 块因果可见关系</span><b>行是“谁在看”，列是“能看谁”</b></figcaption>
     <div class="mask">
       <div class="head"></div><div class="head">块 1</div><div class="head">块 2</div><div class="head">块 3</div><div class="head">块 4</div>
       <div class="head">查询块 1</div><div class="now">同块可见</div><div class="no">未来禁止</div><div class="no">未来禁止</div><div class="no">未来禁止</div>
@@ -236,10 +291,10 @@ figcaption{display:flex;justify-content:space-between;gap:18px;padding-bottom:13
     </div>
   </figure>
 
-  <h2><span class="n">§ 07</span>“喝口水”为什么可以直接写进语言流</h2>
+  <h2><span class="n">§ 09</span>“喝口水”为什么可以直接写进语言流</h2>
   <p>过去的交互模型常把角色控制压成固定动作集合。v0.3 改用角色扮演式输出：括号内写动作，括号外写台词。行为 token 与语言 token 共享因果上下文，并共同条件化后续音频与视频。</p>
   <figure id="fig-6">
-    <figcaption><span>Fig 06 · 开放行为与台词交错</span><b>不是先生成完整脚本，再启动第二套动作模型</b></figcaption>
+    <figcaption><span>Fig 08 · 开放行为与台词交错</span><b>不是先生成完整脚本，再启动第二套动作模型</b></figcaption>
     <div class="dialog reveal">
       <div class="user">USER　说了很久，喝点水吧。</div>
       <div class="act">AGENT　(takes a sip of water)</div>
@@ -251,7 +306,7 @@ figcaption{display:flex;justify-content:space-between;gap:18px;padding-bottom:13
     <div class="note reveal d3"><span class="label">“不增加关键延迟路径”是什么意思</span>行为描述本来就是语言 token，只是在同一条 token 路径里多生成少量文字条件；论文没有再接一个必须等完整动作序列算完的独立控制模型。它不表示行为生成零成本，只表示没有新增一条串行的大模块。</div>
   </figure>
 
-  <h2><span class="n">§ 08</span>为什么世界条件可以一直用，却不用每块重算</h2>
+  <h2><span class="n">§ 10</span>为什么世界条件可以一直用，却不用每块重算</h2>
   <p>世界 <code>W</code> 在会话开始时做 prefill<a class="jr" href="#g-07">07</a>，其注意力 K/V 被保存到 KV cache<a class="jr" href="#g-08">08</a>。后面每个块只追加新输入和新事件；“每个概率项都条件于 W”不等于每次把 W 从头过一遍网络。</p>
   <div class="grid3">
     <div class="card"><span class="tag">会话开始</span><span class="big">PREFILL</span><p>编码场景、角色、音色等世界字段，建立持久的注意力状态。</p></div>
@@ -259,25 +314,7 @@ figcaption{display:flex;justify-content:space-between;gap:18px;padding-bottom:13
     <div class="card"><span class="tag amber">会话期间</span><span class="big">REUSE</span><p>世界仍参与每一步判断，但其旧 K/V 不重新计算。</p></div>
   </div>
 
-  <h2><span class="n">§ 09</span>Thinker 与 Performer：一边更新状态，一边生成高开销 latent</h2>
-  <p>这里的 Thinker–Performer<a class="jr" href="#g-13">13</a>是服务分工，不是语音模型里的 Thinker–Talker。前者把因果状态管理和连续 latent 生成拆开，再用流水线重叠。</p>
-  <figure id="fig-7">
-    <figcaption><span>Fig 07 · 稳态流水线</span><b>每一列是同一段实际时间；不同颜色可以并行</b></figcaption>
-    <div class="scroll">
-      <div class="pipeline">
-        <div class="head"></div><div class="head">时间窗 A</div><div class="head">时间窗 B</div><div class="head">时间窗 C</div><div class="head">时间窗 D</div>
-        <div class="head">Thinker</div><div class="think">编码 / 更新块 k</div><div class="think">编码 / 更新 k+1</div><div class="think">编码 / 更新 k+2</div><div class="think">编码 / 更新 k+3</div>
-        <div class="head">Performer</div><div class="perform">生成 latent k+1</div><div class="perform">生成 latent k+2</div><div class="perform">生成 latent k+3</div><div class="perform">生成 latent k+4</div>
-        <div class="head">Decoder</div><div class="decode">解码 k−1</div><div class="decode">解码 k</div><div class="decode">解码 k+1</div><div class="decode">解码 k+2</div>
-      </div>
-    </div>
-    <div class="grid2" style="margin-top:18px">
-      <div class="card reveal"><span class="tag">Thinker · 单卡</span><p>因果编码、状态更新、KV 构造和解码是频繁的小块工作，额外切卡通信可能得不偿失。</p></div>
-      <div class="card reveal d2"><span class="tag teal">Performer · 多卡</span><p>高分辨率视频 latent 序列更长，用 Ulysses 上下文并行<a class="jr" href="#g-14">14</a>分给多卡；短音频 latent 不照搬同一切法。</p></div>
-    </div>
-  </figure>
-
-  <h2><span class="n">§ 10</span>160 ms、200 ms、550 ms：三笔账不要混</h2>
+  <h2><span class="n">§ 11</span>160 ms、200 ms、550 ms：三笔账不要混</h2>
   <p>吞吐与延迟<a class="jr" href="#g-15">15</a>回答不同问题。160 ms 是稳态交付节拍；约 200 ms 是信号穿过模型路径的时延；550 ms 还把论文预留的双向网络时间算了进去。</p>
   <div class="grid3">
     <div class="card"><span class="tag">流水线节拍</span><span class="big">160 ms</span><p>每个单元的稳态计算与通信必须跟上这个节拍，否则队列会越积越长。</p></div>
@@ -289,10 +326,10 @@ figcaption{display:flex;justify-content:space-between;gap:18px;padding-bottom:13
     <div class="step"><b>相除</b><span><code class="m">235{,}520\div64{,}512\approx3.65</code>。分辨率像素量约变为 3.65 倍，论文仍报告相同实时节拍。</span></div>
   </div>
 
-  <h2><span class="n">§ 11</span>三代到底分别改了什么</h2>
+  <h2><span class="n">§ 12</span>三代到底分别改了什么</h2>
   <p>v0.3 的叙事建立在前两代之上。下表把“本版新公开”与“沿用的能力”分开，避免把继承项算成 v0.3 的新贡献。</p>
   <figure id="fig-8">
-    <figcaption><span>Fig 08 · 版本阶梯</span><b>架构 → 分辨率与并行 → 训练表示与行为接口</b></figcaption>
+    <figcaption><span>Fig 09 · 版本阶梯</span><b>架构 → 分辨率与并行 → 训练表示与行为接口</b></figcaption>
     <div class="scroll">
       <div class="version">
         <div class="head">版本</div><div class="head">核心问题</div><div class="head">输入输出组织</div><div class="head">运行点</div><div class="head">本版新增</div>
@@ -303,7 +340,7 @@ figcaption{display:flex;justify-content:space-between;gap:18px;padding-bottom:13
     </div>
   </figure>
 
-  <h2><span class="n">§ 12</span>论文证明了什么，又没有证明什么</h2>
+  <h2><span class="n">§ 13</span>论文证明了什么，又没有证明什么</h2>
   <p>全双工交互<a class="jr" href="#g-16">16</a>最容易被漂亮 demo 放大。这里把论文数字、方法设计和仍待验证的主张分开。</p>
   <div class="ledger">
     <div class="card"><span class="tag teal">有明确数字</span><h3>运行口径</h3><ul><li>640×368，25 FPS</li><li>160 ms / streaming unit</li><li>约 200 ms 模型侧延迟</li><li>含 350 ms 网络预算约 550 ms</li></ul></div>
@@ -340,6 +377,8 @@ figcaption{display:flex;justify-content:space-between;gap:18px;padding-bottom:13
       <li id="g-14"><strong>Ulysses context parallel</strong>：沿长序列切 token，通过 all-to-all 交换完成注意力的多卡并行方式。详见 <a href="../concepts/distributed-training-parallelism.html">distributed-training-parallelism</a>。</li>
       <li id="g-15"><strong>Throughput / latency</strong>：吞吐问稳态每秒能处理多少；延迟问单个输入从入口到出口要等多久。二者不能互相替代。</li>
       <li id="g-16"><strong>Full-duplex interaction</strong>：系统输出时仍持续接收用户音视频，新输入可以改变后续输出。详见 <a href="../concepts/full-duplex-multimodal-interaction.html">full-duplex-multimodal-interaction</a>。</li>
+      <li id="g-17"><strong>Causal VAE</strong>：编码与解码都只依赖当前和过去帧的 VAE。普通视频 VAE 压一帧要看前后帧，流式场景等不到未来，这一环不因果整条链就不因果。</li>
+      <li id="g-18"><strong>VAD</strong>：Voice Activity Detection，级联系统里判断用户「说没说完」的独立小模块；端到端方案里没有它，轮次时机由模型在同一条序列里自己学。</li>
     </ol>
   </section>
 
