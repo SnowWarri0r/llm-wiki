@@ -1,8 +1,8 @@
 ---
 name: thinker-performer-streaming
 type: concept
-sources: [wan-streamer-v03]
-updated: 2026-08-04
+sources: [wan-streamer-v02, wan-streamer-v03]
+updated: 2026-08-06
 ---
 
 # Thinker–Performer Streaming · 状态更新与连续 latent 生成分工
@@ -33,9 +33,12 @@ Thinker 维护因果上下文和 KV cache，Performer 在同一时间预算里�
 
 高分辨率视频 latent 序列较长，v0.2 用 Ulysses 上下文并行把它切给多张 GPU；音频 latent 短，不必同样切分。Thinker 仍放在单卡，避免因果状态和频繁的小块调度被额外通信拖慢。
 
+每个 Performer rank 还把新来的 K/V 直接写入自己负责的预分片 cache。这样历史增长时不用先复制一份完整 K/V，再在每个 160 ms 单元里重新切分。
+
 ## 链接
 
 - [[wan-streamer-v03]] · v0.3 沿用了哪一段服务路径
+- [[wan-streamer-v02]] · v0.2 为什么改服务拓扑，以及三种延迟口径
 - [[distributed-training-parallelism]] · Ulysses 怎样沿 token 维切长序列
 - [[conditional-flow-matching]] · Performer 实际回归什么连续目标
 - [[kv-cache]] · Thinker 保存的历史状态

@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Multi-Person Audio–Region Binding · 把每条声音送到对应人物区域 · Concept</title>
+<title>对话中的非语言动态 · 点头、停顿和眼神怎样改变话轮 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,39 +27,45 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · multi-person-audio-region-binding</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · conversational-nonverbal-dynamics</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Multi-Person Audio–Region Binding · 把每条声音送到对应人物区域</h1>
+  <h1>对话中的非语言动态 · 点头、停顿和眼神怎样改变话轮</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>多人数字人不能只知道“画面里有两个人、音频里有两条声音”，还要知道谁对应谁。L-RoPE 给人物区域和对应音频相同或相近的 Label，让 attention 更容易把正确声音送到正确嘴部；背景人物再配静音轨，明确告诉模型此人不说话。</p>
-<h2>L 不是 Location</h2>
-<p>L-RoPE 的 L 是 Label。沿 MultiTalk 的示意：人物 A 的视觉区域标签为 0–4，A 的音频标签取 2；人物 B 的区域为 20–24，B 的音频取 22；背景取 12。旋转位置编码让标签接近的 Query 和 Key 更容易互相匹配。</p>
-<p>这不是拿标签做普通分类，也不是把人物框坐标直接塞进注意力分数。框先确定哪些视频 token 属于哪个人物，Label RoPE 再把这种归属编码进 Q/K 的旋转相位。</p>
-<h2>为什么还要静音轨</h2>
-<p>标签负责“分流”：A 的声音别送给 B。静音轨负责“明确无声”：背景人物此刻没有要驱动嘴形的音频。只有分流标签，没有背景静音条件，模型仍可能让非目标人物跟着动嘴。</p>
+<p>同一个动作不只表达内容，还会管理“谁继续说、谁该停、我有没有听懂”；评测多模态对话不能只问模型有没有识别出动作名称。</p>
+<h2>一个最容易混淆的例子</h2>
+<p>用户停 1.5 秒并移开视线，可能是还在思考，系统应等；用户在系统说话时点头，通常是附和，系统应继续；用户突然抬手并前倾，可能是在打断，系统应让出话轮。三种场景都可能只有短暂沉默，却要求相反行为。</p>
+<h2>四组常见作用</h2>
+<ul>
+<li>floor management：停顿、打断、交棒；</li>
+<li>listener feedback：点头、短“嗯”、面部附和；</li>
+<li>affect：笑、惊讶、同理性的情绪匹配；</li>
+<li>adaptor：摸头、咳嗽、挠痒等不一定与话轮相关的自我动作。</li>
+</ul>
+<h2>为什么 VQA 不够</h2>
+<p>回答“他在点头”只证明识别了视觉现象。真正的对话能力还要让这个识别结果改变输出时机：此刻继续说而不是停下；或者用一个短 backchannel 回应而不是开始长篇发言。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/longcat-video-avatar-1-5.html">longcat-video-avatar-1-5</a> · v1.5 的人物框与背景静音扩展</li>
-<li><a href="../papers/rope.html">rope</a> · 旋转位置编码基础；本页的标签构造来自 MultiTalk 论文</li>
-<li><a href="../concepts/cross-attention.html">cross-attention</a> · 视频 Query 怎样读取音频 Key/Value</li>
+<li><a href="../papers/videofdb.html">videofdb</a> · 11 类动态与感知/生成评测</li>
+<li><a href="../concepts/tor-alignment.html">tor-alignment</a> · 把不同动态的期望时序统一成一个通过率</li>
+<li><a href="../concepts/full-duplex-multimodal-interaction.html">full-duplex-multimodal-interaction</a> · 让输入与输出真正同时运行</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
   <span class="label">引用此页的内容 · 2 处</span>
-  <ul><li><a href="../papers/longcat-video-avatar-1-5.html"><span class="cat">paper</span>LongCat-Video-Avatar 1.5 · 把数字人从“对上嘴”做到长视频、多人物与 8 步生成</a></li><li><a href="../concepts/identity-specific-audio-gating.html"><span class="cat">concept</span>身份特定音频门控 · 多人画面里让声音只驱动正确的人</a></li></ul>
+  <ul><li><a href="../papers/videofdb.html"><span class="cat">paper</span>VideoFDB · 语音助手“看见你”之后，真的会看眼色吗</a></li><li><a href="../concepts/tor-alignment.html"><span class="cat">concept</span>TOR-Alignment · 不只看“抢没抢话”，还看这次应不应该抢</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/multi-person-audio-region-binding.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/conversational-nonverbal-dynamics.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
