@@ -1357,3 +1357,13 @@ skill 更新:
 - 补回附录里的主场景分布与 S2 参与强度，分清“每条种子唯一主类型”和“同一对话可同时出现多种交互行为”两种统计口径。
 - 重写训练章：解释从 Qwen3-Omni 初始化到底复用了什么，给出交叉熵共同骨架、逐符号定义和 0.8/0.5 概率手算；再映射到 Thinker 文本/控制 token 与 Talker 主码/残差码。
 - 明确冻结只控制本轮更新对象；论文未公开 codec 损失权重与完整目标函数。补充图执行减少 GPU 调度开销、但不改变模型数学和必要矩阵计算的边界。
+
+## [2026-08-05] ingest | LongCat-Video-Avatar 1.5
+
+- 新增 LongCat-Video-Avatar 1.5 精读与 bespoke HTML；不照报告目录平铺，而按“完整部署拼图 → 数据 → Whisper 对齐 → flow 基础训练 → 逐帧 GRPO → DMD2 → 多人物 → 课程 → 评测与边界”重排。
+- 用 8 秒样本贯穿 50 Hz 音频、33→5 层池化、25 FPS、4× VAE 时间压缩与约 50 个 latent 时刻；另用同一标量逐步算完 flow 输入、速度目标、损失、梯度和一次参数更新。
+- 逐符号解释 per-frame advantage，并用四条视频的手部/动作奖励算出总 advantage；明确论文没有写全稳定化分母、奖励模型与权重，示例数值不伪装成报告超参。
+- 拆清 DMD2 的 real score、fake score、Generator 三个角色和共享基础 DiT + 两套 LoRA 的内存含义；150→8 只写成 18.75× 更少网络调用，不外推墙钟加速。
+- 完整录入五阶段 211k 训练、508 对 EvalTalker、770 群众、10 专家、13,240 判断、八项缺陷率与 Base/Fast 表；保留 v1.5 单人/多人均略低于自家 v1.0 的非整齐结果。
+- 核算并披露数据漏斗的原图不一致：累计保留率的相邻差值与标注淘汰率有 .01–.22 点偏差；没有原始数据时不擅自修数。
+- 新增 whisper-layer-pooling、per-frame-grpo、multi-person-audio-region-binding、multi-stage-video-data-curation 四个概念页；flow matching、DMD、GRPO、cross-attention 与 video VAE 补来源。

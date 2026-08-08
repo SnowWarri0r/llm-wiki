@@ -37,6 +37,7 @@
 - [Interaction Models · Thinking Machines](wiki/papers/interaction-models-tml.md) — 把交互能力做进权重的 276B MoE 模型
 - [Fish Audio S2 Pro](wiki/papers/fish-speech-s2-pro.md) — Dual-AR + RVQ + GRPO 的开源 TTS
 - [DuplexOmni · 边听边说时，后台还能继续想](wiki/papers/duplexomni.md) — 把实时交互 S1 与后台思考 S2 拆成并行线；交互模型内部再用 480 ms 时间片、Thinker–Talker 和 16 层 Mimi codec 生成语音。完整拆开控制标记闭环、两阶段交替冻结与交叉熵手算；ToR 72.6 最强，但 Daily-Omni 53.8、WER 11.92%，论文结果与至少 8×H20 的公开部署口径分开记录。
+- [LongCat-Video-Avatar 1.5 · 不只是对嘴，还要稳、快、多人不串嘴](wiki/papers/longcat-video-avatar-1-5.md) — Meituan 13.6B 音频驱动视频：Whisper 33 层压成 5 组并对齐视频时间轴，逐帧 GRPO 把坏手和不同步定位到具体时段，共享 DiT + Generator/Fake-Score LoRA 做 DMD2 八步蒸馏，L-RoPE + 背景静音轨避免多人串嘴。完整核算数据漏斗、flow 手算、211k 训练、508 对人评与 Base/Fast 取舍；8 NFE 比 150 NFE 少 18.75× 调用，但真实延迟与安全未报告。
 - [Wan-Streamer v0.3 · 把视频拆成世界与事件流](wiki/papers/wan-streamer-v03.md) — 不让模型每个时间片重说场景和人物：持久世界 W 只 prefill 一次，事件 e_k 记录何时、谁、发生什么；普通录像预训练迁移到括号式开放行为与全双工音视频交互。完整拆解条件概率连乘、160 ms=4 帧、Thinker–Performer/Ulysses 和 v0.1→v0.3 继承关系；640×368@25 FPS、模型侧约 200 ms 有数字，行为质量仍主要是定性证据。
 - [ViiTorVoice · 低帧率语义码+并行填声](wiki/papers/viitorvoice.md) — 开源流式零样本 TTS 引擎(无独立论文,思路源自 DualCodec+OmniVoice): 三招各砍一刀延迟—①DualCodec 把 24kHz 压到 12.5 帧/秒,RVQ-1 语义(w2v-BERT 蒸馏,码本16384)+RVQ 2-8 声学残差; ②NAR 掩码并行填声(像完形填空,步数从200降到~8); ③首块流式首帧~60ms; 给参考音零样本克隆+两路CFG调情绪
 - [VITS · 文本进去，波形出来](wiki/papers/vits.md) — 把两段式 TTS 的固定 mel 交接收回一套联合训练：条件 VAE 用 z 装下文字没写出的声音，Flow 接通文本先验与音频后验，MAS 从整句配对中找音素—帧路径，随机时长用去量化 u 与增广 ν 建模多种节奏，HiFi-GAN 多周期判别器补波形细节；LJ MOS 4.43 vs 真人4.46，×67.12实时，并完整覆盖损失、配方、VCTK、消融、声音转换和局限
@@ -259,6 +260,7 @@
 - [拆细则打分 · Rubric-Based Eval](wiki/concepts/rubric-based-evaluation.md) — 别给"好不好"打一个总分,拆成一堆可逐项判定的小问题各打0/1/2再聚合; 可复现+能定位差在哪条; Qwen-Image-Bench拆到56条
 - [LLM-as-Judge · 拿模型当判官](wiki/concepts/llm-as-judge.md) — 用模型自动给输出打分替人评,前提是用人标把判官校准到人类口味(看Spearman ρ); 跟RLHF的reward model同母题
 - [DMD 蒸馏 / NFE](wiki/concepts/dmd-distillation.md) — 原始DMD把多步老师蒸成1-NFE学生：冻结real score拉向目标、动态fake score抵消学生过密区域、离线回归防漏模式；DMD2/TDM和4/8步应用另算
+- [两阶段视频数据筛选](wiki/concepts/multi-stage-video-data-curation.md) — 离线先看完整视频做重标注，训练抽片后再查同步/运动/缺陷/mask；原片合格不等于切出的3.7秒也合格
 - [IDA · 隐式分布对齐](wiki/concepts/implicit-distribution-alignment.md) — 生成器每次更新后，把同构 fake 网络参数向它插值一小步；不是混概率，也不是覆盖 fake 的稠密时间步训练
 - [ISG · 段内引导](wiki/concepts/intra-segment-guidance.md) — 老师走前半段、冻结学生走后半段，用这条绕路目标监督学生直接跨段，让稀疏 anchor 代表整段
 - [VFM 判别器](wiki/concepts/vfm-discriminator.md) — 冻结 DINOv2 / CLIP 的通用表征，只训练多层卷积真假头；高噪声时用 α² 降低 GAN 权重
@@ -304,6 +306,7 @@
 - [NAR 掩码并行生成](wiki/concepts/nar-masked-speech-generation.md) — 非自回归填空式生成: 全盖住→并行猜→迭代几步收敛; SoundStorm/MaskGCT/OmniVoice 一脉
 
 ### 语音 / ASR
+- [Whisper Layer Pooling](wiki/concepts/whisper-layer-pooling.md) — Whisper-large 每个时刻的 embedding+32层输出按8层求均值并保留最后一份，33→5 发生在层轴；50Hz→25FPS才发生在时间轴
 - [Weak Supervision at Scale](wiki/concepts/weak-supervision-at-scale.md) — 弱标注 + 量大力飞，Whisper 核心策略
 - [Multitask Speech](wiki/concepts/multitask-speech.md) — 一个模型多任务，靠特殊 token 切换
 - [Speaker Embedding · 声纹嵌入](wiki/concepts/speaker-embedding.md) — 语音→定长"身份向量",抽"谁说的"; i-vector→x-vector→ECAPA代际; 余弦/PLDA打分判同异
@@ -349,6 +352,7 @@
 - [AP / mAP · 检测精度](wiki/concepts/mean-average-precision.md) — AP是某类的精确率—召回率曲线面积,mAP再跨类别平均;用3个真值、4个预测从TP/FP一路算到AP50=0.833,并拆清COCO AP/AP50/AP75三个口径
 
 ### 多模态
+- [多人音频—区域绑定](wiki/concepts/multi-person-audio-region-binding.md) — L-RoPE 给人物区域和对应音频相近 Label 以分流，人物框定义归属，背景静音轨再明确“这个人不说话”
 - [统一多模态生成](wiki/concepts/unified-multimodal-generation.md) — 不为每个视觉任务接head;稀疏答案走文本、稠密答案走图像、语义+像素走混合输出,任务由instruction指定
 - [生成转感知 · Generation to Perception](wiki/concepts/generation-to-perception.md) — 生成模型为还原像素已被迫学会纹理/几何/运动/语义；保留这套骨干，用有标签目标改造成深度/法线/分割预测器。关键是分清哪些来自预训练先验、哪些来自后训练适配
 - [RGB 任务表示](wiki/concepts/rgb-task-representation.md) — 不给每个任务重做输出头，先把答案编码成 [0,1] 三通道图，同一个 VAE decoder + 同一条 L2 就能通吃；代价是复杂度从 loss/head 搬到了 target formatter（深度要先做尺度归一化+对数压缩）
@@ -387,6 +391,7 @@
 - [RLHF](wiki/concepts/rlhf.md) — SFT → reward model → PPO 三步, 把人类排序偏好变成 LLM 训练信号
 - [on-policy vs off-policy](wiki/concepts/on-policy-vs-off-policy.md) — on-policy=学当前策略自己刚生成的(准但贵,旧数据即过期); off-policy=学别的策略/旧数据(省但分布错位); 重要性采样π/μ纠偏(裸平均5.5→纠偏2.8), 差太远比率爆方差→PPO clip限小步; SFT拿外部数据=off-policy, GRAPE选合身=拉回on-policy
 - [GRPO](wiki/concepts/grpo.md) — 不训 critic；同题采 G 条回答，用组内相对 reward 当 advantage，保留 PPO 的 token ratio 与 clip
+- [Per-Frame GRPO](wiki/concepts/per-frame-grpo.md) — 把组相对 reward 保留到视频时间分区；哪一秒坏手/不同步，哪一秒承担负 advantage，不再由整段平均分掩盖
 - [Dr.GRPO](wiki/concepts/dr-grpo.md) — 保留减组均值，去掉除组标准差和除回答实际长度，修正题目难度与长度偏置
 - [DAPO](wiki/concepts/dapo.md) — 长 CoT 的四项配方：Clip-Higher、Dynamic Sampling、token 级 loss 汇总、超长软惩罚
 - [GSPO](wiki/concepts/gspo.md) — 沿用组相对 advantage，把重要性比率与 clip 从 token 级提升到整条序列，稳定 MoE RL

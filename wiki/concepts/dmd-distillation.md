@@ -1,8 +1,8 @@
 ---
 name: dmd-distillation
 type: concept
-sources: [dmd, dmd2, data-forcing-distillation, senseflow, qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2, drifting-models, drift-ar, minwm, wonder-video-world-model]
-updated: 2026-07-29
+sources: [dmd, dmd2, data-forcing-distillation, senseflow, qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2, drifting-models, drift-ar, minwm, wonder-video-world-model, longcat-video-avatar-1-5]
+updated: 2026-08-05
 ---
 
 # DMD 蒸馏 · 匹配整批图像，不逐步临摹老师
@@ -66,6 +66,8 @@ L_{\mathrm{pseudo}}=\tfrac12
 | DFD | 同一 DMD2 主线 | 在 DMD2 已训好的学生上，让 teacher 偶尔读取同条件真实样本；不用逐样本配对回归 | 论文为 4 步 |
 | SenseFlow | 同一 DMD2 主线 | 沿用无大规模配对主线；IDA 缩短 fake 追踪差、ISG 补段内时间监督、VFM 判别器补语义 | 主文为 4 步，附录扩到 2/1 步 |
 | TDM | 去噪轨迹多个时刻的分布 | 取决于具体实现 | 灵活少步 |
+
+LongCat-Video-Avatar 1.5 把 DMD2 用在 13.6B 视频 DiT 上：基础权重作 real score，同一 backbone 切换 Generator LoRA 与 Fake-Score LoRA，最终蒸成总计 8 NFE。共享权重减少完整模型副本，但三种角色的计算不会因此自动合并。详见 [[longcat-video-avatar-1-5]]。
 
 ## 链接
 

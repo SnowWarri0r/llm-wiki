@@ -1,8 +1,8 @@
 ---
 name: flow-matching
 type: concept
-sources: [interaction-models-tml, ideogram-4, stable-diffusion-3-5, krea-2, omnieraser, diffusionnft, sensenova-vision, meshflow, ltx-2, drifting-models, solaris-multiplayer-world-model, senseflow, sana-video-2]
-updated: 2026-07-28
+sources: [interaction-models-tml, ideogram-4, stable-diffusion-3-5, krea-2, omnieraser, diffusionnft, sensenova-vision, meshflow, ltx-2, drifting-models, solaris-multiplayer-world-model, senseflow, sana-video-2, longcat-video-avatar-1-5]
+updated: 2026-08-05
 ---
 
 # Flow Matching · 流匹配
@@ -28,6 +28,8 @@ updated: 2026-07-28
 - **跟 transformer 接口干净** → flow head 拼在 transformer 输出上
 
 TML 用它生成连续音频特征；Solaris 则在双人视频 latent 上学习 \(\epsilon -x\)，让动作条件决定两路画面怎样共同变化。
+
+LongCat-Video-Avatar 1.5 用相反方向的约定，把去噪目标写成 \(x_0-\epsilon\)：插值路径沿 \(t:0\to1\) 的导数是 \(\epsilon-x_0\)，而生成时从噪声往数据走，所以速度符号相反。详见 [[longcat-video-avatar-1-5]] 的逐数值例。
 
 ## 跟 RVQ 的对比
 | 维度 | RVQ codec | Flow matching |

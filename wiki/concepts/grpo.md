@@ -1,8 +1,8 @@
 ---
 name: grpo
 type: concept
-sources: [fish-speech-s2-pro, ppo, krea-2, diffusionnft]
-updated: 2026-07-22
+sources: [fish-speech-s2-pro, ppo, krea-2, diffusionnft, longcat-video-avatar-1-5]
+updated: 2026-08-05
 ---
 
 # GRPO · Group Relative Policy Optimization
@@ -76,6 +76,7 @@ L_i=\frac{1}{|y_i|}\sum_t
 - [[fish-speech-s2-pro]]：多维 reward 做 TTS 对齐。
 - [[krea-2]]：文生图用多奖励组相对 RL。
 - [[diffusionnft]]：解释扩散模型为什么难直接照搬语言模型的似然比目标。
+- [[longcat-video-avatar-1-5]]：把序列级 advantage 展开到每个视频时间分区，让局部坏手和不同步只影响对应帧段。
 
 ## 来源与链接
 
