@@ -1414,3 +1414,8 @@ skill 更新:
 - 重画六路因果闭环、三块可见矩阵、流路径、训练课程表和相邻单元服务时间线；明确第 k 拍生成 yₖ，第 k+1 拍才解码播出，避免箭头提前连接。
 - 新增 native-streaming-contract、causal-streaming-vae、rolling-streaming-distillation 三个概念页；回链 block-causal、conditional-flow、CFG、teacher forcing、full-duplex 与 thinker-performer。
 - 实验按测量边界拆开 160/200/550 ms，保留 192×336@25 FPS 的原型定位；模型规模、数据量、GPU 型号、蒸馏配方与自然度量化全部列为未公开。
+
+## [2026-08-06] query | Ulysses 上下文并行具体怎么走
+- 起因：wan-streamer-v03 页 v0.2 段只有一句「Performer 用 Ulysses」，术语表指向 distributed-training-parallelism，但概念页里 Ulysses 也只有一句含糊话（「轮流拿到 head 或序列片段」——听着像 Ring，其实不对）。
+- 概念页新增「Ulysses 具体怎么走」专节：五步布局互倒（token 布局→本地投影→all-to-all 去→本地完整注意力→all-to-all 回），沿用页内 8000 token/4 卡例子把通信账算实（每卡每层 ~24.6 MB vs all-gather ~49.2 MB；8 卡时 14.3 vs 57.3，一个越切越省一个越切越亏，python 复核）。
+- 补两个边界条件（并行度封顶 head 数/GQA 的 KV head 数；短序列不划算——正是 v0.2 音频 latent 不切的原因）和 Ring Attention 对照。
