@@ -1340,3 +1340,12 @@ skill 更新:
 - 把训练与部署拆成两章，分清参数怎样更新、RTF 能否跟上播放、响应延迟三笔账；论文未报告实测 RTF 的边界保留。
 - 为 ToR、Big Bench Audio、Daily-Omni、WER 和延迟补首次出现解释；新增 WER 原式、逐符号定义与四词 25% 手算。
 - 修正总览图最后一格为“结果回到 S1”，新增三项 benchmark glossary；桌面与 390 px 下复核公式、横向表格和术语浮卡。
+
+## [2026-08-04] ingest | Wan-Streamer v0.3 · Video = World + Event Stream
+
+- 新增 Wan-Streamer v0.3 精读与 bespoke HTML；按“先排除误读 → 完整训练/交互拼图 → 世界与事件记录 → 条件概率手算 → 预训练迁移 → 流式架构 → 服务与证据边界”重排，不照 8 页技术报告平铺。
+- 用同一个“角色喝水”例子贯穿 \(W\)、\(e_k=(\tau_k,c_k,d_k)\) 和三步联合概率；逐一定义 \(p_\theta\)、\(x_{\le k}\)、\(e_{<k}\) 与乘积符号，并强调连乘来自链式法则，不是假设事件独立。
+- 回读官方 v0.1/v0.2，把块因果注意力、条件流匹配、Thinker–Performer 与 Ulysses 明确标为继承项；把 v0.3 新增的 world-event 预训练表述和括号式开放行为接口单列。
+- 核算 25 FPS = 40 ms/帧、160 ms = 4 帧、640×368 相对 192×336 约 3.65× 像素量，以及 200+350=550 ms；分清流水线节拍、模型侧信号延迟与网络预算。
+- 新增 world-event-decomposition、block-causal-attention、thinker-performer-streaming 三个概念页，并把全双工、条件流匹配、分布式并行旧概念补上 Wan-Streamer 来源。
+- 证据账本明确保留缺口：v0.3 未给行为量化、消融、标注质量、训练规模、参数量与统一硬件对比，项目页定性演示不写成 benchmark 结论。
