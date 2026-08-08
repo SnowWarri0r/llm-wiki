@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>多模态知识流 · 一项能力学到的东西，能不能帮另一项能力 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · multimodal-knowledge-flow</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>多模态知识流 · 一项能力学到的东西，能不能帮另一项能力</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>同一个模型同时练文字、看图和画图时，三种训练目标会共用一部分表征；<strong>知识流</strong>研究的就是：把 A 的训练量加大，在 B 的数据量不变时，B 会不会变好。</p>
+<h2>它不是“模型能不能做三件事”</h2>
+<p>一个模型同时会看图和画图，只能说明能力共存。要证明知识从看图流向画图，需要固定画图数据和其余条件，只增加看图数据，然后观察画图指标是否系统改善。</p>
+<p>论文用三种能力记号：</p>
+<ul>
+<li>(L)：Language，纯文本语言建模；</li>
+<li>(U)：Visual Understanding，图像输入、文字输出；</li>
+<li>(G)：Visual Generation，文字输入、图像输出。</li>
+</ul>
+<p>真实数据实验得到的主方向是：$L\rightarrow U$、$L\rightarrow G$、$U\rightarrow G$ 较强；$G\rightarrow L/U$ 大多接近中性。它不是一张完全对称的三角形。</p>
+<h2>为什么“概念类型”会改变方向</h2>
+<p>看懂“黄色”只需把像素压成一个语义标签；画出准确黄色却要掌握密集的颜色分布。反过来，生成训练可能已经把颜色细节学进内部表征，却还没学会把它映射成回答“yellow”的语言接口。</p>
+<p>因此要区分两种转移：</p>
+<ul>
+<li><strong>零样本转移</strong>：另一任务从没见过该概念，也能立刻使用；</li>
+<li><strong>潜在先验</strong>：立刻不会，但一旦给少量目标任务样本，学得比从未见过该概念的模型快。</li>
+</ul>
+<p>CLEVR 对照发现：颜色和形状几乎没有双向零样本转移；空间关系、大小、数量能从理解部分流向生成；生成学到的颜色和形状虽然不能直接回答 VQA，却能加速后续理解微调。</p>
+<h2>怎样读实验才不被相关性骗到</h2>
+<p>至少检查四件事：目标任务数据量是否固定、总训练量是否改变、两组数据分布是否一致、评价是否仍经过额外微调。若只看“多模态模型分数更高”，不能判断到底是哪条知识流在起作用。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/physics-of-multimodal-pretraining.html">physics-of-multimodal-pretraining</a> · 真实数据与可控 CLEVR 的完整实验</li>
+<li><a href="../concepts/modality-synergy-competition.html">modality-synergy-competition</a> · 知识能流动，不等于联合训练一定净赚；还要扣掉容量竞争</li>
+<li><a href="../concepts/generation-to-perception.html">generation-to-perception</a> · 生成表征转给感知任务的另一条研究线</li>
+<li><a href="../concepts/perplexity.html">perplexity</a> · 论文怎样衡量语言端有没有被视觉训练拖累</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/physics-of-multimodal-pretraining.html"><span class="cat">paper</span>多模态预训练的经验规律 · 文字、看图和画图怎样互相帮忙，又怎样争参数</a></li><li><a href="../concepts/asymmetric-multimodal-pretraining-recipe.html"><span class="cat">concept</span>非对称多模态预训练配方 · 70% 语言、25% 理解、5% 生成</a></li><li><a href="../concepts/modality-synergy-competition.html"><span class="cat">concept</span>模态协同与容量竞争 · 一起训练为什么有时赚、有时亏</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/multimodal-knowledge-flow.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
