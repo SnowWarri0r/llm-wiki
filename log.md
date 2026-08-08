@@ -1419,3 +1419,8 @@ skill 更新:
 - 起因：wan-streamer-v03 页 v0.2 段只有一句「Performer 用 Ulysses」，术语表指向 distributed-training-parallelism，但概念页里 Ulysses 也只有一句含糊话（「轮流拿到 head 或序列片段」——听着像 Ring，其实不对）。
 - 概念页新增「Ulysses 具体怎么走」专节：五步布局互倒（token 布局→本地投影→all-to-all 去→本地完整注意力→all-to-all 回），沿用页内 8000 token/4 卡例子把通信账算实（每卡每层 ~24.6 MB vs all-gather ~49.2 MB；8 卡时 14.3 vs 57.3，一个越切越省一个越切越亏，python 复核）。
 - 补两个边界条件（并行度封顶 head 数/GQA 的 KV head 数；短序列不划算——正是 v0.2 音频 latent 不切的原因）和 Ring Attention 对照。
+
+## [2026-08-06] query | all-to-all 怎么倒回去 / online softmax / Ring Attention 细节
+- Ulysses 节补「回程」块矩阵图：整层激活切成 4×4 块（token 段 × head 组），token 布局=持有一行、head 布局=持有一列；去程按 head 切按 token 段拼，回程反着做，收发块数对称。
+- 新增「Ring Attention 具体怎么走」节：Q 不动、K/V 沿环流动 4 轮的手排轮转表；点破它=flash-attention 的「分块+在线 softmax」从 HBM↔SRAM 抬到卡↔卡；三笔账（每轮 16.4 MB 藏进计算/显存随卡数线性扩/因果 mask 负载不均用 zigzag 修）+ 与 Ulysses 的取舍。
+- online softmax 不重写，指回 flash-attention 页的完整手算（[1,3|2,5] 例，python 复核仍 36.8806 两法一致）。
