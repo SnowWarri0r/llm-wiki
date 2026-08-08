@@ -1,8 +1,8 @@
 ---
 name: rubric-based-evaluation
 type: concept
-sources: [qwen-image-bench, krea-2]
-updated: 2026-06-25
+sources: [qwen-image-bench, krea-2, videofdb]
+updated: 2026-08-06
 ---
 
 # Rubric-Based Evaluation · 拆细则打分
@@ -61,3 +61,4 @@ updated: 2026-06-25
 - [[qwen-image-bench]] · 把"图好不好"拆成 5→23→56 条细则
 - [[llm-as-judge]] · 拆好细则后,用校准的判官自动逐条打分
 - [[image-quality-metrics]] · 对照:FID/CLIPScore 那种单一数值指标
+- [[videofdb]] · 不同对话动态只启用相关评分轴，并另算确定性时序指标

@@ -1,8 +1,8 @@
 ---
 name: llm-as-judge
 type: concept
-sources: [qwen-image-bench]
-updated: 2026-06-25
+sources: [qwen-image-bench, videofdb]
+updated: 2026-08-06
 ---
 
 # LLM-as-Judge · 拿模型当判官
@@ -54,3 +54,4 @@ d²:        0          1            1            0      → Σd² = 2
 - [[qwen-image-bench]] · Q-Judger:校准到 ρ=0.92 的图像评测判官
 - [[rubric-based-evaluation]] · 判官打分前先把"好不好"拆成可判定细则
 - [[rlhf]] · 同母题:训 reward model 把人类偏好蒸进一个模型
+- [[videofdb]] · 三个 judge 的 ICC / Within-1pt 校准，以及 caption 错误如何传给判官
