@@ -1,7 +1,7 @@
 ---
 name: dmd-distillation
 type: concept
-sources: [dmd, dmd2, data-forcing-distillation, senseflow, qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2, drifting-models, drift-ar, minwm, wonder-video-world-model, longcat-video-avatar-1-5]
+sources: [dmd, dmd2, data-forcing-distillation, senseflow, qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2, drifting-models, drift-ar, minwm, wonder-video-world-model, longcat-video-avatar-1-5, klingavatar-2]
 updated: 2026-08-05
 ---
 
