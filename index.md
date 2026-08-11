@@ -37,6 +37,8 @@
 - [Interaction Models · Thinking Machines](wiki/papers/interaction-models-tml.md) — 把交互能力做进权重的 276B MoE 模型
 - [Fish Audio S2 Pro](wiki/papers/fish-speech-s2-pro.md) — Dual-AR + RVQ + GRPO 的开源 TTS
 - [DuplexOmni · 边听边说时，后台还能继续想](wiki/papers/duplexomni.md) — 把实时交互 S1 与后台思考 S2 拆成并行线；交互模型内部再用 480 ms 时间片、Thinker–Talker 和 16 层 Mimi codec 生成语音。完整拆开控制标记闭环、两阶段交替冻结与交叉熵手算；ToR 72.6 最强，但 Daily-Omni 53.8、WER 11.92%，论文结果与至少 8×H20 的公开部署口径分开记录。
+- [DyaPlex · 一边对话，一边观察对方身体并生成自己的动作](wiki/papers/dyaplex.md) — NVIDIA/HKUST 在冻结 PersonaPlex 旁新增 32 层动作塔，把双方每帧 22 个 RVQ 动作码交错成 46-token 序列，再用共享真实帧坐标的 cross-RoPE 逐层读取语音。完整算出 4096 token 只覆盖 7.12 秒、1024 token 覆盖 1.76 秒，拆清 band-mask CE、agent-only 采样、partner 消融与组件延迟；主实验仅身体骨架，face 仅定性，正文/附录 top-k 口径冲突留档。
+- [FacePlex · 语音还在生成，脸也必须同步往前走](wiki/papers/faceplex.md) — 四个 108-D FLAME 动作对以 [.75,.5,.25,0] 的错开 flow time 排队，每 80 ms 共同做 Euler 更新并输出队首；Rolling Cross-Attention 让同一动作在生命周期里读到已生成语音的约 ±240 ms 局部上下文。完整手算直线速度、四槽更新、随机偏移损失、合成/真实数据、指标与 RCA 消融；240 ms 是受控缓冲，不是偷看未知用户未来，端到端延迟与冻结训练口径仍未说清。
 - [LongCat-Video-Avatar 1.5 · 不只是对嘴，还要稳、快、多人不串嘴](wiki/papers/longcat-video-avatar-1-5.md) — Meituan 13.6B 音频驱动视频：Whisper 33 层压成 5 组并对齐视频时间轴，逐帧 GRPO 把坏手和不同步定位到具体时段，共享 DiT + Generator/Fake-Score LoRA 做 DMD2 八步蒸馏，L-RoPE + 背景静音轨避免多人串嘴。完整核算数据漏斗、flow 手算、211k 训练、508 对人评与 Base/Fast 取舍；8 NFE 比 150 NFE 少 18.75× 调用，但真实延迟与安全未报告。
 - [KlingAvatar 2.0 · 先画低清分镜，再并行补成五分钟高清数字人](wiki/papers/klingavatar-2.md) — 低清蓝图先定全局故事和动作，高清锚帧锁住身份与构图，首尾帧子片段并行补运动，再做音频插帧和空间超分；三模态专家整理冲突，深层 DiT mask 把每条音频只送到对应人物。完整手算 GSB 并保留 Face–Lip / Motion 并非全面领先，以及模型规模、分辨率、耗时、硬件和蒸馏步数均未公开的边界。
 - [VideoFDB · 语音助手“看见你”之后，真的会看眼色吗](wiki/papers/videofdb.md) — NVIDIA 用 237 段真实双人通话、11 类非语言动态、三轴 rubric 与 TOR-Alignment，测试停顿时别抢话、点头时继续说、打断时及时让出；逐步推导五类时序 policy 与公式，完整覆盖 judge 一致性、AV/AO 主表、captioning collapse、视觉忽略、FPS 过载和级联头像 2.8–3.5 秒延迟。
@@ -380,6 +382,11 @@
 - [Thinker–Talker](wiki/concepts/thinker-talker.md) — 想的(语义文本)和说的(渲染音频codes)分两路解耦; Talker 吃 Thinker 中间层条件
 - [Multi-Token Prediction](wiki/concepts/multi-token-prediction.md) — 同帧并行预测多层 RVQ codebook, 避免 8 倍序列膨胀; 共享主体+轻量 adapter
 - [Modality Projector](wiki/concepts/modality-projector.md) — 两层 MLP 把冻结编码器特征翻译进 LLM 隐空间占位符, 小投影撬动大编码器
+- [双人动作交错排列](wiki/concepts/dyadic-motion-interleaving.md) — 每帧按 A→B 排双方身份与动作码，让 causal self-attention 同时学单人部位协调、同帧反应和跨帧历史
+- [语音—动作时间对齐 RoPE](wiki/concepts/time-aligned-speech-motion-rope.md) — 扁平 token 先除以每帧长度还原真实帧，使同一动作帧的所有部位按共同时间坐标读取同频语音
+- [Rolling Flow Matching](wiki/concepts/rolling-flow-matching.md) — 多个片段以不同 flow time 同时推进，每个实时 tick 输出完成的队首并在队尾加入新噪声
+- [Rolling Cross-Attention](wiki/concepts/rolling-cross-attention.md) — 动作片段随队列前移并反复读取新语音状态，用固定缓冲获得局部前后文
+- [FLAME 面部动作](wiki/concepts/flame-facial-motion.md) — 用表情、姿态、下巴和眼睛参数控制三维脸，动作模型输出控制量，renderer 才生成像素
 - [World–Event Decomposition](wiki/concepts/world-event-decomposition.md) — 把长期不变的场景、角色和音色留在世界 W，只让事件流记录何时、谁、发生什么；不是显式 3D 物理状态
 - [Block-Causal Attention](wiki/concepts/block-causal-attention.md) — 同一时间块内并行互看，后块只看自己和过去；把音视频 GPU 并行与实时因果约束放进同一张 mask
 - [Thinker–Performer Streaming](wiki/concepts/thinker-performer-streaming.md) — Thinker 管因果状态/KV，Performer 用多卡生成更耗算力的音视频 latent；流水重叠让 160 ms 节拍与约 200 ms 信号延迟可以同时成立

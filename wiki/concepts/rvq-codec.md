@@ -1,7 +1,7 @@
 ---
 name: rvq-codec
 type: concept
-sources: [fish-speech-s2-pro, viitorvoice, duplexomni]
+sources: [fish-speech-s2-pro, viitorvoice, duplexomni, dyaplex]
 updated: 2026-07-29
 ---
 

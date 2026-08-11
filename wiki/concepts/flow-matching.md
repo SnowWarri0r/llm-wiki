@@ -1,7 +1,7 @@
 ---
 name: flow-matching
 type: concept
-sources: [interaction-models-tml, ideogram-4, stable-diffusion-3-5, krea-2, omnieraser, diffusionnft, sensenova-vision, meshflow, ltx-2, drifting-models, solaris-multiplayer-world-model, senseflow, sana-video-2, longcat-video-avatar-1-5]
+sources: [interaction-models-tml, ideogram-4, stable-diffusion-3-5, krea-2, omnieraser, diffusionnft, sensenova-vision, meshflow, ltx-2, drifting-models, solaris-multiplayer-world-model, senseflow, sana-video-2, longcat-video-avatar-1-5, faceplex]
 updated: 2026-08-05
 ---
 

@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>RVQ Codec · 残差向量量化 · Concept</title>
+<title>Rolling Flow Matching · 滚动流匹配 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,62 +53,62 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · rvq-codec</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · rolling-flow-matching</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>RVQ Codec · 残差向量量化</h1>
+  <h1>Rolling Flow Matching · 滚动流匹配</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>把音频压成 <strong>N 层堆叠的 codebook</strong>，第 k 层负责前 k-1 层量化剩下的"误差"。</p>
+<p>把多个去噪进度不同的未来片段排成队，每个实时 tick 一起向成品推进一格。</p>
 <h2>直觉</h2>
-<p>单个大 VQ codebook 要么太小（音质烂）要么太大（内存爆）。RVQ 把任务分到多层：</p>
-<ul>
-<li>第 1 层：粗略量化，"大致这是什么音"</li>
-<li>第 2 层：量化第 1 层的残差 = 一阶修正</li>
-<li>第 N 层：再修正前 N-1 层留下的高频细节</li>
-</ul>
-<p>类比：<strong>JPEG 渐进式编码</strong> —— 先一个低分辨率版本，再叠加细节层。或 <strong>bitplane coding</strong> 把灰度图按位平面切。</p>
+<p>普通 flow matching 生成一段结果时，会拿同一块噪声连续积分多步，做完才能交付。滚动流匹配像四盘同时进烤箱、但熟度错开：最前面那盘下一轮出炉，后面的依次更生，新盘从队尾放进去。每 80 毫秒都有成品出队，GPU 也能批量处理四个不同熟度的片段。</p>
+<p>它替代“一段生成完再开始下一段”的串行采样。代价是必须维护队列，并为最前片段等待若干 tick。</p>
 <h2>怎么做的</h2>
+<p>干净动作 (X)、噪声 (arepsilon) 与进度 (  au) 做直线插值：</p>
+<div class="tex math-display" data-display="true">X^{\tau}=(1-\tau)\varepsilon+\tau X,
+\qquad
+U=X-\varepsilon.</div>
 <ul>
-<li>fish-speech S2 用 <strong>10 个 codebook</strong>，<strong>~21 Hz</strong> 帧率</li>
-<li>编码器（卷积栈）把 waveform 编成连续向量</li>
-<li>第 1 个 codebook 找最近邻 → token₁</li>
-<li>用 codebook 解码后的向量算残差 → 第 2 个 codebook 找最近邻 → token₂</li>
-<li>以此类推到 10 层</li>
-<li>解码器吃 10 路 token 重建波形</li>
-<li>训练时联合优化编码器 + 解码器 + codebook（VQ-VAE 风格，带 commitment loss + codebook loss）</li>
+<li>( au=0)：纯噪声；</li>
+<li>( au=1)：干净动作；</li>
+<li>(U)：沿这条直线每增加 1 个进度单位应移动的速度，因为对 (  au) 求导正好是 (X-\varepsilon)。</li>
 </ul>
-<p>DuplexOmni 的论文把码本层数写成一般符号 <span class="tex math-inline" data-display="false">K</span>。2026-07-29 的官方 checkpoint 配置取 <span class="tex math-inline" data-display="false">K=16</span>，每个 480 ms 时间片生成 6 帧，也就是 12.5 帧/秒；Talker 先自回归出第 0 层，MTP 再补其余 15 层。</p>
-<h2>跟 TML dMel 的区别</h2>
+<p>FacePlex 用 (L=4)，所以每轮进度增加 (Delta    au=1/L=.25)。更新是 (X^{\tau+\Delta\tau}=X^{\tau}+\Delta\tau\hat U)。</p>
+<h2>数字例子</h2>
+<p>四个槽位的进度为 <code>[.75,.50,.25,0]</code>。取干净值 / 噪声分别是 <code>(4,0),(2,−2),(1,1),(−1,3)</code>：</p>
 <ul>
-<li><strong>RVQ</strong> = 学出来的 codebook，跨数据集会自动适配，表达力强</li>
-<li><strong><a href="../concepts/dmel.html">dmel</a></strong> = 规则离散化 Mel 频谱（每个频带按预设格点切）—— 简单、无需训 codebook，但只适合输入侧</li>
+<li>槽 0：状态 (.25×0+.75×4=3)，速度 (4-0=4)，更新后 (3+.25×4=4)，正好完成；</li>
+<li>槽 1：状态 (.5×(-2)+.5×2=0)，速度 4，更新后 1，对应进度 .75；</li>
+<li>槽 2：状态 1，速度 0，更新后仍为 1；</li>
+<li>槽 3：状态 3，速度 −4，更新后 2，对应进度 .25。</li>
 </ul>
-<p>为什么 TML 不在输出侧用 RVQ？我的猜测：RVQ 需要 N 层串行解码 → 延迟高；TML 想要 200ms 内吐完音频，选了 <a href="../concepts/flow-matching.html">flow-matching</a> 一步到位（但 flow matching 也要 ODE 多步，是另一种 trade-off）。详见 <a href="../topics/audio-tokenization-rvq-vs-flow.html">audio-tokenization-rvq-vs-flow</a>。</p>
+<p>整队由 <code>[3,0,1,3]</code> 变成 <code>[4,1,1,2]</code>。最前面的 4 被输出，其余前移，队尾再放一份新噪声。</p>
+<h2>跟普通 flow matching 的对照</h2>
+<ul>
+<li>普通：围绕一个样本连续走完整条路径。</li>
+<li>滚动：一批样本处于不同进度，每轮共同走一小格并输出队首。</li>
+</ul>
 <h2>链接</h2>
 <ul>
-<li><a href="../concepts/dual-ar.html">dual-ar</a> · 10 路 token 由 Dual-AR 生成</li>
-<li><a href="../concepts/dmel.html">dmel</a> · 对照：TML 的离散化方案</li>
-<li><a href="../concepts/flow-matching.html">flow-matching</a> · TML 选用的非量化路线</li>
-<li><a href="../topics/audio-tokenization-rvq-vs-flow.html">audio-tokenization-rvq-vs-flow</a> · 横向比较</li>
-<li><a href="../papers/fish-speech-s2-pro.html">fish-speech-s2-pro</a> · 论文</li>
-<li><a href="../papers/duplexomni.html">duplexomni</a> · 16 层 Mimi codec 用在全双工 Talker 输出</li>
+<li><a href="../papers/faceplex.html">faceplex</a> · 用四槽滚动队列实时生成 FLAME 表情</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · 速度场和直线插值的基础</li>
+<li><a href="../concepts/rolling-cross-attention.html">rolling-cross-attention</a> · 队列里的每个槽怎样读取语音上下文</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 23 处</span>
-  <ul><li><a href="../papers/attention-is-all-you-need.html"><span class="cat">paper</span>Attention Is All You Need · Transformer 始祖</a></li><li><a href="../papers/dmel.html"><span class="cat">paper</span>dMel · 离散 Mel 频谱</a></li><li><a href="../papers/duplexomni.html"><span class="cat">paper</span>DuplexOmni · 边听边说时，后台还能继续想</a></li><li><a href="../papers/dyaplex.html"><span class="cat">paper</span>DyaPlex · 一边对话，一边观察对方身体并生成自己的动作</a></li><li><a href="../papers/fish-speech-s2-pro.html"><span class="cat">paper</span>Fish Audio S2 Pro</a></li><li><a href="../papers/minimind-o.html"><span class="cat">paper</span>MiniMind-O · 0.1B 端到端 Omni</a></li><li><a href="../papers/viitorvoice.html"><span class="cat">paper</span>ViiTorVoice · 低帧率语义码 + 并行填声 = 60ms 流式克隆</a></li><li><a href="../papers/vits.html"><span class="cat">paper</span>VITS · 文本进去，波形出来</a></li><li><a href="../topics/audio-tokenization-rvq-vs-flow.html"><span class="cat">topic</span>音频 token 化：RVQ vs Flow Matching</a></li><li><a href="../concepts/audio-vae.html"><span class="cat">concept</span>Audio VAE · 把波形压成适合生成模型处理的声音 latent</a></li><li><a href="../concepts/bin-quantization.html"><span class="cat">concept</span>Bin Quantization · 等距分箱量化</a></li><li><a href="../concepts/dmel.html"><span class="cat">concept</span>dMel · 离散 Mel 频谱</a></li><li><a href="../concepts/dual-ar.html"><span class="cat">concept</span>Dual-AR · 双自回归</a></li><li><a href="../concepts/dualcodec.html"><span class="cat">concept</span>DualCodec · 低帧率 + 语义增强的双流音频码</a></li><li><a href="../concepts/dyadic-motion-interleaving.html"><span class="cat">concept</span>Dyadic Motion Interleaving · 双人动作交错排列</a></li><li><a href="../concepts/flow-matching.html"><span class="cat">concept</span>Flow Matching · 流匹配</a></li><li><a href="../concepts/inline-emotion-tags.html"><span class="cat">concept</span>Inline Emotion Tags · 内联情绪标签</a></li><li><a href="../concepts/log-mel-spectrogram.html"><span class="cat">concept</span>Log-Mel Spectrogram · Fbank · 对数 Mel 频谱图</a></li><li><a href="../concepts/multi-token-prediction.html"><span class="cat">concept</span>Multi-Token Prediction · MTP · 一步预测好几个</a></li><li><a href="../concepts/semantic-vs-acoustic-tokens.html"><span class="cat">concept</span>语义码 vs 声学码 · 把&quot;说什么&quot;和&quot;听起来啥样&quot;分开</a></li><li><a href="../concepts/thinker-talker.html"><span class="cat">concept</span>Thinker–Talker · 想的和说的分两条路</a></li><li><a href="../concepts/tokenization.html"><span class="cat">concept</span>Tokenization / BPE · 文本怎么切成 token 喂给模型</a></li><li><a href="../concepts/voice-cloning-reference.html"><span class="cat">concept</span>Voice Cloning Reference · 声音克隆参考音频</a></li></ul>
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/faceplex.html"><span class="cat">paper</span>FacePlex · 语音还在生成，脸也必须同步往前走</a></li><li><a href="../concepts/flame-facial-motion.html"><span class="cat">concept</span>FLAME Facial Motion · 参数化三维人脸动作</a></li><li><a href="../concepts/rolling-cross-attention.html"><span class="cat">concept</span>Rolling Cross-Attention · 滚动交叉注意力</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/rvq-codec.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/rolling-flow-matching.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
