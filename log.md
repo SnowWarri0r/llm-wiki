@@ -1480,3 +1480,9 @@ skill 更新:
 - §12 补 B.3 误差二分：重定位项+压缩项;重定位是可寻址性的代价(拿分布内位移换 OOD 失败),无解析界、由 §10「只换地址」表实测;理论只管压缩项。另补 recent-window mass(recent 行 identity 原样复刻 α^rec,压缩误差只出在旧史)。
 - §13 补 G.2/H.2：不和 MG3 比的原因(记忆重训进骨干,无冻结 checkpoint 可外挂);未来方向三条(在线 k-means 调边界/soft-sparse 行/直接优化 P)。
 - md 四处同步。lint 0/0,KaTeX 2869 条 0 失败,浏览器核过 §01 新段。
+
+## [2026-08-11] revise | dyaplex + faceplex 双遍扫(大纲对照遍)
+- DyaPlex：§02 补「6/4 码=RVQ 残差层数」+四部位输入维度表(78/180/57/56)+两个易读错点(4096 词表实为四独立 codebook 并集;因果化=左 pad 零前瞻+下采样 4×→2×);§01 补 17 路交错输入求和+动作塔 1024 vs 语音塔 4096 的容量取舍;§06 补 {H^ℓ} 预计算一次;§08 指标口径(FGD=裸 66D 关节版、同名不同算法不可跨论文比;BeatAlign 机制;P-FD 比的是 GT 对 vs GT+Gen 对)+表头补 ×10⁻³ 单位+GT (Random) 定标行(13/33,DyaPlex 5.6/7.3 比乱配真动作还贴)。
+- FacePlex：§05 补每层构成(self-attn→RCA→FFN→velocity head)+style/anchor 是什么(角色参考动作/已出队干净帧);§06 补真实数据格式化管线(Seamless 自带 112D FLAME、音频门控+归一+重过 Mimi/STT 成同构 shard)+三路 dropout 的用途(CFG+流式 warm-up、null embedding);§08 补 N 消融质量面(N=1 嘴部误差反而最低,质量不随步数单调,N=2 是均衡非上限)。
+- 两 md 同步;lint 2 页 0/0;KaTeX 2871 条 0 失败;浏览器核过改动处。
+- 流程固化：每篇论文最少 review 两遍(通读批判遍+大纲对照遍),已写入长期记忆。

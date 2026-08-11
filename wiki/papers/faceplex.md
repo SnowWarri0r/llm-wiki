@@ -196,7 +196,9 @@ PLRS 不是看嘴像素的简单分类器。它把 108-D FLAME 还原为 5023 �
 
 这套数据有明显选择偏差：合成动作来自 UniLS，12 个候选又按 PLRS 挑最好，学生容易继承 teacher 的动作风格，也会针对 PLRS 偏好的模式过拟合。真实 677 小时能缓和，却不能证明偏差消失。
 
-附录训练配置：AdamW、学习率 (10^{-4})、weight decay 0、梯度 clip 1、500 步 warmup、余弦衰减到初始值 10%、最多 (10^6) 步、batch 256、4 张 H200；style、anchor、audio feature 各有 .1 conditioning dropout；EMA .9999，但作者说原始权重更好。
+真实那一路也要格式化：Seamless 自带预提取的 112 维 FLAME（转成 108 维），音频按逐帧说话活性 mask 门控清零、峰值归一 0.5 对齐合成数据响度，再重过 Mimi（24 kHz、8 codebook）和 Kyutai STT→Moshi SPM 对齐 80 ms 网格——真实录音被整成与自嗨数据同构的 shard（隐藏状态/音频码/文本 token/FLAME 四对齐）。
+
+附录训练配置：AdamW、学习率 (10^{-4})、weight decay 0、梯度 clip 1、500 步 warmup、余弦衰减到初始值 10%、最多 (10^6) 步、batch 256、4 张 H200；三路条件各 .1 dropout——style 是角色参考动作、anchor 是已出队的干净动作帧、audio feature 是 PersonaPlex 隐藏状态，丢弃时换可学 null embedding，为推理期 CFG 和流式 warm-up（启动时 anchor 为空）留路；EMA .9999，但作者说原始权重更好。
 
 又有一处数据口径冲突：正文强调约 1,138 小时混合数据，附录 B.1 写训练使用名为 syntheticv2_plrs22 的 corpus。它可能是内部混合集名称，也可能只指合成集，论文未给 schema，复现时需要作者澄清。
 
@@ -210,6 +212,8 @@ PLRS 不是看嘴像素的简单分类器。它把 108-D FLAME 还原为 5023 �
 - L-PFID：长片段个体级分布距离，越低越好。
 
 FacePlex 的语音指标与 PersonaPlex 接近：Pause .584 vs .587，Backchannel .028 vs .025，Turn .078 vs .078，Interruption .399 vs .427。说明增加面部队列没有明显毁掉原全双工语音行为，但也不能据此说语音全面变好。
+
+Euler 步数的质量面也不单调：N=1 嘴部误差最低（S-LVE 7.392），N=4 分布指标更好（S-FDD 22.890），N=8 之后回落；N=2 是均衡点不是上限。
 
 ## 9. 结果与人评
 
