@@ -1433,3 +1433,9 @@ skill 更新:
 - 完整覆盖主表、四层 LoopBench、N=256 PAC sweep、LingBot 跨架构、slot split、Field/Landmark 混合、MemRoPE/YaRN、streaming writer、显存、运行时、算法与条件理论界限。
 - 明确口径：WorldTrace-Field 主实验的 GPU attention cache 为 O(1)，但 recompute writer 的 CPU host state 每 latent frame +5.4 MB；严格 O(Ns) 状态是附录 streaming writer。官方未开放可下载代码，scene-entry 阈值等复现细节仍缺。
 - 新增 addressable-kv-memory、canonical-rope-keys、field-vs-landmark-memory 三个概念页，并补充 kv-cache / RoPE 的长期寻址与相位平均边界。
+
+## [2026-08-11] revise | longcat-video-avatar-1-5 §04 重写
+- 起因：§04 三个数字（400/33/1280）来历全空、layerstrip 的「均值 4.5」不知所云、音频进 DiT 只有一句话。
+- 按四步重排：① 数字来历（log-Mel 10ms 一列→卷积减半=50 Hz；8×50=400；embedding+32 层=33；1280=隐藏维；30 秒滑窗）；② 层轴分组平均+玩具手算（[4.5,12.5,20.5,28.5,33]）+HuMo 出处；③ 时间轴两段账（对帧率 50→25、对刻度 25 FPS→÷4 latent，audio projector 聚合约 4 帧/160ms）；④ 进 DiT（文本 cross-attn 之后插入、adaLN 闸门防灾难性遗忘）。
+- 边界框收口：projector 结构/窗口、5 通道进 K/V 排法、分组边界与 singleton、只用最后层的消融——论文均未给。
+- 同步 md §5 与 whisper-layer-pooling 概念页（补 HuMo 出处）；sources 加 HuMo（arXiv 2509.08519 已核实）；lint 0/0、glossary 16↔16、浏览器逐屏核过。
