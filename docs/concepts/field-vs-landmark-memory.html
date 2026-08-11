@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>流式 AR vs 双向视频扩散 · Concept</title>
+<title>Field vs Landmark Memory · 平滑摘要与关键帧记忆 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,65 +53,72 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · autoregressive-vs-bidirectional-video-diffusion</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · field-vs-landmark-memory</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>流式 AR vs 双向视频扩散</h1>
+  <h1>Field vs Landmark Memory · 平滑摘要与关键帧记忆</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>双向扩散让整段视频在每个去噪 step 互相修改，推理强但代价高；流式 AR 从左到右提交，延迟低但早期错误无法撤回。</p>
-<h2>双向扩散</h2>
-<p>一开始就建立固定长度的整段 noisy latent。每轮去噪时，任意时间位置都能和其他位置交换信息，所以终点约束能反过来修正开头。代价是每轮都处理整段序列，全局时间注意力约为 <span class="tex math-inline" data-display="false">O(KN^{2})</span>。</p>
-<h2>流式自回归扩散</h2>
-<p>按 <span class="tex math-inline" data-display="false">p(z_{1}|c)p(z_{2}|z_{1},c)…p(zN|z&lt;N,c)</span> 从左到右生成。过去的 K/V 可以缓存，新的 latent 生成后立即输出；但错误的 <span class="tex math-inline" data-display="false">z_{3}</span> 会成为 <span class="tex math-inline" data-display="false">z_{4},z_{5}…</span> 的固定条件。</p>
-<p>KV cache 减少了过去 token 的重复投影，不代表总 attention 变为线性：第 <code>i</code> 个 query 仍要读取 <code>i</code> 个历史 key，<code>1+2+…+N</code> 仍是平方级。</p>
-<h2>HDR 的折中</h2>
-<p>HDR 在输出最终细节点之前，先生成粗时间层。它把“整段可修改”压缩成少量上层节点，再用稀疏父子连接传给下层，目标是保留流式延迟，同时推迟早期决定。</p>
-<h2>Solaris 的 teacher → student 路线</h2>
-<p>Solaris 先训练能整段联合去噪的双向多人 teacher，再把中间 checkpoint 改成只能读取过去的因果 student。student 用 6 个 latent frame 的滚动窗口生成，最后在自己生成的历史上做 Checkpointed Self Forcing。这里“双向质量高、因果可部署”的分工非常直接。</p>
-<h2>minWM 的 teacher → student 路线</h2>
-<p>minWM 先把现成双向视频扩散模型训出相机控制，再用 teacher forcing 改成多步因果模型；随后用 causal ODE 或 causal consistency distillation 压成四步，最后让因果学生 self-rollout，并由双向 real/fake score 做 DMD。它把“高质量双向老师”和“低延迟因果学生”拆成一条可复现流水线。</p>
+<p>固定记忆预算下有两种相反取舍：Field 把一段历史平均成摘要，保住整体连续性；Landmark 挑少数关键时刻原样保存，保住具体事件或场景的精确回忆。</p>
+<h2>用旅行照片理解</h2>
+<ul>
+<li><strong>Field</strong> 像把一天照片做成一张“旅行气氛拼图”：能记住大致天气、色调和路线，但看不清某张门牌；</li>
+<li><strong>Landmark</strong> 像只保留酒店门口、车站出口、景点入口三张原图：回到这些地方时很好认，但没拍到的小巷完全没有。</li>
+</ul>
+<h2>何时分别合适</h2>
+<table>
+<thead>
+<tr>
+<th>未来 Query 的注意方式</th>
+<th>更合适的记忆</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>对一整段过去分散关注</td>
+<td>Field</td>
+<td>组均值能近似这一段的总体信息</td>
+</tr>
+<tr>
+<td>集中寻找某个旧场景</td>
+<td>Landmark</td>
+<td>one-hot 选择保留该帧的原始 Key/Value</td>
+</tr>
+<tr>
+<td>两种需求混合</td>
+<td>共享槽位里混合分配</td>
+<td>接口可行，但分配策略需另行决定</td>
+</tr>
+</tbody>
+</table>
+<h2>固定预算意味着必有损失</h2>
+<p>Field 的每槽来源数会随历史增长，组内细节越来越模糊；Landmark 最多保存与槽数相同的场景，装满后必须淘汰。不存在用固定 <code>L</code> 格无损复现任意 <code>T≫L</code> 历史的办法；设计的本质是提前判断未来更可能需要“整体”还是“某一点”。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/hierarchical-denoising-visual-reasoning.html">hierarchical-denoising-visual-reasoning</a> · HDR 完整方案</li>
-<li><a href="../concepts/sparse-hierarchical-attention.html">sparse-hierarchical-attention</a> · 稀疏连接</li>
-<li><a href="../concepts/kv-cache.html">kv-cache</a> · 流式复用的基础</li>
-<li><a href="../papers/solaris-multiplayer-world-model.html">solaris-multiplayer-world-model</a> · 双向单人→双向多人→因果多人→Self Forcing</li>
-<li><a href="../papers/interactive-video-world-modeling-survey.html">interactive-video-world-modeling-survey</a> · 交互式世界模型为什么必须做因果 rollout</li>
-<li><a href="../papers/minwm.html">minwm</a> · 从双向 T2V/TI2V 到四步因果世界模型的完整工程配方</li>
+<li><a href="../papers/worldtrace.html">worldtrace</a> · 两种 writer 在同一虚拟位置系统中的实现与实验</li>
+<li><a href="../concepts/addressable-kv-memory.html">addressable-kv-memory</a> · 保存内容后还必须能寻址</li>
+<li><a href="../concepts/sparse-attention.html">sparse-attention</a> · one-hot 选择与分组平均都是结构化稀疏近似</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 9 处</span>
-  <ul><li><a href="../papers/hierarchical-denoising-visual-reasoning.html"><span class="cat">paper</span>HDR · 先规划整段轨迹，再逐层生成每一步</a></li><li><a href="../papers/interactive-video-world-modeling-survey.html"><span class="cat">paper</span>交互式视频世界模型综述 · 不是“生成一段视频”，而是每次操作后都要继续维持同一个世界</a></li><li><a href="../papers/minwm.html"><span class="cat">paper</span>minWM · 把离线视频扩散模型改造成可操控、能逐段输出的世界模型</a></li><li><a href="../papers/solaris-multiplayer-world-model.html"><span class="cat">paper</span>Solaris · 两个人同时行动时，视频世界模型怎样维护同一个 Minecraft</a></li><li><a href="../papers/worldtrace.html"><span class="cat">paper</span>WorldTrace · 记忆明明还在，视频世界模型为什么还是认不出回家的路</a></li><li><a href="../concepts/causal-streaming-vae.html"><span class="cat">concept</span>因果流式 VAE · 压缩当前音视频时不偷看未来</a></li><li><a href="../concepts/spatio-temporal-cascade-avatar.html"><span class="cat">concept</span>时空级联数字人 · 先定长片骨架，再并行补高清细节</a></li><li><a href="../concepts/speculative-decoding.html"><span class="cat">concept</span>Speculative Decoding · 小模型先起草，大模型一次验一段</a></li><li><a href="../concepts/teacher-forcing-video-diffusion.html"><span class="cat">concept</span>视频扩散里的 Teacher Forcing · 训练时喂真历史</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/worldtrace.html"><span class="cat">paper</span>WorldTrace · 记忆明明还在，视频世界模型为什么还是认不出回家的路</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/autoregressive-vs-bidirectional-video-diffusion.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/field-vs-landmark-memory.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
 </div>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  document.querySelectorAll('.tex').forEach(function (el) {
-    try {
-      katex.render(el.textContent.trim(), el, {
-        displayMode: el.dataset.display === 'true',
-        throwOnError: false,
-        strict: false
-      });
-    } catch (e) { el.classList.add('tex-error'); }
-  });
-});
-</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

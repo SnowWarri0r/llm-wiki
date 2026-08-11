@@ -1,8 +1,8 @@
 ---
 name: rotary-position-embedding
 type: concept
-sources: [rope, krea-2, meshflow, ltx-2]
-updated: 2026-07-17
+sources: [rope, krea-2, meshflow, ltx-2, worldtrace]
+updated: 2026-08-11
 ---
 
 # Rotary Position Embedding · RoPE · 旋转位置编码
@@ -103,6 +103,12 @@ RoPE 还有一个好性质：**当两个 token 距离越远，位置对 attentio
 
 这意味着 RoPE **自带一个软窗口效应** —— 不需要显式 mask 长距离，模型天然更关注近处。
 
+## 长上下文的另一个问题：训练没见过的旋转角
+
+“公式还能算”不等于“模型学会了怎么用”。若训练时 Query–Key 最多只隔 5 个时间位置，推理突然要求读取相隔 30 的 Key，部分高频通道会转过许多圈，进入训练没覆盖的相位组合。旧 Key 即使仍在 KV cache，也可能变得难以寻址。
+
+而且不同时间的 Key 已带不同旋转，直接做平均可能相消。要把多个 Key 合并成摘要，应先对每个 Key 反向旋转回 canonical 坐标，再平均，最后旋到摘要的新虚拟位置。见 [[canonical-rope-keys]] 与 [[worldtrace]]。
+
 ## 代码出处
 - 原论文：Su et al. 2021, arXiv 2104.09864
 - HuggingFace transformers 里 LlamaRotaryEmbedding 是最标准的参考实现
@@ -113,3 +119,5 @@ RoPE 还有一个好性质：**当两个 token 距离越远，位置对 attentio
 - [[relative-position-encoding]] · 为什么相对位置好
 - [[self-attention]] · RoPE 作用的位置（Q·K^T 之前）
 - [[kv-cache]] · 缓存旋转后的 K，推理时不重复计算
+- [[canonical-rope-keys]] · 为什么不同时间的 Key 不能直接平均
+- [[addressable-kv-memory]] · 为什么 Key 还在也可能读不到
