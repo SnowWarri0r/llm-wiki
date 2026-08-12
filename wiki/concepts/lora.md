@@ -1,8 +1,8 @@
 ---
 name: lora
 type: concept
-sources: [omnieraser]
-updated: 2026-06-17
+sources: [omnieraser, wan-animate-2]
+updated: 2026-08-12
 ---
 
 # LoRA · 低秩适配 · 不动底模，只训一个小增量

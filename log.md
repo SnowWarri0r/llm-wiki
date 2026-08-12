@@ -1504,3 +1504,14 @@ skill 更新:
 - Appendix B 以证据梯子呈现：1% prefill 的 n-gram shift、6 模型×90 问题×4 repeats 的字符风格分类器与因果结论分层；保留作者“suggestive but inconclusive”限制。
 - 新增 authenticated-encryption、reasoning-envelope-replay、reasoning-trace-distillation、hidden-prompt-injection 四个 concept，并给 perplexity 补本篇来源与因果边界。
 - 论文讲解 skill 新增硬门槛：每篇至少两轮彼此独立的 review，第一轮查内容/证据/公式/认知链，第二轮只看第一轮修订后的最终渲染页与桌面/手机/交互；两轮均达 4+ 后才 commit/push。
+
+## [2026-08-12] ingest | Wan-Animate 2
+
+- 新增 14 页论文精读与 bespoke HTML；按“旧路线为何丢细节 → 身份图/驱动视频两路输入 → 配对数据 → 双分支 DiT → Time-Align RoPE → Sparse-Ref → 视角 LoRA → Teacher Forcing → Error Buffer → 两阶段 Self-Forcing → 4-GPU 实时流水线 → 证据账本”重排，不照论文小节生硬平铺。
+- 把两种 reference 拆清：人物参考图进入目标分支决定身份，原始驱动视频进入干净参考分支决定动作；官方代码 commit 3ad2fef 证实参考 K/V 在去噪循环前缓存，目标每步复用。
+- Sparse-Ref 用 T=3、St=4、Sr=2 手算跨分支连边 72→24，并明确论文 O(Nl) 口径隐含每帧参考 token 数为常数；目标视频内部 self-attention 仍完整。
+- Error Buffer 用 100→97 残差说明“污染过净历史”；Self-Forcing 补 score 的本地前置、real/fake 角色、整段定方向与逐块反传的区别，再以 0.4−0.1+0.2=0.5、θ 2→1.95 手算 Algorithm 1。
+- 完整抄录 Figure 6 三组用户研究胜/平/负比例；特别保留 Kling overall 25.9/48.0/26.1 近乎打平，以及参与人数、样本数、显著性和逐模块消融均未公开。
+- 分清论文 Lite 3 步、4 GPU、400×720@24 FPS 与当前开源蒸馏示例 10 步；吞吐不冒充首帧延迟。
+- 新增 time-align-rope、sparse-reference-attention、error-buffer-training、chunk-wise-self-forcing 四个 concept，并补 DiT / LoRA / Teacher Forcing / DMD 来源。
+- Review 1 抓出“身份图被误画成干净分支”的架构错误并修正；Review 2 抓出论文页与概念页展示公式空白、手机 48 视角网格列结构错误并修正。最终 lint 0/0、KaTeX 0 失败、浏览器桌面/手机/弹层复核通过。

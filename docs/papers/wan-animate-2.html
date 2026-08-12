@@ -1,0 +1,395 @@
+<!doctype html>
+<!-- bespoke -->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wan-Animate 2 · 直接视频驱动与实时人物动画</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet">
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+:root{--paper:#f3ecdd;--card:#fffaf0;--ink:#171816;--muted:#716b60;--rule:#bcb09a;--teal:#007c83;--teal2:#cfe8e6;--coral:#bb4933;--coral2:#f2d2c8;--gold:#a8740d;--gold2:#f4e2aa;--blue:#1a4d75;--blue2:#d2dfeb;--navy:#102638;--ok:#256b52;--bad:#9c3124}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.8 "Noto Serif SC",serif;-webkit-font-smoothing:antialiased}body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.42;background-image:linear-gradient(rgba(0,124,131,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(0,124,131,.045) 1px,transparent 1px);background-size:32px 32px}.page{position:relative;max-width:1180px;margin:auto;padding:58px 44px 110px}.mast{display:flex;justify-content:space-between;border-bottom:1px solid var(--ink);padding-bottom:10px;margin-bottom:52px;font:500 11px/1.3 "DM Mono",monospace;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}.kicker,.tag,.label{font:500 11px/1.4 "DM Mono",monospace;letter-spacing:1.2px;text-transform:uppercase}.kicker{color:var(--teal);margin-bottom:15px}h1{font:700 clamp(51px,8vw,94px)/.96 "Fraunces","Noto Serif SC",serif;letter-spacing:-3px;margin:0 0 25px;max-width:1040px}h1 em{color:var(--coral);font-style:italic}.dek{font-size:23px;line-height:1.65;max-width:920px;margin:0 0 18px}.meta{font:500 12px/1.7 "DM Mono",monospace;color:var(--muted)}.tldr{margin:34px 0 0;padding:20px 22px;border-left:5px solid var(--teal);background:var(--card)}.tldr b{color:var(--teal);font-family:"DM Mono",monospace;font-size:12px;letter-spacing:1px}h2{font:700 38px/1.25 "Fraunces","Noto Serif SC",serif;margin:82px 0 22px}.n{display:block;margin-bottom:9px;color:var(--teal);font:500 12px/1 "DM Mono",monospace;letter-spacing:1.3px}.lead{font-size:21px;max-width:900px}h3{font:700 23px/1.4 "Fraunces","Noto Serif SC",serif;margin:14px 0 9px}p{margin:13px 0}a{color:var(--teal);text-underline-offset:3px}a.jr{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 5px;border-radius:12px;background:var(--teal);color:#fff;text-decoration:none;font:500 10px/1 "DM Mono",monospace;vertical-align:super;margin-left:3px}code{font-family:"DM Mono",monospace;font-size:.86em;background:#fff;border:1px solid var(--rule);padding:1px 5px;border-radius:3px}.tag{display:inline-block;padding:6px 9px;background:var(--teal2);color:#075c61}.tag.coral{background:var(--coral2);color:#842b1f}.tag.gold{background:var(--gold2);color:#745008}.tag.blue{background:var(--blue2);color:#173f5e}.math{margin:18px 0;padding:22px 12px;background:var(--navy);color:#fff;border-left:5px solid var(--teal);overflow-x:auto;text-align:center}.math .katex{font-size:1.18em}.vars{display:grid;grid-template-columns:repeat(2,1fr);border:1px solid var(--rule);background:var(--card);margin:16px 0}.vars>div{padding:11px 14px;border-bottom:1px dashed var(--rule)}.vars>div:nth-child(odd){border-right:1px dashed var(--rule)}.vars code{display:inline-block;color:var(--teal)}
+figure{margin:36px 0;padding:24px;border:1px solid var(--rule);background:rgba(255,250,240,.88);box-shadow:10px 10px 0 rgba(80,65,42,.08);overflow:hidden}figcaption{display:flex;justify-content:space-between;gap:18px;padding-bottom:13px;border-bottom:1px dashed var(--rule);margin-bottom:22px;font:500 11px/1.5 "DM Mono",monospace;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted)}figcaption b{color:var(--teal)}.grid2,.grid3,.grid4{display:grid;gap:14px}.grid2{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:repeat(3,1fr)}.grid4{grid-template-columns:repeat(4,1fr)}.card{min-width:0;padding:19px;background:var(--card);border:1px solid var(--rule)}.card p:last-child{margin-bottom:0}.big{display:block;margin:9px 0;color:var(--teal);font:700 30px/1.1 "DM Mono",monospace}.note,.warning,.truth{padding:17px 19px;margin:18px 0;background:#f3fbfa;border-left:5px solid var(--teal)}.warning{background:#fff5f1;border-color:var(--coral)}.truth{background:#fff9e9;border-color:var(--gold)}.note .label,.warning .label,.truth .label{display:block;margin-bottom:4px;color:var(--teal)}.warning .label{color:var(--coral)}.truth .label{color:var(--gold)}
+.flow{display:grid;grid-template-columns:1fr 44px 1.2fr 44px 1fr;gap:10px;align-items:stretch}.inputstack{display:grid;gap:10px}.inputstack .node{min-height:0}.node{min-height:148px;padding:17px;background:var(--card);border:2px solid var(--teal)}.node.coral{border-color:var(--coral)}.node.gold{border-color:var(--gold)}.node b{display:block;font:700 20px/1.35 "Fraunces","Noto Serif SC",serif;margin:8px 0}.node small{font:500 10px/1.5 "DM Mono",monospace;color:var(--muted)}.arrow{display:grid;place-items:center;color:var(--teal);font:700 22px/1 "DM Mono",monospace}.factory{display:grid;grid-template-columns:1fr 38px 1fr 38px 1fr 38px 1fr;gap:9px;align-items:stretch}.factory .card{border-top:5px solid var(--teal)}.branch{display:grid;grid-template-columns:1fr 60px 1fr;gap:12px;align-items:stretch}.lane{padding:20px;border:2px solid var(--teal);background:var(--card)}.lane.ref{border-color:var(--coral)}.lane .stage{margin-top:12px;padding:11px;background:var(--teal2);border-left:4px solid var(--teal)}.lane.ref .stage{background:var(--coral2);border-color:var(--coral)}.bridge{display:grid;place-items:center;text-align:center;font:500 10px/1.7 "DM Mono",monospace;color:var(--muted)}
+.tokens{display:grid;grid-template-columns:95px repeat(6,1fr);gap:5px;min-width:720px}.tokens>div{min-height:54px;display:grid;place-items:center;text-align:center;padding:5px;border:1px solid var(--rule);font:500 10px/1.35 "DM Mono",monospace}.tokens .head{min-height:36px;background:#ebe4d5}.tokens .target{background:var(--teal2)}.tokens .ref{background:var(--coral2)}.tokens .same{outline:3px solid var(--gold);outline-offset:-3px}.scroll{overflow-x:auto}.mask{display:grid;grid-template-columns:92px repeat(6,1fr);gap:4px;min-width:720px}.mask>div{min-height:48px;display:grid;place-items:center;text-align:center;border:1px solid var(--rule);font:500 10px/1.35 "DM Mono",monospace}.mask .head{min-height:35px;background:#ebe4d5}.mask .yes{background:var(--teal2);color:#075c61}.mask .no{background:#eee9df;color:#a29a8f}.mask .self{background:var(--blue2);color:#173f5e}
+.calc{border:1px solid var(--rule);background:var(--card);margin:18px 0}.step{display:grid;grid-template-columns:132px 1fr;gap:15px;padding:13px 16px;border-bottom:1px dashed var(--rule)}.step:last-child{border-bottom:0}.step b{font:500 10px/1.65 "DM Mono",monospace;color:var(--teal);letter-spacing:1px;text-transform:uppercase}.views{display:grid;grid-template-columns:74px repeat(12,1fr);gap:5px;min-width:760px}.views span{aspect-ratio:1;display:grid;place-items:center;background:var(--teal2);border:1px solid var(--teal);font:500 9px/1 "DM Mono",monospace}.views .vlabel{aspect-ratio:auto;background:#ebe4d5;border-color:var(--rule);color:var(--muted);padding:5px}.views .mark{background:var(--gold2);border-color:var(--gold)}
+.chunks{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.chunk{padding:16px;border:2px solid var(--teal);background:var(--teal2);text-align:center}.chunk.noisy{border-color:var(--coral);background:var(--coral2)}.chunk.future{opacity:.45}.chunk b{display:block;font:700 22px/1.2 "DM Mono",monospace}.matrix{display:grid;grid-template-columns:90px repeat(4,1fr);gap:4px}.matrix>div{min-height:49px;display:grid;place-items:center;border:1px solid var(--rule);font:500 10px/1.3 "DM Mono",monospace}.matrix .head{min-height:35px;background:#ebe4d5}.matrix .yes{background:var(--teal2)}.matrix .now{background:var(--coral2)}.matrix .no{background:#eee9df;color:#a29a8f}.buffer{display:grid;grid-template-columns:1fr 42px 1fr 42px 1fr;gap:10px;align-items:center}.number{padding:18px;text-align:center;background:var(--card);border:2px solid var(--teal)}.number.bad{border-color:var(--coral)}.number b{display:block;font:700 30px/1.1 "DM Mono",monospace;color:var(--teal)}.number.bad b{color:var(--coral)}
+.twophase{display:grid;grid-template-columns:1fr 48px 1fr;gap:14px;align-items:stretch}.phase{padding:20px;border:2px solid var(--teal);background:var(--card)}.phase.second{border-color:var(--coral)}.phase ol{padding-left:20px}.phase li{margin:8px 0}.gradrow{display:grid;grid-template-columns:repeat(3,1fr) 44px 1fr;gap:8px;align-items:center;margin-top:14px}.grad{padding:12px;background:var(--coral2);border:1px solid var(--coral);text-align:center;font:500 11px/1.5 "DM Mono",monospace}.sum{padding:12px;background:var(--gold2);border:1px solid var(--gold);text-align:center;font:700 12px/1.5 "DM Mono",monospace}
+.pipeline{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.gpu{padding:17px;background:var(--card);border-top:5px solid var(--teal);min-height:170px}.gpu:nth-child(2),.gpu:nth-child(3){border-color:var(--coral)}.gpu:nth-child(4){border-color:var(--gold)}.gpu b{display:block;font:700 20px/1.3 "Fraunces","Noto Serif SC",serif}.gpu small{font:500 10px/1.5 "DM Mono",monospace;color:var(--muted)}table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14px}th,td{padding:10px 11px;border-bottom:1px solid var(--rule);text-align:left;vertical-align:top}th{font:500 10px/1.4 "DM Mono",monospace;color:var(--muted);text-transform:uppercase}.win{color:var(--ok);font-weight:700}.lose{color:var(--bad);font-weight:700}.ledger{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.ledger .card{border-top:5px solid var(--teal)}.ledger .card:nth-child(2){border-color:var(--gold)}.ledger .card:nth-child(3){border-color:var(--coral)}.ledger ul{padding-left:18px}.ledger li{margin:7px 0}
+.gloss{margin-top:80px;padding-top:30px;border-top:3px double var(--ink)}.gloss h2{margin-top:0}.gloss ol{list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:0 28px;counter-reset:g}.gloss li{counter-increment:g;padding:14px 0 14px 43px;position:relative;border-bottom:1px dashed var(--rule);font-size:14px;line-height:1.6}.gloss li:before{content:counter(g,decimal-leading-zero);position:absolute;left:0;top:17px;font:500 10px/1 "DM Mono",monospace;color:var(--teal)}.gloss li:target{background:var(--gold2)}.sources{margin-top:50px;padding:22px;border:1px solid var(--rule);background:rgba(255,255,255,.45);font-size:15px}.sources li{margin:7px 0}.reveal{opacity:0;transform:translateY(9px);transition:opacity .5s ease,transform .5s ease}figure.play .reveal{opacity:1;transform:none}.d2{transition-delay:.1s}.d3{transition-delay:.2s}.d4{transition-delay:.3s}
+@media(max-width:800px){body{font-size:16px}.page{padding:36px 18px 78px}.mast span:last-child{display:none}h1{font-size:51px;letter-spacing:-2px}.dek{font-size:19px}h2{font-size:31px;margin-top:64px}figure{margin:28px -4px;padding:17px 13px}figcaption{display:block}figcaption b{display:block;margin-top:6px}.grid2,.grid3,.grid4,.branch,.twophase,.ledger,.gloss ol,.pipeline{grid-template-columns:1fr}.flow,.factory{grid-template-columns:1fr}.arrow{height:28px;transform:rotate(90deg)}.vars{grid-template-columns:1fr}.vars>div:nth-child(odd){border-right:0}.step{grid-template-columns:1fr;gap:3px}.views{grid-template-columns:74px repeat(12,1fr)}.chunks{grid-template-columns:repeat(4,minmax(118px,1fr));overflow-x:auto}.buffer{grid-template-columns:1fr}.buffer .arrow{transform:rotate(90deg)}.gradrow{grid-template-columns:1fr}.gradrow>.arrow{transform:rotate(90deg)}.tokens,.mask{min-width:680px}}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · wan-animate-2</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page">
+  <header class="mast"><span>Connectionism · Paper Notes</span><span>arXiv 2608.06009v2 · 8 Aug 2026</span></header>
+  <section class="hero">
+    <div class="kicker">Character animation · direct video conditioning · streaming distillation</div>
+    <h1>不先提骨架，<br><em>直接看视频学动作</em></h1>
+    <p class="dek">Wan-Animate 2 把驱动视频变成按时间索引的参考记忆：目标第 <code>t</code> 帧只读取参考第 <code>t</code> 帧。再用误差缓冲和分块 Self-Forcing，把整段双向模型蒸馏成少步流式版本。</p>
+    <p class="meta">Guangyuan Wang et al. · Tongyi Lab, Alibaba Group · Base + Lite · 14 pages</p>
+    <div class="tldr"><b>TL;DR</b>　Base 负责“动作细、身份稳”：双分支 DiT + Time-Align RoPE + Sparse-Ref。Lite 负责“长视频能实时出”：8 帧一块，Error Buffer 修 Teacher Forcing 的历史过净问题，整段 score 定方向、逐块重放算梯度。论文实时点是 3 步、4 卡、400×720、24 FPS；公开仓库当前推荐的蒸馏示例是 10 步，两者必须分开看。</div>
+  </section>
+
+  <h2><span class="n">§ 00</span>先把三个名字拆开，否则后面一定串</h2>
+  <div class="grid3">
+    <div class="card"><span class="tag">Base</span><h3>把动作学准</h3><p>直接读参考人物图与驱动视频；解决细表情、手势、衣物和非刚体动作在中间表示里丢失的问题。</p></div>
+    <div class="card"><span class="tag coral">Lite</span><h3>把长视频跑起来</h3><p>8 帧分块、少步生成；训练时必须适应自己上一块的不完美输出。</p></div>
+    <div class="card"><span class="tag gold">Release</span><h3>当前开源运行点</h3><p>官方仓库同时放出 Base 与 Distillation 权重。论文 Lite 的 3 步实时点，不等于仓库推荐的 10 步蒸馏示例。</p></div>
+  </div>
+  <div class="warning"><span class="label">最容易被宣传数字带偏的地方</span><strong>24 FPS 不是“任意显卡、任意尺寸、Base 单卡实时”。</strong>论文口径是 Lite、400×720、3 步、4 张 GPU 的流水线。它没有报告首帧等待时间，也没有给出公开 10 步权重在同一硬件上的速度。</div>
+  <div class="note"><span class="label">“End-to-end”也有边界</span>这里指驱动视频不再先经过 pose、SMPL 或独立动作编码器，直接以视频 latent 进入生成骨干；系统仍然使用 VAE、图像/文本条件编码与 DiT，并不是从 RGB 一路不用任何中间特征地算到 RGB。</div>
+
+  <h2><span class="n">§ 01</span>旧方法为什么总要在“细节、身份、速度”里丢一个</h2>
+  <p class="lead">人物动画输入很简单：一张“要演谁”的参考图，一段“该怎么动”的驱动视频。难点是把动作搬过去，又不能把驱动者的脸型、身材和衣服一并搬走。</p>
+  <figure>
+    <figcaption><span>Fig 01 · 三条旧路线的结构性取舍</span><b>中间表示越窄，越容易丢细节；原视频全接入，又容易算不动</b></figcaption>
+    <div class="grid3">
+      <div class="card reveal"><span class="tag blue">显式姿态</span><h3>视频 → 骨架 / SMPL</h3><p>优点是控制清楚。问题是嘴角、眼神、手指、衣摆和软组织不一定能塞进少量关键点；体型差异大时，姿态转移还会带来身份漂移。</p></div>
+      <div class="card reveal d2"><span class="tag gold">隐式编码器</span><h3>视频 → 压缩动作特征</h3><p>不用手工骨架，却仍有信息瓶颈：编码器必须把整段动作压进有限特征，最先被平均掉的常是微表情和局部细节。</p></div>
+      <div class="card reveal d3"><span class="tag coral">原视频拼接</span><h3>所有 token 全互看</h3><p>细节保存得最好，但目标和参考的所有时空 token 两两比较，序列越长，注意力计算与显存越快膨胀。</p></div>
+    </div>
+    <div class="note reveal d4"><span class="label">Wan-Animate 2 的选择</span>保留“直接读原视频”的信息量，但不给每个目标 token 查看整段参考视频的权利：先对齐时间，再只开放对应帧。</div>
+  </figure>
+
+  <h2><span class="n">§ 02</span>先看完整拼图：哪一路提供身份，哪一路提供动作</h2>
+  <figure>
+    <figcaption><span>Fig 02 · Base 与 Lite 在同一张图里的位置</span><b>Base 改条件接法，Lite 改时间生成方式</b></figcaption>
+    <div class="flow">
+      <div class="inputstack reveal"><div class="node"><small>IDENTITY</small><b>参考人物图</b><p>决定脸、体型、衣服与画风；作为 I2V 条件送入目标分支。</p></div><div class="node coral"><small>MOTION</small><b>驱动视频</b><p>保留逐帧动作与表情；整段干净 latent 送入参考分支。</p></div></div>
+      <div class="arrow reveal d2">→</div>
+      <div class="node coral reveal d2"><small>BASE · DUAL-BRANCH DIT</small><b>目标噪声分支 + 干净参考分支</b><p>DiT<a class="jr" href="#g-04">04</a> 共享 Q/K/V 投影；参考 K/V 注入目标 attention。Time-Align RoPE 对时，Sparse-Ref 裁跨分支连边。</p></div>
+      <div class="arrow reveal d3">→</div>
+      <div class="node gold reveal d3"><small>LITE · 8-FRAME CHUNKS</small><b>分块连续输出</b><p>Error Buffer 先模拟历史误差；Self-Forcing 再让模型真正读取自己的生成历史。</p></div>
+    </div>
+    <div class="note reveal d4"><span class="label">两种“参考”别混</span><strong>reference image</strong> 回答“长成谁”，进入目标分支的 I2V 条件；<strong>reference / driving video</strong> 回答“怎么动”，成为干净参考分支。目标第 <code>t</code> 帧查询驱动视频第 <code>t</code> 帧的 K/V。</div>
+  </figure>
+
+  <h2><span class="n">§ 03</span>训练对从哪来：先造“动作完全对齐、身份已经换掉”的视频</h2>
+  <p>直接训练需要三样东西同时存在：驱动视频、换成新角色后的目标视频、目标角色参考图。互联网上几乎没有天然严格对齐的三元组，所以作者用旧版 Wan-Animate 合成监督。</p>
+  <figure>
+    <figcaption><span>Fig 03 · 配对视频数据工厂</span><b>先换身份，再让旧模型合成动作对齐目标</b></figcaption>
+    <div class="factory">
+      <div class="card reveal"><span class="tag">① 驱动视频</span><p>从精选真人动作视频开始，保留真实动作节奏和表情变化。</p></div><div class="arrow reveal d2">→</div>
+      <div class="card reveal d2"><span class="tag gold">② 新角色参考图</span><p>编辑驱动首帧，或用 Qwen-Image / Z-Image 生成真人、卡通和动物角色。</p></div><div class="arrow reveal d3">→</div>
+      <div class="card reveal d3"><span class="tag coral">③ 旧模型合成</span><p>随机配对驱动视频与新角色图，用旧 Wan-Animate 生成动作对齐的目标视频。</p></div><div class="arrow reveal d4">→</div>
+      <div class="card reveal d4"><span class="tag blue">④ 三类过滤</span><p>剔除伪影/模糊、动作过小或不顺、角色身份不稳定的样本。</p></div>
+    </div>
+  </figure>
+  <div class="truth"><span class="label">这套数据的强项与天花板</span>强项是动作天然逐帧对齐；天花板是教师模型的错误也可能进入新训练集。论文没有公开样本量、过滤阈值、通过率或人工复核比例，因此无法估算数据覆盖面。</div>
+
+  <h2><span class="n">§ 04</span>双分支 DiT：同一套 Q/K/V，两个不同噪声时刻</h2>
+  <p>目标分支处理正在去噪的视频 latent，并接收人物参考图；参考分支处理驱动视频的干净 latent。两路都过同一套 Q/K/V 投影<a class="jr" href="#g-01">01</a>，于是产生在同一特征空间里的 query、key、value。区别在时间条件：目标分支使用当前扩散时刻 <code>t</code>，参考分支固定在干净端。</p>
+  <figure>
+    <figcaption><span>Fig 04 · 两条分支不是两套完全独立模型</span><b>参考先算 K/V 并缓存，目标每轮去噪复用</b></figcaption>
+    <div class="branch">
+      <div class="lane reveal"><span class="tag">目标 / latent branch</span><h3>噪声 + 人物参考图</h3><div class="stage">带噪目标 <code class="m">z_t</code> 与 I2V 人物条件进入 DiT</div><div class="stage">共享 Q/K/V 投影 → 目标 Q/K/V</div><div class="stage">目标内部完整 self-attention，再读取对应时刻的驱动 K/V</div></div>
+      <div class="bridge reveal d2"><span>共享参数<br>Q/K/V<br><br>参考 K/V<br>→ 注入目标</span></div>
+      <div class="lane ref reveal d2"><span class="tag coral">参考 / clean branch</span><h3>干净驱动视频 <code class="m">z_{0,\mathrm{ref}}</code></h3><div class="stage">共享 Q/K/V 投影 → 驱动 Q/K/V</div><div class="stage">参考内部 self-attention</div><div class="stage">保存每层 K/V；同一次采样无需反复重算</div></div>
+    </div>
+  </figure>
+  <div class="note"><span class="label">“冻结骨干，只训共享 Q/K/V”是什么意思</span>不是从头训练两套 14B 模型。论文把原 DiT 主体保留，只让两路共享的 Q/K/V 投影适配新的跨视频信息交换；驱动分支与目标分支还各有自己的文字 prompt 和 cross-attention。官方代码进一步证实：<code>forward_ref</code> 在去噪循环前跑一次，每层参考 K/V 写入 cache，后续 <code>forward_gen</code> 复用。</div>
+
+  <h2><span class="n">§ 05</span>Time-Align RoPE：同时发生，就给同一个时间地址</h2>
+  <p>若简单把“整段目标 + 整段参考”首尾拼起来，参考第 0 帧的位置会排在目标最后一帧之后。语义上明明同时发生，位置编码却说它们相隔很远。Time-Align RoPE<a class="jr" href="#g-02">02</a>让两路同一帧共享时间坐标，同时把空间坐标错开防止地址冲突。</p>
+  <figure>
+    <figcaption><span>Fig 05 · 两帧、每帧少量 token 的地址例</span><b>时间相同，空间分区</b></figcaption>
+    <div class="scroll"><div class="tokens">
+      <div class="head">序列</div><div class="head">t0·s0</div><div class="head">t0·s1</div><div class="head">t0·s2</div><div class="head">t0·s3</div><div class="head">t1·s0</div><div class="head">t1·s1</div>
+      <div class="head">目标</div><div class="target same">(0,0)</div><div class="target same">(0,1)</div><div class="target">(0,2)</div><div class="target">(0,3)</div><div class="target same">(1,0)</div><div class="target same">(1,1)</div>
+      <div class="head">参考</div><div class="ref same">(0,4)</div><div class="ref same">(0,5)</div><div class="no">—</div><div class="no">—</div><div class="ref same">(1,4)</div><div class="ref same">(1,5)</div>
+    </div></div>
+    <div class="calc reveal">
+      <div class="step"><b>目标空间</b><span>教学例中每帧 4 个 token，空间编号为 <code>0,1,2,3</code>。</span></div>
+      <div class="step"><b>参考空间</b><span>参考每帧 2 个 token，在空间轴加偏移 4，编号变成 <code>4,5</code>。</span></div>
+      <div class="step"><b>时间对齐</b><span>目标帧 1 和参考帧 1 的第一维都等于 1，所以 RoPE 仍知道它们同时发生。</span></div>
+    </div>
+  </figure>
+  <div class="warning"><span class="label">别把示意数字当实现尺寸</span>论文用目标空间分辨率说明参考空间索引偏移；官方代码把三维 RoPE 的参考偏移写入轴向参数。上图只用 4+2 个 token 把“同时间、不同空间”讲清楚，不是模型真实网格大小。</div>
+
+  <h2><span class="n">§ 06</span>Sparse-Ref：只裁跨分支连边，不裁目标视频自己的全局协调</h2>
+  <p>有了时间地址后，Sparse-Ref Attention<a class="jr" href="#g-03">03</a> 的 mask 可以精确放行：目标第 <code>t</code> 帧只读取参考第 <code>t</code> 帧。目标分支自己的 K/V 仍全部可见，因此人物在目标视频中的颜色、背景和身份仍能跨帧协调。</p>
+  <figure>
+    <figcaption><span>Fig 06 · 查询帧与可读 K/V</span><b>蓝色是目标内部全连接，绿色是同时间参考</b></figcaption>
+    <div class="scroll"><div class="mask">
+      <div class="head">Query</div><div class="head">目标 0</div><div class="head">目标 1</div><div class="head">目标 2</div><div class="head">参考 0</div><div class="head">参考 1</div><div class="head">参考 2</div>
+      <div class="head">目标 0</div><div class="self">可读</div><div class="self">可读</div><div class="self">可读</div><div class="yes">可读</div><div class="no">×</div><div class="no">×</div>
+      <div class="head">目标 1</div><div class="self">可读</div><div class="self">可读</div><div class="self">可读</div><div class="no">×</div><div class="yes">可读</div><div class="no">×</div>
+      <div class="head">目标 2</div><div class="self">可读</div><div class="self">可读</div><div class="self">可读</div><div class="no">×</div><div class="no">×</div><div class="yes">可读</div>
+    </div></div>
+  </figure>
+  <p>先定义符号，再算复杂度：<code>T</code> 是帧数，<code class="m">S_t</code> 是每帧目标 token 数，<code class="m">S_r</code> 是每帧参考 token 数。</p>
+  <div class="math" data-expr="\text{全量跨分支}=T^2S_tS_r,\qquad \text{按时间稀疏}=TS_tS_r"></div>
+  <div class="calc">
+    <div class="step"><b>教学设置</b><span><code>T=3</code>，每帧目标 <code class="m">S_t=4</code> 个 token，参考 <code class="m">S_r=2</code> 个 token。</span></div>
+    <div class="step"><b>全量</b><span>目标共 <code class="m">3\times4=12</code> 个 query，参考共 <code class="m">3\times2=6</code> 个 K/V，所以 <code class="m">12\times6=72</code> 条跨分支连边。</span></div>
+    <div class="step"><b>稀疏</b><span>每个时刻 <code class="m">4\times2=8</code> 条，三个时刻共 <code class="m">3\times8=24</code> 条；这组例子减少 3 倍。</span></div>
+    <div class="step"><b>论文的 O(Nₗ)</b><span>把每帧参考 token 数视作固定常数时，跨分支成本随目标长度线性增长；展开常数后就是 <code>O(TS_tS_r)</code>。</span></div>
+  </div>
+
+  <h2><span class="n">§ 07</span>Viewpoint LoRA：动作来自驱动视频，镜头不必跟着它走</h2>
+  <p>如果驱动视频是正面，普通动画模型往往也只能生成正面。作者在 Unreal Engine 中渲染多视图人物，并用文字标注“右转 60°、俯视”等镜头条件，只在 cross-attention<a class="jr" href="#g-06">06</a> 投影上训练 LoRA<a class="jr" href="#g-05">05</a>，不改 Base 主体。</p>
+  <figure>
+    <figcaption><span>Fig 07 · 48 个离散视角</span><b>12 个方位角 × 4 个俯仰角</b></figcaption>
+    <div class="scroll"><div class="views">
+      <span class="vlabel">俯仰类 1</span><span>0°</span><span>30°</span><span>60°</span><span class="mark">90°</span><span>120°</span><span>150°</span><span>180°</span><span>210°</span><span>240°</span><span>270°</span><span>300°</span><span>330°</span>
+      <span class="vlabel">俯仰类 2</span><span>0°</span><span>30°</span><span>60°</span><span class="mark">90°</span><span>120°</span><span>150°</span><span>180°</span><span>210°</span><span>240°</span><span>270°</span><span>300°</span><span>330°</span>
+      <span class="vlabel">俯仰类 3</span><span>0°</span><span>30°</span><span>60°</span><span class="mark">90°</span><span>120°</span><span>150°</span><span>180°</span><span>210°</span><span>240°</span><span>270°</span><span>300°</span><span>330°</span>
+      <span class="vlabel">俯仰类 4</span><span>0°</span><span>30°</span><span>60°</span><span class="mark">90°</span><span>120°</span><span>150°</span><span>180°</span><span>210°</span><span>240°</span><span>270°</span><span>300°</span><span>330°</span>
+    </div></div>
+    <p class="truth"><span class="label">图里为什么只给方位角具体数字</span>论文只明确写了 12 个 azimuth 与 4 个 elevation 类，没有列出四个俯仰角的具体度数；这里保留“俯仰类 1–4”，不自行编造角度。</p>
+    <div class="calc reveal">
+      <div class="step"><b>为什么单独造数据</b><span>真实视频很难保证同一人物、同一动作、同一背景，只改变摄影机角度；UE 可以严格控制这些变量。</span></div>
+      <div class="step"><b>为什么只训 LoRA</b><span>Base 已会保持身份和转移动作；这里只需学“文字视角 → cross-attention 怎样改写镜头”，避免为 48 类控制破坏原能力。</span></div>
+      <div class="step"><b>证据边界</b><span>论文给了视角定性样例，没有公布角度误差、连续插值精度、多视图数据量或跨角色泛化指标。</span></div>
+    </div>
+  </figure>
+
+  <h2><span class="n">§ 08</span>为什么 Base 不能直接变实时：训练看真历史，推理看自己历史</h2>
+  <p>Lite 把视频切成 8 帧一块。训练第 C 块时，Teacher Forcing<a class="jr" href="#g-07">07</a>给它真实干净的 A、B；推理时只能给模型自己生成的 Â、B̂。哪怕每块只偏一点，下一块读到的输入分布也已经变了，这就是 exposure bias<a class="jr" href="#g-14">14</a>。</p>
+  <figure>
+    <figcaption><span>Fig 08 · 训练 C 块时的因果可见性</span><b>过去干净块可读，当前 noisy 块只在块内互看，未来不可见</b></figcaption>
+    <div class="scroll"><div class="chunks"><div class="chunk"><b>A</b>真实历史</div><div class="chunk"><b>B</b>真实历史</div><div class="chunk noisy"><b>C</b>当前带噪</div><div class="chunk future"><b>D</b>未来</div></div></div>
+    <div class="scroll" style="margin-top:18px"><div class="matrix">
+      <div class="head">Query</div><div class="head">A</div><div class="head">B</div><div class="head">C</div><div class="head">D</div>
+      <div class="head">A</div><div class="yes">可读</div><div class="no">×</div><div class="no">×</div><div class="no">×</div>
+      <div class="head">B</div><div class="yes">可读</div><div class="yes">可读</div><div class="no">×</div><div class="no">×</div>
+      <div class="head">C</div><div class="yes">可读</div><div class="yes">可读</div><div class="now">块内可读</div><div class="no">×</div>
+    </div></div>
+  </figure>
+  <div class="warning"><span class="label">Exposure bias</span>Teacher Forcing 不是错误，它先稳定地教会“给定过去，续写下一块”。问题是它把历史做得过于完美。Wan-Animate 2 接着用 Error Buffer 做轻量模拟，再用 Self-Forcing 彻底对齐推理分布。</div>
+
+  <h2><span class="n">§ 09</span>Error Buffer：把上一轮真实犯过的错，叠回干净历史</h2>
+  <p>Error Buffer<a class="jr" href="#g-15">15</a> 的做法是：设真实干净历史为 <code class="m">x_0</code>，模型一步预测为 <code class="m">\hat x_0</code>。残差定义为预测减真值，再把旧残差加回真实历史：</p>
+  <div class="math" data-expr="e=\hat x_0-x_0,\qquad \tilde x_0=x_0+e"></div>
+  <div class="vars"><div><code class="m">x_0</code>真实干净历史</div><div><code class="m">\hat x_0</code>模型的一步预测</div><div><code>e</code>预测残差，写入缓冲区</div><div><code class="m">\tilde x_0</code>加入残差后用于训练的历史</div></div>
+  <figure>
+    <figcaption><span>Fig 09 · 一个标量就能看懂为什么要加残差</span><b>100 + (97 − 100) = 97</b></figcaption>
+    <div class="buffer"><div class="number reveal"><span>真实历史</span><b>100</b></div><div class="arrow reveal d2">→</div><div class="number bad reveal d2"><span>一步预测</span><b>97</b><small>残差 = −3</small></div><div class="arrow reveal d3">→</div><div class="number reveal d3"><span>污染后历史</span><b>97</b><small>100 + (−3)</small></div></div>
+  </figure>
+  <div class="truth"><span class="label">论文没给出的配方不要擅自补</span>作者只说缓冲区维护运行中的误差分布，并把采样残差加到干净历史。容量多大、多久更新、是否按时间步分桶、残差是否缩放都没有公开。这里的 100/97 只解释因果，不代表实现参数。</div>
+
+  <h2><span class="n">§ 10</span>Self-Forcing：先整段判断“往哪改”，再逐块算“参数怎么改”</h2>
+  <p>只用 Error Buffer，历史仍是“真值 + 旧误差”，还不是模型真实连续生成的序列。Self-Forcing<a class="jr" href="#g-10">10</a>让学生完整 rollout 自己的输出，再用 real-score 与 fake-score<a class="jr" href="#g-09">09</a>之差提供 DMD<a class="jr" href="#g-08">08</a>方向。</p>
+  <h3>score 不是“真假分数”，而是图像该往哪改的方向</h3>
+  <div class="math" data-expr="s(x_t,t)=\nabla_{x_t}\log p_t(x_t),\qquad \Delta s=s_{\mathrm{fake}}(x_t,t)-s_{\mathrm{real}}(x_t,t)"></div>
+  <div class="vars"><div><code class="m">x_t</code>给完整学生视频重新加噪后的 latent</div><div><code>t</code>本次加噪强度</div><div><code class="m">p_t(x_t)</code>这个噪声等级下的数据密度</div><div><code class="m">\nabla_{x_t}\log p_t</code>让样本朝更高密度区域移动的图像同形方向</div><div><code class="m">s_{\mathrm{real}}</code>冻结 Base 教师给出的目标分布方向</div><div><code class="m">s_{\mathrm{fake}}</code>用最新学生样本在线跟随学生分布的 score 网络</div></div>
+  <p>两者都认为正常的方向相减后会抵消，剩下的是“学生分布与目标分布还差在哪”。DMD 的生成器梯度含 <code class="m">s_{\mathrm{fake}}-s_{\mathrm{real}}</code>，而梯度下降会再减去这项，所以学生最终朝 real 方向移动、离开自己已经挤得过密的区域。fake-score 的在线训练属于 DMD 继承机制，不是 Wan-Animate 2 新发明。</p>
+  <figure>
+    <figcaption><span>Fig 10 · 两阶段不是重复算同一件事</span><b>第一阶段取全局方向，第二阶段恢复局部计算图</b></figcaption>
+    <div class="twophase">
+      <div class="phase reveal"><span class="tag">Phase 1 · no grad</span><h3>整段 rollout + 整段 score</h3><ol><li>随机选择本轮去噪步数，学生按块自回归生成完整视频。</li><li>记录每块最后一次带噪输入 <code class="m">z_i^{(1)}</code> 与最终干净输出 <code class="m">z_i^{(0)}</code>。</li><li>给完整输出重新加噪。</li><li>real/fake score 网络用<strong>双向完整 attention</strong>看整段，算每个位置应往哪里改。</li></ol></div>
+      <div class="arrow reveal d2">→</div>
+      <div class="phase second reveal d2"><span class="tag coral">Phase 2 · with grad</span><h3>逐块重放 + 梯度累积</h3><ol><li>重新输入记录的 <code class="m">z_i^{(1)}</code>，一次只建一个 8 帧块的计算图。</li><li>接上 Phase 1 预先算好的 score 方向。</li><li>得到这一块对学生参数的梯度。</li><li>块间 detach<a class="jr" href="#g-11">11</a>，全部累加后只更新一次参数。</li></ol></div>
+    </div>
+    <div class="gradrow reveal d3"><div class="grad">块 1<br>g₁ = 0.4</div><div class="grad">块 2<br>g₂ = −0.1</div><div class="grad">块 3<br>g₃ = 0.2</div><div class="arrow">→</div><div class="sum">总梯度<br>g = 0.5</div></div>
+  </figure>
+  <div class="math" data-expr="g=\sum_{i=1}^{M}\nabla_{\theta_s}L_i,\qquad \theta_s\leftarrow\theta_s-\eta g"></div>
+  <div class="vars"><div><code>M</code>块数</div><div><code class="m">L_i</code>第 i 块蒸馏损失</div><div><code class="m">\theta_s</code>学生生成器参数</div><div><code>g</code>所有块累积总梯度</div><div><code class="m">\eta</code>学习率</div><div><code class="m">\nabla_{\theta_s}L_i</code>第 i 块对同一套参数的梯度</div></div>
+  <div class="calc"><div class="step"><b>梯度求和</b><span><code class="m">g=0.4-0.1+0.2=0.5</code>。</span></div><div class="step"><b>更新</b><span>若 <code class="m">\theta_s=2</code>、<code class="m">\eta=0.1</code>，则 <code class="m">\theta_s^{\mathrm{new}}=2-0.1\times0.5=1.95</code>。</span></div><div class="step"><b>为什么 detach</b><span>只断开上一块的历史计算图，避免整段图常驻显存；当前块仍正常反传，最终各块梯度仍更新同一套参数。</span></div></div>
+
+  <h2><span class="n">§ 11</span>为什么 score 要看整段，生成器反传却只看一块</h2>
+  <p>Chunk-wise gradient<a class="jr" href="#g-16">16</a> 是论文最容易被一句话说糊涂的地方。两种可见范围解决的是两种问题：</p>
+  <div class="grid2">
+    <div class="card"><span class="tag">整段 score</span><h3>判断全局哪里不自然</h3><p>双向网络同时看到头尾，能发现人物第 1 块穿蓝衣、第 8 块突然变红，或动作节奏跨块断裂。它只给方向，不保留学生生成图。</p></div>
+    <div class="card"><span class="tag coral">单块反传</span><h3>把显存峰值压到一块</h3><p>用记录下来的 noisy 输入重放当前块，恢复参数到输出的局部计算图；score 方向已经全局算好，因此不必把整段学生图同时留在显存。</p></div>
+  </div>
+  <div class="warning"><span class="label">这不是“每块独立训练”</span>若 score 也只看一块，模型只能知道局部画面像不像，无法判断长程身份漂移。Wan-Animate 2 的设计恰好把“质量判断的范围”和“反传图的范围”拆开。</div>
+
+  <h2><span class="n">§ 12</span>4 张 GPU 怎样接成 24 FPS 流水线</h2>
+  <figure>
+    <figcaption><span>Fig 11 · 论文 Lite 实时系统</span><b>箭头严格按数据流从左到右</b></figcaption>
+    <div class="pipeline">
+      <div class="gpu reveal"><small>GPU 1</small><b>VAE Encode</b><p>把输入条件与历史帧变成 VAE latent<a class="jr" href="#g-13">13</a>；为下一块准备模型输入。</p></div>
+      <div class="gpu reveal d2"><small>GPU 2 + GPU 3</small><b>3-step DiT</b><p>两卡沿时间维做 sequence parallel<a class="jr" href="#g-12">12</a>，共同完成三次去噪。</p></div>
+      <div class="gpu reveal d3"><small>GPU 4</small><b>VAE Decode</b><p>把上一块干净 latent 解码成可播放帧。</p></div>
+      <div class="gpu reveal d4"><small>OUTPUT</small><b>400×720 @ 24 FPS</b><p>编码、去噪、解码在不同块上重叠运行，追求稳态吞吐。</p></div>
+    </div>
+  </figure>
+  <div class="calc"><div class="step"><b>帧预算</b><span>24 FPS 等价于平均每帧 <code class="m">1000/24\approx41.7\,\mathrm{ms}</code> 的稳态产出节拍。</span></div><div class="step"><b>块时长</b><span>8 帧对应 <code class="m">8/24\approx0.333\,\mathrm{s}</code> 的视频内容；流水线必须在约 333 ms 内持续产出下一块，队列才不会越积越长。</span></div><div class="step"><b>不等于首帧延迟</b><span>流水吞吐达 24 FPS，不代表用户 41.7 ms 就看到第一帧。论文没有报告首次编码、三步去噪和首次解码合计的首帧等待。</span></div></div>
+  <div class="truth"><span class="label">论文与开源仓库要分两列</span>论文：Lite 3 步、4 GPU、400×720、24 FPS。当前仓库：Base Diffusers 示例 40 步，蒸馏 Diffusers 示例 10 步且不使用 CFG；原生配置说明默认面向 8×A800 的 720P，也测试过 2×A800 的 480P。公开配置不能反推论文 3 步系统已按同样方式发布。</div>
+
+  <h2><span class="n">§ 13</span>实验到底证明了多少：用户偏好有数字，模块归因没有</h2>
+  <p>论文主要给定性图和用户研究。下表抄的是 Figure 6 的“Wan-Animate 2 更好 / 相同 / 对手更好”比例；不是自动指标，也不是胜率置信区间。</p>
+  <div class="scroll"><table>
+    <thead><tr><th>对手</th><th>维度</th><th>本方法更好</th><th>相同</th><th>对手更好</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="6">Wan-Animate</td><td>Overall</td><td class="win">78.5%</td><td>17.8%</td><td>3.7%</td></tr><tr><td>Visual Quality</td><td class="win">82.3%</td><td>14.6%</td><td>3.1%</td></tr><tr><td>Dynamic Naturalness</td><td class="win">71.6%</td><td>22.0%</td><td>6.4%</td></tr><tr><td>Identity</td><td class="win">74.2%</td><td>19.8%</td><td>6.0%</td></tr><tr><td>Motion</td><td class="win">68.3%</td><td>24.5%</td><td>7.2%</td></tr><tr><td>Expression</td><td class="win">65.9%</td><td>27.8%</td><td>6.3%</td></tr>
+      <tr><td rowspan="6">Dreamina</td><td>Overall</td><td>32.3%</td><td>46.5%</td><td>21.2%</td></tr><tr><td>Visual Quality</td><td>32.5%</td><td>46.1%</td><td>21.4%</td></tr><tr><td>Dynamic Naturalness</td><td>30.5%</td><td>49.2%</td><td>20.3%</td></tr><tr><td>Identity</td><td>36.5%</td><td>42.0%</td><td>21.5%</td></tr><tr><td>Motion</td><td>28.3%</td><td>51.9%</td><td>19.8%</td></tr><tr><td>Expression</td><td>37.2%</td><td>41.3%</td><td>21.5%</td></tr>
+      <tr><td rowspan="6">Kling-MotionControl</td><td>Overall</td><td>25.9%</td><td>48.0%</td><td class="lose">26.1%</td></tr><tr><td>Visual Quality</td><td>27.4%</td><td>43.0%</td><td>29.6%</td></tr><tr><td>Dynamic Naturalness</td><td>23.8%</td><td>51.4%</td><td>24.8%</td></tr><tr><td>Identity</td><td>28.5%</td><td>43.9%</td><td>27.6%</td></tr><tr><td>Motion</td><td>23.8%</td><td>50.0%</td><td>26.2%</td></tr><tr><td>Expression</td><td>25.6%</td><td>50.6%</td><td>23.8%</td></tr>
+    </tbody>
+  </table></div>
+  <div class="warning"><span class="label">Kling 这一行尤其别偷换结论</span>Overall 是 25.9% 本方法更好、48.0% 相同、26.1% Kling 更好，几乎打平，不支持“显著胜过 Kling”。论文也没有报告参与者人数、比较样本数、随机化办法、投票一致性或显著性检验。</div>
+
+  <h2><span class="n">§ 14</span>证据账本：哪些可以相信，哪些只能当设计假说</h2>
+  <div class="ledger">
+    <div class="card"><span class="tag">论文直接支持</span><ul><li>双分支、Time-Align RoPE、Sparse-Ref 与 Viewpoint LoRA 的结构。</li><li>8 帧分块、Error Buffer、两阶段 Self-Forcing 与算法流程。</li><li>三组用户研究比例。</li><li>4-GPU、3 步、400×720、24 FPS 的论文运行点。</li></ul></div>
+    <div class="card"><span class="tag gold">有展示但证据较弱</span><ul><li>复杂动作、卡通/动物角色与多视角效果主要来自定性样例。</li><li>Lite 长时间运行“无可见误差积累”只有视频展示，没有漂移曲线。</li><li>Lite 与 Base 质量相当没有统一量化表。</li></ul></div>
+    <div class="card"><span class="tag coral">论文没有回答</span><ul><li>数据规模、过滤阈值与训练算力。</li><li>各模块单独贡献多少；全文没有消融。</li><li>首帧延迟、显存、单卡速度与能耗。</li><li>用户研究人数和统计显著性。</li><li>开放 10 步模型与论文 3 步 Lite 的质量/速度对应。</li></ul></div>
+  </div>
+
+  <h2><span class="n">§ 15</span>把整篇压成一条因果链</h2>
+  <div class="calc">
+    <div class="step"><b>动作细节会丢</b><span>不再先提骨架或压缩动作码，直接保留驱动视频 token。</span></div>
+    <div class="step"><b>全量视频太贵</b><span>Time-Align RoPE 先对齐同一时刻；Sparse-Ref 再只开放对应帧的跨分支注意力。</span></div>
+    <div class="step"><b>镜头被驱动锁死</b><span>用 48 类 UE 多视图数据训练 cross-attention LoRA，把动作与视角条件分开。</span></div>
+    <div class="step"><b>整段生成不实时</b><span>切成 8 帧块，以因果 Teacher Forcing 先学会续写。</span></div>
+    <div class="step"><b>训练历史过于完美</b><span>Error Buffer 把模型残差加回真历史；Self-Forcing 再让学生完整读取自己的输出。</span></div>
+    <div class="step"><b>整段反传太占显存</b><span>整段 score 负责全局方向，逐块重放只保留一块计算图，梯度累积后统一更新。</span></div>
+  </div>
+
+  <section class="gloss">
+    <h2>术语直接触达</h2>
+    <ol>
+      <li id="g-01"><strong>Q/K/V projection</strong>：把 token 投影成“我要找什么 / 我能被怎样匹配 / 我实际提供什么内容”。两分支共享投影，才便于直接互相查询。</li>
+      <li id="g-02"><strong>Time-Align RoPE</strong>：两路同一帧共享时间坐标，参考空间坐标另加偏移；不是简单把两段视频首尾编号。</li>
+      <li id="g-03"><strong>Sparse-Ref Attention</strong>：目标帧只查同一时刻参考帧；目标视频自己的 self-attention 不被裁掉。详见 <a href="../concepts/sparse-reference-attention.html">sparse-reference-attention</a>。</li>
+      <li id="g-04"><strong>DiT</strong>：用 Transformer 在扩散/流模型的 latent 上预测去噪方向。详见 <a href="../concepts/diffusion-transformer.html">diffusion-transformer</a>。</li>
+      <li id="g-05"><strong>LoRA</strong>：用两个低秩小矩阵表示权重增量，冻结原权重，只训练少量新增参数。详见 <a href="../concepts/lora.html">lora</a>。</li>
+      <li id="g-06"><strong>Cross-attention</strong>：当前视频 token 做 query，去读取文字或另一分支的 K/V；用于让外部条件改变当前特征。</li>
+      <li id="g-07"><strong>Teacher Forcing</strong>：训练下一块时喂真实历史，稳定但会造成训练/推理历史分布不一致。详见 <a href="../concepts/teacher-forcing-video-diffusion.html">teacher-forcing-video-diffusion</a>。</li>
+      <li id="g-08"><strong>DMD</strong>：用目标分布与学生分布的 score 差给少步学生提供分布匹配梯度。详见 <a href="../concepts/dmd-distillation.html">dmd-distillation</a>。</li>
+      <li id="g-09"><strong>Real/Fake Score</strong>：real score 指向目标数据高密度区域，fake score 描述学生当前分布；两者之差决定学生应该往哪移动。</li>
+      <li id="g-10"><strong>Self-Forcing</strong>：训练时让模型读取自己先前生成的历史，直接对齐推理条件；比 Teacher Forcing 更真实也更昂贵。</li>
+      <li id="g-11"><strong>Stop-gradient / detach</strong>：把张量当固定快照，不让梯度穿过它回到更早计算图；不是永久冻结模型。</li>
+      <li id="g-12"><strong>Sequence Parallel</strong>：把一条长 token 序列沿长度切给多张 GPU，合力完成 attention/FFN，降低单卡负担。</li>
+      <li id="g-13"><strong>VAE latent</strong>：视频压缩后的连续特征；模型主要在 latent 空间生成，最后再由解码器还原像素。</li>
+      <li id="g-14"><strong>Exposure bias</strong>：训练看完美真历史，推理看自己有误差的历史，输入分布错位导致错误累积。</li>
+      <li id="g-15"><strong>Error Buffer</strong>：保存历史预测残差，再用残差污染干净训练上下文。详见 <a href="../concepts/error-buffer-training.html">error-buffer-training</a>。</li>
+      <li id="g-16"><strong>Chunk-wise gradient</strong>：全局方向预先算好后，每次只重放一个块建图；显存峰值按块而非整段增长。详见 <a href="../concepts/chunk-wise-self-forcing.html">chunk-wise-self-forcing</a>。</li>
+    </ol>
+  </section>
+
+  <section class="sources"><b>Sources</b><ul><li><a href="https://arxiv.org/abs/2608.06009">Wan-Animate 2 · arXiv 2608.06009v2</a></li><li><a href="https://humanaigc.github.io/wan-animate-2/">官方项目页 · 定性视频与多视角样例</a></li><li><a href="https://github.com/Wan-Video/Wan-Animate-2">官方代码与权重 · 检查于 2026-08-12，commit 3ad2fef</a></li><li>本页完整覆盖正文与 Algorithm 1；论文无附录。教学小数字均明确标注，不冒充论文实验值。</li></ul></section>
+</div>
+<script>
+document.querySelectorAll('figure').forEach(function(fig){new IntersectionObserver(function(es,obs){if(es[0].isIntersecting){fig.classList.add('play');obs.disconnect()}},{threshold:.12}).observe(fig)});
+function renderWanAnimateMath(){
+  if(!window.katex){setTimeout(renderWanAnimateMath,40);return;}
+  document.querySelectorAll('[data-expr]').forEach(function(el){
+    try{katex.render(el.dataset.expr,el,{displayMode:true,throwOnError:true});}
+    catch(err){el.textContent=el.dataset.expr;el.style.color='#ffb6a8';}
+  });
+}
+window.addEventListener('DOMContentLoaded',renderWanAnimateMath);
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!document.getElementById(id))return;
+      e.preventDefault();
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>
