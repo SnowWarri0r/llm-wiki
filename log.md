@@ -1552,3 +1552,6 @@ skill 更新:
 - 新增 long-short-visual-memory、dynamic-keyframe-redundancy-selection、avatar-state-cycling、prompt-aware-kv-cache-switching 四个 concept，并补 DMD / KV / block-causal / FSDP 等反向来源。
 - 证据边界单列：Eq.8 的噪声预测 / 速度目标记号不一致，Eq.11 的状态容器字段、DKFS 替换槽位策略、26.68 FPS 的准确 GPU 口径与 cache switching 单项毫秒均未公开；截至 2026-08-12 未找到作者代码或独立项目页。
 - Review 1 / Review 2 的发现与最终浏览器验收记录见本次提交说明。
+
+## [2026-08-12] revise | personaplex §09 修病句「没报告 A100 型号」
+- 用户吐槽：A100 就是型号、规格公开，这话什么鬼。原意没错但表述错——真正没报告的是 A100 的具体版本（40/80 GB、PCIe/SXM）和训练精度（bf16/fp16/tf32 吞吐差约两倍），改写为准确表述。
