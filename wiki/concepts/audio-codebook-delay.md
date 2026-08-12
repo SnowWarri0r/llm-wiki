@@ -1,7 +1,7 @@
 ---
 name: audio-codebook-delay
 type: concept
-sources: [personaplex]
+sources: [moshi, personaplex]
 updated: 2026-08-12
 ---
 
@@ -35,6 +35,7 @@ updated: 2026-08-12
 
 ## 链接
 
-- [[personaplex]] · 来源
+- [[moshi]] · 原始消融与延迟定义
+- [[personaplex]] · 沿用一格声学错位
 - [[temporal-depth-transformer]] · 帧内多 codebook 生成
 - [[rvq-codec]] · 语义层和残差层

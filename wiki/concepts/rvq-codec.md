@@ -1,7 +1,7 @@
 ---
 name: rvq-codec
 type: concept
-sources: [fish-speech-s2-pro, viitorvoice, duplexomni, personaplex, dyaplex]
+sources: [fish-speech-s2-pro, viitorvoice, moshi, duplexomni, personaplex, dyaplex]
 updated: 2026-08-12
 ---
 
@@ -41,4 +41,5 @@ DuplexOmni 的论文把码本层数写成一般符号 \(K\)。2026-07-29 的官�
 - [[flow-matching]] · TML 选用的非量化路线
 - [[audio-tokenization-rvq-vs-flow]] · 横向比较
 - [[fish-speech-s2-pro]] · 论文
+- [[moshi]] · Mimi 把语义 VQ 与七层声学 RVQ 并联
 - [[duplexomni]] · 16 层 Mimi codec 用在全双工 Talker 输出

@@ -1,0 +1,73 @@
+---
+name: moshi
+type: paper
+source: raw/papers/moshi.pdf
+upstream: https://arxiv.org/abs/2410.00037
+ingested: 2026-08-12
+authors: Alexandre Défossez, Laurent Mazaré, Manu Orsini, Amélie Royer, Patrick Pérez, Hervé Jégou, Edouard Grave, Neil Zeghidour · Kyutai · 2024
+year: 2024
+---
+
+# Moshi · 把语音对话改写成每 80 毫秒一次的联合预测
+
+传统语音助手先把一整轮话转成文字，再让语言模型回答，最后把整段文字念出来。Moshi 把这条三级流水线改成一条持续运行的时间轴：每 80 毫秒同时接收用户声音、更新对话状态、决定自己是否开口，并生成下一小段声音。它不靠显式的“轮到谁说”开关，因此能学习停顿、附和、重叠与打断。
+
+## 一句话
+
+**把双方语音和助手自己的文字草稿排进同一条 12.5 Hz 时间轴，让一个 7B 模型持续边听边说。**
+
+## 最容易误读的五点
+
+1. **200 ms 不是完整产品链路的通用延迟。**论文给出 160 ms 理论模型延迟与 L4 上约 200 ms 实测；网络、浏览器音频、回声消除和排队另算。
+2. **Inner Monologue 不是先写完整答案再做 TTS。**每个 80 ms 时间格只先出当前的一小段文字 token，紧接着出同格的语义音频码与声学细节。
+3. **17 路 token 不会让 7B Transformer 每格跑 17 次。**17 路上一格嵌入先相加；大 Temporal Transformer 每 80 ms 只前进一次，小 Depth Transformer 才在当前格内逐路预测。
+4. **全双工不只是开口快。**用户与 Moshi 各有一条独立音轨；模型自己说话时，用户音轨仍持续进入下一次预测。
+5. **Mimi 的第一路并非“粗糙音频层”。**它单独接受 WavLM 语义蒸馏；其余七路声学 RVQ 与它并行，避免语义目标把重建细节挤坏。
+
+## 核心贡献
+
+1. **流式语义—声学 codec**：[[rvq-codec]] —— Mimi 以 12.5 Hz、8 个码本和 1.1 kbps 表示 24 kHz 音频，首帧只等 80 ms。
+2. **两级自回归**：[[temporal-depth-transformer]] —— 大模型沿时间走，小模型只在当前帧内补齐多层音频码。
+3. **低延迟错位**：[[audio-codebook-delay]] —— 先确定语义码，声学细节晚一格生成，以固定 80 ms 换更稳定的声音。
+4. **真正的双音轨**：[[full-duplex-multimodal-interaction]] —— 用户与助手可以同时发声，系统不再依赖硬切话轮。
+5. **逐帧文字脚手架**：[[inner-monologue-speech]] —— 助手自己的文字 token 在同一时间格中先于音频码生成，显著提升知识问答和长语音稳定性。
+
+## 训练主线
+
+Moshi 不是从随机参数直接学会聊天。先用 2.1T 英文 token 训练 7B 的 Helium；再把 Helium 权重放进 Temporal Transformer，在 700 万小时单音轨音频上学“声音也能当 token”；接着用说话人分离结果做双音轨后训练，再用 2000 小时 Fisher 电话对话学习真实重叠与停顿；最后用超过 2 万小时的合成指令对话固定助手身份和音色。
+
+Depth Transformer、音频 embedding 与输出头是新加的，随机初始化；Helium 的 attention/FFN 没有突然“变成声码器”，而是在新损失下继续更新，把原有语言表示用于声音 token 预测。为减轻遗忘，音频预训练阶段有一半 batch 仍然是纯文本。
+
+## 最关键的实验账
+
+- 无错位时，转写 NLL 为 4.36、续写长度 486 字符；加入两格错位、语义损失权重 100、逐码本参数和 Inner Monologue 后，NLL 降到 2.77，长度升到 1920。
+- Spoken Web Questions 从无 Inner Monologue 的 9.2% 升到 26.6%，LLaMA Questions 从 21.0% 升到 62.3%，Audio TriviaQA 从 7.3% 升到 22.8%。这证明文字脚手架很重要，但仍低于纯文本 Helium 的 32.3% / 75.0% / 56.4%。
+- Mimi 的主版本在 1.1 kbps、12.5 Hz、全因果条件下获得 81.0 MUSHRA；客观 VisQOL 只有 1.84，恰好说明客观音质代理在改变训练目标后可能严重失真。
+- 最终模型 MMLU 为 49.7，低于 Helium 的 54.3。语音能力不是白送的，持续训练会挤掉一部分文本知识。
+
+## 我的批注
+
+- Moshi 最值得学的不是“把音频 token 喂给 LLM”，而是**把真实时间做成模型的一等公民**：双方每 80 ms 都必须占一个位置，沉默也要建模。
+- Inner Monologue 的价值不在可解释性，而在因果顺序：先用文字空间定住“说什么”，再让语义码和声学码决定“怎么响”。
+- 160 ms 来自两笔固定账：Mimi 首帧 80 ms，加一格声学错位 80 ms。它不是靠隐藏某个长文本推理阶段得到的。
+- 论文把 codec、语言模型、双工数据、延迟、压缩和安全全部自己做了一遍，因此它更像一份完整系统报告，而不是只换一个 attention block 的架构论文。
+- 评测仍有明显空白：大部分对话统计来自模型自己生成双方音轨，缺少今天常见的打断恢复、附和时机和真人长期交互基准；“第一个实时全双工”应放在 2024 年的评测环境里理解。
+
+## 论文、发布权重与当前仓库要分开
+
+论文描述的是 2024 年的 7B Moshi 与实验配方，正文训练上下文为 3000 个 80 ms 步，约 4 分钟，结论中把可用对话概括为约 5 分钟。当前官方仓库在 2026-05-16 的 `e6a55d2` commit 已同时维护 PyTorch、MLX 和 Rust 三套推理栈，并发布 Moshiko / Moshika 多种精度版本。仓库后来增加的工程能力不能倒算成论文实验。
+
+## 跟 wiki 里其他 paper 的关系
+
+- [[personaplex]] · 在 Moshi 的双工骨干前增加声音示范与角色文字提示。
+- [[dyaplex]] · 冻结 PersonaPlex/Moshi 语音塔，再让动作塔按同一 80 ms 节拍生成双人身体动作。
+- [[faceplex]] · 继续把实时语音隐状态接到脸部动画。
+- [[duplexomni]] · 延续双工目标，但把快交互与慢思考进一步拆成两套模型。
+- [[minimind-o]] · 用更小的 Thinker–Talker 实现复现 Mimi 多码本输出路线。
+
+## 历史定位
+
+- 2023 · dGSLM · 双音轨全双工概念验证，但不实时、没有文本知识骨干、只建模语义音频码。
+- 2024 · **Moshi** · 把 7B 文本模型、流式语义—声学 codec、双音轨和逐帧文字脚手架接成约 200 ms 的端到端系统。
+- 2026 · PersonaPlex · 在 Moshi 上增加可控音色和角色。
+- 2026 · DuplexOmni / DyaPlex / FacePlex · 分别扩展异步思考、身体动作与脸部动作。
