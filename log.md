@@ -1537,3 +1537,7 @@ skill 更新:
 - 用户问 DualTalk 是啥——两页结果表都拿它当基线但没交代身份，前置引入违规。
 - DyaPlex §07：DualTalk 本行=双人对话 3D 人脸（双方音频→56 维 blendshape 回归，NeurIPS 2025）；被搬成 69 维 SMPL-X 身体回归后坍缩成静止（速度 std<10⁻⁵ vs 正常 10⁻²），论文归因 MSE 遇稀疏低幅动作时恒定均值姿势是强局部最优——反衬 DyaPlex 选离散 token+交叉熵的理由。
 - FacePlex §07：三基线各补半句（ARTalk=语音驱动 3D 面部动作；DualTalk=双人 3D 人脸 blendshape；UniLS=双方完整音频驱动说/听双角色、即本文的合成数据 teacher），并与原"被迫 chunk-wise"句合并去重。
+
+## [2026-08-12] revise | dyaplex §05 补恒等式推导
+- 用户问 ⟨R(aφ)q,R(bφ)k⟩=⟨q,R((b−a)φ)k⟩ 为什么成立——页面只有"角度可相加减"一句提示，仍是断言。
+- 补两件工具+一步推导：①同时旋转不改内积（转桌面直觉 + RᵀR=I 代数）；②二维旋转角度相加 R(x)R(y)=R(x+y)、倒转=负角。推导=把两支箭头一起倒转 aφ：Query 归位、Key 剩 R((b−a)φ)k，a/b 被减法消掉。附 a=2、b=3 的 90° 数值验证（此前 python 已复核 lhs=rhs=0）。
