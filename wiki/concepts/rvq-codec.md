@@ -1,8 +1,8 @@
 ---
 name: rvq-codec
 type: concept
-sources: [fish-speech-s2-pro, viitorvoice, duplexomni, dyaplex]
-updated: 2026-07-29
+sources: [fish-speech-s2-pro, viitorvoice, duplexomni, personaplex, dyaplex]
+updated: 2026-08-12
 ---
 
 # RVQ Codec · 残差向量量化
