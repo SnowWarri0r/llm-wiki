@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stealing Reasoning Traces · 密文没被破解，推理为什么仍被偷走</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#efe7d2;--paper2:#e5dcc4;--card:#f8f2df;--white:#fffdf5;--ink:#171714;--ink2:#39362f;--muted:#706957;--rule:#b8aa8b;--navy:#142b46;--navy2:#234e70;--cyan:#008aa5;--cyan2:#c9e8eb;--red:#b5372e;--red2:#f1d1c6;--gold:#c18416;--gold2:#f3dfa0;--green:#39705b;--green2:#cfe2d7;--accent:var(--cyan)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font-family:'Newsreader','Noto Serif SC',serif;font-size:18px;line-height:1.72;-webkit-font-smoothing:antialiased}body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:99;opacity:.23;background-image:linear-gradient(rgba(20,43,70,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(20,43,70,.055) 1px,transparent 1px);background-size:36px 36px}.page{max-width:1080px;margin:auto;padding:54px 40px 120px}.mast{border-top:4px double var(--ink);border-bottom:1px solid var(--rule);padding:13px 0;display:flex;justify-content:space-between;gap:16px;font:700 11px/1.4 'JetBrains Mono',monospace;letter-spacing:2px;text-transform:uppercase;color:var(--ink2)}.mast .right{color:var(--muted)}.hero{padding:64px 0 36px}.issue{display:flex;align-items:center;gap:14px;color:var(--cyan);font:700 11px/1 'JetBrains Mono',monospace;letter-spacing:3px;text-transform:uppercase}.issue:after{content:"";height:1px;background:var(--rule);flex:1}h1{font-family:'Fraunces','Noto Serif SC',serif;font-size:clamp(54px,8.4vw,92px);line-height:.95;letter-spacing:-.04em;margin:25px 0 20px;font-weight:750}h1 em{color:var(--cyan);font-style:italic}.byline{font:500 11px/1.6 'JetBrains Mono',monospace;letter-spacing:1px;color:var(--muted);max-width:920px}.dek{font-family:'Fraunces','Noto Serif SC',serif;font-size:clamp(21px,2.5vw,29px);line-height:1.42;font-style:italic;color:var(--ink2);max-width:880px;margin:22px 0}.status{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:start;background:var(--navy);color:#f5f2e8;border-left:6px solid var(--cyan);padding:22px 24px;margin:26px 0 50px}.status b{font:700 11px/1.4 'JetBrains Mono',monospace;letter-spacing:2px;color:#7ed5df}.status p{margin:0;color:#f5f2e8}.tldr{background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--cyan);padding:24px 28px;margin:0 0 38px}.tldr .label,.formula-purpose,.eyebrow{font:700 10px/1.4 'JetBrains Mono',monospace;letter-spacing:2px;text-transform:uppercase;color:var(--cyan)}
+section{margin:78px 0 0;scroll-margin-top:30px}h2{display:grid;grid-template-columns:74px 1fr;gap:18px;align-items:start;font-family:'Fraunces','Noto Serif SC',serif;font-size:clamp(31px,4vw,43px);line-height:1.14;letter-spacing:-.02em;margin:0 0 22px}h2 .n{font:700 10px/1.5 'JetBrains Mono',monospace;letter-spacing:2px;color:var(--cyan);padding-top:10px}h3{font-family:'Fraunces','Noto Serif SC',serif;font-size:25px;line-height:1.25;margin:36px 0 12px}p{margin:12px 0}.lead{font-size:21px;line-height:1.62;color:var(--ink2)}strong{color:var(--ink)}code{font-family:'JetBrains Mono',monospace;font-size:.86em;background:var(--white);border:1px solid var(--rule);padding:1px 5px;border-radius:3px}a{color:#006d82;text-decoration-thickness:1px;text-underline-offset:3px}.jr{font:700 9px/1 'JetBrains Mono',monospace;vertical-align:super;background:var(--gold2);color:#402d06;border:1px solid var(--gold);padding:2px 5px;border-radius:8px;text-decoration:none;margin:0 2px}.jr:hover,.jr:focus{background:var(--gold);color:#fff}.formula{overflow-x:auto;background:var(--navy);color:#fff;border-left:5px solid var(--cyan);padding:22px 18px;margin:12px 0 18px;text-align:center}.formula.light{background:var(--card);color:var(--ink);border:1px solid var(--rule);border-left:5px solid var(--cyan)}.symbols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0 24px}.sym{background:var(--card);border:1px solid var(--rule);padding:11px 13px;font-size:15px}.sym code{display:inline-block;margin-right:5px;color:var(--navy);font-weight:700}.calc{background:#101f32;color:#ecf3f2;border-left:5px solid var(--gold);padding:18px 22px;margin:18px 0;font:500 14px/1.85 'JetBrains Mono',monospace;overflow-x:auto}.calc .ans{color:#ffe074;font-weight:700}.calc .hi{color:#82dfe8}.note,.boundary,.warn{background:var(--card);border-left:4px solid var(--cyan);padding:16px 20px;margin:20px 0;color:var(--ink2)}.warn{border-color:var(--red);background:var(--red2)}.boundary{border-color:var(--gold);background:#f6ecd0}ul,ol{padding-left:24px}li{margin:8px 0}
+figure{margin:34px 0;padding:27px;background:var(--card);border:1px solid var(--rule);box-shadow:9px 9px 0 rgba(20,43,70,.07)}figcaption{display:flex;justify-content:space-between;gap:18px;border-bottom:1px dashed var(--rule);padding-bottom:13px;margin-bottom:22px;font:700 10px/1.5 'JetBrains Mono',monospace;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}figcaption b{color:var(--cyan)}.caption{font-size:15px;color:var(--muted);margin:18px 0 0}.flow{display:grid;grid-template-columns:minmax(0,1fr) 48px minmax(0,1fr) 48px minmax(0,1fr);align-items:stretch}.flow .box,.level,.risk,.def,.stat,.review-card{background:var(--white);border:1px solid var(--rule);padding:18px}.flow .box b,.level b,.risk b,.def b,.stat b,.review-card b{display:block;font:700 10px/1.4 'JetBrains Mono',monospace;letter-spacing:1.4px;color:var(--cyan);margin-bottom:10px;text-transform:uppercase}.flow .box strong{display:block;font-family:'Fraunces','Noto Serif SC',serif;font-size:23px;line-height:1.2;margin:8px 0}.arrow{display:grid;place-items:center;color:var(--red);font:700 28px/1 'JetBrains Mono',monospace}.seal{display:grid;grid-template-columns:1.05fr .95fr;gap:16px}.seal-side{border:1px solid var(--rule);background:var(--white);padding:20px}.seal-side h4{font:700 12px/1.4 'JetBrains Mono',monospace;color:var(--navy);margin:0 0 14px}.packet{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.packet span{display:grid;place-items:center;min-height:64px;border:1px solid var(--navy2);background:var(--cyan2);font:700 10px/1.3 'JetBrains Mono',monospace;text-align:center;padding:6px}.packet span.secret{grid-column:span 3;background:var(--navy);color:#fff}.seal-list{display:grid;gap:8px}.seal-item{display:grid;grid-template-columns:92px 1fr;gap:10px;padding:10px;border-bottom:1px dashed var(--rule)}.seal-item b{font:700 10px/1.5 'JetBrains Mono',monospace;color:var(--cyan)}.levels{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.level{position:relative}.level strong{font-size:21px}.level .scope{margin-top:13px;height:8px;background:var(--paper2)}.level .scope i{display:block;height:100%;background:var(--cyan)}.level:nth-child(2) .scope i{width:66%}.level:nth-child(1) .scope i{width:33%}.risk-grid{display:grid;grid-template-columns:140px repeat(2,1fr);border:1px solid var(--rule)}.risk-grid>*{padding:16px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}.risk-grid>*:nth-child(3n){border-right:0}.risk-grid>*:nth-last-child(-n+3){border-bottom:0}.risk-grid .axis{font:700 10px/1.4 'JetBrains Mono',monospace;letter-spacing:1px;color:var(--muted);background:var(--paper2)}.risk strong{display:block;font-size:20px;margin:3px 0 7px}.risk p{font-size:15px;line-height:1.5;margin:0}.risk.danger{background:var(--red2)}.ratio{display:grid;grid-template-columns:1fr 1fr;gap:18px}.ratio-card{background:var(--white);border:1px solid var(--rule);padding:20px}.ratio-card .big{font:700 clamp(34px,6vw,64px)/1 'JetBrains Mono',monospace;color:var(--navy);margin:14px 0}.ratio-line{height:14px;background:var(--paper2);position:relative}.ratio-line i{position:absolute;inset:0 auto 0 0;background:var(--cyan)}
+.table-wrap{overflow-x:auto;margin:18px 0}table{border-collapse:collapse;width:100%;min-width:680px;background:var(--card);font-size:15px}th,td{padding:11px 13px;border-bottom:1px solid var(--rule);text-align:right}th:first-child,td:first-child{text-align:left}th{font:700 10px/1.4 'JetBrains Mono',monospace;letter-spacing:.8px;color:var(--navy);background:var(--paper2)}tr.best{background:var(--green2)}.gloss{border-top:3px double var(--ink);padding-top:34px}.gloss h2{grid-template-columns:1fr;font-size:30px}.gloss ol{list-style:none;padding:0;counter-reset:g}.gloss li{counter-increment:g;position:relative;padding:14px 10px 14px 54px;border-bottom:1px dashed var(--rule);font-size:16px}.gloss li:before{content:counter(g,decimal-leading-zero);position:absolute;left:8px;top:16px;color:var(--cyan);font:700 10px/1 'JetBrains Mono',monospace}.term{font-weight:700;font-style:italic}.sources{border-top:1px solid var(--rule);padding-top:22px}.sources .label{font:700 10px/1.4 'JetBrains Mono',monospace;letter-spacing:2px;color:var(--muted)}footer{border-top:1px solid var(--rule);margin-top:55px;padding-top:16px;display:flex;justify-content:space-between;gap:18px;font:500 10px/1.5 'JetBrains Mono',monospace;color:var(--muted)}
+.jr:hover,.jr:focus{background:var(--navy);border-color:var(--navy);color:#fff}.jr:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}html body a.jr.jr-active{background:var(--navy);border-color:var(--navy);color:#fff!important}
+@media(max-width:760px){body{font-size:17px}.page{padding:32px 18px 90px}.mast{align-items:flex-start;flex-direction:column}.hero{padding-top:42px}h1{font-size:clamp(46px,14vw,70px)}h2{grid-template-columns:1fr;gap:5px}h2 .n{padding:0}.status{grid-template-columns:1fr}.symbols,.seal,.ratio{grid-template-columns:1fr}.flow{grid-template-columns:1fr;gap:8px}.arrow{transform:rotate(90deg);min-height:28px}.levels{grid-template-columns:1fr}.risk-grid{grid-template-columns:96px 1fr}.risk-grid>*{border-right:0!important;border-bottom:1px solid var(--rule)!important}.risk-grid>*:last-child{border-bottom:0!important}.risk-grid .axis.empty{display:none}.packet{grid-template-columns:repeat(2,1fr)}.packet span.secret{grid-column:span 2}figure{padding:18px;margin-left:-4px;margin-right:-4px}figcaption{flex-direction:column;gap:4px}.formula{margin-left:-4px;margin-right:-4px;padding:18px 8px}footer{flex-direction:column}}
+@media(max-width:760px){.arrow{transform:none;font-size:0;min-height:28px}.arrow:before{content:"↓";font:700 28px/1 'JetBrains Mono',monospace}}
+</style>
+<!-- katex-head:start -->
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<!-- katex-head:end -->
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · stealing-reasoning-traces</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page">
+<header class="mast"><span>Connectionism · Personal Wiki</span><span class="right">Security / Reasoning APIs · 2026</span></header>
+<section class="hero" id="top">
+  <div class="issue">Field Notes · Protocol Design</div>
+  <h1>Stealing<br><em>Reasoning Traces.</em></h1>
+  <div class="byline">A. Panfilov · D. Schmotz · I. Shumailov · L. Beurer-Kellner · J. Schaeffer · A. Prabhu · J. Geiping · M. Andriushchenko · 2026</div>
+  <p class="dek">它用来回答一个很实际的问题：API 返回的隐藏推理明明是密文，为什么公开一份 agent 日志，仍可能把推理、密钥和个人信息一起暴露出去？</p>
+</section>
+<div class="status"><b>PATCH STATUS</b><p><strong>这是已完成责任披露的漏洞复盘。</strong>作者称受影响 provider 已确认收到报告；截至 2026 年 8 月，论文图 1 的攻击已不能用文中方法复现。本页解释协议缺口、实验证据和修复边界，不提供可直接复刻的越权提示模板。</p></div>
+<div class="tldr"><span class="label">TL;DR</span><p>攻击者没有破解加密。他把一份<strong>合法、未改动</strong>的 reasoning envelope 搬到另一段会话或另一模型中；兼容 API 本来就会解密并处理它，再由较弱模型把内容重新生成出来。根因是 envelope 认证了“内容没被改”，却没有充分绑定“谁、哪次会话、哪种模型、排在第几步”。</p></div>
+
+<section id="s0"><h2><span class="n">SECTION 00</span><span>先纠正四个最容易读错的点</span></h2>
+  <div class="levels">
+    <div class="level"><b>NOT CRYPTO BREAK</b><strong>没有恢复密钥</strong><p>真正解密仍由 provider 内部完成；攻击组合的是重放与模型转述。</p><div class="scope"><i></i></div></div>
+    <div class="level"><b>INFERENCE</b><strong>具体密码协议未公开</strong><p>“似乎使用全局共享 key”来自跨上下文兼容的行为证据，不是密码学逆向。</p><div class="scope"><i></i></div></div>
+    <div class="level"><b>NO PLAINTEXT GT</b><strong>长度接近不是逐字真值</strong><p>token 比例、定性细节与隐私泄漏共同支持高保真，但不能证明每个 token 完全一致。</p><div class="scope"><i></i></div></div>
+  </div>
+  <div class="warn"><strong>第四点单独钉住：</strong>附录 B 的风格漂移、低困惑度与逐字概率都是行为探针。它们能说明“某些模型更容易被一小段来源推理带进相近轨道”，不能证明这些模型训练时偷用了 proprietary traces。</div>
+</section>
+
+<section id="s1"><h2><span class="n">SECTION 01</span><span>先看这封“密封交接单”：为什么 API 要把隐藏推理交给客户端</span></h2>
+  <p class="lead">推理模型常先写很长的内部草稿，再只给用户短答案。下一轮若还要接着想，provider 要么替每个会话保存内部状态，要么把状态封进一份 opaque envelope<a class="jr" href="#g-15">15</a>，让客户端代存并在下一次调用时传回。后者让 API 保持 stateless<a class="jr" href="#g-01">01</a>，也方便压缩历史和切换模型。</p>
+  <figure><figcaption><span>Fig 01 · 一个 envelope 里，哪些东西保密，哪些东西参与验签</span><b>content ≠ context</b></figcaption>
+    <div class="seal"><div class="seal-side"><h4>CLIENT HOLDS · 看见结构，看不见推理</h4><div class="packet"><span>HEADER<br>version / key id</span><span>NONCE<a class="jr" href="#g-14">14</a><br>一次性随机数</span><span class="secret">CIPHERTEXT · 隐藏推理明文</span><span>TAG<br>认证标签</span></div></div><div class="seal-side"><h4>SERVER CHECKS · AEAD 常见职责</h4><div class="seal-list"><div class="seal-item"><b>CONFIDENTIALITY</b><span>客户端看不懂 ciphertext。</span></div><div class="seal-item"><b>INTEGRITY</b><span>密文或关联数据被改，tag 验不过。</span></div><div class="seal-item"><b>STATELESSNESS</b><span>provider 不必替每段会话保存整份推理。</span></div></div></div></div>
+    <p class="caption">论文把 opaque block 按 AEAD<a class="jr" href="#g-02">02</a> envelope 来讨论，但三家 provider 均未公开完整密码实现。图只画协议职责，不把推测当字段规范。</p>
+  </figure>
+  <p>关键区别在关联数据（associated data，AD）<a class="jr" href="#g-03">03</a>：它不加密，但会参与认证。若 AD 里只有版本和 key ID，服务端只能确认“这是我签过的内容”；若还绑定 caller、session、model policy 和 turn，才有能力确认“它正在正确上下文里使用”。</p>
+  <div class="note"><strong>这一节已有：</strong>envelope 解决了“隐藏内容 + 防篡改 + 客户端代存”。<strong>下一节要补：</strong>一份合法 envelope 到底能被搬多远。</div>
+</section>
+
+<section id="s2"><h2><span class="n">SECTION 02</span><span>三层兼容：从“自己换个对话”一路扩大到“换账号、换模型”</span></h2>
+  <p>兼容本身有正常用途：编辑历史、压缩上下文、从昂贵模型降级到便宜模型，或者让网关自动换路由。漏洞来自兼容范围比业务需要更宽，而验证时又没有核对原上下文；这类不改消息、只把合法消息再次使用的问题叫 replay attack<a class="jr" href="#g-13">13</a>。</p>
+  <figure><figcaption><span>Fig 02 · reasoning portability 的三层半径</span><b>blast radius grows</b></figcaption><div class="levels">
+    <div class="level"><b>LEVEL 1</b><strong>跨 session</strong><p>同一账号把旧块重排，或放进新会话。</p><div class="scope"><i></i></div></div>
+    <div class="level"><b>LEVEL 2</b><strong>跨 user</strong><p>另一个账号也能提交从公开日志拿到的块。</p><div class="scope"><i></i></div></div>
+    <div class="level"><b>LEVEL 3</b><strong>跨 model</strong><p>同一 provider 的另一模型也能解开并处理。</p><div class="scope"><i></i></div></div>
+  </div><p class="caption">论文 2026 年 7 月的矩阵在 Claude、GPT、Gemini 家族都测到不同程度的跨模型兼容。它只代表当时 API 版本；责任披露后状态已变化。</p></figure>
+  <p>论文区分两类攻击者。first-party attacker 自己请求强模型，拿到自己的 envelope，用于推理蒸馏或绕过强模型防护；third-party attacker 从公开 agent trace 拿到别人的 envelope，用于 secret extraction 或把被投毒的隐藏状态交给受害者恢复。</p>
+  <div class="note"><strong>这一节已有：</strong>攻击材料如何跨边界流动。<strong>下一节要补：</strong>为什么另一模型能把“看见”变成“说出来”。</div>
+</section>
+
+<section id="s3"><h2><span class="n">SECTION 03</span><span>完整数据流只有两次调用：强模型产出，弱模型转述</span></h2>
+  <p class="lead">这里最反直觉的一点是：source model 没有被直接要求泄露内部推理。它只完成正常任务并返回合法 envelope；真正的提取提示送给更弱、更便宜、但仍兼容该 envelope 的 decoder model。</p>
+  <figure><figcaption><span>Fig 03 · 一次 reasoning extraction 的执行顺序</span><b>no key recovery</b></figcaption><div class="flow">
+    <div class="box"><b>CALL A · SOURCE</b><strong>强模型解题</strong><p>输入题目，内部生成 hidden reasoning。</p></div><div class="arrow">→</div>
+    <div class="box"><b>CLIENT ASSET</b><strong>拿到合法 envelope E</strong><p>visible answer 可见；E 只是一串 opaque bytes。</p></div><div class="arrow">→</div>
+    <div class="box"><b>CALL B · DECODER</b><strong>兼容弱模型处理 E</strong><p>provider 解密；弱模型被诱导重述读到的旧推理。</p></div>
+  </div><p class="caption">强模型防护没有在 call B 的输出路径上；弱模型因此像“模糊解码器”或 decryption oracle<a class="jr" href="#g-04">04</a>。它不是确定性解密算法，而是一次随机生成。</p></figure>
+  <p>作者选择 Claude Haiku 4.5、GPT-5.6 Luna 与 Gemini Robotics 1.6 作为 decoder。Claude 可沿用固定提取框架；GPT 需要 best-of-N<a class="jr" href="#g-05">05</a>、失败回退，并把一次转录切成约 50 token 以内的小段；Gemini 最多取 20 组候选，再让 Flash 模型整合。流程差异本身就说明：这是一条模型生成链，不是“密文进去、明文必然唯一出来”的传统解密接口。</p>
+  <div class="boundary"><strong>公开讲解的安全边界：</strong>论文附录给了 provider-specific 提示与规避细节。本页保留数据流、测量与防御，不复刻可执行的 jailbreak 模板。</div>
+</section>
+
+<section id="s4"><h2><span class="n">SECTION 04</span><span>没有 hidden plaintext，作者凭什么说“提取成功”</span></h2>
+  <p class="formula-purpose">这条式子只回答长度是否对得上：</p>
+  <div class="formula" data-expr="r=\frac{T_{\mathrm{ext}}}{T_{\mathrm{bill}}},\qquad e=|1-r|"></div>
+  <div class="symbols"><div class="sym"><code class="m">T_{\mathrm{ext}}</code>转录文本重新编码后的 token 数。</div><div class="sym"><code class="m">T_{\mathrm{bill}}</code>source API 报告并计费的 thinking token 数。</div><div class="sym"><code class="m">r</code>两种长度之比；接近 1 表示长度接近。</div><div class="sym"><code class="m">e</code>离 1 的绝对偏差；越小越接近。</div></div>
+  <figure><figcaption><span>Fig 04 · 2,000 个隐藏 token 的教学验算</span><b>length evidence, not plaintext proof</b></figcaption><div class="ratio">
+    <div class="ratio-card"><span class="eyebrow">API-BILLED THINKING</span><div class="big">2,000</div><div class="ratio-line"><i style="width:100%"></i></div><p>把计费计数当长度参照。</p></div>
+    <div class="ratio-card"><span class="eyebrow">RE-ENCODED EXTRACTION</span><div class="big">1,900</div><div class="ratio-line"><i style="width:95%"></i></div><p><code class="m">r=.95</code>，所以 <code class="m">e=.05</code>。</p></div>
+  </div><p class="caption">长度只差 5%，支持“转录覆盖了大部分内容”。它无法排除改写、遗漏 100 个 token，或用相同长度生成另一段文字。</p></figure>
+  <p>作者在 120 个 Codeforces problems 上观察到多数点贴近 <code class="m">y=x</code>，再用两类证据补强：decoded reasoning 明显比 displayed summary 细；有些 secret 只在 decoded reasoning 出现。正确结论是<strong>证据支持高保真恢复</strong>，而不是“已拿到可逐字核验的真实明文”。</p>
+  <div class="note"><strong>这一节已有：</strong>提取证据的强弱边界。<strong>下一节要补：</strong>这条能力具体伤害哪四类对象。</div>
+</section>
+<section id="s5"><h2><span class="n">SECTION 05</span><span>四类风险不是散点：先看 envelope 属于谁</span></h2>
+  <p>前四节已经说明 envelope 怎样被搬运与转述。风险可以用两个问题排成一张表：攻击者拿的是自己的块还是别人的块；目标是读出内容，还是让块继续影响后续行为。</p>
+  <figure><figcaption><span>Fig 05 · 两类攻击者 × 两种目的</span><b>four attack vectors</b></figcaption><div class="risk-grid">
+    <div class="axis empty"></div><div class="axis">窃取能力 / 数据</div><div class="axis">绕过控制 / 注入</div>
+    <div class="axis">自己的 envelope</div><div class="risk"><b>FIRST PARTY</b><strong>推理轨迹蒸馏</strong><p>把强模型的中间解法变成更密的学生监督。</p></div><div class="risk"><b>FIRST PARTY</b><strong>Jailbreak 隐藏通道</strong><p>强模型只给安全摘要，decoder 却转述隐藏过程里的有害细节。</p></div>
+    <div class="axis">别人的 envelope</div><div class="risk danger"><b>THIRD PARTY</b><strong>Secret / PII 提取</strong><p>从公开 raw trace 读取 visible text 没有的敏感值。</p></div><div class="risk danger"><b>THIRD PARTY</b><strong>隐藏提示注入</strong><p>把携带旧意图的合法块交给受害者恢复，普通文本扫描器看不见。</p></div>
+  </div><p class="caption">蒸馏<a class="jr" href="#g-06">06</a>与 jailbreak 使用攻击者自己合法生成的块；隐私泄漏与隐藏提示注入<a class="jr" href="#g-07">07</a>依赖跨用户或共享 trace。</p></figure>
+  <h3>为什么推理比答案值钱</h3>
+  <p>答案只暴露终点，reasoning trace 还给出拆题、试错、核验与修正。假设可见答案 20 tokens，隐藏推理 1,980 tokens，训练序列长度从 20 变成 2,000，token 级监督密度约扩大 <code class="m">2000/20=100</code> 倍。这不表示能力提升 100 倍，但解释了真实轨迹为何比同量短答案更有蒸馏价值。</p>
+  <p>论文估计：用 Haiku 4.5 处理 10,000 条、每条约 12k input 与 12k output tokens，名义 API 成本约 720 美元。若 traces 已由他人公开，攻击者甚至不用再向昂贵 source model 付费。</p>
+</section>
+
+<section id="s6"><h2><span class="n">SECTION 06</span><span>6,708 条公开轨迹经过两层筛选，最后剩下什么</span></h2>
+  <p class="lead">隐私实验不是把正则表达式命中的每串字符都算泄漏。第一层先追求高召回，第二层再排掉占位符、环境变量名、benchmark fixtures 与普通公开标识；随后按值去重，并单独剔除 benchmark。</p>
+  <figure><figcaption><span>Fig 06 · block、session 与 artifact 是三种统计单位</span><b>do not mix denominators</b></figcaption><div class="flow">
+    <div class="box"><b>PUBLIC TRAJECTORIES</b><strong>6,708 sessions</strong><p>来自 GitHub 与 Hugging Face 的公开 agent logs。</p></div><div class="arrow">→</div>
+    <div class="box"><b>DECODED BLOCKS</b><strong>315,320 blocks</strong><p>第一阶段标出 27,165，即 8.6%。</p></div><div class="arrow">→</div>
+    <div class="box"><b>REAL ARTIFACTS</b><strong>1,028 blocks</strong><p>至少含一项真实 artifact；涉及 328 sessions。</p></div>
+  </div><p class="caption">第二阶段实际复核 6,950 个被标记 blocks。1,028 是 block 数，不等于去重后的敏感值数。</p></figure>
+  <div class="table-wrap"><table><thead><tr><th>口径</th><th>数量</th><th>它在数什么</th></tr></thead><tbody>
+    <tr><td>全部来源 · headline</td><td>912</td><td>367 PII + 363 technical identifiers + 182 credentials</td></tr>
+    <tr><td>Table 4 完整 taxonomy 去重</td><td>941</td><td>headline 的 912 + 单列的 Other 29</td></tr>
+    <tr><td>去掉 benchmark</td><td>704</td><td>真实用户会话中的 distinct artifacts</td></tr>
+    <tr class="best"><td>只在 hidden reasoning</td><td>64</td><td>在 raw session 的可见部分完全找不到</td></tr>
+  </tbody></table></div>
+  <p>真实用户会话中包括 62 个 API keys、33 个 passwords、24 个 access tokens、7 个 private keys、30 个 personal emails 与 6 个非 localhost IP。按 session 算，328 / 6,708 = 4.9% 至少泄漏一项真实敏感值；按 block 算则是 1,028 / 315,320 ≈ 0.3%。两个百分比都对，只是分母不同。</p>
+  <div class="calc">block 泄漏率 = 1,028 ÷ 315,320 = <span class="hi">0.326%</span> ≈ 0.3%<br>session 泄漏率 = 328 ÷ 6,708 = <span class="ans">4.889%</span> ≈ 4.9%<br>reasoning-only 占真实 artifacts = 64 ÷ 704 = <span class="ans">9.09%</span></div>
+  <div class="boundary"><strong>704 与 912 不能直接说成“清洗后删掉 208 个假值”。</strong>headline 的三大类共 912，Table 4 另有 29 个 Other，所以完整去重数是 941；704 则从完整 taxonomy 里额外排除了 benchmark。页面分别保留原表口径，不把它们硬串成单一漏斗。</div>
+</section>
+
+<section id="s7"><h2><span class="n">SECTION 07</span><span>为什么“请帮我匿名化”反而可能把 secret 再写进隐藏层</span></h2>
+  <p>用户让 agent 清理会话时，模型得先读到旧值，才能判断哪里要删。于是 visible answer 可能已经变成 <code>API_KEY</code>=<code>[REDACTED]</code>，hidden reasoning 却刚写下“需要删除的原值是……”。用户检查明文后公开 raw transcript，opaque block 仍跟着出去。</p>
+  <figure><figcaption><span>Fig 07 · visible summary 不是 hidden reasoning 的缩略复印件</span><b>about 5× shorter</b></figcaption><div class="ratio">
+    <div class="ratio-card"><span class="eyebrow">HIDDEN REASONING</span><div class="big">5×</div><div class="ratio-line"><i style="width:100%"></i></div><p>包含探索、失败路线、核验提示，也可能重述待清理的敏感值。</p></div>
+    <div class="ratio-card"><span class="eyebrow">DISPLAYED SUMMARY</span><div class="big">1×</div><div class="ratio-line"><i style="width:20%;background:var(--gold)"></i></div><p>可能只留结论、删掉中间数学，甚至只概括推理尾声。</p></div>
+  </div><p class="caption">小样本包括 18 条 Opus 4.8 与 15 条 GPT-5.6 Sol traces。作者观察 summary 平均约短五倍；它不是 hidden plaintext ground truth。</p></figure>
+  <p>论文还指出：18 条 Opus traces 里 9 条在推导前先写答案，8 条 summary 也保留了这种顺序；有一条 summary 删除了“接下来要核验”的提醒。摘要能降低暴露面，却也会隐藏试错与不确定性，因此既不能用来证明 extraction 逐字正确，也不能替代对 opaque blocks 的清理。</p>
+  <div class="warn"><strong>发布 agent 数据最稳妥的规则：</strong>移除所有 reasoning、signature、thinkingSignature 与其他 opaque state 字段。只清洗可见文本无法覆盖模型真实读取的全部上下文。</div>
+</section>
+
+<section id="s8"><h2><span class="n">SECTION 08</span><span>附录 B 的问题不是“谁偷了谁”，而是“短前缀能把行为推多远”</span></h2>
+  <p class="lead">作者把少量 decoded proprietary reasoning 放在 open-weight model 的推理开头，再让模型自由生成剩余推理和完整 visible answer。若输出变得更像 source，这证明一次推理中的条件敏感性；要证明训练时蒸馏，还需要训练数据、checkpoint lineage 或更强的因果证据。</p>
+  <figure><figcaption><span>Fig 08 · 三层证据，回答三个不同问题</span><b>suggestive ≠ causal</b></figcaption><div class="levels">
+    <div class="level"><b>N-GRAM OVERLAP</b><strong>表面措辞靠近吗</strong><p>Kimi-K3 加 1% Opus prefill 后，STEM +.150，non-STEM +.086。</p><div class="scope"><i style="width:42%"></i></div></div>
+    <div class="level"><b>STYLE CLASSIFIER</b><strong>写作统计变了吗</strong><p>字符 3–5 gram、2<sup>18</sup> hashed features、按 problem 的 5-fold CV。</p><div class="scope"><i style="width:64%"></i></div></div>
+    <div class="level"><b>CAUSAL CLAIM</b><strong>训练时蒸馏了吗</strong><p>没有训练数据与 lineage；论文明确不给这个结论。</p><div class="scope"><i style="width:10%;background:var(--red)"></i></div></div>
+  </div><p class="caption">可见答案始终自由生成，没有直接预填。推理时的四个词也能改变后续风格，因此 style drift<a class="jr" href="#g-08">08</a>本身不是训练来源证据。</p></figure>
+  <p>完整 style 实验用 6 个 open-weight models、90 个问题（12 AIME + 78 Codeforces）、每个 prefill 条件重复 4 次，所以每模型每条件有 360 条；proprietary reference 每题只有 1 条，共 90。五个条件是 no prefill、self prefill、Sol 4 words、Opus 4 words、Kimi-K2.5 4 words。</p>
+  <p>多个模型在 Sol / Opus prefill 下与自己的 control 更容易区分，但真正朝 source reference 靠近的单元很少，AUC<a class="jr" href="#g-09">09</a>也多在 .91–1.00，仍然很好分。Kimi-K3 与 GLM-5.2 的 reasoning length 在 prefill 后明显缩短，例如 Kimi-K3 从约 5,700 降到 Opus prefill 的约 2,500；这说明生成轨道被改变，不说明改变来自训练记忆。</p>
+  <div class="boundary"><strong>作者自己的限制：</strong>漏洞修补后才做这组分析；样本小且偏 benchmark；decoded trace 是 fuzzy；serving precision、chat template 与 provider stack 无法完全控制。因此“unusual behavioral compatibility”是上限结论。</div>
+</section>
+
+<section id="s9"><h2><span class="n">SECTION 09</span><span>概率抽取与困惑度：一个问“能否逐字撞中”，一个问“读起来顺不顺”</span></h2>
+  <h3>角色 1 · 概率定义</h3><p class="formula-purpose">独立采样 n 次，至少一次逐字生成目标 span：</p>
+  <div class="formula" data-expr="P(\mathrm{hit\ by}\ n)=1-(1-p_z)^n"></div>
+  <div class="symbols"><div class="sym"><code class="m">z</code>想逐字复现的目标 span，论文默认 16 tokens。</div><div class="sym"><code class="m">p_z</code>一次 temperature-1 采样恰好生成 z 的联合概率。</div><div class="sym"><code class="m">1-p_z</code>单次没有命中的概率。</div><div class="sym"><code class="m">(1-p_z)^n</code>n 次都没命中的概率；用 1 减它得到至少命中一次。</div></div>
+  <div class="calc">设 <code class="m">p_z</code> = 10⁻⁶，n = 1,000,000<br>P(hit) = 1-(1-10⁻⁶)¹⁰⁰⁰⁰⁰⁰<br>≈ 1-e⁻¹ = <span class="ans">0.632</span><br>平均要约 1/<code class="m">p_z</code> = <span class="hi">1,000,000 次</span>才进入“有机会撞中”的量级</div>
+  <p>论文用 teacher forcing<a class="jr" href="#g-10">10</a>一次算出每个 token 的条件概率，再相乘得到 <code class="m">p_z</code>。对 decoded reasoning 的 16-token spans，Kimi-K3 虽最容易，常仍需约 <code class="m">10^9–10^12</code> 次查询；结果不支持实用的逐字记忆提取。visible answer 在完整 reasoning 条件下可能容易得多，这说明上下文能强力约束答案措辞，不等于 reasoning 被逐字记住。</p>
+  <h3>角色 2 · 序列评分</h3><p class="formula-purpose">困惑度衡量 scorer 觉得整段推理有多自然：</p>
+  <div class="formula" data-expr="\operatorname{PPL}(t\mid q)=\exp\!\left(-\frac{1}{|t|}\sum_{i=1}^{|t|}\log p(t_i\mid q,t_{<i})\right)"></div>
+  <div class="symbols"><div class="sym"><code class="m">q</code>题目；评分时始终作为已知条件。</div><div class="sym"><code class="m">t=(t_1,\ldots,t_{|t|})</code>整段待评分 reasoning tokens。</div><div class="sym"><code class="m">t_{&lt;i}</code>第 i 个 token 前面的真实前缀。</div><div class="sym"><code class="m">p(t_i\mid q,t_{&lt;i})</code>scorer 给真实下一个 token 的概率。</div><div class="sym"><code class="m">\log</code>把逐 token 概率的连乘变成可相加的 log probability。</div><div class="sym"><code class="m">-|t|^{-1}\sum</code>取平均负 log probability；再 exp 回到等效分支数。</div></div>
+  <div class="calc">三个真值 token 概率 = [0.5, 0.25, 0.5]<br>平均负 log = -(ln.5 + ln.25 + ln.5) / 3 = <span class="hi">0.924</span><br>PPL = exp(0.924) = <span class="ans">2.52</span><br>等价验算：1 / (0.5×0.25×0.5)^(1/3) = 2.52 ✓</div>
+  <p>低 PPL<a class="jr" href="#g-11">11</a>只说明“这段文字对 scorer 很顺”。论文热力图里 native trace 并不总在每个 scorer 下最低，作者也把 PPL 明确称为 coarse metric。把低 PPL 直接翻译成“模型训练时见过”会跳过最关键的因果环节。</p>
+</section>
+<section id="s10"><h2><span class="n">SECTION 10</span><span>防御不能只补一层：先缩小密文的合法使用范围</span></h2>
+  <p class="lead">前面的漏洞链需要三件事同时成立：客户端持有可复制资产、资产能跨上下文通过验证、兼容模型愿意转述。防御要分别切断这三件事，而不是只训练模型“更会拒绝”。</p>
+  <figure><figcaption><span>Fig 09 · 从协议根部到模型行为的五层防线</span><b>defense in depth</b></figcaption><div class="flow">
+    <div class="box"><b>ARCHITECTURE</b><strong>服务端保存状态</strong><p>客户端只拿随机 state ID；代价是存储和 API 复杂度。</p></div><div class="arrow">→</div>
+    <div class="box"><b>CRYPTOGRAPHY</b><strong>绑定上下文</strong><p>AD 纳入 user、session、model policy 与前序位置。</p></div><div class="arrow">→</div>
+    <div class="box"><b>MODEL</b><strong>拒绝转录</strong><p>合法模型看到旧推理后，仍拒绝把它原样吐出。</p></div>
+  </div><div class="levels" style="margin-top:12px"><div class="level"><b>GATEWAY</b><strong>跨模型隔离</strong><p>显式批准 downgrade / re-sign；监测同一 signature 跨会话高速重放。</p></div><div class="level"><b>REVOCATION</b><strong>旧资产失效</strong><p>轮换 pre-fix keys，拒绝 retired key ID；必要时验证身份后重新签发。</p></div><div class="level"><b>DATA HYGIENE</b><strong>公开前剥离隐藏块</strong><p>移除 opaque reasoning fields，不把“乱码”当无害附件。</p></div></div><p class="caption">任何单层都不完整：只做模型拒绝会被未来弱模型绕过；只做 user binding 仍允许同用户跨 session；只做 hash chain 仍可能被整段会话重放。</p></figure>
+  <p>最彻底的 stateful 方案把 reasoning 留在服务端，客户端手里不再有可搬运的密文资产。若业务坚持 stateless，<a href="../concepts/authenticated-encryption.html">authenticated-encryption</a> 的 associated data 至少应绑定 caller identity 与 session；跨模型切换走受控重新签发，而不是默认全家族通用。</p>
+  <div class="warn"><strong>结构性上限：</strong>模型必须读懂自己的旧推理，才能保持多轮连续性。即使 transport encryption 完美，只要合法模型会被提示诱导转述，内容仍只是 semi-hidden。密码学能限制“谁能让哪种模型处理哪一块”，不能直接规定模型读完后怎样回答。</div>
+</section>
+
+<section id="s11"><h2><span class="n">SECTION 11</span><span>hash chain 每一项在管什么，为什么它仍拦不住整段重放</span></h2>
+  <p class="formula-purpose">附录 A 的草案把下一块绑定到用户、会话与直接前驱：</p>
+  <div class="formula" data-expr="\tau_{n+1}=H\!\left(\mathrm{user\_id}\,\|\,\mathrm{session\_id}\,\|\,H(\tau_n\,\|\,\mathrm{salt}_2)\,\|\,\mathrm{salt}_1\right)"></div>
+  <div class="symbols"><div class="sym"><code class="m">\tau_n</code>第 n 块 reasoning content；n 表示会话顺序。</div><div class="sym"><code class="m">\tau_{n+1}</code>写入下一块关联数据的链式摘要。</div><div class="sym"><code class="m">H</code>密码学 hash；输入变一点，摘要就应难以预测地改变。</div><div class="sym"><code class="m">\|</code>拼接符号，把几段字节顺次接在一起；不是范数。</div><div class="sym"><code class="m">\mathrm{salt}_1,\mathrm{salt}_2</code>额外随机值，用来隔离不同 hash 输入域。</div><div class="sym"><code class="m">\mathrm{user\_id},\mathrm{session\_id}</code>把同一内容限制在原账号与原会话。</div></div>
+  <div class="note"><strong>论文这里复用了同一个 τ 记号：</strong>右边的 <code class="m">\tau_n</code> 是第 n 块推理内容，左边的 <code class="m">\tau_{n+1}</code> 却是给下一块使用的摘要。实现里应当给 content 与 digest 分开命名；它不是“hash 之后变成下一段推理正文”。</div>
+  <figure><figcaption><span>Fig 10 · 同一推理块，三种搬法为什么结果不同</span><b>dependency, not real hash output</b></figcaption><div class="flow">
+    <div class="box"><b>VALID CONTEXT</b><strong>user 17 · session 42</strong><p>前驱是 <code class="m">\tau_7</code>；服务端重算的摘要与 envelope 记录一致。</p></div><div class="arrow">→</div>
+    <div class="box"><b>WRONG SESSION</b><strong>user 17 · session 91</strong><p>session bytes 改了，重算摘要不同，拒绝。</p></div><div class="arrow">→</div>
+    <div class="box"><b>MISSING PREDECESSOR</b><strong>直接跳过 <code class="m">\tau_7</code></strong><p>内层 <code class="m">H(\tau_7\mathbin\Vert\mathrm{salt}_2)</code> 对不上，拒绝。</p></div>
+  </div><p class="caption">这里不伪造 SHA 数字，只追依赖关系。攻击者若连同 user/session 的完整合法历史按原顺序重放，所有前驱仍能对上，因此 chain 主要提高成本并缩小 blast radius。</p></figure>
+  <p>P1（reasoning ordinality）只要求 X 在依赖它的 Y 之前；对话压缩时可以删掉一段，只保留剩余顺序。P2（full reasoning integrity）要求 Y 前面必须恰好是 X，任何中间块都不能删；它更强，却会让 compaction 后所有下游 hash 都要重算。论文建议用 Merkle tree<a class="jr" href="#g-12">12</a>保留被压缩区间的 root，让 surviving spans 仍可验证。</p>
+  <div class="boundary"><strong>这是 proposal，不是 deployed protocol。</strong>论文没有给 formal security proof、状态规模、fork/compaction 的完整 wire format，也没有 provider 采用情况。P3 leak monitoring 与 P4 single-use non-replayability 还需要服务端状态，不能只靠上面这条 hash 式子自动获得。</div>
+</section>
+
+<section id="s12"><h2><span class="n">SECTION 12</span><span>实验、成本与披露：这些数字各自证明到哪</span></h2>
+  <div class="table-wrap"><table><thead><tr><th>实验块</th><th>数据 / 设置</th><th>它支持什么</th><th>它不支持什么</th></tr></thead><tbody>
+    <tr><td>Controlled extraction</td><td>120 Codeforces + AIME25 + HLE；三家 API</td><td>token 长度与内容细节支持可扩展恢复</td><td>没有逐字 plaintext ground truth</td></tr>
+    <tr><td>Public privacy scan</td><td>6,708 sessions；315,320 blocks</td><td>真实公开 traces 的现实泄漏面</td><td>不是互联网或企业私有 trace 的穷举审计</td></tr>
+    <tr><td>Summary comparison</td><td>18 Opus + 15 Sol</td><td>summary 常大幅压缩并遗漏核验线索</td><td>样本小，不能概括所有任务</td></tr>
+    <tr><td>Appendix B style</td><td>6 open models；90 problems；4 repeats</td><td>短 reasoning prefill 会改变部分模型行为</td><td>不能因果证明训练时蒸馏</td></tr>
+    <tr><td>Probabilistic extraction</td><td>默认 16-token span</td><td>无实用逐字 reasoning memorization 证据</td><td>不能排除策略级或分布级学习</td></tr>
+  </tbody></table></div>
+  <figure><figcaption><span>Fig 11 · 研究时间线</span><b>tested → disclosed → patched</b></figcaption><div class="flow">
+    <div class="box"><b>EARLY JUL 2026</b><strong>测试 API 行为</strong><p>兼容矩阵和主要 extraction 对应当时版本。</p></div><div class="arrow">→</div>
+    <div class="box"><b>RESPONSIBLE DISCLOSURE</b><strong>通知 providers 与平台</strong><p>受影响 provider、Microsoft、Hugging Face 收到技术细节。</p></div><div class="arrow">→</div>
+    <div class="box"><b>AUG 2026</b><strong>原攻击无法复现</strong><p>作者称各 provider 确认收件，随后无法再发动同样攻击。</p></div>
+  </div><p class="caption">论文约 30,000 美元 API credits；10,000 条、每条约 12k input + 12k output 的 Haiku 4.5 解码名义估算约 720 美元。</p></figure>
+  <p>论文附录 E 还给出 illegible、non-English、scheming、instrumental subgoals、alignment self-assessment、AIME 与 Codeforces 等定性 decoded traces。它们说明隐藏 reasoning 的内容比 visible answer 广，但不能用单条例子推断整个模型的稳定意图。</p>
+  <div class="note"><strong>版本边界：</strong>正文所有 provider compatibility 都应读成“as of July 2026”。这不是今天仍可照做的 API 能力表。</div>
+</section>
+
+<section id="s13"><h2><span class="n">SECTION 13</span><span>我的判断：这篇真正偷走的，是“加密等于安全”的错觉</span></h2>
+  <div class="levels"><div class="level"><b>STRONGEST EVIDENCE</b><strong>协议上下文缺口</strong><p>同一合法块能跨 session / user / model 被处理，是整篇最直接、最可操作的系统证据。</p></div><div class="level"><b>MOST IMPORTANT NUMBER</b><strong>64 reasoning-only</strong><p>它证明可见文本清洗并没有覆盖模型真实读取的全部上下文。</p></div><div class="level"><b>MOST LIMITED CLAIM</b><strong>谁做过蒸馏</strong><p>style、PPL 与抽取概率三条线都不足以给训练来源定罪。</p></div></div>
+  <p class="lead">最值得带走的设计原则是：<strong>认证不仅要回答“这东西是真的吗”，还要回答“谁能在什么状态、什么顺序、什么权限下使用它”。</strong>stateless API 把服务端状态变成客户端资产，随之而来的可复制性、可分享性与可重放性必须一并进入威胁模型。</p>
+  <p>对数据发布者，行动建议更简单：公开 agent trajectory 时移除所有 opaque reasoning / signature fields。对 provider，context-bound AEAD、受控 model switching、legacy key retirement 与 model-level refusal 要一起做。任何一层单独承担全部安全责任，都会留下结构性缺口。</p>
+</section>
+
+<section id="gloss" class="gloss"><h2>术语直达 · 点正文编号看人话解释</h2><ol>
+  <li id="g-01"><span class="term">Stateless API</span>：服务端不为每段对话长期保存内部状态；客户端每次把恢复所需信息带回来。</li>
+  <li id="g-02"><span class="term">AEAD</span>：Authenticated Encryption with Associated Data；同时提供保密与完整性，并认证一段不加密的上下文。详见<a href="../concepts/authenticated-encryption.html">概念页</a>。</li>
+  <li id="g-03"><span class="term">Associated data</span>：明文可见但纳入 tag 校验的字段，适合绑定 user、session、version 与顺序。</li>
+  <li id="g-04"><span class="term">Decryption oracle</span>：攻击者不能直接拿到密钥，却能反复让一个合法组件处理密文并从输出侧获得信息；本论文的模型输出是模糊、随机的。</li>
+  <li id="g-05"><span class="term">Best-of-N</span>：同一输入采样 N 次，再按某个准则选最合适候选；提高成功率，也提高调用成本。</li>
+  <li id="g-06"><span class="term">Reasoning-trace distillation</span>：把老师的中间推理连同答案用作学生监督。详见<a href="../concepts/reasoning-trace-distillation.html">概念页</a>。</li>
+  <li id="g-07"><span class="term">Hidden prompt injection</span>：影响后续行为的指令位于用户不可见的隐藏状态。详见<a href="../concepts/hidden-prompt-injection.html">概念页</a>。</li>
+  <li id="g-08"><span class="term">Style drift</span>：加入前缀后，输出的字符或词组统计发生可测变化；它描述行为变化，不等于训练来源证明。</li>
+  <li id="g-09"><span class="term">AUC</span>：分类器把正例排在负例前面的概率；0.5 近似随机，1.0 表示完全可分。</li>
+  <li id="g-10"><span class="term">Teacher forcing</span>：每一步都喂真实前缀，直接读取模型给真实下一个 token 的概率；这里用于评分，不是训练 decoder。</li>
+  <li id="g-11"><span class="term">Perplexity</span>：平均负 log probability 取指数；越低表示 scorer 觉得序列越自然。详见<a href="../concepts/perplexity.html">概念页</a>。</li>
+  <li id="g-12"><span class="term">Merkle tree</span>：叶子逐层 hash 汇总成 root；保留 root 便能验证一段数据属于原集合，而不必长期保存所有叶子。</li>
+  <li id="g-13"><span class="term">Replay attack</span>：不篡改合法消息，只在错误时间或上下文再次使用。详见<a href="../concepts/reasoning-envelope-replay.html">概念页</a>。</li>
+  <li id="g-14"><span class="term">Nonce</span>：同一密钥下应保持唯一的一次性值；重复使用可能破坏具体 AEAD 算法的安全性。</li>
+  <li id="g-15"><span class="term">Reasoning envelope</span>：客户端持有并回传的 opaque hidden-state block；它是协议资产，不应当作普通日志乱码。</li>
+</ol></section>
+<section class="sources"><span class="label">PRIMARY SOURCES · ACCESSED 2026-08-12</span><ul>
+  <li><a href="https://arxiv.org/abs/2608.09867">Stealing Reasoning Traces from Proprietary LLM APIs · arXiv abstract</a></li>
+  <li><a href="https://arxiv.org/pdf/2608.09867">Full paper · 116 pages</a></li>
+</ul></section>
+<footer><span>paper fact / experimental fact / explanation inference 已分层</span><span><a href="../index.html">Personal Wiki Index</a></span></footer>
+</main><script>document.addEventListener("DOMContentLoaded",function(){document.querySelectorAll("[data-expr]").forEach(function(el){if(window.katex)katex.render(el.dataset.expr,el,{displayMode:true,throwOnError:false});});});</script><!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!document.getElementById(id))return;
+      e.preventDefault();
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body></html>

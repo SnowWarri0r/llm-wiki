@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>困惑度 Perplexity · 模型对一段话有多&quot;意外&quot; · Concept</title>
+<title>推理信封重放 · 合法密文被搬到了错误的对话 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,60 +53,79 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · perplexity</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · reasoning-envelope-replay</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>困惑度 Perplexity · 模型对一段话有多&quot;意外&quot;</h1>
+  <h1>推理信封重放 · 合法密文被搬到了错误的对话</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>把模型在一段文本上的平均交叉熵取指数，得到一个"等效分支数"：困惑度 = exp(平均每 token 的负对数概率)；越低 = 模型觉得这段话越自然、越在意料之中。</p>
-<h2>直觉 · "平均下来它在几个里猜"</h2>
-<p>模型每步预测下一个 token，给真值 token 一个概率。概率高 = 不意外；概率低 = 意外。把整段的"意外程度"汇总成一个数，就是困惑度。</p>
-<p>它有个好懂的解读：<strong>等效分支数</strong>。困惑度=10 ≈ "模型平均每步像在 10 个等可能选项里猜"；困惑度=2 ≈ "平均每步像在 2 个里猜"——越小越笃定。所以困惑度低 = 这段话<strong>对模型很顺</strong>。</p>
+<p>攻击者不改密文，只把一份仍能通过验证的推理块重新塞给另一次调用。</p>
+<h2>直觉</h2>
+<p>一张门票是真的，不代表它在任何影院、任何场次、任何人手里都该有效。重放攻击利用的正是这道差别：对象本身通过验真，但系统没有核对它属于谁、哪一场、排在第几步。</p>
+<p>推理 API 为了保持无状态，会把隐藏推理装进 opaque envelope 交给客户端保管。后续请求把它传回，模型就能接着想。如果 envelope 只证明“这段内容由服务端签过”，没有证明“只能由这个用户在这段会话的这个位置使用”，它就可能被跨 session、跨 user 或跨 model 搬运。</p>
 <h2>怎么做的</h2>
-<pre><code>一段 N 个 token，模型给每个真值 token 的概率 p₁…p_N：
-平均 NLL = −(1/N) Σ log pₜ        （= 平均每 token 的交叉熵）
-困惑度  PPL = exp( 平均 NLL )
+<pre><code class="language-text">调用 A：强模型 → 返回 visible answer + opaque reasoning envelope E
+搬运：客户端保留 E，不修改其中任何字节
+调用 B：把 E 放进另一个兼容调用 → 目标模型接受并处理旧推理
 </code></pre>
-<p>关键是那个 <strong>1/N</strong>：困惑度是<strong>逐 token 的几何平均</strong>，已经<strong>按长度归一</strong>了。所以它能<strong>公平比较不同长度的回答</strong>——长回答不会因为 token 多就吃亏，这正是 <a href="../papers/grape.html">grape</a> 用它给候选回答排序的原因。</p>
-<h2>数字例子 · 两段回答比"合身"</h2>
-<p>同一指令的两个候选，看目标模型给每个真值 token 的概率：</p>
-<pre><code>候选 A（合身）:   逐 token 概率 [0.5, 0.4, 0.5]
-  平均 NLL = −(ln0.5+ln0.4+ln0.5)/3 = 0.768
-  PPL = exp(0.768) = 2.15      ← 模型平均像在 ~2 个里猜，很顺
-
-候选 B（强老师但不合身）: [0.2, 0.1, 0.3]
-  平均 NLL = −(ln0.2+ln0.1+ln0.3)/3 = 1.705
-  PPL = exp(1.705) = 5.50      ← 平均像在 ~5.5 个里猜，别扭
+<p>三层兼容从窄到宽：</p>
+<ol>
+<li>跨 session：同一用户把 <span class="tex math-inline" data-display="false">E</span> 放进另一段会话。</li>
+<li>跨 user：另一账号也能提交 <span class="tex math-inline" data-display="false">E</span>。</li>
+<li>跨 model：同一 provider 的另一模型也能处理 <span class="tex math-inline" data-display="false">E</span>。</li>
+</ol>
+<h2>数字例子</h2>
+<p>把 envelope 想成四元组：</p>
+<pre><code class="language-text">E = (ciphertext, nonce, tag, key_id)
+原上下文 = (user 17, session 42, model A, turn 8)
+新上下文 = (user 29, session 91, model B, turn 2)
 </code></pre>
-<p>✓ 自检：A 的困惑度 2.15 &lt; B 的 5.50。哪怕 B 来自更强的老师，<strong>目标模型觉得 A 更自然</strong>——<a href="../papers/grape.html">grape</a> 就选 A。注意用困惑度(而非总对数概率)是关键：总概率会偏向短回答，逐 token 几何平均把长度拉平了，比的是"平均每 token 多顺"。</p>
+<p>若验签只检查 <span class="tex math-inline" data-display="false">E</span> 的四个字段，两个上下文都会得到“有效”。若关联数据额外绑定 <span class="tex math-inline" data-display="false">(17,42,A,8)</span>，第二组上下文至少有四处不匹配，重放会被拒绝。</p>
+<h2>防御</h2>
+<ul>
+<li>把用户、会话、模型与前序位置写进认证上下文。</li>
+<li>服务端记录 envelope 是否已经消费，阻止同一块重复使用。</li>
+<li>跨模型切换经过显式、受控的重新签发，而不是默认全家族通用。</li>
+<li>轮换旧密钥并拒绝 legacy key ID，切断已经公开的历史块。</li>
+</ul>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/grape.html">grape</a> · 用困惑度给候选回答排序，选最低(最合身)那条</li>
-<li><a href="../papers/stealing-reasoning-traces.html">stealing-reasoning-traces</a> · 用条件困惑度比较不同模型的推理风格；低 PPL 只能说明“顺”，不能单独证明蒸馏或记忆</li>
-<li><a href="../concepts/cross-entropy.html">cross-entropy</a> · 困惑度 = exp(平均交叉熵/NLL)，一对孪生量</li>
-<li><a href="../concepts/distribution-aligned-sft.html">distribution-aligned-sft</a> · "低困惑度 = 贴合模型分布"是它的判据</li>
-<li><a href="../concepts/softmax.html">softmax</a> · 每步的概率来自 softmax</li>
+<li><a href="../concepts/authenticated-encryption.html">authenticated-encryption</a> · 关联数据如何把合法密文绑定到合法上下文。</li>
+<li><a href="../papers/stealing-reasoning-traces.html">stealing-reasoning-traces</a> · 把重放与弱模型转录组合成推理提取。</li>
+<li><a href="../concepts/hidden-prompt-injection.html">hidden-prompt-injection</a> · 反方向风险：把带恶意意图的合法块交给受害者重放。</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 7 处</span>
-  <ul><li><a href="../papers/grape.html"><span class="cat">paper</span>GRAPE · 最好的指令微调数据，是&quot;合身&quot;的那条</a></li><li><a href="../papers/stealing-reasoning-traces.html"><span class="cat">paper</span>Stealing Reasoning Traces · 密文没被破解，推理为什么仍被偷走</a></li><li><a href="../concepts/distribution-aligned-sft.html"><span class="cat">concept</span>分布对齐的 SFT · 数据好不好，是相对你这个模型说的</a></li><li><a href="../concepts/logarithms.html"><span class="cat">concept</span>对数 · 把乘除变成加减</a></li><li><a href="../concepts/multimodal-knowledge-flow.html"><span class="cat">concept</span>多模态知识流 · 一项能力学到的东西，能不能帮另一项能力</a></li><li><a href="../concepts/on-policy-vs-off-policy.html"><span class="cat">concept</span>on-policy vs off-policy · 学自己刚做的，还是学别人/旧的</a></li><li><a href="../concepts/reasoning-trace-distillation.html"><span class="cat">concept</span>推理轨迹蒸馏 · 不只抄答案，还抄解题过程</a></li></ul>
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/stealing-reasoning-traces.html"><span class="cat">paper</span>Stealing Reasoning Traces · 密文没被破解，推理为什么仍被偷走</a></li><li><a href="../concepts/authenticated-encryption.html"><span class="cat">concept</span>认证加密 AEAD · 既上锁，也贴防拆封条</a></li><li><a href="../concepts/hidden-prompt-injection.html"><span class="cat">concept</span>隐藏提示注入 · 恶意指令藏在用户看不见的上下文里</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/perplexity.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/reasoning-envelope-replay.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

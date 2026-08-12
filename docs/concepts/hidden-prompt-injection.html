@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>困惑度 Perplexity · 模型对一段话有多&quot;意外&quot; · Concept</title>
+<title>隐藏提示注入 · 恶意指令藏在用户看不见的上下文里 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,60 +53,72 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · perplexity</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · hidden-prompt-injection</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>困惑度 Perplexity · 模型对一段话有多&quot;意外&quot;</h1>
+  <h1>隐藏提示注入 · 恶意指令藏在用户看不见的上下文里</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>把模型在一段文本上的平均交叉熵取指数，得到一个"等效分支数"：困惑度 = exp(平均每 token 的负对数概率)；越低 = 模型觉得这段话越自然、越在意料之中。</p>
-<h2>直觉 · "平均下来它在几个里猜"</h2>
-<p>模型每步预测下一个 token，给真值 token 一个概率。概率高 = 不意外；概率低 = 意外。把整段的"意外程度"汇总成一个数，就是困惑度。</p>
-<p>它有个好懂的解读：<strong>等效分支数</strong>。困惑度=10 ≈ "模型平均每步像在 10 个等可能选项里猜"；困惑度=2 ≈ "平均每步像在 2 个里猜"——越小越笃定。所以困惑度低 = 这段话<strong>对模型很顺</strong>。</p>
+<p>模型会读到一段影响后续行为的指令，但用户界面和普通文本扫描器都看不到它。</p>
+<h2>直觉</h2>
+<p>普通提示注入像文档里夹着一句“忽略前面的要求”；至少人和扫描器能看见。隐藏注入更像把指令写进密封的交接单：接班模型能读，交接的人只能看到一串 opaque bytes。</p>
 <h2>怎么做的</h2>
-<pre><code>一段 N 个 token，模型给每个真值 token 的概率 p₁…p_N：
-平均 NLL = −(1/N) Σ log pₜ        （= 平均每 token 的交叉熵）
-困惑度  PPL = exp( 平均 NLL )
+<pre><code class="language-text">攻击者让模型产生一段含恶意意图的隐藏推理
+→ API 把它封装成合法 envelope
+→ envelope 被放进共享 trace / agent checkpoint
+→ 受害者恢复这段 trace
+→ 后续模型把旧推理当成自己的上下文继续执行
 </code></pre>
-<p>关键是那个 <strong>1/N</strong>：困惑度是<strong>逐 token 的几何平均</strong>，已经<strong>按长度归一</strong>了。所以它能<strong>公平比较不同长度的回答</strong>——长回答不会因为 token 多就吃亏，这正是 <a href="../papers/grape.html">grape</a> 用它给候选回答排序的原因。</p>
-<h2>数字例子 · 两段回答比"合身"</h2>
-<p>同一指令的两个候选，看目标模型给每个真值 token 的概率：</p>
-<pre><code>候选 A（合身）:   逐 token 概率 [0.5, 0.4, 0.5]
-  平均 NLL = −(ln0.5+ln0.4+ln0.5)/3 = 0.768
-  PPL = exp(0.768) = 2.15      ← 模型平均像在 ~2 个里猜，很顺
-
-候选 B（强老师但不合身）: [0.2, 0.1, 0.3]
-  平均 NLL = −(ln0.2+ln0.1+ln0.3)/3 = 1.705
-  PPL = exp(1.705) = 5.50      ← 平均像在 ~5.5 个里猜，别扭
-</code></pre>
-<p>✓ 自检：A 的困惑度 2.15 &lt; B 的 5.50。哪怕 B 来自更强的老师，<strong>目标模型觉得 A 更自然</strong>——<a href="../papers/grape.html">grape</a> 就选 A。注意用困惑度(而非总对数概率)是关键：总概率会偏向短回答，逐 token 几何平均把长度拉平了，比的是"平均每 token 多顺"。</p>
+<p>风险来自两件事同时成立：envelope 能跨上下文重放；外部审计只检查可见文本。</p>
+<h2>数字例子</h2>
+<p>假设一条共享轨迹含 100 个可见消息和 12 个 opaque reasoning blocks。发布者把 100 个消息都扫过，发现 0 条可疑文字；其中第 9 个隐藏块却含有一条持久指令。若恢复工具把 12 个块全部原样回传，文本审计覆盖率看似是 100%，对真实模型上下文却只覆盖了：</p>
+<div class="tex math-display" data-display="true">\frac{100}{100+12}\approx 89.3\%.</div>
+<p>这里的 89.3% 只是按“块数”等权的教学估算；真实风险取决于隐藏块长度、位置和模型服从程度。</p>
+<h2>防御</h2>
+<ul>
+<li>分享 trace 前移除所有 opaque reasoning / signature 字段，而不只清洗可见文本。</li>
+<li>恢复外部会话时默认丢弃隐藏状态，重新生成必要上下文摘要。</li>
+<li>provider 把 envelope 绑定到用户、会话和前序位置，使第三方块无法通过验证。</li>
+<li>模型层识别来自旧隐藏状态的异常指令，并把工具调用继续交给显式权限检查。</li>
+</ul>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/grape.html">grape</a> · 用困惑度给候选回答排序，选最低(最合身)那条</li>
-<li><a href="../papers/stealing-reasoning-traces.html">stealing-reasoning-traces</a> · 用条件困惑度比较不同模型的推理风格；低 PPL 只能说明“顺”，不能单独证明蒸馏或记忆</li>
-<li><a href="../concepts/cross-entropy.html">cross-entropy</a> · 困惑度 = exp(平均交叉熵/NLL)，一对孪生量</li>
-<li><a href="../concepts/distribution-aligned-sft.html">distribution-aligned-sft</a> · "低困惑度 = 贴合模型分布"是它的判据</li>
-<li><a href="../concepts/softmax.html">softmax</a> · 每步的概率来自 softmax</li>
+<li><a href="../concepts/reasoning-envelope-replay.html">reasoning-envelope-replay</a> · 隐藏块为什么能从攻击者上下文搬进受害者上下文。</li>
+<li><a href="../concepts/authenticated-encryption.html">authenticated-encryption</a> · 密文真实、完整，不代表其使用上下文合法。</li>
+<li><a href="../papers/stealing-reasoning-traces.html">stealing-reasoning-traces</a> · 给出跨模型、跨任务的实验性 PoC。</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 7 处</span>
-  <ul><li><a href="../papers/grape.html"><span class="cat">paper</span>GRAPE · 最好的指令微调数据，是&quot;合身&quot;的那条</a></li><li><a href="../papers/stealing-reasoning-traces.html"><span class="cat">paper</span>Stealing Reasoning Traces · 密文没被破解，推理为什么仍被偷走</a></li><li><a href="../concepts/distribution-aligned-sft.html"><span class="cat">concept</span>分布对齐的 SFT · 数据好不好，是相对你这个模型说的</a></li><li><a href="../concepts/logarithms.html"><span class="cat">concept</span>对数 · 把乘除变成加减</a></li><li><a href="../concepts/multimodal-knowledge-flow.html"><span class="cat">concept</span>多模态知识流 · 一项能力学到的东西，能不能帮另一项能力</a></li><li><a href="../concepts/on-policy-vs-off-policy.html"><span class="cat">concept</span>on-policy vs off-policy · 学自己刚做的，还是学别人/旧的</a></li><li><a href="../concepts/reasoning-trace-distillation.html"><span class="cat">concept</span>推理轨迹蒸馏 · 不只抄答案，还抄解题过程</a></li></ul>
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/stealing-reasoning-traces.html"><span class="cat">paper</span>Stealing Reasoning Traces · 密文没被破解，推理为什么仍被偷走</a></li><li><a href="../concepts/reasoning-envelope-replay.html"><span class="cat">concept</span>推理信封重放 · 合法密文被搬到了错误的对话</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/perplexity.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/hidden-prompt-injection.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {
