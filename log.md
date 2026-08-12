@@ -1545,3 +1545,10 @@ skill 更新:
 ## [2026-08-12] revise | dyaplex §08 补「实测 vs 硬算」
 - 用户问 §08 的数咋算的。图里换算链（⌊4096/46⌋=89→7.12s）是全的，但没说 173/80 ms 是 A6000 实测非推导、也没讲砍窗口为什么省时间。
 - 补一段：换算与实测分账；机制=自回归每 token 扫整个 self-attention 窗口；173/80≈2.2 非 4 倍的原因（cross-attention 与 FFN 固定成本没砍）；80 ms 贴节拍线呼应 caption 的组件不可相加。
+
+## [2026-08-12] ingest | InteractiveAvatar · 意图状态与长短期视觉记忆
+- 主线按认知顺序重排：先用“看手表几点”跑完整系统，再补视频扩散 / DMD 前置，之后依次拆 LSVM、遮挡重建、DKFS、状态循环、cache switching、四阶段训练与实验。
+- 补充材料全部覆盖：5 秒=120 帧=30 latent，空间 4×4 压缩后每 memory latent 144 token，两池共约 8640 token；当前块读第一块、前两块与两类 memory；3 步、两张 H100、NCCL/NVLink/WebSocket 与首帧 2.6 秒分账。
+- 新增 long-short-visual-memory、dynamic-keyframe-redundancy-selection、avatar-state-cycling、prompt-aware-kv-cache-switching 四个 concept，并补 DMD / KV / block-causal / FSDP 等反向来源。
+- 证据边界单列：Eq.8 的噪声预测 / 速度目标记号不一致，Eq.11 的状态容器字段、DKFS 替换槽位策略、26.68 FPS 的准确 GPU 口径与 cache switching 单项毫秒均未公开；截至 2026-08-12 未找到作者代码或独立项目页。
+- Review 1 / Review 2 的发现与最终浏览器验收记录见本次提交说明。

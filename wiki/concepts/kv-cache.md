@@ -1,8 +1,8 @@
 ---
 name: kv-cache
 type: concept
-sources: [interaction-models-tml, fish-speech-s2-pro, unlimited-ocr, turboquant, hierarchical-denoising-visual-reasoning, solaris-multiplayer-world-model, interactive-video-world-modeling-survey, worldtrace]
-updated: 2026-08-11
+sources: [interaction-models-tml, fish-speech-s2-pro, unlimited-ocr, turboquant, hierarchical-denoising-visual-reasoning, solaris-multiplayer-world-model, interactive-video-world-modeling-survey, worldtrace, interactive-avatar]
+updated: 2026-08-12
 ---
 
 # KV Cache

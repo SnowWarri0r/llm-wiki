@@ -1,8 +1,8 @@
 ---
 name: dot-product
 type: concept
-sources: [turboquant]
-updated: 2026-06-18
+sources: [turboquant, interactive-avatar]
+updated: 2026-08-12
 ---
 
 # 点积与投影 · dot product · 衡量"方向多一致 + 多长"

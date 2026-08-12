@@ -1,7 +1,7 @@
 ---
 name: chunk-wise-self-forcing
 type: concept
-sources: [wan-animate-2]
+sources: [wan-animate-2, interactive-avatar]
 updated: 2026-08-12
 ---
 
