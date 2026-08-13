@@ -30,21 +30,21 @@ g=\sum_{i=1}^{M}\nabla_{\theta_s}L_i
 \theta_s\leftarrow\theta_s-\eta g
 \]
 
-- <code>M</code>：视频被切成的块数；
-- <code>L_i</code>：第 <code>i</code> 块的蒸馏损失；
-- <code>\theta_s</code>：学生生成器参数；
-- <code>g</code>：所有块累积出的总梯度；
-- <code>\eta</code>：学习率。
+- \(M\)：视频被切成的块数；
+- \(L_i\)：第 \(i\) 块的蒸馏损失；
+- \(\theta_s\)：学生生成器参数；
+- \(g\)：所有块累积出的总梯度；
+- \(\eta\)：学习率。
 
 ## 数字例子
 
-三块重放得到梯度 <code>g₁=0.4</code>、<code>g₂=−0.1</code>、<code>g₃=0.2</code>：
+三块重放得到梯度 \(g_1=0.4\)、\(g_2=-0.1\)、\(g_3=0.2\)：
 
 \[
 g=0.4-0.1+0.2=0.5
 \]
 
-若当前参数 <code>θₛ=2</code>，学习率 <code>η=0.1</code>：
+若当前参数 \(\theta_s=2\)，学习率 \(\eta=0.1\)：
 
 \[
 \theta_s^{\mathrm{new}}=2-0.1\times0.5=1.95

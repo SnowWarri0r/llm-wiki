@@ -26,6 +26,8 @@ from pathlib import Path
 import yaml
 import markdown
 
+from tex_migrate import is_math as is_math_code
+
 ROOT = Path(__file__).resolve().parent
 WIKI = ROOT / "wiki"
 HTML_OUT = ROOT / "docs"
@@ -139,6 +141,50 @@ def scan_entries() -> list[Entry]:
                 bespoke_path=page if auto_rendered or page.exists() else None,
             ))
     return entries
+
+
+def scan_auto_page_math_leaks():
+    """自动页里的裸 `<code>` 不会进 KaTeX；构建时把这类静默漏渲染变成硬错误。"""
+    issues = []
+    auto_categories = ("concepts", "topics", "threads", "books")
+
+    # 先查源文件里的控制字符。`\tau` / `\varepsilon` 若被错误转义成 tab /
+    # vertical-tab，Markdown 仍能生成页面，却会把公式拆成肉眼难定位的乱码。
+    for category in auto_categories:
+        source_dir = WIKI / category
+        if not source_dir.exists():
+            continue
+        for path in sorted(source_dir.glob("*.md")):
+            for line_no, line in enumerate(path.read_text().split("\n"), 1):
+                controls = sorted({ord(ch) for ch in line if ord(ch) < 32})
+                if controls:
+                    labels = ", ".join(f"U+{value:04X}" for value in controls)
+                    issues.append((path.relative_to(ROOT), line_no,
+                                   f"含控制字符 {labels}，可能是 LaTeX 反斜杠被转义"))
+
+    # 再查最终 HTML，而不是只猜 Markdown 写法；排除 <pre>，数字账本和伪代码
+    # 本来就应该保留等宽排版。只认无 class 的裸 <code>，显式 code.m 不误报。
+    for category in auto_categories:
+        out_dir = HTML_OUT / category
+        if not out_dir.exists():
+            continue
+        for path in sorted(out_dir.glob("*.html")):
+            page = path.read_text()
+            if "<!-- bespoke -->" in page[:200]:
+                continue
+            article_match = re.search(r'<article class="concept-body">(.*?)</article>', page, re.S)
+            if not article_match:
+                continue
+            body = article_match.group(1)
+            pre_ranges = [(m.start(), m.end()) for m in re.finditer(r"<pre\b.*?</pre>", body, re.S)]
+            for match in re.finditer(r"<code>(.*?)</code>", body, re.S):
+                if any(start <= match.start() < end for start, end in pre_ranges):
+                    continue
+                raw = html.unescape(re.sub(r"<[^>]+>", "", match.group(1))).strip()
+                if is_math_code(raw):
+                    issues.append((path.relative_to(ROOT), 0,
+                                   f"裸数学 {raw!r} 不会渲染；源 Markdown 改用 \\(…\\)"))
+    return issues
 
 
 CSS = r"""
@@ -1746,6 +1792,16 @@ def main():
             print(f"    [[{slug}]]  ← referenced by {sources}")
         print()
         print("  补法: 在 wiki/concepts/<slug>.md 写一份 stub (5 段模板)，或修正错别字。")
+        sys.exit(1)
+
+    # 5. Auto-page math gate: bare inline math is otherwise a silent rendering failure.
+    math_leaks = scan_auto_page_math_leaks()
+    if math_leaks:
+        print()
+        print(f"✗ {len(math_leaks)} auto-page math rendering issue(s) — fix before commit:")
+        for path, line_no, message in math_leaks:
+            where = f"{path}:{line_no}" if line_no else str(path)
+            print(f"    {where}: {message}")
         sys.exit(1)
 
 
