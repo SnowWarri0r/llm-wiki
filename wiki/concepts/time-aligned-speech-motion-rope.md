@@ -20,24 +20,24 @@ DyaPlex 一帧塞进 46 个动作 token。若直接用扁平序号，第一帧�
 ## 怎么做的
 
 
-若每个运动帧占 (L_{step}) 个 token，扁平位置 (n) 对应的运动时间是
+若每个运动帧占 \(L_{\mathrm{step}}\) 个 token，扁平位置 \(n\) 对应的运动时间是
 
 
 \[
-q_{pos}(n)=\left\lfloor\frac{n}{L_{step}}\right\rfloor.
+q_{\mathrm{pos}}(n)=\left\lfloor\frac{n}{L_{\mathrm{step}}}\right\rfloor.
 \]
 
 
-- (n)：动作序列里的扁平 token 下标；
-- (L_{step})：每帧 token 数，DyaPlex 为 46；
-- (q_{pos})：真正送入 cross-attention RoPE 的帧编号；
-- (lfloor\cdot\rfloor)：向下取整。
+- \(n\)：动作序列里的扁平 token 下标；
+- \(L_{\mathrm{step}}\)：每帧 token 数，DyaPlex 为 46；
+- \(q_{\mathrm{pos}}\)：真正送入 cross-attention RoPE 的帧编号；
+- \(\lfloor\cdot\rfloor\)：向下取整。
 
-动作 Query 按 (q_{pos}) 旋转，语音 Key 按自己的 12.5 Hz 帧编号 (s) 旋转。两者点积里出现的是相对时间差 (q_{pos}-s)。因果 mask 还要求 (s\le q_{pos})，防止看见未来语音。
+动作 Query 按 \(q_{\mathrm{pos}}\) 旋转，语音 Key 按自己的 12.5 Hz 帧编号 \(s\) 旋转。两者点积里出现的是相对时间差 \(q_{\mathrm{pos}}-s\)。因果 mask 还要求 \(s\le q_{\mathrm{pos}}\)，防止看见未来语音。
 
 ## 数字例子
 
-取 (L_{step}=46)。扁平下标 92、100、137 分别属于：
+取 \(L_{\mathrm{step}}=46\)。扁平下标 92、100、137 分别属于：
 
 
 \[

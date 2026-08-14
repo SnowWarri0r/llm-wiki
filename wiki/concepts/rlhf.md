@@ -55,7 +55,7 @@ response_B: <较差的回答>
 label: A > B
 ```
 
-把这种 (prompt, response_A, response_B, "A 好") 标注数据**几十万条**收齐, 训一个独立的 reward model RM:
+把这种 <code class="literal">(prompt, response_A, response_B, "A 好")</code> 标注数据**几十万条**收齐, 训一个独立的 reward model RM:
 
 ```python
 RM: (prompt, response) → scalar reward

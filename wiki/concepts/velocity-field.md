@@ -47,7 +47,7 @@ v_t(x | x_1) = x_1 - x_0           # 常数速度，沿直线
 ```
 loss = E_{t, x_0, x_1} || u_θ(x_t, t) - (x_1 - x_0) ||²
 ```
-就是个 MSE —— 让神经网络 u_θ 在每个 (x_t, t) 上预测对应的 velocity。
+就是个 MSE —— 让神经网络 \(u_\theta\) 在每个 \((x_t,t)\) 上预测对应的 velocity。
 
 理论上 conditional FM loss 跟 marginal FM loss 等价（梯度方向相同），所以学出来的 u_θ 就是 marginal velocity field 的近似。
 
