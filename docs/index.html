@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css?v=43080b49" />
+<link href="vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="vendor/katex/katex.min.js"></script>
 <style>
 
 .catcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; margin: 18px 0 8px; }
@@ -31,7 +33,7 @@
 <div class="page">
 <div class="masthead">
   <span class="l">Connectionism · Personal Wiki</span>
-  <span class="r">索引 · 456 条目</span>
+  <span class="r">索引 · 461 条目</span>
 </div>
 
 <section class="hero">
@@ -42,34 +44,47 @@
 
 <h2><span class="num">§ 01</span>浏览 · Browse by type</h2>
 <div class="catcards">
-<a class="catcard" href="papers.html"><span class="n">100</span><span class="lbl">精读页 · Deep Dives</span><span class="d">手工打磨的论文 / 源码精读页</span></a>
+<a class="catcard" href="papers.html"><span class="n">101</span><span class="lbl">精读页 · Deep Dives</span><span class="d">手工打磨的论文 / 源码精读页</span></a>
 <a class="catcard" href="books.html"><span class="n">2</span><span class="lbl">Books · 书籍精讲</span><span class="d">2 本书 · 32 章精讲</span></a>
 <a class="catcard" href="topics.html"><span class="n">5</span><span class="lbl">Topics · 综合</span><span class="d">跨多个源的横向综合</span></a>
-<a class="catcard" href="concepts.html"><span class="n">315</span><span class="lbl">Concepts · 概念</span><span class="d">跨论文复用的概念颗粒</span></a>
+<a class="catcard" href="concepts.html"><span class="n">319</span><span class="lbl">Concepts · 概念</span><span class="d">跨论文复用的概念颗粒</span></a>
 <a class="catcard" href="threads.html"><span class="n">2</span><span class="lbl">Threads · 思考</span><span class="d">个人思考线 / 开放问题</span></a>
 </div>
 
 <h2><span class="num">§ 02</span>最近更新 · Recent</h2>
 <div class="timeline">
+<a class="tl-row" href="papers/asyncpatch-diffusion.html"><span class="tl-date">2026-08-14</span><span class="tl-cat">paper</span><span class="tl-title">AsyncPatch Diffusion · 不再让整张图共用一只去噪时钟</span><span class="tl-hook"><strong>把单个扩散时刻改成空间时刻图，同一个联合 score 网络就能按区域决定“哪里固定、哪里先生成”。</strong></span></a>
+<a class="tl-row" href="concepts/asyncpatch-timestep-sampling.html"><span class="tl-date">2026-08-14</span><span class="tl-cat">concept</span><span class="tl-title">AsyncPatch Timestep Sampling · 先选全局噪声，再分配局部时钟</span><span class="tl-hook">不让每个 patch 在 <span class="tex" data-display="false">[0,1]</span> 各抽各的，而是先均匀抽一个全图平均时刻 <span class="tex" data-display="false">\bar t</span>，再在以 <span class="tex" data-display="false">\bar t</span> 为中心的对称区间内给各 patch 抽时刻。</span></a>
+<a class="tl-row" href="concepts/classifier-free-guidance.html"><span class="tl-date">2026-08-14</span><span class="tl-cat">concept</span><span class="tl-title">Classifier-Free Guidance · CFG</span><span class="tl-hook">让模型同一步算两遍 —— 一遍看着 prompt、一遍蒙着眼，再把&quot;看着 prompt 多走的那部分&quot;放大，逼它更听话。</span></a>
+<a class="tl-row" href="concepts/diffusion-timestep-conditioning.html"><span class="tl-date">2026-08-14</span><span class="tl-cat">concept</span><span class="tl-title">Diffusion Timestep Conditioning · 告诉去噪网络“现在噪到哪一步”</span><span class="tl-hook">同一个去噪网络要处理从纯噪声到近乎干净的所有状态；先把时刻 <span class="tex" data-display="false">t</span> 编成向量，再送进每个 block，让网络随噪声强度切换工作方式。</span></a>
+<a class="tl-row" href="concepts/input-guidance.html"><span class="tl-date">2026-08-14</span><span class="tl-cat">concept</span><span class="tl-title">Input Guidance · 放大已知图像真正带来的修改方向</span><span class="tl-hook">对同一个待更新状态算两次 score：一次使用较干净的输入条件，一次故意把输入再加噪；两者之差就是“清晰输入多带来的细节方向”。</span></a>
+<a class="tl-row" href="concepts/joint-diffusion.html"><span class="tl-date">2026-08-14</span><span class="tl-cat">concept</span><span class="tl-title">Joint Diffusion · 每个位置单独加噪，网络仍联合看全图</span><span class="tl-hook">普通扩散给整张图一个噪声时刻；联合扩散给第 <span class="tex" data-display="false">i</span> 个空间单元自己的 <span class="tex" data-display="false">t_i</span>，却仍用一个网络同时读全部单元，所以它学到的是联合分布，不是一堆互不相干的局部去噪器。</span></a>
+<a class="tl-row" href="concepts/pixel-space-diffusion.html"><span class="tl-date">2026-08-14</span><span class="tl-cat">concept</span><span class="tl-title">Pixel-Space Diffusion · 直接在原始像素上扩散</span><span class="tl-hook">扩散不经 VAE 压成 latent，<strong>直接在原始 RGB 像素上做</strong>——用一个可学的 patch embedding 替掉 VAE 的压缩活，去掉 latent 的信息瓶颈，端到端一个模型。</span></a>
+<a class="tl-row" href="concepts/score-function.html"><span class="tl-date">2026-08-14</span><span class="tl-cat">concept</span><span class="tl-title">Score Function · 不是评分，而是“这张带噪图该往哪改”</span><span class="tl-hook">一家照片修复店想训练学徒。师傅手里有很多清晰照片，却没有现成的“每一个坏位置该怎么修”标签。于是店里自己造练习题：</span></a>
+<a class="tl-row" href="concepts/spatial-diffusion-schedule.html"><span class="tl-date">2026-08-14</span><span class="tl-cat">concept</span><span class="tl-title">Spatial Diffusion Schedule · 让每块都有自己的去噪进度表</span><span class="tl-hook">普通采样时整张图只有一条 <span class="tex" data-display="false">t:1\to0</span> 的时间线；空间日程改成 <span class="tex" data-display="false">N</span> 条单调下降的局部时间线 <span class="tex" data-display="false">\tau_i(u)</span>，用它决定第 <span class="tex" data-display="false">i</span> 块何时去噪。</span></a>
 <a class="tl-row" href="papers/interactive-avatar.html"><span class="tl-date">2026-08-12</span><span class="tl-cat">paper</span><span class="tl-title">InteractiveAvatar · 让实时数字人记得过去，也听得懂“现在该做什么”</span><span class="tl-hook">用 LLM 把用户语音拆成“动作 + 回答 + 稳定状态”，再用长短期视觉记忆守住无限流式生成中的身份与物体。</span></a>
 <a class="tl-row" href="papers/moshi.html"><span class="tl-date">2026-08-12</span><span class="tl-cat">paper</span><span class="tl-title">Moshi · 把语音对话改写成每 80 毫秒一次的联合预测</span><span class="tl-hook"><strong>把双方语音和助手自己的文字草稿排进同一条 12.5 Hz 时间轴，让一个 7B 模型持续边听边说。</strong></span></a>
 <a class="tl-row" href="papers/personaplex.html"><span class="tl-date">2026-08-12</span><span class="tl-cat">paper</span><span class="tl-title">PersonaPlex · 同一套实时语音模型，既能换声音，也能换身份</span><span class="tl-hook"><strong>先给模型听一小段参考声音，再告诉它“你是航空客服”；之后它仍按 80 毫秒节拍边听边说，但声音和行为都受这两段提示控制。</strong></span></a>
 <a class="tl-row" href="papers/rcm.html"><span class="tl-date">2026-08-12</span><span class="tl-cat">paper</span><span class="tl-title">rCM · 把连续时间一致性蒸馏扩到 14B 视频模型</span><span class="tl-hook"><strong>用 DMD 的长跳纠偏，修复 sCM 沿局部切线逐段累积的误差。</strong></span></a>
 <a class="tl-row" href="papers/stealing-reasoning-traces.html"><span class="tl-date">2026-08-12</span><span class="tl-cat">paper</span><span class="tl-title">Stealing Reasoning Traces · 密文没被破解，推理为什么仍被偷走</span><span class="tl-hook"><strong>加密只证明“内容没被改”，没有绑定“谁在什么上下文里用”，合法密文便能被重放给弱模型充当模糊解码器。</strong></span></a>
-<a class="tl-row" href="papers/wan-animate-2.html"><span class="tl-date">2026-08-12</span><span class="tl-cat">paper</span><span class="tl-title">Wan-Animate 2 · 不先提骨架，直接让参考视频教角色怎么动</span><span class="tl-hook">让目标视频在每个时刻只读取驱动视频的对应帧，再用误差缓冲与分块 Self-Forcing 把模型蒸馏成实时版本。</span></a>
-<a class="tl-row" href="concepts/ai-memory-hierarchy.html"><span class="tl-date">2026-08-12</span><span class="tl-cat">concept</span><span class="tl-title">AI 服务器内存层级 · HBM / LPDDR5X / DDR5 / CXL / 光互连 · 快但小↔慢但大</span><span class="tl-hook">AI 机架里的内存不是一种东西，而是一条<strong>&quot;越快越贵越小、越慢越便宜越大&quot;的阶梯</strong>——HBM 紧贴 GPU、SOCAMM(LPDDR5X) 在 CPU 边上管容量、再往外是 DDR5 / CXL 内存池 / 光互连共享池。理解这条阶梯，才看得懂&quot;NVIDIA 砍内存&quot;那种新闻到底砍的是哪一层。</span></a>
-<a class="tl-row" href="concepts/audio-codebook-delay.html"><span class="tl-date">2026-08-12</span><span class="tl-cat">concept</span><span class="tl-title">Audio Codebook Delay · 先定语义，下一帧再补声学细节</span><span class="tl-hook">同一段 80 毫秒声音里，第一层语义 token 按当前时刻生成，其余声学 token 故意向后错一帧。</span></a>
-<a class="tl-row" href="concepts/authenticated-encryption.html"><span class="tl-date">2026-08-12</span><span class="tl-cat">concept</span><span class="tl-title">认证加密 AEAD · 既上锁，也贴防拆封条</span><span class="tl-hook">AEAD 同时保证内容看不懂、内容没被改，还能把“谁、哪次会话、放在哪”一并纳入验签。</span></a>
-<a class="tl-row" href="concepts/avatar-state-cycling.html"><span class="tl-date">2026-08-12</span><span class="tl-cat">concept</span><span class="tl-title">头像状态循环 · 动作做完后，明确回到一个稳定状态</span><span class="tl-hook">LLM 不只产出一句回答，还同时写“现在做什么”和“做完后保持什么状态”，让视频生成器在行动与待机之间循环。</span></a>
-<a class="tl-row" href="concepts/block-causal-attention.html"><span class="tl-date">2026-08-12</span><span class="tl-cat">concept</span><span class="tl-title">Block-Causal Attention · 块因果注意力</span><span class="tl-hook">同一个时间块里的 token 可以互相看，后面的时间块只能看自己和过去，不能偷看未来。</span></a>
-<a class="tl-row" href="concepts/chunk-wise-self-forcing.html"><span class="tl-date">2026-08-12</span><span class="tl-cat">concept</span><span class="tl-title">Chunk-wise Self-Forcing · 整段定方向，分块算梯度</span><span class="tl-hook">先让 score 网络看完整生成视频，再把生成器按块重放、累加梯度，兼顾长程质量与显存。</span></a>
-<a class="tl-row" href="concepts/continuous-time-consistency.html"><span class="tl-date">2026-08-12</span><span class="tl-cat">concept</span><span class="tl-title">连续时间一致性 · 不逐步走完，也要认出同一个终点</span><span class="tl-hook">同一条去噪轨迹上的任意带噪点，都应该被映射到同一个干净样本。</span></a>
-<a class="tl-row" href="concepts/diffusion-transformer.html"><span class="tl-date">2026-08-12</span><span class="tl-cat">concept</span><span class="tl-title">Diffusion Transformer · DiT</span><span class="tl-hook">把扩散模型里那个老 U-Net 换成 Transformer —— 图像切成 latent token，像处理一串 token 一样去噪。</span></a>
 </div>
 <div class="colophon">
   Renderer / <code>render.py</code> · Pattern / <a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f" target="_blank">Karpathy LLM Wiki</a> · Source / <a href="https://github.com/SnowWarri0r/llm-wiki" target="_blank">github.com/SnowWarri0r/llm-wiki</a>
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 </body>
 </html>

@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Diffusion Timestep Conditioning · 告诉去噪网络“现在噪到哪一步” · Concept</title>
+<title>Input Guidance · 放大已知图像真正带来的修改方向 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,59 +53,62 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · diffusion-timestep-conditioning</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · input-guidance</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Diffusion Timestep Conditioning · 告诉去噪网络“现在噪到哪一步”</h1>
+  <h1>Input Guidance · 放大已知图像真正带来的修改方向</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>同一个去噪网络要处理从纯噪声到近乎干净的所有状态；先把时刻 <span class="tex math-inline" data-display="false">t</span> 编成向量，再送进每个 block，让网络随噪声强度切换工作方式。</p>
-<h2>为什么不能只喂 <span class="tex math-inline" data-display="false">x_t</span></h2>
-<p>输入数值本身不一定能唯一说明噪声等级。早期步骤要先搭全局结构，晚期步骤只需修小纹理。不给 <span class="tex math-inline" data-display="false">t</span>，相当于让同一个修图师不知道现在拿到的是草稿还是终稿。</p>
-<h2>正弦时间嵌入</h2>
-<p>一个常见写法是：</p>
-<div class="tex math-display" data-display="true">e_{2i}(t)=\sin\left(\frac{t}{10000^{2i/d}}\right),\qquad
-e_{2i+1}(t)=\cos\left(\frac{t}{10000^{2i/d}}\right)</div>
-<p><span class="tex math-inline" data-display="false">d</span> 是嵌入维度，<span class="tex math-inline" data-display="false">i</span> 选择不同频率。高频分量分得清相邻时刻，低频分量表示长范围进度。</p>
-<h2>数字例子</h2>
-<p>用两档频率 <span class="tex math-inline" data-display="false">1</span> 与 <span class="tex math-inline" data-display="false">0.1</span> 做四维玩具版：</p>
-<div class="tex math-display" data-display="true">e(t)=[\sin t,\cos t,\sin(0.1t),\cos(0.1t)]</div>
-<p>当 <span class="tex math-inline" data-display="false">t=0</span>：</p>
-<div class="tex math-display" data-display="true">e(0)=[0,1,0,1]</div>
-<p>当 <span class="tex math-inline" data-display="false">t=\pi</span>：</p>
-<div class="tex math-display" data-display="true">e(\pi)\approx[0,-1,0.309,0.951]</div>
-<p>同一个时刻被多档“钟表指针”共同编码，不需要为 1000 个时刻各存一张互不相关的表。</p>
-<h2>怎样进入 ResBlock</h2>
-<p>时间向量先过 MLP，再投影成 scale 与 shift。OpenAI guided-diffusion 的代码形式是：</p>
-<div class="tex math-display" data-display="true">h&#x27;=(1+s_t)\operatorname{GN}(h)+b_t</div>
-<p><span class="tex math-inline" data-display="false">h</span> 是当前空间特征，<span class="tex math-inline" data-display="false">s_t</span> 与 <span class="tex math-inline" data-display="false">b_t</span> 都由时间嵌入生成。若 <span class="tex math-inline" data-display="false">\operatorname{GN}(h)=[-1,1]</span>：</p>
-<pre><code class="language-text">时刻 A：scale=.5, shift=.2 → [-1.3, 1.7]
-时刻 B：scale=-.2, shift=.1 → [-.7, .9]
+<p>对同一个待更新状态算两次 score：一次使用较干净的输入条件，一次故意把输入再加噪；两者之差就是“清晰输入多带来的细节方向”。</p>
+<h2>公式</h2>
+<div class="tex math-display" data-display="true">\begin{aligned}
+\Delta s_i&amp;=s_{\mathrm{clean},i}-s_{\mathrm{noisy},i},\\
+s_{\mathrm{guided},i}&amp;=s_{\mathrm{clean},i}+\omega_i\Delta s_i
+\end{aligned}</div>
+<ul>
+<li><span class="tex math-inline" data-display="false">i</span>：当前要更新的空间 token。</li>
+<li><span class="tex math-inline" data-display="false">s_{\mathrm{clean},i}</span>：输入参考区域较干净时，网络给位置 <span class="tex math-inline" data-display="false">i</span> 的 score 向量。</li>
+<li><span class="tex math-inline" data-display="false">s_{\mathrm{noisy},i}</span>：参考输入被额外加噪后，同一位置的 score。</li>
+<li><span class="tex math-inline" data-display="false">\omega_i\ge 0</span>：引导强度；0 表示不放大。</li>
+<li><span class="tex math-inline" data-display="false">\Delta s_i=s_{\mathrm{clean},i}-s_{\mathrm{noisy},i}</span>：清晰输入相对模糊输入额外提供的修改方向。</li>
+</ul>
+<h2>一个标量手算</h2>
+<p>真实 score 是与 latent 同形的张量，这里只拿其中一个数说明算法。设：</p>
+<pre><code class="language-text">清晰输入时的 score = 0.8
+输入加噪后的 score = 0.5
+guidance 强度 omega = 2
 </code></pre>
-<p>输入特征相同，仅时刻不同，block 的处理结果就不同。这才是“条件注入”真正改动的地方。</p>
+<p>则：</p>
+<pre><code class="language-text">差向量 = 0.8 - 0.5 = 0.3
+放大后   = 0.8 + 2×0.3 = 1.4
+等价写法 = 3×0.8 - 2×0.5 = 1.4
+</code></pre>
+<p>它没有把去噪方向随便乘三；只放大“清晰输入相比模糊输入多出来的 0.3”。</p>
+<h2>与 CFG 的关系</h2>
+<p><a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a> 用“有文本条件 − 无文本条件”的差提高 prompt 遵循；Input Guidance 用“清晰空间输入 − 加噪空间输入”的差提高细节忠实度。AsyncPatch 在实现中先在每个噪声水平完成 CFG，再对两个空间输入分支做 Input Guidance。</p>
+<h2>边界</h2>
+<p>引导是外推，强度过大会夸大错误。论文主要用定性样例和附录曲线展示纹理 / 输入忠实度的变化，没有证明它对所有任务都单调变好。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/diffusion-unet.html">diffusion-unet</a> · 时间嵌入送进每个残差块</li>
-<li><a href="../concepts/group-normalization.html">group-normalization</a> · 被 scale / shift 调制的归一化</li>
-<li><a href="../concepts/adaptive-layernorm.html">adaptive-layernorm</a> · DiT 用 LayerNorm 实现的后继版本</li>
-<li><a href="../concepts/positional-encoding.html">positional-encoding</a> · 同一套正弦编码最早在 Transformer 里表示位置</li>
-<li><a href="../papers/asyncpatch-diffusion.html">asyncpatch-diffusion</a> · 把广播到全图的标量时刻升级为二维时间图，并在各层做空间 FiLM</li>
+<li><a href="../papers/asyncpatch-diffusion.html">asyncpatch-diffusion</a> · Input Guidance 的来源</li>
+<li><a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a> · 同一种“放大两次前向之差”的思路</li>
+<li><a href="../concepts/score-function.html">score-function</a> · 上式里的 score 究竟是什么</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 7 处</span>
-  <ul><li><a href="../papers/asyncpatch-diffusion.html"><span class="cat">paper</span>AsyncPatch Diffusion · 不再让整张图共用一只去噪时钟</a></li><li><a href="../papers/diffusion-unet.html"><span class="cat">paper</span>Diffusion U-Net · 同一张网，反复回答“这一步该擦掉什么”</a></li><li><a href="../papers/sana-video-2.html"><span class="cat">paper</span>SANA-Video 2.0 · 用三层“速写”加一层“精查”生成长视频</a></li><li><a href="../concepts/asyncpatch-timestep-sampling.html"><span class="cat">concept</span>AsyncPatch Timestep Sampling · 先选全局噪声，再分配局部时钟</a></li><li><a href="../concepts/content-aware-flow-shift.html"><span class="cat">concept</span>Content-Aware Flow Shift · 不同视频多练不同噪声段</a></li><li><a href="../concepts/group-normalization.html"><span class="cat">concept</span>Group Normalization · 分组归一化</a></li><li><a href="../concepts/joint-diffusion.html"><span class="cat">concept</span>Joint Diffusion · 每个位置单独加噪，网络仍联合看全图</a></li></ul>
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/asyncpatch-diffusion.html"><span class="cat">paper</span>AsyncPatch Diffusion · 不再让整张图共用一只去噪时钟</a></li><li><a href="../concepts/classifier-free-guidance.html"><span class="cat">concept</span>Classifier-Free Guidance · CFG</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/diffusion-timestep-conditioning.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/input-guidance.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
