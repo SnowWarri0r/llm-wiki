@@ -111,8 +111,66 @@
 <p>离散 CM 会构造相邻点 <code class="m">t</code> 与 <code class="m">t-\Delta t</code>，要求两者输出相等。sCM<a class="jr" href="#g-05">05</a> 把 <code class="m">\Delta t\to0</code>，等价于要求沿轨迹的总导数为 0：</p>
 <div class="formula">\frac{d}{dt}f_\theta(x_t,t)=\frac{\partial f_\theta}{\partial x_t}\frac{dx_t}{dt}+\frac{\partial f_\theta}{\partial t}=0</div>
 <p>这不是“函数对时间完全不变”。输入 <code class="m">x_t</code> 在变、时间标签也在变；两部分变化互相抵消，最终答案才不变。完整教学例见 <a href="../concepts/continuous-time-consistency.html">连续时间一致性概念页</a>。</p>
-<p>但“导数等于 0”不能直接当损失。先说清“二阶导”：一阶导是斜率（θ 挪一点、损失变多少，训练每步算的就是它），二阶导是<strong>斜率的斜率</strong>——对导数再求一次导，和平方没关系。<code class="m">\|df_\theta/dt\|^2</code> 的麻烦不在平方，在括号里：df/dt 本身已经是一次求导的产物，把它放进损失，反向传播就要“对求导过程再求导”。autodiff 是一台对计算图求一次导的机器，这等于图套图；而且 df/dt 里的 <code class="m">\partial f/\partial x</code> 是 Jacobian——输入每维×输出每维的斜率表，视频 latent 下万亿格（§ 04 的 JVP 就是为了连表都不造），再让每格对 θ 可反传，显存算力都爆。连续时间 CM 的经典结果给了出路，三步就能推出来。离散损失是 <code class="m">\|f_\theta(x_t,t)-f_{\theta^-}(x_{t-\Delta t},t-\Delta t)\|^2</code>（θ⁻ 取当前参数值但不吃梯度）。第一步求梯度：只有前一项含 θ，得 <code class="m">2(\text{残差})^\top\partial f_\theta/\partial\theta</code>。第二步对 target 泰勒展开：<code class="m">f_{\theta^-}(x_{t-\Delta t},t-\Delta t)\approx f_{\theta^-}(x_t,t)-\Delta t\,df_{\theta^-}/dt</code>，代入后残差 = <code class="m">[f_\theta(x_t,t)-f_{\theta^-}(x_t,t)]+\Delta t\,df_{\theta^-}/dt</code>——关键一击：θ⁻ 就是当前 θ 的数值，同一函数同一点取值，<strong>方括号恒等于零</strong>（数值为零、梯度仍从 f_θ 流出），残差只剩 Δt × 冻结切线。第三步除以 Δt 取极限：梯度 = 「student 输出的参数灵敏度 × 冻结 target 的切线」。二阶导为什么没了：sg/detach 的语义是“把数值抄下来、剪断来历”，反传时冻结项就是一个叶子常数（像代码里的字面量），常数对 θ 的导数是 <strong>0</strong>——切线整条算在 θ⁻ 分支上，autodiff 从不对它再求 θ 的导。顺带把“数值为零、梯度仍流出”说透：<code class="m">f_\theta(x_t,t)-f_{\theta^-}(x_t,t)</code> 的数值是同一个数相减、恒为 0，但前项背后挂着活的反传线、后项的线被剪了——这个零不是死零，它对 θ 的导数是 <code class="m">\partial f_\theta/\partial\theta</code>。下面的 MSE 是把这个梯度装回去的代理目标：</p><p>下面的验证在干什么：第三步的结论是一个等式，找一个小到能手算的玩具模型，<strong>等式两边各自独立算一遍</strong>——左边按离散损失硬求导，右边按极限公式直接代。两条不同的路得到同一个数，等式才可信；这就是“对账”。</p><div class="calc"><div class="step"><b>账本一 · 离散侧</b><span>student <code class="m">f_\theta(x,t)=x-\theta t</code>、老师轨迹 <code class="m">x_t=1+2t</code>（一致性要求 θ=2）；当前 θ=1.5，取 t=.5、Δt=.1：残差 <code class="m">1.25-1.2=.05</code>，离散梯度 <code class="m">2\times.05\times(-.5)=-.05</code>，除以 Δt 得 <code class="m">-.5</code>。</span></div><div class="step"><b>账本二 · 极限侧</b><span>冻结切线 <code class="m">1\times2+(-1.5)=.5</code>，极限公式给 <code class="m">2\times.5\times(-.5)=-.5</code>——严丝合缝（f 线性，连高阶项都没有）。切线 = 2−θ：负梯度推 θ 向 2，到 2 时切线归零、训练停住。</span></div></div>
-<div class="formula">\mathcal L_{\mathrm{sCM}}=\mathbb E_{x_0,\epsilon,t\sim p_G}\left\|F_\theta(x_t,t)-F_{\theta^-}(x_t,t)-\frac{g}{\|g\|_2^2+c}\right\|_2^2,\qquad g=w(t)\frac{df_{\theta^-}(x_t,t)}{dt}</div>
+<p>但“导数等于 0”不能直接当损失。先说清“二阶导”：一阶导是斜率（θ 挪一点、损失变多少，训练每步算的就是它），二阶导是<strong>斜率的斜率</strong>——对导数再求一次导，和平方没关系。<code class="m">\|df_\theta/dt\|^2</code> 的麻烦不在平方，在括号里：df/dt 本身已经是一次求导的产物，把它放进损失，反向传播就要“对求导过程再求导”。autodiff 是一台对计算图求一次导的机器，这等于图套图；而且 df/dt 里的 <code class="m">\partial f/\partial x</code> 是 Jacobian——输入每维×输出每维的斜率表，视频 latent 下万亿格（§ 04 的 JVP 就是为了连表都不造），再让每格对 θ 可反传，显存算力都爆。</p><figure id="fig-nest"><figcaption><span>Fig 03 · 为什么 ‖df/dt‖² 会撞上二阶导</span><b>损失里已藏着一次求导 = 图套图</b></figcaption>
+<svg viewBox="0 0 920 310" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
+<defs><marker id="mAn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#163a58"/></marker>
+<marker id="mAr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#a83b25"/></marker></defs>
+<text x="230" y="32" text-anchor="middle" font-size="15" font-weight="700" fill="#163a58">普通损失 · 机器求一次导 ✓</text>
+<rect x="30" y="120" width="92" height="52" rx="6" fill="#fbf6e8" stroke="#163a58" stroke-width="1.5"/><text x="76" y="151" text-anchor="middle" font-size="14">θ 参数</text>
+<rect x="176" y="120" width="132" height="52" rx="6" fill="#fbf6e8" stroke="#163a58" stroke-width="1.5"/><text x="242" y="143" text-anchor="middle" font-size="13.5">网络 f_θ</text><text x="242" y="161" text-anchor="middle" font-size="12" fill="#756c60">前向一遍</text>
+<rect x="356" y="120" width="76" height="52" rx="6" fill="#fbf6e8" stroke="#163a58" stroke-width="1.5"/><text x="394" y="151" text-anchor="middle" font-size="14">loss</text>
+<line x1="124" y1="146" x2="172" y2="146" stroke="#163a58" stroke-width="1.6" marker-end="url(#mAn)"/><line x1="310" y1="146" x2="352" y2="146" stroke="#163a58" stroke-width="1.6" marker-end="url(#mAn)"/>
+<path d="M 394 174 L 394 212 L 76 212 L 76 178" fill="none" stroke="#a83b25" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#mAr)"/>
+<text x="235" y="238" text-anchor="middle" font-size="13.5" fill="#a83b25">反传：对这张前向图求一次导（一阶）✓</text>
+<line x1="458" y1="18" x2="458" y2="292" stroke="#b9ae98" stroke-dasharray="3 6"/>
+<text x="690" y="32" text-anchor="middle" font-size="15" font-weight="700" fill="#a83b25">损失里含 df/dt · 图套图 ✗</text>
+<rect x="486" y="120" width="80" height="52" rx="6" fill="#fbf6e8" stroke="#163a58" stroke-width="1.5"/><text x="526" y="151" text-anchor="middle" font-size="14">θ 参数</text>
+<rect x="600" y="76" width="206" height="138" rx="6" fill="none" stroke="#163a58" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="703" y="99" text-anchor="middle" font-size="13.5" font-weight="700" fill="#163a58">df/dt 的计算</text><text x="703" y="117" text-anchor="middle" font-size="11.5" fill="#756c60">本身就是一张求导图</text>
+<rect x="618" y="130" width="170" height="52" rx="5" fill="#f4d8ce" stroke="#a83b25" stroke-width="1.4"/><text x="703" y="150" text-anchor="middle" font-size="13">∂f/∂x = Jacobian</text><text x="703" y="168" text-anchor="middle" font-size="12" fill="#756c60">万亿格斜率表</text>
+<rect x="838" y="120" width="72" height="52" rx="6" fill="#fbf6e8" stroke="#163a58" stroke-width="1.5"/><text x="874" y="151" text-anchor="middle" font-size="14">loss</text>
+<line x1="568" y1="146" x2="596" y2="146" stroke="#163a58" stroke-width="1.6" marker-end="url(#mAn)"/><line x1="808" y1="146" x2="834" y2="146" stroke="#163a58" stroke-width="1.6" marker-end="url(#mAn)"/>
+<path d="M 874 174 L 874 240 L 703 240 L 703 218" fill="none" stroke="#a83b25" stroke-width="1.6" stroke-dasharray="6 5" marker-end="url(#mAr)"/>
+<text x="690" y="266" text-anchor="middle" font-size="13.5" fill="#a83b25">反传要穿进求导图内部：对求导再求导 = 二阶导，爆</text>
+</svg></figure><p>连续时间 CM 的经典结果给了出路，三步就能推出来。离散损失是 <code class="m">\|f_\theta(x_t,t)-f_{\theta^-}(x_{t-\Delta t},t-\Delta t)\|^2</code>（θ⁻ 取当前参数值但不吃梯度）。第一步求梯度：只有前一项含 θ，得 <code class="m">2(\text{残差})^\top\partial f_\theta/\partial\theta</code>。第二步对 target 泰勒展开：<code class="m">f_{\theta^-}(x_{t-\Delta t},t-\Delta t)\approx f_{\theta^-}(x_t,t)-\Delta t\,df_{\theta^-}/dt</code>，代入后残差 = <code class="m">[f_\theta(x_t,t)-f_{\theta^-}(x_t,t)]+\Delta t\,df_{\theta^-}/dt</code>——关键一击：θ⁻ 就是当前 θ 的数值，同一函数同一点取值，<strong>方括号恒等于零</strong>（数值为零、梯度仍从 f_θ 流出），残差只剩 Δt × 冻结切线。第三步除以 Δt 取极限：梯度 = 「student 输出的参数灵敏度 × 冻结 target 的切线」。二阶导为什么没了：sg/detach 的语义是“把数值抄下来、剪断来历”，反传时冻结项就是一个叶子常数（像代码里的字面量），常数对 θ 的导数是 <strong>0</strong>——切线整条算在 θ⁻ 分支上，autodiff 从不对它再求 θ 的导。顺带把“数值为零、梯度仍流出”说透：<code class="m">f_\theta(x_t,t)-f_{\theta^-}(x_t,t)</code> 的数值是同一个数相减、恒为 0，但前项背后挂着活的反传线、后项的线被剪了——这个零不是死零，它对 θ 的导数是 <code class="m">\partial f_\theta/\partial\theta</code>。</p><figure id="fig-sg"><figcaption><span>Fig 04 · sg 的活线与死线</span><b>数值相同，命运不同</b></figcaption>
+<svg viewBox="0 0 920 310" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
+<defs><marker id="mBt" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#147687"/></marker>
+<marker id="mBn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#163a58"/></marker></defs>
+<text x="460" y="16" text-anchor="middle" font-size="12" fill="#756c60">各自的来历（计算图连线）</text>
+<line x1="255" y1="24" x2="255" y2="44" stroke="#147687" stroke-width="1.6"/>
+<line x1="665" y1="22" x2="665" y2="28" stroke="#756c60" stroke-width="1.4" stroke-dasharray="4 3"/><line x1="665" y1="42" x2="665" y2="46" stroke="#756c60" stroke-width="1.4" stroke-dasharray="4 3"/><text x="665" y="39" text-anchor="middle" font-size="14" fill="#a83b25">✂</text>
+<rect x="120" y="46" width="270" height="66" rx="6" fill="#fbf6e8" stroke="#147687" stroke-width="2"/><text x="255" y="72" text-anchor="middle" font-size="15">f_θ(x_t, t) = 1.25</text><text x="255" y="94" text-anchor="middle" font-size="12.5" fill="#147687">反传线活着</text>
+<text x="455" y="88" text-anchor="middle" font-size="24" fill="#171719">−</text>
+<rect x="530" y="46" width="270" height="66" rx="6" fill="#fbf6e8" stroke="#756c60" stroke-width="1.6" stroke-dasharray="6 4"/><text x="665" y="72" text-anchor="middle" font-size="15">sg[ f_θ⁻(x_t, t) ] = 1.25</text><text x="665" y="94" text-anchor="middle" font-size="12.5" fill="#756c60">来历已剪断 · 叶子常数</text>
+<line x1="255" y1="112" x2="390" y2="166" stroke="#163a58" stroke-width="1.5" marker-end="url(#mBn)"/><line x1="665" y1="112" x2="530" y2="166" stroke="#163a58" stroke-width="1.5" marker-end="url(#mBn)"/>
+<rect x="330" y="168" width="260" height="50" rx="6" fill="#fbf6e8" stroke="#163a58" stroke-width="1.6"/><text x="460" y="198" text-anchor="middle" font-size="14.5">相减 = 0（数值层面）</text>
+<path d="M 165 112 L 115 208" fill="none" stroke="#147687" stroke-width="1.7" stroke-dasharray="6 4" marker-end="url(#mBt)"/>
+<rect x="60" y="212" width="110" height="48" rx="6" fill="#cde8e9" stroke="#147687" stroke-width="1.7"/><text x="115" y="241" text-anchor="middle" font-size="15">θ</text>
+<text x="115" y="286" text-anchor="middle" font-size="12.5" fill="#147687">∂f_θ/∂θ 梯度流出 ✓</text>
+<line x1="775" y1="112" x2="775" y2="154" stroke="#756c60" stroke-width="1.5" stroke-dasharray="5 4"/><circle cx="775" cy="161" r="4.5" fill="#756c60"/>
+<text x="775" y="190" text-anchor="middle" font-size="12.5" fill="#756c60">梯度 = 0（不是 1）</text>
+</svg>
+<div class="same">同一个数相减恒为零；但左边那条反传线活着——这个零不是死零。</div></figure><p>下面的验证在干什么：第三步的结论是一个等式，找一个小到能手算的玩具模型，<strong>等式两边各自独立算一遍</strong>——左边按离散损失硬求导，右边按极限公式直接代。两条不同的路得到同一个数，等式才可信；这就是“对账”。</p><figure id="fig-ledger"><figcaption><span>Fig 05 · 两本账对账</span><b>两条不同的路，同一个 −.5</b></figcaption>
+<svg viewBox="0 0 920 360" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
+<defs><marker id="mCn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#163a58"/></marker>
+<marker id="mCg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#3f7354"/></marker></defs>
+<rect x="270" y="14" width="380" height="58" rx="6" fill="#fbf6e8" stroke="#163a58" stroke-width="1.6"/><text x="460" y="38" text-anchor="middle" font-size="14">玩具：f_θ(x,t) = x − θt，θ = 1.5</text><text x="460" y="58" text-anchor="middle" font-size="12.5" fill="#756c60">老师轨迹 x_t = 1 + 2t（一致性要求 θ = 2）</text>
+<line x1="400" y1="74" x2="256" y2="94" stroke="#163a58" stroke-width="1.5" marker-end="url(#mCn)"/><line x1="520" y1="74" x2="664" y2="94" stroke="#163a58" stroke-width="1.5" marker-end="url(#mCn)"/>
+<rect x="110" y="96" width="280" height="34" rx="5" fill="#163a58"/><text x="250" y="118" text-anchor="middle" font-size="13.5" fill="#fbf6e8">账本一 · 离散损失硬求导</text>
+<rect x="530" y="96" width="280" height="34" rx="5" fill="#147687"/><text x="670" y="118" text-anchor="middle" font-size="13.5" fill="#fbf6e8">账本二 · 极限公式直接代</text>
+<rect x="110" y="142" width="280" height="40" rx="5" fill="#fbf6e8" stroke="#b9ae98"/><text x="250" y="167" text-anchor="middle" font-size="13.5">残差 = 1.25 − 1.2 = .05</text>
+<rect x="110" y="196" width="280" height="40" rx="5" fill="#fbf6e8" stroke="#b9ae98"/><text x="250" y="221" text-anchor="middle" font-size="13.5">dL/dθ = 2 × .05 × (−.5) = −.05</text>
+<rect x="110" y="250" width="280" height="40" rx="5" fill="#fbf6e8" stroke="#b9ae98"/><text x="250" y="275" text-anchor="middle" font-size="13.5">÷ Δt：−.05 / .1 = −.5</text>
+<rect x="530" y="142" width="280" height="40" rx="5" fill="#fbf6e8" stroke="#b9ae98"/><text x="670" y="167" text-anchor="middle" font-size="13.5">冻结切线 = 1×2 + (−1.5) = .5</text>
+<rect x="530" y="196" width="280" height="40" rx="5" fill="#fbf6e8" stroke="#b9ae98"/><text x="670" y="221" text-anchor="middle" font-size="13.5">2 × 切线 × ∂f/∂θ = 2 × .5 × (−.5)</text>
+<rect x="530" y="250" width="280" height="40" rx="5" fill="#fbf6e8" stroke="#b9ae98"/><text x="670" y="275" text-anchor="middle" font-size="13.5">= −.5</text>
+<line x1="250" y1="184" x2="250" y2="194" stroke="#163a58" stroke-width="1.5" marker-end="url(#mCn)"/><line x1="250" y1="238" x2="250" y2="248" stroke="#163a58" stroke-width="1.5" marker-end="url(#mCn)"/>
+<line x1="670" y1="184" x2="670" y2="194" stroke="#163a58" stroke-width="1.5" marker-end="url(#mCn)"/><line x1="670" y1="238" x2="670" y2="248" stroke="#163a58" stroke-width="1.5" marker-end="url(#mCg)"/>
+<line x1="250" y1="292" x2="386" y2="316" stroke="#3f7354" stroke-width="1.6" marker-end="url(#mCg)"/><line x1="670" y1="292" x2="534" y2="316" stroke="#3f7354" stroke-width="1.6" marker-end="url(#mCg)"/>
+<rect x="330" y="312" width="260" height="40" rx="6" fill="#d7e7d8" stroke="#3f7354" stroke-width="1.8"/><text x="460" y="337" text-anchor="middle" font-size="14" fill="#3f7354" font-weight="700">对账 ✓ 两条路同得 −.5</text>
+</svg>
+<div class="same">赠品：切线 = 2 − θ，负梯度推 θ 向 2；到位切线归零，训练自己停。</div></figure><div class="calc"><div class="step"><b>账本一 · 离散侧</b><span>student <code class="m">f_\theta(x,t)=x-\theta t</code>、老师轨迹 <code class="m">x_t=1+2t</code>（一致性要求 θ=2）；当前 θ=1.5，取 t=.5、Δt=.1：残差 <code class="m">1.25-1.2=.05</code>，离散梯度 <code class="m">2\times.05\times(-.5)=-.05</code>，除以 Δt 得 <code class="m">-.5</code>。</span></div><div class="step"><b>账本二 · 极限侧</b><span>冻结切线 <code class="m">1\times2+(-1.5)=.5</code>，极限公式给 <code class="m">2\times.5\times(-.5)=-.5</code>——严丝合缝（f 线性，连高阶项都没有）。切线 = 2−θ：负梯度推 θ 向 2，到 2 时切线归零、训练停住。</span></div></div>
+<p>对账通过——现在可以放心把这个梯度装回一个可训练的 MSE 代理目标：</p><div class="formula">\mathcal L_{\mathrm{sCM}}=\mathbb E_{x_0,\epsilon,t\sim p_G}\left\|F_\theta(x_t,t)-F_{\theta^-}(x_t,t)-\frac{g}{\|g\|_2^2+c}\right\|_2^2,\qquad g=w(t)\frac{df_{\theta^-}(x_t,t)}{dt}</div>
 <div class="vars"><div><code class="m">F_\theta</code>当前 student 的速度预测；这一路接收梯度。</div><div><code class="m">F_{\theta^-}</code>EMA target 的速度预测；当前损失中冻结。</div><div><code class="m">g</code>目标一致性函数沿老师轨迹的加权切线。</div><div><code class="m">w(t)=\cos t</code>论文采用的时间权重，并吸收到 JVP 重排中。</div><div><code class="m">\|g\|_2^2+c</code>按切线强度归一化；论文取 <code class="m">c=.1</code> 防止分母接近 0。</div><div><code class="m">p_G</code>专门给 student / generator 局部一致性项采时间的分布。</div></div>
 <p>逐件读它为什么长这样。<strong>为什么向「F<sub>θ⁻</sub> + 归一化切线」回归</strong>：对这个 MSE 求梯度、在 <code class="m">F_\theta\approx F_{\theta^-}</code> 附近展开，剩下的正是上面那个真梯度。更直观的是不动点刻画——当且仅当切线 <code class="m">g=0</code>（一致性条件达成），修正项消失、目标退化成 <code class="m">F_\theta=F_{\theta^-}</code>，训练恰好停在 <code class="m">df/dt=0</code> 满足的地方。<strong>为什么在 F（速度）空间比较</strong>：TrigFlow 参数化 <code class="m">f_\theta=\cos(t)x_t-\sin(t)F_\theta</code>，F 恰好是网络的原生输出头；在 f 空间做 MSE 要除以 <code class="m">\sin t</code>，t 趋近 0 时病态。<strong>为什么除 <code class="m">\|g\|_2^2+c</code></strong>：切线模长随 t 和样本剧烈波动、高噪声区特别大，裸切线会让个别样本淹没整个 batch 的梯度（sCM 在 FP16 下真炸过，rCM 用 BF16 虽不炸也沿用）；归一化把每个样本的修正量压到有界，这就是 sCM 的 adaptive weighting。</p><div class="calc"><div class="step"><b>只演示归一化</b><span>若一维切线 <code class="m">g=.3</code>，则目标修正量为 <code class="m">.3/(.3^2+.1)=.3/.19\approx1.579</code>。</span></div><div class="step"><b>抑强扶弱</b><span>换大切线 <code class="m">g=10</code>：修正量 <code class="m">10/(100+.1)\approx.0999</code>——切线越猛修正反而越小。修正量在 <code class="m">g=\sqrt{c}\approx.316</code> 处封顶约 1.58，没有谁能一家独大。</span></div><div class="step"><b>落成 MSE 目标</b><span>若冻结速度 <code class="m">F_{\theta^-}=.4</code>，右侧目标是 <code class="m">.4+1.579=1.979</code>；当前 <code class="m">F_\theta</code> 就向这个数回归。</span></div><div class="step"><b>边界</b><span>这个标量只说明式子怎样算。真实 <code class="m">g</code> 是与视频 latent 同形的张量，论文的范数 / 平均具体归约由实现口径决定。</span></div></div>
 </section>
@@ -123,7 +181,7 @@
 <div class="formula">\operatorname{JVP}(F,x,v)=J_F(x)v=\left.\frac{d}{d\varepsilon}F(x+\varepsilon v)\right|_{\varepsilon=0}</div>
 <div class="vars"><div><code class="m">F</code>这里可看成 student 网络。</div><div><code class="m">x</code>当前带噪 latent。</div><div><code class="m">v</code>指定的输入方向；rCM 中来自时间轨迹。</div><div><code class="m">J_F(x)</code>完整 Jacobian，只出现在数学定义里，不实际展开。</div><div><code class="m">\varepsilon</code>定义微小位移的标量，不是扩散噪声 <code class="m">\epsilon</code>。</div><div><code class="m">J_F(x)v</code>输出沿该方向的瞬时变化。</div></div>
 <figure id="fig-jvp">
-  <figcaption><span>Fig 03 · 一次完整手算</span><b>二维输入 → 二维输出，只问方向 v</b></figcaption>
+  <figcaption><span>Fig 06 · 一次完整手算</span><b>二维输入 → 二维输出，只问方向 v</b></figcaption>
   <div class="split">
     <div class="card"><span class="tag">函数与位置</span><p><code class="m">F(x_1,x_2)=[x_1^2+x_2,\;3x_1-x_2]</code></p><p><code class="m">x=[2,1]</code>，方向 <code class="m">v=[1,-2]</code></p></div>
     <div class="bridge">→</div>
@@ -140,7 +198,7 @@
 <div class="formula">\frac{df_{\theta^-}}{dt}=-\cos t\left(F_{\theta^-}-F_{\mathrm{teacher}}\right)-\sin t\left(x_t+\frac{dF_{\theta^-}}{dt}\right)</div>
 <div class="vars"><div><code class="m">\theta^-</code>当前 student 的 EMA<a class="jr" href="#g-12">12</a> / stop-gradient 目标参数。</div><div><code class="m">F_{\theta^-}</code>目标 student 的速度预测。</div><div><code class="m">F_{\mathrm{teacher}}</code>冻结老师的速度预测。</div><div><code class="m">F_{\theta^-}-F_{\mathrm{teacher}}</code>student 与老师当下速度的差。</div><div><code class="m">dF_{\theta^-}/dt</code>student 自身沿轨迹的 JVP；上一时段的偏差会进入后续目标。</div><div><code class="m">\cos t,\sin t</code>两项随噪声时间变化的权重。</div></div>
 <figure id="fig-error">
-  <figcaption><span>Fig 04 · 时间越靠近高噪声端，老师项越弱、自反馈越强</span><b>不是“JVP 本身有罪”，而是误差会被递推</b></figcaption>
+  <figcaption><span>Fig 07 · 时间越靠近高噪声端，老师项越弱、自反馈越强</span><b>不是“JVP 本身有罪”，而是误差会被递推</b></figcaption>
   <div class="errorline">
     <div class="errorbox"><small>t=.1</small><b>cos=.995</b><span>老师差权重强</span></div>
     <div class="errorbox"><small>t=.1</small><b>sin=.100</b><span>JVP 自反馈弱</span></div>
@@ -177,7 +235,7 @@
 <h2><span class="n">§ 07</span>为什么叫长跳：DMD 看到的是 student 自己走出来的结果</h2>
 <p>Consistency model 每一步先把当前噪声状态预测到干净端，再按下一个更小的噪声时间重新加噪。训练随机选步数 <code class="m">N\sim\mathrm{Uniform}\{1,\ldots,N_{\max}\}</code>，本文 <code class="m">N_{\max}=4</code>。</p>
 <figure id="fig-rollout">
-  <figcaption><span>Fig 05 · 一个四步 rollout</span><b>前三步冻结，只让最后一步接 DMD 梯度</b></figcaption>
+  <figcaption><span>Fig 08 · 一个四步 rollout</span><b>前三步冻结，只让最后一步接 DMD 梯度</b></figcaption>
   <div class="rollout">
     <div class="roll"><small>STEP 1 · θ⁻</small><b><code class="m">t_1\approx\pi/2</code></b><p>纯噪声 → 预测干净 → 重新加到 <code class="m">t_2=1.3</code></p></div>
     <div class="roll"><small>STEP 2 · θ⁻</small><b><code class="m">t_2=1.3</code></b><p>再预测干净 → 重新加到 <code class="m">t_3=1.0</code></p></div>
@@ -209,7 +267,7 @@
 <div class="vars"><div><code class="m">Q,K,V</code>attention 的 query、key、value。</div><div><code class="m">S,P,O</code>分数、softmax 权重、最终输出。</div><div><code class="m">\dot Q,\dot K,\dot V</code>三者沿当前时间轨迹的方向导数。</div><div><code class="m">\odot</code>对应位置相乘；不是矩阵乘法。</div><div><code class="m">\mathbf1</code>全 1 向量，用来求每行加权和并广播回该行。</div><div><code class="m">\dot O</code>attention 输出的 JVP。</div></div>
 <p>若先完整落地 <code class="m">S,P,\dot S,\dot P</code>，长视频的平方矩阵会把 HBM<a class="jr" href="#g-08">08</a> 撑爆。论文写了 Triton FlashAttention-2 JVP kernel：每次只把一块 Q/K/V 与切线放进片上存储，在线更新 softmax 的最大值、分母、输出和切线累加量，块用完即丢。</p>
 <figure id="fig-infra">
-  <figcaption><span>Fig 06 · 三层扩展解决三种不同瓶颈</span><b>kernel 省中间矩阵 · FSDP 省状态 · CP 拆序列</b></figcaption>
+  <figcaption><span>Fig 09 · 三层扩展解决三种不同瓶颈</span><b>kernel 省中间矩阵 · FSDP 省状态 · CP 拆序列</b></figcaption>
   <div class="hardware">
     <div class="hw"><span class="tag teal">单层 attention</span><b>FA2-JVP 融合 kernel</b><p>原值 <code class="m">O</code> 与切线 <code class="m">\dot O</code> 同步流式累加，不把四张长序列平方矩阵写回 HBM。详见 <a href="../concepts/flash-attention.html">FlashAttention</a>。</p></div>
     <div class="hw"><span class="tag">整张模型</span><b>FSDP2<a class="jr" href="#g-10">10</a></b><p>参数、梯度、优化器状态按 GPU 分片；层边界与 JVP wrapper 对齐，避免每张卡都常驻完整 14B 状态。</p></div>
