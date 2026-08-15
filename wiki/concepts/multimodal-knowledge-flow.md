@@ -17,11 +17,11 @@ updated: 2026-08-06
 
 论文用三种能力记号：
 
-- (L)：Language，纯文本语言建模；
-- (U)：Visual Understanding，图像输入、文字输出；
-- (G)：Visual Generation，文字输入、图像输出。
+- \(L\)：Language，纯文本语言建模；
+- \(U\)：Visual Understanding，图像输入、文字输出；
+- \(G\)：Visual Generation，文字输入、图像输出。
 
-真实数据实验得到的主方向是：$L\rightarrow U$、$L\rightarrow G$、$U\rightarrow G$ 较强；$G\rightarrow L/U$ 大多接近中性。它不是一张完全对称的三角形。
+真实数据实验得到的主方向是：\(L\rightarrow U\)、\(L\rightarrow G\)、\(U\rightarrow G\) 较强；\(G\rightarrow L/U\) 大多接近中性。它不是一张完全对称的三角形。
 
 ## 为什么“概念类型”会改变方向
 

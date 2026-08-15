@@ -22,12 +22,14 @@ input = embedding(token) + PE(position)
 PE(pos) 必须对每个 pos 唯一，且让模型能学到"相对位置"信息。
 
 ## Sinusoidal PE（论文用的）
-```
-PE(pos, 2i)   = sin(pos / 10000^(2i / d_model))
-PE(pos, 2i+1) = cos(pos / 10000^(2i / d_model))
-```
+\[
+\begin{aligned}
+\mathrm{PE}(pos,2i)&=\sin\left(\frac{pos}{10000^{2i/d_{\mathrm{model}}}}\right),\\
+\mathrm{PE}(pos,2i+1)&=\cos\left(\frac{pos}{10000^{2i/d_{\mathrm{model}}}}\right).
+\end{aligned}
+\]
 
-第 i 维用频率 1 / 10000^(2i / d_model) 的正弦/余弦。低维高频，高维低频。
+第 \(i\) 维用频率 \(1/10000^{2i/d_{\mathrm{model}}}\) 的正弦或余弦。低维高频，高维低频。
 
 **为什么这么设计**：
 - 每个位置 pos 在 d_model 维度上有唯一的频率指纹
