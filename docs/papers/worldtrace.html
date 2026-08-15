@@ -215,12 +215,27 @@ PK = [2, 10, 20, 30]ᵀ</div><p>摘要行是 one-hot，原样挑第 1、4 帧。
 </section>
 
 <section id="s12"><h2><span class="n">SECTION 12</span><span>理论部分：证明的是“条件下接近”，不是任意 Query 上最优</span></h2>
-  <p class="formula-purpose">放松后的 attention 分布匹配目标：</p>
+  <p class="lead">这一节回答的是选型问题：固定 L 格预算，<strong>哪类 Query 天生适合哪种 P</strong>。论文分三步：先把“输出差多少”归结为“分布差多少”，再定义一个理想化的分布匹配目标，最后对两类 Query 各给一条上界——每条上界恰好对应一种 writer。</p>
+  <h3>第一步 · 输出误差被分布失配控制住</h3>
+  <p class="formula-purpose">Proposition 1（近似界）：压缩前后的输出差，最多是分布失配乘上最大的一行 Value 范数。</p>
+  <div class="formula" data-expr="\|r_q(P)\|_2\le\underbrace{\|\hat\alpha_qP-\alpha_q\|_1}_{\text{分布失配}}\cdot\|V\|_{\infty,\mathrm{row}}"></div>
+  <div class="symbols"><div class="sym"><code class="m">r_q(P)</code>压缩 attention 输出减完整输出。</div><div class="sym"><code class="m">\alpha_q</code>完整 attention 对 T 帧的权重——§ 05 完整版算出的 [.035, .042, .063, .077, .210, .572] 就是一个。</div><div class="sym"><code class="m">\hat\alpha_q</code>压缩后对 L 格的实际权重，§ 05 里的 [.043, .079, .236, .642]。</div><div class="sym"><code class="m">\hat\alpha_qP</code>把 L 格权重按配方摊回 T 帧。</div><div class="sym"><code class="m">\|V\|_{\infty,\mathrm{row}}</code>范数最大的那一行 Value。</div><div class="sym"><b>意义</b>Value 有界时，只要分布贴得住，输出就差不远——后面只用盯分布。</div></div>
+  <h3>第二步 · 理想化目标：让槽权重随便配，P 的结构能贴多近</h3>
   <div class="formula" data-expr="\mathcal J(P)=\sum_{q\in\mathcal Q}\min_{\gamma_q\in\Delta_{L_{\mathrm{attn}}}}\|\gamma_qP-\alpha_q\|_1"></div>
-  <div class="symbols"><div class="sym"><code class="m">\mathcal Q</code>当前分析的一组 Query。</div><div class="sym"><code class="m">\alpha_q</code>完整 T 帧 attention 的权重分布。</div><div class="sym"><code class="m">\gamma_q</code>理论上自由选择的 L 个槽权重。</div><div class="sym"><code class="m">\gamma_qP</code>把槽权重展开回 T 帧后的近似分布。</div><div class="sym"><code class="m">\|\cdot\|_1</code>逐位置绝对差相加。</div><div class="sym"><b>min 算子</b>对每个 Query 选理论最有利的槽权重。</div></div>
-  <p>真实推理的槽权重不是自由变量，而是 <code class="m">\operatorname{softmax}(q(PK)^\top)</code>。所以 <code class="m">\mathcal J(P)</code> 是放松后的下界目标。作者证明：</p>
-  <ul><li>若旧历史 attention 在每个时间组内近似均匀，Field 的误差随组内不均匀程度 <code class="m">\varepsilon_q</code> 变小；</li><li>若 recall Query 的 attention 接近集中在已保存 landmark，Landmark 的误差随覆盖偏差 <code class="m">\delta_q</code> 变小。</li></ul>
-  <div class="warn"><strong>条件刻画，不是无条件最优。</strong>论文没有测预训练模型真实的 ε/δ；条件本身就是“Query 适合这类 P”。理论说明两种 writer 各自匹配哪类查询，不证明所有长视频都优于其他 cache。</div>
+  <div class="symbols"><div class="sym"><code class="m">\mathcal Q</code>当前分析的一组 Query。</div><div class="sym"><code class="m">\gamma_q</code>理论上自由选择的 L 个槽权重。</div><div class="sym"><code class="m">\gamma_qP</code>把槽权重展开回 T 帧后的近似分布。</div><div class="sym"><code class="m">\|\cdot\|_1</code>逐位置绝对差相加。</div><div class="sym"><b>min 算子</b>对每个 Query 选理论最有利的槽权重。</div><div class="sym"><b>为什么是放松</b>真实推理的槽权重被 <code class="m">\operatorname{softmax}(q(PK)^\top)</code> 锁死，只会更差；J 度量的是 P 结构自身的天花板。</div></div>
+  <p>关键是看懂 <code class="m">\gamma_qP</code>。沿用 § 05 的 Field P：<code class="m">\gamma=[g_1,g_2,g_3,g_4]</code> 摊回六帧是 <code class="m">[\tfrac{g_1}2,\tfrac{g_1}2,\tfrac{g_2}2,\tfrac{g_2}2,g_3,g_4]</code>——<strong>给合并槽多少权重，就等于把这份权重按配方摊回它的来源帧</strong>。结构约束当场浮出来：组内两帧被迫平分，组内不均匀的目标分布怎么配都贴不住。Landmark P 的约束则是：没存下的帧一列全零，那里的目标质量放不进去。</p>
+  <h3>第三步 · 同两张 P，对两类 Query 各算一次</h3>
+  <p>拿 § 05 的两张 P，各配一个典型 Query 算 <code class="m">\min\|\gamma P-\alpha\|_1</code>（python 复核）：</p>
+  <div class="table-wrap"><table><thead><tr><th>Query 类型 · 最优 L1 失配 ↓</th><th>Field（组平均）</th><th>Landmark（存帧 1、4）</th></tr></thead><tbody>
+    <tr><td>分散型：α = [.035, .042, .063, .077, .210, .572]</td><td class="best">.021</td><td>.211</td></tr>
+    <tr><td>回访型：α = [.90, .02, .02, .02, .02, .02]，目标帧 1</td><td>.880</td><td class="best">.080</td></tr>
+  </tbody></table></div>
+  <div class="calc">分散型 × Field：组内本来就近似均匀，摊回 [.0385,.0385,.070,.070,.210,.572]，L1=<span class="hi">.021</span><br>分散型 × Landmark：帧 2、3 没存，质量 .105 放不进去、还得挤到别的帧 → L1=<span class="bad">.211</span><br>回访型 × Landmark：目标帧 1 恰好被存，γ 直接把 .90 放进去 → L1=<span class="hi">.080</span><br>回访型 × Field：帧 1、2 被迫平分，.90 和 .02 之间怎么配都差 .88 → L1=<span class="bad">.880</span></div>
+  <p>两个 writer 各赢一行、各差一个数量级——§ 08 的取舍在这张表里变成了可以手算的结构事实。</p>
+  <h3>第四步 · 把“适合”写成条件，各给一条上界</h3>
+  <p><strong>Field 的条件（ε-coherent）</strong>：归一化的旧史权重距某个“组级均匀混合”的 L1 不超过 <code class="m">\varepsilon_q</code>——即 Query 关心的是时间段而非具体帧。此时 <code class="m">\mathcal J(P_{\mathrm{field}})\le\sum_q\|\alpha_q^{\mathrm{old}}\|_1\varepsilon_q\le\sum_q\varepsilon_q</code>。上面分散型的 <code class="m">\varepsilon_q\approx.097</code>、旧史总质量 .217，上界 <code class="m">.217\times.097\approx.021</code>——和直接算的最优值一致，因为证明用的 γ 就是这么配的：recent 原样复制、旧史按组配比。</p>
+  <p><strong>Landmark 的条件（δ-covered）</strong>：旧史权重距“目标帧的 one-hot”的 L1 不超过 <code class="m">\delta_q</code>，<strong>且目标帧已被存为 landmark</strong>。此时 <code class="m">\mathcal J(P_{\mathrm{land}})\le\sum_q\|\alpha_q^{\mathrm{old}}\|_1\delta_q</code>。回访型的 <code class="m">\delta_q=.125</code>、旧史质量 .96，上界 .12——成立但不紧（直接最优 .08）。实验用的“最老出局”入口规则，是对这个 δ 覆盖的流式近似，同时相关场景数不超过 <code class="m">N_s</code> 时靠得住。</p>
+  <div class="warn"><strong>条件刻画，不是无条件最优。</strong>两条上界对各自定义的 Query 族按构造成立，不是对所有 Query 的最优性声明。论文明说没有在预训练模型上实测 ε/δ——量它需要超出训练视野的未压缩 rollout，而 § 01 已经说明那时参考 attention 本身就在退化；条件只能通过它预测的行为（§ 10 的实验）间接检验。</div>
 </section>
 
 <section id="s13"><h2><span class="n">SECTION 13</span><span>局限：哪类问题它根本没解决</span></h2>
