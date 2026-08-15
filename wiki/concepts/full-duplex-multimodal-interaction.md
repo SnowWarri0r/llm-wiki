@@ -1,7 +1,7 @@
 ---
 name: full-duplex-multimodal-interaction
 type: concept
-sources: [duplexomni, wan-streamer-v01, wan-streamer-v02, wan-streamer-v03, videofdb]
+sources: [duplexomni, wan-streamer-v01, wan-streamer-v02, wan-streamer-v03, videofdb, dyaplex, faceplex]
 updated: 2026-08-06
 ---
 

@@ -1445,3 +1445,19 @@ skill 更新:
 - 纠正“参考帧四周留空”：1.0 原文是训练视频帧周围随机加入 empty pixels，属于空间 padding，不是时间补帧；用 512→640、脸宽占比 50%→40% 的教学例解释小脸与远景鲁棒性，并列出未公开的边距、填充值与后处理。
 - 拆清人工退化参考图：正常参考图的副本被加入纹理扭曲、模糊、过强对比度/饱和度和偏色，作为负 CFG 条件；补通用 CFG 方向式和 .2/.6/s=2 数值例，同时标明公式与退化配方并非论文公开实现。
 - 拆清 DWPose 嘴部加权：关键点→嘴部区域→映射到损失分辨率→局部误差加权，并区分“论文明确写了定位与加权”和“区域形状、膨胀、倍率等实现未披露”；同时与 2.0 的整人 SAM2 mask 链分开。
+
+## [2026-08-11] ingest | DyaPlex
+
+- 新增 NVIDIA/HKUST DyaPlex 精读与双塔流式控制台风格 bespoke HTML；按“交互闭环 → 冻结语音塔 → 四部位 codec → 双人交错 → 真实时间坐标 → cross-RoPE → 训练/推理 → 数据/指标/实时”重排。
+- 完整解释语音权重没有直接变成骨骼权重：32 层动作塔通过新 Q/K/V 投影逐层读取冻结 PersonaPlex 隐藏状态；22 码、4096 词表四 band、主实验 18 个身体码与定性 face 分支严格分开。
+- 用 46-token 帧验算 4096→89 帧→7.12 秒、1024→22 帧→1.76 秒；用动作帧 2 对语音帧 0–3 画严格因果矩阵，避免扁平 token 下标冒充时间。
+- 完整录入 Seamless 数据、训练配置、五类指标、主表/消融/人评和 A6000 Ada runtime；保留正文 top-k 200 与附录无 top-k、组件时延非端到端、DualTalk 迁移崩塌等边界。
+- 新增 dyadic-motion-interleaving、time-aligned-speech-motion-rope 概念页，并补 full-duplex、RVQ、RoPE、cross-attention 来源。
+
+## [2026-08-11] ingest | FacePlex
+
+- 新增 FacePlex 精读与滚动表情流水线风格 bespoke HTML；从“离线 audio-to-face 切块为何失败”开始，串起 FLAME 输出、音频/隐藏/动作三队列、RFM、RCA、训练、数据、结果、延迟与边界。
+- 用同一组四槽标量完整算出 `[.75,.5,.25,0]` 的插值状态、`U=X−ε` 速度和 `.25U` Euler 更新，并用求导说明速度目标由直线路径产生；所有公式逐符号定义。
+- 拆清 RCA 的“未来”是 PersonaPlex 已经生成但暂存的音频：同一动作生命周期覆盖 h(t−3)…h(t+3)，代价为 3×80=240 ms 固定等待，不是读取未知用户未来。
+- 完整覆盖 67,200 synthetic self-play、UniLS best-of-12、PLRS 过滤、1138 h 合计数据、训练配置、主表、人评、RFM/RCA/data/mask 与 Euler-N 消融；full RCA 并非每项指标第一。
+- 明确正文/附录的联合训练与冻结缓存、混合数据与 syntheticv2 corpus 两组口径冲突；新增 rolling-flow-matching、rolling-cross-attention、flame-facial-motion 概念页，并补 flow/full-duplex/cross-attention 来源。
