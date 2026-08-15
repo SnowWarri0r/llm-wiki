@@ -38,6 +38,7 @@
 - [Interaction Models · Thinking Machines](wiki/papers/interaction-models-tml.md) — 把交互能力做进权重的 276B MoE 模型
 - [Fish Audio S2 Pro](wiki/papers/fish-speech-s2-pro.md) — Dual-AR + RVQ + GRPO 的开源 TTS
 - [DuplexOmni · 边听边说时，后台还能继续想](wiki/papers/duplexomni.md) — 把实时交互 S1 与后台思考 S2 拆成并行线；交互模型内部再用 480 ms 时间片、Thinker–Talker 和 16 层 Mimi codec 生成语音。完整拆开控制标记闭环、两阶段交替冻结与交叉熵手算；ToR 72.6 最强，但 Daily-Omni 53.8、WER 11.92%，论文结果与至少 8×H20 的公开部署口径分开记录。
+- [PersonaPlex · 同一套实时语音模型，既能换声音，也能换身份](wiki/papers/personaplex.md) — 在 Moshi 的 80 ms 全双工骨干前拼入参考声音与角色文字，不改成 ASR–LLM–TTS 级联；完整拆开 17 路输入、Temporal–Depth、声学码延迟、prompt 缓存、加权 loss、2,250 小时合成数据、两套 duplex benchmark，并严格分开论文实验模型与公开 personaplex-7b-v1 的数据和评测口径。
 - [DyaPlex · 一边对话，一边观察对方身体并生成自己的动作](wiki/papers/dyaplex.md) — NVIDIA/HKUST 在冻结 PersonaPlex 旁新增 32 层动作塔，把双方每帧 22 个 RVQ 动作码交错成 46-token 序列，再用共享真实帧坐标的 cross-RoPE 逐层读取语音。完整算出 4096 token 只覆盖 7.12 秒、1024 token 覆盖 1.76 秒，拆清 band-mask CE、agent-only 采样、partner 消融与组件延迟；主实验仅身体骨架，face 仅定性，正文/附录 top-k 口径冲突留档。
 - [FacePlex · 语音还在生成，脸也必须同步往前走](wiki/papers/faceplex.md) — 四个 108-D FLAME 动作对以 [.75,.5,.25,0] 的错开 flow time 排队，每 80 ms 共同做 Euler 更新并输出队首；Rolling Cross-Attention 让同一动作在生命周期里读到已生成语音的约 ±240 ms 局部上下文。完整手算直线速度、四槽更新、随机偏移损失、合成/真实数据、指标与 RCA 消融；240 ms 是受控缓冲，不是偷看未知用户未来，端到端延迟与冻结训练口径仍未说清。
 - [LongCat-Video-Avatar 1.5 · 不只是对嘴，还要稳、快、多人不串嘴](wiki/papers/longcat-video-avatar-1-5.md) — Meituan 13.6B 音频驱动视频：Whisper 33 层压成 5 组并对齐视频时间轴，逐帧 GRPO 把坏手和不同步定位到具体时段，共享 DiT + Generator/Fake-Score LoRA 做 DMD2 八步蒸馏，L-RoPE + 背景静音轨避免多人串嘴。完整核算数据漏斗、flow 手算、211k 训练、508 对人评与 Base/Fast 取舍；8 NFE 比 150 NFE 少 18.75× 调用，但真实延迟与安全未报告。
@@ -385,6 +386,10 @@
 - [GAN Control Regularization](wiki/concepts/gan-control-regularization.md) — 给真实与 student rollout 加同一噪声，从冻结 teacher 的跨层低频特征判断相机是否走偏，专门补 DMD 容易忽略的整体镜头控制
 
 ### Omni / 语音交互
+- [Hybrid Text–Audio System Prompt](wiki/concepts/hybrid-text-audio-system-prompt.md) — 先给参考声音，再给角色说明；两段沿时间拼接，正式对话同时受音色与身份控制
+- [Temporal–Depth Transformer](wiki/concepts/temporal-depth-transformer.md) — 时间轴每 80 ms 前进一步，帧内小模型再补 8 层 agent 音频码，避免大 Transformer 按 codebook 膨胀 8 倍
+- [Audio Codebook Delay](wiki/concepts/audio-codebook-delay.md) — 文字/语义码先走，声学细节晚一帧补齐，用固定 80 ms 等待换更清楚的条件依赖
+- [Full-Duplex-Bench Metrics](wiki/concepts/full-duplex-bench-metrics.md) — TOR 在停顿/附和测试里要低、在顺滑接话/被打断测试里要高；再看附和频率、JSD 与响应延迟
 - [Thinker–Talker](wiki/concepts/thinker-talker.md) — 想的(语义文本)和说的(渲染音频codes)分两路解耦; Talker 吃 Thinker 中间层条件
 - [Multi-Token Prediction](wiki/concepts/multi-token-prediction.md) — 同帧并行预测多层 RVQ codebook, 避免 8 倍序列膨胀; 共享主体+轻量 adapter
 - [Modality Projector](wiki/concepts/modality-projector.md) — 两层 MLP 把冻结编码器特征翻译进 LLM 隐空间占位符, 小投影撬动大编码器

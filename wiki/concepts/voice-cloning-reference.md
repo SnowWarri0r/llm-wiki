@@ -1,8 +1,8 @@
 ---
 name: voice-cloning-reference
 type: concept
-sources: [fish-speech-s2-pro, viitorvoice]
-updated: 2026-07-02
+sources: [fish-speech-s2-pro, viitorvoice, personaplex]
+updated: 2026-08-12
 ---
 
 # Voice Cloning Reference · 声音克隆参考音频
@@ -26,3 +26,4 @@ fish-speech README / demo 工作流；具体入口需要继续读本地 `raw/fis
 - [[fish-speech-s2-pro]] · 来源
 - [[rvq-codec]] · 声学 token 承载音色信息
 - [[dual-ar]] · 生成架构
+- [[personaplex]] · 参考声音怎样与角色文字拼成 hybrid system prompt

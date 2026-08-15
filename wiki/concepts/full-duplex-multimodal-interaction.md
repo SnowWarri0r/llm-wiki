@@ -1,8 +1,8 @@
 ---
 name: full-duplex-multimodal-interaction
 type: concept
-sources: [duplexomni, wan-streamer-v01, wan-streamer-v02, wan-streamer-v03, videofdb, dyaplex, faceplex]
-updated: 2026-08-06
+sources: [duplexomni, personaplex, wan-streamer-v01, wan-streamer-v02, wan-streamer-v03, videofdb, dyaplex, faceplex]
+updated: 2026-08-12
 ---
 
 # Full-Duplex Multimodal Interaction · 全双工多模态交互
@@ -72,3 +72,4 @@ DuplexOmni 的时间片是 480 ms。它不是先生成完整句子再播放，�
 - [[wan-streamer-v01]] · 同一个 Transformer 如何同时感知并生成文字、声音和画面
 - [[wan-streamer-v03]] · 用 160 ms 单元同时接收用户音视频，并让开放行为描述进入同一事件流
 - [[videofdb]] · 不只测“能否同时听说”，还测视觉是否真正改变话轮与非语言回应
+- [[personaplex]] · 用声音与角色 prompt 控制端到端全双工语音模型
