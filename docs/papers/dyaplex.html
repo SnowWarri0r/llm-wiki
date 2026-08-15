@@ -1,0 +1,174 @@
+<!doctype html>
+<!-- bespoke -->
+<html lang="zh-CN"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="DyaPlex 论文完整精读：PersonaPlex 双塔、双人动作交错、时间对齐 RoPE、RVQ 动作码、训练、实时性、实验与边界。">
+<title>DyaPlex · 一边对话，一边观察身体并生成动作</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&amp;family=Noto+Sans+SC:wght@400;500;600;700&amp;family=Noto+Serif+SC:wght@400;600;700;900&amp;display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet"><script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+:root{--paper:#f1ecdf;--card:#fbf8ef;--ink:#14242c;--muted:#6f716d;--line:#b9b19e;--deep:#143d4a;--cyan:#087f8f;--cyan2:#cae8e7;--green:#4d8b62;--green2:#dce9d8;--amber:#d69019;--amber2:#f3dfb3;--red:#c64c35;--red2:#f3d2c9;--white:#fffefa}
+*{box-sizing:border-box}html{scroll-behavior:smooth;overflow-x:clip}body{margin:0;overflow-x:clip;background:var(--paper);color:var(--ink);font:18px/1.82 "Noto Serif SC",serif}body:before{content:"";position:fixed;inset:0;z-index:-1;background-image:linear-gradient(rgba(20,61,74,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(20,61,74,.035) 1px,transparent 1px);background-size:34px 34px}.page{width:calc(100% - 44px);max-width:1220px;margin:auto;padding:40px 0 100px}.mast{display:flex;justify-content:space-between;gap:18px;padding:10px 0;border-top:4px double var(--ink);border-bottom:1px solid var(--line);color:var(--muted);font:500 11px/1.5 "DM Mono",monospace;letter-spacing:1.5px;text-transform:uppercase}.hero{padding:58px 0 42px;border-bottom:1px solid var(--line)}.eyebrow{color:var(--cyan);font:500 12px/1.5 "DM Mono",monospace;letter-spacing:2px;text-transform:uppercase}h1{margin:17px 0 15px;color:var(--deep);font-size:clamp(62px,11vw,142px);line-height:.86;letter-spacing:-.075em;font-weight:900}h1 em{color:var(--red);font-style:normal}.dek{max-width:1080px;font-size:clamp(22px,2.6vw,31px);line-height:1.5;color:#31474f}.byline{color:var(--muted);font:500 11px/1.7 "DM Mono",monospace}.tldr{display:grid;grid-template-columns:112px 1fr;gap:20px;margin-top:29px;padding:24px 27px;background:var(--deep);color:white;border-left:7px solid var(--red)}.tldr b{color:#ffc2b4;font:500 11px/1.5 "DM Mono",monospace;letter-spacing:1.7px}.tldr p{margin:0;font-size:19px}.toc{display:grid;grid-template-columns:repeat(5,1fr);margin-top:28px;border:1px solid var(--line)}.toc a{padding:12px 13px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink);font:600 12px/1.5 "Noto Sans SC",sans-serif}.toc a:nth-child(5n){border-right:0}.toc a:hover{background:var(--cyan);color:white}section{padding-top:64px}h2{display:grid;grid-template-columns:72px 1fr;gap:18px;align-items:baseline;margin:0 0 22px;font-size:clamp(31px,4vw,47px);line-height:1.25;letter-spacing:-.035em}h2 .n{color:var(--cyan);font:500 11px/1.4 "DM Mono",monospace;letter-spacing:2px}h3{margin:34px 0 12px;font-size:25px;line-height:1.45}p{margin:12px 0}.lead{font-size:20px;color:#30464e}a{color:var(--cyan);text-underline-offset:3px}strong{color:var(--deep)}code{background:var(--card);border:1px solid var(--line);padding:2px 5px;border-radius:3px;font:500 .86em/1.4 "DM Mono",monospace}.note,.warn,.boundary{padding:17px 20px;margin:18px 0;font:500 16px/1.75 "Noto Sans SC",sans-serif}.note{background:var(--cyan2);border-left:5px solid var(--cyan)}.warn{background:var(--red2);border-left:5px solid var(--red)}.boundary{background:var(--amber2);border-left:5px solid var(--amber)}figure{margin:34px 0;padding:28px;background:rgba(251,248,239,.95);border:1px solid var(--line);box-shadow:10px 10px 0 rgba(20,61,74,.06)}figcaption{display:flex;justify-content:space-between;gap:18px;margin-bottom:23px;padding-bottom:12px;border-bottom:1px dashed var(--line);color:var(--muted);font:500 11px/1.5 "DM Mono",monospace;letter-spacing:1.2px;text-transform:uppercase}figcaption span:first-child{color:var(--cyan)}figcaption b{color:var(--red)}.caption{margin:16px 0 0;color:var(--muted);font:400 13px/1.65 "Noto Sans SC",sans-serif}.formula-purpose{margin-top:22px;color:var(--deep);font:700 17px/1.5 "Noto Sans SC",sans-serif}.formula{margin:10px 0 18px;padding:22px 18px;overflow-x:auto;text-align:center;background:var(--deep);color:white;border-left:6px solid var(--red)}.formula .katex{color:white;font-size:1.08em}.symbols{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}.sym{padding:13px 14px;background:var(--card);border:1px solid var(--line);font:400 14px/1.65 "Noto Sans SC",sans-serif}.sym code{display:block;width:max-content;margin-bottom:5px;color:var(--cyan)}
+.loop{display:grid;grid-template-columns:repeat(5,1fr);gap:0}.loop .step{position:relative;min-height:160px;padding:17px 14px;background:white;border:1px solid var(--line)}.loop .step:not(:last-child):after{content:"→";position:absolute;right:-15px;top:63px;z-index:2;display:grid;place-items:center;width:28px;height:28px;background:var(--paper);color:var(--red);font:700 19px/1 "DM Mono",monospace}.step b{color:var(--cyan);font:700 10px/1.4 "DM Mono",monospace}.step strong{display:block;margin:8px 0;font-size:17px}.step p{font:400 12px/1.6 "Noto Sans SC",sans-serif}.step.out{background:var(--green2)}.arch{display:grid;grid-template-columns:1fr 64px 1.2fr;gap:12px;align-items:stretch}.tower{padding:20px;background:white;border:1px solid var(--line);border-top:7px solid var(--cyan)}.tower.motion{border-top-color:var(--red)}.tower h4{margin:5px 0 11px;font-size:23px}.tower ul{padding-left:20px;font:400 14px/1.75 "Noto Sans SC",sans-serif}.bridge{display:grid;place-items:center;text-align:center;color:var(--red);font:700 12px/1.5 "DM Mono",monospace}.bridge:before{content:"32×\A cross-attn →";white-space:pre}.bands{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.band{padding:18px 13px;background:white;border:1px solid var(--line);border-top:7px solid var(--cyan)}.band:nth-child(2){border-top-color:var(--green)}.band:nth-child(3){border-top-color:var(--amber)}.band:nth-child(4){border-top-color:var(--red)}.band b{font:700 10px/1.4 "DM Mono",monospace;color:var(--muted)}.band strong{display:block;margin:7px 0;font-size:19px}.band span{font:500 12px/1.5 "DM Mono",monospace}.tokens{display:grid;grid-template-columns:34px repeat(6,1fr) 34px repeat(6,1fr);gap:4px}.tok{padding:12px 3px;text-align:center;background:#d9e7eb;border:1px solid #9eb7be;font:500 10px/1.3 "DM Mono",monospace}.tok.tag{background:var(--deep);color:white}.tok.b{background:#f0d4cd;border-color:#d48b78}.deps{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:18px}.dep{padding:15px;background:white;border:1px solid var(--line);font:400 13px/1.6 "Noto Sans SC",sans-serif}.dep b{display:block;color:var(--cyan);font:700 10px/1.4 "DM Mono",monospace}.align-grid{display:grid;grid-template-columns:130px repeat(4,1fr);border:1px solid var(--line)}.cell{min-height:62px;padding:10px;text-align:center;background:white;border-right:1px solid var(--line);border-bottom:1px solid var(--line);font:500 11px/1.45 "DM Mono",monospace}.cell:nth-child(5n){border-right:0}.cell.head{background:var(--deep);color:white}.cell.label{background:#e8e2d5;text-align:left}.cell.ok{background:var(--cyan2)}.cell.now{background:var(--green2);box-shadow:inset 0 0 0 3px var(--green)}.cell.no{background:var(--red2);color:var(--red);text-decoration:line-through}.context{display:grid;grid-template-columns:1fr 48px 1fr;gap:10px}.ctx{padding:22px;background:white;border:1px solid var(--line)}.ctx h4{margin:0;font-size:27px}.ctx strong{display:block;margin:12px 0;color:var(--cyan);font:700 29px/1 "DM Mono",monospace}.ctx.fast{border-top:7px solid var(--green)}.ctx.full{border-top:7px solid var(--red)}.ctx-arrow{display:grid;place-items:center;color:var(--red);font:700 24px/1 "DM Mono",monospace}.ctx-arrow:before{content:"→"}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.mode{padding:20px;background:white;border:1px solid var(--line);border-top:7px solid var(--cyan)}.mode.agent{border-top-color:var(--green)}.mode h4{margin:0 0 8px;font-size:22px}.mode p{font:400 14px/1.7 "Noto Sans SC",sans-serif}.table-wrap{overflow-x:auto}table{width:100%;min-width:760px;border-collapse:collapse;background:white;font:400 13px/1.5 "Noto Sans SC",sans-serif}th,td{padding:11px 10px;border-bottom:1px solid var(--line);text-align:right}th{background:var(--deep);color:white;font:500 10px/1.4 "DM Mono",monospace}th:first-child,td:first-child{text-align:left}.best{background:var(--green2);font-weight:700}.caution{background:var(--amber2)}.bars{display:grid;grid-template-columns:190px 1fr 76px;gap:9px 12px;align-items:center;font:500 12px/1.4 "DM Mono",monospace}.bar{height:19px;background:#ddd8cc}.bar i{display:block;height:100%;background:var(--cyan)}.bar i.red{background:var(--red)}.bar i.green{background:var(--green)}.compare{display:grid;grid-template-columns:1fr 1fr;gap:12px}.compare .paper{padding:20px;background:white;border:1px solid var(--line);border-top:8px solid var(--cyan)}.compare .paper.face{border-top-color:#a44668}.paper h4{margin:0 0 10px;font-size:24px}.paper ul{padding-left:20px;font:400 14px/1.72 "Noto Sans SC",sans-serif}.limits{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.limit{padding:17px;background:white;border:1px solid var(--line);min-height:155px}.limit b{display:block;color:var(--red);font:700 10px/1.4 "DM Mono",monospace}.limit strong{display:block;margin:8px 0;font-size:18px}.limit p{font:400 13px/1.6 "Noto Sans SC",sans-serif}.gloss{margin-top:72px;padding-top:30px;border-top:3px double var(--ink)}.gloss h2{grid-template-columns:1fr;font-size:32px}.gloss ol{list-style:none;padding:0;counter-reset:g}.gloss li{counter-increment:g;position:relative;padding:12px 12px 12px 54px;border-bottom:1px dashed var(--line);font:400 15px/1.65 "Noto Sans SC",sans-serif}.gloss li:before{content:counter(g,decimal-leading-zero);position:absolute;left:10px;color:var(--cyan);font:500 11px/1.7 "DM Mono",monospace}.gloss li:target{background:var(--amber2)}.term{font-weight:700;color:var(--deep)}.jr{vertical-align:super;text-decoration:none;background:var(--amber2);border:1px solid var(--amber);color:var(--deep);padding:1px 5px;border-radius:10px;font:500 9px/1 "DM Mono",monospace}.sources{margin-top:30px;padding:20px;background:var(--card);border:1px solid var(--line)}.sources .label{font:500 10px/1.5 "DM Mono",monospace;color:var(--cyan);letter-spacing:1.4px;text-transform:uppercase}.colophon{display:flex;justify-content:space-between;gap:20px;margin-top:54px;padding-top:15px;border-top:1px solid var(--line);color:var(--muted);font:500 10px/1.5 "DM Mono",monospace}
+@media(max-width:900px){.toc{grid-template-columns:repeat(2,1fr)}.symbols{grid-template-columns:1fr 1fr}.loop{grid-template-columns:1fr 1fr}.loop .step:after{display:none}.bands,.limits{grid-template-columns:1fr 1fr}.tokens{grid-template-columns:repeat(6,1fr)}.tok.tag{grid-column:span 6}.deps{grid-template-columns:1fr}.align-grid{min-width:700px}.align-wrap{overflow-x:auto}}
+@media(max-width:620px){body{font-size:16px}.page{width:calc(100% - 24px);padding-top:22px}.mast{font-size:9px}.hero{padding-top:40px}h1{font-size:53px}.tldr{grid-template-columns:1fr;gap:6px;padding:20px}section{padding-top:48px}h2{grid-template-columns:1fr;gap:5px}figure{padding:16px 12px;margin:25px 0;box-shadow:5px 5px 0 rgba(20,61,74,.06)}figcaption{display:block}figcaption b{display:block;margin-top:5px}.arch,.context,.two,.compare{grid-template-columns:1fr}.bridge:before{content:"↓\A 32× CROSS-ATTN"}.ctx-arrow:before{content:"↓"}.bands,.symbols,.loop,.limits{grid-template-columns:1fr}.bars{grid-template-columns:1fr 64px}.bars .bar{grid-column:1/-1}.colophon{display:block}}
+</style></head><body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · dyaplex</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page">
+<header class="mast"><span>NVIDIA · HKUST</span><span>arXiv 2606.03874 · 2026</span></header>
+<section class="hero"><div class="eyebrow">Full-duplex speech × dyadic body motion</div><h1>DYA<em>PLEX</em>.</h1><div class="byline">DyaPlex · Full-Duplex Speech-Motion Model for Dyadic Interaction</div><p class="dek">机器人正在回答时，你忽然摆手，它不能等整段录音结束才“配动作”。DyaPlex 让语音、对方身体和自己的身体每 80 毫秒共同往前走。</p><div class="tldr"><b>TL;DR</b><p>冻结 PersonaPlex 语音塔；把双方动作交错成每帧 46 个 token；所有同帧 token 共享真实时间编号，逐层 cross-attention 读取同频语音状态。主实验只做身体骨架，不直接生成像素。</p></div>
+<nav class="toc"><a href="#s0">00 · 任务闭环</a><a href="#s1">01 · 完整架构</a><a href="#s2">02 · 动作 codec</a><a href="#s3">03 · 交错序列</a><a href="#s4">04 · 时间坐标</a><a href="#s5">05 · RoPE 对齐</a><a href="#s6">06 · 训练推理</a><a href="#s7">07 · 数据</a><a href="#s8">08 · 指标结果</a><a href="#s9">09 · 实时性</a><a href="#s10">10 · FacePlex 对照</a><a href="#s11">11 · 局限判断</a><a href="#gloss">术语直达</a></nav></section>
+
+<section id="s0"><h2><span class="n">SECTION 00</span><span>不是“听完再配动作”，而是持续闭环</span></h2><p class="lead">用户说“箱子太重了”并弯腰指向地面。普通 co-speech 模型拿完整录音配一段动作；DyaPlex 必须在用户刚弯腰时就让智能体转向、回应，同时继续听下一句话。</p>
+<figure><figcaption><span>Fig 01 · 每个 80 ms 时间片的真实数据流</span><b>arrows follow causality</b></figcaption><div class="loop"><div class="step"><b>01 · OBSERVE</b><strong>用户新语音 + 已发生动作</strong><p>只输入当前和过去，没有未来。</p></div><div class="step"><b>02 · SPEECH</b><strong>PersonaPlex 继续对话</strong><p>生成下一小段声音与各层隐藏状态。</p></div><div class="step"><b>03 · MOTION</b><strong>动作塔读语音和双方历史</strong><p>观察到的 A 动作填入 A 槽。</p></div><div class="step"><b>04 · SAMPLE</b><strong>只采样智能体 B</strong><p>逐个生成本帧身体动作码。</p></div><div class="step out"><b>05 · EMIT</b><strong>解码成 SMPL-X</strong><p>输出后立刻进入下一时间片。</p></div></div><p class="caption">全双工<a class="jr" href="#g-01">01</a>不等于“首包很快”：智能体说话时仍必须接收新输入并改变后续输出。</p></figure>
+<div class="boundary"><strong>输出边界：</strong>主模型输出通用 SMPL-X<a class="jr" href="#g-02">02</a> 身体姿态，不含皮肤、衣服和背景；脸部版本仅作定性演示。它是动作架构，不是直接像素视频模型。</div></section>
+
+<section id="s1"><h2><span class="n">SECTION 01</span><span>冻结语音塔，新增动作塔：权重没有“变成骨骼”</span></h2><p>PersonaPlex 是 32 层、宽 4096 的因果语音 Transformer，Mimi codec 以 12.5 Hz 推进。DyaPlex 冻结它，并为每一层接一层新的 motion Transformer。动作塔宽 1024，16 个 self-attention head；cross-attention 有 12 头、每头 64 维。</p>
+<figure><figcaption><span>Fig 02 · 一一配层的双塔</span><b>speech stays speech</b></figcaption><div class="arch"><div class="tower"><b>FROZEN · 32 LAYERS</b><h4>PersonaPlex 语音塔</h4><ul><li>输入双方语音与对话历史</li><li>继续生成智能体声音</li><li>每层输出 4096-D 隐藏状态</li><li>参数不接受动作损失梯度</li></ul></div><div class="bridge"></div><div class="tower motion"><b>TRAINABLE · 32 LAYERS</b><h4>动作 Transformer</h4><ul><li>自己的 Query 读取语音 Key/Value</li><li>新投影矩阵把语音特征重映射给动作</li><li>self-attention 整理双方动作历史</li><li>预测下一个 RVQ 动作码</li></ul></div></div><p class="caption">不是把语音 Q/K/V 直接解释成关节。语音塔保留“说什么、谁在说、是否停顿”的表示；动作塔自己学习这些表示应对应什么动作。</p></figure></section>
+
+<section id="s2"><h2><span class="n">SECTION 02</span><span>25 FPS 连续姿态怎样压成 22 个离散选择</span></h2><p>四个严格因果 RVQ-VAE<a class="jr" href="#g-03">03</a>分别负责上身、手、下身与位移、脸。编码器时间降采样 2 倍，把 25 FPS 变成与语音相同的 12.5 Hz；解码器再还原到 25 FPS。</p>
+<figure><figcaption><span>Fig 03 · 四个部位各用自己的合法编号带</span><b>22 codes / person / frame</b></figcaption><div class="bands"><div class="band"><b>UPPER</b><strong>上身 · 6 码</strong><span>0–1023</span></div><div class="band"><b>HANDS</b><strong>双手 · 6 码</strong><span>1024–2047</span></div><div class="band"><b>LOWER + TRANS</b><strong>下身位移 · 6 码</strong><span>2048–3071</span></div><div class="band"><b>FACE</b><strong>脸 · 4 码</strong><span>3072–4095</span></div></div><p class="caption">词表总计 4096，但部位不能跨 band 选码。训练时把非法 band 的 logits 设为负无穷。主论文监督 18 个身体码；4 个脸码不进入主定量结果。</p></figure>
+<p>这种表示把一次姿态拆成 22 次局部选择。优点是不同身体部位可独立压缩；缺点是每 80 毫秒要顺序采样 22 个码，论文也把它列为主要效率瓶颈。</p></section>
+
+<section id="s3"><h2><span class="n">SECTION 03</span><span>把双人动作写成一条序列，模型才看得见“你动我才动”</span></h2><p class="formula-purpose">每一帧的扁平长度：</p><div class="formula" data-expr="L_{step}=2(K+1)=2(22+1)=46"></div><div class="symbols"><div class="sym"><code class="m">K=22</code>每个人每个 12.5 Hz 帧的动作码数。</div><div class="sym"><code class="m">+1</code>每个人前面额外插入身份标签。</div><div class="sym"><code class="m">L_{step}=46</code>一个真实时间帧在扁平序列里占 46 个 token。</div></div>
+<figure><figcaption><span>Fig 04 · 教学缩略：22 个码压成 6 个</span><b>same frame A before B</b></figcaption><div class="tokens"><div class="tok tag">A</div><div class="tok">上1</div><div class="tok">上2</div><div class="tok">手1</div><div class="tok">手2</div><div class="tok">腿1</div><div class="tok">腿2</div><div class="tok tag">B</div><div class="tok b">上1</div><div class="tok b">上2</div><div class="tok b">手1</div><div class="tok b">手2</div><div class="tok b">腿1</div><div class="tok b">腿2</div></div><div class="deps"><div class="dep"><b>WITHIN PERSON</b>同一个人的上身、手和腿在一条 causal history 中协调。</div><div class="dep"><b>WITHIN FRAME</b>B 排在 A 后面，因此能读取同帧刚观察到的 A。</div><div class="dep"><b>ACROSS FRAMES</b>下一帧双方都能读到上一帧完整双人动作。</div></div><p class="caption">真实序列每人不是 6 码而是 22 码。图只缩短横向长度，不改变依赖方向。</p></figure></section>
+
+<section id="s4"><h2><span class="n">SECTION 04</span><span>46 个 token 是一帧，不是 46 个时间点</span></h2><p>若用扁平下标做位置，同帧首尾相差 45，相邻帧边界却只差 1。语音每 80 毫秒只有一格，这种位置会把身体部位顺序误当时间。</p><p class="formula-purpose">先把扁平位置还原为真实帧：</p><div class="formula" data-expr="q_{pos}(t)=\left\lfloor\frac{t}{L_{step}}\right\rfloor"></div><div class="symbols"><div class="sym"><code class="m">t</code>动作长序列里的扁平 token 下标。</div><div class="sym"><code class="m">L_{step}=46</code>每个真实帧的 token 数。</div><div class="sym"><code class="m">q_{pos}(t)</code>送进 cross-attention RoPE 的真实帧编号。</div></div><p>例如 <code class="m">t\in[92,137]</code> 时，所有位置都满足 <code class="m">\lfloor t/46\rfloor=2</code>。它们属于同一个动作帧，应该共享时间位置 2。</p></section>
+
+<section id="s5"><h2><span class="n">SECTION 05</span><span>Time-aligned RoPE<a class="jr" href="#g-05">05</a>：让动作第 2 帧找到语音第 2 帧</span></h2><p class="formula-purpose">动作 Query 与语音 Key 各按自己的真实时间旋转：</p><div class="formula" data-expr="\widetilde q_t=\operatorname{RoPE}(q_t,q_{pos}(t)),\qquad \widetilde k_s=\operatorname{RoPE}(K^\ell[s],s)"></div><div class="symbols"><div class="sym"><code class="m">q_t</code>当前动作 token 经训练投影得到的 Query。</div><div class="sym"><code class="m">K^\ell[s]</code>语音塔第 ℓ 层、第 s 个时间片的 Key。</div><div class="sym"><code class="m">q_{pos}(t)-s</code>RoPE 点积中真正起作用的相对时间差。</div></div>
+<figure><figcaption><span>Fig 05 · 查询动作帧 2 时能读哪些语音</span><b>strict causal mask</b></figcaption><div class="align-wrap"><div class="align-grid"><div class="cell head">动作 Query</div><div class="cell head">语音 s=0</div><div class="cell head">语音 s=1</div><div class="cell head">语音 s=2</div><div class="cell head">语音 s=3</div><div class="cell label">q=2</div><div class="cell ok">相差 2<br>可读</div><div class="cell ok">相差 1<br>可读</div><div class="cell now">相差 0<br>同一刻</div><div class="cell no">未来 +1<br>遮住</div></div></div><p class="caption">因果 mask 要求 <code class="m">s\le q_{pos}(t)</code>。RoPE 提供“相隔几帧”，mask 决定未来是否可见；两者不是一回事。</p></figure>
+<div class="note"><strong>去掉会怎样：</strong>没有 cross-attention，动作只能听不到语音；有 cross-attention 但没有时间 RoPE，则要靠内容自己猜对齐。消融中去掉 cross-RoPE，FGD 由 5.6 变 8.4，BeatAlign 由 .059 变 .064。</div></section>
+
+<section id="s6"><h2><span class="n">SECTION 06</span><span>训练预测下一个码，推理时只生成智能体槽</span></h2><p class="formula-purpose">band mask<a class="jr" href="#g-06">06</a> 后的 teacher forcing<a class="jr" href="#g-04">04</a> 交叉熵：</p><div class="formula" data-expr="\mathcal L_{CE}(\theta)=-\sum_{t\in\mathcal S}\log p_\theta(x_{t+1}\mid x_{\le t};\{H^\ell\})"></div><div class="symbols"><div class="sym"><code class="m">\theta</code>动作塔参数；语音塔冻结。</div><div class="sym"><code class="m">\mathcal S</code>每帧 18 个受监督身体码位置。</div><div class="sym"><code class="m">x_{\le t}</code>真实双人动作历史；teacher forcing 直接给模型。</div><div class="sym"><code class="m">\{H^\ell\}</code>PersonaPlex 32 层隐藏状态。</div><div class="sym"><code class="m">p_\theta</code>非法部位编号被 mask 后，正确码的概率。</div><div class="sym"><code class="m">-\log p</code>正确概率越低，损失越大。</div></div><p>辅助 voice-activity BCE 判断说话/聆听状态，总目标为 <code class="m">\mathcal L=\mathcal L_{CE}+.01\mathcal L_{VA}</code>。若正确码概率 .7、说话概率 .8 且标签为 1，则 <code class="m">-\ln(.7)=.3567</code>，voice 项 <code class="m">.01[-\ln(.8)]=.00223</code>，总计 .3589。</p>
+<div class="two"><div class="mode"><h4>Both-speaker mode</h4><p>为合成双人数据，同时采样 A 与 B 的动作槽。两个人都由模型创造。</p></div><div class="mode agent"><h4>Agent-only mode</h4><p>把摄像头观测的搭档动作抄进 A 槽，只在 B 的 18 个身体位置采样。人物标签确定性插入。</p></div></div><div class="warn"><strong>论文内部冲突：</strong>正文写 temperature 1.0、top-k 200；附录 D.2 写 temperature 1.0 且不做 top-k truncation。这里保留冲突，不替作者选答案。</div></section>
+
+<section id="s7"><h2><span class="n">SECTION 07</span><span>3435 小时数据怎样留下来</span></h2><p>Seamless Interaction 原始约 4000 小时。横屏异常、旋转、不可读视频被删除；HMR2 约 2.4% 无效帧丢弃，少于 8 个有效帧的配对也丢弃。最终训练集 57,947 对 / 3435 小时；测试集 330 对 / 约 18 小时，取每对前 20 秒评测。</p><p>hybrid prompt 由默认文字角色说明和约 10 秒声音样本组成；约 1.4% 缺少可用声音提示的配对被过滤。面部分支用 SPECTRE 提取 6D 下巴旋转 + 50D 表情；零面部帧达到 20% 的配对不进入 face-codec 子集。</p><div class="note"><strong>训练配置：</strong>AdamW，β₁=.9、β₂=.95、weight decay .1、L2 clip 1.0、lr 3e−4、有效 batch 512；64 张 H100、30k iteration。四个 part codec 各用 1 张 H100 单独训练。</div></section>
+
+<section id="s8"><h2><span class="n">SECTION 08</span><span>先懂指标，再看“看对方”带来多大差异</span></h2><p>FGD 只看智能体 22×3=66D 关节分布；Paired-FD<a class="jr" href="#g-07">07</a> 把双方拼成 132D，检查互动配对。Diversity 与 BeatAlign 要接近 GT .633 / .049，不是盲目越高越好。
+<code class="m">\Delta User=(PFD_{shuffled}-PFD_{matched})/PFD_{matched}</code> 检查随机换搭档后是否恶化。matched 7.3、+31% 对应 shuffled <code class="m">7.3\times1.31=9.563</code>。</p>
+<div class="table-wrap"><table><thead><tr><th>设置</th><th>FGD ↓</th><th>Diversity → .633</th><th>BeatAlign → .049</th><th>Paired-FD ↓</th><th>ΔUser ↑</th></tr></thead><tbody><tr><td>Audio2Photoreal</td><td>57</td><td>.395</td><td>.051</td><td>72</td><td>0%</td></tr><tr><td>DualTalk</td><td>161</td><td>.305</td><td>—</td><td>163</td><td>+.3%</td></tr><tr class="best"><td>DyaPlex</td><td>5.6</td><td>.611</td><td>.059</td><td>7.3</td><td>+31%</td></tr><tr class="caution"><td>不输入搭档动作</td><td>39</td><td>.725</td><td>.064</td><td>41</td><td>0%</td></tr><tr><td>去掉 cross-attention</td><td>41</td><td>.708</td><td>.080</td><td>44</td><td>+15%</td></tr><tr><td>去掉 cross-RoPE</td><td>8.4</td><td>.582</td><td>.064</td><td>10</td><td>+31%</td></tr></tbody></table></div><p>不看搭档后 FGD 约差 7 倍，Paired-FD 约差 5.6 倍，ΔUser 归零。这是模型确实利用具体搭档动作的核心证据。32 人偏好中，DyaPlex 对 Audio2Photoreal 为 66.3%，对 DualTalk 为 97.5%，对真实动作仍获 29.4%；最后一项不等于超过真人。</p><div class="boundary"><strong>基线边界：</strong>DualTalk 从面部回归迁移到身体任务后明显崩塌。结果支持 DyaPlex 架构，但优势幅度也受基线重训质量影响。</div></section>
+
+<section id="s9"><h2><span class="n">SECTION 09</span><span>80 毫秒预算：实时来自缩短动作历史</span></h2><p>12.5 Hz 的单帧预算是 <code class="m">1/12.5=0.08\,s=80\,ms</code>。A6000 Ada 上，论文分别报告语音塔 30 ms、decoder .8 ms、动作塔完整 4096-token context 为 173 ms；后者明显超预算。</p>
+<figure><figcaption><span>Fig 06 · Token 数必须先除以每帧 46</span><b>motion history trade-off</b></figcaption><div class="context"><div class="ctx full"><h4>完整动作上下文</h4><strong>4096 tokens</strong><p><code class="m">\lfloor4096/46\rfloor=89</code> 帧<br><code class="m">89/12.5=7.12\,s</code><br>动作塔 173 ms / frame</p></div><div class="ctx-arrow"></div><div class="ctx fast"><h4>实时配置</h4><strong>1024 tokens</strong><p><code class="m">\lfloor1024/46\rfloor=22</code> 帧<br><code class="m">22/12.5=1.76\,s</code><br>动作塔 80 ms / frame</p></div></div><p class="caption">语音上下文仍保留 7.1 秒；砍掉的是 motion self-attention 历史。组件时间没有说明并行与 I/O，不能简单相加冒充端到端 latency。</p></figure></section>
+
+<section id="s10"><h2><span class="n">SECTION 10</span><span>DyaPlex 与 FacePlex：同用 PersonaPlex，不是同一模型两个版本</span></h2><figure><figcaption><span>Fig 07 · 身体反应 vs 面部同步</span><b>different objectives</b></figcaption><div class="compare"><div class="paper"><h4>DyaPlex</h4><ul><li>输出 SMPL-X 全身动作</li><li>RVQ 离散码自回归</li><li>显式输入搭档身体动作</li><li>语音严格因果，不看未来</li><li>主要瓶颈：每帧顺序采 22 码</li></ul></div><div class="paper face"><h4>FacePlex</h4><ul><li>输出 108-D FLAME 面部参数</li><li>Rolling Flow Matching</li><li>没有显式搭档脸部动作输入</li><li>暂存已生成音频，约 240 ms look-ahead</li><li>主要代价：固定输出缓冲</li></ul></div></div><p class="caption">两篇来自不同团队。共同点是 PersonaPlex 和约 80 ms 节拍；表示、条件、生成算法与延迟策略都不同。</p></figure></section>
+
+<section id="s11"><h2><span class="n">SECTION 11</span><span>局限与判断：强架构论文，不是完整数字人产品报告</span></h2><div class="limits"><div class="limit"><b>01 · BODY ONLY</b><strong>主实验没有脸</strong><p>face codec 仅有定性演示，不能从身体指标推出表情质量。</p></div><div class="limit"><b>02 · TWO PEOPLE</b><strong>只支持双人</strong><p>46-token 编排与同帧顺序都围绕 A/B。</p></div><div class="limit"><b>03 · LATENCY</b><strong>没有端到端测量</strong><p>组件 runtime 不含完整调度、I/O 与机器人执行。</p></div><div class="limit"><b>04 · CONTEXT</b><strong>实时要缩历史</strong><p>动作上下文从 7.1 秒降到 1.76 秒。</p></div><div class="limit"><b>05 · SEQUENTIAL</b><strong>22 码逐个采样</strong><p>论文建议未来改成 chunk/depth decoder。</p></div><div class="limit"><b>06 · DEPLOYMENT</b><strong>未做真实机器人长期实验</strong><p>测试是离线 Seamless 数据的前 20 秒。</p></div></div><p class="lead"><strong>我的判断：</strong>最可信的贡献是交错双人序列 + 真实时间 RoPE + agent-only 因果采样形成闭环；partner ablation 证明对方动作不是装饰。最该降温的是“real-time full character”：它依赖较短 motion context，主结果仍是双人身体骨架。</p></section>
+
+<section id="gloss" class="gloss"><h2>术语直达 · 点编号看人话解释</h2><ol><li id="g-01"><span class="term">全双工</span>：智能体输出期间仍接收对方输入，新输入可改变后续语音与动作；不只是首包低延迟。详见<a href="../concepts/full-duplex-multimodal-interaction.html">概念页</a>。</li><li id="g-02"><span class="term">SMPL-X</span>：用关节姿态、表情和形体参数驱动通用三维人体的参数模型；不是像素视频。</li><li id="g-03"><span class="term">RVQ-VAE</span>：多个残差量化层把连续动作压成离散编号，再由解码器还原。详见<a href="../concepts/rvq-codec.html">概念页</a>。</li><li id="g-04"><span class="term">teacher forcing</span>：训练预测下一 token 时，前缀使用真实 token，而不是模型刚才可能预测错的 token。</li><li id="g-05"><span class="term">time-aligned RoPE</span>：同一动作帧的 46 个 token 共享真实帧编号，与同频语音按相对时间做 attention。详见<a href="../concepts/time-aligned-speech-motion-rope.html">概念页</a>。</li><li id="g-06"><span class="term">band mask</span>：上身、手、下身、脸各只能在自己的 1024 编号区间选码；其他 logits 在 softmax 前设为负无穷。</li><li id="g-07"><span class="term">Paired-FD</span>：把双方关节拼在一起比较联合动作分布，检查互动而不只是单人自然度。</li></ol></section>
+<section class="sources"><span class="label">Sources · accessed 2026-08-11</span><ul><li><a href="https://arxiv.org/abs/2606.03874">DyaPlex · arXiv</a></li><li><a href="https://research.nvidia.com/labs/amri/projects/DyaPlex/">DyaPlex · NVIDIA 官方项目页</a></li></ul></section><footer class="colophon"><span>paper fact / numerical teaching example / critique 已分层</span><span><a href="faceplex.html">FacePlex →</a> · <a href="duplexomni.html">DuplexOmni</a></span></footer>
+</main><script>document.addEventListener("DOMContentLoaded",function(){document.querySelectorAll("[data-expr]").forEach(function(el){if(window.katex)katex.render(el.dataset.expr,el,{displayMode:true,throwOnError:false});});});</script><!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!document.getElementById(id))return;
+      e.preventDefault();
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body></html>
