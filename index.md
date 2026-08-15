@@ -30,6 +30,8 @@
 - [DMD · 一步分布匹配蒸馏](wiki/papers/dmd.md) — 不逐步抄老师轨迹：冻结 real score 拉向目标、动态 fake score 防样本挤成一团、离线 LPIPS 回归守住粗结构；从 KL→两个 score→加噪→伪损失/stopgrad 完整推导，原始论文严格是 1 NFE，不与后来的 4/8 步 DMD 家族混写
 - [DMD2 · 去掉大规模配对稳定器](wiki/papers/dmd2.md) — 保留 DMD 双 score，但让 fake-score 以 5:1 频率追上移动的学生分布；再用真实图 GAN 补老师近似误差，用 backward simulation 让多步训练看到学生推理时真正产生的中间 latent。ImageNet 一步 FID 1.28，SDXL 四步追平 100-NFE 老师；同时保留 SDXL 一步仍用 10K 对短预热的边界
 - [Data-Forcing Distillation · 让 DMD 的老师重新看到真实视频](wiki/papers/data-forcing-distillation.md) — DMD2 四步学生已会生成后，teacher 按 50% 概率改在同条件真实视频上算 score；teacher score discrepancy 与原项精确抵消，最终只需一行输入替换。含反向 KL 两格手算、三网络总览、共享噪声、伪目标更新、成立条件、ViPE 数据筛选、T2V/I2V/AR 证据和全部负消融。
+- [rCM · 用长跳纠偏修好连续时间一致性](wiki/papers/rcm.md) — 14B 视频扩散蒸到 1–4 步：sCM 沿老师轨迹学局部切线（JVP 算、归一化 MSE 训）保多样性，DMD 隔几步长跳检查成品分布纠累积误差；含总导数=0 的完整推导与玩具对账、TrigFlow 失稳分析、FlashAttention-2 JVP kernel 与 14B 分块流水线
+- [Causal-rCM · 让少步视频模型学会连载](wiki/papers/causal-rcm.md) — rCM 续作：正反散度互补搬进自回归视频——teacher-forcing CM 照老师学保覆盖，self-forcing DMD 在自己 rollout 上改治曝光偏差，三段串行；TF-sCM 首个实现（custom-mask FA2 JVP kernel，10× 收敛），2 步因果 1.3B VBench 84.63 超 50 步双向 14B；初始化消融揭穿 VBench 奖励过平滑；Cosmos 3 改因果 supertoken 做动作可控世界模型
 - [SANA-Video 2.0 · 三层速写，一层精查](wiki/papers/sana-video-2.md) — NVIDIA 5B/14B 高效视频 DiT：3 层 gated linear + 1 层完整 softmax，Block AttnRes 每 8 层存摘要并让每个 token 按需翻旧块；完整拆解线性状态秩瓶颈、3:1 比例消融、逐符号路由与数字例、flow/TQD/Self-Flow、DPO/ReFL、十桶验证、VBench、Sol-Engine 与 QAT 口径。
 - [SenseFlow · DMD2 扩到 SD 3.5 / FLUX](wiki/papers/senseflow.md) — 大模型上 fake 网络即使 20:1 追赶仍会振荡：IDA 每次把 fake 参数向学生挪 3%，ISG 用老师前半段+冻结学生后半段把整段信息压进四个 anchor，VFM 判别器用冻结 DINOv2/CLIP 补语义；含完整 min-max 分解、数字例、代码差异、消融与质量-覆盖取舍
 - [Generative Modeling via Drifting](wiki/papers/drifting-models.md) — 完整拆解一步生成：pushforward、核吸引/排斥、反对称的正确边界、stopgrad 梯度、特征空间、训练时 CFG、DiT/队列配方、ImageNet 与机器人消融

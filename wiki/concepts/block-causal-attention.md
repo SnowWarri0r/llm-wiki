@@ -1,8 +1,8 @@
 ---
 name: block-causal-attention
 type: concept
-sources: [wan-streamer-v01, wan-streamer-v03, interactive-avatar]
-updated: 2026-08-12
+sources: [wan-streamer-v01, wan-streamer-v03, interactive-avatar, causal-rcm]
+updated: 2026-08-14
 ---
 
 # Block-Causal Attention · 块因果注意力

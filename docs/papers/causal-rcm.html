@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Causal-rCM · 让少步视频模型学会连载</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..800&family=Newsreader:opsz,wght@6..72,350..700&family=Noto+Serif+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+<style>
+:root{--paper:#f2eee1;--card:#faf7ea;--ink:#171719;--ink2:#3d3937;--muted:#756c60;--rule:#b9ae98;--navy:#163a58;--navy2:#d9e6eb;--rust:#a83b25;--rust2:#f4d8ce;--teal:#0e6e78;--teal2:#cde8e9;--gold:#bd7a00;--gold2:#f4dfaa;--green:#3f7354;--green2:#d7e7d8;--accent:#0e6e78}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:18px/1.76 'Newsreader','Noto Serif SC',serif;-webkit-font-smoothing:antialiased}body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.32;background-image:linear-gradient(rgba(14,110,120,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(14,110,120,.05) 1px,transparent 1px);background-size:32px 32px}.page{position:relative;max-width:1180px;margin:auto;padding:58px 38px 120px}.mast{display:flex;justify-content:space-between;border-top:4px double var(--ink);border-bottom:1px solid var(--rule);padding:12px 0;color:var(--muted);font:600 11px/1.5 'JetBrains Mono';letter-spacing:2px;text-transform:uppercase}.hero{padding:58px 0 32px}.issue{display:flex;gap:14px;align-items:center;color:var(--teal);font:700 11px/1.5 'JetBrains Mono';letter-spacing:3px;text-transform:uppercase}.issue:after{content:"";height:1px;background:var(--rule);flex:1}.hero h1{margin:18px 0 12px;font:750 clamp(50px,8vw,100px)/.9 'Fraunces','Noto Serif SC';letter-spacing:-.05em}.hero h1 em{color:var(--teal);font-weight:600}.byline{color:var(--muted);font:600 12px/1.5 'JetBrains Mono';letter-spacing:1px}.dek{max-width:900px;font:italic 400 clamp(21px,2.5vw,29px)/1.43 'Fraunces','Noto Serif SC';color:var(--ink2)}.tldr,.note,.warning,.truth{margin:24px 0;padding:18px 22px;background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--navy)}.warning{border-left-color:var(--rust);background:#fff0e8}.truth{border-left-color:var(--green);background:#edf5ea}.label{display:block;margin-bottom:5px;color:var(--navy);font:700 10px/1.5 'JetBrains Mono';letter-spacing:2px;text-transform:uppercase}.warning .label{color:var(--rust)}.truth .label{color:var(--green)}nav.toc{position:sticky;top:0;z-index:10;display:flex;gap:7px;overflow-x:auto;margin:0 -14px 50px;padding:10px 14px;background:rgba(242,238,225,.96);border-block:1px solid var(--rule);scrollbar-width:none}nav.toc a{flex:none;padding:6px 9px;border:1px solid var(--rule);color:var(--navy);background:var(--card);font:600 10px/1.2 'JetBrains Mono';text-decoration:none}nav.toc a:hover,nav.toc a:focus-visible{background:var(--teal);color:#fff;outline:none}h2{display:flex;gap:16px;align-items:baseline;margin:76px 0 20px;font:700 clamp(30px,4vw,43px)/1.1 'Fraunces','Noto Serif SC';letter-spacing:-.025em}h2 .n{min-width:55px;color:var(--teal);font:700 11px/1.4 'JetBrains Mono';letter-spacing:2px}h3{margin:34px 0 10px;font:700 23px/1.3 'Fraunces','Noto Serif SC'}p{margin:12px 0}a{color:#0b5761;text-decoration-thickness:1px;text-underline-offset:3px}strong{font-weight:700}.lead{font-size:22px;line-height:1.58;color:var(--ink2)}code{font:500 .88em/1.5 'JetBrains Mono';background:#fffaf0;border:1px solid var(--rule);border-radius:3px;padding:1px 5px}.jr{vertical-align:super;margin:0 2px;padding:1px 5px;border:1px solid var(--gold);border-radius:999px;background:var(--gold2);color:#563700;text-decoration:none;font:700 9px/1.2 'JetBrains Mono'}.jr:hover,.jr:focus-visible{background:#614000;color:#fff;outline:2px solid var(--gold);outline-offset:2px}.grid2,.grid3,.grid4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid4{grid-template-columns:repeat(4,minmax(0,1fr))}.card{min-width:0;padding:20px;background:var(--card);border:1px solid var(--rule);box-shadow:5px 5px 0 rgba(14,110,120,.07)}.card h3{margin:8px 0 5px}.card p{font-size:16px;line-height:1.58}.tag{display:inline-block;padding:3px 8px;background:var(--navy2);color:var(--navy);font:700 10px/1.4 'JetBrains Mono';letter-spacing:1px;text-transform:uppercase}.tag.rust{background:var(--rust2);color:#7b291a}.tag.teal{background:var(--teal2);color:#075662}.tag.gold{background:var(--gold2);color:#634000}.tag.green{background:var(--green2);color:#285438}figure{margin:38px 0;padding:28px;background:rgba(250,247,234,.85);border:1px solid var(--rule);box-shadow:8px 8px 0 rgba(14,110,120,.08);overflow:hidden}figcaption{display:flex;justify-content:space-between;gap:16px;margin-bottom:22px;padding-bottom:12px;border-bottom:1px dashed var(--rule);color:var(--muted);font:600 11px/1.4 'JetBrains Mono';letter-spacing:1.3px;text-transform:uppercase}figcaption b{color:var(--rust)}.formula{margin:18px 0;padding:21px 16px;overflow-x:auto;text-align:center;background:#12333a;color:#fff;border-left:6px solid var(--gold);font-size:1.12em}.formula .katex{color:#fff}.vars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0}.vars>div{min-width:0;padding:10px 12px;background:var(--card);border:1px solid var(--rule);font-size:14px}.vars code{display:block;margin-bottom:4px;color:#0b5761}.calc{counter-reset:step;display:grid;gap:8px;margin:18px 0}.step{position:relative;padding:13px 14px 13px 56px;background:#fff;border:1px solid var(--rule);font-size:15px}.step:before{counter-increment:step;content:counter(step,decimal-leading-zero);position:absolute;left:16px;top:14px;color:var(--teal);font:700 11px/1.5 'JetBrains Mono'}.step b{display:block;color:var(--navy)}.rollout{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:28px;align-items:stretch}.roll{position:relative;padding:14px;background:#fff;border:2px solid var(--navy);text-align:center}.roll:not(:last-child):after{content:"→";position:absolute;right:-27px;top:42%;z-index:2;color:var(--teal);font:700 21px/1 'JetBrains Mono'}.roll.final{border-color:var(--rust);background:var(--rust2)}.roll b{display:block}.roll small{color:var(--muted);font:700 9px/1.5 'JetBrains Mono';letter-spacing:1px}.roll p{font-size:14px;line-height:1.5}.scroll{overflow-x:auto;margin:18px 0;border:1px solid var(--rule)}table{width:100%;border-collapse:collapse;background:var(--card);font-size:14px;white-space:nowrap}th,td{padding:10px 12px;border-bottom:1px solid var(--rule);text-align:right}th:first-child,td:first-child{text-align:left}thead th{position:sticky;top:0;background:var(--navy);color:#fff;font:600 10px/1.4 'JetBrains Mono';letter-spacing:.7px}.win{background:var(--green2);color:#1f5237;font-weight:700}.lose{background:var(--rust2);color:#7c2b1d}.same{margin-top:14px;text-align:center;color:var(--green);font-weight:700}.gloss{margin-top:76px;padding-top:30px;border-top:3px double var(--ink)}.gloss ol{list-style:none;padding:0;counter-reset:g}.gloss li{position:relative;padding:13px 10px 13px 48px;border-bottom:1px dashed var(--rule);font-size:15px}.gloss li:before{counter-increment:g;content:counter(g,decimal-leading-zero);position:absolute;left:7px;color:var(--teal);font:700 10px/1.8 'JetBrains Mono'}.gloss .term{font-weight:700;color:var(--navy)}.sources{margin-top:54px;padding:22px;background:var(--card);border:1px solid var(--rule);font-size:14px}.sources li{margin:7px 0}.reveal{opacity:0;transform:translateY(8px);transition:.55s ease}.play .reveal{opacity:1;transform:none}.d2{transition-delay:.10s}.d3{transition-delay:.20s}.d4{transition-delay:.30s}@media(max-width:850px){.page{padding:34px 18px 90px}.grid3,.grid4{grid-template-columns:1fr 1fr}.vars{grid-template-columns:1fr}.rollout{grid-template-columns:1fr}.roll:not(:last-child):after{content:"↓";right:auto;left:50%;top:auto;bottom:-26px}figcaption{display:block}figcaption b{display:block;margin-top:5px}}@media(max-width:520px){body{font-size:17px}.page{padding-inline:12px}.hero h1{font-size:46px}figure{padding:18px 12px}.grid2,.grid3,.grid4{grid-template-columns:1fr}.mast .r{display:none}}
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+.katex span{display:inline}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · causal-rcm</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page">
+<div class="mast"><span>MODEL DISTILLATION · FIELD NOTES</span><span class="r">ARXIV 2606.25473 · NVLABS/RCM</span></div>
+<header class="hero">
+  <div class="issue">从「整段一锤子」到「逐块连载」</div>
+  <h1>Causal-rCM<br><em>学会连载</em></h1>
+  <p class="byline">Kaiwen Zheng et al. · Tsinghua × UT Austin × NVIDIA · arXiv v1 (2026-06)</p>
+  <p class="dek">rCM 蒸出的少步模型是整段一锤子买卖：81 帧一起去噪，出片前一帧也看不到。想边生成边播、被手柄和方向盘实时操控，模型必须变成因果的——rCM 那套「正反散度互补」怎么原样搬过去？这就是本页要回答的一个问题。</p>
+  <div class="tldr"><span class="label">先记这一句</span>把模型当成连载作家：<strong>teacher-forcing 是拿老师写好的前文练接龙</strong>（离线、照着学、保多样性——对应 rCM 的 CM 项），<strong>self-forcing 是自己从头连载、编辑盯着改</strong>（在线、治写歪、但编辑口味会让作品趋同——对应 DMD 项）。Causal-rCM 三段串行：先学接龙 → 练到两笔成章 → 真连载给编辑盯。2 步因果 Wan2.1-1.3B 冲到 VBench 84.63，超过 50 步的双向 14B 老师。</div>
+</header>
+<nav class="toc"><a href="#misread">00 先排雷</a><a href="#why">01 为什么因果</a><a href="#paradigms">02 三种范式</a><a href="#mapping">03 哲学移植</a><a href="#pipeline">04 三段流水线</a><a href="#packed">05 packed TF</a><a href="#tfscm">06 TF-sCM</a><a href="#sfdmd">07 SF-DMD</a><a href="#tricks">08 两个加速</a><a href="#infra">09 基建</a><a href="#results">10 实验</a><a href="#world">11 世界模型</a><a href="#limits">12 边界</a><a href="#verdict">13 判断</a></nav>
+
+<section id="misread">
+<h2><span class="n">§ 00</span>先排除六种误读</h2>
+<div class="grid3">
+  <div class="card"><span class="tag teal">名字</span><h3>因果 = attention 方向</h3><p>这里的 causal 指时间方向的注意力掩码（后面的帧看不见未来），和因果推断（causal inference）没有任何关系。</p></div>
+  <div class="card"><span class="tag">与 rCM 的关系</span><h3>哲学同款，组合方式不同</h3><p>rCM 把 CM 和 DMD <strong>联合训练</strong>；Causal-rCM 改成<strong>三段串行</strong>——论文试过联合，因果老师与双向老师的分布差距会压低上限。原理详见 <a href="rcm.html">rCM 页</a>。</p></div>
+  <div class="card"><span class="tag gold">粒度</span><h3>帧间自回归，帧内仍是扩散</h3><p>自回归发生在帧 / chunk 之间；每个 chunk 内部还是少步扩散去噪。它不是逐像素的 GPT。</p></div>
+  <div class="card"><span class="tag rust">分数</span><h3>VBench 会说谎</h3><p>初始化消融里 DF/TF 分数最高（≈85），但画面过平滑、水面头发树叶全糊——论文自己贴图打脸榜单，选型要看图。</p></div>
+  <div class="card"><span class="tag green">数据</span><h3>训练只用合成数据</h3><p>全部训练视频由双向 Wan2.1-14B 老师以 100 步 Euler 采样生成，没有用任何真实视频数据。</p></div>
+  <div class="card"><span class="tag">交付物</span><h3>是配方不是单一模型</h3><p>论文自称 open recipe：算法（TF-sCM 首个实现）+ 基建（custom-mask JVP kernel、五组兼容性设计）一起开源在 NVlabs/rcm。</p></div>
+</div>
+</section>
+
+<section id="why">
+<h2><span class="n">§ 01</span>为什么必须因果：一锤子买卖播不了流</h2>
+<p class="lead">双向视频扩散像雕一整块石料：81 帧互相看、一起从噪声里浮现，任何一帧都要等全部完工。流式播放和交互控制要的是连载：写完一块就能播一块，后面的块还能听指挥。</p>
+<figure id="fig-stream">
+<figcaption><span>Fig 01 · 双向一锤子 vs 因果连载</span><b>首块延迟从「全片」缩到「一块」</b></figcaption>
+<svg viewBox="0 0 920 330" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
+<defs><marker id="mA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#0e6e78"/></marker></defs>
+<text x="230" y="30" text-anchor="middle" font-size="15" font-weight="700" fill="#163a58">双向 · 整段一起去噪</text>
+<rect x="60" y="52" width="340" height="64" rx="6" fill="#faf7ea" stroke="#163a58" stroke-width="2"/>
+<text x="230" y="80" text-anchor="middle" font-size="13.5">21 个 latent 帧互相全都看得见</text>
+<text x="230" y="100" text-anchor="middle" font-size="12" fill="#756c60">50 步 × 2（CFG）一起去噪</text>
+<line x1="230" y1="120" x2="230" y2="146" stroke="#a83b25" stroke-width="1.6" marker-end="url(#mA)"/>
+<rect x="110" y="150" width="240" height="42" rx="5" fill="#f4d8ce" stroke="#a83b25" stroke-width="1.5"/>
+<text x="230" y="176" text-anchor="middle" font-size="13" fill="#7b291a">出第一帧前要等全片算完</text>
+<text x="230" y="222" text-anchor="middle" font-size="12.5" fill="#756c60">Wan2.1-14B：0.18 帧/秒 · 无法交互</text>
+<line x1="460" y1="18" x2="460" y2="310" stroke="#b9ae98" stroke-dasharray="3 6"/>
+<text x="690" y="30" text-anchor="middle" font-size="15" font-weight="700" fill="#0e6e78">因果 · 逐 chunk 连载</text>
+<rect x="500" y="52" width="110" height="64" rx="6" fill="#cde8e9" stroke="#0e6e78" stroke-width="2"/>
+<text x="555" y="80" text-anchor="middle" font-size="13">chunk 1</text><text x="555" y="99" text-anchor="middle" font-size="11.5" fill="#756c60">少步去噪</text>
+<rect x="646" y="52" width="110" height="64" rx="6" fill="#cde8e9" stroke="#0e6e78" stroke-width="2"/>
+<text x="701" y="80" text-anchor="middle" font-size="13">chunk 2</text><text x="701" y="99" text-anchor="middle" font-size="11.5" fill="#756c60">看 1 的 KV</text>
+<rect x="792" y="52" width="110" height="64" rx="6" fill="#cde8e9" stroke="#0e6e78" stroke-width="2"/>
+<text x="847" y="80" text-anchor="middle" font-size="13">chunk 3</text><text x="847" y="99" text-anchor="middle" font-size="11.5" fill="#756c60">看 1、2 的 KV</text>
+<line x1="612" y1="84" x2="642" y2="84" stroke="#0e6e78" stroke-width="1.7" marker-end="url(#mA)"/>
+<line x1="758" y1="84" x2="788" y2="84" stroke="#0e6e78" stroke-width="1.7" marker-end="url(#mA)"/>
+<line x1="555" y1="120" x2="555" y2="146" stroke="#3f7354" stroke-width="1.6" marker-end="url(#mA)"/>
+<rect x="495" y="150" width="120" height="42" rx="5" fill="#d7e7d8" stroke="#3f7354" stroke-width="1.5"/>
+<text x="555" y="176" text-anchor="middle" font-size="13" fill="#1f5237">立即可播 ▶</text>
+<text x="700" y="222" text-anchor="middle" font-size="12.5" fill="#756c60">2 步因果 1.3B：15.9–25.6 帧/秒 · 下一块可听动作指挥</text>
+<rect x="500" y="248" width="402" height="52" rx="5" fill="#faf7ea" stroke="#b9ae98"/>
+<text x="701" y="270" text-anchor="middle" font-size="12.5">历史块的 K/V 存进 KV cache，新块只算自己的注意力</text>
+<text x="701" y="289" text-anchor="middle" font-size="11.5" fill="#756c60">代价：历史一旦生成就冻结——写歪的前文会一直影响后文</text>
+</svg>
+</figure>
+<p>自回归<a class="jr" href="#g-01">01</a>视频扩散把生成沿时间轴切开：给定按帧或按 chunk 划分的 latent 序列，模型逐块生成、每块条件在前面所有块上，块内用扩散去噪。已经生成的块把 K/V 存进 KV cache<a class="jr" href="#g-02">02</a>，新块只需算自己的注意力。这带来两个能力：<strong>流式</strong>（第一块算完立即播放）和<strong>交互</strong>（下一块生成前可以插入动作条件）。</p>
+<p>本页实验用两种块粒度，后面所有表格都分这两栏读：<strong>frame-wise（记 c1-1）</strong>——首块 1 个 latent 帧、以后每块 1 帧；<strong>chunk-wise（记 c3-3）</strong>——首块 3 帧、以后每块 3 帧。480p、81 个 RGB 帧经 VAE 时间压缩后是 21 个 latent 帧。</p>
+<div class="calc"><div class="step"><b>延迟账</b><span>N 步去噪的因果模型每块实际花 <strong>N+1</strong> 次前向（NFE<a class="jr" href="#g-03">03</a>）：N 步去噪之后，还要把生成好的干净块再喂一遍网络、把它的干净 K/V 写进 cache（§ 08 的 noisy context 就是砍这一笔的）。例：2 步模型每块 3 NFE、4 步模型每块 5 NFE。</span></div><div class="step"><b>体感数字</b><span>双向 Wan2.1-14B 吞吐 0.18 FPS（H100、含 VAE 解码）；本页的 2 步因果 1.3B 到 12.2–22.2 FPS，第二块延迟 0.31–0.49 秒——从「等一部片」变成「等半秒」。</span></div></div>
+</section>
+
+<section id="paradigms">
+<h2><span class="n">§ 02</span>三种因果训练范式：接龙、各写各的、自己连载</h2>
+<p class="lead">因果模型怎么训，业内有三套路子。用连载作家打比方一次看清：它们的区别只在「练笔时，前文是谁写的、干不干净」。</p>
+<figure id="fig-paradigms">
+<figcaption><span>Fig 02 · TF / DF / SF 三范式</span><b>区别全在「前文从哪来」</b></figcaption>
+<svg viewBox="0 0 920 360" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
+<text x="160" y="28" text-anchor="middle" font-size="14.5" font-weight="700" fill="#163a58">teacher-forcing（TF）</text>
+<rect x="40" y="44" width="70" height="54" rx="5" fill="#d7e7d8" stroke="#3f7354" stroke-width="1.6"/><text x="75" y="67" text-anchor="middle" font-size="12">前文 1</text><text x="75" y="86" text-anchor="middle" font-size="10.5" fill="#285438">真答案·干净</text>
+<rect x="122" y="44" width="70" height="54" rx="5" fill="#d7e7d8" stroke="#3f7354" stroke-width="1.6"/><text x="157" y="67" text-anchor="middle" font-size="12">前文 2</text><text x="157" y="86" text-anchor="middle" font-size="10.5" fill="#285438">真答案·干净</text>
+<rect x="204" y="44" width="76" height="54" rx="5" fill="#f4dfaa" stroke="#bd7a00" stroke-width="1.8"/><text x="242" y="67" text-anchor="middle" font-size="12">当前块</text><text x="242" y="86" text-anchor="middle" font-size="10.5" fill="#634000">带噪·练它</text>
+<text x="160" y="126" text-anchor="middle" font-size="12" fill="#756c60">全块共用一个噪声时刻 t</text>
+<text x="160" y="150" text-anchor="middle" font-size="12" fill="#a83b25">离线、稳；但从没见过自己写歪的前文</text>
+<text x="460" y="28" text-anchor="middle" font-size="14.5" font-weight="700" fill="#163a58">diffusion-forcing（DF）</text>
+<rect x="340" y="44" width="70" height="54" rx="5" fill="#f4dfaa" stroke="#bd7a00" stroke-width="1.6"/><text x="375" y="67" text-anchor="middle" font-size="12">块 1</text><text x="375" y="86" text-anchor="middle" font-size="10.5" fill="#634000">噪声 t₁</text>
+<rect x="422" y="44" width="70" height="54" rx="5" fill="#f4dfaa" stroke="#bd7a00" stroke-width="1.6"/><text x="457" y="67" text-anchor="middle" font-size="12">块 2</text><text x="457" y="86" text-anchor="middle" font-size="10.5" fill="#634000">噪声 t₂</text>
+<rect x="504" y="44" width="70" height="54" rx="5" fill="#f4dfaa" stroke="#bd7a00" stroke-width="1.6"/><text x="539" y="67" text-anchor="middle" font-size="12">块 3</text><text x="539" y="86" text-anchor="middle" font-size="10.5" fill="#634000">噪声 t₃</text>
+<text x="460" y="126" text-anchor="middle" font-size="12" fill="#756c60">每块独立抽噪声等级 · 块间因果 mask</text>
+<text x="460" y="150" text-anchor="middle" font-size="12" fill="#a83b25">训练灵活；但同样没治曝光偏差</text>
+<text x="762" y="28" text-anchor="middle" font-size="14.5" font-weight="700" fill="#0e6e78">self-forcing（SF）</text>
+<rect x="642" y="44" width="70" height="54" rx="5" fill="#cde8e9" stroke="#0e6e78" stroke-width="1.6"/><text x="677" y="67" text-anchor="middle" font-size="12">前文 1</text><text x="677" y="86" text-anchor="middle" font-size="10.5" fill="#075662">自己写的</text>
+<rect x="724" y="44" width="70" height="54" rx="5" fill="#cde8e9" stroke="#0e6e78" stroke-width="1.6"/><text x="759" y="67" text-anchor="middle" font-size="12">前文 2</text><text x="759" y="86" text-anchor="middle" font-size="10.5" fill="#075662">自己写的</text>
+<rect x="806" y="44" width="76" height="54" rx="5" fill="#f4dfaa" stroke="#bd7a00" stroke-width="1.8"/><text x="844" y="67" text-anchor="middle" font-size="12">当前块</text><text x="844" y="86" text-anchor="middle" font-size="10.5" fill="#634000">正在生成</text>
+<text x="762" y="126" text-anchor="middle" font-size="12" fill="#756c60">训练时就按推理方式 rollout（带 KV cache）</text>
+<text x="762" y="150" text-anchor="middle" font-size="12" fill="#a83b25">治曝光偏差；但要配 DMD/GAN，敏感又易坍缩</text>
+<rect x="60" y="192" width="800" height="140" rx="6" fill="#faf7ea" stroke="#b9ae98"/>
+<text x="460" y="222" text-anchor="middle" font-size="13.5" font-weight="700" fill="#163a58">曝光偏差（exposure bias）：TF / DF 的死穴</text>
+<text x="460" y="252" text-anchor="middle" font-size="12.5">练笔时前文永远是「标准答案」，真连载时前文全是自己写的——</text>
+<text x="460" y="274" text-anchor="middle" font-size="12.5">第 3 块的小瑕疵进了第 4 块的上下文，第 4 块跟着歪，误差滚雪球，画质随时间劣化。</text>
+<text x="460" y="304" text-anchor="middle" font-size="12.5" fill="#0e6e78">SF 的解法：训练时就吃自己生成的前文（on-policy），训练与推理见到的世界一致。</text>
+</svg>
+</figure>
+<p><strong>teacher-forcing（TF）</strong><a class="jr" href="#g-04">04</a>：预测当前带噪块，注意力看到的历史是<strong>干净的真答案</strong>，全部块共用同一个噪声时刻。<strong>diffusion-forcing（DF）</strong><a class="jr" href="#g-05">05</a>：每块独立抽自己的噪声等级，在块因果 mask 下一起训——历史是「别人的、但带噪」。两者都是离线范式，都有曝光偏差<a class="jr" href="#g-06">06</a>。<strong>self-forcing（SF）</strong><a class="jr" href="#g-07">07</a>：训练时直接模拟推理，逐块 rollout、KV cache 全套照跑，历史是<strong>自己生成的</strong>——曝光偏差从根上消失。</p>
+<div class="warning"><span class="label">SF 不是免费午餐</span>SF 只解决「前文从哪来」，它本身不提供训练信号——要配 DMD<a class="jr" href="#g-08">08</a> 或 GAN 损失才能训。而这两者都是反向 KL 一族：在 student 自己生成的样本上优化，<strong>对初始化敏感、容易模式坍缩</strong>。所以现有系统各自发明了五花八门的初始化（ODE-pair 回归、DF 因果适配、TF/DF 混合……），但「哪种初始化最好」在这篇之前没人系统比过。</div>
+</section>
+
+<section id="mapping">
+<h2><span class="n">§ 03</span>rCM 哲学的移植：一张对应表就说完</h2>
+<p class="lead"><a href="rcm.html">rCM</a> 的核心洞察是蒸馏目标层面的正反散度互补：CM 沿老师轨迹学、保轨迹保覆盖（正向散度），DMD 在自己生成的样本上改、提质量（反向散度）。Causal-rCM 发现：因果训练范式层面存在一模一样的一对。</p>
+<figure id="fig-mapping">
+<figcaption><span>Fig 03 · 两层互补的对应关系</span><b>rCM 的洞察在因果世界有一对天然对应物</b></figcaption>
+<svg viewBox="0 0 920 300" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
+<defs><marker id="mB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#756c60"/></marker></defs>
+<text x="250" y="30" text-anchor="middle" font-size="14" font-weight="700" fill="#3f7354">正向散度 · 照着学 · 保覆盖</text>
+<text x="670" y="30" text-anchor="middle" font-size="14" font-weight="700" fill="#a83b25">反向散度 · 按成品改 · 提质量</text>
+<rect x="120" y="48" width="260" height="66" rx="6" fill="#d7e7d8" stroke="#3f7354" stroke-width="1.8"/>
+<text x="250" y="76" text-anchor="middle" font-size="13.5" font-weight="700">rCM：CM 损失</text>
+<text x="250" y="98" text-anchor="middle" font-size="12" fill="#285438">在老师轨迹 / 真数据上，离线</text>
+<rect x="540" y="48" width="260" height="66" rx="6" fill="#f4d8ce" stroke="#a83b25" stroke-width="1.8"/>
+<text x="670" y="76" text-anchor="middle" font-size="13.5" font-weight="700">rCM：DMD 损失</text>
+<text x="670" y="98" text-anchor="middle" font-size="12" fill="#7b291a">在 student 自己生成的样本上，on-policy</text>
+<line x1="250" y1="120" x2="250" y2="152" stroke="#756c60" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#mB)"/>
+<line x1="670" y1="120" x2="670" y2="152" stroke="#756c60" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#mB)"/>
+<text x="460" y="140" text-anchor="middle" font-size="12.5" fill="#756c60">同一哲学，降到因果训练范式层面</text>
+<rect x="120" y="158" width="260" height="66" rx="6" fill="#d7e7d8" stroke="#3f7354" stroke-width="1.8"/>
+<text x="250" y="186" text-anchor="middle" font-size="13.5" font-weight="700">Causal-rCM：TF-CM</text>
+<text x="250" y="208" text-anchor="middle" font-size="12" fill="#285438">干净因果上下文 + 老师轨迹，离线</text>
+<rect x="540" y="158" width="260" height="66" rx="6" fill="#f4d8ce" stroke="#a83b25" stroke-width="1.8"/>
+<text x="670" y="186" text-anchor="middle" font-size="13.5" font-weight="700">Causal-rCM：SF-DMD</text>
+<text x="670" y="208" text-anchor="middle" font-size="12" fill="#7b291a">自回归 rollout 的成品上，on-policy</text>
+<rect x="120" y="248" width="680" height="38" rx="5" fill="#faf7ea" stroke="#b9ae98"/>
+<text x="460" y="272" text-anchor="middle" font-size="12.5">分工：TF-CM 给 SF 一个带因果结构、模式覆盖完整的起点；SF-DMD 消训练-推理差距</text>
+</svg>
+</figure>
+<p>这不是孤例。论文列了一整族「正向打底、反向精修」的近亲：DDO（真数据扩散损失 + 自生成负样本的反似然）、DiffusionNFT（前向过程目标 + 奖励排序样本，25× 效率）、DDRL（前向 KL 正则 + GRPO 式奖励优化）、rCM（CM + DMD）。共同规律：<strong>正向/离线目标信号稳、保模式覆盖；反向/on-policy 目标直接改生成分布、但依赖初始化</strong>。Causal-rCM 是这条规律在自回归蒸馏上的实例化。</p>
+<div class="note"><span class="label">与最近邻工作的差别</span>用 TF-CM 给 SF 初始化不是首创——APT2 已经用 TF-dCM 初始化 SF-GAN，同期的 Causal Forcing++ 也组合了 TF-dCM → SF-DMD。这篇的增量：(1) 统一散度视角；(2) 系统的初始化消融（6 种初始化摆一张桌上比）；(3) <strong>TF-sCM 的首个实现</strong>（连续时间 + JVP + 自定义 mask，此前没人做成过）；(4) 完整开源基建。</div>
+</section>
+
+<section id="pipeline">
+<h2><span class="n">§ 04</span>三段流水线：改造 → 少步化 → 连载精修</h2>
+<p class="lead">rCM 把 CM 和 DMD 联合训练；Causal-rCM 拆成三段串行——每段的产物恰好是下一段的起点。</p>
+<figure id="fig-pipeline">
+<figcaption><span>Fig 04 · 三段训练流水线</span><b>每段产物 = 下段起点</b></figcaption>
+<div class="rollout" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+  <div class="roll reveal"><small>起点</small><b>双向 Wan2.1</b><p>整段互看的预训练扩散模型（1.3B student / 14B 老师）</p></div>
+  <div class="roll reveal d2"><small>阶段 1 · TF（30k 迭代）</small><b>因果化</b><p>packed forward + TF mask，把双向模型改造成全步数因果扩散。产物一物两用：<strong>因果老师 + 下段初始化</strong></p></div>
+  <div class="roll reveal d3"><small>阶段 2 · TF-CM</small><b>少步化</b><p>沿因果老师轨迹做一致性蒸馏：dCM 要 10k 迭代，sCM 只要 1k（§ 06）</p></div>
+  <div class="roll reveal d4 final"><small>阶段 3 · SF-DMD</small><b>连载精修</b><p>自己逐块 rollout，DMD 在成品上纠分布，消曝光偏差（§ 07）</p></div>
+</div>
+<div class="same">为什么不像 rCM 那样联合训：因果老师和双向老师有分布差距，论文实测联合训练压低 VBench 上限（§ 12）。</div>
+</figure>
+<p>注意阶段 1 的一物两用：TF 训出来的 14B 因果模型在阶段 2 里当<strong>老师</strong>（提供因果轨迹），TF 训出来的 1.3B 当<strong>学生初始化</strong>。阶段 3 换回<strong>双向</strong> 14B 当 DMD 的 teacher score 和 fake score<a class="jr" href="#g-09">09</a>——因为 DMD 评的是最终成品的分布，双向模型看得全、评得准。</p>
+</section>
+
+<section id="packed">
+<h2><span class="n">§ 05</span>TF 的核心操作：把「干净前文 + 带噪目标」拼成一条序列</h2>
+<p class="lead">TF 系列（TF、TF-dCM、TF-sCM）共用同一个底座动作：packed causal forward——把干净上下文和带噪目标拼接成一条序列、配一张特制注意力 mask，一次前向全算完。</p>
+<div class="formula">\left[\bm{v}_\theta\left([\bm{x}_0^{\mathrm{clean}},\bm{x}_t^{\mathrm{noisy}}],[\bm{0}^{\mathrm{clean}},\bm{t}^{\mathrm{noisy}}];\bm{M}_{\mathrm{TF}}\right)\right]_{\mathrm{noisy}}</div>
+<div class="vars">
+<div><code class="m">\bm{x}_0^{\mathrm{clean}}</code>干净的真历史块，时间戳全填 0（表示无噪）。</div>
+<div><code class="m">\bm{x}_t^{\mathrm{noisy}}</code>带噪的目标块，时间戳填共享的 t。</div>
+<div><code class="m">\bm{M}_{\mathrm{TF}}</code>TF 注意力 mask：每个带噪块只许看「它之前的干净块 + 它自己」。</div>
+<div><code class="m">[\cdot]_{\mathrm{noisy}}</code>只取带噪段的输出——损失也只打在这段上。</div>
+</div>
+<figure id="fig-mask">
+<figcaption><span>Fig 05 · TF mask 长什么样</span><b>3 块小例子：行 = 谁在看，列 = 被看的</b></figcaption>
+<svg viewBox="0 0 920 430" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
+<text x="330" y="26" text-anchor="middle" font-size="13.5" fill="#756c60">序列 = [ 净1 净2 净3 ｜ 噪1 噪2 噪3 ]（chunk 粒度，✓=允许注意，·=禁止）</text>
+<text x="140" y="66" text-anchor="end" font-size="12.5" fill="#756c60">被看的 →</text>
+<text x="185" y="66" text-anchor="middle" font-size="13">净1</text><text x="245" y="66" text-anchor="middle" font-size="13">净2</text><text x="305" y="66" text-anchor="middle" font-size="13">净3</text>
+<text x="380" y="66" text-anchor="middle" font-size="13">噪1</text><text x="440" y="66" text-anchor="middle" font-size="13">噪2</text><text x="500" y="66" text-anchor="middle" font-size="13">噪3</text>
+<line x1="340" y1="50" x2="340" y2="400" stroke="#b9ae98" stroke-dasharray="3 4"/>
+<text x="120" y="106" text-anchor="middle" font-size="13">净1 行</text>
+<text x="120" y="156" text-anchor="middle" font-size="13">净2 行</text>
+<text x="120" y="206" text-anchor="middle" font-size="13">净3 行</text>
+<text x="120" y="266" text-anchor="middle" font-size="13" fill="#634000">噪1 行</text>
+<text x="120" y="316" text-anchor="middle" font-size="13" fill="#634000">噪2 行</text>
+<text x="120" y="366" text-anchor="middle" font-size="13" fill="#634000">噪3 行</text>
+<g font-size="15" text-anchor="middle">
+<text x="185" y="106" fill="#3f7354">✓</text><text x="245" y="106" fill="#b9ae98">·</text><text x="305" y="106" fill="#b9ae98">·</text><text x="380" y="106" fill="#b9ae98">·</text><text x="440" y="106" fill="#b9ae98">·</text><text x="500" y="106" fill="#b9ae98">·</text>
+<text x="185" y="156" fill="#3f7354">✓</text><text x="245" y="156" fill="#3f7354">✓</text><text x="305" y="156" fill="#b9ae98">·</text><text x="380" y="156" fill="#b9ae98">·</text><text x="440" y="156" fill="#b9ae98">·</text><text x="500" y="156" fill="#b9ae98">·</text>
+<text x="185" y="206" fill="#3f7354">✓</text><text x="245" y="206" fill="#3f7354">✓</text><text x="305" y="206" fill="#3f7354">✓</text><text x="380" y="206" fill="#b9ae98">·</text><text x="440" y="206" fill="#b9ae98">·</text><text x="500" y="206" fill="#b9ae98">·</text>
+<text x="185" y="266" fill="#b9ae98">·</text><text x="245" y="266" fill="#b9ae98">·</text><text x="305" y="266" fill="#b9ae98">·</text><text x="380" y="266" fill="#bd7a00">✓</text><text x="440" y="266" fill="#b9ae98">·</text><text x="500" y="266" fill="#b9ae98">·</text>
+<text x="185" y="316" fill="#3f7354">✓</text><text x="245" y="316" fill="#b9ae98">·</text><text x="305" y="316" fill="#b9ae98">·</text><text x="380" y="316" fill="#b9ae98">·</text><text x="440" y="316" fill="#bd7a00">✓</text><text x="500" y="316" fill="#b9ae98">·</text>
+<text x="185" y="366" fill="#3f7354">✓</text><text x="245" y="366" fill="#3f7354">✓</text><text x="305" y="366" fill="#b9ae98">·</text><text x="380" y="366" fill="#b9ae98">·</text><text x="440" y="366" fill="#b9ae98">·</text><text x="500" y="366" fill="#bd7a00">✓</text>
+</g>
+<rect x="560" y="80" width="330" height="300" rx="6" fill="#faf7ea" stroke="#b9ae98"/>
+<text x="725" y="110" text-anchor="middle" font-size="13.5" font-weight="700" fill="#163a58">三条读图规则</text>
+<text x="580" y="146" font-size="12.5">① 净块之间：块因果（净i 看净j, j≤i）</text>
+<text x="580" y="176" font-size="12.5">② 噪i 行：只看「净j (j&lt;i) + 噪i 自己」</text>
+<text x="580" y="206" font-size="12.5" fill="#a83b25">③ 噪i 不看净i——当前块的干净版</text>
+<text x="596" y="228" font-size="12.5" fill="#a83b25">就是答案本身，看了等于抄答案</text>
+<text x="580" y="266" font-size="12.5" fill="#756c60">损失只打噪行的输出；净行只是给</text>
+<text x="580" y="288" font-size="12.5" fill="#756c60">别人当上下文，自己的输出不用</text>
+<text x="580" y="326" font-size="12.5" fill="#0e6e78">噪块之间互不可见：每块是一次独立</text>
+<text x="580" y="348" font-size="12.5" fill="#0e6e78">的「接龙练习」，一条序列练 3 道题</text>
+</svg>
+</figure>
+<p>配上 RF 回归目标 <code class="m">\bm{v}=\bm{\epsilon}-\bm{x}_0</code>（rectified flow<a class="jr" href="#g-10">10</a> 日程下的标准速度目标），这就是阶段 1 的 TF 损失，训出全步数因果模型。<strong>TF-dCM</strong> 在同一布局上做离散一致性<a class="jr" href="#g-11">11</a>：干净上下文按住不动，带噪段沿因果老师的 ODE 解一小步到 <code class="m">t-\Delta t</code>，要求 student 在两个时刻输出一致——正是 rCM 页 § 03 的离散损失，只是每一项都套上了 TF mask。</p>
+<div class="note"><span class="label">为什么非要「拼接 + 特制 mask」，分两遍跑不行吗</span>可以：先在块因果 mask 下把干净 token 的 KV 算好缓存，第二遍让噪 token 来查。但这样干净 KV 必须留在计算图里等反传，跟激活检查点<a class="jr" href="#g-12">12</a>合不来、更费显存。packed 单遍是为了让「TF 训练」长得和普通训练一样——一条序列进、一个损失出，SAC / FSDP / CP 全部照常工作（§ 09 的兼容性全靠它）。这类 mask 用 FlexAttention<a class="jr" href="#g-13">13</a> 或 MagiAttention 这样的自定义 mask 算子实现。</div>
+</section>
+
+<section id="tfscm">
+<h2><span class="n">§ 06</span>TF-sCM：招牌菜——连续时间一致性搬进因果 mask</h2>
+<p class="lead">rCM 页花了三节讲清的连续时间一致性（切线目标 + JVP + 归一化 MSE），这里整套搬进 TF 布局——这是本文自称的头号增量：此前没人在 teacher-forcing 下实现过 sCM，收益是比 TF-dCM 快约 10 倍收敛。</p>
+<p>回忆 rCM 页的结论：sCM 的目标是让 student 沿老师轨迹的切线归零，训练目标是向「冻结输出 + 归一化切线」做 MSE 回归，切线用 JVP<a class="jr" href="#g-14">14</a> 算。搬进 TF 只改了一件事——<strong>网络的输入从 <code class="m">(\bm{x}_t,t)</code> 变成了拼接序列，而拼接序列里只有噪段在沿老师轨迹动，净段是钉死的</strong>。所以 JVP 的方向向量要按段填：</p>
+<div class="formula">\texttt{JVP}\left(\bm{v}_{\theta^-},\;\left([\bm{x}_0^{\mathrm{clean}},\bm{x}_t^{\mathrm{noisy}}],[\bm{0},\bm{t}]\right),\;\left([\bm{0}^{\mathrm{clean}},\bm{v}_{\mathrm{teacher}}^{\mathrm{TF}}],[\bm{0}^{\mathrm{clean}},\bm{1}^{\mathrm{noisy}}]\right)\right)</div>
+<div class="vars">
+<div><code class="m">\bm{0}^{\mathrm{clean}}</code>净段的移动方向 = 零：干净历史不随 t 变，切线自然为 0。</div>
+<div><code class="m">\bm{v}_{\mathrm{teacher}}^{\mathrm{TF}}</code>因果老师在同一 TF mask 下给出的速度——噪段沿它移动。</div>
+<div><code class="m">\bm{1}^{\mathrm{noisy}}</code>噪段的时间戳以速度 1 流逝；净段时间戳钉在 0。</div>
+<div><code class="m">\theta^-</code>stop-gradient 的目标网络；JVP 走的是和主前向完全相同的 masked attention。</div>
+</div>
+<p>剩下的一切与 rCM 页 § 03 的 <code class="m">\mathcal L_{\mathrm{sCM}}</code> 同构：残差 <code class="m">\Delta\bm{v}_\theta^{\mathrm{TF}}</code>（student 与冻结网络在噪段的输出差，数值为零但携带梯度）向归一化切线回归，分母 <code class="m">w^2(t)\|\bm{h}\|_2^2+c</code> 抑强扶弱。</p>
+<div class="warning"><span class="label">一个反常识的工程选择：不套 TrigFlow，直接用 RF 原生形式</span>rCM 在双向蒸馏里把 RF 模型包进 TrigFlow 坐标再训 sCM，实测更稳；这篇在因果 TF 下实测<strong>刚好相反</strong>——TrigFlow 包装画质劣化，RF 原生更平滑。附录 A 给了完整代数解释，三个要点：<br>① 两种坐标的一致性映射<strong>完全等价</strong>（换元后逐项抵消），一致性零点也相同——目标没变；<br>② 但切线归一化让两个 MSE <strong>不再是同一个目标</strong>：换元后 TrigFlow 版的分母是 <code class="m">w^2\|\bm{h}\|_2^2+cZ^4</code>（<code class="m">Z=\cos\tau+\sin\tau</code>），RF 版是 <code class="m">w^2\|\bm{h}\|_2^2+c</code>——常数 c 一进来，等价性被打破，等效于换了一套时间加权；<br>③ 浮点下更狠：把缩放系数放进 JVP 方向再传播整个网络，和先算裸切线再乘系数，<strong>逐位不相等</strong>（舍入、混精度 cast、融合 kernel 各不相同），TrigFlow 包装还有大量「代数上精确抵消、数值上不精确抵消」的中间项，全被归一化分母放大。</div>
+<div class="calc"><div class="step"><b>收敛速度账</b><span>frame-wise：TF-sCM 1–2k 迭代 VBench 就过 81.8，超过 TF-dCM 训满 10k 的水平；chunk-wise 差距更大，TF-sCM 1–2k 迭代过 83。</span></div><div class="step"><b>但单步不更快</b><span>custom-mask JVP kernel 目前是 Triton 写的，单迭代速度只与「TF-dCM + 标准 FlashAttention-2」打平（§ 12 局限）。10× 是迭代次数省出来的，不是 kernel 快出来的。</span></div></div>
+</section>
+
+<section id="sfdmd">
+<h2><span class="n">§ 07</span>SF-DMD：真连载，编辑只改最后一笔</h2>
+<p class="lead">阶段 3 让 student 像推理时一样逐块 rollout（KV cache 全套照跑），把整段成品交给 DMD 评。显存撑不住整条 rollout 的反传，所以梯度只走每块的最后一步。</p>
+<figure id="fig-rollout">
+<figcaption><span>Fig 06 · SF rollout 与梯度截断</span><b>灰 = 冻结（θ⁻），红 = 只有这步吃梯度（θ）</b></figcaption>
+<svg viewBox="0 0 920 330" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
+<defs><marker id="mC" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#756c60"/></marker><marker id="mD" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#a83b25"/></marker></defs>
+<text x="180" y="30" text-anchor="middle" font-size="14" font-weight="700" fill="#163a58">chunk 1（块内少步去噪）</text>
+<rect x="40" y="46" width="80" height="46" rx="5" fill="#eee9db" stroke="#756c60" stroke-width="1.4" stroke-dasharray="5 3"/><text x="80" y="74" text-anchor="middle" font-size="12">纯噪声</text>
+<rect x="150" y="46" width="80" height="46" rx="5" fill="#eee9db" stroke="#756c60" stroke-width="1.4" stroke-dasharray="5 3"/><text x="190" y="74" text-anchor="middle" font-size="12">中间步 θ⁻</text>
+<rect x="260" y="46" width="90" height="46" rx="5" fill="#f4d8ce" stroke="#a83b25" stroke-width="2"/><text x="305" y="68" text-anchor="middle" font-size="12" fill="#7b291a">最后一步 θ</text><text x="305" y="85" text-anchor="middle" font-size="10.5" fill="#7b291a">梯度只走这里</text>
+<line x1="122" y1="69" x2="146" y2="69" stroke="#756c60" stroke-width="1.5" marker-end="url(#mC)"/>
+<line x1="232" y1="69" x2="256" y2="69" stroke="#756c60" stroke-width="1.5" marker-end="url(#mC)"/>
+<line x1="305" y1="94" x2="305" y2="126" stroke="#0e6e78" stroke-width="1.6" marker-end="url(#mC)"/>
+<rect x="240" y="130" width="130" height="42" rx="5" fill="#cde8e9" stroke="#0e6e78" stroke-width="1.6"/><text x="305" y="156" text-anchor="middle" font-size="12">干净块 1 出炉</text>
+<line x1="372" y1="151" x2="470" y2="151" stroke="#756c60" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#mC)"/>
+<text x="420" y="140" text-anchor="middle" font-size="11" fill="#756c60">追加进 KV cache</text>
+<text x="420" y="184" text-anchor="middle" font-size="11" fill="#756c60">（detach，历史块不吃梯度）</text>
+<text x="640" y="30" text-anchor="middle" font-size="14" font-weight="700" fill="#163a58">chunk 2 …（条件在 cache 上，同样只有最后一步吃梯度）</text>
+<rect x="474" y="46" width="80" height="46" rx="5" fill="#eee9db" stroke="#756c60" stroke-width="1.4" stroke-dasharray="5 3"/><text x="514" y="74" text-anchor="middle" font-size="12">纯噪声</text>
+<rect x="584" y="46" width="80" height="46" rx="5" fill="#eee9db" stroke="#756c60" stroke-width="1.4" stroke-dasharray="5 3"/><text x="624" y="74" text-anchor="middle" font-size="12">中间步 θ⁻</text>
+<rect x="694" y="46" width="90" height="46" rx="5" fill="#f4d8ce" stroke="#a83b25" stroke-width="2"/><text x="739" y="68" text-anchor="middle" font-size="12" fill="#7b291a">最后一步 θ</text><text x="739" y="85" text-anchor="middle" font-size="10.5" fill="#7b291a">梯度只走这里</text>
+<line x1="556" y1="69" x2="580" y2="69" stroke="#756c60" stroke-width="1.5" marker-end="url(#mC)"/>
+<line x1="666" y1="69" x2="690" y2="69" stroke="#756c60" stroke-width="1.5" marker-end="url(#mC)"/>
+<rect x="80" y="228" width="760" height="80" rx="6" fill="#faf7ea" stroke="#b9ae98"/>
+<text x="460" y="256" text-anchor="middle" font-size="13" font-weight="700" fill="#163a58">全部块的成品拼成整段视频 → 进 DMD 损失（双向 14B teacher + fake score 评分）</text>
+<text x="460" y="282" text-anchor="middle" font-size="12.5" fill="#756c60">每次迭代 rollout 的去噪步数 N 在 [1, 4] 里随机抽；中间步与历史 KV 全部 detach，显存有界</text>
+</svg>
+</figure>
+<p>块内每一步是「CM 式去噪到干净、再前向加噪到下一个时刻」的组合；DMD 损失照抄 rCM 页 § 06 的伪回归形式（分子 fake 与 teacher 去噪差、分母 teacher 偏差归一化），只是打分对象从单段视频换成了 rollout 拼出的整段。</p>
+<h3>步数循环：让每个去噪区间都轮到「最后一步」</h3>
+<p>梯度只走最后一步有个隐患：如果永远按目标步数（比如 4 步）rollout，被监督的永远只有「第 4 步 → 干净」这一个区间。论文的修法是<strong>按迭代循环 rollout 步数</strong>：目标日程是 <code>[4,2,2,…]</code> 时，训练按 <code>[1,1,…] → [2,2,…] → [3,2,…] → [4,2,…] → 回到 [1,1,…]</code> 轮转——不同迭代里，不同的去噪区间轮流成为那个「可反传的最后一步」。</p>
+<div class="note"><span class="label">replayed back-propagation：给长视频省显存的可选路径</span>即使只留每块最后一步，长视频里「所有块的最后一步」同时挂在计算图上也很占显存。可选的 replayed 模式分两遍：第一遍<strong>无梯度</strong>整条 rollout，只存下每块的最后输入、时间步、detach 的 KV cache 和 DMD 目标；第二遍逐块<strong>带梯度重算</strong>最后一步、单独反传、梯度累加。用重算换激活显存。论文特意只给 SF-DMD 留这条路：TF 系列已有 SAC，重放差分前缀 KV 的收益有限。</div>
+</section>
+
+<section id="tricks">
+<h2><span class="n">§ 08</span>两个推理加速：省一遍编码、把预算花在第一块</h2>
+<div class="grid2">
+<div class="card"><span class="tag teal">noisy context</span><h3>N+1 → N：省掉干净重编码</h3><p>标准因果推理里，每块去噪完还要把干净结果再喂一遍网络、编码出干净 KV 当后文的上下文——这就是 § 01 延迟账里的「+1」。noisy context 直接<strong>复用最后一步去噪时的 KV</strong> 当上下文，一遍不补。副产品：上下文里的残余噪声像低通滤波，压掉累积的高频伪影、保留粗粒度运动——对长视频反而是加分项。训练侧只需在最后的 SF 阶段按此方式 rollout 即可，TF 阶段不用改。</p></div>
+<div class="card"><span class="tag gold">custom step schedule</span><h3>第一块最难，多给它几步</h3><p>文生视频里第一块要立起全局场景、布局、外观，后面的块只是顺着延伸。所以步数按块分配：名义 2 步的模型实际用 <code>[4,2,2,…]</code>——只有第一块花 4 步。§ 07 的步数循环训练就是为它设计的。</p></div>
+</div>
+<div class="calc"><div class="step"><b>NFE 对账（frame-wise 各档）</b><span>4 步：4+1=5 NFE；2 步：2+1=3；2 步 + noisy context：2+0=2；1 步：1+1=2——和 § 10 主表的 NFE 列逐行吻合。</span></div><div class="step"><b>具体日程</b><span>4 步采样的中间时刻取 [15/16, 5/6, 5/8]；2 步 = 首块 4 步 + 后续 [5/6]；2 步 noisy context 版后续取 [5/8] 并复用最后一遍前向当上下文；1 步 = 首块 4 步 + 后续直接一步到底。</span></div></div>
+</section>
+
+<section id="infra">
+<h2><span class="n">§ 09</span>基建：让五套机关互相不打架</h2>
+<p class="lead">这节是论文的另一半交付物。难点不在单个组件——TF mask、JVP、FSDP2、Ulysses、SAC、KV cache 各自都有现成轮子——难在<strong>它们两两组合时会打架</strong>。</p>
+<h3>custom-mask FlashAttention-2 JVP kernel</h3>
+<p>TF-sCM 要求 JVP 穿过<strong>和主前向一模一样的 masked attention</strong>。通用的 <code>torch.func.jvp</code> 走不了融合注意力（要 materialize 巨大的注意力中间量）；rCM 已有 FlashAttention<a class="jr" href="#g-15">15</a>-2 JVP kernel，这篇给它加上自定义 mask。两个关键设计：</p>
+<div class="calc">
+<div class="step"><b>mask 没有切线</b><span>mask 是离散的路由结构，不参与求导：被禁位置的分数设 <code class="m">-\infty</code>、分数切线设 <strong>0</strong>——JVP 是对「mask 固定的注意力映射」求的。</span></div>
+<div class="step"><b>在线 softmax 加三个 JVP 累加器</b><span>沿用 FlashAttention 的分块扫描（m、ℓ、O 就地累加，见 <a href="../concepts/flash-attention.html">flash-attention 页</a>），额外维护 A（概率×值切线）、B（分数切线加权×值）、r（分数切线的行和）三个累加器，与主累加器共用同一套 rescale 因子；尾声一步合成 <code class="m">\mathbf{tO}=\mathrm{diag}(\ell)^{-1}(\mathbf{A}+\mathbf{B}-\mathrm{diag}(r)\mathbf{O})</code>。</span></div>
+<div class="step"><b>mask 用矩形清单表示</b><span>不 materialize 稠密 0/−∞ 矩阵，而是「query 组 × 合法 key 区间」的稀疏矩形清单（MagiAttention 风格）——TF / 块因果 mask 都能拆成少数几个满矩形，kernel 只流式扫这些矩形。主分数和切线分数走同一份调度，保证切线对应的正是前向真正用的那个 mask。</span></div>
+</div>
+<h3>五组兼容性设计</h3>
+<div class="grid2">
+<div class="card"><span class="tag">SAC × FlexAttention</span><p>FlexAttention 被 PyTorch 编译器 lower 成融合 kernel 后，SAC 看不见它。解法：torch ≥ 2.10 + <code>wrap_inductor_compiled_regions</code>，把编译区暴露成显式的可检查点区域。</p></div>
+<div class="card"><span class="tag">SAC × self-forcing</span><p>SF rollout 是有状态的（KV cache 逐块演化），而 SAC 的重算要求 forward 可重放。解法：持久 cache 与每次 forward 的因果状态分离——cache 追加放在检查点区外，检查点区只读一份固定的因果上下文。</p></div>
+<div class="card"><span class="tag">JVP × FSDP2</span><p>不能对 FSDP2<a class="jr" href="#g-16">16</a> 包好的模型整体套 <code>torch.func.jvp</code>。解法：层级配对接口——每层收 (x, tx) 吐 (y, ty)，即 FSDP2(JVP) 而非 JVP(FSDP2)；FSDP2 照常管参数分片，切线在层内本地传播。</p></div>
+<div class="card"><span class="tag">JVP / KV cache × Ulysses CP</span><p>切线张量走和本体完全相同的通信路径：tQ/tK/tV 跟 Q/K/V 一起 all-to-all（见 <a href="../concepts/distributed-training-parallelism.html">并行切法页</a> 的 Ulysses 布局互倒）。KV cache 直接存 all-to-all 之后的 [B, H/P, L, C] 布局，各 rank 复用自己那份头分片缓存，避免新旧布局来回转换。</p></div>
+</div>
+<div class="note"><span class="label">对照其他代码库</span>论文的实现级对照表里，Self-Forcing 官方库无 CP/SP、无 JVP、FSDP 只到 v1；FastVideo 与 FastGen 有并行但都无 TF packed 训练、无 JVP、无 replayed 反传。(Causal-)rCM 是表中唯一全勾的——双向 + 因果、TF/DF/SF、JVP、FSDP2、Ulysses、SAC、pre/post-RoPE 两种 KV cache 全支持。pre-RoPE 缓存留给「同一段缓存要换位置编码」的场景（长度外推、位置重索引）。</div>
+</section>
+
+<section id="results">
+<h2><span class="n">§ 10</span>实验：2 步 1.3B 超过 50 步 14B，以及三个反直觉</h2>
+<p>设置：student 是 Wan2.1-1.3B，老师全是 14B；数据是纯合成——双向 14B 以 100 步 Euler、shift 3.0、CFG 5.0 生成的文生视频对；VBench<a class="jr" href="#g-17">17</a>-T2V 评测（总分 / 质量 / 语义），效率在单张 H100、batch 1 上量（含 VAE 解码）。</p>
+<div class="calc">
+<div class="step"><b>阶段 1 · TF/DF 因果化</b><span>30k 迭代；batch 256（1.3B）/ 64（14B，Ulysses CP=8）；AdamW lr 10⁻⁵。TF 全块共享 t、配高斯钟形时间权重；DF 每块独立抽 t、无权重。</span></div>
+<div class="step"><b>阶段 2 · TF-CM 少步化</b><span>lr 降到 2×10⁻⁶、CFG 3.0、CP=4。TF-dCM：均匀 RF 网格（shift 3、48 步）跑 10k 迭代；TF-sCM：LogitNormal(−0.8, 1.6) 采时间、切线 warmup 1000，只跑 1k 迭代。</span></div>
+<div class="step"><b>阶段 3 · SF-DMD 精修</b><span>student lr 2×10⁻⁶、fake-score lr 4×10⁻⁷、CFG 5.0、最大 rollout 4 步、student update freq. = 6（原文未展开这个超参的语义，复现以代码为准）；迭代数按档位不同（主表最后一列）。</span></div>
+</div>
+<div class="scroll"><table>
+<thead><tr><th>方法</th><th>NFE/块</th><th>总分↑</th><th>质量↑</th><th>语义↑</th><th>吞吐 FPS↑</th><th>首块延迟 s↓</th><th>次块延迟 s↓</th><th>SF-DMD 迭代</th></tr></thead>
+<tbody>
+<tr><td>双向 Wan2.1-1.3B（50 步×2）</td><td>100</td><td>82.78</td><td>83.44</td><td>80.13</td><td>0.72</td><td>–</td><td>–</td><td>–</td></tr>
+<tr><td>双向 Wan2.1-14B（50 步×2，老师）</td><td>100</td><td>83.35</td><td>83.97</td><td>80.88</td><td>0.18</td><td>–</td><td>–</td><td>–</td></tr>
+<tr><td colspan="9" style="text-align:left;background:#e8e2d2;font-weight:700">frame-wise（c1-1）</td></tr>
+<tr><td>Causal Forcing（4 步）</td><td>5</td><td>81.56</td><td>82.59</td><td>77.44</td><td>8.3</td><td>0.40</td><td>0.46</td><td>–</td></tr>
+<tr><td>Causal-rCM（4 步）</td><td>5</td><td>84.29</td><td>85.27</td><td>80.36</td><td>8.3</td><td>0.40</td><td>0.46</td><td>1200</td></tr>
+<tr class="win"><td>Causal-rCM（2 步）</td><td>3</td><td>84.63</td><td>85.46</td><td>81.31</td><td>12.2</td><td>0.40</td><td>0.31</td><td>3000</td></tr>
+<tr><td>Causal-rCM（2 步 + noisy ctx）</td><td>2</td><td>83.11</td><td>83.55</td><td>81.37</td><td>15.9</td><td>0.40</td><td>0.23</td><td>1500</td></tr>
+<tr class="win"><td>Causal-rCM（1 步）</td><td>2</td><td>84.63</td><td>85.54</td><td>81.01</td><td>15.9</td><td>0.40</td><td>0.23</td><td>3000</td></tr>
+<tr><td colspan="9" style="text-align:left;background:#e8e2d2;font-weight:700">chunk-wise（c3-3）</td></tr>
+<tr><td>Self-Forcing（4 步）</td><td>5</td><td>83.76</td><td>84.53</td><td>80.68</td><td>17.4</td><td>0.57</td><td>0.64</td><td>–</td></tr>
+<tr><td>LongLive（4 步）</td><td>5</td><td>83.62</td><td>84.36</td><td>80.69</td><td>17.4</td><td>0.57</td><td>0.64</td><td>–</td></tr>
+<tr><td>Causal Forcing（4 步）</td><td>5</td><td>83.96</td><td>84.94</td><td>80.04</td><td>17.4</td><td>0.57</td><td>0.64</td><td>–</td></tr>
+<tr><td>AnyFlow（4 步）</td><td>5</td><td>84.31</td><td>85.15</td><td>80.94</td><td>17.4</td><td>0.57</td><td>0.64</td><td>–</td></tr>
+<tr class="win"><td>Causal-rCM（4 步）</td><td>5</td><td>84.37</td><td>85.02</td><td>81.73</td><td>17.4</td><td>0.57</td><td>0.64</td><td>1250</td></tr>
+<tr><td>Causal-rCM（2 步）</td><td>3</td><td>84.30</td><td>85.04</td><td>81.36</td><td>22.2</td><td>0.57</td><td>0.49</td><td>2500</td></tr>
+<tr><td>Causal-rCM（2 步 + noisy ctx）</td><td>2</td><td>84.24</td><td>84.96</td><td>81.36</td><td>25.6</td><td>0.57</td><td>0.41</td><td>1750</td></tr>
+<tr><td>Causal-rCM（1 步）</td><td>2</td><td>84.01</td><td>84.71</td><td>81.22</td><td>25.6</td><td>0.57</td><td>0.41</td><td>3000</td></tr>
+</tbody></table></div>
+<h3>反直觉一：frame-wise 下 1/2 步反而比 4 步好</h3>
+<p>单帧 chunk 没有内部时间结构可去噪，给每个后续块配 4 步深 rollout 只会放大自回归反馈误差（SF-DMD 只对最后一步反传，截断加剧了这一点）。实测症状很具体：4 步 frame-wise 训练会长出<strong>相机漂移</strong>——所有样本一致向左转的相机偏置，只能稳训约 1k 迭代；换成 1–2 步后漂移基本消失、能稳训约 3k。而 chunk-wise（3 帧一块）有块内时间关联要建模，4 步深采样反而最好——<strong>最优步数日程取决于每块的时间跨度</strong>。</p>
+<h3>反直觉二：noisy context 在两种粒度下方向相反</h3>
+<p>同为 2 NFE 档，frame-wise 里 1 步纯净上下文（84.63）远好于 2 步 noisy context（83.11）；chunk-wise 里反过来（84.24 &gt; 84.01）。解释：单帧块维度低，上下文里的残噪直接伤到逐帧细节；3 帧块的时空 token 群高维冗余，高斯扰动很难均匀破坏整块结构，粗粒度运动保得住，多出的一个去噪步反而净赚。</p>
+<h3>反直觉三：初始化消融里，分数最高的输给了眼睛</h3>
+<div class="scroll"><table>
+<thead><tr><th>SF-DMD 的初始化</th><th colspan="2">frame-wise 总分↑ / 迭代</th><th colspan="2">chunk-wise 总分↑ / 迭代</th></tr></thead>
+<tbody>
+<tr><td>DF（因果扩散）</td><td>83.11</td><td>2000</td><td class="lose">84.80</td><td>1500</td></tr>
+<tr><td>TF（因果扩散）</td><td>82.62</td><td>1000</td><td class="lose">84.95</td><td>1000</td></tr>
+<tr><td>DF-KD（ODE-pair 回归）</td><td>80.59</td><td>2000</td><td>83.61</td><td>1500</td></tr>
+<tr><td>TF-KD（ODE-pair 回归）</td><td>83.49</td><td>1250</td><td>83.79</td><td>1000</td></tr>
+<tr class="win"><td>TF-dCM</td><td>84.29</td><td>1200</td><td>84.33</td><td>3200</td></tr>
+<tr class="win"><td>TF-sCM</td><td>83.84</td><td>1000</td><td>84.37</td><td>1250</td></tr>
+</tbody></table></div>
+<p>chunk-wise 下 DF/TF 初始化分数最高（≈85，表中标红），但论文自己贴图拆台：这些模型的水面、头发、树叶<strong>过平滑、过饱和、细节明显更少</strong>。综合分数与画面，TF-CM 初始化才是最可靠选择；两个 TF-CM 变体里，TF-sCM 略优且 SF-DMD 迭代更省。还有一个诚实的注脚：frame-wise 下 TF-sCM 起点更强，但 TF-dCM 在 SF-DMD 期更稳、能精修更久、峰值反而更高——<strong>最好的初始化 ≠ 最好的终点</strong>。</p>
+<div class="truth"><span class="label">这节最值得带走的方法论</span>VBench 总分会奖励「平滑安全」的输出。凡是蒸馏/精修类工作，榜单分数必须配定性图一起读——这篇论文用自己的消融当了反面教材，难得。</div>
+</section>
+
+<section id="world">
+<h2><span class="n">§ 11</span>交互世界模型：把 Cosmos 3 的视觉流改成因果</h2>
+<p>Causal-rCM 的第二个落点是 Cosmos 3——两塔 Mixture-of-Transformers 世界模型：UND 塔管文本理解，GEN 塔管视觉/动作/声音生成，共享多模态注意力层与统一 3D mRoPE。原版 GEN 塔内是双向自注意力；改造只动一处：<strong>视觉流按「latent 帧 = 一个 supertoken」切，supertoken 之间时间因果、supertoken 内部（同帧的空间 token）保持双向</strong>。UND↔GEN 的跨塔注意力结构原样保留。</p>
+<p>同一套因果栈通吃三种任务：文生视频（全部 supertoken 从文本条件生成）、图生视频（首帧当干净上下文）、<strong>前向动力学</strong>（动作条件）。动作接法：动作 supertoken 作为输入条件，经统一 3D mRoPE 对齐到下一个视觉 supertoken——动作 <code class="m">A_i</code> 控制状态 <code class="m">V_i\to V_{i+1}</code> 的转移；首帧前插一个空动作 token 保持布局统一。演示是自动驾驶场景：同一初始画面，左转 / 右转 / 直行三种自车动作生成三条不同的未来。</p>
+<div class="warning"><span class="label">证据边界</span>世界模型部分只有定性演示（Fig 10 的三方向轨迹），论文没有给这部分的定量指标。流媒体质量的全部数字都来自 Wan2.1 文生视频实验。</div>
+</section>
+
+<section id="limits">
+<h2><span class="n">§ 12</span>边界：论文自己承认的四件事，和它画的路线图</h2>
+<div class="grid2">
+<div class="card"><span class="tag rust">脆弱面</span><h3>frame-wise 长训仍然脆</h3><p>4 步深 rollout 的 frame-wise SF-DMD 训久了长相机漂移，只能停在 1k 迭代。论文的猜想：动作条件的交互设定里动作提供了显式运动先验，能消掉相机运动的多义性——待验证。</p></div>
+<div class="card"><span class="tag rust">选型面</span><h3>最好初始化 ≠ 最好终点</h3><p>TF-sCM 初始更强，但 frame-wise 下 TF-dCM 精修期更稳、峰值更高。初始化质量和精修稳定性没有对齐，选型不能只看第一段曲线。</p></div>
+<div class="card"><span class="tag rust">路线面</span><h3>联合训练暂时不行</h3><p>rCM 式的 CM+DMD 联合优化在因果设定下压低 VBench 上限——归因于因果老师与双向老师的分布差距。当前只能用分段流水线。</p></div>
+<div class="card"><span class="tag rust">系统面</span><h3>Triton kernel 不够快</h3><p>custom-mask JVP kernel 单迭代只打平「dCM + 标准 FA2」，落后 FlashAttention-3/4。10× 收益全部来自迭代数，kernel 还有硬件红利没吃。</p></div>
+</div>
+<p>论文收尾画了一张「终极管线」路线图：现有蒸馏方法都是两条管线的子集——<strong>CM 路线</strong>（dCM → sCM → DMD/GAN，因果版对应 TF-dCM → TF-sCM → SF-DMD）与 <strong>CTM 路线</strong>（MeanFlow<a class="jr" href="#g-18">18</a> 有限差分版 → JVP 版 → DMD/GAN）。离散/有限差分方法当热身、连续时间 JVP 方法当主菜，是它给后续工作的统一建议；系统侧的下一步是 torch.compile、CUDA Graphs、NVFP4。</p>
+</section>
+
+<section id="verdict">
+<h2><span class="n">§ 13</span>我的判断</h2>
+<p>这是一篇「配方 + 基建」型论文，读法和普通方法论文不一样。<strong>算法增量</strong>其实收敛在两点：TF-sCM 的首个可跑实现（10× 收敛，靠 custom-mask JVP kernel 撑起），以及那张 6 种初始化 × 2 种粒度的系统消融——后者把此前各家「祖传初始化」第一次摆上同一张桌子。<strong>基建增量</strong>（五组兼容性设计、稀疏矩形 mask 的 JVP kernel、pre/post-RoPE 双缓存）对社区的长期价值可能大于算法本身。</p>
+<p>可复现性好于多数同行：代码开源、训练数据是可再生成的合成数据、超参表全给（三阶段的 batch/lr/CP 尺寸/时间采样一应俱全）。要小心的地方：VBench 与观感的背离贯穿全文，任何引用这篇数字的比较都应该连定性图一起看；世界模型部分是能力演示，不是评测结论；「student update freq. = 6」这类超参原文没展开语义，复现以代码为准。</p>
+<p>和 <a href="rcm.html">rCM 页</a>连读的推荐顺序：先在 rCM 页搞懂 sCM 切线 / JVP / DMD 伪回归三件套（那边有完整手算），再回这页看它们各自被「因果化」时改动了哪一处——TF-sCM 只改 JVP 方向向量的填法，SF-DMD 只改打分对象，你会发现真正的新东西比目录看起来少，而这恰恰是好配方的特征：<strong>老零件、新装法</strong>。</p>
+</section>
+
+<section class="gloss" id="glossary">
+<h2><span class="n">附录</span>词汇表</h2>
+<ol>
+<li id="g-01"><span class="term">自回归视频扩散（AR video diffusion）</span> — 帧/chunk 之间自回归（后块条件在前块上）、块内用扩散去噪的视频生成范式；对应离散扩散语言模型里的 block diffusion。</li>
+<li id="g-02"><span class="term">KV cache</span> — 因果注意力里把历史 token 的 Key/Value 存下来复用，新 token 只算自己的注意力；本文分 disabled / append / readonly 三种模式，缓存一律 detach。</li>
+<li id="g-03"><span class="term">NFE</span> — number of function evaluations，网络前向次数；因果推理里每块 = 去噪步数 + 1 次干净上下文编码（noisy context 可省掉后者）。</li>
+<li id="g-04"><span class="term">teacher-forcing（TF）</span> — 预测当前带噪块、注意力看干净真历史的离线因果训练范式；名字借自 RNN 时代的同名技巧。</li>
+<li id="g-05"><span class="term">diffusion-forcing（DF）</span> — 每块独立抽噪声等级、块因果 mask 下联合训练的范式；历史是带噪的。</li>
+<li id="g-06"><span class="term">曝光偏差（exposure bias）</span> — 训练时条件在真历史、推理时条件在自己生成的历史，分布不一致导致误差随生成长度累积。</li>
+<li id="g-07"><span class="term">self-forcing（SF）</span> — 训练时按推理方式逐块 rollout（含 KV cache），在自己生成的历史上训练，从根上消曝光偏差；需配 DMD/GAN 提供训练信号。</li>
+<li id="g-08"><span class="term">DMD</span> — distribution matching distillation：用 teacher score 与 fake score 的去噪差指路、伪回归形式注入梯度的分布匹配蒸馏；反向 KL 一族，模式寻求。完整拆解见 rCM 页 § 06。</li>
+<li id="g-09"><span class="term">fake score</span> — 在 student 生成样本上持续训练的辅助去噪网络，充当「student 分布的 score」的代理；与 teacher score 的差给出修正方向。</li>
+<li id="g-10"><span class="term">rectified flow（RF）</span> — 噪声日程 α=1−t、σ=t 的流匹配特例，速度目标简化为 ε−x₀；本文 TF-sCM 用 RF 原生形式而非 TrigFlow 包装。</li>
+<li id="g-11"><span class="term">dCM / sCM</span> — 离散/连续时间一致性模型：dCM 要求相邻两个离散时刻输出一致；sCM 取 Δt→0 极限，用 JVP 算切线、归一化 MSE 训练。推导详见 rCM 页 § 03。</li>
+<li id="g-12"><span class="term">SAC（选择性激活检查点）</span> — 只对选定算子（注意力、MLP 等计算重的无状态区域）在反传时重算，比整段 checkpoint 更细粒度的省显存手段。</li>
+<li id="g-13"><span class="term">FlexAttention</span> — PyTorch 的自定义 mask 注意力编程模型：用 mask_mod 函数描述注意力模式，编译器 lower 成融合 kernel。</li>
+<li id="g-14"><span class="term">JVP</span> — Jacobian-vector product：不造整张导数表、只沿指定输入方向问一次输出变化率的 forward-mode 求导；几何直觉与手算见 rCM 页 § 04。</li>
+<li id="g-15"><span class="term">FlashAttention</span> — 分块扫 K/V + 在线 softmax 的融合注意力 kernel；本文在其累加循环里加 A/B/r 三个 JVP 累加器并支持稀疏矩形 mask。</li>
+<li id="g-16"><span class="term">FSDP2</span> — PyTorch 的 ZeRO-3 式全分片数据并行：参数/梯度/优化器状态按 rank 分片，逐层临时聚齐；本文同一管线里要同时装下 student、teacher、fake score、EMA 四套网络。</li>
+<li id="g-17"><span class="term">VBench</span> — 视频生成基准，报总分与质量/语义子分；本文证明它会奖励过平滑输出，须配定性图使用。</li>
+<li id="g-18"><span class="term">MeanFlow / CTM</span> — 一致性轨迹模型一族：一致性函数多带一个目标时刻 s，映射 x_t → x_s；MeanFlow 可视作 RF 日程下 sCM 与 CTM 的结合，是路线图里与 CM 并列的另一条管线。</li>
+</ol>
+</section>
+
+<div class="sources">
+<strong>来源与延伸</strong>
+<ul>
+<li>论文：<a href="https://arxiv.org/abs/2606.25473">arXiv 2606.25473</a> · Causal-rCM: A Unified Teacher-Forcing and Self-Forcing Open Recipe（v1，2026-06-24）· 代码 <a href="https://github.com/NVlabs/rcm">NVlabs/rcm</a></li>
+<li>前作：<a href="rcm.html">rCM 页</a>——sCM 切线推导、JVP 手算、DMD 伪回归全在那边，本页默认它们已读。</li>
+<li>定性样例（相机漂移、过平滑对比、Cosmos 3 三方向演示）见原文 Fig 8 / Fig 10 与项目仓库，本页不转载。</li>
+</ul>
+</div>
+
+</main>
+<script>
+function math(){if(!window.katex){setTimeout(math,40);return}document.querySelectorAll('.formula').forEach(function(e){if(e.dataset.done)return;try{katex.render(e.textContent.trim(),e,{displayMode:true,throwOnError:true});e.dataset.done='1'}catch(x){e.classList.add('katex-error');e.title=String(x)}})}math();
+document.querySelectorAll('figure').forEach(function(f){var o=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){f.classList.add('play');o.disconnect()}})},{threshold:.12});o.observe(f)});
+</script>
+<script>
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!document.getElementById(id))return;
+      e.preventDefault();
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>

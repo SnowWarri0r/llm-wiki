@@ -1,8 +1,8 @@
 ---
 name: autoregressive-vs-bidirectional-video-diffusion
 type: concept
-sources: [hierarchical-denoising-visual-reasoning, solaris-multiplayer-world-model, interactive-video-world-modeling-survey, minwm]
-updated: 2026-07-24
+sources: [hierarchical-denoising-visual-reasoning, solaris-multiplayer-world-model, interactive-video-world-modeling-survey, minwm, causal-rcm]
+updated: 2026-08-14
 ---
 
 # 流式 AR vs 双向视频扩散
