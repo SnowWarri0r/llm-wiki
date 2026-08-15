@@ -196,9 +196,9 @@ PLRS 不是看嘴像素的简单分类器。它把 108-D FLAME 还原为 5023 �
 
 这套数据有明显选择偏差：合成动作来自 UniLS，12 个候选又按 PLRS 挑最好，学生容易继承 teacher 的动作风格，也会针对 PLRS 偏好的模式过拟合。真实 677 小时能缓和，却不能证明偏差消失。
 
-真实那一路也要格式化：Seamless 自带预提取的 112 维 FLAME（转成 108 维），音频按逐帧说话活性 mask 门控清零、峰值归一 0.5 对齐合成数据响度，再重过 Mimi（24 kHz、8 codebook）和 Kyutai STT→Moshi SPM 对齐 80 ms 网格——真实录音被整成与自嗨数据同构的 shard（隐藏状态/音频码/文本 token/FLAME 四对齐）。
+真实那一路也要格式化。模型吃的不是音频文件，而是四条对齐到 80 ms 网格的流（隐藏状态/音频码/文本 token/FLAME），合成数据天生就是这个格式，真实录音要整形：不说话的帧按活性标注乘零（真实沉默有底噪，合成沉默是干净的零，不清掉响度和底噪都会泄露数据来源）；波形峰值归一到 0.5 对齐合成语音的恒定响度；升采样 24 kHz 重过 Mimi 变成同样的整数码；用 Kyutai STT 转写出带时间戳的词、再用 Moshi 分词器切 token 填进对应格子。整形完一条真实对话的训练记录（shard）和一条自嗨对话在格式上无法区分。FLAME 最省事：数据集自带预提取 112 维参数，转 108 维即可。
 
-附录训练配置：AdamW、学习率 (10^{-4})、weight decay 0、梯度 clip 1、500 步 warmup、余弦衰减到初始值 10%、最多 (10^6) 步、batch 256、4 张 H200；三路条件各 .1 dropout——style 是角色参考动作、anchor 是已出队的干净动作帧、audio feature 是 PersonaPlex 隐藏状态，丢弃时换可学 null embedding，为推理期 CFG 和流式 warm-up（启动时 anchor 为空）留路；EMA .9999，但作者说原始权重更好。
+附录训练配置：AdamW、学习率 (10^{-4})、weight decay 0、梯度 clip 1、500 步 warmup、余弦衰减到初始值 10%、最多 (10^6) 步、batch 256、4 张 H200；三路条件各 .1 dropout——style 是角色参考动作、anchor 是已出队的干净动作帧、audio feature 是 PersonaPlex 隐藏状态，丢弃时换可学的空白占位向量（null embedding）。两个用途：让模型学会「没有该条件怎么办」，推理时把有条件/无条件预测相减放大条件遵循（classifier-free guidance）；流式启动时队列为空、anchor 天然缺失，见过缺条件的模型开头几拍才不抽风；EMA .9999，但作者说原始权重更好。
 
 又有一处数据口径冲突：正文强调约 1,138 小时混合数据，附录 B.1 写训练使用名为 syntheticv2_plrs22 的 corpus。它可能是内部混合集名称，也可能只指合成集，论文未给 schema，复现时需要作者澄清。
 
