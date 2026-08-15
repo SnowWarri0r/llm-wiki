@@ -209,9 +209,11 @@
 
 <section id="failure">
 <h2><span class="n">§ 05</span>为什么放大到 10B+ 会坏：目标里藏着自己的切线</h2>
-<p>TrigFlow 下，论文把 target 网络的总导数整理成两部分：</p>
+<p>先交代下面这条公式的来路——它没有任何新东西，是把两件旧东西相乘求一次导。第一件：TrigFlow 参数化 <code class="m">f_{\theta^-}=\cos t\,x_t-\sin t\,F_{\theta^-}(x_t,t)</code>（§ 03 结尾提过，f 不是独立网络，是拿原生输出 F 拼出来的）。第二件：切线沿<strong>老师轨迹</strong>取，所以 <code class="m">dx_t/dt=F_{\mathrm{teacher}}</code>——老师速度场本来就是轨迹的移动速度。对 f 求总导数，乘积法则逐项拆：<code class="m">\cos t\,x_t</code> 两个因子都随 t 变，给 <code class="m">-\sin t\,x_t+\cos t\,(dx_t/dt)</code>；<code class="m">-\sin t\,F_{\theta^-}</code> 给 <code class="m">-\cos t\,F_{\theta^-}-\sin t\,(dF_{\theta^-}/dt)</code>。把 <code class="m">dx_t/dt</code> 换成 <code class="m">F_{\mathrm{teacher}}</code>，再按 cos / sin 各归一堆：</p>
 <div class="formula">\frac{df_{\theta^-}}{dt}=-\cos t\left(F_{\theta^-}-F_{\mathrm{teacher}}\right)-\sin t\left(x_t+\frac{dF_{\theta^-}}{dt}\right)</div>
 <div class="vars"><div><code class="m">\theta^-</code>当前 student 的 EMA<a class="jr" href="#g-12">12</a> / stop-gradient 目标参数。</div><div><code class="m">F_{\theta^-}</code>目标 student 的速度预测。</div><div><code class="m">F_{\mathrm{teacher}}</code>冻结老师的速度预测。</div><div><code class="m">F_{\theta^-}-F_{\mathrm{teacher}}</code>student 与老师当下速度的差。</div><div><code class="m">dF_{\theta^-}/dt</code>student 自身沿轨迹的 JVP；上一时段的偏差会进入后续目标。</div><div><code class="m">\cos t,\sin t</code>两项随噪声时间变化的权重。</div></div>
+<p>这样归堆不是随手整理：归完后两个括号各有含义。cos 括号是“student 速度离老师差多少”——<strong>有老师锚着</strong>；sin 括号里是 student 自己的 JVP——<strong>没有外部锚，是自反馈</strong>。本节的坏消息全住在第二个括号里。</p>
+<div class="calc"><div class="step"><b>公式体检 · 完美 student 应给 0</b><span>取 <code class="m">x_0=2</code>、<code class="m">\epsilon=-1</code>、<code class="m">t=\pi/6</code>（cos=.866、sin=.5）：<code class="m">x_t=.866\times2+.5\times(-1)=1.232</code>，<code class="m">F_{\mathrm{teacher}}=.866\times(-1)-.5\times2=-1.866</code>。</span></div><div class="step"><b>两个括号各自归零</b><span>完美 student 在轨迹上 <code class="m">F_{\theta^-}=F_{\mathrm{teacher}}</code>，第一个括号 = 0；沿轨迹 <code class="m">F=\cos t\,\epsilon-\sin t\,x_0</code>，求导得 <code class="m">dF/dt=-.5\times(-1)-.866\times2=-1.232=-x_t</code>，第二个括号 <code class="m">x_t+dF/dt=0</code>。于是 <code class="m">df/dt=0</code>，一致性恰好达成——公式没编错。</span></div></div>
 <figure id="fig-error">
   <figcaption><span>Fig 07 · 时间越靠近高噪声端，老师项越弱、自反馈越强</span><b>不是“JVP 本身有罪”，而是误差会被递推</b></figcaption>
   <div class="errorline">
