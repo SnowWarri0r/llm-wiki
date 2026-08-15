@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>ReAct · Reason + Act · 想一步动一步 · Concept</title>
+<title>头像状态循环 · 动作做完后，明确回到一个稳定状态 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,68 +53,70 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · react-loop</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · avatar-state-cycling</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>ReAct · Reason + Act · 想一步动一步</h1>
+  <h1>头像状态循环 · 动作做完后，明确回到一个稳定状态</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>让 LLM <strong>交替地"想一句(Reason) → 动一下(Act) → 看结果(Observe)"</strong>，而不是憋一大段答案——下一步做什么取决于上一步看到了什么，这就是 agent 会用工具、能多轮调研的最小循环。</p>
-<h2>直觉 · 闭卷答 vs 开卷边查边写</h2>
-<p>普通 LLM 回答像<strong>闭卷考试</strong>：脑子里有什么就写什么，写错也没法回头核对。</p>
-<p>ReAct 像<strong>开卷 + 能动手</strong>：想到"这我不确定"就停下来去<strong>查一下/算一下/调个 API</strong>，把查到的结果(Observation)接着喂回去，再想下一步。一个问题被拆成一串小步，每步都能看到真实世界的反馈再决定怎么走。</p>
-<pre><code>Thought: 要算训练成本，得先知道参数量
-Act:     search(&quot;模型A 参数量&quot;)
-Obs:     7B
-Thought: 还需要 GPU 小时数
-Act:     search(&quot;模型A GPU hours&quot;)
-Obs:     130 万 H100·时
-Thought: 信息够了，可以估算成本了
-Answer:  ...
+<p>LLM 不只产出一句回答，还同时写“现在做什么”和“做完后保持什么状态”，让视频生成器在行动与待机之间循环。</p>
+<h2>直觉</h2>
+<p>只给视频模型一句“抬手看表”，它可能在回答结束后继续抬手、反复看表。状态循环把一条指令拆成两张连续的导演卡：</p>
+<ol>
+<li>动作卡：抬腕看表，同时说“现在十点半”；</li>
+<li>稳定卡：放下手，坐着等待下一条指令。</li>
+</ol>
+<h2>怎么做的</h2>
+<p>用户第 <span class="tex math-inline" data-display="false">t</span> 轮文字为 <span class="tex math-inline" data-display="false">x_t</span>，上一轮状态为 <span class="tex math-inline" data-display="false">\mathcal S_{t-1}</span>。LLM 输出动作提示、回答音频和新稳定提示：</p>
+<div class="tex math-display" data-display="true">(p_t^{\mathrm{act}},a_t^{\mathrm{resp}},p_t^{\mathrm{stable}})
+=\operatorname{LLM}(x_t,\mathcal S_{t-1}).</div>
+<p>回答音频播放期间，视频模型同时吃 <span class="tex math-inline" data-display="false">p_t^{\mathrm{act}}</span> 与 <span class="tex math-inline" data-display="false">a_t^{\mathrm{resp}}</span>：文字管身体动作，音频管口型。音频结束后，音频条件置空，文字改成 <span class="tex math-inline" data-display="false">p_t^{\mathrm{stable}}</span>，直到下一轮用户输入到来。</p>
+<h2>数字例子</h2>
+<p>设回答音频长 2.4 秒，视频以 24 FPS 播放：</p>
+<pre><code class="language-text">动作阶段：2.4 × 24 = 57.6，约 58 帧
+稳定阶段：若用户 3.0 秒后才继续说，还有 0.6×24≈14 帧
 </code></pre>
-<p><strong>Thought / Act / Observation</strong> 三件一轮，循环到模型觉得"够了"就收尾。</p>
-<h2>为什么有用</h2>
-<ul>
-<li><strong>接上真实世界</strong>：Act 可以是搜索、抓网页、跑代码、调函数——LLM 从"凭记忆"变成"凭证据"。</li>
-<li><strong>自带纠错</strong>：Observation 是真实反馈，搜错了下一轮能换关键词，不像闭卷一条道走到黑。</li>
-<li><strong>可解释</strong>：Thought 链留下了"它为什么这么做"的痕迹，方便排查跑偏。</li>
-</ul>
-<h2>它的坑 vs Planner-Executor</h2>
-<p>ReAct 是<strong>边走边想</strong>，灵活但<strong>容易绕远、没全局观</strong>——可能在一个子问题上反复横跳。</p>
-<p>对照的另一套是 <strong>Planner-Executor（先规划后执行）</strong>：先让模型一次性列完整计划(子任务 1/2/3…)，再逐条执行。有全局观、子任务能并行，但计划定死后<strong>不好临场调整</strong>。</p>
-<p>实践里常<strong>混用</strong>：planner 出大纲 → 每个子任务内部跑 ReAct 小循环。<a href="../concepts/deep-research.html">deep-research</a> 系统的 ②③ 轴(工具使用 + 规划控制)基本就建在这两套范式上。</p>
-<h2>代码出处 / 来源</h2>
-<ul>
-<li>ReAct 原始论文 arXiv 2210.03629（Yao et al. 2022）</li>
-<li>LangChain / 各类 agent 框架的默认循环大多是 ReAct 变体</li>
-</ul>
+<p>前 58 帧执行“看表 + 回答”，后 14 帧使用“放下手、坐稳”的提示。若没有稳定提示，动作提示会继续控制这 14 帧，反复动作的风险更高。</p>
+<h2>论文没说清的地方</h2>
+<p>正文把上一轮输入写成 <span class="tex math-inline" data-display="false">\mathcal S_{t-1}</span>，散文却只明确提到上一轮 stable prompt。这个状态容器是否还保存场景物体、对话摘要或动作历史，论文没有列字段；不能把它擅自扩成完整 agent memory。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../concepts/deep-research.html">deep-research</a> · 把 ReAct 循环跑几十轮做调研报告</li>
-<li><a href="../concepts/memory-stream.html">memory-stream</a> · 多轮 Observation 攒下来怎么存</li>
-<li><a href="../papers/memgpt.html">memgpt</a> · LLM 自己 function call 调度记忆，ReAct 的"动手"升级版</li>
-<li><a href="../concepts/agent-reflection.html">agent-reflection</a> · 跑久了把碎片 Observation 提炼成高层认知</li>
-<li><a href="../concepts/action-chunking.html">action-chunking</a> · 对照:ReAct 想一步动一步，chunking 想一次动多步</li>
+<li><a href="../papers/interactive-avatar.html">interactive-avatar</a> · RRM 与 State-Cycling 的来源</li>
+<li><a href="../concepts/react-loop.html">react-loop</a> · 推理、行动、观察的通用 agent 循环</li>
+<li><a href="../concepts/full-duplex-multimodal-interaction.html">full-duplex-multimodal-interaction</a> · 输入与输出同时推进时的系统目标</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 4 处</span>
-  <ul><li><a href="../concepts/action-chunking.html"><span class="cat">concept</span>Action Chunking · 一次推理预测多步动作</a></li><li><a href="../concepts/avatar-state-cycling.html"><span class="cat">concept</span>头像状态循环 · 动作做完后，明确回到一个稳定状态</a></li><li><a href="../concepts/deep-research.html"><span class="cat">concept</span>Deep Research · 深度研究系统 · 派一个会上网的研究员</a></li><li><a href="../concepts/memory-stream.html"><span class="cat">concept</span>Memory Stream · 记忆流</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/interactive-avatar.html"><span class="cat">paper</span>InteractiveAvatar · 让实时数字人记得过去，也听得懂“现在该做什么”</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/react-loop.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/avatar-state-cycling.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

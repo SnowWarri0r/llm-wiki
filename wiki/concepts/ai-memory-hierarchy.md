@@ -1,8 +1,8 @@
 ---
 name: ai-memory-hierarchy
 type: concept
-sources: []
-updated: 2026-06-16
+sources: [interactive-avatar]
+updated: 2026-08-12
 ---
 
 # AI 服务器内存层级 · HBM / LPDDR5X / DDR5 / CXL / 光互连 · 快但小↔慢但大

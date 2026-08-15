@@ -1,8 +1,8 @@
 ---
 name: react-loop
 type: concept
-sources: [generative-agents]
-updated: 2026-06-15
+sources: [generative-agents, interactive-avatar]
+updated: 2026-08-12
 ---
 
 # ReAct · Reason + Act · 想一步动一步
