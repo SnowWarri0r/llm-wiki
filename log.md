@@ -1486,3 +1486,8 @@ skill 更新:
 - FacePlex：§05 补每层构成(self-attn→RCA→FFN→velocity head)+style/anchor 是什么(角色参考动作/已出队干净帧);§06 补真实数据格式化管线(Seamless 自带 112D FLAME、音频门控+归一+重过 Mimi/STT 成同构 shard)+三路 dropout 的用途(CFG+流式 warm-up、null embedding);§08 补 N 消融质量面(N=1 嘴部误差反而最低,质量不随步数单调,N=2 是均衡非上限)。
 - 两 md 同步;lint 2 页 0/0;KaTeX 2871 条 0 失败;浏览器核过改动处。
 - 流程固化：每篇论文最少 review 两遍(通读批判遍+大纲对照遍),已写入长期记忆。
+
+## [2026-08-11] revise | faceplex 拆包两处过度压缩句
+- 用户细则：过于省略=通俗易懂的违规项（一句话步骤>2 或未解释术语>2 必拆）。已写入长期记忆 rubric。
+- 真实数据管线句（门控/归一/Mimi/STT/shard 五步一口气）拆成四条有序步骤，每步带为什么；shard 就地定义。
+- dropout 句拆开：null embedding=可学空白占位；CFG 就地解释（有/无条件预测相减放大遵循）；warm-up 的因果讲透（启动时 anchor 天然缺失）。
