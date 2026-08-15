@@ -70,17 +70,17 @@
 <p>表情不能只看开口前的声音：一个音节末尾、停顿或笑声会改变前后几帧的嘴形。FacePlex 先生成语音，再把音频和表情一起暂存。某个表情片段在队列里待三轮，每轮都能读到后来已由系统生成的语音状态。</p>
 <p>这不是预测用户的未来，也不是偷看测试答案。它替代严格只看过去的单次 cross-attention，用约 240 毫秒固定等待换取局部双向语音上下文。</p>
 <h2>怎么做的</h2>
-<p>设队列长 (L=4)，第 (i) 个动作槽对第 (j) 个语音隐藏槽是否可见由二值 mask (A_{ij}) 决定：</p>
+<p>设队列长 <span class="tex math-inline" data-display="false">L=4</span>，第 <span class="tex math-inline" data-display="false">i</span> 个动作槽对第 <span class="tex math-inline" data-display="false">j</span> 个语音隐藏槽是否可见，由二值 mask <span class="tex math-inline" data-display="false">A_{ij}</span> 决定：</p>
 <ul>
 <li>full：全部为 1；</li>
-<li>block diagonal：仅 (i=j)；</li>
-<li>causal：仅 (j\le i)；</li>
-<li>anti-causal：仅 (j\ge i)。</li>
+<li>block diagonal：仅 <span class="tex math-inline" data-display="false">i=j</span>；</li>
+<li>causal：仅 <span class="tex math-inline" data-display="false">j\le i</span>；</li>
+<li>anti-causal：仅 <span class="tex math-inline" data-display="false">j\ge i</span>。</li>
 </ul>
 <p>队列每 80 毫秒前移一次。同一个动作片段不是永远固定在某个格子，因此它一生中读取到的语音范围大于一次 attention 的四个槽位。</p>
 <h2>数字例子</h2>
-<p>动作片段 (X_t) 刚进入队尾时读取 <code>[h_{t-3},h_{t-2},h_{t-1},h_t]</code>；下一轮读取 <code>[h_{t-2},h_{t-1},h_t,h_{t+1}]</code>；到输出前读取 <code>[h_t,h_{t+1},h_{t+2},h_{t+3}]</code>。</p>
-<p>把所有轮次取并集，它见过 (h_{t-3}) 到 (h_{t+3})。后面三项之所以可用，是因为系统已先生成并缓存相应语音；代价是等待 (3×80=240) 毫秒。</p>
+<p>动作片段 <span class="tex math-inline" data-display="false">X_t</span> 刚进入队尾时读取 <span class="tex math-inline" data-display="false">[h_{t-3},h_{t-2},h_{t-1},h_t]</span>；下一轮读取 <span class="tex math-inline" data-display="false">[h_{t-2},h_{t-1},h_t,h_{t+1}]</span>；到输出前读取 <span class="tex math-inline" data-display="false">[h_t,h_{t+1},h_{t+2},h_{t+3}]</span>。</p>
+<p>把所有轮次取并集，它见过 <span class="tex math-inline" data-display="false">h_{t-3}</span> 到 <span class="tex math-inline" data-display="false">h_{t+3}</span>。后面三项之所以可用，是因为系统已先生成并缓存相应语音；代价是等待 <span class="tex math-inline" data-display="false">3\times80=240</span> 毫秒。</p>
 <h2>跟严格因果 attention 的对照</h2>
 <ul>
 <li>严格因果：零额外未来缓冲，但嘴形可能缺少音节尾部线索。</li>
@@ -105,6 +105,19 @@
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

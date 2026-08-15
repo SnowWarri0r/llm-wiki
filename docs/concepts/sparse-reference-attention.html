@@ -65,22 +65,22 @@
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>目标视频内部仍可全局互看，但目标第 <code>t</code> 帧只读取参考第 <code>t</code> 帧。</p>
+<p>目标视频内部仍可全局互看，但目标第 <span class="tex math-inline" data-display="false">t</span> 帧只读取参考第 <span class="tex math-inline" data-display="false">t</span> 帧。</p>
 <h2>直觉</h2>
 <p>如果在学“第 2 秒抬手”，没有必要让目标第 2 秒同时查询参考视频第 0、1、2、3 秒的全部像素。先用时间对齐把正确参考帧找出来，再只在这一帧里挑细节。</p>
 <h2>怎么做的</h2>
-<p>设每段有 <code>T</code> 帧，目标每帧 <code>S_t</code> 个 token，参考每帧 <code>S_r</code> 个 token：</p>
-<div class="tex math-display" data-display="true">\text{全量跨分支连边}=T^2S_tS_r</div>
-<div class="tex math-display" data-display="true">\text{按时间对齐连边}=TS_tS_r</div>
+<p>设每段有 <span class="tex math-inline" data-display="false">T</span> 帧，目标每帧 <span class="tex math-inline" data-display="false">S_t</span> 个 token，参考每帧 <span class="tex math-inline" data-display="false">S_r</span> 个 token：</p>
+<div class="tex math-display" data-display="true">\text{全量跨分支连边}=T^2 S_t S_r</div>
+<div class="tex math-display" data-display="true">\text{按时间对齐连边}=T S_t S_r</div>
 <p>注意：被裁掉的是“目标查询参考”的跨分支连边；目标分支的自注意力仍保持完整。</p>
 <h2>数字例子</h2>
-<p>取 <code>T=3</code>、<code>S_t=4</code>、<code>S_r=2</code>：</p>
+<p>取 <span class="tex math-inline" data-display="false">T=3</span>、<span class="tex math-inline" data-display="false">S_t=4</span>、<span class="tex math-inline" data-display="false">S_r=2</span>：</p>
 <ul>
-<li>全量比较：目标共有 <code>3×4=12</code> 个 query，参考共有 <code>3×2=6</code> 个 K/V，连边数为 <code>12×6=72</code>。</li>
-<li>时间对齐：每个时刻只有 <code>4×2=8</code> 条跨分支连边，三个时刻共 <code>3×8=24</code>。</li>
-<li>这组小例子把跨分支比较量从 72 降到 24，正好减少 3 倍；一般会减少约 <code>T</code> 倍。</li>
+<li>全量比较：目标共有 <span class="tex math-inline" data-display="false">3\times4=12</span> 个 query，参考共有 <span class="tex math-inline" data-display="false">3\times2=6</span> 个 K/V，连边数为 <span class="tex math-inline" data-display="false">12\times6=72</span>。</li>
+<li>时间对齐：每个时刻只有 <span class="tex math-inline" data-display="false">4\times2=8</span> 条跨分支连边，三个时刻共 <span class="tex math-inline" data-display="false">3\times8=24</span>。</li>
+<li>这组小例子把跨分支比较量从 72 降到 24，正好减少 3 倍；一般会减少约 <span class="tex math-inline" data-display="false">T</span> 倍。</li>
 </ul>
-<p>论文把复杂度写成从 <code>O(N_rN_l)</code> 降到 <code>O(N_l)</code>，隐含前提是每帧参考 token 数视作固定常数。若把 <code>S_r</code> 也展开，更完整的写法是上面的 <code>O(TS_tS_r)</code>。</p>
+<p>论文把复杂度写成从 <span class="tex math-inline" data-display="false">\mathcal{O}(N_r N_l)</span> 降到 <span class="tex math-inline" data-display="false">\mathcal{O}(N_l)</span>，隐含前提是每帧参考 token 数视作固定常数。若把 <span class="tex math-inline" data-display="false">S_r</span> 也展开，更完整的写法是上面的 <span class="tex math-inline" data-display="false">\mathcal{O}(T S_t S_r)</span>。</p>
 <h2>链接</h2>
 <ul>
 <li><a href="../papers/wan-animate-2.html">wan-animate-2</a> · 提出并用于直接视频驱动</li>
