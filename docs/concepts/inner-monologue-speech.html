@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Audio Codebook Delay · 先定语义，下一帧再补声学细节 · Concept</title>
+<title>Inner Monologue · 每帧先写一点文字，再生成对应声音 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,52 +53,80 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · audio-codebook-delay</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · inner-monologue-speech</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Audio Codebook Delay · 先定语义，下一帧再补声学细节</h1>
+  <h1>Inner Monologue · 每帧先写一点文字，再生成对应声音</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>同一段 80 毫秒声音里，第一层语义 token 按当前时刻生成，其余声学 token 故意向后错一帧。</p>
-<h2>直觉</h2>
-<p>像先写字幕草稿，再晚 80 毫秒决定具体语气、音高和质感。声学层拿得到已经确定的语义层，不必在同一个瞬间盲猜“说什么”和“怎么响”。</p>
+<p>Moshi 每 80 毫秒先预测自己的文字 token，再预测同一小段语音的语义码和声学码。</p>
+<h2>它不是什么</h2>
+<p>它不是“先在后台写完整答案，再把整句交给 TTS”。那样必须等文字完成，无法在 200 毫秒左右开口，也无法在中途听见用户改口。Moshi 只把<strong>当前时间格</strong>的文字放在当前语音码之前；下一格仍会重新读取用户刚到的声音。</p>
 <h2>怎么排</h2>
-<p>设帧号为 <code>t</code>：</p>
-<ul>
-<li>agent 文字 token 与第 1 个语义音频 token 放在 <code>t</code>；</li>
-<li>第 2–8 个声学 token 放在 <code>t+1</code>；</li>
-<li>一帧是 <code>1 / 12.5 = 0.08</code> 秒，所以错开量是 80 毫秒。</li>
-</ul>
+<p>每个 80 ms 时间格从上到下有三层：</p>
+<pre><code class="language-text">助手文字 token
+→ 助手语义音频 token
+→ 助手声学细节 token
+</code></pre>
+<p>没有新词时，文字流使用 <code>PAD</code>。下一词即将开始前插入 <code>EPAD</code>，把“现在该结束停顿”和“接下来要说哪个词”拆成两次决定。</p>
 <h2>数字例子</h2>
-<p>句子第 10 帧确定要说“好”：</p>
-<ol>
-<li><code>t=10</code> 先生成对应文字/语义码；</li>
-<li><code>t=11</code> 的深度模块已经看到这层语义，再补 7 层音色、韵律和细节码；</li>
-<li>codec 收齐 8 层后还原这一小段波形。</li>
-</ol>
-<p>代价是固定增加一帧等待；收益是声学细节不必与语义在同一帧互相猜。</p>
+<p>假设英文单词 “okay” 在 0.80 秒开始，分词器把它切成两个 token。12.5 Hz 意味着每格 80 ms，因此它落在第 10 格附近。用便于手算的 0-based 编号：</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">时间格</th>
+<th>文字流</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">9</td>
+<td><code>EPAD</code></td>
+<td>宣告填充即将结束</td>
+</tr>
+<tr>
+<td style="text-align: right;">10</td>
+<td><code>ok</code></td>
+<td>先定住当前语义</td>
+</tr>
+<tr>
+<td style="text-align: right;">11</td>
+<td><code>ay</code></td>
+<td>补完这个词</td>
+</tr>
+<tr>
+<td style="text-align: right;">12</td>
+<td><code>PAD</code></td>
+<td>暂时没有新词</td>
+</tr>
+</tbody>
+</table>
+<p>同一格里，文字 token 先进入 Depth Transformer，语义音频码随后生成；声学细节再按 codebook delay 晚一格补齐。模型仍然一格一格向前走，没有等待完整句子。</p>
+<h2>为什么有效</h2>
+<p>纯音频模型要同时从离散声音码里猜知识、句法、词义、音色与韵律。文字流给它一条更紧凑的语义路径。Moshi 的消融中，加入这条流后，3 秒提示续写的外部文本模型 NLL 从 3.65 降到 2.77，转写长度从 602 增到 1920；spoken QA 的三项准确率也大约变成原来的三倍。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/moshi.html">moshi</a> · 原始消融与延迟定义</li>
-<li><a href="../papers/personaplex.html">personaplex</a> · 沿用一格声学错位</li>
-<li><a href="../concepts/temporal-depth-transformer.html">temporal-depth-transformer</a> · 帧内多 codebook 生成</li>
-<li><a href="../concepts/rvq-codec.html">rvq-codec</a> · 语义层和残差层</li>
+<li><a href="../papers/moshi.html">moshi</a> · 提出逐帧文字—语义—声学层级。</li>
+<li><a href="../concepts/temporal-depth-transformer.html">temporal-depth-transformer</a> · 同一帧的多路 token 怎样生成。</li>
+<li><a href="../concepts/audio-codebook-delay.html">audio-codebook-delay</a> · 声学细节为什么晚一帧。</li>
+<li><a href="../papers/personaplex.html">personaplex</a> · 沿用 Moshi 的 Inner Monologue，并在前面加入角色与声音 prompt。</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 3 处</span>
-  <ul><li><a href="../papers/moshi.html"><span class="cat">paper</span>Moshi · 把语音对话改写成每 80 毫秒一次的联合预测</a></li><li><a href="../concepts/inner-monologue-speech.html"><span class="cat">concept</span>Inner Monologue · 每帧先写一点文字，再生成对应声音</a></li><li><a href="../concepts/temporal-depth-transformer.html"><span class="cat">concept</span>Temporal–Depth Transformer · 时间轴走大步，帧内再补多层音频码</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/moshi.html"><span class="cat">paper</span>Moshi · 把语音对话改写成每 80 毫秒一次的联合预测</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/audio-codebook-delay.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/inner-monologue-speech.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
