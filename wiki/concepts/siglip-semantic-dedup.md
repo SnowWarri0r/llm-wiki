@@ -1,8 +1,8 @@
 ---
 name: siglip-semantic-dedup
 type: concept
-sources: [krea-2]
-updated: 2026-06-26
+sources: [krea-2, interactive-avatar]
+updated: 2026-08-12
 ---
 
 # SigLIP 语义去重 · 删的是"长得像"，不是"字节一样"
