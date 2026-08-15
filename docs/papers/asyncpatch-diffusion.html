@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AsyncPatch Diffusion · 不再让整张图共用一只去噪时钟</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..800&family=Newsreader:opsz,wght@6..72,350..700&family=Noto+Serif+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<style>
+:root{--paper:#f3edde;--card:#fbf6e8;--ink:#171719;--ink2:#3d3937;--muted:#756c60;--rule:#b9ae98;--navy:#163a58;--navy2:#d9e6eb;--rust:#a83b25;--rust2:#f4d8ce;--teal:#147687;--teal2:#cde8e9;--gold:#9b6500;--gold2:#f4dfaa;--green:#3f7354;--green2:#d7e7d8;--purple:#68477c;--purple2:#e5dbea}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:18px/1.76 'Newsreader','Noto Serif SC',serif;-webkit-font-smoothing:antialiased}body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.3;background-image:linear-gradient(rgba(20,118,135,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(20,118,135,.045) 1px,transparent 1px);background-size:32px 32px}.page{position:relative;max-width:1180px;margin:auto;padding:58px 38px 120px}.mast{display:flex;justify-content:space-between;border-top:4px double var(--ink);border-bottom:1px solid var(--rule);padding:12px 0;color:var(--muted);font:600 11px/1.5 'JetBrains Mono';letter-spacing:2px;text-transform:uppercase}.hero{padding:58px 0 32px}.issue{display:flex;gap:14px;align-items:center;color:var(--teal);font:700 11px/1.5 'JetBrains Mono';letter-spacing:3px;text-transform:uppercase}.issue:after{content:"";height:1px;background:var(--rule);flex:1}.hero h1{margin:18px 0 14px;font:750 clamp(54px,8.6vw,108px)/.88 'Fraunces','Noto Serif SC';letter-spacing:-.052em}.hero h1 em{color:var(--teal);font-weight:600}.byline{color:var(--muted);font:600 12px/1.5 'JetBrains Mono';letter-spacing:.8px}.dek{max-width:920px;font:italic 400 clamp(21px,2.5vw,29px)/1.43 'Fraunces','Noto Serif SC';color:var(--ink2)}.tldr,.note,.warning,.truth{margin:24px 0;padding:18px 22px;background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--teal)}.warning{border-left-color:var(--rust);background:#fff0e8}.truth{border-left-color:var(--green);background:#edf5ea}.label{display:block;margin-bottom:5px;color:var(--teal);font:700 10px/1.5 'JetBrains Mono';letter-spacing:2px;text-transform:uppercase}.warning .label{color:var(--rust)}.truth .label{color:var(--green)}nav.toc{position:sticky;top:0;z-index:10;display:flex;gap:7px;overflow-x:auto;margin:0 -14px 50px;padding:10px 14px;background:rgba(243,237,222,.96);border-block:1px solid var(--rule);scrollbar-width:none}nav.toc a{flex:none;padding:6px 9px;border:1px solid var(--rule);color:var(--navy);background:var(--card);font:600 10px/1.2 'JetBrains Mono';text-decoration:none}nav.toc a:hover,nav.toc a:focus-visible{background:var(--navy);color:#fff;outline:2px solid var(--navy);outline-offset:1px}h2{display:flex;gap:16px;align-items:baseline;margin:76px 0 20px;font:700 clamp(30px,4vw,43px)/1.1 'Fraunces','Noto Serif SC';letter-spacing:-.025em}h2 .n{min-width:55px;color:var(--teal);font:700 11px/1.4 'JetBrains Mono';letter-spacing:2px}h3{margin:34px 0 10px;font:700 23px/1.3 'Fraunces','Noto Serif SC'}p{margin:12px 0}a{color:#8c2d1d;text-decoration-thickness:1px;text-underline-offset:3px}strong{font-weight:700}.lead{font-size:22px;line-height:1.58;color:var(--ink2)}code{font:500 .88em/1.5 'JetBrains Mono';background:#fffaf0;border:1px solid var(--rule);border-radius:3px;padding:1px 5px}.jr{vertical-align:super;margin:0 2px;padding:1px 5px;border:1px solid var(--gold);border-radius:999px;background:var(--gold2);color:#4f3200;text-decoration:none;font:700 9px/1.2 'JetBrains Mono'}.jr:hover,.jr:focus-visible,.jr.jr-active{background:#4f3200;color:#fff;outline:2px solid var(--gold);outline-offset:2px}.grid2,.grid3,.grid4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid4{grid-template-columns:repeat(4,minmax(0,1fr))}.card{min-width:0;padding:20px;background:var(--card);border:1px solid var(--rule);box-shadow:5px 5px 0 rgba(22,58,88,.06)}.card h3{margin:8px 0 5px}.card p{font-size:16px;line-height:1.58}.tag{display:inline-block;padding:3px 8px;background:var(--navy2);color:var(--navy);font:700 10px/1.4 'JetBrains Mono';letter-spacing:1px;text-transform:uppercase}.tag.rust{background:var(--rust2);color:#7b291a}.tag.teal{background:var(--teal2);color:#075662}.tag.gold{background:var(--gold2);color:#573800}.tag.green{background:var(--green2);color:#285438}.tag.purple{background:var(--purple2);color:#4b315c}figure{margin:38px 0;padding:28px;background:rgba(251,246,232,.84);border:1px solid var(--rule);box-shadow:8px 8px 0 rgba(22,58,88,.07);overflow:hidden}figcaption{display:flex;justify-content:space-between;gap:16px;margin-bottom:22px;padding-bottom:12px;border-bottom:1px dashed var(--rule);color:var(--muted);font:600 11px/1.4 'JetBrains Mono';letter-spacing:1.3px;text-transform:uppercase}figcaption b{color:var(--teal)}.formula{margin:18px 0;padding:21px 16px;overflow-x:auto;text-align:center;background:#142b40;color:#fff;border-left:6px solid var(--teal);font-size:1.1em}.formula .katex{color:#fff}.vars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0}.vars>div{min-width:0;padding:10px 12px;background:var(--card);border:1px solid var(--rule);font-size:14px}.vars code{display:block;margin-bottom:4px;color:#7b291a}.calc{counter-reset:step;display:grid;gap:8px;margin:18px 0}.step{position:relative;padding:13px 14px 13px 56px;background:#fff;border:1px solid var(--rule);font-size:15px}.step:before{counter-increment:step;content:counter(step,decimal-leading-zero);position:absolute;left:16px;top:14px;color:var(--teal);font:700 11px/1.5 'JetBrains Mono'}.step b{display:block;color:var(--navy)}.flow{display:grid;grid-template-columns:1fr 44px 1fr 44px 1fr;align-items:stretch}.node{min-width:0;padding:18px;background:#fff;border:2px solid var(--navy)}.node.rust{border-color:var(--rust);background:#fff0e9}.node.teal{border-color:var(--teal);background:#edf9f8}.node.green{border-color:var(--green);background:#edf5ea}.node b{display:block;margin:4px 0;font:700 19px/1.3 'Fraunces','Noto Serif SC'}.node small{color:var(--muted);font:700 9px/1.4 'JetBrains Mono';letter-spacing:1px}.node p{font-size:14px;line-height:1.5}.arrow{display:flex;align-items:center;justify-content:center;color:var(--rust);font:700 28px/1 'JetBrains Mono'}.vocab{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.vocab .card{box-shadow:none;padding:16px}.vocab b{display:block;color:var(--navy)}.vocab p{margin:4px 0;font-size:14px}.clock-panels{display:grid;grid-template-columns:1fr 1fr;gap:18px}.clock-panel{padding:18px;background:#fff;border:1px solid var(--rule)}.clock-panel h3{margin:0 0 12px}.clock-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-width:330px;margin:14px auto}.clock{aspect-ratio:1;display:grid;place-items:center;border:2px solid var(--navy);background:var(--navy2);font:700 13px/1 'JetBrains Mono'}.clock.clean{background:var(--green2);border-color:var(--green)}.clock.mid{background:var(--gold2);border-color:var(--gold)}.clock.noisy{background:var(--rust2);border-color:var(--rust)}.legend{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;color:var(--muted);font:600 10px/1.3 'JetBrains Mono'}.legend i{display:inline-block;width:10px;height:10px;margin-right:4px;border:1px solid currentColor}.barset{display:grid;gap:13px}.barrow{display:grid;grid-template-columns:170px 1fr 80px;gap:12px;align-items:center;font-size:14px}.bartrack{height:20px;background:#e1d9cb;position:relative}.barfill{height:100%;background:var(--teal)}.barfill.rust{background:var(--rust)}.barfill.gold{background:var(--gold)}.sampler{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.sample-card{padding:16px;background:#fff;border:1px solid var(--rule)}.axis{position:relative;height:72px;margin:16px 5px 4px}.axis:before{content:"";position:absolute;left:0;right:0;top:35px;height:3px;background:var(--navy)}.axis .range{position:absolute;top:29px;height:15px;background:var(--teal2);border-inline:2px solid var(--teal)}.axis .center{position:absolute;top:20px;width:3px;height:33px;background:var(--rust)}.axis .tick{position:absolute;top:48px;transform:translateX(-50%);font:600 10px/1 'JetBrains Mono';color:var(--muted)}.film{display:grid;grid-template-columns:1fr 56px 1fr;gap:16px;align-items:center}.film-col{display:grid;gap:10px}.film-layer{padding:13px;background:#fff;border:2px solid var(--navy);text-align:center}.film-layer.map{border-color:var(--teal);background:var(--teal2)}.film-layer.out{border-color:var(--green);background:var(--green2)}.film-op{text-align:center;color:var(--rust);font:700 24px/1 'JetBrains Mono'}.schedule{display:grid;gap:12px}.sched-row{display:grid;grid-template-columns:150px repeat(8,1fr);gap:5px;align-items:center}.sched-name{font:700 13px/1.3 'JetBrains Mono';color:var(--navy)}.slot{height:38px;display:grid;place-items:center;border:1px solid var(--rule);background:#fff;font:600 10px/1 'JetBrains Mono'}.slot.c0{background:var(--green2);border-color:var(--green)}.slot.c1{background:var(--rust2);border-color:var(--rust)}.slot.c2{background:var(--gold2);border-color:var(--gold)}.slot.c3{background:var(--teal2);border-color:var(--teal)}.guide{display:grid;grid-template-columns:1fr 56px 1fr 56px 1fr;align-items:stretch}.guide .gbox{padding:18px;background:#fff;border:2px solid var(--navy);text-align:center}.guide .gbox b{display:block;font:700 25px/1.2 'JetBrains Mono';color:var(--navy)}.guide .gbox.final{border-color:var(--green);background:var(--green2)}.guide .op{display:grid;place-items:center;font:700 25px/1 'JetBrains Mono';color:var(--rust)}.path-wrap{display:grid;grid-template-columns:1fr 1fr;gap:18px}.path-card{padding:16px;background:#fff;border:1px solid var(--rule)}.path-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;max-width:300px;margin:14px auto}.path-cell{aspect-ratio:1;display:grid;place-items:center;background:#eee7da;border:1px solid var(--rule);font:700 12px/1 'JetBrains Mono'}.path-cell.on{background:var(--teal2);border:2px solid var(--teal);color:#075662}.path-cell.start{background:var(--green2);border-color:var(--green)}.path-cell.end{background:var(--rust2);border-color:var(--rust)}.scroll{overflow-x:auto;margin:18px 0;border:1px solid var(--rule)}table{width:100%;border-collapse:collapse;background:var(--card);font-size:14px;white-space:nowrap}th,td{padding:10px 12px;border-bottom:1px solid var(--rule);text-align:right}th:first-child,td:first-child{text-align:left}thead th{background:var(--navy);color:#fff;font:600 10px/1.4 'JetBrains Mono';letter-spacing:.7px}.win{background:var(--green2);color:#1f5237;font-weight:700}.mutedrow{color:var(--muted)}.gloss{margin-top:76px;padding-top:30px;border-top:3px double var(--ink)}.gloss ol{list-style:none;padding:0;counter-reset:g}.gloss li{position:relative;padding:13px 10px 13px 48px;border-bottom:1px dashed var(--rule);font-size:15px}.gloss li:before{counter-increment:g;content:counter(g,decimal-leading-zero);position:absolute;left:7px;color:var(--teal);font:700 10px/1.8 'JetBrains Mono'}.gloss .term{font-weight:700;color:var(--navy)}.sources{margin-top:54px;padding:22px;background:var(--card);border:1px solid var(--rule);font-size:14px}.sources li{margin:7px 0}.jr-pop{position:fixed;z-index:1200;left:50%;bottom:18px;transform:translate(-50%,18px);width:min(680px,calc(100vw - 28px));padding:18px 42px 18px 20px;background:#10293b;color:#fff;border:1px solid #4a7188;box-shadow:0 14px 45px rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:.2s}.jr-pop.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}.jr-pop-close{position:absolute;right:10px;top:10px;border:1px solid #7893a2;background:transparent;color:#fff;cursor:pointer}.jr-pop a{color:#b9edf0}.jr-pop-num{color:#7ee0e6;font:700 11px/1 'JetBrains Mono'}.reveal{opacity:0;transform:translateY(8px);transition:.55s ease}.play .reveal{opacity:1;transform:none}.d2{transition-delay:.10s}.d3{transition-delay:.20s}.d4{transition-delay:.30s}
+@media(max-width:850px){.page{padding:34px 18px 90px}.grid3,.grid4,.vocab{grid-template-columns:1fr 1fr}.flow{grid-template-columns:1fr}.arrow{height:34px;transform:rotate(90deg)}.clock-panels,.path-wrap{grid-template-columns:1fr}.sampler{grid-template-columns:1fr}.film{grid-template-columns:1fr}.film-op{transform:rotate(90deg)}.vars{grid-template-columns:1fr}.sched-row{grid-template-columns:105px repeat(8,minmax(34px,1fr));min-width:650px}.schedule{overflow-x:auto}.guide{grid-template-columns:1fr}.guide .op{height:36px}figcaption{display:block}figcaption b{display:block;margin-top:5px}.barrow{grid-template-columns:120px 1fr 65px}}@media(max-width:520px){body{font-size:17px}.page{padding-inline:12px}.hero h1{font-size:51px}figure{padding:18px 12px;margin-inline:0}.grid2,.grid3,.grid4,.vocab{grid-template-columns:1fr}.mast .r{display:none}.clock-grid{gap:4px}.barrow{grid-template-columns:1fr}.barrow .bartrack{order:2}.barrow span:last-child{position:absolute;right:28px}.formula{font-size:.94em;padding-inline:10px}.jr-pop{bottom:8px}}
+/* 与全站注入的 glossary 浮卡兼容：桌面居中右侧，手机贴底，不继承旧的横向位移。 */
+.jr-pop.show{transform:translateY(-50%)}
+@media(max-width:820px){.jr-pop.show{transform:none}}
+@media(max-width:520px){nav.toc{margin-inline:0;padding-inline:0}}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · asyncpatch-diffusion</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page">
+<div class="mast"><span>SPATIALLY FLEXIBLE DIFFUSION · FIELD NOTES</span><span class="r">ARXIV 2606.07079 · 2026</span></div>
+<header class="hero">
+  <div class="issue">一张图里，不同位置可以处在不同去噪时刻</div>
+  <h1>AsyncPatch<br><em>Diffusion</em></h1>
+  <p class="byline">Samuele Papa · Valentin De Bortoli · Guillaume Couairon · Daniel Sýkora · Romuald Elie · Klaus Greff</p>
+  <p class="dek">普通扩散让整张图共用一只时钟。AsyncPatch 给每个 patch 一只局部时钟，再让一个联合网络同时看全图：于是“已知区域保持干净、未知区域继续生成”不再是外挂规则，而是模型训练时就见过的状态。</p>
+  <div class="tldr"><span class="label">先记这一句</span><strong>它没有发明新的去噪目标，而是把标量时间 <code class="m">t</code> 升级为与图像对齐的时间场 <code class="m">\mathbf t=(t_1,\ldots,t_N)</code>。</strong>训练时补齐“全局噪声水平 × 局部差异”的组合；推理时只换各位置的时间路径，同一份 U-Net 就能做整图生成、补图、空间自回归和输入细节引导。</div>
+</header>
+<nav class="toc"><a href="#vocab">00 前置</a><a href="#map">01 总览</a><a href="#joint">02 联合加噪</a><a href="#failure">03 采样缺口</a><a href="#sampler">04 AsyncPatch</a><a href="#loss">05 训练目标</a><a href="#arch">06 架构</a><a href="#routes">07 推理路径</a><a href="#inpaint">08 补图</a><a href="#guidance">09 引导</a><a href="#elbo">10 ELBO</a><a href="#recipe">11 配方</a><a href="#results">12 实验</a><a href="#limits">13 边界</a></nav>
+
+<section id="vocab">
+<h2><span class="n">§ 00</span>先把四个词翻成人话</h2>
+<p class="lead">这里只认清每个词在流程里负责什么；正式公式到后面再拆。</p>
+<div class="vocab">
+  <div class="card"><span class="tag">timestep</span><b>噪声时刻</b><p><code class="m">t=0</code> 接近干净图，<code class="m">t=1</code> 接近纯噪声。它不是视频帧编号。</p></div>
+  <div class="card"><span class="tag teal">score</span><b>局部修改方向</b><p>不是“图像得几分”，而是与 latent 同形的一张方向图：每个数该往哪调。<a class="jr" href="#g-01">01</a></p></div>
+  <div class="card"><span class="tag gold">patch</span><b>一小块空间单元</b><p>训练不是给每个 RGB 像素都单独配钟，而是把相邻位置分块，共享一只局部钟。</p></div>
+  <div class="card"><span class="tag purple">FiLM</span><b>按条件缩放和平移</b><p>从时间条件算出 scale / shift，改写 U-Net 中间特征；AsyncPatch 让它随空间位置变化。<a class="jr" href="#g-02">02</a></p></div>
+</div>
+</section>
+
+<section id="map">
+<h2><span class="n">§ 01</span>先拼完整系统：图像和时间图并排进入同一个 U-Net</h2>
+<p class="lead">输入不是“图像加一个数字”，而是两张对齐的图：一张装带噪视觉 token，一张写每个 token 当前有多噪。U-Net 联合读取它们，为每个位置输出自己的 score。</p>
+<figure id="fig-map">
+  <figcaption><span>Fig 01 · 一次训练前向的完整数据流</span><b>独立加噪 · 联合预测</b></figcaption>
+  <div class="flow">
+    <div class="node"><small>DATA + RANDOM TIMES</small><b>干净图 <code class="m">\mathbf x</code> ＋ 时间图 <code class="m">\mathbf t</code></b><p>同一 patch 共享 <code class="m">t_i</code>；每个位置按自己的信号系数和噪声系数加噪。</p></div>
+    <div class="arrow">→</div>
+    <div class="node teal"><small>ONE JOINT U-NET</small><b>空间 FiLM 调制</b><p>时间图随 U-Net 一起下采样；不同位置得到不同 scale / shift，但卷积和注意力仍连接整张图。</p></div>
+    <div class="arrow">→</div>
+    <div class="node green"><small>OUTPUT</small><b>每个位置的 score</b><p>输出与输入同形。训练拿“实际加进去的噪声方向”监督；推理沿反向方向把局部时钟降到 0。</p></div>
+  </div>
+  <div class="truth"><span class="label">最容易混淆的一点</span>前向加噪在给定干净图后按位置独立；网络预测并不独立。右半边的 score 可以读取左半边已经干净的内容，这才让补图成立。</div>
+</figure>
+</section>
+
+<section id="joint">
+<h2><span class="n">§ 02</span>从一只钟到十六只钟：联合扩散到底改了什么</h2>
+<p>普通扩散的所有位置共享同一个 <code class="m">t</code>。AsyncPatch 用时间向量 <code class="m">\mathbf t=(t_1,\ldots,t_N)</code> 代替它；前向分布写成：</p>
+<div class="formula">\begin{aligned}q(\mathbf z_{\mathbf t}\mid\mathbf x)&amp;=\prod_{i=1}^{N}q(z_{i,t_i}\mid x_i,t_i),\\q(z_{i,t_i}\mid x_i,t_i)&amp;=\mathcal N\!\left(z_{i,t_i};\alpha_{t_i}x_i,\sigma_{t_i}^{2}I\right)\end{aligned}</div>
+<div class="vars">
+  <div><code class="m">\mathbf x=(x_1,\ldots,x_N)</code>干净图像或 latent 的 <code class="m">N</code> 个空间 token。</div>
+  <div><code class="m">\mathbf t=(t_1,\ldots,t_N)</code>时间场；每个 <code class="m">t_i</code> 是标量。</div>
+  <div><code class="m">z_{i,t_i}</code>位置 <code class="m">i</code> 在自己的时刻加噪后的 token。</div>
+  <div><code class="m">\alpha_{t_i}</code>保留多少干净信号；时刻越噪通常越小。</div>
+  <div><code class="m">\sigma_{t_i}</code>加入多少标准高斯噪声；时刻越噪通常越大。</div>
+  <div><code class="m">I</code>单位协方差；<code class="m">\prod_i</code> 表示给定原图后，各位置的噪声独立采样。</div>
+</div>
+<figure id="fig-clocks">
+  <figcaption><span>Fig 02 · 同一张四乘四图，两种时间条件</span><b>普通扩散只有一种灰度 · Joint Diffusion 能混合</b></figcaption>
+  <div class="clock-panels">
+    <div class="clock-panel">
+      <h3>普通扩散 · 全部 <code class="m">t=.7</code></h3>
+      <div class="clock-grid">
+        <span class="clock noisy">.7</span><span class="clock noisy">.7</span><span class="clock noisy">.7</span><span class="clock noisy">.7</span>
+        <span class="clock noisy">.7</span><span class="clock noisy">.7</span><span class="clock noisy">.7</span><span class="clock noisy">.7</span>
+        <span class="clock noisy">.7</span><span class="clock noisy">.7</span><span class="clock noisy">.7</span><span class="clock noisy">.7</span>
+        <span class="clock noisy">.7</span><span class="clock noisy">.7</span><span class="clock noisy">.7</span><span class="clock noisy">.7</span>
+      </div>
+      <p>全图一起噪、一起干净。网络训练时没有见过“左边已知、右边待补”的状态。</p>
+    </div>
+    <div class="clock-panel">
+      <h3>联合扩散 · 每块有自己的 <code class="m">t_i</code></h3>
+      <div class="clock-grid">
+        <span class="clock clean">0</span><span class="clock clean">0</span><span class="clock mid">.5</span><span class="clock noisy">.9</span>
+        <span class="clock clean">0</span><span class="clock clean">0</span><span class="clock mid">.5</span><span class="clock noisy">.9</span>
+        <span class="clock clean">.1</span><span class="clock clean">.1</span><span class="clock mid">.6</span><span class="clock noisy">1</span>
+        <span class="clock clean">.1</span><span class="clock clean">.1</span><span class="clock mid">.6</span><span class="clock noisy">1</span>
+      </div>
+      <p>左边提供清晰上下文，右边仍可从噪声生成；中间带负责把边界接顺。</p>
+    </div>
+  </div>
+  <div class="legend"><span><i style="background:var(--green2)"></i>接近干净</span><span><i style="background:var(--gold2)"></i>中等噪声</span><span><i style="background:var(--rust2)"></i>接近纯噪声</span></div>
+</figure>
+<h3>沿用一组四格数字</h3>
+<p>把真实张量缩成四个数。干净值 <code class="m">\mathbf x=[2,1,4,3]</code>，时间为 <code class="m">[0,0,.8,.8]</code>。玩具日程在 <code class="m">t=.8</code> 取 <code class="m">\alpha=.6,\sigma=.8</code>，后两格噪声为 <code class="m">[-1,.5]</code>：</p>
+<div class="calc">
+  <div class="step"><b>已知区不加噪</b><span>前两格 <code class="m">t=0</code>，仍是 <code class="m">[2,1]</code>。</span></div>
+  <div class="step"><b>第三格</b><span><code class="m">z_3=.6\times4+.8\times(-1)=1.6</code>。</span></div>
+  <div class="step"><b>第四格</b><span><code class="m">z_4=.6\times3+.8\times.5=2.2</code>。</span></div>
+  <div class="step"><b>联合送入网络</b><span>U-Net 看到完整 <code class="m">[2,1,1.6,2.2]</code> 和时间图 <code class="m">[0,0,.8,.8]</code>，不是四个互不相干的小网络。</span></div>
+</div>
+</section>
+
+<section id="failure">
+<h2><span class="n">§ 03</span>为什么“每块独立随机”仍会漏掉关键状态</h2>
+<p>最直觉的训练法是让每个 patch 的 <code class="m">t_i</code> 独立服从 <code class="m">U(0,1)</code>。单个 patch 的确什么时刻都能见到；问题出在<strong>整张图的平均时刻</strong>。若有 <code class="m">M</code> 块：</p>
+<div class="formula">\begin{aligned}\bar t&amp;=\frac{1}{M}\sum_{i=1}^{M}t_i,\\\operatorname{Var}(\bar t)&amp;=\frac{1}{12M},\\\operatorname{Std}(\bar t)&amp;=\frac{1}{\sqrt{12M}}\end{aligned}</div>
+<div class="vars">
+  <div><code class="m">t_i\sim U(0,1)</code>第 <code class="m">i</code> 块独立抽到的时刻。</div>
+  <div><code class="m">\bar t</code>这张图所有 patch 时刻的算术平均。</div>
+  <div><code class="m">1/12</code>区间 <code class="m">[0,1]</code> 均匀分布的方差。</div>
+  <div><code class="m">1/M</code>独立样本取平均后，方差缩小的倍数。</div>
+</div>
+<p>取 <code class="m">M=64</code>，标准差是 <code class="m">\sqrt{1/768}\approx.0361</code>。平均时刻落到 0.1，离中心 0.5 约有 <code class="m">.4/.0361\approx11.1</code> 个标准差——训练里几乎碰不到。<a class="jr" href="#g-03">03</a></p>
+<figure id="fig-concentration">
+  <figcaption><span>Fig 03 · patch 越多，图像平均时刻越被挤到 0.5</span><b>局部随机 ≠ 全局覆盖</b></figcaption>
+  <div class="barset">
+    <div class="barrow"><b>1 个 patch</b><div class="bartrack"><div class="barfill rust" style="width:100%"></div></div><span>std .289</span></div>
+    <div class="barrow"><b>4 个 patch</b><div class="bartrack"><div class="barfill gold" style="width:50%"></div></div><span>std .144</span></div>
+    <div class="barrow"><b>16 个 patch</b><div class="bartrack"><div class="barfill" style="width:25%"></div></div><span>std .072</span></div>
+    <div class="barrow"><b>64 个 patch</b><div class="bartrack"><div class="barfill" style="width:12.5%"></div></div><span>std .036</span></div>
+  </div>
+  <div class="warning"><span class="label">漏掉什么</span>普通整图生成需要“全局接近 1”的起点；生成结束需要“全局接近 0”的状态；补图还需要大块连贯区域一边干净、一边很噪。独立像素 / patch 采样虽然花哨，却把这些整体现象挤没了。</div>
+</figure>
+</section>
+
+<section id="sampler">
+<h2><span class="n">§ 04</span>AsyncPatch 采样：先定整张图多噪，再决定各块差多少</h2>
+<p>上一节已经知道缺口来自全图均值。修法因此分成两层：先直接均匀采全图中心 <code class="m">\bar t</code>，保证干净、中间、纯噪三类全局状态都能见到；再围绕它生成 patch 差异。</p>
+<div class="formula">\begin{aligned}\bar t&amp;\sim U(t_{\min},t_{\max}),\\\delta&amp;=\min(\bar t-t_{\min},\,t_{\max}-\bar t,\,.5),\\t^-&amp;=\bar t-\delta,\qquad t^+=\bar t+\delta,\\t_i&amp;\sim U(t^-,t^+)\end{aligned}</div>
+<div class="vars">
+  <div><code class="m">t_{\min},t_{\max}</code>允许的噪声时刻范围；实验可看作 0 到 1。</div>
+  <div><code class="m">\bar t</code>先均匀选出的全图中心噪声水平。</div>
+  <div><code class="m">\delta</code>对称区间的半宽；取三项最小值是为了不越过左右边界，也不宽过 1。</div>
+  <div><code class="m">t^-,t^+</code>本张图的 patch 可抽取区间。</div>
+  <div><code class="m">t_i</code>第 <code class="m">i</code> 个 patch 最终得到的局部时刻。</div>
+  <div><code class="m">U(a,b)</code>区间 <code class="m">[a,b]</code> 上每个位置等可能的均匀分布。</div>
+</div>
+<figure id="fig-sampler">
+  <figcaption><span>Fig 04 · 三个中心时刻对应三段采样区间</span><b>红线是中心 · 蓝带是各 patch 可抽范围</b></figcaption>
+  <div class="sampler">
+    <div class="sample-card"><span class="tag green">偏干净</span><h3><code class="m">\bar t=.25</code></h3><div class="axis"><span class="range" style="left:0;width:50%"></span><span class="center" style="left:25%"></span><span class="tick" style="left:0">0</span><span class="tick" style="left:25%">.25</span><span class="tick" style="left:50%">.5</span><span class="tick" style="left:100%">1</span></div><p><code class="m">\delta=.25</code>，从 <code class="m">[0,.5]</code> 抽。</p></div>
+    <div class="sample-card"><span class="tag gold">居中</span><h3><code class="m">\bar t=.50</code></h3><div class="axis"><span class="range" style="left:0;width:100%"></span><span class="center" style="left:50%"></span><span class="tick" style="left:0">0</span><span class="tick" style="left:50%">.5</span><span class="tick" style="left:100%">1</span></div><p><code class="m">\delta=.5</code>，从 <code class="m">[0,1]</code> 抽。</p></div>
+    <div class="sample-card"><span class="tag rust">偏噪</span><h3><code class="m">\bar t=.80</code></h3><div class="axis"><span class="range" style="left:60%;width:40%"></span><span class="center" style="left:80%"></span><span class="tick" style="left:0">0</span><span class="tick" style="left:60%">.6</span><span class="tick" style="left:80%">.8</span><span class="tick" style="left:100%">1</span></div><p><code class="m">\delta=.2</code>，从 <code class="m">[.6,1]</code> 抽。</p></div>
+  </div>
+</figure>
+<div class="note"><span class="label">论文措辞的精确边界</span>区间关于 <code class="m">\bar t</code> 对称，因此每个 <code class="m">t_i</code> 的期望是 <code class="m">\bar t</code>。若只是有限个 patch 独立采样，它们的实际样本均值仍会在 <code class="m">\bar t</code> 周围小幅波动；除非实现额外做成对或重心校正，不能把“期望中心”说成“每张图严格相等”。</div>
+</section>
+
+<section id="loss">
+<h2><span class="n">§ 05</span>训练目标没有换题：仍然学习每个位置该往哪去噪</h2>
+<p>AsyncPatch 改的是输入状态的分布，不是 score matching 的基本问题。理论形式对每个位置比较“真实条件 score”和网络预测：</p>
+<div class="formula">\begin{aligned}r_i&amp;=\nabla_{z_{i,t_i}}\log q(z_{i,t_i}\mid x_i,t_i)-s_\theta(\mathbf z_{\mathbf t};\mathbf t)_i,\\\mathcal L(\theta)&amp;=\sum_{i=1}^{N}\mathbb E_{\mathbf x,\,\mathbf t,\,\mathbf z_{\mathbf t}}\!\left[\lambda_i(\mathbf t)\|r_i\|_2^2\right]\end{aligned}</div>
+<div class="vars">
+  <div><code class="m">\theta</code>U-Net 的全部可训练参数。</div>
+  <div><code class="m">s_\theta(\mathbf z_{\mathbf t};\mathbf t)_i</code>网络看完整带噪图和时间图后，为位置 <code class="m">i</code> 预测的 score。</div>
+  <div><code class="m">\nabla_{z_{i,t_i}}\log q(\cdot)</code>已知原图和实际噪声时，位置 <code class="m">i</code> 的正确 score；梯度对该位置的带噪值求。</div>
+  <div><code class="m">r_i</code>位置 <code class="m">i</code> 的真实 score 减预测 score；与该 token 同形。</div>
+  <div><code class="m">\lambda_i(\mathbf t)&gt;0</code>位置和整张时间图共同决定的正权重；第 10 节解释它为何能形成 ELBO。</div>
+  <div><code class="m">\|\cdot\|_2^2</code>对应元素作差、平方再求和；向量完全相同才为 0。</div>
+  <div><code class="m">\mathbb E</code>反复换原图、时间图和高斯噪声后取平均。</div>
+</div>
+<p>论文实际训练采用 rectified-flow Gaussian diffusion 的<strong>速度预测</strong>与 SiD2 目标。<a class="jr" href="#g-04">04</a> 这不是另一套机制：score、噪声和速度在给定噪声日程时可相互换算；网络仍在学习与每个局部时刻匹配的反向方向。</p>
+<div class="calc">
+  <div class="step"><b>采一张图与一张时间图</b><span>例如继续使用 <code class="m">\mathbf t=[0,0,.8,.8]</code>。</span></div>
+  <div class="step"><b>按位置独立加噪</b><span>得到上一节算出的 <code class="m">\mathbf z_{\mathbf t}=[2,1,1.6,2.2]</code>。</span></div>
+  <div class="step"><b>一次联合前向</b><span>U-Net 同时输出四个方向；前两格也有输出，但训练权重可按相应时刻处理。</span></div>
+  <div class="step"><b>逐位置比目标再求和</b><span>每个位置的误差按 <code class="m">\lambda_i(\mathbf t)</code> 加权，最后反向传播更新同一套参数。</span></div>
+</div>
+</section>
+
+<section id="arch">
+<h2><span class="n">§ 06</span>一张时间图怎样进入 U-Net：FiLM 从“整层一把尺”变成“每处一把尺”</h2>
+<p>普通扩散 U-Net 把标量 <code class="m">t</code> 编成一个向量，再给一层特征图统一生成 scale <code class="m">\gamma_t</code> 和 shift <code class="m">\beta_t</code>。AsyncPatch 输入二维时间图；它随特征一起下采样，每个空间位置获得自己的 <code class="m">\gamma_{h,w}</code> 与 <code class="m">\beta_{h,w}</code>：</p>
+<div class="formula">\begin{aligned}\tilde h_{c,h,w}&amp;=\operatorname{Norm}(h)_{c,h,w},\\h'_{c,h,w}&amp;=\bigl(1+\gamma_{c,h,w}(\mathbf t)\bigr)\tilde h_{c,h,w}+\beta_{c,h,w}(\mathbf t)\end{aligned}</div>
+<div class="vars">
+  <div><code class="m">h_{c,h,w}</code>U-Net 某层在通道 <code class="m">c</code>、位置 <code class="m">(h,w)</code> 的特征。</div>
+  <div><code class="m">\tilde h_{c,h,w}</code>归一化后的特征；让调制作用在稳定尺度上。</div>
+  <div><code class="m">\gamma_{c,h,w}</code>从局部时间条件生成的缩放量。</div>
+  <div><code class="m">\beta_{c,h,w}</code>从局部时间条件生成的平移量。</div>
+</div>
+<figure id="fig-film">
+  <figcaption><span>Fig 05 · 图像特征与时间图在每个分辨率重新对齐</span><b>同一位置的时间条件只调制对应位置</b></figcaption>
+  <div class="film">
+    <div class="film-col">
+      <div class="film-layer"><b>图像特征 64×64</b><span>卷积 / 注意力联合看全图</span></div>
+      <div class="film-layer"><b>图像特征 32×32</b><span>下采样后扩大感受野</span></div>
+      <div class="film-layer"><b>图像特征 16×16</b><span>更粗的全局语义</span></div>
+    </div>
+    <div class="film-op">⊗</div>
+    <div class="film-col">
+      <div class="film-layer map"><b>时间图 64×64</b><span>局部 <code class="m">t_{h,w}</code> → scale / shift</span></div>
+      <div class="film-layer map"><b>时间图 32×32</b><span>随同级特征一起缩小</span></div>
+      <div class="film-layer map"><b>时间图 16×16</b><span>仍与当前位置一一对应</span></div>
+    </div>
+  </div>
+  <div class="truth"><span class="label">没变 / 变了</span>没变的是 U-Net 的卷积、注意力、skip 和联合感受野；变的是时间条件不再广播给整张特征图，而是在空间上逐点调制。论文没有为补图再接一个专用 decoder。</div>
+</figure>
+</section>
+
+<section id="routes">
+<h2><span class="n">§ 07</span>同一份权重，换四条推理时间线</h2>
+<p>训练完成后，用户指定一条随全局进度 <code class="m">u:0\to1</code> 变化的时间路径 <code class="m">\boldsymbol\tau(u)=(\tau_1(u),\ldots,\tau_N(u))</code>。每条 <code class="m">\tau_i</code> 都单调下降，保证局部状态从噪声走向干净。</p>
+<figure id="fig-routes">
+  <figcaption><span>Fig 06 · 八块图像在四种日程中的去噪顺序</span><b>每行从左到右是空间块 · 颜色表示当前阶段</b></figcaption>
+  <div class="schedule">
+    <div class="sched-row"><span class="sched-name">同步生成</span><span class="slot c1">1→0</span><span class="slot c1">1→0</span><span class="slot c1">1→0</span><span class="slot c1">1→0</span><span class="slot c1">1→0</span><span class="slot c1">1→0</span><span class="slot c1">1→0</span><span class="slot c1">1→0</span></div>
+    <div class="sched-row"><span class="sched-name">补图</span><span class="slot c0">固定 0</span><span class="slot c0">固定 0</span><span class="slot c0">固定 0</span><span class="slot c0">固定 0</span><span class="slot c1">1→0</span><span class="slot c1">1→0</span><span class="slot c1">1→0</span><span class="slot c1">1→0</span></div>
+    <div class="sched-row"><span class="sched-name">栅格 AR</span><span class="slot c0">先完成</span><span class="slot c2">第 2</span><span class="slot c2">第 3</span><span class="slot c2">第 4</span><span class="slot c3">第 5</span><span class="slot c3">第 6</span><span class="slot c3">第 7</span><span class="slot c1">最后</span></div>
+    <div class="sched-row"><span class="sched-name">不确定性优先</span><span class="slot c0">低误差</span><span class="slot c0">低误差</span><span class="slot c2">中</span><span class="slot c2">中</span><span class="slot c1">高误差</span><span class="slot c1">高误差</span><span class="slot c3">动态</span><span class="slot c3">动态</span></div>
+  </div>
+</figure>
+<div class="warning"><span class="label">路线不等于免费加速</span>论文的栅格自回归示例把 8×8 共 64 个 patch 依次生成，每块 16 步，总计 <code class="m">64\times16=1024</code> 步，质量也会受损。不确定性路线另训一个误差预测头，再把低不确定区域的时钟加速；它是启发式增强，不是主定理保证。</div>
+</section>
+
+<section id="inpaint">
+<h2><span class="n">§ 08</span>补图为什么自然出现：mask 只是在设置两组时钟</h2>
+<p>设 <code class="m">m_i=1</code> 表示像素 / token 已知，<code class="m">m_i=0</code> 表示要补。最简单的时间路径是：</p>
+<div class="formula">\tau_i(u)=(1-m_i)(1-u)</div>
+<div class="vars">
+  <div><code class="m">u\in[0,1]</code>整个反向采样的完成进度。</div>
+  <div><code class="m">m_i</code>二值 mask；1 是已知区，0 是未知区。</div>
+  <div><code class="m">1-u</code>未知区从 1 下降到 0 的普通反向时间。</div>
+  <div><code class="m">\tau_i(u)</code>位置 <code class="m">i</code> 在当前采样进度的局部时刻。</div>
+</div>
+<p>继续用四格例子：<code class="m">m=[1,1,0,0]</code>，当 <code class="m">u=.4</code> 时，<code class="m">1-u=.6</code>：</p>
+<div class="calc">
+  <div class="step"><b>已知格</b><span><code class="m">(1-1)\times.6=0</code>，所以前两格时间为 0，始终当干净条件。</span></div>
+  <div class="step"><b>未知格</b><span><code class="m">(1-0)\times.6=.6</code>，所以后两格正处在中等噪声。</span></div>
+  <div class="step"><b>整张时间图</b><span><code class="m">\boldsymbol\tau(.4)=[0,0,.6,.6]</code>。</span></div>
+  <div class="step"><b>只更新未知区</b><span>反向求解器更新后两格；前两格每步用原始已知值覆盖回来，避免已知内容漂移。</span></div>
+</div>
+<p>为什么网络输出的是条件 score？固定已知区后，联合密度可分成 <code class="m">p(x_{\rm known})p(x_{\rm missing}\mid x_{\rm known})</code>。对未知变量求梯度时，第一项与未知变量无关，梯度为 0：</p>
+<div class="formula">\begin{aligned}&amp;\nabla_{x_{\rm missing}}\log p(x_{\rm known},x_{\rm missing})\\&amp;\quad=\nabla_{x_{\rm missing}}\log p(x_{\rm missing}\mid x_{\rm known})\end{aligned}</div>
+<div class="note"><span class="label">这条等式在说什么</span>联合 score 网络本来学习整张图的密度坡度。当已知半边固定，只对未知半边求导时，“已知半边本身有多常见”是常数，被自然消掉；剩下的正是“给定已知半边，未知半边该往哪改”。<a class="jr" href="#g-05">05</a></div>
+</section>
+
+<section id="guidance">
+<h2><span class="n">§ 09</span>Input Guidance：清晰输入比模糊输入多提供了什么</h2>
+<p>补图会利用已知区，但默认影响可能不够强。作者对同一个待生成状态跑两次网络：一支保留较清晰的输入，另一支把输入区域再加噪。放大两支 score 的差：</p>
+<div class="formula">\begin{aligned}s_{\mathrm{guided},i}&amp;=s_{\mathrm{clean},i}\\&amp;\quad+\omega_i(s_{\mathrm{clean},i}-s_{\mathrm{noisy},i})\\&amp;=(1+\omega_i)s_{\mathrm{clean},i}-\omega_i s_{\mathrm{noisy},i}\end{aligned}</div>
+<div class="vars">
+  <div><code class="m">s_{\mathrm{clean},i}</code>输入区域较清晰时，位置 <code class="m">i</code> 的 score。</div>
+  <div><code class="m">s_{\mathrm{noisy},i}</code>把输入区域额外加噪后，同一位置的 score。</div>
+  <div><code class="m">\omega_i\ge0</code>位置相关的引导强度。</div>
+  <div><code class="m">s_{\mathrm{clean}}-s_{\mathrm{noisy}}</code>清晰输入相对模糊输入额外带来的方向。</div>
+</div>
+<figure id="fig-guide">
+  <figcaption><span>Fig 07 · 用一个标量看清外推的每一步</span><b>真实 score 是张量 · 这里仅演示一个元素</b></figcaption>
+  <div class="guide">
+    <div class="gbox"><span class="tag green">清晰输入</span><b>0.8</b><p>完整参考细节下的方向</p></div>
+    <div class="op">−</div>
+    <div class="gbox"><span class="tag rust">加噪输入</span><b>0.5</b><p>细节被抹掉后的方向</p></div>
+    <div class="op">× 2</div>
+    <div class="gbox final"><span class="tag green">最终</span><b>1.4</b><p><code class="m">.8+2(.8-.5)</code></p></div>
+  </div>
+</figure>
+<p>它与 CFG<a class="jr" href="#g-06">06</a>同属“放大两次前向的差”，但条件不同：CFG 比较有 / 无文本，Input Guidance 比较清晰 / 加噪的空间输入。论文实现先在各噪声分支内部完成 CFG，再做 Input Guidance；不是把四个 score 随便混成一式。</p>
+</section>
+
+<section id="elbo">
+<h2><span class="n">§ 10</span>为什么这套多时钟损失仍能对应似然：把许多一维路径做平均</h2>
+<p>到这里，方法已经可以执行。理论部分回答另一个问题：当 <code class="m">\mathbf t</code> 位于 <code class="m">[0,1]^N</code> 的时间超立方里，逐位置 score 损失是不是仍在优化数据似然，还是只是一条经验目标？</p>
+<p>论文主定理给出：存在一组显式、处处为正的权重 <code class="m">\lambda_i(\mathbf t)</code>，使加权损失构成对数似然的变分下界。省去与参数 <code class="m">\theta</code> 无关的常数后，可把结构写成：</p>
+<div class="formula">\log p_\theta(\mathbf x)\ \ge\ C-\mathcal L_{\lambda}(\theta)</div>
+<div class="vars">
+  <div><code class="m">p_\theta(\mathbf x)</code>反向生成模型给真实样本的概率密度。</div>
+  <div><code class="m">\mathcal L_\lambda</code>第 5 节的多时钟加权 score 损失。</div>
+  <div><code class="m">C</code>不依赖可训练参数 <code class="m">\theta</code> 的项；训练时不会改变最优参数。</div>
+  <div><code class="m">\ge</code>表示右边是 ELBO<a class="jr" href="#g-07">07</a>：最大化右边，就在抬高真实对数似然的下界。</div>
+</div>
+<h3>证明主线，不把证明误当训练步骤</h3>
+<figure id="fig-elbo">
+  <figcaption><span>Fig 08 · 两个 token 时，时间空间是一张方格</span><b>每条单调路径都由普通一维扩散小步组成</b></figcaption>
+  <div class="path-wrap">
+    <div class="path-card"><span class="tag teal">路径 A · 先动 token 1</span><div class="path-grid">
+      <span class="path-cell start">0,0</span><span class="path-cell on">→</span><span class="path-cell on">→</span><span class="path-cell on">→</span><span class="path-cell on">1,0</span>
+      <span class="path-cell">·</span><span class="path-cell">·</span><span class="path-cell">·</span><span class="path-cell">·</span><span class="path-cell on">↑</span>
+      <span class="path-cell">·</span><span class="path-cell">·</span><span class="path-cell">·</span><span class="path-cell">·</span><span class="path-cell on">↑</span>
+      <span class="path-cell">·</span><span class="path-cell">·</span><span class="path-cell">·</span><span class="path-cell">·</span><span class="path-cell on">↑</span>
+      <span class="path-cell">·</span><span class="path-cell">·</span><span class="path-cell">·</span><span class="path-cell">·</span><span class="path-cell end">1,1</span>
+    </div><p>横向先把第一个 token 从干净推到噪声，再纵向处理第二个。</p></div>
+    <div class="path-card"><span class="tag purple">路径 B · 交替前进</span><div class="path-grid">
+      <span class="path-cell start">0,0</span><span class="path-cell on">→</span><span class="path-cell">·</span><span class="path-cell">·</span><span class="path-cell">·</span>
+      <span class="path-cell">·</span><span class="path-cell on">↑</span><span class="path-cell on">→</span><span class="path-cell">·</span><span class="path-cell">·</span>
+      <span class="path-cell">·</span><span class="path-cell">·</span><span class="path-cell on">↑</span><span class="path-cell on">→</span><span class="path-cell">·</span>
+      <span class="path-cell">·</span><span class="path-cell">·</span><span class="path-cell">·</span><span class="path-cell on">↑</span><span class="path-cell on">→</span>
+      <span class="path-cell">·</span><span class="path-cell">·</span><span class="path-cell">·</span><span class="path-cell">·</span><span class="path-cell end">1,1</span>
+    </div><p>两只钟交替前进；每一步仍只沿一个坐标轴改变一个局部时刻。</p></div>
+  </div>
+</figure>
+<div class="calc">
+  <div class="step"><b>一条路径</b><span>固定一条从全干净 <code class="m">(0,\ldots,0)</code> 到全噪声 <code class="m">(1,\ldots,1)</code> 的单调路径。</span></div>
+  <div class="step"><b>拆成一维小步</b><span>每个小步只改变一个坐标，因此可沿用普通 DDPM / score 模型的一维 ELBO。</span></div>
+  <div class="step"><b>对所有路径求平均</b><span>不同路径经过时间超立方中不同区域；平均后，每个位置 <code class="m">i</code>、每张时间图 <code class="m">\mathbf t</code> 得到一个访问密度。</span></div>
+  <div class="step"><b>访问密度变成权重</b><span>这个正密度就是 <code class="m">\lambda_i(\mathbf t)</code> 的来源。附录用单调随机游走、流体极限和 pushforward 密度把离散路径极限写严谨。<a class="jr" href="#g-08">08</a></span></div>
+</div>
+<div class="note"><span class="label">理论边界</span>这一定理证明“存在合适权重时，多时钟 score 损失有似然下界解释”。它不证明任意随手选的 timestep sampler、任意统一权重都会达到同样最优效率，也不代表训练代码里要枚举所有路径。</div>
+</section>
+
+<section id="recipe">
+<h2><span class="n">§ 11</span>模型、训练与推理配方</h2>
+<div class="grid3">
+  <div class="card"><span class="tag">60M 消融模型</span><h3>ImageNet 64</h3><p>约 60M U-Net，训练 100 万步、batch 512；用于比较 Perlin、Patchwise 与 AsyncPatch 时刻采样。</p></div>
+  <div class="card"><span class="tag teal">600M 主模型</span><h3>像素 / latent 两条线</h3><p>约 620M U-Net。ImageNet64 直接在 64×64×3 像素训练；256 分辨率任务先经 VQ autoencoder 压成 64×64×3 latent。</p></div>
+  <div class="card"><span class="tag gold">采样</span><h3>250-step DDIM</h3><p>主要结果使用 250 步 DDIM<a class="jr" href="#g-09">09</a>，随机系数 0.25；不是少步生成论文。</p></div>
+</div>
+<div class="grid2">
+  <div class="card"><span class="tag purple">U-Net 结构</span><h3>空间时间调制</h3><p>主模型 base channel 256，通道倍率 1/2/3/4，四级各 4 个 residual block，中间 3 个 block；每级都接收匹配分辨率的时间图。</p></div>
+  <div class="card"><span class="tag green">优化</span><h3>Adam + EMA</h3><p>使用 Adam、梯度裁剪、学习率 warmup 与 0.999 EMA<a class="jr" href="#g-10">10</a>。理论写 score，实际采用 rectified-flow Gaussian velocity prediction 与 SiD2 目标。</p></div>
+</div>
+<p>VQ autoencoder 把 256×256×3 压到 64×64×3，下采样 4 倍、码本大小 8192。作者还用 masked modeling 训练它，并把 mask 通过调制送进 encoder / decoder。<strong>因此 latent 补图指标不仅含 diffusion 误差，也含 autoencoder 重建误差。</strong></p>
+<div class="note"><span class="label">公开算力账</span>论文附录估计总训练约 2024 TPUv6-hours：ImageNet64 主实验约 1440，两个 256 latent 运行约 384，两个 LSUN 运行约 160，消融约 40。它不是低成本验证。</div>
+</section>
+
+<section id="results">
+<h2><span class="n">§ 12</span>实验：生成基本保住，新增的价值主要在空间灵活性</h2>
+<h3>先看时刻采样消融 · ImageNet 64</h3>
+<div class="scroll"><table>
+  <thead><tr><th>训练时刻采样</th><th>生成 FID ↓</th><th>解读</th></tr></thead>
+  <tbody>
+    <tr><td>普通同步 diffusion</td><td class="win">1.74</td><td>生成基线</td></tr>
+    <tr><td>Perlin</td><td>2.05</td><td>形成连贯空间区域，偏补图状态</td></tr>
+    <tr><td>Patchwise 独立采样</td><td>2.54</td><td>全图均值集中在 0.5，生成退化最明显</td></tr>
+    <tr><td>AsyncPatch</td><td class="win">1.77</td><td>几乎追回同步训练的生成质量</td></tr>
+  </tbody>
+</table></div>
+<p>FID<a class="jr" href="#g-11">11</a>越低越好。1.74 与 1.77 的差很小，支持“增加空间自由度后，普通生成基本没掉”；它不支持声称 AsyncPatch 在这张表上显著超过同步基线。</p>
+<h3>256×256 latent 模型 · 50K 生成样本</h3>
+<div class="scroll"><table>
+  <thead><tr><th>数据集</th><th>普通 LDM FID ↓</th><th>AsyncPatch FID ↓</th><th>结论</th></tr></thead>
+  <tbody>
+    <tr><td>ImageNet 256</td><td>8.24</td><td class="win">8.06</td><td>基本持平，小幅更低</td></tr>
+    <tr><td>LSUN</td><td class="win">2.83</td><td>3.09</td><td>基本接近，小幅更高</td></tr>
+  </tbody>
+</table></div>
+<h3>补图 · FID / LPIPS 均为越低越好</h3>
+<div class="scroll"><table>
+  <thead><tr><th>数据集 / 方法</th><th>Extrema</th><th>Square</th><th>Thin</th><th>Wide</th></tr></thead>
+  <tbody>
+    <tr><td>ImageNet · RePaint†</td><td>45.7 / .504</td><td>32.2 / .206</td><td>31.1 / .202</td><td>27.6 / .198</td></tr>
+    <tr><td>ImageNet · AsyncPatch</td><td class="win">39.0 / .413</td><td class="win">26.6 / .162</td><td class="win">21.2 / .133</td><td class="win">22.1 / .152</td></tr>
+    <tr><td>LSUN · AsyncPatch</td><td>20.2 / .406</td><td>14.5 / .145</td><td>13.3 / .107</td><td>13.9 / .141</td></tr>
+  </tbody>
+</table></div>
+<p>LPIPS<a class="jr" href="#g-12">12</a>比较深层特征而非逐像素差。这里的 † 表示作者把 RePaint 接到 latent diffusion 口径。仍要注意：论文的像素空间与 latent 空间表格不能直接横比；ImageNet 的 autoencoder 自身就带来约 0.07 LPIPS，哪怕 diffusion 完美也不会归零。</p>
+<div class="truth"><span class="label">最稳妥的结论</span>AsyncPatch 的证据更像“用几乎不损失普通生成质量的代价，换来补图和多种空间路线”，而不是“在所有 mask 上战胜所有专用补图系统”。监督式补图基线在常见训练分布 mask 上仍可能更强；作者强调 AsyncPatch 在 extrema 这类分布外 mask 上更有竞争力。</div>
+</section>
+
+<section id="limits">
+<h2><span class="n">§ 13</span>它证明了什么，还没有证明什么</h2>
+<div class="grid2">
+  <div class="card"><span class="tag green">已经站住</span><h3>一个模型，多条空间路径</h3><p>联合 score、空间时间调制、AsyncPatch 采样器与 inpainting / AR 路线形成完整闭环；主表显示生成质量大体保住。</p></div>
+  <div class="card"><span class="tag rust">没有站住</span><h3>现代文生图全面替代</h3><p>实验是无条件 U-Net、最高 256 分辨率；没有文本条件、现代 DiT、1024 分辨率或复杂编辑指令的证据。</p></div>
+  <div class="card"><span class="tag gold">理论保证</span><h3>ELBO 权重存在</h3><p>证明合适权重下目标有似然解释；不保证任意 sampler / 权重都同样高效，也不保证 Input Guidance 单调提升。</p></div>
+  <div class="card"><span class="tag purple">工程代价</span><h3>更多前向与更长路线</h3><p>Input Guidance 要额外前向；栅格 AR 示例达 1024 步；不确定性路线另训预测头。灵活性不是免费吞吐。</p></div>
+</div>
+<div class="warning"><span class="label">我的判断</span>这篇最值得带走的设计不是某个 FID 数字，而是一个接口变化：把“任务类型”从网络外的 mask / sampler 分支，改写成网络内可见的空间时间边界条件。只要后续能在大 DiT、文本条件和高清 latent 上保持训练稳定，它会比“每个编辑任务接一个专用头”更有扩展性；论文当前证据还没跨过这一步。</div>
+</section>
+
+<section class="gloss">
+<h2>引用 / 术语表</h2>
+<ol>
+  <li id="g-01"><span class="term">Score function</span> · <code class="m">\nabla_x\log p(x)</code>，不是质量评分，而是把当前样本推向更高概率区域的方向张量。详见 <a href="../concepts/score-function.html">score-function</a>。</li>
+  <li id="g-02"><span class="term">FiLM</span> · Feature-wise Linear Modulation；从条件生成 scale / shift，逐通道或逐位置改写归一化特征。AsyncPatch 使用空间可变版本。</li>
+  <li id="g-03"><span class="term">Concentration of measure</span> · 独立随机量一多，平均值反而高度集中。这里表现为 patch 时刻平均值被压在 0.5 附近。</li>
+  <li id="g-04"><span class="term">Velocity prediction / SiD2</span> · 扩散可预测 score、噪声、干净样本或速度；给定噪声日程可互换。SiD2 是作者实际采用的训练目标配方。</li>
+  <li id="g-05"><span class="term">Conditional score</span> · 固定已知变量后，对未知变量的条件对数密度求梯度；联合密度中只依赖已知变量的常数项会消失。</li>
+  <li id="g-06"><span class="term">Classifier-Free Guidance</span> · 用有条件和无条件两次前向的差放大条件遵循。详见 <a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a>。</li>
+  <li id="g-07"><span class="term">ELBO</span> · Evidence Lower Bound；把难直接计算的对数似然换成可优化的下界。最大化下界不等于直接算出真实似然。</li>
+  <li id="g-08"><span class="term">Pushforward density</span> · 随机路径经过映射后，在时间空间各位置留下的概率密度；这里变成多时钟损失的权重来源。</li>
+  <li id="g-09"><span class="term">DDIM</span> · 一种扩散反向求解器，可用较确定的更新路径采样；250 步说明本文重点不是少步蒸馏。</li>
+  <li id="g-10"><span class="term">EMA</span> · 参数的指数滑动平均，用较平滑的历史模型做评估 / 采样。详见 <a href="../concepts/ema.html">ema</a>。</li>
+  <li id="g-11"><span class="term">FID</span> · 比较真实图和生成图在特征空间的整体分布，越低越好；它是群体分布指标，不评价某一张图。</li>
+  <li id="g-12"><span class="term">LPIPS</span> · 用预训练网络深层特征衡量两张图的感知差异，越低越像。详见 <a href="lpips.html">LPIPS</a>。</li>
+</ol>
+</section>
+
+<section class="sources">
+<span class="label">Primary sources</span>
+<ol>
+  <li><a href="https://arxiv.org/abs/2606.07079">AsyncPatch Diffusion: spatially-flexible image generation · arXiv 2606.07079</a>，正文、附录、公式与实验表。</li>
+  <li><a href="https://arxiv.org/html/2606.07079v1">官方 HTML v1</a>，用于逐节核对符号、表格和附录配方。</li>
+</ol>
+</section>
+</main>
+<script>
+(function(){
+  function math(){
+    if(!window.katex){setTimeout(math,40);return}
+    document.querySelectorAll('.formula').forEach(function(e){
+      if(e.dataset.done)return;
+      try{katex.render(e.textContent.trim(),e,{displayMode:true,throwOnError:true});e.dataset.done='1'}
+      catch(x){e.classList.add('katex-error');e.title=String(x)}
+    });
+  }
+  math();
+  document.querySelectorAll('figure').forEach(function(fig){
+    var obs=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){fig.classList.add('play');obs.disconnect()}})},{threshold:.18});
+    obs.observe(fig);
+  });
+})();
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!document.getElementById(id))return;
+      e.preventDefault();
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>

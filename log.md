@@ -1588,3 +1588,9 @@ skill 更新:
 ## [2026-08-14] revise | rcm Fig 05 重画——每一步标明代的是哪条公式
 - 用户：图里不知道代入了什么公式。旧版盒子只有算式结果，1.25/1.2/−.5 凭空出现。
 - 重画：顶部玩具模型 → 一排「原料盒」（∂f/∂x=1、∂f/∂t=−1.5、∂f/∂θ=−t、dx/dt=2，标明从 f=x−θt 一眼读出）→ 每列头部先亮「用的公式」（账本一 L=(f_θ−f_θ⁻)²；账本二 极限梯度=2×切线×∂f/∂θ）→ 每格两行=公式行+代入行（含 x_.5=2.0、x_.4=1.8 的来路）→ 收敛绿框。独立页截图核过无压线。
+## [2026-08-14] ingest | AsyncPatch Diffusion · 每个 patch 一只去噪时钟
+- 按认知顺序重排：先拼“带噪图 + 时间图 → 空间 FiLM U-Net → 联合 score”的整机，再用同一组四格数字贯穿联合加噪、训练目标、补图时钟和 Input Guidance；理论 ELBO 放在机制跑通之后。
+- 完整解释独立 patch 时刻的反直觉缺口：若 64 块各自服从 U(0,1)，全图平均时刻标准差只有 √(1/768)≈.036，几乎见不到全干净 / 全噪状态；AsyncPatch 改成先采全图中心，再采以它为中心的局部区间。
+- 新增 joint-diffusion、asyncpatch-timestep-sampling、spatial-diffusion-schedule、input-guidance 四个 concept，并反向更新 score / timestep conditioning / CFG 来源。
+- 实验与边界分账：ImageNet64 FID 1.74→1.77 基本保住，ImageNet256 LDM 8.24→8.06、LSUN 2.83→3.09；latent / pixel 结果不横比，AR 示例 1024 步且质量下降，现代文本 DiT / 高清编辑仍未验证。
+- Review 1 逐节覆盖原文正文、表格与 A–J 附录，并用脚本复核方差、引导和主表数字；Review 2 完成 KaTeX、glossary 双向引用、桌面 1440 / 手机 390、箭头端点、浮卡点击态和横向溢出检查，修掉手机浮卡重复注入与 2px 溢出。

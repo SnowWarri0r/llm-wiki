@@ -10,6 +10,7 @@
 - [CNN · 卷积神经网络](wiki/papers/cnn.md) — 视觉骨架基础: 小核滑遍全图+权重共享, 把局部性/平移不变焊进结构; 卷积滑窗动画 + LeNet→ResNet→ViT 谱系
 - [U-Net · 一边看清是什么，一边记住它在哪](wiki/papers/unet.md) — MICCAI 2015 像素分割祖师爷：编码器缩图拿上下文，解码器放大还网格，同尺度 skip 裁剪后 concat 补回边界；原版 572→388 尺寸账、overlap-tile、弹性形变和细胞窄缝加权损失完整手算
 - [Diffusion U-Net · 一次去噪到底经过了什么](wiki/papers/diffusion-unet.md) — 不把“扩散 U-Net”当黑盒：DDPM→ADM→LDM 谱系，从加噪监督、时间条件 ResBlock、GroupNorm、同尺度 skip 到 self/cross-attention；Stable Diffusion v1 的 64×64×4 latent 与 320/640/1280/1280 通道账完整走一遍，同一组标量算清训练损失和恢复，最后分开 U-Net、scheduler、CFG 与 DiT 的职责
+- [AsyncPatch Diffusion · 不再让整张图共用一只去噪时钟](wiki/papers/asyncpatch-diffusion.md) — 每个 patch 各有噪声时刻、一个 U-Net 仍联合看全图；先采全图平均时刻再采局部差异，修掉独立时刻均值总挤在 0.5 的缺口。同一权重只换空间时间路径即可做整图生成、补图、栅格 AR 与 Input Guidance；含联合 score、空间 FiLM、ELBO 路径证明、250-step 配方与生成 / 补图边界。
 - [Deep Residual Learning · ResNet](wiki/papers/resnet.md) — 残差连接的起源，把"网络越深越好"做成现实，也给两年后的 Transformer 留好 sublayer 模板
 - [YOLO · 看一眼就把框和类一起吐出来](wiki/papers/yolo.md) — CVPR2016 YOLO v1:原始 R-CNN 逐框提特征,Fast R-CNN 共享整图卷积但仍等 Selective Search,Faster R-CNN 用 RPN 提候选;YOLO 一次前向输出 7×7×30。训练损失拆责任框中心/尺寸/置信度、空框置信度、类别五块;√w,h 让同样 1% 图宽误差对小框产生 7.20× 平方损失。VOC2007:63.4%mAP@45FPS;错误画像是 19.0% 定位 vs 4.75% 背景误检;与最佳 Fast R-CNN 组合 71.8→75.0(+3.2)。VOC2012 57.9,小物体仍弱;Picasso/People-Art 显示艺术画迁移优势但不外推为普遍域泛化。
 - [YOLOv2 / YOLO9000 · 给 YOLO v1 逐项校准](wiki/papers/yolov2-yolo9000.md) — CVPR2017:BatchNorm+高分辨率预训练+anchor+IOU维度聚类+sigmoid位置限位+passthrough+多尺度训练,消融63.4→78.6;同一权重416为76.8mAP@67FPS、544为78.6@40FPS。Darknet-19仅5.58B运算;WordTree把COCO框监督与ImageNet分类合成9418类。边界:COCO AP@[.5:.95]21.6/小目标AP5.0;156个无框监督类16.0mAP,动物迁移好但服饰类可到0。
@@ -238,6 +239,10 @@
 - [Scaling Laws](wiki/concepts/scaling-laws.md) — LM loss 跟参数/数据/算力的 power law
 
 ### 生成模型基础
+- [Joint Diffusion · 联合扩散](wiki/concepts/joint-diffusion.md) — 每个位置按自己的时刻独立加噪，但同一网络联合读取整张带噪图；“噪声独立、预测联合”让干净区成为噪声区的条件
+- [AsyncPatch 时刻采样](wiki/concepts/asyncpatch-timestep-sampling.md) — 先均匀选全图中心时刻，再在对称区间给 patch 分配局部时钟；避免 patch 一多、平均时刻被大数定律锁在 0.5
+- [空间扩散日程](wiki/concepts/spatial-diffusion-schedule.md) — 用每个位置自己的单调时间线切换同步生成、补图与空间自回归；换的是推理路线，不是模型权重
+- [Input Guidance](wiki/concepts/input-guidance.md) — 比较清晰输入和加噪输入下的 score，放大二者之差；与 CFG 同构但引导的是空间输入细节
 - [Speculative Decoding · 推测解码](wiki/concepts/speculative-decoding.md) — 小草稿模型先提一段，大目标模型一次并行验收；加速来自减少目标模型的串行调用，不是用小模型替代大模型
 - [因果归一化注意力熵](wiki/concepts/causal-normalized-attention-entropy.md) — 先算一行注意力有多分散，再除以该行最大熵 `log r`；不同因果长度由此落在同一条 0～1 量尺上
 - [熵参数化先验](wiki/concepts/entropy-parameterized-prior.md) — 用逐位置熵调高斯起点的标准差：模型越拿不准，单步生成器获得的可修正范围越大；σ 是标准差，方差是 σ²

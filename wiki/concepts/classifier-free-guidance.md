@@ -1,8 +1,8 @@
 ---
 name: classifier-free-guidance
 type: concept
-sources: [ideogram-4, flux-1, diffusionnft, viitorvoice, ltx-2, drifting-models, dmd, diffusion-unet, wan-streamer-v01, klingavatar-2]
-updated: 2026-08-06
+sources: [ideogram-4, flux-1, diffusionnft, viitorvoice, ltx-2, drifting-models, dmd, diffusion-unet, wan-streamer-v01, klingavatar-2, asyncpatch-diffusion]
+updated: 2026-08-14
 ---
 
 # Classifier-Free Guidance · CFG
@@ -44,3 +44,4 @@ z_next = euler_step(z_t, v, t)          # flow matching 积分一步
 - [[diffusion-transformer]] · 条件/无条件两支都跑 DiT
 - [[guidance-distillation]] · 把这两遍前向蒸成一遍([[flux-1]] dev)
 - [[wan-streamer-v01]] · 强教师用 CFG 与更多求解步，学生在部署时用更少步
+- [[input-guidance]] · 同样放大两次前向的差，但比较清晰 / 加噪空间输入，不是有 / 无文本

@@ -1,8 +1,8 @@
 ---
 name: pixel-space-diffusion
 type: concept
-sources: [hidream-o1, pid-pixel-diffusion]
-updated: 2026-06-10
+sources: [hidream-o1, pid-pixel-diffusion, asyncpatch-diffusion]
+updated: 2026-08-14
 ---
 
 # Pixel-Space Diffusion · 直接在原始像素上扩散
@@ -52,3 +52,4 @@ pixel UiT:   512²×3 图 ───────[直接切 patch≈16]───�
 - [[unified-transformer]] · 像素+文本+条件一条流的架构
 - [[hidream-o1]] · 用 pixel-space 的统一生成模型
 - [[pixel-diffusion-decoder]] · 折中:只把解码这段改像素扩散([[pid-pixel-diffusion]])
+- [[asyncpatch-diffusion]] · 同一论文同时做 64×64 像素扩散与 256×256 latent 扩散，示范两种评测口径为何不能横比
