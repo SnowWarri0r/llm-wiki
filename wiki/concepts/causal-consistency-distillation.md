@@ -1,8 +1,8 @@
 ---
 name: causal-consistency-distillation
 type: concept
-sources: [minwm]
-updated: 2026-07-24
+sources: [minwm, causal-rcm]
+updated: 2026-08-14
 ---
 
 # Causal Consistency Distillation · 不存整条 ODE 轨迹也能学少步

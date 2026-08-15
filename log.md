@@ -1594,3 +1594,10 @@ skill 更新:
 - 新增 joint-diffusion、asyncpatch-timestep-sampling、spatial-diffusion-schedule、input-guidance 四个 concept，并反向更新 score / timestep conditioning / CFG 来源。
 - 实验与边界分账：ImageNet64 FID 1.74→1.77 基本保住，ImageNet256 LDM 8.24→8.06、LSUN 2.83→3.09；latent / pixel 结果不横比，AR 示例 1024 步且质量下降，现代文本 DiT / 高清编辑仍未验证。
 - Review 1 逐节覆盖原文正文、表格与 A–J 附录，并用脚本复核方差、引导和主表数字；Review 2 完成 KaTeX、glossary 双向引用、桌面 1440 / 手机 390、箭头端点、浮卡点击态和横向溢出检查，修掉手机浮卡重复注入与 2px 溢出。
+
+## [2026-08-14] ingest | Causal-rCM · 把正反散度互补搬进自回归视频
+- rCM 续作（arXiv 2606.25473，同团队）。TF↔正向散度（对应 CM）、SF↔反向散度（对应 DMD）的统一视角；三段串行流水线（TF 因果化 → TF-CM 少步化 → SF-DMD 连载精修），联合训练因因果/双向老师分布差距被弃用。
+- 招牌 TF-sCM：连续时间一致性首次进 teacher-forcing——JVP 方向按段填（净段 0、噪段 v_teacher），custom-mask FA2 JVP kernel（在线 softmax 加 A/B/r 三累加器 + 稀疏矩形 mask）；比 TF-dCM 快 10×。RF-native 优于 TrigFlow 包装（附录 A：归一化 +c 破坏等价、浮点系数进出 JVP 不逐位相等）。
+- 主结果全表搬运：2 步因果 Wan2.1-1.3B VBench 84.63 超 50 步双向 14B（83.35）；三个反直觉（frame-wise 1/2 步>4 步且 4 步长相机漂移、noisy context 两粒度方向相反、DF/TF 初始化分数最高但过平滑）。
+- 顺手补上 rcm 在 index.md 里漏登记的入口；rcm.html §00 卡片改为互链新页。概念页 5 个更新 sources（causal-consistency-distillation / chunk-wise-self-forcing / autoregressive-vs-bidirectional / block-causal-attention / continuous-time-consistency）。
+- Review 1 逐节对照原文大纲（含附录 A 理论、附录 B kernel 算法）；Review 2 渲染/glossary/图审计见本条后续勘误。

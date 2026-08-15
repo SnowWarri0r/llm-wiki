@@ -1,8 +1,8 @@
 ---
 name: continuous-time-consistency
 type: concept
-sources: [rcm]
-updated: 2026-08-12
+sources: [rcm, causal-rcm]
+updated: 2026-08-14
 ---
 
 # 连续时间一致性 · 不逐步走完，也要认出同一个终点
