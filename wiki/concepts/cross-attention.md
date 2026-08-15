@@ -1,7 +1,7 @@
 ---
 name: cross-attention
 type: concept
-sources: [attention-is-all-you-need, ltx-2, diffusion-unet, longcat-video-avatar-1-5]
+sources: [attention-is-all-you-need, ltx-2, diffusion-unet, longcat-video-avatar-1-5, klingavatar-2]
 updated: 2026-08-05
 ---
 
