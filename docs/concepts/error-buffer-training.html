@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>视频扩散里的 Teacher Forcing · 训练时喂真历史 · Concept</title>
+<title>Error Buffer Training · 把模型会犯的小错加回训练历史 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,50 +53,71 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · teacher-forcing-video-diffusion</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · error-buffer-training</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>视频扩散里的 Teacher Forcing · 训练时喂真历史</h1>
+  <h1>Error Buffer Training · 把模型会犯的小错加回训练历史</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>训练因果视频模型时，第 <code>i</code> 段只生成当前 noisy chunk，但把此前的真实干净视频段当历史条件；这样容易学会下一段，却会造成训练看真历史、推理看自己历史的 exposure bias。</p>
-<h2>用四段视频看懂</h2>
-<p>假设视频 latent 被切成 <code>A、B、C、D</code> 四段，当前训练目标是 <code>C</code>：</p>
-<pre><code class="language-text">训练：真实 A + 真实 B + noisy C → 还原真实 C
-推理：生成 A + 生成 B + noisy C → 生成 C
-</code></pre>
-<p>因果 mask 保证 <code>C</code> 看不到未来的 <code>D</code>。但训练时的 <code>A、B</code> 没有任何生成误差，推理时则可能已经漂色、变形或偏离相机轨迹。模型从没在这种有瑕疵的历史上练过，误差便会一段段放大。</p>
-<h2>为什么还要先这样训</h2>
-<p>如果一开始就让未训练好的模型反复读取自己的烂输出，后续每段的输入分布会不断变化，学习很不稳定。Teacher forcing 先把“只看过去、续写下一段”的基本能力教会，再由 self-rollout / self forcing 阶段让模型适应自己的历史。</p>
-<h2>它和文字自回归的关系</h2>
-<p>LLM 训练时用真实前词预测下一个词，推理时读取自己刚生成的词；视频版本的矛盾相同，只是一个 token 换成了一小段 noisy latent，而且每段内部还要进行多步或少步去噪。</p>
+<p>缓存模型预测与真值的残差，再用残差污染干净历史，让训练输入更像推理时自己的输出。</p>
+<h2>直觉</h2>
+<p>Teacher Forcing 像练车时永远给你一条完美直路，推理却要沿自己刚刚压歪的车辙继续开。Error Buffer 把以前压歪的幅度记下来，训练下一段时故意把历史稍微挪歪。</p>
+<h2>怎么做的</h2>
+<p>用一种常见且与论文描述一致的符号写法：</p>
+<div class="tex math-display" data-display="true">e=\hat x_0-x_0</div>
+<div class="tex math-display" data-display="true">\tilde x_0=x_0+e</div>
+<ul>
+<li><code>x_0</code>：真实干净历史；</li>
+<li><code>\hat x_0</code>：模型的一步预测；</li>
+<li><code>e</code>：预测残差，存入缓冲区；</li>
+<li><code>\tilde x_0</code>：加入旧残差后、用于后续训练的历史。</li>
+</ul>
+<p>论文只说明缓冲区维护运行中的误差分布，没有公开容量、更新频率、采样方法或残差缩放系数；上式用于解释机制，不冒充缺失的实现配方。</p>
+<h2>数字例子</h2>
+<p>真实历史特征为 <code>x₀=100</code>，模型的一步预测是 <code>97</code>：</p>
+<div class="tex math-display" data-display="true">e=97-100=-3</div>
+<div class="tex math-display" data-display="true">\tilde x_0=100+(-3)=97</div>
+<p>下一块训练看到的是 97，而不是过于理想的 100；这更接近推理时“模型只能读取自己上一块输出”的情况。</p>
+<h2>跟 Self-Forcing 的区别</h2>
+<p>Error Buffer 仍以真实历史为底，只叠加旧误差，便宜而稳定；Self-Forcing 会真正让模型连续读取自己的完整生成结果，更贴近推理但计算更贵、训练也更难。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/minwm.html">minwm</a> · Stage 1 用 teacher forcing 获得因果能力，Stage 3 用 self-rollout 修正分布错位</li>
-<li><a href="../papers/solaris-multiplayer-world-model.html">solaris-multiplayer-world-model</a> · Diffusion Forcing 与 Checkpointed Self Forcing</li>
-<li><a href="../concepts/autoregressive-vs-bidirectional-video-diffusion.html">autoregressive-vs-bidirectional-video-diffusion</a> · 因果生成与整段双向去噪的取舍</li>
-<li><a href="../papers/wan-streamer-v01.html">wan-streamer-v01</a> · rolling distillation 让少步学生连续读取自己的生成历史</li>
-<li><a href="../papers/wan-animate-2.html">wan-animate-2</a> · 用 Error Buffer 先污染干净历史，再用分块 Self-Forcing 真正读取自身输出</li>
+<li><a href="../papers/wan-animate-2.html">wan-animate-2</a> · Lite 模型 Teacher Forcing 阶段的修补</li>
+<li><a href="../concepts/teacher-forcing-video-diffusion.html">teacher-forcing-video-diffusion</a> · 为什么训练/推理历史不一致</li>
+<li><a href="../concepts/chunk-wise-self-forcing.html">chunk-wise-self-forcing</a> · 后续更彻底的自生成历史训练</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 7 处</span>
-  <ul><li><a href="../papers/minwm.html"><span class="cat">paper</span>minWM · 把离线视频扩散模型改造成可操控、能逐段输出的世界模型</a></li><li><a href="../papers/wan-animate-2.html"><span class="cat">paper</span>Wan-Animate 2 · 不先提骨架，直接让参考视频教角色怎么动</a></li><li><a href="../papers/wan-streamer-v01.html"><span class="cat">paper</span>Wan-Streamer v0.1 · 一个模型怎样边听、边看、边说、边生成画面</a></li><li><a href="../concepts/causal-consistency-distillation.html"><span class="cat">concept</span>Causal Consistency Distillation · 不存整条 ODE 轨迹也能学少步</a></li><li><a href="../concepts/chunk-wise-self-forcing.html"><span class="cat">concept</span>Chunk-wise Self-Forcing · 整段定方向，分块算梯度</a></li><li><a href="../concepts/error-buffer-training.html"><span class="cat">concept</span>Error Buffer Training · 把模型会犯的小错加回训练历史</a></li><li><a href="../concepts/rolling-streaming-distillation.html"><span class="cat">concept</span>滚动式流媒体蒸馏 · 让少步学生练习读取自己的历史</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/wan-animate-2.html"><span class="cat">paper</span>Wan-Animate 2 · 不先提骨架，直接让参考视频教角色怎么动</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/teacher-forcing-video-diffusion.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/error-buffer-training.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {
