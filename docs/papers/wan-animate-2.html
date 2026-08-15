@@ -89,8 +89,22 @@ figure{margin:36px 0;padding:24px;border:1px solid var(--rule);background:rgba(2
     <div class="note reveal d4"><span class="label">两种“参考”别混</span><strong>reference image</strong> 回答“长成谁”，进入目标分支的 I2V 条件；<strong>reference / driving video</strong> 回答“怎么动”，成为干净参考分支。目标第 <code>t</code> 帧查询驱动视频第 <code>t</code> 帧的 K/V。</div>
   </figure>
 
-  <h2><span class="n">§ 03</span>训练对从哪来：先造“动作完全对齐、身份已经换掉”的视频</h2>
-  <p>直接训练需要三样东西同时存在：驱动视频、换成新角色后的目标视频、目标角色参考图。互联网上几乎没有天然严格对齐的三元组，所以作者用旧版 Wan-Animate 合成监督。</p>
+  <h2 id="s3"><span class="n">§ 03</span>训练对从哪来：先造“动作完全对齐、身份已经换掉”的视频</h2>
+  <p>直接训练需要三样东西同时存在：驱动视频、换成新角色后的目标视频、目标角色参考图。互联网上几乎没有天然严格对齐的三元组，所以作者用旧版 Wan-Animate 合成监督。但这马上会引出一个问题：<strong>旧版自己又是拿什么数据训出来的？</strong></p>
+  <h3>旧版不需要跨身份三元组：一段真人视频就能自我监督</h3>
+  <p>旧版 Wan-Animate 不是从头训练，而是在已经学会通用视频生成的 Wan-I2V 上继续训练。作者收集单人且身份稳定的真人视频，覆盖说话、表情和身体动作。假设其中一段是“人物 B 挥手”：原视频本身就是要还原的正确答案；从同一段视频取人物图，告诉模型“长成 B”；再从每一帧自动提取骨架与脸部区域，告诉模型“此刻怎么动”。输入和答案都来自同一段视频，时间天然对齐，不需要真的找到“人物 A 与人物 B 做出一模一样动作”的两段录像。</p>
+  <div class="scroll"><table>
+    <thead><tr><th>从“人物 B 挥手”视频得到什么</th><th>旧版训练时负责什么</th><th>怎么得到</th></tr></thead>
+    <tbody>
+      <tr><td>人物 B 的参考图</td><td>身份、衣服与外观条件</td><td>从同一视频片段取人物帧</td></tr>
+      <tr><td>逐帧骨架</td><td>身体动作条件</td><td>VitPose 自动提取；同时用于动作质量过滤</td></tr>
+      <tr><td>逐帧脸部图像</td><td>表情条件</td><td>按骨架定位脸部后裁切，再压成一维特征</td></tr>
+      <tr><td>原始“人物 B 挥手”视频</td><td>模型要还原的目标视频</td><td>现成真值，不由另一台模型生成</td></tr>
+      <tr><td>人物 mask 与文字说明</td><td>换人模式的生成区域、Wan 的文字条件</td><td>SAM2 分割；Qwen2.5-VL-72B 生成描述</td></tr>
+    </tbody>
+  </table></div>
+  <div class="note"><span class="label">同一个人当输入和答案，模型不会只抄脸吗？</span>旧版特意把“怎么动”做成<strong>身份信息很弱的控制信号</strong>：身体只给骨架；脸部图像先压成一维特征，再做缩放、颜色扰动和随机噪声，削弱脸型与纹理。这样身份主要应从参考图读取，动作主要应从骨架和表情特征读取。它仍然是在同身份数据上学习、再依靠这种结构约束泛化到跨身份，并不等于训练集里已经有真实的跨身份正确答案。</div>
+  <div class="warning"><span class="label">为什么二代不能继续照这个办法训</span>二代把骨架和表情瓶颈拆掉，直接读完整驱动视频。若训练时让“人物 B 的视频”同时充当驱动输入和目标答案，驱动分支已经含有 B 的脸、衣服和身体，模型走捷径直接复制它就能把损失降下来，人物参考图反而可能被忽略。二代因此真正需要 <strong>驱动 A + 参考 B + B 按 A 的动作生成的目标视频</strong>。旧版恰好能制造第三项：它读取 A 的骨架/表情控制和 B 的参考图，先合成“B 做 A 的动作”，再拿这条合成视频监督直接视频驱动的二代。这不是循环论证，而是<strong>旧版靠有意丢掉身份的控制信号学会动作迁移，二代再用旧版造出的跨身份答案学习直接读原视频</strong>。</div>
   <figure>
     <figcaption><span>Fig 03 · 配对视频数据工厂</span><b>先换身份，再让旧模型合成动作对齐目标</b></figcaption>
     <div class="factory">
@@ -284,7 +298,7 @@ figure{margin:36px 0;padding:24px;border:1px solid var(--rule);background:rgba(2
     </ol>
   </section>
 
-  <section class="sources"><b>Sources</b><ul><li><a href="https://arxiv.org/abs/2608.06009">Wan-Animate 2 · arXiv 2608.06009v2</a></li><li><a href="https://humanaigc.github.io/wan-animate-2/">官方项目页 · 定性视频与多视角样例</a></li><li><a href="https://github.com/Wan-Video/Wan-Animate-2">官方代码与权重 · 检查于 2026-08-12，commit 3ad2fef</a></li><li>本页完整覆盖正文与 Algorithm 1；论文无附录。教学小数字均明确标注，不冒充论文实验值。</li></ul></section>
+  <section class="sources"><b>Sources</b><ul><li><a href="https://arxiv.org/abs/2608.06009">Wan-Animate 2 · arXiv 2608.06009v2</a></li><li><a href="https://arxiv.org/abs/2509.14055">旧版 Wan-Animate · 自监督数据、控制信号与分阶段训练</a></li><li><a href="https://humanaigc.github.io/wan-animate-2/">官方项目页 · 定性视频与多视角样例</a></li><li><a href="https://github.com/Wan-Video/Wan-Animate-2">官方代码与权重 · 检查于 2026-08-12，commit 3ad2fef</a></li><li>本页完整覆盖正文与 Algorithm 1；论文无附录。教学小数字均明确标注，不冒充论文实验值。</li></ul></section>
 </div>
 <script>
 document.querySelectorAll('figure').forEach(function(fig){new IntersectionObserver(function(es,obs){if(es[0].isIntersecting){fig.classList.add('play');obs.disconnect()}},{threshold:.12}).observe(fig)});
