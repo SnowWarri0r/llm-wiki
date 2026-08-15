@@ -1515,3 +1515,9 @@ skill 更新:
 - 分清论文 Lite 3 步、4 GPU、400×720@24 FPS 与当前开源蒸馏示例 10 步；吞吐不冒充首帧延迟。
 - 新增 time-align-rope、sparse-reference-attention、error-buffer-training、chunk-wise-self-forcing 四个 concept，并补 DiT / LoRA / Teacher Forcing / DMD 来源。
 - Review 1 抓出“身份图被误画成干净分支”的架构错误并修正；Review 2 抓出论文页与概念页展示公式空白、手机 48 视角网格列结构错误并修正。最终 lint 0/0、KaTeX 0 失败、浏览器桌面/手机/弹层复核通过。
+
+## [2026-08-12] rewrite | dyaplex 整页重构——「一页一问一喻」样板
+- 起因：用户指出论文页普遍割裂、无深入浅出感。诊断：质量体系全是局部闸门（覆盖闸/逐节打分/边界框），没有一个量全局叙事——优化什么得到什么。
+- 五条对症重构（DyaPlex 当样板）：① 一页一问（这份谱子怎么记/怎么对伴奏/怎么 80ms 写完一小节）一喻（总谱：声部=部位、音域=band、小节=46 token、小节号=q_pos、伴奏=冻结语音塔、上台只写自己声部=agent-only）贯穿全页；② 学习序重排，数据/配置沉到档案区；③ 彩色框 8→1（只留论文自相矛盾那条），其余 caveat 融进正文语气；④ 每节开头桥接句（"死线定了，先看谁来赶工"），过删标题连读测试；⑤ 整节重写不打补丁。
+- 图序恰好不变无需重编号；事实与数字一个没动。lint 0/0、KaTeX 0 失败、glossary 7↔7、浏览器逐屏核过。
+- 待用户验收后：五条写进 SKILL.md 并推广到 faceplex/worldtrace 等页。
