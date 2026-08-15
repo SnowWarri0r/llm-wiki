@@ -1,0 +1,409 @@
+---
+name: worldtrace
+type: paper
+source: https://arxiv.org/abs/2608.07408
+upstream: https://research.nvidia.com/labs/sil/projects/WorldTrace/
+ingested: 2026-08-11
+authors: Xindi Wu, Sven Elflein, James Lucas, Olga Russakovsky, Laura Leal-Taixé, Despoina Paschalidou, Jonathan Lorraine, Aljosa Osep
+year: 2026
+---
+
+# WorldTrace · 记忆明明还在，视频世界模型为什么还是认不出回家的路
+
+## 一句话
+
+WorldTrace 不训练新模型，只在推理时改写固定大小的 KV cache：最近几帧原样保留，久远历史放进摘要槽；每个摘要槽都分配一个模型训练时见过、彼此不重合的虚拟时间位置。WorldTrace-Field 在去掉 RoPE 旋转后平均旧 Key，偏向长期连贯；WorldTrace-Landmark 原样保存场景入口 Key，偏向回到旧地点时准确复原。
+
+## 0. 先说结论：它修的是“记得但找不到”，不是普通的显存不足
+
+想象一个能实时生成画面的游戏世界。玩家从房间 A 出发，走过 B、C、D，最后回到 A。一个只保留最近画面的滑动窗口早已删掉 A；一个保留全部 KV 的模型虽然还存着 A，却要用训练时从没见过的超长 RoPE 距离去读取它，attention 也可能失灵。
+
+因此“把旧画面留在内存里”只是第一层。真正可用的记忆要同时满足：
+
+1. **内容还在**：别把 A 丢掉或平均成一团；
+2. **地址读得到**：当前 Query 能通过训练过的位置范围找到它；
+3. **地址能区分**：多个摘要不能挤在同一位置；
+4. **预算固定**：不能让 GPU KV cache 随视频长度一直增长。
+
+WorldTrace 把这四件事压进一个固定大小的“摘要 + 最近”缓存。论文的核心不是更大的生成器，而是一个训练外的 cache 读写规则。
+
+## 1. 先补前置：AR 视频、Q/K/V、KV cache 和时间 RoPE
+
+### 1.1 AR 视频世界模型怎样生成
+
+模型不是一次生成一分钟视频，而是每次生成一个 chunk。Matrix-Game-2 每个 chunk 含 3 个 latent frame；每个 latent frame 有 880 个视觉 token。下一 chunk 去噪时会读取过去 chunk 写下的 Key 与 Value。
+
+- Query：当前 token 正在找什么；
+- Key：旧 token 的检索标签；
+- Value：真的被取回并混入当前表示的内容；
+- KV cache：把历史 K/V 留着，下一 chunk 不必重算历史网络。
+
+### 1.2 RoPE 为什么让 Key 带上“时间地址”
+
+RoPE 把 Q/K 每两个维度当成平面向量，按所在时间旋转。当前 Query 在时间 `q`，旧 Key 在时间 `k`，二者点积会依赖相对距离 `q-k`。Value 不旋转，因为位置只需要影响“该读谁”的分数，不必直接改写被读回的内容。
+
+训练时模型只见过：
+
+\[
+0\le \delta_{q,k}=q-k\le \Delta t_{\mathrm{train}}.
+\]
+
+- `q`：当前 Query 的时间位置；
+- `k`：某个旧 Key 的时间位置；
+- `δ_q,k`：二者相隔多少 latent frame；
+- `Δt_train`：训练见过的最大距离，MG2 为 5。
+
+若推理走到 `q=30`，却想读 `k=0`，距离变成 30，远超训练最大值 5。KV 还在不等于模型知道怎样解释这个新相位。
+
+## 2. 两个失败必须分开看
+
+### 2.1 地址失败：所有旧摘要被塞到同一个门牌号
+
+Block-relative 会把超出训练范围的距离截到上限。单独保留少数 token 时，这能避免 OOD；但压缩出多个摘要槽后，所有太旧的槽都被截到同一个位置。attention 看到的是多个相同门牌号，无法用位置区分“最老摘要”和“次老摘要”。
+
+另一种 Centroid-linear 让槽位置取所含帧时间戳的均值，再映射回合法区间。槽能区分，但随着视频增长，同一槽的位置一直漂；模型训练时没学过这种“槽身份不断换地址”的规则。
+
+### 2.2 内容失败：直接平均已经旋转的 Key 会相消
+
+RoPE 后的 Key 像带方向的箭头。两个内容相同的 Key 若分别旋转 0° 与 180°，会变成 `[1,0]` 和 `[-1,0]`。直接平均：
+
+\[
+\frac{[1,0]+[-1,0]}{2}=[0,0].
+\]
+
+内容明明相同，摘要却变成零向量。先把每支箭头反向旋回 0°，再平均，才会得到 `[1,0]`；最后按摘要槽的新地址旋转即可。
+
+## 3. 完整系统：固定七格记忆如何覆盖无限长历史
+
+下面用一个略大于论文 MG2 配置的教学缓存贯穿全文：
+
+- 当前时间 `q=20`；
+- 固定缓存 `L_attn=7` 格；
+- 3 个摘要槽 `N_s=3`；
+- 4 个最近槽 `N_r=4`；
+- 训练最大距离 `Δt_train=6`；
+- 玩家路线 A→B→C→D→A。
+
+七格始终分成：
+
+```text
+远处历史                         最近原文
+[摘要 s0][摘要 s1][摘要 s2] | [t17][t18][t19][t20]
+  A/B段     B/C段     C/D段   |  逐帧原样保存
+```
+
+每生成一个新 chunk：新 K/V 进入最近窗口；最老最近帧被挤出去，再由 Field 或 Landmark 写入摘要区。模型 attention 始终只读七格，所以 GPU 里的 attention 长度不增长。
+
+## 4. 虚拟位置：不管走了多久，三个摘要都搬回熟悉街区
+
+摘要允许使用的位置范围是：
+
+\[
+t^v_{\min}=\max(0,q-\Delta t_{\mathrm{train}}),\qquad
+t^v_{\max}=q-N_r.
+\]
+
+带入 `q=20, Δ=6, N_r=4`：
+
+\[
+t^v_{\min}=\max(0,20-6)=14,\qquad t^v_{\max}=20-4=16.
+\]
+
+14 到 16 正好有三个位置。第 `s` 个摘要槽使用：
+
+\[
+t_s^v=q-(L_{\mathrm{attn}}-1-s),\qquad s=0,1,\ldots,N_s-1.
+\]
+
+逐个代入：
+
+```text
+s=0: t₀ᵛ = 20-(7-1-0)=14
+s=1: t₁ᵛ = 20-(7-1-1)=15
+s=2: t₂ᵛ = 20-(7-1-2)=16
+```
+
+真正来自时间 0 的房间 A，也可以在读取时暂时挂上 14 号虚拟位置。下一步 `q=21` 时，三个虚拟位置一起变成 15、16、17；相对距离仍是 6、5、4。模型永远只处理训练见过的距离，而且三个槽永远分开。
+
+“虚拟”只改 attention 读取时给 Key 的时间相位，不会谎称旧画面真的发生在时间 14，也不修改 Value 的内容。
+
+## 5. `P` 矩阵：Field 和 Landmark 其实只差“每格抄哪些旧帧”
+
+假设六个历史 Key 暂时都简化成标量：
+
+\[
+K=[2,4,8,10,20,30]^\top.
+\]
+
+要压成 4 格：前两格摘要，后两格保留最近帧。Field 的投影矩阵可以写成：
+
+\[
+P_{\mathrm{field}}=
+\begin{bmatrix}
+1/2&1/2&0&0&0&0\\
+0&0&1/2&1/2&0&0\\
+0&0&0&0&1&0\\
+0&0&0&0&0&1
+\end{bmatrix}.
+\]
+
+每一行都说“这个缓存槽从哪些历史帧取多少”。矩阵乘法得到：
+
+\[
+P_{\mathrm{field}}K=[3,9,20,30]^\top.
+\]
+
+- 第一格是 `(2+4)/2=3`；
+- 第二格是 `(8+10)/2=9`；
+- 后两格直接复制 20 和 30。
+
+Landmark 只把前两行换成 one-hot：例如直接挑第 1、4 帧时，两行分别是 `[1,0,0,0,0,0]` 与 `[0,0,0,1,0,0]`。所以两种方法共享同一个读取系统，只是一个“按时间段做平均”，一个“挑少数关键帧原样保存”。
+
+完整 attention 从 `T` 个旧帧读取：
+
+\[
+\mathcal A(q,K,V)=\operatorname{softmax}(qK^\top)V.
+\]
+
+压缩后改成：
+
+\[
+\widehat{\mathcal A}(q,K,V;P)
+=\operatorname{softmax}\!\left(q(PK)^\top\right)PV.
+\]
+
+`PK` 是压缩后的 Key，`PV` 是用同样分组得到的 Value。`P` 的行数只有固定的 `L_attn`，因此 attention 不再随总历史 `T` 增长。论文把寻找好 `P` 的问题联系到非负矩阵分解，但部署时并不在线解一次 NMF；Field 和 Landmark 都直接使用手工结构化的 `P`。
+
+## 6. WorldTrace-Field：先去掉旧地址，再合并内容，再装上新地址
+
+对第 `f` 个 RoPE 二维频率对，Field 写入摘要的公式是：
+
+\[
+K^f_{\mathrm{field}}(t^v)
+=R(\theta_ft^v)\frac1M\sum_{m=1}^{M}
+R(-\theta_ft_m)K^f_{t_m}.
+\]
+
+符号逐个对应：
+
+- `f`：某一对二维 RoPE 通道；真实模型有许多频率对；
+- `K^f_t_m`：第 `m` 个来源帧在原时间 `t_m` 已旋转过的 Key；
+- `R(α)`：把二维向量旋转角度 `α` 的矩阵；
+- `θ_f`：这对通道每走一步旋转多少；
+- `R(-θ_f t_m)`：把原地址旋掉，回到 canonical key；
+- `M`：这个摘要槽合并的来源帧数，由分组大小决定，不是另调的超参；
+- `1/M Σ`：在同一 canonical 坐标系做普通平均；
+- `t^v`：摘要槽的新虚拟位置；
+- 最左侧 `R(θ_f t^v)`：只按新地址重新旋转一次。
+
+### 6.1 完整数值例
+
+两帧的 canonical 内容都为 `[1,0]`。第一帧角度 0°，第二帧角度 180°：
+
+```text
+存进 cache 的旋转后 Key
+K₁ = R(0°)[1,0]   = [ 1,0]
+K₂ = R(180°)[1,0] = [-1,0]
+
+错误：直接平均
+(K₁+K₂)/2 = [0,0]
+
+正确：先反向旋转
+R(0°)K₁      = [1,0]
+R(-180°)K₂   = [1,0]
+canonical 平均 = [1,0]
+
+若摘要虚拟地址角度为 90°
+R(90°)[1,0] = [0,1]
+```
+
+若当前 Query 恰为 `[0,1]`，正确摘要点积是 1，错误零向量点积是 0。相消问题不是“画面平均后变糊”这么简单，而是 Key 的检索信号可被位置相位直接抹掉。
+
+### 6.2 它严格保住了什么
+
+若两支 canonical Key 是 `[1,0]` 与 `[0,1]`，Query 是 `[2,1]`，把它们都放到同一虚拟位置后，两个原始 logit 是 2 和 1，平均为 1.5。平均 Key 为 `[.5,.5]`，点积也是 `2×.5+1×.5=1.5`。
+
+这来自点积对 Key 的线性：
+
+\[
+\left\langle Q,\frac1M\sum_m K_m\right\rangle
+=\frac1M\sum_m\langle Q,K_m\rangle.
+\]
+
+但它只保证 **softmax 前的平均分数**。softmax 后每个权重还取决于 cache 里所有其他 Key；把 M 个 token 合成一个 token 也改变了 token 数，不能声称完整 attention 输出完全等价。
+
+### 6.3 Field 的真实代价
+
+主实验使用 recompute writer：被逐出的 canonical Key 继续放在 CPU host memory，每次分组边界移动，都从来源帧重新算组均值，避免“平均的平均”累积误差。因此：
+
+- GPU attention cache 是固定大小；
+- 但 host memory 仍随历史增长，每个 latent frame 约增加 5.4 MB；
+- 附录另测严格流式 writer，只保留每槽 running sum/count，状态为 `O(N_s)`；在 `N=48` 时 TempSSIM 0.538，略低于 recompute 的 0.545，但仍高于滑窗 0.472。
+
+所以“WorldTrace 是 O(1) memory”必须说明口径：attention 和 GPU cache 为 O(1)；主 Field writer 的 CPU 侧来源状态不是 O(1)。
+
+## 7. WorldTrace-Landmark：不平均房间 A，而是把入口那一帧原样留下
+
+Field 适合“下一帧广泛参考过去整体”的连贯性，但回到 A 需要的是某一处具体旧场景。Landmark 对相邻帧的 canonical Key 算余弦距离：
+
+\[
+d_{\cos}(a,b)=1-\frac{a^\top b}{\|a\|_2\|b\|_2}.
+\]
+
+相同房间内的 Key 方向接近，距离小；跨进新场景时距离突然变大，超过阈值 `τ` 就记作场景入口。论文没有公开 `τ` 的具体数值。
+
+教学例：上一帧 `[1,0]`，同房间下一帧 `[.98,.2]`，余弦距离约 `1-.98/1.0002≈.020`；进入新房间变成 `[0,1]`，距离为 1。若教学阈值设 `.4`，前者不记，后者会写成 landmark。
+
+最多保留 `N_s` 个最近场景入口；装满后新入口覆盖最老入口。槽还没装满时，空位重复最老 landmark，避免读到空槽。
+
+### 7.1 为什么叫 frozen key
+
+槽位置会随着新 landmark 进入而移动。若每移动一次，都对上一次 bf16 结果“反旋转→再旋转”，舍入误差会一轮轮积累。WorldTrace 在场景入口出现时只算一次 canonical key，以后每轮都从这份冻结原件直接旋到当前虚拟位置：
+
+\[
+K^f_{\mathrm{land}}(t_s^v)
+=R(\theta_f t_s^v)R(-\theta_f t_{\ell^*})K^f_{t_{\ell^*}}.
+\]
+
+- `t_{ℓ*}`：被选为 landmark 的原时间；
+- `R(-θ_f t_{ℓ*})K`：只计算一次的 canonical 原件；
+- `t_s^v`：该 landmark 当前所在槽的虚拟地址；
+- `R(θ_f t_s^v)`：本轮从原件新鲜旋到目标地址。
+
+这等于 Field 公式取 `M=1`，没有平均。它避免的是反复数值变换造成的 drift，不是冻结整个生成模型，也不是让场景永远不被淘汰。
+
+## 8. Field 与 Landmark 不是谁替代谁
+
+| 目标 | Field | Landmark |
+|---|---|---|
+| 旧历史怎样写 | 连续时间段做 canonical 平均 | 挑场景入口原样保存 |
+| 更擅长 | 整体时间连贯、场景慢慢演化 | 绕路后回忆某个具体地方 |
+| 会丢什么 | 组内某一帧的精确细节 | 未触发检测器的场景、超过槽数的老场景 |
+| 理论对应 | 查询对一段历史分散注意 | 查询集中找少数帧 |
+| 实际风险 | 越长每槽平均越多，细节更糊 | detector 漏检或老 landmark 被挤掉 |
+
+附录把二者混在同一 cache 中测试：4 个摘要槽可按 F/L 分配。但中间配比没有单调变好；这些单 seed 结果里全 Landmark 的 recall 最强。因此论文证明了接口可以混用，没有给出自动决定“这次该多留 Field 还是 Landmark”的策略。
+
+## 9. LoopBench 怎样测“回到同一处”
+
+没有真实游戏引擎的 ground truth 时，模型第一次到 A 生成的画面就作为自己的参考；沿路线返回相同几何姿态时，再把返回画面与第一次画面比较。
+
+- ABA：直走再原路返回；
+- ABCA：近似三角回路；
+- ABCDA：方形回路；
+- 相机旋转：人留在 A，只把镜头转 90°/180°/360°再转回；
+- 多次回访：ABABA、ABCBA、ABCDBA。
+
+三类指标回答不同问题：
+
+- TempSSIM：相邻解码帧的 SSIM，越高越连续；但完全静止也可能高，所以不能单独代表世界正确；
+- Local Scene Drift：相邻 chunk 的 CLIP 特征距离，越低表示局部语义漂移更小；
+- PAC：返回路与去程在匹配姿态处的 CLIP-ViT-H/14 余弦相似度，越高越像“第一次见到的同一地方”。
+
+每个 LoopBench 条件生成 100 个不同初始场景；多 seed 用 `{0,42,123,456,789}`。这比只挑一段好看视频更可靠，但 PAC 仍是 CLIP 语义相似度，不是像素级、几何级世界状态验证。
+
+## 10. 结果：哪些数字真的支持了哪些结论
+
+### 10.1 Field 的位置方案
+
+同样使用 canonical 平均，只换虚拟位置：
+
+| 位置方案 | TempSSIM N=8 | TempSSIM N=16 |
+|---|---:|---:|
+| Block-relative | .390 | .530 |
+| Centroid-linear | .377 | .479 |
+| WorldTrace slot-rank | **.413** | **.545** |
+
+它支持“地址安排本身是瓶颈”，因为 content writer 被控制为相同。长 rollout `N=48` 时，Field TempSSIM `.545` 对滑窗 `.472`，相对提高 `(0.545-.472)/.472=15.5%`；Scene Drift 也从 `.0305` 降到 `.0295`。
+
+### 10.2 Landmark 的回访
+
+ABA、`N=16` 时，PAC 从滑窗 `.723±.013` 提到 `.864±.009`，相对增益 `(0.864-.723)/.723=19.5%`。延长到 `N=256` 的附录 sweep：
+
+| 方法 | N=16 | N=64 | N=128 | N=256 |
+|---|---:|---:|---:|---:|
+| Sliding window | .540 | .412 | .504 | .631 |
+| WorldTrace-Field | .555 | .442 | .495 | .602 |
+| Latent re-anchor | .955 | .913 | .782 | .610 |
+| WorldTrace-Landmark | **.959** | **.976** | **.986** | **.989** |
+
+这里的非单调基线很重要：PAC 不是一个随时间必然递减的物理量；生成内容、路线和 CLIP 表示都可造成波动。可稳妥下的结论是 Landmark 在这套回访协议下跨全部报告 horizon 明显更高，而不是“记忆误差严格随时间增长”。
+
+### 10.3 相位抵消消融
+
+固定 Block-relative 位置，只换平均域。`N_s=4` 时 LatentDiff 从 naive `.312` 降到 canonical `.233`，下降 25.3%。这更直接支持“先 unrotate 再平均”，但论文没有在正文或附录定义 LatentDiff 的具体归一化方式，因此不能把数值解释成像素误差。
+
+### 10.4 跨架构
+
+在 14B LingBot-World 上，Landmark 相对滑窗从 4× horizon 起提高 8.9%、14.1%、7.3%；2× 时反而低 `.006` 且无显著差异。Field 也不是全面胜出：4× 时 `.619`，略低于滑窗 `.624`。这说明方法不是“任何长度、任何 backbone 都单调改善”。
+
+## 11. 实现、显存和速度账
+
+MG2-1.3B 有 30 层、12 个 attention head、每 head 128 维；latent frame 分辨率 `44×80`，每帧 880 token，输出像素 `352×640`。固定 6 latent frame cache 的论文估算是：
+
+\[
+6\times880\times12\times(128\times2)\times30\times2
+=973{,}209{,}600\ \text{bytes}\approx0.97\ \text{GB}.
+\]
+
+两个 `×2` 分别是 K/V 两份与 fp16 每数 2 bytes。实际峰值还包含模型权重、临时激活、VAE 等，所以表 13 报告的进程峰值更高：滑窗与 Field 在 N=64/256/512 分别 1838/1903/1993 MB；Landmark 为 2470/2536/2626 MB，约多 0.6 GB 场景锚定开销。
+
+推理使用 3 个蒸馏去噪步 `t∈{1000,666,333}`、timestep shift 5.0、不用 CFG；每 chunk 由逐帧键鼠动作控制。在一张 A100 80GB、batch 1、含 VAE decode 的 `N=8` 测速中：滑窗 `.95 s/chunk`、Field `.99`、Landmark `1.00`，均在基线 6% 内。整个实验约 100 GPU-hours。
+
+论文没有公开可下载代码；官方项目页提供论文、海报、幻灯和视频。算法 1 足以描述 cache 更新逻辑，但不能替代可运行实现，尤其是 layer/head 级 scene-entry 聚合、阈值、host writer 数据布局没有完整配置。
+
+## 12. 理论部分到底证明了什么
+
+论文把完整 attention 权重记为 `α_q`，压缩槽的权重记为 `α̂_q`。压缩槽再通过 `P` 映回原始时间轴，可比较 `α̂_qP` 与 `α_q` 的 L1 距离。对许多 Query 的放松目标是：
+
+\[
+\mathcal J(P)=\sum_{q\in\mathcal Q}
+\min_{\gamma_q\in\Delta_{L_{\mathrm{attn}}}}
+\|\gamma_qP-\alpha_q\|_1.
+\]
+
+- `𝒬`：当前要分析的一组 Query；
+- `γ_q`：允许自由选择的槽权重，非负且和为 1；
+- `γ_qP`：这些槽按 `P` 展开回 T 帧后形成的近似注意力分布；
+- `||·||_1`：每个位置绝对差之和；
+- `min`：对每个 Query 选择理论上最有利的槽权重。
+
+真实推理中的槽权重并不能自由选择，而由 `softmax(q(PK)^T)` 决定。因此 `J(P)` 是实际误差的下界式放松，不是部署表现的上界保证。
+
+在作者定义的两类 Query 中：
+
+- 若旧历史 attention 在每个时间组内接近均匀，Field 的误差上界由组内不均匀程度 `ε_q` 决定；
+- 若 recall attention 接近集中在已保存的某个 landmark，Landmark 的误差上界由覆盖误差 `δ_q` 决定。
+
+这是条件刻画：**如果 Query 本来就符合某类模式，对应 `P` 接近最优。**论文没有测预训练模型真实的 `ε_q/δ_q`，也没有证明任意 Query 上普遍最优。
+
+## 13. 这篇论文真正留下的边界
+
+1. 只适用于有 temporal RoPE、AR chunk 生成和已知局部窗口的模型；不是所有视频扩散模型的通用外挂。
+2. Field 越跑越久，每槽平均帧数约 `T/N_s`，具体场景细节会越来越糊。
+3. Landmark 只有 detector 选中的场景能回忆；超过 `N_s` 个场景时最老者被淘汰。
+4. 主 Field 的 GPU cache 固定，但 CPU host state 线性增长；严格 O(1) writer 是附录替代方案，效果略低。
+5. 世界模型的单 chunk 画质、动作遵循与物理规律完全继承 backbone；WorldTrace 只改记忆。
+6. LoopBench 以模型自己第一次生成的 A 为参考，测的是自洽回访，不证明它与真实三维世界一致。
+7. `+15.5%` 是 N=48 的 TempSSIM 相对增益；`+19.5%` 是 ABA N=16 的 PAC 相对增益，不能推广成所有指标统一提升。
+
+## 14. 最后把拼图压成一句可迁移的经验
+
+长期记忆不是“保存”和“检索”二选一，而是三件事的乘积：**存下有用内容 × 给它模型读得懂的地址 × 在固定预算里选择合适粒度。**WorldTrace 最值得迁移的不是某个特定平均公式，而是把 content writer 和 position reader 放到同一张设计图里：Field 与 Landmark 改的是内容，slot-rank 与 canonical key 保证这些内容真的能被读到。
+
+## 来源
+
+- [论文 · arXiv 2608.07408](https://arxiv.org/abs/2608.07408)
+- [NVIDIA 官方项目页](https://research.nvidia.com/labs/sil/projects/WorldTrace/)
+
+## 关联概念
+
+- [[addressable-kv-memory]]
+- [[canonical-rope-keys]]
+- [[field-vs-landmark-memory]]
+- [[kv-cache]]
+- [[rotary-position-embedding]]
+- [[sparse-attention]]
+- [[softmax]]
+- [[dot-product]]
+- [[autoregressive-vs-bidirectional-video-diffusion]]

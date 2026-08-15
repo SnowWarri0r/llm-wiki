@@ -174,6 +174,9 @@ def rope(x, position):
 <p>RoPE 还有一个好性质：<strong>当两个 token 距离越远，位置对 attention score 的贡献越弱</strong>。</p>
 <p>直觉用拔河想：32 个频率 = 32 根绳子。距离近时所有绳子朝同一方向拉（cos 都接近 +1），合力大 → 位置信号强。距离远时每根绳子正负各异（有的 +0.3 有的 -0.7），互相抵消，合力趋近于零 → 位置信号弱。<strong>距离越远，绳子方向越"各说各话"，加起来越接近零</strong>。</p>
 <p>这意味着 RoPE <strong>自带一个软窗口效应</strong> —— 不需要显式 mask 长距离，模型天然更关注近处。</p>
+<h2>长上下文的另一个问题：训练没见过的旋转角</h2>
+<p>“公式还能算”不等于“模型学会了怎么用”。若训练时 Query–Key 最多只隔 5 个时间位置，推理突然要求读取相隔 30 的 Key，部分高频通道会转过许多圈，进入训练没覆盖的相位组合。旧 Key 即使仍在 KV cache，也可能变得难以寻址。</p>
+<p>而且不同时间的 Key 已带不同旋转，直接做平均可能相消。要把多个 Key 合并成摘要，应先对每个 Key 反向旋转回 canonical 坐标，再平均，最后旋到摘要的新虚拟位置。见 <a href="../concepts/canonical-rope-keys.html">canonical-rope-keys</a> 与 <a href="../papers/worldtrace.html">worldtrace</a>。</p>
 <h2>代码出处</h2>
 <ul>
 <li>原论文：Su et al. 2021, arXiv 2104.09864</li>
@@ -186,12 +189,14 @@ def rope(x, position):
 <li><a href="../concepts/relative-position-encoding.html">relative-position-encoding</a> · 为什么相对位置好</li>
 <li><a href="../concepts/self-attention.html">self-attention</a> · RoPE 作用的位置（Q·K^T 之前）</li>
 <li><a href="../concepts/kv-cache.html">kv-cache</a> · 缓存旋转后的 K，推理时不重复计算</li>
+<li><a href="../concepts/canonical-rope-keys.html">canonical-rope-keys</a> · 为什么不同时间的 Key 不能直接平均</li>
+<li><a href="../concepts/addressable-kv-memory.html">addressable-kv-memory</a> · 为什么 Key 还在也可能读不到</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 11 处</span>
-  <ul><li><a href="../papers/ltx-2.html"><span class="cat">paper</span>LTX-2 · 让声音和画面在同一段去噪过程中彼此校正</a></li><li><a href="../papers/mrt.html"><span class="cat">paper</span>MRT · Masked Region Transformer · 分层图像生成与编辑</a></li><li><a href="../papers/rope.html"><span class="cat">paper</span>RoFormer · Rotary Position Embedding (RoPE)</a></li><li><a href="../topics/training-vs-inference.html"><span class="cat">topic</span>训练 vs 推理 · 同一个模型的两种运行方式</a></li><li><a href="../concepts/audiovisual-cross-attention.html"><span class="cat">concept</span>Audiovisual Cross-Attention · 音视频双向交叉注意力</a></li><li><a href="../concepts/mrope.html"><span class="cat">concept</span>M-RoPE · 多模态旋转位置编码</a></li><li><a href="../concepts/positional-encoding.html"><span class="cat">concept</span>Positional Encoding · 位置编码</a></li><li><a href="../concepts/projective-rope.html"><span class="cat">concept</span>PRoPE · 把相机几何写进注意力</a></li><li><a href="../concepts/qk-rmsnorm.html"><span class="cat">concept</span>QK-Norm · 给 Q/K 做归一化稳住训练</a></li><li><a href="../concepts/relative-position-encoding.html"><span class="cat">concept</span>Relative Position Encoding · 相对位置编码</a></li><li><a href="../concepts/voxel-rope-conditioning.html"><span class="cat">concept</span>Voxel + 3D RoPE 条件 · 先把点云位置磨粗，再写进注意力</a></li></ul>
+  <span class="label">引用此页的内容 · 14 处</span>
+  <ul><li><a href="../papers/ltx-2.html"><span class="cat">paper</span>LTX-2 · 让声音和画面在同一段去噪过程中彼此校正</a></li><li><a href="../papers/mrt.html"><span class="cat">paper</span>MRT · Masked Region Transformer · 分层图像生成与编辑</a></li><li><a href="../papers/rope.html"><span class="cat">paper</span>RoFormer · Rotary Position Embedding (RoPE)</a></li><li><a href="../papers/worldtrace.html"><span class="cat">paper</span>WorldTrace · 记忆明明还在，视频世界模型为什么还是认不出回家的路</a></li><li><a href="../topics/training-vs-inference.html"><span class="cat">topic</span>训练 vs 推理 · 同一个模型的两种运行方式</a></li><li><a href="../concepts/addressable-kv-memory.html"><span class="cat">concept</span>Addressable KV Memory · 可寻址的 KV 记忆</a></li><li><a href="../concepts/audiovisual-cross-attention.html"><span class="cat">concept</span>Audiovisual Cross-Attention · 音视频双向交叉注意力</a></li><li><a href="../concepts/canonical-rope-keys.html"><span class="cat">concept</span>Canonical RoPE Keys · 去掉位置旋转的 Key</a></li><li><a href="../concepts/mrope.html"><span class="cat">concept</span>M-RoPE · 多模态旋转位置编码</a></li><li><a href="../concepts/positional-encoding.html"><span class="cat">concept</span>Positional Encoding · 位置编码</a></li><li><a href="../concepts/projective-rope.html"><span class="cat">concept</span>PRoPE · 把相机几何写进注意力</a></li><li><a href="../concepts/qk-rmsnorm.html"><span class="cat">concept</span>QK-Norm · 给 Q/K 做归一化稳住训练</a></li><li><a href="../concepts/relative-position-encoding.html"><span class="cat">concept</span>Relative Position Encoding · 相对位置编码</a></li><li><a href="../concepts/voxel-rope-conditioning.html"><span class="cat">concept</span>Voxel + 3D RoPE 条件 · 先把点云位置磨粗，再写进注意力</a></li></ul>
 </div>
 
 <div class="colophon">

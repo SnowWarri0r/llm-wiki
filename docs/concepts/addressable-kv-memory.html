@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Addressable KV Memory · 可寻址的 KV 记忆 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · addressable-kv-memory</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Addressable KV Memory · 可寻址的 KV 记忆</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p><strong>记忆在不在</strong>与<strong>模型能不能用 attention 找到它</strong>是两回事；可寻址记忆要求历史内容还在、读取位置落在模型熟悉的范围内，而且多个记忆位置彼此可区分。</p>
+<h2>生活直觉</h2>
+<p>仓库里存着三箱货，不等于快递员能取到：</p>
+<ul>
+<li>标签被撕掉：内容在，但没有地址；</li>
+<li>三箱都写“最里面”：地址重合，无法区分；</li>
+<li>标签使用从没培训过的新编码：人能看见，流程却不认识。</li>
+</ul>
+<p>长视频 KV cache 也会这样。旧 Key 即使仍在显存，时间 RoPE 相对距离一旦超过训练范围，Query 就要在没学过的位置关系上检索。若又把多个旧摘要都截到同一个位置，它们还会发生地址碰撞。</p>
+<h2>三个条件</h2>
+<ol>
+<li><strong>Retention</strong>：需要的信息没有被删掉或压坏；</li>
+<li><strong>In-distribution address</strong>：Query–Key 相对位置仍在训练见过的区间；</li>
+<li><strong>Distinctness</strong>：不同 memory slot 有不同地址，attention 能分开选择。</li>
+</ol>
+<p>WorldTrace 的 slot-rank 位置解决后两项；Field / Landmark writer 解决第一项。只做任意一半都不够。</p>
+<h2>不是哪几件事</h2>
+<ul>
+<li>不是“KV cache 越大越好”：完整 cache 仍可能在超长 RoPE 距离上读不到；</li>
+<li>不是普通数据库随机访问：地址是进入 attention 点积的位置相位，不是数组下标；</li>
+<li>不是模型学到永久地图：WorldTrace 仍是有限槽位的视觉轨迹记忆。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/worldtrace.html">worldtrace</a> · 固定槽位怎样同时处理保存与寻址</li>
+<li><a href="../concepts/kv-cache.html">kv-cache</a> · K/V 为什么会留在推理内存</li>
+<li><a href="../concepts/rotary-position-embedding.html">rotary-position-embedding</a> · 时间地址怎样进入 Q/K 点积</li>
+<li><a href="../concepts/canonical-rope-keys.html">canonical-rope-keys</a> · 内容换地址前为什么要先去掉旧相位</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/worldtrace.html"><span class="cat">paper</span>WorldTrace · 记忆明明还在，视频世界模型为什么还是认不出回家的路</a></li><li><a href="../concepts/field-vs-landmark-memory.html"><span class="cat">concept</span>Field vs Landmark Memory · 平滑摘要与关键帧记忆</a></li><li><a href="../concepts/kv-cache.html"><span class="cat">concept</span>KV Cache</a></li><li><a href="../concepts/rotary-position-embedding.html"><span class="cat">concept</span>Rotary Position Embedding · RoPE · 旋转位置编码</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/addressable-kv-memory.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
