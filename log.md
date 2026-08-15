@@ -1494,3 +1494,13 @@ skill 更新:
 
 ## [2026-08-11] revise | faceplex 补 L 的定义
 - L 全页当分母（Δτ=1/L）、当槽数（τ_i 公式）、算等待（(L−1)×80ms），却没有一格正面说它是什么。§02 符号格补：L=滚动队列槽数（同时在制的片段数），一个数管两头——步长 1/L 与等待 L−1 轮；md 同步补到手算段。
+
+## [2026-08-12] ingest | Stealing Reasoning Traces
+
+- 新增 116 页论文精读与 bespoke HTML；不按论文“漏洞→攻击→附录”平铺，改按“密封交接单为什么存在→内容认证与上下文认证→三层兼容→两次调用→证据边界→四类风险→隐私漏斗→summary 差异→风格漂移/PPL→防御”重排。
+- 把“没有破解加密”钉在开篇：攻击者原样重放 provider 签过的 envelope，合法兼容模型负责解密处理，较弱模型只是随机的 fuzzy decoder；provider 密码细节与全局 key 均标为行为推断。
+- 逐项解释 token ratio、至少命中一次概率、PPL 与 hash chain；每条公式都有角色、符号表、数字例和结论上限。16-token reasoning span 的 10^9–10^12 查询口径与“低 PPL 不等于记忆/蒸馏”单独收口。
+- 隐私实验严格拆 block/session/artifact 三种单位：315,320 blocks、1,028 leaking blocks、328 sessions、912 headline / 941 taxonomy dedup / 704 non-benchmark / 64 reasoning-only，不把不同表口径硬串成一个漏斗。
+- Appendix B 以证据梯子呈现：1% prefill 的 n-gram shift、6 模型×90 问题×4 repeats 的字符风格分类器与因果结论分层；保留作者“suggestive but inconclusive”限制。
+- 新增 authenticated-encryption、reasoning-envelope-replay、reasoning-trace-distillation、hidden-prompt-injection 四个 concept，并给 perplexity 补本篇来源与因果边界。
+- 论文讲解 skill 新增硬门槛：每篇至少两轮彼此独立的 review，第一轮查内容/证据/公式/认知链，第二轮只看第一轮修订后的最终渲染页与桌面/手机/交互；两轮均达 4+ 后才 commit/push。

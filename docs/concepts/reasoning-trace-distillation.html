@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>困惑度 Perplexity · 模型对一段话有多&quot;意外&quot; · Concept</title>
+<title>推理轨迹蒸馏 · 不只抄答案，还抄解题过程 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,60 +53,77 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · perplexity</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · reasoning-trace-distillation</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>困惑度 Perplexity · 模型对一段话有多&quot;意外&quot;</h1>
+  <h1>推理轨迹蒸馏 · 不只抄答案，还抄解题过程</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>把模型在一段文本上的平均交叉熵取指数，得到一个"等效分支数"：困惑度 = exp(平均每 token 的负对数概率)；越低 = 模型觉得这段话越自然、越在意料之中。</p>
-<h2>直觉 · "平均下来它在几个里猜"</h2>
-<p>模型每步预测下一个 token，给真值 token 一个概率。概率高 = 不意外；概率低 = 意外。把整段的"意外程度"汇总成一个数，就是困惑度。</p>
-<p>它有个好懂的解读：<strong>等效分支数</strong>。困惑度=10 ≈ "模型平均每步像在 10 个等可能选项里猜"；困惑度=2 ≈ "平均每步像在 2 个里猜"——越小越笃定。所以困惑度低 = 这段话<strong>对模型很顺</strong>。</p>
+<p>训练学生模型时，把老师的中间解法也当监督，而不只给最终答案。</p>
+<h2>直觉</h2>
+<p>只给答案像题库末页只有“42”；给推理轨迹则像附上草稿：先识别题型、试哪条路、在哪检查、怎样修正。学生获得的监督更密，但也会继承老师的冗余、错误习惯和敏感信息。</p>
 <h2>怎么做的</h2>
-<pre><code>一段 N 个 token，模型给每个真值 token 的概率 p₁…p_N：
-平均 NLL = −(1/N) Σ log pₜ        （= 平均每 token 的交叉熵）
-困惑度  PPL = exp( 平均 NLL )
+<p>答案蒸馏的数据对是：</p>
+<div class="tex math-display" data-display="true">(q, a)</div>
+<p>推理轨迹蒸馏把它扩成：</p>
+<div class="tex math-display" data-display="true">(q, r_1,r_2,\ldots,r_m,a)</div>
+<ul>
+<li><span class="tex math-inline" data-display="false">q</span>：题目或用户请求。</li>
+<li><span class="tex math-inline" data-display="false">r_i</span>：第 <span class="tex math-inline" data-display="false">i</span> 段中间推理 token。</li>
+<li><span class="tex math-inline" data-display="false">m</span>：推理长度。</li>
+<li><span class="tex math-inline" data-display="false">a</span>：最终可见答案。</li>
+</ul>
+<p>训练仍可以是 next-token prediction；区别在于监督序列从只含 <span class="tex math-inline" data-display="false">a</span>，变成同时包含 <span class="tex math-inline" data-display="false">r_{1:m}</span> 与 <span class="tex math-inline" data-display="false">a</span>。</p>
+<h2>数字例子</h2>
+<p>一道题的最终答案只有 20 tokens，隐藏推理有 1,980 tokens：</p>
+<pre><code class="language-text">答案监督长度 = 20
+推理 + 答案监督长度 = 1,980 + 20 = 2,000
+token 级监督密度约扩大 2,000 / 20 = 100 倍
 </code></pre>
-<p>关键是那个 <strong>1/N</strong>：困惑度是<strong>逐 token 的几何平均</strong>，已经<strong>按长度归一</strong>了。所以它能<strong>公平比较不同长度的回答</strong>——长回答不会因为 token 多就吃亏，这正是 <a href="../papers/grape.html">grape</a> 用它给候选回答排序的原因。</p>
-<h2>数字例子 · 两段回答比"合身"</h2>
-<p>同一指令的两个候选，看目标模型给每个真值 token 的概率：</p>
-<pre><code>候选 A（合身）:   逐 token 概率 [0.5, 0.4, 0.5]
-  平均 NLL = −(ln0.5+ln0.4+ln0.5)/3 = 0.768
-  PPL = exp(0.768) = 2.15      ← 模型平均像在 ~2 个里猜，很顺
-
-候选 B（强老师但不合身）: [0.2, 0.1, 0.3]
-  平均 NLL = −(ln0.2+ln0.1+ln0.3)/3 = 1.705
-  PPL = exp(1.705) = 5.50      ← 平均像在 ~5.5 个里猜，别扭
-</code></pre>
-<p>✓ 自检：A 的困惑度 2.15 &lt; B 的 5.50。哪怕 B 来自更强的老师，<strong>目标模型觉得 A 更自然</strong>——<a href="../papers/grape.html">grape</a> 就选 A。注意用困惑度(而非总对数概率)是关键：总概率会偏向短回答，逐 token 几何平均把长度拉平了，比的是"平均每 token 多顺"。</p>
+<p>这不等于能力一定扩大 100 倍：不少推理 token 会重复、走弯路或只服务格式。但它解释了为什么高质量真实轨迹通常比同样数量的短答案更有训练价值。</p>
+<h2>关键边界</h2>
+<ul>
+<li>“输出风格变像老师”不是“训练时用过老师轨迹”的证明；短前缀也能在推理时改变风格。</li>
+<li>低困惑度只表示目标模型觉得这段文字顺，不证明它记忆过原文。</li>
+<li>逐字抽取概率很低，也不能排除分布级、策略级蒸馏。</li>
+</ul>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/grape.html">grape</a> · 用困惑度给候选回答排序，选最低(最合身)那条</li>
-<li><a href="../papers/stealing-reasoning-traces.html">stealing-reasoning-traces</a> · 用条件困惑度比较不同模型的推理风格；低 PPL 只能说明“顺”，不能单独证明蒸馏或记忆</li>
-<li><a href="../concepts/cross-entropy.html">cross-entropy</a> · 困惑度 = exp(平均交叉熵/NLL)，一对孪生量</li>
-<li><a href="../concepts/distribution-aligned-sft.html">distribution-aligned-sft</a> · "低困惑度 = 贴合模型分布"是它的判据</li>
-<li><a href="../concepts/softmax.html">softmax</a> · 每步的概率来自 softmax</li>
+<li><a href="../papers/stealing-reasoning-traces.html">stealing-reasoning-traces</a> · 讨论从 proprietary API 的 opaque block 中恢复蒸馏监督。</li>
+<li><a href="../concepts/perplexity.html">perplexity</a> · 衡量一段轨迹在目标模型下有多顺。</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 7 处</span>
-  <ul><li><a href="../papers/grape.html"><span class="cat">paper</span>GRAPE · 最好的指令微调数据，是&quot;合身&quot;的那条</a></li><li><a href="../papers/stealing-reasoning-traces.html"><span class="cat">paper</span>Stealing Reasoning Traces · 密文没被破解，推理为什么仍被偷走</a></li><li><a href="../concepts/distribution-aligned-sft.html"><span class="cat">concept</span>分布对齐的 SFT · 数据好不好，是相对你这个模型说的</a></li><li><a href="../concepts/logarithms.html"><span class="cat">concept</span>对数 · 把乘除变成加减</a></li><li><a href="../concepts/multimodal-knowledge-flow.html"><span class="cat">concept</span>多模态知识流 · 一项能力学到的东西，能不能帮另一项能力</a></li><li><a href="../concepts/on-policy-vs-off-policy.html"><span class="cat">concept</span>on-policy vs off-policy · 学自己刚做的，还是学别人/旧的</a></li><li><a href="../concepts/reasoning-trace-distillation.html"><span class="cat">concept</span>推理轨迹蒸馏 · 不只抄答案，还抄解题过程</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/stealing-reasoning-traces.html"><span class="cat">paper</span>Stealing Reasoning Traces · 密文没被破解，推理为什么仍被偷走</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/perplexity.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/reasoning-trace-distillation.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {
