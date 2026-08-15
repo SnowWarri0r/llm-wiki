@@ -190,9 +190,11 @@
 
 <section id="jvp">
 <h2><span class="n">§ 04</span>JVP：不造整张导数表，只沿老师轨迹问一次</h2>
-<p>若模型输入、输出各有上百万个数，完整 Jacobian<a class="jr" href="#g-06">06</a> 会有万亿级位置；但上一节只需要它乘上轨迹方向 <code class="m">dx_t/dt</code>。这就是 JVP：</p>
+<p>先把分工说清，免得和上一节搅在一起：sg 回答的是“切线要不要再被求导”——不用，冻结成常数；本节回答的是“这个被冻结的切线本身怎么算得起”。切线里藏着 <code class="m">\partial f/\partial x</code>，即完整 Jacobian<a class="jr" href="#g-06">06</a>——输入每维 × 输出每维的斜率表，输入输出各上百万个数时就是万亿格，哪怕只算一次也造不起。好消息是从头到尾没人需要整张表：上一节的切线公式里，它永远只以「表 × 轨迹方向 <code class="m">dx_t/dt</code>」的形态出现。只算这个乘积、跳过造表，就是 JVP：</p>
 <div class="formula">\operatorname{JVP}(F,x,v)=J_F(x)v=\left.\frac{d}{d\varepsilon}F(x+\varepsilon v)\right|_{\varepsilon=0}</div>
 <div class="vars"><div><code class="m">F</code>这里可看成 student 网络。</div><div><code class="m">x</code>当前带噪 latent。</div><div><code class="m">v</code>指定的输入方向；rCM 中来自时间轨迹。</div><div><code class="m">J_F(x)</code>完整 Jacobian，只出现在数学定义里，不实际展开。</div><div><code class="m">\varepsilon</code>定义微小位移的标量，不是扩散噪声 <code class="m">\epsilon</code>。</div><div><code class="m">J_F(x)v</code>输出沿该方向的瞬时变化。</div></div>
+<p>几何上，JVP 就是<strong>方向导数的向量版</strong>。把 F 看成一台“输入空间 → 输出空间”的变形机：站在点 x，输入朝方向 v 挪一小步，输出会朝哪边、以多快挪？定义式写的就是这个字面动作——沿 v 迈 ε 小步、看输出挪多少、除以 ε，答案 <code class="m">J_F(x)v</code> 是输出端的一支箭。一维时“斜率”就是一个数；多维时斜率取决于朝哪边走，<code class="m">J_F(x)v</code> 就是“朝 v 走的斜率”。打个比方：完整 Jacobian 是站在脚下这一点、把每个方向的坡度全测一遍造出的测绘册；JVP 是只沿真要走的这条路迈一步、看海拔变多少。rCM 里那条路就是老师轨迹，<code class="m">v=dx_t/dt</code>——一致性条件只关心 f 沿轨迹变不变，全方向的测绘册本来就用不上。</p>
+<p>算起来也不是“先造表、再乘方向”：forward-mode autodiff 让方向跟着数值一起往前传——每层算出数值的同时顺手算“数值沿 v 的变化率”（每个基本算子的求导规则都是现成的），一遍前向走到出口，那个变化率就是 <code class="m">J_F(x)v</code>，成本与一次普通前向同量级。下面手算里把 J 写出来纯为教学；真实实现里这张表从未出现，“小步自检”那两行才是它的本性——真的沿 v 迈了 <code class="m">\varepsilon=.001</code> 的一步。</p>
 <figure id="fig-jvp">
   <figcaption><span>Fig 06 · 一次完整手算</span><b>二维输入 → 二维输出，只问方向 v</b></figcaption>
   <div class="split">
