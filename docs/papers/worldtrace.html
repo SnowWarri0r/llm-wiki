@@ -94,6 +94,7 @@ figure{margin:35px 0;padding:28px;background:rgba(251,248,239,.94);border:1px so
   <div class="formula" data-expr="0\le \delta_{q,k}=q-k\le \Delta t_{\mathrm{train}}"></div>
   <div class="symbols"><div class="sym"><code class="m">q</code>当前 Query 的绝对时间位置。</div><div class="sym"><code class="m">k</code>某个缓存 Key 的绝对时间位置。</div><div class="sym"><code class="m">\delta_{q,k}</code>二者相差多少 latent frame。</div><div class="sym"><code class="m">\Delta t_{\mathrm{train}}</code>训练见过的最大距离；MG2 为 5。</div><div class="sym"><code class="m">K</code>检索标签；会被时间 RoPE 旋转。</div><div class="sym"><code class="m">V</code>被读回的内容；不做 RoPE 旋转。</div></div>
   <p>RoPE<a class="jr" href="#g-04">04</a> 把每两个 Q/K 维度当成二维箭头，按时间旋转。点积因此带上相对距离。推理若走到 <code class="m">q=30</code> 还想读 <code class="m">k=0</code>，距离 30 远超训练最大值 5：公式当然能算，但模型没学过怎样解释这些相位。</p>
+  <p>附录按频率把这件事拆得更细。MG2 每 head 128 维沿三根轴分：44 维给时间、各 42 维给空间高宽；22 个时间频率 <code class="m">\theta_f=10000^{-f/22}</code>，从最快的 1.0 一路降到最慢的约 <code class="m">1.5\times10^{-4}</code>。每个频率通过 <code class="m">\cos(\theta_f|\delta_{q,k}|)</code> 进入分数：距离 30 时，最快的频率已绕过 π 约十次，<strong>贡献实际成了随机数</strong>；最慢的频率只转了 0.26°，cos 仍约等于 1，几乎位置不变、扛着语义内容。所以超纲不是全盘乱码，而是<strong>快频通道先变成噪声</strong>——这正是后面 canonical key 只需把相位摘干净就能救回内容的原因。</p>
 </section>
 
 <section id="s2"><h2><span class="n">SECTION 02</span><span>两种失败：旧地址超纲，直接平均又会把内容抵消</span></h2>
@@ -181,6 +182,7 @@ PK = [2, 10, 20, 30]ᵀ</div><p>摘要行是 one-hot，原样挑第 1、4 帧。
 <section id="s8"><h2><span class="n">SECTION 08</span><span>Field 与 Landmark 不是升级关系，而是两种未来查询假设</span></h2>
   <div class="two"><div class="mode field"><h4>WorldTrace-Field<a class="jr" href="#g-11">11</a></h4><ul><li>连续时间段做 canonical 平均</li><li>适合未来对一段历史分散关注</li><li>长处：整体连贯、慢变化</li><li>短板：组内某一帧的细节会糊</li></ul></div><div class="mode land"><h4>WorldTrace-Landmark<a class="jr" href="#g-12">12</a></h4><ul><li>场景入口 one-hot 原样保存</li><li>适合未来集中找某个旧场景</li><li>长处：回访、稀疏事件</li><li>短板：漏检或超过槽数就丢</li></ul></div></div>
   <p>这就是 Field 与 Landmark 的固定预算取舍<a class="jr" href="#g-15">15</a>。</p>
+  <div class="note"><strong>为什么换 writer 不用动地址系统——这是论文 3.5 节点破的耦合解法。</strong>位置和内容本来是缠在一起的：摘要的虚拟地址会偏离它压缩时的偏移范围，直接平均带相位的 Key 又会破坏均值保持。WorldTrace 用两个机制各断一头：slot indexing 把地址方案钉死，canonical 变换把“来源位置→虚拟位置”的搬移整个吸收掉。于是槽里放什么变成<strong>纯内容层面的设计选择</strong>——Field 和 Landmark 才能共用同一套读取系统随意互换、甚至混搭。</div>
   <p>附录把 4 个摘要槽按 Field / Landmark 混合分配，但中间配比没有单调改善；单 seed 表中全 Landmark 的 recall 最强。论文证明“同一接口能混用”，没有给出自动选择比例的策略。</p>
 </section>
 
@@ -220,6 +222,9 @@ PK = [2, 10, 20, 30]ᵀ</div><p>摘要行是 one-hot，原样挑第 1、4 帧。
   <p class="formula-purpose">Proposition 1（近似界）：压缩前后的输出差，最多是分布失配乘上最大的一行 Value 范数。</p>
   <div class="formula" data-expr="\|r_q(P)\|_2\le\underbrace{\|\hat\alpha_qP-\alpha_q\|_1}_{\text{分布失配}}\cdot\|V\|_{\infty,\mathrm{row}}"></div>
   <div class="symbols"><div class="sym"><code class="m">r_q(P)</code>压缩 attention 输出减完整输出。</div><div class="sym"><code class="m">\alpha_q</code>完整 attention 对 T 帧的权重——§ 05 完整版算出的 [.035, .042, .063, .077, .210, .572] 就是一个。</div><div class="sym"><code class="m">\hat\alpha_q</code>压缩后对 L 格的实际权重，§ 05 里的 [.043, .079, .236, .642]。</div><div class="sym"><code class="m">\hat\alpha_qP</code>把 L 格权重按配方摊回 T 帧。</div><div class="sym"><code class="m">\|V\|_{\infty,\mathrm{row}}</code>范数最大的那一行 Value。</div><div class="sym"><b>意义</b>Value 有界时，只要分布贴得住，输出就差不远——后面只用盯分布。</div></div>
+  <p class="formula-purpose">附录还把总误差拆成独立的两半——重定位与压缩：</p>
+  <div class="formula" data-expr="\|\widehat{\mathcal A}-\mathcal A_{\mathrm{orig}}\|\le\underbrace{\|\mathcal A-\mathcal A_{\mathrm{orig}}\|}_{\text{重定位}}+\underbrace{\|\widehat{\mathcal A}-\mathcal A\|}_{\text{压缩}}"></div>
+  <p>重定位项（Key 从原时间戳搬到 slot-rank 虚拟位置）<strong>不是压缩的代价，是可寻址性的代价</strong>：超过训练视野后原始偏移本来就出界、attention 直接退化，slot-rank 是拿一个有界的分布内位移，换掉一个不受控的出界失败。论文没有给它解析界——但 § 10 第一张表“同一 writer 只换地址”量的正是这一项。下面的理论只管第二项（压缩）。</p>
   <h3>第二步 · 理想化目标：让槽权重随便配，P 的结构能贴多近</h3>
   <div class="formula" data-expr="\mathcal J(P)=\sum_{q\in\mathcal Q}\min_{\gamma_q\in\Delta_{L_{\mathrm{attn}}}}\|\gamma_qP-\alpha_q\|_1"></div>
   <div class="symbols"><div class="sym"><code class="m">\mathcal Q</code>当前分析的一组 Query。</div><div class="sym"><code class="m">\gamma_q</code>理论上自由选择的 L 个槽权重。</div><div class="sym"><code class="m">\gamma_qP</code>把槽权重展开回 T 帧后的近似分布。</div><div class="sym"><code class="m">\|\cdot\|_1</code>逐位置绝对差相加。</div><div class="sym"><b>min 算子</b>对每个 Query 选理论最有利的槽权重。</div><div class="sym"><b>为什么是放松</b>真实推理的槽权重被 <code class="m">\operatorname{softmax}(q(PK)^\top)</code> 锁死，只会更差；J 度量的是 P 结构自身的天花板。</div></div>
@@ -233,6 +238,7 @@ PK = [2, 10, 20, 30]ᵀ</div><p>摘要行是 one-hot，原样挑第 1、4 帧。
   <div class="calc">分散型 × Field：组内本来就近似均匀，摊回 [.0385,.0385,.070,.070,.210,.572]，L1=<span class="hi">.021</span><br>分散型 × Landmark：帧 2、3 没存，质量 .105 放不进去、还得挤到别的帧 → L1=<span class="bad">.211</span><br>回访型 × Landmark：目标帧 1 恰好被存，γ 直接把 .90 放进去 → L1=<span class="hi">.080</span><br>回访型 × Field：帧 1、2 被迫平分，.90 和 .02 之间怎么配都差 .88 → L1=<span class="bad">.880</span></div>
   <p>两个 writer 各赢一行、各差一个数量级——§ 08 的取舍在这张表里变成了可以手算的结构事实。</p>
   <h3>第四步 · 把“适合”写成条件，各给一条上界</h3>
+  <p>先说一个两张 P 共享的免费午餐：recent 行都是 identity，最近窗口的权重 <code class="m">\alpha_q^{\mathrm{rec}}</code> 被原样复刻，<strong>压缩误差只可能出在旧史上</strong>——所以下面两个条件都只谈归一化的旧史权重 <code class="m">\bar\alpha_q^{\mathrm{old}}</code>。</p>
   <p><strong>Field 的条件（ε-coherent）</strong>：归一化的旧史权重距某个“组级均匀混合”的 L1 不超过 <code class="m">\varepsilon_q</code>——即 Query 关心的是时间段而非具体帧。此时 <code class="m">\mathcal J(P_{\mathrm{field}})\le\sum_q\|\alpha_q^{\mathrm{old}}\|_1\varepsilon_q\le\sum_q\varepsilon_q</code>。上面分散型的 <code class="m">\varepsilon_q\approx.097</code>、旧史总质量 .217，上界 <code class="m">.217\times.097\approx.021</code>——和直接算的最优值一致，因为证明用的 γ 就是这么配的：recent 原样复制、旧史按组配比。</p>
   <p><strong>Landmark 的条件（δ-covered）</strong>：旧史权重距“目标帧的 one-hot”的 L1 不超过 <code class="m">\delta_q</code>，<strong>且目标帧已被存为 landmark</strong>。此时 <code class="m">\mathcal J(P_{\mathrm{land}})\le\sum_q\|\alpha_q^{\mathrm{old}}\|_1\delta_q</code>。回访型的 <code class="m">\delta_q=.125</code>、旧史质量 .96，上界 .12——成立但不紧（直接最优 .08）。实验用的“最老出局”入口规则，是对这个 δ 覆盖的流式近似，同时相关场景数不超过 <code class="m">N_s</code> 时靠得住。</p>
   <div class="warn"><strong>条件刻画，不是无条件最优。</strong>两条上界对各自定义的 Query 族按构造成立，不是对所有 Query 的最优性声明。论文明说没有在预训练模型上实测 ε/δ——量它需要超出训练视野的未压缩 rollout，而 § 01 已经说明那时参考 attention 本身就在退化；条件只能通过它预测的行为（§ 10 的实验）间接检验。</div>
@@ -240,6 +246,7 @@ PK = [2, 10, 20, 30]ᵀ</div><p>摘要行是 one-hot，原样挑第 1、4 帧。
 
 <section id="s13"><h2><span class="n">SECTION 13</span><span>局限：哪类问题它根本没解决</span></h2>
   <div class="limits"><div class="limit"><b>01 · MODEL FAMILY</b><strong>需要 temporal RoPE 的 AR 模型</strong><p>不是所有双向视频扩散模型都能直接外挂。</p></div><div class="limit"><b>02 · FIELD BLUR</b><strong>每槽越压越多</strong><p>来源数约 T/N_s，具体旧场景会逐渐被平均。</p></div><div class="limit"><b>03 · DETECTOR MISS</b><strong>没被选中就无法回忆</strong><p>τ 未公开，连续转场也未必出现明显峰值。</p></div><div class="limit"><b>04 · SLOT CAP</b><strong>最多留 N_s 个场景</strong><p>进入更多场景后最老 landmark 仍会丢失。</p></div><div class="limit"><b>05 · BACKBONE LIMIT</b><strong>不改善物理和动作能力</strong><p>单 chunk 画质、运动、控制完全继承原模型。</p></div><div class="limit"><b>06 · SELF-CONSISTENCY</b><strong>LoopBench 不是真实 3D 验证</strong><p>参考是模型第一次生成的 A，只证明回访自洽。</p></div></div>
+  <p>一条容易起疑的空缺，论文自己交代了：<strong>为什么不和 Matrix-Game-3 比</strong>——MG3 把记忆做进训练（重训双向骨干、按相机位姿检索旧帧作条件、改 RoPE 再蒸馏），没有一个“冻结 checkpoint + 可改写 cache”可供 WorldTrace 外挂，硬比会把“重训出来的记忆”和“training-free 推理期改造”混为一谈。未来方向也顺着 NMF 框架给了三条：推理期用在线 k-means / streaming coreset 自适应调分组边界、在“平均”与“原样挑帧”之间插值的 soft-sparse 行、直接优化一张兼顾连贯与回访的 P。</p>
   <div class="note"><strong>最值得迁移的经验：</strong>长期记忆 = 有用内容 × 可读地址 × 固定预算下合适粒度。Field / Landmark 决定内容，canonical key 把内容与旧地址拆开，slot-rank 再给它一个模型熟悉的新地址。</div>
 </section>
 
