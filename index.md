@@ -21,6 +21,7 @@
 - [GPT-1](wiki/papers/gpt-1.md) — 只要 Transformer decoder，causal LM 预训练，用输入格式编码任务结构
 - [GPT-2](wiki/papers/gpt-2.md) — 同架构 scale 13× 到 1.5B + WebText，发现 prompt 能 zero-shot 触发任务
 - [GPT-3](wiki/papers/gpt-3.md) — 同架构再 scale 100× 到 175B，prompt 里给几个例子模型现学（ICL），ChatGPT 时代由此开始
+- [Stealing Reasoning Traces · 密文没被破解，推理为什么仍被偷走](wiki/papers/stealing-reasoning-traces.md) — 不是破译密钥，而是把合法 opaque reasoning envelope 跨 session/user/model 重放给较弱兼容模型转述；完整拆开 AEAD 内容认证与上下文绑定、三层 portability、token-ratio 证据、6,708 条公开轨迹中的 704 个真实 artifacts、风格漂移不等于蒸馏，以及 user/session/hash-chain/legacy-key 多层修复。论文已责任披露，作者称 2026 年 8 月原攻击无法复现。
 - [GRAPE · 最好的微调数据是"合身"的那条](wiki/papers/grape.md) — SFT数据选择(NeurIPS25 spotlight): 别默认挑最强老师那条回答,数据好坏是相对模型说的; 让目标模型给每个候选算长度归一概率=困惑度,选最低(最合身)那条做SFT(只前向不训练); 为什么=on-policy>off-policy同构+纯自产会塌缩故选外部多样; 超405B最强老师+13.8%、超3×数据+30.9%、约1/6算力超Tulu3-SFT
 - [ReLAT · 给潜在推理闭环](wiki/papers/relat.md) — 潜在推理(把"想"压进K个连续向量省token)是开环:生成完没人验它是否还忠于原问题。ReLAT用"能否从潜在重建回问题Q"当保真信号(必要非充分,纯自监督);潜在用softmax期望嵌入做成可微,测试时只调临时LoRA(N=16步)最小化重建损失再答、答完复位;Qwen3-8B AIME24 50→73.3(比开环+16.6)、比Self-Refine省84%token还更准
 - [Flow Matching](wiki/papers/flow-matching.md) — 把 diffusion 的 score matching 换成"学速度场 + ODE 积分"，简单 + 少步推理
@@ -425,6 +426,12 @@
 - [Virtual Context Management](wiki/concepts/virtual-context-management.md) — context 当 RAM，LLM 自己 function call 调度记忆
 - [Action Chunking](wiki/concepts/action-chunking.md) — 看一眼预测多步动作; 慢感知喂快控制 + 更连贯少累积误差; 机器人 VLA / Lumine 通用
 - [Imitation Learning](wiki/concepts/imitation-learning.md) — 行为克隆抄专家演示, 不试错不要 reward; 对照 RL; 软肋是误差累积(distribution shift)
+
+### LLM API 安全
+- [认证加密 AEAD](wiki/concepts/authenticated-encryption.md) — 既给内容上锁，也认证不加密的 user/session/version 上下文；密文真实不等于使用场景合法
+- [推理信封重放](wiki/concepts/reasoning-envelope-replay.md) — 不改合法 envelope，只把它搬到另一 session、user 或 model；重放与篡改是两类问题
+- [推理轨迹蒸馏](wiki/concepts/reasoning-trace-distillation.md) — 不只给学生最终答案，还把老师的中间解法当 next-token 监督；监督更密，也会继承冗余与敏感信息
+- [隐藏提示注入](wiki/concepts/hidden-prompt-injection.md) — 恶意意图藏进用户与普通文本扫描器都看不见、但后续模型会读取的 opaque state
 
 ### 共享基础设施
 - [分布式训练并行](wiki/concepts/distributed-training-parallelism.md) — FSDP2/HSDP切模型状态、TP切单层矩阵、CP/Ulysses切长序列；4卡数字例把三种切法和通信代价分开

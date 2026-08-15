@@ -1,8 +1,8 @@
 ---
 name: perplexity
 type: concept
-sources: [grape]
-updated: 2026-06-29
+sources: [grape, stealing-reasoning-traces]
+updated: 2026-08-12
 ---
 
 # 困惑度 Perplexity · 模型对一段话有多"意外"
@@ -38,6 +38,7 @@ updated: 2026-06-29
 
 ## 链接
 - [[grape]] · 用困惑度给候选回答排序，选最低(最合身)那条
+- [[stealing-reasoning-traces]] · 用条件困惑度比较不同模型的推理风格；低 PPL 只能说明“顺”，不能单独证明蒸馏或记忆
 - [[cross-entropy]] · 困惑度 = exp(平均交叉熵/NLL)，一对孪生量
 - [[distribution-aligned-sft]] · "低困惑度 = 贴合模型分布"是它的判据
 - [[softmax]] · 每步的概率来自 softmax
