@@ -47,6 +47,7 @@
 - [Wan-Streamer v0.1 · 一个模型怎样边听、边看、边说、边生成画面](wiki/papers/wan-streamer-v01.md) — 把用户与智能体的文字、音频、视频排进同一因果时间线；离散文字做 next-token，连续音视频用联合条件流匹配，每 160 ms 生成并把干净 latent 写回历史。完整手算概率连乘与 flow loss，拆开三阶段训练、rolling distillation、两卡时间线和三种延迟；192×336@25 FPS、模型侧约 200 ms 有数字，模型规模、数据、蒸馏和质量量化均未公开。
 - [Wan-Streamer v0.2 · 画面大了 3.65 倍，为什么延迟没有跟着涨](wiki/papers/wan-streamer-v02.md) — 训练公式不变，部署时单卡 Thinker 保持低延迟感知、状态与解码，多卡 Performer 用 Ulysses 承接长视频 latent；完整解释 160 ms 流水节拍、约 200 ms 模型响应和约 550 ms 远程预算，以及预分片 KV、视频分片/音频不分片。640×368@25 FPS 有数字，画质和硬件账仍主要缺失。
 - [Wan-Streamer v0.3 · 把视频拆成世界与事件流](wiki/papers/wan-streamer-v03.md) — 不让模型每个时间片重说场景和人物：持久世界 W 只 prefill 一次，事件 e_k 记录何时、谁、发生什么；普通录像预训练迁移到括号式开放行为与全双工音视频交互。完整拆解条件概率连乘、160 ms=4 帧、Thinker–Performer/Ulysses 和 v0.1→v0.3 继承关系；640×368@25 FPS、模型侧约 200 ms 有数字，行为质量仍主要是定性证据。
+- [Wan-Animate 2 · 不先提骨架，直接让参考视频教角色怎么动](wiki/papers/wan-animate-2.md) — Base 用双分支 DiT 直接读取驱动视频，Time-Align RoPE 对齐同一帧，Sparse-Ref 只开放对应时刻的跨分支 K/V；Lite 每 8 帧一块，用 Error Buffer 污染过净历史，再以整段 score 定方向、逐块重放累积梯度。完整核算注意力连边、48 视角、用户研究与 4-GPU 流水线，并分清论文 3 步 24 FPS 与当前开源 10 步蒸馏配置。
 - [ViiTorVoice · 低帧率语义码+并行填声](wiki/papers/viitorvoice.md) — 开源流式零样本 TTS 引擎(无独立论文,思路源自 DualCodec+OmniVoice): 三招各砍一刀延迟—①DualCodec 把 24kHz 压到 12.5 帧/秒,RVQ-1 语义(w2v-BERT 蒸馏,码本16384)+RVQ 2-8 声学残差; ②NAR 掩码并行填声(像完形填空,步数从200降到~8); ③首块流式首帧~60ms; 给参考音零样本克隆+两路CFG调情绪
 - [VITS · 文本进去，波形出来](wiki/papers/vits.md) — 把两段式 TTS 的固定 mel 交接收回一套联合训练：条件 VAE 用 z 装下文字没写出的声音，Flow 接通文本先验与音频后验，MAS 从整句配对中找音素—帧路径，随机时长用去量化 u 与增广 ν 建模多种节奏，HiFi-GAN 多周期判别器补波形细节；LJ MOS 4.43 vs 真人4.46，×67.12实时，并完整覆盖损失、配方、VCTK、消融、声音转换和局限
 - [LTX-2 · 让声音和画面在同一段去噪中彼此校正](wiki/papers/ltx-2.md) — 开源联合音视频生成：两套 causal VAE 保留模态差异，14B 视频流与 5B 音频流在 48 层中用双向 cross-attention 沿共同时间轴交换；Gemma 全层特征+双向 connector+thinking registers 加强文本条件，modality-CFG 分开调文字遵循和音视频同步，0.5MP base→latent 放大→重叠 tiles 生成 1080p。H100 每步 1.22s vs Wan2.2 22.30s 约18×，但内部质量人评缺少样本数/胜率/置信区间，训练规模与配方也未公开；正文 14B+5B 与结论 13B+3B 矛盾留档。
@@ -192,6 +193,10 @@
 - [归一化家族 Normalization](wiki/concepts/normalization.md) — BN/LN/GN/RMSNorm 只差"对哪根轴求μ/σ"; 同一个2×4矩阵算三遍(按行LN/按列BN/分块GN)真数字例子 + 立方体图
 - [Residual + LayerNorm](wiki/concepts/residual-layernorm.md) — 现代 Transformer block 的稳定训练骨架
 - [视频扩散里的 Teacher Forcing](wiki/concepts/teacher-forcing-video-diffusion.md) — 训练喂真实历史、推理读自身历史；先学会因果续写，也留下 exposure bias
+- [Time-Align RoPE](wiki/concepts/time-align-rope.md) — 两路同一帧共享时间坐标，参考空间坐标另加偏移；同时发生但地址不冲突
+- [Sparse Reference Attention](wiki/concepts/sparse-reference-attention.md) — 目标视频内部仍全局互看，跨分支只读取同一时刻参考帧；连边从 T²SₜSᵣ 降到 TSₜSᵣ
+- [Error Buffer Training](wiki/concepts/error-buffer-training.md) — 缓存模型预测减真值的残差，再叠回干净历史，让训练提前见到推理时的小漂移
+- [Chunk-wise Self-Forcing](wiki/concepts/chunk-wise-self-forcing.md) — score 网络整段看全局，学生一次只重放一块建图，梯度累加后统一更新
 - [Causal Consistency Distillation](wiki/concepts/causal-consistency-distillation.md) — 老师在线走一小步，学生与 EMA 目标在相邻噪声时刻保持一致，省掉离线 ODE 轨迹存储
 
 ### CNN 基础

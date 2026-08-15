@@ -1,8 +1,8 @@
 ---
 name: diffusion-transformer
 type: concept
-sources: [ideogram-4, qwen-image-2, mrt, stable-diffusion-3-5, flux-1, cosmos-3, dit, krea-2, omnieraser, meshflow, ltx-2, drifting-models, solaris-multiplayer-world-model, interactive-video-world-modeling-survey, diffusion-unet, klingavatar-2]
-updated: 2026-07-27
+sources: [ideogram-4, qwen-image-2, mrt, stable-diffusion-3-5, flux-1, cosmos-3, dit, krea-2, omnieraser, meshflow, ltx-2, drifting-models, solaris-multiplayer-world-model, interactive-video-world-modeling-survey, diffusion-unet, klingavatar-2, wan-animate-2]
+updated: 2026-08-12
 ---
 
 # Diffusion Transformer · DiT
