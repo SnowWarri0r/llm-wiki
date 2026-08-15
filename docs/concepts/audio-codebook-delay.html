@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Voice Cloning Reference · 声音克隆参考音频 · Concept</title>
+<title>Audio Codebook Delay · 先定语义，下一帧再补声学细节 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,46 +53,51 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · voice-cloning-reference</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · audio-codebook-delay</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Voice Cloning Reference · 声音克隆参考音频</h1>
+  <h1>Audio Codebook Delay · 先定语义，下一帧再补声学细节</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>给 TTS 模型一段参考音频，让它抽取说话人音色、韵律和风格条件，再生成同风格的新语音。</p>
+<p>同一段 80 毫秒声音里，第一层语义 token 按当前时刻生成，其余声学 token 故意向后错一帧。</p>
 <h2>直觉</h2>
-<p>文本只告诉模型"说什么"，参考音频告诉模型"用谁的声音怎么说"。它相当于语音版 few-shot：不用重新训练说话人模型，只在输入条件里给一个示范。</p>
-<h2>怎么做的</h2>
+<p>像先写字幕草稿，再晚 80 毫秒决定具体语气、音高和质感。声学层拿得到已经确定的语义层，不必在同一个瞬间盲猜“说什么”和“怎么响”。</p>
+<h2>怎么排</h2>
+<p>设帧号为 <code>t</code>：</p>
 <ul>
-<li>输入 10-30 秒左右参考音频</li>
-<li>模型/codec 提取说话人和声学条件</li>
-<li>生成时文本内容走语言侧，音色/风格走参考条件</li>
-<li>输出经 <a href="../concepts/rvq-codec.html">rvq-codec</a> 或声学 decoder 还原为波形</li>
+<li>agent 文字 token 与第 1 个语义音频 token 放在 <code>t</code>；</li>
+<li>第 2–8 个声学 token 放在 <code>t+1</code>；</li>
+<li>一帧是 <code>1 / 12.5 = 0.08</code> 秒，所以错开量是 80 毫秒。</li>
 </ul>
-<h2>代码出处</h2>
-<p>fish-speech README / demo 工作流；具体入口需要继续读本地 <code>raw/fish-speech</code> clone。</p>
+<h2>数字例子</h2>
+<p>句子第 10 帧确定要说“好”：</p>
+<ol>
+<li><code>t=10</code> 先生成对应文字/语义码；</li>
+<li><code>t=11</code> 的深度模块已经看到这层语义，再补 7 层音色、韵律和细节码；</li>
+<li>codec 收齐 8 层后还原这一小段波形。</li>
+</ol>
+<p>代价是固定增加一帧等待；收益是声学细节不必与语义在同一帧互相猜。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/fish-speech-s2-pro.html">fish-speech-s2-pro</a> · 来源</li>
-<li><a href="../concepts/rvq-codec.html">rvq-codec</a> · 声学 token 承载音色信息</li>
-<li><a href="../concepts/dual-ar.html">dual-ar</a> · 生成架构</li>
-<li><a href="../papers/personaplex.html">personaplex</a> · 参考声音怎样与角色文字拼成 hybrid system prompt</li>
+<li><a href="../papers/personaplex.html">personaplex</a> · 来源</li>
+<li><a href="../concepts/temporal-depth-transformer.html">temporal-depth-transformer</a> · 帧内多 codebook 生成</li>
+<li><a href="../concepts/rvq-codec.html">rvq-codec</a> · 语义层和残差层</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 6 处</span>
-  <ul><li><a href="../papers/fish-speech-s2-pro.html"><span class="cat">paper</span>Fish Audio S2 Pro</a></li><li><a href="../papers/minimind-o.html"><span class="cat">paper</span>MiniMind-O · 0.1B 端到端 Omni</a></li><li><a href="../papers/viitorvoice.html"><span class="cat">paper</span>ViiTorVoice · 低帧率语义码 + 并行填声 = 60ms 流式克隆</a></li><li><a href="../concepts/hybrid-text-audio-system-prompt.html"><span class="cat">concept</span>Hybrid Text–Audio System Prompt · 文字与声音合成一条系统提示</a></li><li><a href="../concepts/inline-emotion-tags.html"><span class="cat">concept</span>Inline Emotion Tags · 内联情绪标签</a></li><li><a href="../concepts/semantic-vs-acoustic-tokens.html"><span class="cat">concept</span>语义码 vs 声学码 · 把&quot;说什么&quot;和&quot;听起来啥样&quot;分开</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../concepts/temporal-depth-transformer.html"><span class="cat">concept</span>Temporal–Depth Transformer · 时间轴走大步，帧内再补多层音频码</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/voice-cloning-reference.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/audio-codebook-delay.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 

@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Voice Cloning Reference · 声音克隆参考音频 · Concept</title>
+<title>Temporal–Depth Transformer · 时间轴走大步，帧内再补多层音频码 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,46 +53,45 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · voice-cloning-reference</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · temporal-depth-transformer</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Voice Cloning Reference · 声音克隆参考音频</h1>
+  <h1>Temporal–Depth Transformer · 时间轴走大步，帧内再补多层音频码</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>给 TTS 模型一段参考音频，让它抽取说话人音色、韵律和风格条件，再生成同风格的新语音。</p>
-<h2>直觉</h2>
-<p>文本只告诉模型"说什么"，参考音频告诉模型"用谁的声音怎么说"。它相当于语音版 few-shot：不用重新训练说话人模型，只在输入条件里给一个示范。</p>
-<h2>怎么做的</h2>
+<p>时间 Transformer 每 80 毫秒处理一次对话历史；深度 Transformer 只在当前 80 毫秒帧里，依次补齐多层音频 codebook。</p>
+<h2>为什么要拆两层</h2>
+<p>Mimi 每个时刻不只给一个音频 token，而是给 8 个从语义到声学细节的 token。若把它们全摊平，大模型的时间轴会从 12.5 步/秒膨胀到 100 步/秒。两层结构把“跨时间理解对话”与“同一帧补声音细节”分开。</p>
+<h2>数据怎样走</h2>
+<p>PersonaPlex 每帧有 17 路输入：用户 8 路音频码、agent 8 路音频码、agent 1 路文字码。17 个嵌入向量先逐元素相加，得到一个时间帧向量。时间 Transformer 处理这条 12.5 Hz 序列；深度 Transformer 再读时间状态与本帧已经生成的 codebook，输出 agent 的 8 路音频码。</p>
+<h2>数字例子</h2>
+<p>1 秒语音有 <code>12.5</code> 帧。每帧双方各 8 个音频码，再加 1 个 agent 文字码，共 <code>8 + 8 + 1 = 17</code> 路。</p>
 <ul>
-<li>输入 10-30 秒左右参考音频</li>
-<li>模型/codec 提取说话人和声学条件</li>
-<li>生成时文本内容走语言侧，音色/风格走参考条件</li>
-<li>输出经 <a href="../concepts/rvq-codec.html">rvq-codec</a> 或声学 decoder 还原为波形</li>
+<li>直接摊平音频层：单方就是 <code>12.5 × 8 = 100</code> 个时间位置/秒；</li>
+<li>Temporal–Depth：大时间轴仍只有 <code>12.5</code> 个位置/秒；每个位置内部再做 8 次较小的深度预测。</li>
 </ul>
-<h2>代码出处</h2>
-<p>fish-speech README / demo 工作流；具体入口需要继续读本地 <code>raw/fish-speech</code> clone。</p>
+<p>这不是把总计算白白消掉，而是避免让最贵的跨时间 Transformer 在每个 codebook 上重复前进。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/fish-speech-s2-pro.html">fish-speech-s2-pro</a> · 来源</li>
-<li><a href="../concepts/rvq-codec.html">rvq-codec</a> · 声学 token 承载音色信息</li>
-<li><a href="../concepts/dual-ar.html">dual-ar</a> · 生成架构</li>
-<li><a href="../papers/personaplex.html">personaplex</a> · 参考声音怎样与角色文字拼成 hybrid system prompt</li>
+<li><a href="../papers/personaplex.html">personaplex</a> · 来源</li>
+<li><a href="../concepts/rvq-codec.html">rvq-codec</a> · 为什么一个音频帧有多层 codebook</li>
+<li><a href="../concepts/audio-codebook-delay.html">audio-codebook-delay</a> · 为什么声学细节晚一帧</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 6 处</span>
-  <ul><li><a href="../papers/fish-speech-s2-pro.html"><span class="cat">paper</span>Fish Audio S2 Pro</a></li><li><a href="../papers/minimind-o.html"><span class="cat">paper</span>MiniMind-O · 0.1B 端到端 Omni</a></li><li><a href="../papers/viitorvoice.html"><span class="cat">paper</span>ViiTorVoice · 低帧率语义码 + 并行填声 = 60ms 流式克隆</a></li><li><a href="../concepts/hybrid-text-audio-system-prompt.html"><span class="cat">concept</span>Hybrid Text–Audio System Prompt · 文字与声音合成一条系统提示</a></li><li><a href="../concepts/inline-emotion-tags.html"><span class="cat">concept</span>Inline Emotion Tags · 内联情绪标签</a></li><li><a href="../concepts/semantic-vs-acoustic-tokens.html"><span class="cat">concept</span>语义码 vs 声学码 · 把&quot;说什么&quot;和&quot;听起来啥样&quot;分开</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../concepts/audio-codebook-delay.html"><span class="cat">concept</span>Audio Codebook Delay · 先定语义，下一帧再补声学细节</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/voice-cloning-reference.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/temporal-depth-transformer.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 

@@ -1,8 +1,8 @@
 ---
 name: speaker-embedding
 type: concept
-sources: [x-vector]
-updated: 2026-06-22
+sources: [x-vector, personaplex]
+updated: 2026-08-12
 ---
 
 # Speaker Embedding · 声纹嵌入
