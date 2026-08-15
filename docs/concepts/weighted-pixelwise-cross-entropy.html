@@ -65,25 +65,23 @@
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>每个像素仍用 <code>-log(真实类别概率)</code> 计错，但关键像素再乘更大的权重，让模型优先修正更重要、也更容易被多数像素淹没的错误。</p>
+<p>每个像素仍用 <span class="tex math-inline" data-display="false">-\log(\text{真实类别概率})</span> 计错，但关键像素再乘更大的权重，让模型优先修正更重要、也更容易被多数像素淹没的错误。</p>
 <h2>直觉</h2>
 <p>一张细胞图里，背景可能占 90%，两只细胞之间的窄缝不到 1%。所有像素一视同仁时，模型把窄缝错成细胞，对总损失影响很小；结果两只细胞粘成一团。</p>
 <p>权重图相当于在答案纸上标出：“这几道边界题分值更高。”</p>
 <h2>公式回答什么</h2>
-<pre><code class="language-text">L = - Σ_{x∈Ω} w(x) log p_{l(x)}(x)
-</code></pre>
+<div class="tex math-display" data-display="true">L=-\sum_{x\in\Omega}w(x)\log p_{\ell(x)}(x)</div>
 <ul>
 <li><span class="tex math-inline" data-display="false">\Omega</span>：所有输出像素的位置集合；</li>
-<li><code>x</code>：其中一个像素坐标；</li>
-<li><code>l(x)</code>：该像素真实类别；</li>
-<li><code>p_{l(x)}(x)</code>：模型给真实类别的概率；</li>
-<li><code>w(x)</code>：这个像素的权重；</li>
+<li><span class="tex math-inline" data-display="false">x</span>：其中一个像素坐标；</li>
+<li><span class="tex math-inline" data-display="false">\ell(x)</span>：该像素真实类别；</li>
+<li><span class="tex math-inline" data-display="false">p_{\ell(x)}(x)</span>：模型给真实类别的概率；</li>
+<li><span class="tex math-inline" data-display="false">w(x)</span>：这个像素的权重；</li>
 <li><span class="tex math-inline" data-display="false">\Sigma</span>：把所有像素的损失相加；</li>
-<li><code>-log</code>：正确概率越小，惩罚越大。</li>
+<li><span class="tex math-inline" data-display="false">-\log</span>：正确概率越小，惩罚越大。</li>
 </ul>
 <h2>U-Net 的边界权重</h2>
-<pre><code class="language-text">w(x)=w_c(x)+w_0 exp(-(d_1(x)+d_2(x))²/(2σ²))
-</code></pre>
+<div class="tex math-display" data-display="true">w(x)=w_c(x)+w_0\exp\!\left(-\frac{(d_1(x)+d_2(x))^2}{2\sigma^2}\right)</div>
 <ul>
 <li><span class="tex math-inline" data-display="false">w_c</span> 平衡类别数量；</li>
 <li><span class="tex math-inline" data-display="false">d_1,d_2</span> 分别是到最近、第二近细胞边界的距离；</li>

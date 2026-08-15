@@ -17,21 +17,21 @@ JVP 不展开完整 Jacobian，只计算输入沿指定方向移动时，输出�
 
 ## 怎么做的
 
-模型 (F:\mathbb R^n\to\mathbb R^m)，输入为 (x)，指定方向为 (v)：
+模型 \(F:\mathbb R^n\to\mathbb R^m\)，输入为 \(x\)，指定方向为 \(v\)：
 
 \[
 \operatorname{JVP}(F,x,v)=J_F(x)v
 =\left.\frac{d}{d\epsilon}F(x+\epsilon v)\right|_{\epsilon=0}.
 \]
 
-- (J_F(x))：输出每一维对输入每一维偏导组成的 (m\times n) Jacobian。
-- (v)：输入移动方向，与 `x` 同形。
-- (J_F(x)v)：输出沿 `v` 的方向导数，与模型输出同形。
-- (\epsilon)：只用于定义“移动一丁点”的标量。
+- \(J_F(x)\)：输出每一维对输入每一维偏导组成的 \(m\times n\) Jacobian。
+- \(v\)：输入移动方向，与 \(x\) 同形。
+- \(J_F(x)v\)：输出沿 \(v\) 的方向导数，与模型输出同形。
+- \(\epsilon\)：只用于定义“移动一丁点”的标量。
 
 ## 数字例子
 
-令 (F(x_1,x_2)=[x_1^2+x_2,\;3x_1-x_2])，在 (x=[2,1]) 沿 (v=[1,-2]) 移动。
+令 \(F(x_1,x_2)=[x_1^2+x_2,\;3x_1-x_2]\)，在 \(x=[2,1]\) 沿 \(v=[1,-2]\) 移动。
 
 \[
 J_F(2,1)=\begin{bmatrix}4&1\\3&-1\end{bmatrix},\qquad
@@ -40,7 +40,7 @@ J_Fv=\begin{bmatrix}4&1\\3&-1\end{bmatrix}
 =\begin{bmatrix}2\\5\end{bmatrix}.
 \]
 
-用小步长 `ε=.001` 自检：
+用小步长 \(\epsilon=0.001\) 自检：
 
 ```text
 F([2,1]) = [5,5]

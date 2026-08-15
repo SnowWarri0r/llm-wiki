@@ -68,27 +68,28 @@
 <p>把多个去噪进度不同的未来片段排成队，每个实时 tick 一起向成品推进一格。</p>
 <h2>直觉</h2>
 <p>普通 flow matching 生成一段结果时，会拿同一块噪声连续积分多步，做完才能交付。滚动流匹配像四盘同时进烤箱、但熟度错开：最前面那盘下一轮出炉，后面的依次更生，新盘从队尾放进去。每 80 毫秒都有成品出队，GPU 也能批量处理四个不同熟度的片段。</p>
-<p>它替代“一段生成完再开始下一段”的串行采样。代价是必须维护队列，并为最前片段等待若干 tick。</p>
+<p>它替代“一段生成完再开始下一段”的串行采样。代价是必须维护队列，并让最前面的片段等待若干个 tick。</p>
 <h2>怎么做的</h2>
-<p>干净动作 (X)、噪声 (arepsilon) 与进度 (  au) 做直线插值：</p>
+<p>干净动作 <span class="tex math-inline" data-display="false">X</span>、噪声 <span class="tex math-inline" data-display="false">\varepsilon</span> 与进度 <span class="tex math-inline" data-display="false">\tau</span> 做直线插值：</p>
 <div class="tex math-display" data-display="true">X^{\tau}=(1-\tau)\varepsilon+\tau X,
 \qquad
 U=X-\varepsilon.</div>
 <ul>
-<li>( au=0)：纯噪声；</li>
-<li>( au=1)：干净动作；</li>
-<li>(U)：沿这条直线每增加 1 个进度单位应移动的速度，因为对 (  au) 求导正好是 (X-\varepsilon)。</li>
+<li><span class="tex math-inline" data-display="false">\tau=0</span>：纯噪声；</li>
+<li><span class="tex math-inline" data-display="false">\tau=1</span>：干净动作；</li>
+<li><span class="tex math-inline" data-display="false">U</span>：沿这条直线每增加 1 个进度单位应移动的速度。因为 <span class="tex math-inline" data-display="false">X^\tau</span> 对 <span class="tex math-inline" data-display="false">\tau</span> 求导，正好得到 <span class="tex math-inline" data-display="false">X-\varepsilon</span>。</li>
 </ul>
-<p>FacePlex 用 (L=4)，所以每轮进度增加 (Delta    au=1/L=.25)。更新是 (X^{\tau+\Delta\tau}=X^{\tau}+\Delta\tau\hat U)。</p>
+<p>FacePlex 用 <span class="tex math-inline" data-display="false">L=4</span>，所以每轮进度增加 <span class="tex math-inline" data-display="false">\Delta\tau=1/L=0.25</span>。模型预测速度 <span class="tex math-inline" data-display="false">\hat U</span> 后，按下面这一步更新：</p>
+<div class="tex math-display" data-display="true">X^{\tau+\Delta\tau}=X^{\tau}+\Delta\tau\hat U.</div>
 <h2>数字例子</h2>
-<p>四个槽位的进度为 <code>[.75,.50,.25,0]</code>。取干净值 / 噪声分别是 <code>(4,0),(2,−2),(1,1),(−1,3)</code>：</p>
+<p>四个槽位的进度为 <span class="tex math-inline" data-display="false">[0.75,0.50,0.25,0]</span>。取四组“干净值、噪声”分别为 <span class="tex math-inline" data-display="false">(4,0),(2,-2),(1,1),(-1,3)</span>：</p>
 <ul>
-<li>槽 0：状态 (.25×0+.75×4=3)，速度 (4-0=4)，更新后 (3+.25×4=4)，正好完成；</li>
-<li>槽 1：状态 (.5×(-2)+.5×2=0)，速度 4，更新后 1，对应进度 .75；</li>
-<li>槽 2：状态 1，速度 0，更新后仍为 1；</li>
-<li>槽 3：状态 3，速度 −4，更新后 2，对应进度 .25。</li>
+<li>槽 0：状态 <span class="tex math-inline" data-display="false">0.25\times0+0.75\times4=3</span>，速度 <span class="tex math-inline" data-display="false">4-0=4</span>，更新后 <span class="tex math-inline" data-display="false">3+0.25\times4=4</span>，正好完成；</li>
+<li>槽 1：状态 <span class="tex math-inline" data-display="false">0.5\times(-2)+0.5\times2=0</span>，速度为 4，更新后为 1，对应进度 0.75；</li>
+<li>槽 2：状态为 1，速度为 0，更新后仍为 1；</li>
+<li>槽 3：状态为 3，速度为 -4，更新后为 2，对应进度 0.25。</li>
 </ul>
-<p>整队由 <code>[3,0,1,3]</code> 变成 <code>[4,1,1,2]</code>。最前面的 4 被输出，其余前移，队尾再放一份新噪声。</p>
+<p>整队由 <span class="tex math-inline" data-display="false">[3,0,1,3]</span> 变成 <span class="tex math-inline" data-display="false">[4,1,1,2]</span>。最前面的 4 被输出，其余结果前移，队尾再放一份新噪声。</p>
 <h2>跟普通 flow matching 的对照</h2>
 <ul>
 <li>普通：围绕一个样本连续走完整条路径。</li>
