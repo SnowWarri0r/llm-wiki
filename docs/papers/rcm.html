@@ -267,12 +267,14 @@
 
 <section id="stable">
 <h2><span class="n">§ 08</span>稳定 JVP：小模型用半连续差分，大模型把时间支路升到 FP32</h2>
-<p>先把需要稳定的完整导数拆开。输入沿老师速度移动造成第一项；只改变时间标签造成第二项：</p>
+<p>先把需要稳定的完整导数拆开——和 § 03 拆 f 是同一把链式法则：<code class="m">F(x_t,t)</code> 里时间从两扇门进来，一扇推着输入 <code class="m">x_t</code> 沿老师速度挪（贡献 Jacobian × 移动方向，即空间 JVP），一扇改时间标签本身（贡献 <code class="m">\partial F/\partial t</code>）：</p>
 <div class="formula">\frac{dF_{\theta^-}}{dt}=\left(\nabla_{x_t}F_{\theta^-}\right)F_{\mathrm{teacher}}+\frac{\partial F_{\theta^-}}{\partial t}</div>
 <div class="vars"><div><code class="m">\nabla_{x_t}F_{\theta^-}</code>输出对带噪输入的 Jacobian。</div><div><code class="m">F_{\mathrm{teacher}}</code>老师速度，也是输入移动方向。</div><div><code class="m">(\nabla_xF)F_{\mathrm{teacher}}</code>空间方向 JVP。</div><div><code class="m">\partial F/\partial t</code>输入固定、只改时间嵌入时的偏导，论文认为主要数值不稳点在这里。</div></div>
-<p>论文给两种办法。2B 图像模型可以把空间方向仍用精确 JVP，只把时间偏导改成有限差分：</p>
+<p>论文给两种办法。2B 图像模型：空间那扇门继续用精确 JVP，时间这扇门改成有限差分——一半连续、一半离散，标题里的“半连续”就是这个意思：</p>
 <div class="formula">\frac{\partial F(x_t,t)}{\partial t}\approx\frac{\cos(\Delta t)F(x_t,t)-F(x_t,t-\Delta t)}{\sin(\Delta t)},\qquad \Delta t=10^{-4}</div>
 <div class="vars"><div><code class="m">F(x_t,t)</code>当前时间的网络输出。</div><div><code class="m">F(x_t,t-\Delta t)</code>同一输入、稍早时间标签的输出。</div><div><code class="m">\Delta t</code>很小的时间间隔，论文取 <code class="m">10^{-4}</code>。</div><div><code class="m">\cos,\sin</code>来自 TrigFlow 参数化，不是通用有限差分都必须有。</div></div>
+<p>cos / sin 是哪来的：TrigFlow 的理想输出沿轨迹恰好是 <code class="m">A\cos t+B\sin t</code> 的形状（§ 05 体检里算过，完美 student 的 <code class="m">F=\cos t\,\epsilon-\sin t\,x_0</code>）。对这族函数用角度加法公式展开 <code class="m">F(x_t,t-\Delta t)</code>，拆开重组后得到一条<strong>恒等式</strong>（不是近似）：<code class="m">F(x_t,t-\Delta t)=\cos(\Delta t)F(x_t,t)-\sin(\Delta t)\,\partial F/\partial t</code>——移项解出 <code class="m">\partial F/\partial t</code>，就是上面的公式。所以它在理想解形状上对<strong>任意步长</strong>都精确；真实网络不完全是这个形状，但小 Δt 下 <code class="m">\cos\Delta t\approx1</code>、<code class="m">\sin\Delta t\approx\Delta t</code>，它平滑退化成普通差分 <code class="m">[F(t)-F(t-\Delta t)]/\Delta t</code>——网络越训越像理想解时白赚精确性，一分钱不亏。</p>
+<div class="calc"><div class="step"><b>数字体检 · 理想形状上任意步长精确</b><span>取 § 05 同款 <code class="m">\epsilon=-1</code>、<code class="m">x_0=2</code>：<code class="m">F(t)=-\cos t-2\sin t</code>，真导数在 <code class="m">t=\pi/6</code> 处为 <code class="m">-1.232</code>。故意取大步长 <code class="m">\Delta t=\pi/12</code>：trig 格式给 <code class="m">-1.232051</code>（分毫不差），普通差分给 <code class="m">-1.461</code>（错 .23）。</span></div><div class="step"><b>小步长两者会合</b><span><code class="m">\Delta t=10^{-4}</code>（论文取值）时 <code class="m">\cos\Delta t\approx1-5\times10^{-9}</code>、<code class="m">\sin\Delta t\approx\Delta t</code>，普通差分也给 <code class="m">-1.23214</code>——差别只剩理想形状上的那点无偏性。</span></div></div>
 <p>但 10B+ / 视频模型为了省第二遍网络前向，仍用完整 JVP，只把所有 time embedding 层放到 FP32。直觉上：绝大多数矩阵乘继续 BF16 省资源，最容易让“微小时间差”丢精度的支路用 FP32 保小数。</p>
 <div class="grid2"><div class="card"><span class="tag teal">半连续</span><h3>更稳，需两次时间输出</h3><p>无需改整个网络结构；论文用于 Cosmos 2B。额外前向使超大视频模型代价太高。</p></div><div class="card"><span class="tag rust">全 JVP + FP32 time</span><h3>更省，仍要监控误差</h3><p>用于 10B+ / 视频；Cosmos 初始化阶段仍有不匹配，但训练保持稳定。</p></div></div>
 </section>
