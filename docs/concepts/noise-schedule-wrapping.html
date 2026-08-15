@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Causal Consistency Distillation · 不存整条 ODE 轨迹也能学少步 · Concept</title>
+<title>噪声日程包装 · 给不同老师换一只统一的时间表 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,65 +53,57 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · causal-consistency-distillation</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · noise-schedule-wrapping</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Causal Consistency Distillation · 不存整条 ODE 轨迹也能学少步</h1>
+  <h1>噪声日程包装 · 给不同老师换一只统一的时间表</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>让学生在相邻两个噪声时刻给出同一个干净视频段：左边由当前学生预测，右边由 EMA 学生接住老师走过的一小步；这样在线产生监督，不必预先保存大量 ODE 中间 latent。</p>
-<h2>它要替代什么</h2>
-<p>少步学生原本可以用离线 ODE 数据训练：先让慢速因果老师跑完整去噪轨迹，把每个中间状态存盘；之后学生学习从指定中间状态直接跳到干净结果。问题是生成和保存轨迹都很贵。</p>
-<p>一致性蒸馏只现场做老师的一小步：</p>
-<div class="tex math-display" data-display="true">\mathcal L_{\mathrm{CD}}=
-\mathbb E\left[
-w(t)\,
-d\!\left(
-G_\theta(x_t^i,x_{\mathrm{gt}}^{&lt;i},t),
-G_{\theta^-}(\hat x_{t-\Delta t}^i,x_{\mathrm{gt}}^{&lt;i},t-\Delta t)
-\right)
-\right].</div>
+<p>不改老师学到的信噪比，只把原时间坐标改写成 TrigFlow 时间坐标。</p>
+<h2>直觉</h2>
+<p>两只钟表一个用 0–1000 刻度，一个用 0–90 度。包装不是让时间倒流，而是找到两只表上“同样嘈杂”的刻度，再把老师的输入缩放到对应幅度。</p>
+<h2>怎么做的</h2>
+<p>原老师的加噪式为 (x_s=\alpha_s x_0+\sigma_s\epsilon)。TrigFlow 使用 (x_t=\cos t\,x_0+\sin t\,\epsilon)。先匹配噪声与信号之比：</p>
+<div class="tex math-display" data-display="true">\frac{\sigma_{\phi(t)}}{\alpha_{\phi(t)}}=\tan t.</div>
 <ul>
-<li><code>i</code>：当前自回归视频段；</li>
-<li><span class="tex math-inline" data-display="false">x_t^i</span>：当前段在噪声时刻 <code>t</code> 的状态；</li>
-<li><span class="tex math-inline" data-display="false">x_{\mathrm{gt}}^{&lt;i}</span>：当前段之前的真实干净历史；</li>
-<li><span class="tex math-inline" data-display="false">\hat x_{t-\Delta t}^{i}</span>：因果老师从 <span class="tex math-inline" data-display="false">t</span> 沿 ODE 走一小步得到的状态；</li>
-<li><span class="tex math-inline" data-display="false">G_\theta</span>：正在训练的学生；</li>
-<li><span class="tex math-inline" data-display="false">G_{\theta^-}</span>：学生参数的 EMA 副本，作为停止梯度的稳定目标；</li>
-<li><code>w(t)</code>：不同噪声时刻的权重；</li>
-<li><code>d</code>：距离函数，例如平方误差。</li>
+<li>(s=\phi(t))：TrigFlow 时间 <code>t</code> 对应的原老师时间。</li>
+<li>(\alpha_s)：原日程的信号系数。</li>
+<li>(\sigma_s)：原日程的噪声系数。</li>
+<li>(\tan t=\sin t/\cos t)：TrigFlow 的噪声/信号比。</li>
 </ul>
-<h2>一个标量例子</h2>
-<p>若当前学生预测 <code>.60</code>，EMA 目标预测 <code>.55</code>，距离取平方差，且 <code>w(t)=2</code>：</p>
-<pre><code class="language-text">L = 2 × (.60 − .55)²
-  = 2 × .0025
-  = .005
+<p>两边比例相同但总幅度可能不同，所以调用老师前再乘：</p>
+<div class="tex math-display" data-display="true">k(t)=\sqrt{\alpha_{\phi(t)}^2+\sigma_{\phi(t)}^2},\qquad
+x^{\mathrm{raw}}=k(t)x_t.</div>
+<h2>数字例子</h2>
+<p>某原日程在 <code>s=400</code> 时 (\alpha_s=0.6,\sigma_s=0.8)。</p>
+<pre><code class="language-text">噪声/信号比 = .8/.6 = 1.333
+t = arctan(1.333) ≈ .927 rad
+
+TrigFlow 系数：cos(t)≈.6，sin(t)≈.8
+k = sqrt(.6²+.8²)=1
 </code></pre>
-<p>学生被要求在两个相邻时刻都指向同一个干净结果。EMA 目标只提供靶子，不随这一项损失一起反向传播，否则靶子也会跟着学生同时移动。</p>
-<h2>代价没有消失，只是换了位置</h2>
-<p>离线 ODE 把老师计算提前做完并占用磁盘；causal CD 在训练时在线调用老师和 EMA 学生，省存储、少数据准备，但每个训练 step 的模型调用更多。</p>
+<p>此例总幅度正好为 1，所以无需缩放。若原系数是 <code>.3,.4</code>，比例仍是 <code>1.333</code>，对应同一个 <code>t</code>，但 <code>k=sqrt(.3²+.4²)=.5</code>，老师应读取 <code>.5x_t</code>。比例保住“噪多少”，缩放补回“整体多大”。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/minwm.html">minwm</a> · Stage 2a 与 2b 的完整取舍</li>
-<li><a href="../concepts/ema.html">ema</a> · <span class="tex math-inline" data-display="false">\theta^{-}</span> 为什么比当前参数更适合当目标</li>
-<li><a href="../concepts/ode-vs-sde.html">ode-vs-sde</a> · 一小步 ODE 到底是什么意思</li>
-<li><a href="../concepts/teacher-forcing-video-diffusion.html">teacher-forcing-video-diffusion</a> · 公式里的真实历史从哪里来</li>
+<li><a href="../papers/rcm.html">rcm</a> · 用包装把 Cosmos / Wan 老师接进统一 TrigFlow sCM 目标。</li>
+<li><a href="../concepts/probability-path.html">probability-path</a> · 加噪系数怎样定义整条概率路径。</li>
+<li><a href="../concepts/velocity-field.html">velocity-field</a> · 包装后的老师输出再换成统一速度表示。</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 2 处</span>
-  <ul><li><a href="../papers/minwm.html"><span class="cat">paper</span>minWM · 把离线视频扩散模型改造成可操控、能逐段输出的世界模型</a></li><li><a href="../concepts/continuous-time-consistency.html"><span class="cat">concept</span>连续时间一致性 · 不逐步走完，也要认出同一个终点</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/rcm.html"><span class="cat">paper</span>rCM · 把连续时间一致性蒸馏扩到 14B 视频模型</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/causal-consistency-distillation.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/noise-schedule-wrapping.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 

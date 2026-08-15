@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Causal Consistency Distillation · 不存整条 ODE 轨迹也能学少步 · Concept</title>
+<title>连续时间一致性 · 不逐步走完，也要认出同一个终点 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,65 +53,59 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · causal-consistency-distillation</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · continuous-time-consistency</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Causal Consistency Distillation · 不存整条 ODE 轨迹也能学少步</h1>
+  <h1>连续时间一致性 · 不逐步走完，也要认出同一个终点</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>让学生在相邻两个噪声时刻给出同一个干净视频段：左边由当前学生预测，右边由 EMA 学生接住老师走过的一小步；这样在线产生监督，不必预先保存大量 ODE 中间 latent。</p>
-<h2>它要替代什么</h2>
-<p>少步学生原本可以用离线 ODE 数据训练：先让慢速因果老师跑完整去噪轨迹，把每个中间状态存盘；之后学生学习从指定中间状态直接跳到干净结果。问题是生成和保存轨迹都很贵。</p>
-<p>一致性蒸馏只现场做老师的一小步：</p>
-<div class="tex math-display" data-display="true">\mathcal L_{\mathrm{CD}}=
-\mathbb E\left[
-w(t)\,
-d\!\left(
-G_\theta(x_t^i,x_{\mathrm{gt}}^{&lt;i},t),
-G_{\theta^-}(\hat x_{t-\Delta t}^i,x_{\mathrm{gt}}^{&lt;i},t-\Delta t)
-\right)
-\right].</div>
+<p>同一条去噪轨迹上的任意带噪点，都应该被映射到同一个干净样本。</p>
+<h2>直觉</h2>
+<p>老师像导航软件，要用许多小步沿道路开到终点；一致性模型像记住“这条路最终通向哪里”，站在路上任一点都直接报出同一个终点。</p>
+<p>离散 Consistency Model 比较相邻两个时间点的输出。连续时间版本把间隔缩到趋近于 0，不再真的造一个邻点，而是要求模型沿老师轨迹移动一丁点时，最终答案不变。</p>
+<h2>怎么做的</h2>
+<p>设带噪状态为 (x_t)，模型的终点预测为 (f_\theta(x_t,t))。理想条件是：</p>
+<div class="tex math-display" data-display="true">\frac{d}{dt}f_\theta(x_t,t)=0.</div>
+<p>总导数同时包含“输入沿轨迹变化”和“时间本身变化”：</p>
+<div class="tex math-display" data-display="true">\frac{df}{dt}=\frac{\partial f}{\partial x}\frac{dx_t}{dt}+\frac{\partial f}{\partial t}.</div>
 <ul>
-<li><code>i</code>：当前自回归视频段；</li>
-<li><span class="tex math-inline" data-display="false">x_t^i</span>：当前段在噪声时刻 <code>t</code> 的状态；</li>
-<li><span class="tex math-inline" data-display="false">x_{\mathrm{gt}}^{&lt;i}</span>：当前段之前的真实干净历史；</li>
-<li><span class="tex math-inline" data-display="false">\hat x_{t-\Delta t}^{i}</span>：因果老师从 <span class="tex math-inline" data-display="false">t</span> 沿 ODE 走一小步得到的状态；</li>
-<li><span class="tex math-inline" data-display="false">G_\theta</span>：正在训练的学生；</li>
-<li><span class="tex math-inline" data-display="false">G_{\theta^-}</span>：学生参数的 EMA 副本，作为停止梯度的稳定目标；</li>
-<li><code>w(t)</code>：不同噪声时刻的权重；</li>
-<li><code>d</code>：距离函数，例如平方误差。</li>
+<li>(t)：噪声时间；越大通常越接近纯噪声。</li>
+<li>(x_t)：时间 <code>t</code> 的带噪 latent。</li>
+<li>(dx_t/dt)：老师速度场给出的轨迹方向。</li>
+<li>(\partial f/\partial x)：输入改一点，终点预测怎样变。</li>
+<li>(\partial f/\partial t)：输入不动，只改时间标签时，预测怎样变。</li>
 </ul>
-<h2>一个标量例子</h2>
-<p>若当前学生预测 <code>.60</code>，EMA 目标预测 <code>.55</code>，距离取平方差，且 <code>w(t)=2</code>：</p>
-<pre><code class="language-text">L = 2 × (.60 − .55)²
-  = 2 × .0025
-  = .005
+<h2>数字例子</h2>
+<p>用一个教学函数 (f(x,t)=x-2t)，老师轨迹为 (x_t=1+2t)：</p>
+<pre><code class="language-text">沿轨迹代入：f(x_t,t)=(1+2t)-2t=1
+所以无论 t=.2 还是 t=.8，终点预测都是 1。
+
+∂f/∂x=1，dx/dt=2，∂f/∂t=-2
+df/dt=1×2+(-2)=0  ✓
 </code></pre>
-<p>学生被要求在两个相邻时刻都指向同一个干净结果。EMA 目标只提供靶子，不随这一项损失一起反向传播，否则靶子也会跟着学生同时移动。</p>
-<h2>代价没有消失，只是换了位置</h2>
-<p>离线 ODE 把老师计算提前做完并占用磁盘；causal CD 在训练时在线调用老师和 EMA 学生，省存储、少数据准备，但每个训练 step 的模型调用更多。</p>
+<p>这就是“一致”：状态在变，时间也在变，但两种变化恰好抵消，终点答案不变。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/minwm.html">minwm</a> · Stage 2a 与 2b 的完整取舍</li>
-<li><a href="../concepts/ema.html">ema</a> · <span class="tex math-inline" data-display="false">\theta^{-}</span> 为什么比当前参数更适合当目标</li>
-<li><a href="../concepts/ode-vs-sde.html">ode-vs-sde</a> · 一小步 ODE 到底是什么意思</li>
-<li><a href="../concepts/teacher-forcing-video-diffusion.html">teacher-forcing-video-diffusion</a> · 公式里的真实历史从哪里来</li>
+<li><a href="../papers/rcm.html">rcm</a> · 扩到 14B 视频模型，并用 score regularization 修误差。</li>
+<li><a href="../concepts/jacobian-vector-product.html">jacobian-vector-product</a> · 高效计算上式里的方向导数。</li>
+<li><a href="../concepts/velocity-field.html">velocity-field</a> · 提供轨迹方向 (dx_t/dt)。</li>
+<li><a href="../concepts/causal-consistency-distillation.html">causal-consistency-distillation</a> · 因果流式视频里的对应版本。</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
   <span class="label">引用此页的内容 · 2 处</span>
-  <ul><li><a href="../papers/minwm.html"><span class="cat">paper</span>minWM · 把离线视频扩散模型改造成可操控、能逐段输出的世界模型</a></li><li><a href="../concepts/continuous-time-consistency.html"><span class="cat">concept</span>连续时间一致性 · 不逐步走完，也要认出同一个终点</a></li></ul>
+  <ul><li><a href="../papers/rcm.html"><span class="cat">paper</span>rCM · 把连续时间一致性蒸馏扩到 14B 视频模型</a></li><li><a href="../concepts/jacobian-vector-product.html"><span class="cat">concept</span>JVP · 只问模型沿这一条方向会怎样变</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/causal-consistency-distillation.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/continuous-time-consistency.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 

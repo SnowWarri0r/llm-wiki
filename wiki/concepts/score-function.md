@@ -1,7 +1,7 @@
 ---
 name: score-function
 type: concept
-sources: [flow-matching, ode-sde, dmd, dmd2, data-forcing-distillation, senseflow, drifting-models]
+sources: [flow-matching, ode-sde, dmd, dmd2, data-forcing-distillation, senseflow, drifting-models, rcm]
 updated: 2026-07-26
 ---
 
