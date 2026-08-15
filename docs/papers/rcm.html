@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>rCM · 用长跳纠偏修好连续时间一致性</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..800&family=Newsreader:opsz,wght@6..72,350..700&family=Noto+Serif+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<style>
+:root{--paper:#f3edde;--card:#fbf6e8;--ink:#171719;--ink2:#3d3937;--muted:#756c60;--rule:#b9ae98;--navy:#163a58;--navy2:#d9e6eb;--rust:#a83b25;--rust2:#f4d8ce;--teal:#147687;--teal2:#cde8e9;--gold:#bd7a00;--gold2:#f4dfaa;--green:#3f7354;--green2:#d7e7d8}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:18px/1.76 'Newsreader','Noto Serif SC',serif;-webkit-font-smoothing:antialiased}body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.32;background-image:linear-gradient(rgba(22,58,88,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(22,58,88,.04) 1px,transparent 1px);background-size:32px 32px}.page{position:relative;max-width:1180px;margin:auto;padding:58px 38px 120px}.mast{display:flex;justify-content:space-between;border-top:4px double var(--ink);border-bottom:1px solid var(--rule);padding:12px 0;color:var(--muted);font:600 11px/1.5 'JetBrains Mono';letter-spacing:2px;text-transform:uppercase}.hero{padding:58px 0 32px}.issue{display:flex;gap:14px;align-items:center;color:var(--rust);font:700 11px/1.5 'JetBrains Mono';letter-spacing:3px;text-transform:uppercase}.issue:after{content:"";height:1px;background:var(--rule);flex:1}.hero h1{margin:18px 0 12px;font:750 clamp(58px,9vw,112px)/.88 'Fraunces','Noto Serif SC';letter-spacing:-.055em}.hero h1 em{color:var(--rust);font-weight:600}.byline{color:var(--muted);font:600 12px/1.5 'JetBrains Mono';letter-spacing:1px}.dek{max-width:900px;font:italic 400 clamp(21px,2.5vw,29px)/1.43 'Fraunces','Noto Serif SC';color:var(--ink2)}.tldr,.note,.warning,.truth{margin:24px 0;padding:18px 22px;background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--navy)}.warning{border-left-color:var(--rust);background:#fff0e8}.truth{border-left-color:var(--green);background:#edf5ea}.label{display:block;margin-bottom:5px;color:var(--navy);font:700 10px/1.5 'JetBrains Mono';letter-spacing:2px;text-transform:uppercase}.warning .label{color:var(--rust)}.truth .label{color:var(--green)}nav.toc{position:sticky;top:0;z-index:10;display:flex;gap:7px;overflow-x:auto;margin:0 -14px 50px;padding:10px 14px;background:rgba(243,237,222,.96);border-block:1px solid var(--rule);scrollbar-width:none}nav.toc a{flex:none;padding:6px 9px;border:1px solid var(--rule);color:var(--navy);background:var(--card);font:600 10px/1.2 'JetBrains Mono';text-decoration:none}nav.toc a:hover,nav.toc a:focus-visible{background:var(--navy);color:#fff;outline:none}h2{display:flex;gap:16px;align-items:baseline;margin:76px 0 20px;font:700 clamp(30px,4vw,43px)/1.1 'Fraunces','Noto Serif SC';letter-spacing:-.025em}h2 .n{min-width:55px;color:var(--rust);font:700 11px/1.4 'JetBrains Mono';letter-spacing:2px}h3{margin:34px 0 10px;font:700 23px/1.3 'Fraunces','Noto Serif SC'}p{margin:12px 0}a{color:#8c2d1d;text-decoration-thickness:1px;text-underline-offset:3px}strong{font-weight:700}.lead{font-size:22px;line-height:1.58;color:var(--ink2)}code{font:500 .88em/1.5 'JetBrains Mono';background:#fffaf0;border:1px solid var(--rule);border-radius:3px;padding:1px 5px}.jr{vertical-align:super;margin:0 2px;padding:1px 5px;border:1px solid var(--gold);border-radius:999px;background:var(--gold2);color:#563700;text-decoration:none;font:700 9px/1.2 'JetBrains Mono'}.jr:hover,.jr:focus-visible{background:#614000;color:#fff;outline:2px solid var(--gold);outline-offset:2px}.grid2,.grid3,.grid4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid4{grid-template-columns:repeat(4,minmax(0,1fr))}.card{min-width:0;padding:20px;background:var(--card);border:1px solid var(--rule);box-shadow:5px 5px 0 rgba(22,58,88,.06)}.card h3{margin:8px 0 5px}.card p{font-size:16px;line-height:1.58}.tag{display:inline-block;padding:3px 8px;background:var(--navy2);color:var(--navy);font:700 10px/1.4 'JetBrains Mono';letter-spacing:1px;text-transform:uppercase}.tag.rust{background:var(--rust2);color:#7b291a}.tag.teal{background:var(--teal2);color:#075662}.tag.gold{background:var(--gold2);color:#634000}.tag.green{background:var(--green2);color:#285438}figure{margin:38px 0;padding:28px;background:rgba(251,246,232,.82);border:1px solid var(--rule);box-shadow:8px 8px 0 rgba(22,58,88,.07);overflow:hidden}figcaption{display:flex;justify-content:space-between;gap:16px;margin-bottom:22px;padding-bottom:12px;border-bottom:1px dashed var(--rule);color:var(--muted);font:600 11px/1.4 'JetBrains Mono';letter-spacing:1.3px;text-transform:uppercase}figcaption b{color:var(--teal)}.flow{display:grid;grid-template-columns:1fr 42px 1fr 42px 1fr;align-items:stretch}.node{position:relative;min-width:0;padding:18px;background:#fff;border:2px solid var(--navy)}.node.rust{border-color:var(--rust);background:#fff0e9}.node.teal{border-color:var(--teal);background:#edf9f8}.node b{display:block;margin:4px 0;font:700 19px/1.3 'Fraunces','Noto Serif SC'}.node small{color:var(--muted);font:700 9px/1.4 'JetBrains Mono';letter-spacing:1px}.node p{font-size:14px;line-height:1.5}.arrow{display:flex;align-items:center;justify-content:center;color:var(--rust);font:700 28px/1 'JetBrains Mono'}.formula{margin:18px 0;padding:21px 16px;overflow-x:auto;text-align:center;background:#142b40;color:#fff;border-left:6px solid var(--teal);font-size:1.12em}.formula .katex{color:#fff}.vars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0}.vars>div{min-width:0;padding:10px 12px;background:var(--card);border:1px solid var(--rule);font-size:14px}.vars code{display:block;margin-bottom:4px;color:#7b291a}.calc{counter-reset:step;display:grid;gap:8px;margin:18px 0}.step{position:relative;padding:13px 14px 13px 56px;background:#fff;border:1px solid var(--rule);font-size:15px}.step:before{counter-increment:step;content:counter(step,decimal-leading-zero);position:absolute;left:16px;top:14px;color:var(--rust);font:700 11px/1.5 'JetBrains Mono'}.step b{display:block;color:var(--navy)}.trajectory{position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:24px;padding:44px 12px 18px}.trajectory:before{content:"";position:absolute;left:8%;right:8%;top:70px;height:4px;background:linear-gradient(90deg,var(--rust),var(--teal));border-radius:4px}.point{position:relative;text-align:center}.dot{position:relative;z-index:1;display:grid;place-items:center;width:58px;height:58px;margin:auto;border-radius:50%;background:var(--card);border:3px solid var(--navy);font:700 13px/1 'JetBrains Mono'}.point p{font-size:13px}.same{margin-top:14px;text-align:center;color:var(--green);font-weight:700}.split{display:grid;grid-template-columns:1fr 80px 1fr;align-items:center}.bridge{text-align:center;color:var(--rust);font:700 28px/1.2 'JetBrains Mono'}.meter{height:14px;margin:10px 0;background:#ddd6c9;overflow:hidden}.meter i{display:block;height:100%;background:var(--teal)}.errorline{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.errorbox{padding:14px;text-align:center;border:1px solid var(--rule);background:#fff}.errorbox b{display:block;color:var(--rust);font:700 22px/1.2 'JetBrains Mono'}.errorbox small{display:block;color:var(--muted)}.rollout{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:end}.roll{position:relative;padding:14px;background:#fff;border:2px solid var(--navy);text-align:center}.roll:not(:last-child):after{content:"→";position:absolute;right:-22px;top:42%;z-index:2;color:var(--rust);font:700 21px/1 'JetBrains Mono'}.roll.final{border-color:var(--rust);background:var(--rust2)}.roll b{display:block}.hardware{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.hw{padding:18px;background:#fff;border:1px solid var(--rule)}.hw b{display:block;color:var(--navy);font:700 18px/1.3 'Fraunces','Noto Serif SC'}.scroll{overflow-x:auto;margin:18px 0;border:1px solid var(--rule)}table{width:100%;border-collapse:collapse;background:var(--card);font-size:14px;white-space:nowrap}th,td{padding:10px 12px;border-bottom:1px solid var(--rule);text-align:right}th:first-child,td:first-child{text-align:left}thead th{position:sticky;top:0;background:var(--navy);color:#fff;font:600 10px/1.4 'JetBrains Mono';letter-spacing:.7px}.win{background:var(--green2);color:#1f5237;font-weight:700}.lose{background:var(--rust2);color:#7c2b1d}.gloss{margin-top:76px;padding-top:30px;border-top:3px double var(--ink)}.gloss ol{list-style:none;padding:0;counter-reset:g}.gloss li{position:relative;padding:13px 10px 13px 48px;border-bottom:1px dashed var(--rule);font-size:15px}.gloss li:before{counter-increment:g;content:counter(g,decimal-leading-zero);position:absolute;left:7px;color:var(--rust);font:700 10px/1.8 'JetBrains Mono'}.gloss .term{font-weight:700;color:var(--navy)}.sources{margin-top:54px;padding:22px;background:var(--card);border:1px solid var(--rule);font-size:14px}.sources li{margin:7px 0}.reveal{opacity:0;transform:translateY(8px);transition:.55s ease}.play .reveal{opacity:1;transform:none}.d2{transition-delay:.10s}.d3{transition-delay:.20s}.d4{transition-delay:.30s}@media(max-width:850px){.page{padding:34px 18px 90px}.grid3,.grid4{grid-template-columns:1fr 1fr}.flow{grid-template-columns:1fr}.arrow{height:34px;transform:rotate(90deg)}.split{grid-template-columns:1fr}.bridge{padding:12px}.hardware{grid-template-columns:1fr}.rollout{grid-template-columns:1fr 1fr}.roll:nth-child(2):after{display:none}.vars{grid-template-columns:1fr}figcaption{display:block}figcaption b{display:block;margin-top:5px}}@media(max-width:520px){body{font-size:17px}.page{padding-inline:12px}.hero h1{font-size:55px}figure{padding:18px 12px;margin-inline:0}.grid2,.grid3,.grid4,.rollout,.errorline{grid-template-columns:1fr}.roll:not(:last-child):after{content:"↓";right:auto;left:50%;top:auto;bottom:-24px}.trajectory{grid-template-columns:1fr;padding-top:12px}.trajectory:before{left:39px;right:auto;top:20px;bottom:20px;width:3px;height:auto}.point{display:grid;grid-template-columns:70px 1fr;align-items:center;text-align:left}.dot{margin:0}.mast .r{display:none}}
+/* Rollout arrows get their own whitespace; below tablet width the sequence is strictly vertical. */
+.rollout{gap:28px}
+.roll:not(:last-child):after{right:-27px}
+@media(max-width:850px){.rollout{grid-template-columns:1fr}.roll:nth-child(2):after,.roll:not(:last-child):after{display:block;content:"↓";right:auto;left:50%;top:auto;bottom:-26px}}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · rcm</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page">
+<div class="mast"><span>MODEL DISTILLATION · FIELD NOTES</span><span class="r">ARXIV 2510.08431 · ICLR 2026</span></div>
+<header class="hero">
+  <div class="issue">从“局部学得像”到“整段不跑偏”</div>
+  <h1>rCM<br><em>长跳纠偏</em></h1>
+  <p class="byline">Kaiwen Zheng et al. · Tsinghua University × NVIDIA · arXiv v3</p>
+  <p class="dek">连续时间一致性模型已经会沿老师轨迹学“这一小步该怎样不变”；rCM 再给它一根跨多步的纠偏绳，把 14B 视频扩散模型压到 1–4 步。</p>
+  <div class="tldr"><span class="label">先记这一句</span>sCM 像每隔一米校一次方向，覆盖面广但微小误差会累积；DMD 像隔很远检查一次“你到底到了哪里”，能修质量却可能牺牲多样性。rCM 把两者相加：<strong>局部切线守轨迹，长跳 score 守终点分布。</strong></div>
+</header>
+<nav class="toc"><a href="#misread">00 先排雷</a><a href="#map">01 总览</a><a href="#flow">02 加噪</a><a href="#cm">03 一致性</a><a href="#jvp">04 JVP</a><a href="#failure">05 失效</a><a href="#regularize">06 rCM</a><a href="#rollout">07 rollout</a><a href="#stable">08 稳定计算</a><a href="#infra">09 基建</a><a href="#train">10 配方</a><a href="#results">11 实验</a><a href="#limits">12 边界</a></nav>
+
+<section id="misread">
+<h2><span class="n">§ 00</span>先排除六种误读</h2>
+<div class="grid3">
+  <div class="card"><span class="tag rust">名字</span><h3>r = regularized</h3><p>这里不是旋转角色、黎曼流形或 recursive；全名是 <strong>score-regularized Continuous-time Consistency Model</strong>。</p></div>
+  <div class="card"><span class="tag">模型大小</span><h3>没有把 14B 变小</h3><p>参数量基本不变。提速来自 NFE<a class="jr" href="#g-01">01</a> 从老师约 70 次降到 1–4 次。</p></div>
+  <div class="card"><span class="tag teal">JVP</span><h3>不是完整 Jacobian</h3><p>只求“沿当前去噪轨迹走”这一根方向的输出变化，不展开巨大的导数矩阵。</p></div>
+  <div class="card"><span class="tag gold">DMD</span><h3>训练时才有两套 score</h3><p>teacher / fake score 是训练脚手架；推理只留下少步 student。</p></div>
+  <div class="card"><span class="tag rust">一步</span><h3>不是无损压缩</h3><p>一步图像小字更差，一步视频更模糊。论文真正稳妥的区间是 2–4 步。</p></div>
+  <div class="card"><span class="tag green">版本边界</span><h3>Causal-rCM 是后续</h3><p>官方仓库后来加入流式自回归训练，但本页只讲 ICLR 2026 的原始双向 rCM。</p></div>
+</div>
+</section>
+
+<section id="map">
+<h2><span class="n">§ 01</span>先拼完整系统：两条监督绳拉同一个 student</h2>
+<p class="lead">原始扩散老师能花几十步生成好图 / 视频。rCM 初始化一份同结构 student，再同时接上两条训练路径；推理时两条路径全部拆掉。</p>
+<figure id="fig-map">
+  <figcaption><span>Fig 01 · 训练与推理的完整拼图</span><b>两条训练路径 → 一份少步 student</b></figcaption>
+  <div class="flow">
+    <div class="node"><small>OFFLINE · FORWARD-LIKE</small><b>sCM 局部一致性</b><p>从老师轨迹上的任意带噪点出发，用 JVP 要求终点预测沿轨迹不变。善于覆盖老师的多种可能。</p></div>
+    <div class="arrow">＋</div>
+    <div class="node rust"><small>ON-POLICY · REVERSE KL</small><b>DMD 长跳纠偏</b><p>从 student 自己的 1–4 步结果出发，teacher score 拉向真实区域，fake score 抵消学生扎堆区域。</p></div>
+    <div class="arrow">→</div>
+    <div class="node teal"><small>DEPLOY</small><b>1–4 次 student</b><p>训练时的 teacher、fake-score、JVP 目标网络都不部署。保留相同 0.6B–14B 生成骨干，直接少步采样。</p></div>
+  </div>
+  <div class="truth"><span class="label">一句分工</span>sCM 回答“沿老师道路，这一小段方向对不对”；DMD 回答“走了几大步以后，你实际交出的作品落在哪”。</div>
+</figure>
+</section>
+
+<section id="flow">
+<h2><span class="n">§ 02</span>前置：图像怎样从干净走到噪声</h2>
+<p>先只看一个 latent。给干净样本 <code class="m">x_0</code> 混入标准高斯噪声 <code class="m">\epsilon</code>：</p>
+<div class="formula">x_t=\alpha_t x_0+\sigma_t\epsilon,\qquad \epsilon\sim\mathcal N(0,I)</div>
+<div class="vars"><div><code class="m">x_0</code>干净图像 / 视频 latent；不是像素时也仍叫样本。</div><div><code class="m">x_t</code>噪声时刻 <code class="m">t</code> 的状态，与 <code class="m">x_0</code> 同形。</div><div><code class="m">\alpha_t</code>保留多少干净信号。</div><div><code class="m">\sigma_t</code>混入多少噪声；与 <code class="m">\alpha_t</code> 一起组成噪声日程<a class="jr" href="#g-02">02</a>。</div><div><code class="m">\epsilon</code>程序采样的噪声，均值 0、协方差单位阵。</div><div><code class="m">t</code>连续噪声时间，不是视频帧序号。</div></div>
+<p>论文统一换到 TrigFlow<a class="jr" href="#g-03">03</a>：<code class="m">\alpha_t=\cos t</code>、<code class="m">\sigma_t=\sin t</code>。当 <code class="m">t=0</code> 时是干净数据；接近 <code class="m">\pi/2</code> 时接近纯噪声。</p>
+<div class="calc">
+  <div class="step"><b>取一组可手算数字</b><span><code class="m">x_0=2</code>、<code class="m">\epsilon=-1</code>、<code class="m">t=\pi/6</code>；因此 <code class="m">\cos t\approx.866</code>、<code class="m">\sin t=.5</code>。</span></div>
+  <div class="step"><b>混合</b><span><code class="m">x_t=.866\times2+.5\times(-1)=1.232</code>。</span></div>
+  <div class="step"><b>真实速度</b><span><code class="m">v^*=\dot\alpha_t x_0+\dot\sigma_t\epsilon=-\sin t\,x_0+\cos t\,\epsilon=-1-.866=-1.866</code>。</span></div>
+  <div class="step"><b>含义</b><span>时间继续增大一点，状态会按约 <code class="m">-1.866</code> 每单位时间变化；老师网络学习的就是这个局部速度场。</span></div>
+</div>
+<div class="note"><span class="label">不同老师如何接进同一时间轴</span>Cosmos / Wan 原始噪声日程不一定是三角函数。rCM 用 <a href="../concepts/noise-schedule-wrapping.html">noise schedule wrapping</a> 匹配同一噪声/信号比，再补幅度缩放；它换的是时间坐标，不是重训老师。</div>
+</section>
+
+<section id="cm">
+<h2><span class="n">§ 03</span>Consistency：站在同一条路的任何位置，都报同一个终点</h2>
+<p>老师的速度场<a class="jr" href="#g-04">04</a>定义一条从噪声到数据的轨迹。一致性函数 <code class="m">f_\theta(x_t,t)</code> 不预测下一小步，而是直接预测这条轨迹的干净终点。</p>
+<div class="formula">f_\theta(x_t,t)\longrightarrow x_0,\qquad f_\theta(x,0)=x</div>
+<div class="vars"><div><code class="m">f_\theta</code>student 的一致性函数。</div><div><code class="m">\theta</code>student 可训练参数。</div><div><code class="m">x_t,t</code>当前位置和噪声时间。</div><div><code class="m">f_\theta(x,0)=x</code>边界条件：已经干净就原样返回。</div></div>
+<figure id="fig-path">
+  <figcaption><span>Fig 02 · 位置不同，终点答案相同</span><b>不是四个框各猜一个终点</b></figcaption>
+  <div class="trajectory">
+    <div class="point reveal"><div class="dot">t=1.5</div><p>几乎纯噪声<br><code class="m">f=2.0</code></p></div>
+    <div class="point reveal d2"><div class="dot">t=1.0</div><p>轮廓出现<br><code class="m">f=2.0</code></p></div>
+    <div class="point reveal d3"><div class="dot">t=.5</div><p>细节出现<br><code class="m">f=2.0</code></p></div>
+    <div class="point reveal d4"><div class="dot">t=0</div><p>干净终点<br><code class="m">f=2.0</code></p></div>
+  </div>
+  <div class="same">四个位置沿同一条老师轨迹，所以一致性目标都是同一个 <code class="m">x_0=2</code>。</div>
+</figure>
+<p>离散 CM 会构造相邻点 <code class="m">t</code> 与 <code class="m">t-\Delta t</code>，要求两者输出相等。sCM<a class="jr" href="#g-05">05</a> 把 <code class="m">\Delta t\to0</code>，等价于要求沿轨迹的总导数为 0：</p>
+<div class="formula">\frac{d}{dt}f_\theta(x_t,t)=\frac{\partial f_\theta}{\partial x_t}\frac{dx_t}{dt}+\frac{\partial f_\theta}{\partial t}=0</div>
+<p>这不是“函数对时间完全不变”。输入 <code class="m">x_t</code> 在变、时间标签也在变；两部分变化互相抵消，最终答案才不变。完整教学例见 <a href="../concepts/continuous-time-consistency.html">连续时间一致性概念页</a>。</p>
+<p>真正更新 student 时，论文使用下面这个可做 MSE 的归一化切线目标，而不是直接把“导数等于 0”当作一行程序：</p>
+<div class="formula">\mathcal L_{\mathrm{sCM}}=\mathbb E_{x_0,\epsilon,t\sim p_G}\left\|F_\theta(x_t,t)-F_{\theta^-}(x_t,t)-\frac{g}{\|g\|_2^2+c}\right\|_2^2,\qquad g=w(t)\frac{df_{\theta^-}(x_t,t)}{dt}</div>
+<div class="vars"><div><code class="m">F_\theta</code>当前 student 的速度预测；这一路接收梯度。</div><div><code class="m">F_{\theta^-}</code>EMA target 的速度预测；当前损失中冻结。</div><div><code class="m">g</code>目标一致性函数沿老师轨迹的加权切线。</div><div><code class="m">w(t)=\cos t</code>论文采用的时间权重，并吸收到 JVP 重排中。</div><div><code class="m">\|g\|_2^2+c</code>按切线强度归一化；论文取 <code class="m">c=.1</code> 防止分母接近 0。</div><div><code class="m">p_G</code>专门给 student / generator 局部一致性项采时间的分布。</div></div>
+<div class="calc"><div class="step"><b>只演示归一化</b><span>若一维切线 <code class="m">g=.3</code>，则目标修正量为 <code class="m">.3/(.3^2+.1)=.3/.19\approx1.579</code>。</span></div><div class="step"><b>落成 MSE 目标</b><span>若冻结速度 <code class="m">F_{\theta^-}=.4</code>，右侧目标是 <code class="m">.4+1.579=1.979</code>；当前 <code class="m">F_\theta</code> 就向这个数回归。</span></div><div class="step"><b>边界</b><span>这个标量只说明式子怎样算。真实 <code class="m">g</code> 是与视频 latent 同形的张量，论文的范数 / 平均具体归约由实现口径决定。</span></div></div>
+</section>
+
+<section id="jvp">
+<h2><span class="n">§ 04</span>JVP：不造整张导数表，只沿老师轨迹问一次</h2>
+<p>若模型输入、输出各有上百万个数，完整 Jacobian<a class="jr" href="#g-06">06</a> 会有万亿级位置；但上一节只需要它乘上轨迹方向 <code class="m">dx_t/dt</code>。这就是 JVP：</p>
+<div class="formula">\operatorname{JVP}(F,x,v)=J_F(x)v=\left.\frac{d}{d\varepsilon}F(x+\varepsilon v)\right|_{\varepsilon=0}</div>
+<div class="vars"><div><code class="m">F</code>这里可看成 student 网络。</div><div><code class="m">x</code>当前带噪 latent。</div><div><code class="m">v</code>指定的输入方向；rCM 中来自时间轨迹。</div><div><code class="m">J_F(x)</code>完整 Jacobian，只出现在数学定义里，不实际展开。</div><div><code class="m">\varepsilon</code>定义微小位移的标量，不是扩散噪声 <code class="m">\epsilon</code>。</div><div><code class="m">J_F(x)v</code>输出沿该方向的瞬时变化。</div></div>
+<figure id="fig-jvp">
+  <figcaption><span>Fig 03 · 一次完整手算</span><b>二维输入 → 二维输出，只问方向 v</b></figcaption>
+  <div class="split">
+    <div class="card"><span class="tag">函数与位置</span><p><code class="m">F(x_1,x_2)=[x_1^2+x_2,\;3x_1-x_2]</code></p><p><code class="m">x=[2,1]</code>，方向 <code class="m">v=[1,-2]</code></p></div>
+    <div class="bridge">→</div>
+    <div class="card"><span class="tag teal">只要这一根切线</span><p><code class="m">J_F=\begin{bmatrix}4&1\\3&-1\end{bmatrix}</code></p><p><code class="m">J_Fv=[4-2,\;3+2]=[2,5]</code></p></div>
+  </div>
+  <div class="calc"><div class="step"><b>用小步长自检</b><span><code class="m">F([2,1])=[5,5]</code>；<code class="m">F([2.001,.998])\approx[5.002001,5.005]</code>。</span></div><div class="step"><b>差分除以步长</b><span><code class="m">([5.002001,5.005]-[5,5])/.001\approx[2.001,5]</code>，趋近 <code class="m">[2,5]</code>。</span></div></div>
+</figure>
+<div class="warning"><span class="label">别和反向传播混在一起</span>JVP 是 forward-mode 的方向导数，用来得到连续一致性目标；随后为了更新几十亿参数，训练仍会反向传播。它不是“用了 JVP 所以不用 backprop”。</div>
+</section>
+
+<section id="failure">
+<h2><span class="n">§ 05</span>为什么放大到 10B+ 会坏：目标里藏着自己的切线</h2>
+<p>TrigFlow 下，论文把 target 网络的总导数整理成两部分：</p>
+<div class="formula">\frac{df_{\theta^-}}{dt}=-\cos t\left(F_{\theta^-}-F_{\mathrm{teacher}}\right)-\sin t\left(x_t+\frac{dF_{\theta^-}}{dt}\right)</div>
+<div class="vars"><div><code class="m">\theta^-</code>当前 student 的 EMA<a class="jr" href="#g-12">12</a> / stop-gradient 目标参数。</div><div><code class="m">F_{\theta^-}</code>目标 student 的速度预测。</div><div><code class="m">F_{\mathrm{teacher}}</code>冻结老师的速度预测。</div><div><code class="m">F_{\theta^-}-F_{\mathrm{teacher}}</code>student 与老师当下速度的差。</div><div><code class="m">dF_{\theta^-}/dt</code>student 自身沿轨迹的 JVP；上一时段的偏差会进入后续目标。</div><div><code class="m">\cos t,\sin t</code>两项随噪声时间变化的权重。</div></div>
+<figure id="fig-error">
+  <figcaption><span>Fig 04 · 时间越靠近高噪声端，老师项越弱、自反馈越强</span><b>不是“JVP 本身有罪”，而是误差会被递推</b></figcaption>
+  <div class="errorline">
+    <div class="errorbox"><small>t=.1</small><b>cos=.995</b><span>老师差权重强</span></div>
+    <div class="errorbox"><small>t=.1</small><b>sin=.100</b><span>JVP 自反馈弱</span></div>
+    <div class="errorbox"><small>t=1.4</small><b>cos=.170</b><span>老师差权重弱</span></div>
+    <div class="errorbox"><small>t=1.4</small><b>sin=.985</b><span>JVP 自反馈强</span></div>
+  </div>
+  <div class="calc">
+    <div class="step"><b>低噪声端示例</b><span>若老师差为 <code class="m">.2</code>、JVP 组合误差为 <code class="m">.1</code>，两项绝对贡献约 <code class="m">.995\times.2=.199</code> 与 <code class="m">.100\times.1=.010</code>。</span></div>
+    <div class="step"><b>高噪声端示例</b><span>同样误差在 <code class="m">t=1.4</code> 变成 <code class="m">.170\times.2=.034</code> 与 <code class="m">.985\times.1=.099</code>；自反馈已经约为老师纠偏的 2.9 倍。</span></div>
+  </div>
+</figure>
+<p>因此，一处 JVP 数值误差会先污染 target，再被模型学进去，后续时间的 target 又依赖这份已污染的切线。论文在 Cosmos 0.6B / 2B 上测到 BF16 的 JVP 相对 L2 误差明显高于普通输出误差；放大网络后，纹理、文字和视频时序首先暴露问题。</p>
+</section>
+
+<section id="regularize">
+<h2><span class="n">§ 06</span>rCM 的修法：隔几步看看成品到底偏到哪</h2>
+<p>sCM 的相邻切线属于“短监督”。rCM 加一项 DMD<a class="jr" href="#g-07">07</a>：先让 student 自己走 1–4 步得到 <code class="m">x_0</code>，再把它加噪到随机 <code class="m">x_t</code>，比较 teacher 与 fake-score 的去噪预测。</p>
+<div class="formula">\mathcal L_{\mathrm{rCM}}=\mathcal L_{\mathrm{sCM}}+\lambda\mathcal L_{\mathrm{DMD}}</div>
+<div class="vars"><div><code class="m">\mathcal L_{\mathrm{sCM}}</code>局部连续一致性损失。</div><div><code class="m">\mathcal L_{\mathrm{DMD}}</code>学生生成分布到老师分布的长跳纠偏。</div><div><code class="m">\lambda</code>两者权重；论文所有任务用 <code class="m">.01</code>。</div><div><code class="m">\mathcal L_{\mathrm{rCM}}</code>两项相加的最终 student 目标。</div></div>
+<p>论文用“伪回归目标”把想要的 score 方向塞进自动求导：</p>
+<div class="formula">\mathcal L_{\mathrm{DMD}}=\mathbb E\left\|x_0-\operatorname{sg}\!\left[x_0-\frac{f_{\mathrm{fake}}(x_t,t)-f_{\mathrm{teacher}}(x_t,t)}{\operatorname{mean}|x_0-f_{\mathrm{teacher}}(x_t,t)|}\right]\right\|_2^2</div>
+<div class="vars"><div><code class="m">x_0</code>student 少步 rollout 的最终干净预测。</div><div><code class="m">x_t</code>把该结果重新加到随机噪声时间 <code class="m">t</code> 后的样本。</div><div><code class="m">f_{\mathrm{teacher}}</code>冻结老师在 <code class="m">x_t</code> 处预测的干净样本。</div><div><code class="m">f_{\mathrm{fake}}</code>用 student 最新生成结果持续训练的 fake-score 网络。</div><div><code class="m">\operatorname{mean}|\cdot|</code>对所有元素取绝对值再平均，只做尺度归一化。</div><div><code class="m">\operatorname{sg}</code>stop-gradient：括号内数值当常量目标，梯度不穿过去。</div></div>
+<div class="calc">
+  <div class="step"><b>标量教学例</b><span>设 <code class="m">x_0=1.2</code>、<code class="m">f_{\mathrm{fake}}=.8</code>、<code class="m">f_{\mathrm{teacher}}=1.4</code>。标量分母为 <code class="m">|1.2-1.4|=.2</code>。</span></div>
+  <div class="step"><b>先算想要的方向</b><span><code class="m">g=(.8-1.4)/.2=-3</code>。fake 比 teacher 偏左，所以梯度应让 student 往右。</span></div>
+  <div class="step"><b>造冻结目标</b><span><code class="m">y=\operatorname{sg}[x_0-g]=\operatorname{sg}[1.2-(-3)]=4.2</code>。</span></div>
+  <div class="step"><b>损失与梯度</b><span><code class="m">L=(1.2-4.2)^2=9</code>，<code class="m">dL/dx_0=2(1.2-4.2)=-6=2g</code>。若实现前乘 <code class="m">1/2</code>，梯度恰为 <code class="m">g=-3</code>；常数 2 可并入损失权重。</span></div>
+  <div class="step"><b>为什么必须 stop-gradient</b><span>没有 <code class="m">\operatorname{sg}</code>，目标里的 <code class="m">x_0</code> 也随左边一起变化；<code class="m">x_0-x_0</code> 的梯度抵消，造出来的方向就失效。</span></div>
+</div>
+<div class="truth"><span class="label">这里不是把 student 直接拉到 4.2</span><code class="m">4.2</code> 只是单次反传的伪目标，用来制造正确梯度；高维真实训练的步长还会乘学习率、网络 Jacobian 与 <code class="m">\lambda=.01</code>，不会一步跳过去。</div>
+</section>
+
+<section id="rollout">
+<h2><span class="n">§ 07</span>为什么叫长跳：DMD 看到的是 student 自己走出来的结果</h2>
+<p>Consistency model 每一步先把当前噪声状态预测到干净端，再按下一个更小的噪声时间重新加噪。训练随机选步数 <code class="m">N\sim\mathrm{Uniform}\{1,\ldots,N_{\max}\}</code>，本文 <code class="m">N_{\max}=4</code>。</p>
+<figure id="fig-rollout">
+  <figcaption><span>Fig 05 · 一个四步 rollout</span><b>前三步冻结，只让最后一步接 DMD 梯度</b></figcaption>
+  <div class="rollout">
+    <div class="roll"><small>STEP 1 · θ⁻</small><b><code class="m">t_1\approx\pi/2</code></b><p>纯噪声 → 预测干净 → 重新加到 <code class="m">t_2=1.3</code></p></div>
+    <div class="roll"><small>STEP 2 · θ⁻</small><b><code class="m">t_2=1.3</code></b><p>再预测干净 → 重新加到 <code class="m">t_3=1.0</code></p></div>
+    <div class="roll"><small>STEP 3 · θ⁻</small><b><code class="m">t_3=1.0</code></b><p>再预测干净 → 重新加到 <code class="m">t_4=.6</code></p></div>
+    <div class="roll final"><small>STEP 4 · θ</small><b><code class="m">t_4=.6\to0</code></b><p>得到 <code class="m">x_0</code>，DMD 梯度只穿过这一遍 student。</p></div>
+  </div>
+</figure>
+<p>训练随机采候选时间 <code class="m">\hat t_n\sim p_D</code> 后，使用 <code class="m">t_n=\min(\hat t_n,t_{n-1})</code>，保证时间不反向增大。前三步用 <code class="m">\theta^-</code> 且不留反向图，节省显存；最后一步才用当前 <code class="m">\theta</code> 计算 DMD 梯度。</p>
+<p>评测时不再随机抽时刻。4 步固定使用 <code class="m">[\arctan(\sigma_{\max}),1.3,1.0,.6]</code>，少于 4 步就取前 <code class="m">k</code> 项；8 步可视化用 <code class="m">[\arctan(\sigma_{\max}),1.3,1.0,1.0,.6,.6,.3,.3]</code>。重复时刻不是原地多算一次：每次仍先回到干净端、换一份噪声，再回到该噪声等级。</p>
+<div class="warning"><span class="label">不能过度解读</span>只对最后一步反传不等于前三步“没作用”。它们决定最后一步看见什么输入分布，只是不保存跨三步的梯度图。</div>
+</section>
+
+<section id="stable">
+<h2><span class="n">§ 08</span>稳定 JVP：小模型用半连续差分，大模型把时间支路升到 FP32</h2>
+<p>先把需要稳定的完整导数拆开。输入沿老师速度移动造成第一项；只改变时间标签造成第二项：</p>
+<div class="formula">\frac{dF_{\theta^-}}{dt}=\left(\nabla_{x_t}F_{\theta^-}\right)F_{\mathrm{teacher}}+\frac{\partial F_{\theta^-}}{\partial t}</div>
+<div class="vars"><div><code class="m">\nabla_{x_t}F_{\theta^-}</code>输出对带噪输入的 Jacobian。</div><div><code class="m">F_{\mathrm{teacher}}</code>老师速度，也是输入移动方向。</div><div><code class="m">(\nabla_xF)F_{\mathrm{teacher}}</code>空间方向 JVP。</div><div><code class="m">\partial F/\partial t</code>输入固定、只改时间嵌入时的偏导，论文认为主要数值不稳点在这里。</div></div>
+<p>论文给两种办法。2B 图像模型可以把空间方向仍用精确 JVP，只把时间偏导改成有限差分：</p>
+<div class="formula">\frac{\partial F(x_t,t)}{\partial t}\approx\frac{\cos(\Delta t)F(x_t,t)-F(x_t,t-\Delta t)}{\sin(\Delta t)},\qquad \Delta t=10^{-4}</div>
+<div class="vars"><div><code class="m">F(x_t,t)</code>当前时间的网络输出。</div><div><code class="m">F(x_t,t-\Delta t)</code>同一输入、稍早时间标签的输出。</div><div><code class="m">\Delta t</code>很小的时间间隔，论文取 <code class="m">10^{-4}</code>。</div><div><code class="m">\cos,\sin</code>来自 TrigFlow 参数化，不是通用有限差分都必须有。</div></div>
+<p>但 10B+ / 视频模型为了省第二遍网络前向，仍用完整 JVP，只把所有 time embedding 层放到 FP32。直觉上：绝大多数矩阵乘继续 BF16 省资源，最容易让“微小时间差”丢精度的支路用 FP32 保小数。</p>
+<div class="grid2"><div class="card"><span class="tag teal">半连续</span><h3>更稳，需两次时间输出</h3><p>无需改整个网络结构；论文用于 Cosmos 2B。额外前向使超大视频模型代价太高。</p></div><div class="card"><span class="tag rust">全 JVP + FP32 time</span><h3>更省，仍要监控误差</h3><p>用于 10B+ / 视频；Cosmos 初始化阶段仍有不匹配，但训练保持稳定。</p></div></div>
+</section>
+
+<section id="infra">
+<h2><span class="n">§ 09</span>14B 为什么放得下：原值和切线走同一套分块流水线</h2>
+<p>普通 attention 为 <code class="m">S=QK^\top</code>、<code class="m">P=\operatorname{softmax}(S)</code>、<code class="m">O=PV</code>。点号表示沿时间轨迹的切线：</p>
+<div class="formula">\dot S=\dot QK^\top+Q\dot K^\top,\quad \dot P=P\odot\dot S-P\odot\left((P\odot\dot S)\mathbf1\mathbf1^\top\right),\quad \dot O=\dot PV+P\dot V</div>
+<div class="vars"><div><code class="m">Q,K,V</code>attention 的 query、key、value。</div><div><code class="m">S,P,O</code>分数、softmax 权重、最终输出。</div><div><code class="m">\dot Q,\dot K,\dot V</code>三者沿当前时间轨迹的方向导数。</div><div><code class="m">\odot</code>对应位置相乘；不是矩阵乘法。</div><div><code class="m">\mathbf1</code>全 1 向量，用来求每行加权和并广播回该行。</div><div><code class="m">\dot O</code>attention 输出的 JVP。</div></div>
+<p>若先完整落地 <code class="m">S,P,\dot S,\dot P</code>，长视频的平方矩阵会把 HBM<a class="jr" href="#g-08">08</a> 撑爆。论文写了 Triton FlashAttention-2 JVP kernel：每次只把一块 Q/K/V 与切线放进片上存储，在线更新 softmax 的最大值、分母、输出和切线累加量，块用完即丢。</p>
+<figure id="fig-infra">
+  <figcaption><span>Fig 06 · 三层扩展解决三种不同瓶颈</span><b>kernel 省中间矩阵 · FSDP 省状态 · CP 拆序列</b></figcaption>
+  <div class="hardware">
+    <div class="hw"><span class="tag teal">单层 attention</span><b>FA2-JVP 融合 kernel</b><p>原值 <code class="m">O</code> 与切线 <code class="m">\dot O</code> 同步流式累加，不把四张长序列平方矩阵写回 HBM。详见 <a href="../concepts/flash-attention.html">FlashAttention</a>。</p></div>
+    <div class="hw"><span class="tag">整张模型</span><b>FSDP2<a class="jr" href="#g-10">10</a></b><p>参数、梯度、优化器状态按 GPU 分片；层边界与 JVP wrapper 对齐，避免每张卡都常驻完整 14B 状态。</p></div>
+    <div class="hw"><span class="tag rust">长视频序列</span><b>Ulysses CP<a class="jr" href="#g-11">11</a></b><p>先按序列切给各卡，再 all-to-all 改成按 attention head 切；算完反向交换。原值与切线完全同样分布。</p></div>
+  </div>
+</figure>
+<div class="note"><span class="label">为什么切小块真的省 IO</span>关键不是“切块”三个字，而是切到片上放得下后，分数、softmax、加权 V 和切线更新在同一个 kernel 里做完；中间小块不再落回 HBM。只切块后仍写回显存，IO 不会自动消失。</div>
+</section>
+
+<section id="train">
+<h2><span class="n">§ 10</span>完整训练循环与配方：student 和 fake-score 轮流追</h2>
+<div class="grid4">
+  <div class="card"><span class="tag">01 初始化</span><h3>三份从老师起步</h3><p>student、EMA target、fake-score 都从 teacher 权重初始化；不是让 fake-score 随机学起。</p></div>
+  <div class="card"><span class="tag teal">02 student 轮</span><h3>sCM + DMD</h3><p>采 <code class="m">p_G(t)</code> 算局部切线；warmup 后再做随机 1–4 步 rollout 与长跳纠偏。</p></div>
+  <div class="card"><span class="tag rust">03 fake 轮</span><h3>追学生最新分布</h3><p>固定 student，用它生成的样本做普通 flow matching，更新 fake-score。</p></div>
+  <div class="card"><span class="tag gold">04 交替</span><h3>5:1 或 10:1</h3><p>多数配置每 5 轮更新一次 student；Wan 14B 每 10 轮，其余轮给 fake-score 追赶。</p></div>
+</div>
+<p><code class="m">p_G</code> 与 <code class="m">p_D</code> 是两只不同的时间采样器：前者挑 sCM 切线训练在哪个噪声段发生，后者挑 DMD 在 rollout 后从哪个噪声强度检查分布。它们不是生成分布 <code class="m">p_\theta</code>。</p>
+<p>fake-score 那一轮本身就是普通 flow matching：把冻结 student rollout 出的 <code class="m">x_0^{\theta^-}</code> 加噪，构造已知速度目标，再让 fake 网络回归：</p>
+<div class="formula">x_t=\cos t\,x_0^{\theta^-}+\sin t\,\epsilon,\qquad v^*=\cos t\,\epsilon-\sin t\,x_0^{\theta^-},\qquad \mathcal L_{\mathrm{fake}}=\left\|F_{\mathrm{fake}}(x_t,t)-v^*\right\|_2^2</div>
+<div class="vars"><div><code class="m">x_0^{\theta^-}</code>冻结 EMA student 的 1–4 步生成结果。</div><div><code class="m">\epsilon</code>新采样的标准高斯噪声。</div><div><code class="m">v^*</code>TrigFlow 下由干净结果与噪声解析算出的真实速度。</div><div><code class="m">F_{\mathrm{fake}}</code>追踪 student 最新生成分布的速度网络。</div></div>
+<div class="calc"><div class="step"><b>一维例子</b><span>设 <code class="m">x_0^{\theta^-}=2</code>、<code class="m">\epsilon=-1</code>、<code class="m">t=\pi/6</code>，则 <code class="m">x_t=.866\times2+.5\times(-1)=1.232</code>。</span></div><div class="step"><b>目标速度</b><span><code class="m">v^*=.866\times(-1)-.5\times2=-1.866</code>。若 fake 预测 <code class="m">-1.5</code>，损失为 <code class="m">(-1.5+1.866)^2\approx.134</code>。</span></div></div>
+<div class="scroll"><table>
+<thead><tr><th>模型</th><th>batch</th><th>student LR</th><th>fake LR</th><th>student 频率</th><th>CP</th><th><code class="m">\sigma_{\max}</code></th><th>warmup</th><th>iter</th></tr></thead>
+<tbody><tr><td>Cosmos 0.6B</td><td>1024</td><td>1e−6</td><td>2e−7</td><td>1 / 5</td><td>1</td><td>80</td><td>0</td><td>80k</td></tr><tr><td>Cosmos 2B</td><td>512</td><td>1e−6</td><td>2e−7</td><td>1 / 5</td><td>1</td><td>80</td><td>0</td><td>30k</td></tr><tr><td>Cosmos 14B</td><td>256</td><td>1e−6</td><td>2e−7</td><td>1 / 5</td><td>1</td><td>800</td><td>0</td><td>25k</td></tr><tr><td>Wan 1.3B</td><td>256</td><td>2e−6</td><td>4e−7</td><td>1 / 5</td><td>1</td><td>1600</td><td>1000</td><td>10k</td></tr><tr><td>Wan 14B</td><td>64</td><td>1e−6</td><td>1e−7</td><td>1 / 10</td><td>10</td><td>1600</td><td>200</td><td>10k</td></tr></tbody>
+</table></div>
+<p>共同设置：AdamW <code class="m">\beta_1=0,\beta_2=.999</code>、weight decay <code class="m">.01</code>、不做 gradient clipping、power EMA length <code class="m">.05</code>、<code class="m">N_{\max}=4</code>、teacher CFG<a class="jr" href="#g-09">09</a> 强度 Cosmos 4.5 / Wan 5。作者特别说“不裁梯度”很关键，但没有给独立消融表。</p>
+<p>附录把两只时间采样器写得更具体。文生图两者都先采一个正数 <code class="m">z</code>；视频的 <code class="m">p_G</code> 再按 latent 帧数把时间向高噪声区伸展，<code class="m">p_D</code> 则从均匀随机数构造 rectified-flow 时间：</p>
+<div class="formula">\begin{aligned}p_G^{\mathrm{image}}:&\ \log z\sim\mathcal N(-.8,1.6^2),\quad t=\arctan z\\p_D^{\mathrm{image}}:&\ \log z\sim\mathcal N(0,1.6^2),\quad t=\arctan z\\p_G^{\mathrm{video}}:&\ \log z\sim\mathcal N(-.8,1.6^2),\quad t=\arctan(\sqrt T\,z)\\p_D^{\mathrm{video}}:&\ u\sim\mathcal U(0,1),\quad t_{\mathrm{RF}}=\frac{5u}{1+4u},\quad t=\arctan\frac{t_{\mathrm{RF}}}{1-t_{\mathrm{RF}}}\end{aligned}</div>
+<div class="vars"><div><code class="m">z</code>服从 log-normal 分布的正数噪声尺度；写 <code class="m">\log z</code> 才服从正态。</div><div><code class="m">T</code>视频 latent 的帧数，不是像素帧数；乘 <code class="m">\sqrt T</code> 会改变采样时间分布。</div><div><code class="m">u</code>0 到 1 的均匀随机数。</div><div><code class="m">t_{\mathrm{RF}}</code>先构造出的 rectified-flow 时间，再通过 odds 与 <code class="m">\arctan</code> 换到 TrigFlow 时间。</div></div>
+<div class="warning"><span class="label">论文与 2026 官方仓库要分开读</span>论文主算法联合训练 <code class="m">\mathcal L_{\mathrm{sCM}}+.01\mathcal L_{\mathrm{DMD}}</code>。当前仓库 README 另建议，某些模型更稳的做法是分阶段训练：dCM → sCM → DMD（可同时保留 sCM）。这是发布后的实现经验，不能冒充论文原实验。</div>
+</section>
+
+<section id="results">
+<h2><span class="n">§ 11</span>实验到底支持了什么</h2>
+<h3>文生图 · GenEval</h3>
+<div class="scroll"><table><thead><tr><th>方法</th><th>参数</th><th>NFE</th><th>Overall ↑</th><th>读法</th></tr></thead><tbody><tr><td>Cosmos teacher</td><td>0.6B</td><td>35×2</td><td class="win">0.81</td><td>同尺寸老师</td></tr><tr><td>DMD2</td><td>0.6B</td><td>4</td><td>0.77</td><td>反向 KL 基线</td></tr><tr><td>rCM</td><td>0.6B</td><td>4 / 2 / 1</td><td>0.79 / 0.78 / 0.78</td><td>4 步最好</td></tr><tr><td>Cosmos teacher</td><td>2B</td><td>35×2</td><td class="win">0.83</td><td>同尺寸老师</td></tr><tr><td>DMD2</td><td>2B</td><td>4</td><td>0.80</td><td>论文未报 14B DMD2</td></tr><tr><td>rCM</td><td>2B</td><td>4 / 2 / 1</td><td>0.81 / 0.82 / 0.81</td><td>两步最高</td></tr><tr><td>Cosmos teacher</td><td>14B</td><td>35×2</td><td class="win">0.84</td><td>同尺寸老师</td></tr><tr><td>rCM</td><td>14B</td><td>4 / 2 / 1</td><td>0.83 / 0.81 / 0.82</td><td>四步距老师 .01</td></tr></tbody></table></div>
+<h3>文生视频 · Wan2.1 480p，单张 H100、batch 1，含 VAE 解码</h3>
+<div class="scroll"><table><thead><tr><th>模型</th><th>参数</th><th>NFE</th><th>FPS ↑</th><th>VBench total ↑</th><th>相对老师吞吐</th></tr></thead><tbody><tr><td>Wan teacher</td><td>1.3B</td><td>50×2</td><td>0.72</td><td>83.02</td><td>1×</td></tr><tr><td>rCM</td><td>1.3B</td><td>4</td><td>14.6</td><td class="win">84.43</td><td>20.3×</td></tr><tr><td>rCM</td><td>1.3B</td><td>2</td><td>23.0</td><td>84.09</td><td>31.9×</td></tr><tr><td>rCM</td><td>1.3B</td><td>1</td><td class="win">32.3</td><td>82.65</td><td>44.9×</td></tr><tr><td>Wan teacher</td><td>14B</td><td>50×2</td><td>0.18</td><td>83.58</td><td>1×</td></tr><tr><td>rCM</td><td>14B</td><td>4</td><td>4.5</td><td>84.92</td><td>25×</td></tr><tr><td>rCM</td><td>14B</td><td>2</td><td>8.3</td><td class="win">85.05</td><td>46.1×</td></tr><tr><td>rCM</td><td>14B</td><td>1</td><td>14.4</td><td>83.02</td><td>80×</td></tr></tbody></table></div>
+<div class="grid3"><div class="card"><span class="tag green">能支持</span><h3>2–4 步是甜点区</h3><p>14B 两步的 VBench total 甚至高于老师；四步定性细节与文字最好。</p></div><div class="card"><span class="tag rust">不能支持</span><h3>一步完全无损</h3><p>一视频更模糊，背景和小字仍会坏；单一自动总分也不等于全面视觉胜出。</p></div><div class="card"><span class="tag gold">速度口径</span><h3>FPS 不等于整段延迟</h3><p>它是 81 帧视频的吞吐，单 H100、batch 1、含 VAE；不能直接说“生成一段只要 1/FPS 秒”。</p></div></div>
+<h3>Cosmos 2B · 720p 视频不是全面超过老师</h3>
+<div class="scroll"><table><thead><tr><th>方法</th><th>NFE</th><th>FPS ↑</th><th>T2V total ↑</th><th>I2V total ↑</th></tr></thead><tbody><tr><td>Cosmos teacher</td><td>35×2</td><td>0.32</td><td>83.03</td><td class="win">88.6</td></tr><tr><td>rCM</td><td>4</td><td class="win">4.6</td><td class="win">84.40</td><td>88.2</td></tr></tbody></table></div>
+<p>四步吞吐约为老师的 <code class="m">4.6/.32\approx14.4</code> 倍，T2V 自动总分更高，但 I2V 低 <code class="m">.4</code>。正确结论是“少步保持竞争力并大幅加速”，不是“每个任务都严格优于老师”。</p>
+<h3>λ 消融：它就是一只质量—多样性旋钮</h3>
+<p>作者在 Wan 1.3B、batch 64、10k iteration 上比较 <code class="m">\lambda\in\{1,.1,.01,.001\}</code>：越大越锐、越接近 teacher，却越容易丢多样性；越小则相反。<code class="m">.01</code> 是“仍保持好质量的最小权重”，因此用于全部任务。</p>
+</section>
+
+<section id="limits">
+<h2><span class="n">§ 12</span>最后判断：这篇真正解决了什么，还缺什么</h2>
+<div class="grid2"><div class="card"><span class="tag teal">站得住</span><h3>把故障、算法和 kernel 接成闭环</h3><p>先测到大模型 sCM 的细节 / 时序故障，再从目标式定位 JVP 自反馈，最后用 DMD 长跳和数值精度修复；不是只报一个更高分。</p></div><div class="card"><span class="tag rust">仍有限</span><h3>不是通用免调蒸馏定律</h3><p>完整训练成本、GPU 数、数据配比、人评与长视频物理一致性都没给；论文视频最长约 5 秒。</p></div></div>
+<h3>论文没有证明的四件事</h3>
+<ol><li>VBench 高于老师不代表人眼每个维度都更好，蒸馏学生仍有物理一致性和细节损失。</li><li><code class="m">\lambda=.01</code> 在本文任务复用成功，不代表换架构、数据或时长后无需再调。</li><li>误差传播推导解释了“怎样会累积”，没有给严格的训练收敛保证。</li><li>论文比较采样吞吐，没有报告训练总 GPU-hours，因此无法算完整成本回收周期。</li></ol>
+<div class="truth"><span class="label">附录里的负结果也值得记</span>作者还实现了更一般的 continuous-time consistency trajectory model：让模型学习任意 <code class="m">t\to s</code>，而不只 <code class="m">t\to0</code>。在本文设置中它的质量和多样性都不如 sCM。作者的解释是“任意起终点映射更难优化”；这是一项经验观察，不是证明 MeanFlow / AYF 在所有任务都更差。</div>
+<div class="note"><span class="label">一句带走</span>rCM 的关键不是把两个 loss 机械相加，而是让它们各管一件事：<strong>sCM 用老师轨迹提供密集局部监督，DMD 用学生自己的产物提供稀疏长程纠偏；FlashAttention-JVP 与分布式并行再让这套互补监督能落到 14B 视频 DiT。</strong></div>
+</section>
+
+<section class="gloss">
+<h2>术语直接可达</h2>
+<ol>
+<li id="g-01"><span class="term">NFE</span> · Number of Function Evaluations，生成一次调用去噪网络多少次。老师表中的“35×2”表示 35 个时间步，每步 CFG 做有条件 / 无条件两遍，共 70 次。</li>
+<li id="g-02"><span class="term">噪声日程</span> · 每个时间 <code>t</code> 的信号系数 <code class="m">\alpha_t</code> 与噪声系数 <code class="m">\sigma_t</code>；决定同一时刻到底有多嘈杂。</li>
+<li id="g-03"><span class="term">TrigFlow</span> · 用 <code class="m">\cos t</code> 和 <code class="m">\sin t</code> 混合数据 / 噪声的统一参数化；并不表示模型内部真的在画三角函数。</li>
+<li id="g-04"><span class="term">速度场</span> · <code class="m">v(x,t)=dx/dt</code>，告诉每个带噪位置下一瞬间该往哪动。详见 <a href="../concepts/velocity-field.html">概念页</a>。</li>
+<li id="g-05"><span class="term">sCM</span> · simplified Continuous-time Consistency Model，把离散相邻点监督压到连续极限，用 JVP 计算切线目标。</li>
+<li id="g-06"><span class="term">Jacobian / JVP</span> · Jacobian 收集每个输出对每个输入的偏导；JVP 只让它乘一个指定方向，不展开整张表。详见 <a href="../concepts/jacobian-vector-product.html">概念页</a>。</li>
+<li id="g-07"><span class="term">DMD</span> · Distribution Matching Distillation，用 teacher score 与 fake score 之差更新少步生成器。详见 <a href="../concepts/dmd-distillation.html">概念页</a>。</li>
+<li id="g-08"><span class="term">HBM</span> · GPU 主显存，容量较大但离计算单元比片上 SRAM / 寄存器远；FlashAttention 主要省的是中间矩阵反复进出 HBM。</li>
+<li id="g-09"><span class="term">CFG</span> · Classifier-Free Guidance，把有条件与无条件预测组合以增强提示遵循；普通实现每步要两遍网络。详见 <a href="../concepts/classifier-free-guidance.html">概念页</a>。</li>
+<li id="g-10"><span class="term">FSDP2</span> · Fully Sharded Data Parallel，把参数、梯度和优化器状态分片到多张 GPU，需要某层时再通信聚合。</li>
+<li id="g-11"><span class="term">Context Parallel / Ulysses</span> · 把长视频 token 沿序列维切到多卡，再通过 all-to-all 改成按 attention head 分工。</li>
+<li id="g-12"><span class="term">EMA target</span> · 用 student 参数的指数滑动平均得到较慢变化的目标网络；<code class="m">\theta^-</code> 在当前损失里停止梯度。</li>
+</ol>
+</section>
+
+<section class="sources"><strong>来源与版本边界</strong><ul>
+<li><a href="https://arxiv.org/abs/2510.08431">论文 · Large Scale Diffusion Distillation via Score-Regularized Continuous-Time Consistency</a>，arXiv v3，2026-05-06 修订，ICLR 2026。</li>
+<li><a href="https://github.com/NVlabs/rcm">官方实现 · NVlabs/rcm</a>，本页核对提交 <code>ed3cb14</code>；仓库已同时包含后续 Causal-rCM，相关内容未混入本文实验。</li>
+<li><a href="https://research.nvidia.com/labs/dir/rcm">NVIDIA 项目页</a>：模型示例、代码与项目更新。</li>
+<li>实验数字来自论文正文与附录；页面中的标量 / 二维算例是教学例，不是论文实测。</li>
+</ul></section>
+</main>
+<script>
+function math(){if(!window.katex){setTimeout(math,40);return}document.querySelectorAll('.formula').forEach(function(e){if(e.dataset.done)return;try{katex.render(e.textContent.trim(),e,{displayMode:true,throwOnError:true});e.dataset.done='1'}catch(x){e.classList.add('katex-error');e.title=String(x)}})}math();
+document.querySelectorAll('figure').forEach(function(f){var o=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){f.classList.add('play');o.disconnect()}})},{threshold:.12});o.observe(f)});
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!document.getElementById(id))return;
+      e.preventDefault();
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>

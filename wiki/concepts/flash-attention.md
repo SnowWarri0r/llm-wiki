@@ -1,7 +1,7 @@
 ---
 name: flash-attention
 type: concept
-sources: [unlimited-ocr]
+sources: [unlimited-ocr, rcm]
 updated: 2026-07-17
 ---
 
