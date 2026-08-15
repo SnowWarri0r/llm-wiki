@@ -1532,3 +1532,8 @@ skill 更新:
 - 用户指出符号格里的 q_pos(t)−s 在任何公式里都没出现过——恒等式给了、主公式给了，但没人把 a=q_pos(t)、b=s 代进去，格子在解释一个不存在的符号。
 - 补上展开式 ⟨q̃_t,k̃_s⟩=⟨q_t, R((s−q_pos(t))φ)K^ℓ[s]⟩：差值从此在公式里现身；注明正负只是旋转方向、因果 mask 下 ≤0（只能往回看）；格子改为 s−q_pos(t)「展开式里唯一含位置的项」。
 - 符号格移到主公式紧后，消掉 define-before-use；0 ERROR 0 WARN、KaTeX 0 失败。
+
+## [2026-08-12] revise | dyaplex/faceplex 补基线身份（DualTalk 是谁）
+- 用户问 DualTalk 是啥——两页结果表都拿它当基线但没交代身份，前置引入违规。
+- DyaPlex §07：DualTalk 本行=双人对话 3D 人脸（双方音频→56 维 blendshape 回归，NeurIPS 2025）；被搬成 69 维 SMPL-X 身体回归后坍缩成静止（速度 std<10⁻⁵ vs 正常 10⁻²），论文归因 MSE 遇稀疏低幅动作时恒定均值姿势是强局部最优——反衬 DyaPlex 选离散 token+交叉熵的理由。
+- FacePlex §07：三基线各补半句（ARTalk=语音驱动 3D 面部动作；DualTalk=双人 3D 人脸 blendshape；UniLS=双方完整音频驱动说/听双角色、即本文的合成数据 teacher），并与原"被迫 chunk-wise"句合并去重。
