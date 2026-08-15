@@ -50,7 +50,7 @@ E_{x ~ p}[f(x)]  # 等价于
 # (1/N) * sum(f(x_i) for x_i in samples_from_p)  当 N → ∞
 ```
 
-flow matching loss 公式里的 \(E_{t,x_0,x_1}[...]\) = "对所有 (t, x_0, x_1) 的组合求平均"。
+flow matching loss 公式里的 \(E_{t,x_0,x_1}[...]\) = “对所有 \((t,x_0,x_1)\) 的组合求平均”。
 
 ### `log p(x)` · 对数概率
 直接用 p 数值范围太广（10⁻¹⁰ 到 1.0），取 log 后变成 -23 到 0 这种神经网络友好的范围。

@@ -74,7 +74,7 @@ FFN_SwiGLU(x) = ( Swish(x·W_gate)  ⊙  x·W_up ) · W_down
 Swish(z) = z · sigmoid(z)   (也叫 SiLU，一条平滑、负区不全为 0 的曲线)
 ⊙ = 逐元素相乘
 ```
-三个矩阵(W_gate / W_up / W_down)而非两个，为保持参数量，中间维度从 4d 缩到约 2.67d(×2/3)。
+这里有三个矩阵——<code class="literal">W_gate</code>、<code class="literal">W_up</code>、<code class="literal">W_down</code>，普通 FFN 则只有两个。为了让总参数量基本不变，中间维度从 \(4d\) 缩到约 \(2.67d\)，也就是原来的 \(2/3\)。
 
 ## 数字例子
 设某 token 算出两条投影：门 \(g =x\cdot W_{\mathrm{gate}} = [2, -1]\)，内容 \(u =x\cdot W_{\mathrm{up}} = [3,4]\)。

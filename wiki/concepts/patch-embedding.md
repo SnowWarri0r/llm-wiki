@@ -65,7 +65,7 @@ x = x + pos_embed
 | Embedding 矩阵 \((vocab_{\mathrm{size}},hidden)\) 查表 | Linear 投影 \((patch_{\mathrm{size}}^{2} \times 3,hidden)\) |
 | 加位置编码（学习式 or RoPE） | 加位置编码（学习式 1D 或 2D） |
 | `[CLS]` token 用于分类 | `[CLS]` token 用于分类 |
-| 输出: (B, seq_len, hidden) | 输出: (B, num_patches+1, hidden) |
+| 输出: <code class="literal">(B, seq_len, hidden)</code> | 输出: <code class="literal">(B, num_patches+1, hidden)</code> |
 
 **完全同构**。所以 ViT 实现上可以直接复用 BERT 的代码, 只换 embedding 这一层。
 

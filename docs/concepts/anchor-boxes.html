@@ -77,10 +77,10 @@
 尺寸: b_w = p_w × exp(t_w)
       b_h = p_h × exp(t_h)
 </code></pre>
-<p>(c_x,c_y) 是负责格左上角的整数坐标；(p_w,p_h) 是胜出 anchor 的宽高；(t_x,t_y,t_w,t_h) 是网络直接输出的无约束实数；(b_x,b_y,b_w,b_h) 才是解码后的中心与尺寸。这里都先用网格单位，最后乘 stride 才回到像素。</p>
+<p><span class="tex math-inline" data-display="false">(c_x,c_y)</span> 是负责格左上角的整数坐标；<span class="tex math-inline" data-display="false">(p_w,p_h)</span> 是胜出 anchor 的宽高；<span class="tex math-inline" data-display="false">(t_x,t_y,t_w,t_h)</span> 是网络直接输出的无约束实数；<span class="tex math-inline" data-display="false">(b_x,b_y,b_w,b_h)</span> 才是解码后的中心与尺寸。这里都先用网格单位，最后乘 stride 才回到像素。</p>
 <h2>数字例子</h2>
-<p>输入 416×416、输出 13×13，stride=32。设真值框中心是 (112,152) px、宽高是 (96,64) px；换成网格单位就是中心 (3.5,4.75)、宽高 (3,2)。所以负责格索引是 (c_x,c_y)=(3,4)；索引从 0 开始，画面上是第 4 列、第 5 行。</p>
-<p>为便于手算，假设 5 种 anchor 为 (1,1)、(2,1)、(2,2)、(4,3)、(6,1)。和 3×2 真值框中心对齐后，IOU 依次是 0.167、0.333、<strong>0.667</strong>、0.500、0.333，因此 2×2 anchor 胜出，即 (p_w,p_h)=(2,2)。</p>
+<p>输入 416×416、输出 13×13，stride=32。设真值框中心是 <span class="tex math-inline" data-display="false">(112,152)</span> px、宽高是 <span class="tex math-inline" data-display="false">(96,64)</span> px；换成网格单位就是中心 <span class="tex math-inline" data-display="false">(3.5,4.75)</span>、宽高 <span class="tex math-inline" data-display="false">(3,2)</span>。所以负责格索引是 <span class="tex math-inline" data-display="false">(c_x,c_y)=(3,4)</span>；索引从 0 开始，画面上是第 4 列、第 5 行。</p>
+<p>为便于手算，假设 5 种 anchor 为 <span class="tex math-inline" data-display="false">(1,1)</span>、<span class="tex math-inline" data-display="false">(2,1)</span>、<span class="tex math-inline" data-display="false">(2,2)</span>、<span class="tex math-inline" data-display="false">(4,3)</span>、<span class="tex math-inline" data-display="false">(6,1)</span>。和 3×2 真值框中心对齐后，IOU 依次是 0.167、0.333、<strong>0.667</strong>、0.500、0.333，因此 2×2 anchor 胜出，即 <span class="tex math-inline" data-display="false">(p_w,p_h)=(2,2)</span>。</p>
 <p>网络要学到：</p>
 <pre><code class="language-text">t_x = logit(3.5-3) = logit(0.5) = 0
 t_y = logit(4.75-4) = logit(0.75) = ln(3) ≈ 1.099
@@ -92,10 +92,10 @@ b_y = sigmoid(1.099) + 4 = 4.75
 b_w = 2 × exp(0.405) = 3
 b_h = 2 × exp(0) = 2
 </code></pre>
-<p>乘回 stride=32，得到中心 (112,152) px、宽高 (96,64) px，和真值一致。</p>
+<p>乘回 stride=32，得到中心 <span class="tex math-inline" data-display="false">(112,152)</span> px、宽高 <span class="tex math-inline" data-display="false">(96,64)</span> px，和真值一致。</p>
 <h2>为什么这么算</h2>
 <ul>
-<li>sigmoid 把任意实数压到 (0,1)，所以中心小数部分不会越出当前格；加上 (c_x,c_y) 才变成全局网格位置。</li>
+<li>sigmoid 把任意实数压到 <span class="tex math-inline" data-display="false">(0,1)</span>，所以中心小数部分不会越出当前格；加上 <span class="tex math-inline" data-display="false">(c_x,c_y)</span> 才变成全局网格位置。</li>
 <li>exp 永远为正，适合尺寸；它把输出解释为相对 anchor 的倍率。0 表示不缩放，ln2 表示 2 倍，−ln2 表示一半。</li>
 <li>最后乘 stride 是因为前面所有数字都在特征图坐标系，而输入框在像素坐标系。</li>
 </ul>
@@ -144,6 +144,19 @@ b_h = 2 × exp(0) = 2
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

@@ -143,6 +143,51 @@ def scan_entries() -> list[Entry]:
     return entries
 
 
+def _mask_auto_markdown_math_and_code(source: str) -> str:
+    """保留字符串长度，只遮掉已经正确标记的数学和代码区域。"""
+    masked = list(source)
+    patterns = (
+        r"(?ms)^```[^\n]*\n.*?^```[ \t]*$",
+        r"(?ms)^~~~[^\n]*\n.*?^~~~[ \t]*$",
+        r"\\\[(?:.|\n)*?\\\]",
+        r"\\\((?:.|\n)*?\\\)",
+        r"(?is)<code\b[^>]*>.*?</code>",
+        r"`[^`\n]*`",
+    )
+    for pattern in patterns:
+        for match in re.finditer(pattern, "".join(masked)):
+            for index in range(match.start(), match.end()):
+                if masked[index] != "\n":
+                    masked[index] = " "
+    return "".join(masked)
+
+
+def find_plain_parenthesized_math(source: str):
+    """找出 `(x_t)` 这类普通括号中的 LaTeX；普通括号不会触发 KaTeX。"""
+    masked = _mask_auto_markdown_math_and_code(source)
+    issues = []
+    candidate = re.compile(r"\((?:[^()\n]|\([^()\n]*\))*\)")
+    definite_math = re.compile(r"\\[A-Za-z]+|[A-Za-z]_(?:\{[^}]+\}|[A-Za-z0-9])")
+    for line_no, line in enumerate(masked.splitlines(), 1):
+        for match in candidate.finditer(line):
+            if definite_math.search(match.group(0)):
+                issues.append((line_no, match.group(0)))
+    return issues
+
+
+def find_dollar_delimited_math(source: str):
+    """自动页不启用 `$…$` 定界；只抓明显是公式的内容，避开美元金额和股票代码。"""
+    masked = _mask_auto_markdown_math_and_code(source)
+    issues = []
+    definite_math = re.compile(r"\\[A-Za-z]+|[_^=<>]|\b[A-Za-z]\s*[+*/-]\s*[A-Za-z0-9]")
+    for line_no, line in enumerate(masked.splitlines(), 1):
+        # `$2250 ... $45000` 是两个美元金额，不是数学定界符；以数字开头时跳过。
+        for match in re.finditer(r"(?<!\\)\$(?!\d)([^$\n]+)(?<!\\)\$", line):
+            if definite_math.search(match.group(1)):
+                issues.append((line_no, match.group(0)))
+    return issues
+
+
 def scan_auto_page_math_leaks():
     """自动页里的裸 `<code>` 不会进 KaTeX；构建时把这类静默漏渲染变成硬错误。"""
     issues = []
@@ -155,12 +200,19 @@ def scan_auto_page_math_leaks():
         if not source_dir.exists():
             continue
         for path in sorted(source_dir.glob("*.md")):
-            for line_no, line in enumerate(path.read_text().split("\n"), 1):
+            source = path.read_text()
+            for line_no, line in enumerate(source.split("\n"), 1):
                 controls = sorted({ord(ch) for ch in line if ord(ch) < 32})
                 if controls:
                     labels = ", ".join(f"U+{value:04X}" for value in controls)
                     issues.append((path.relative_to(ROOT), line_no,
                                    f"含控制字符 {labels}，可能是 LaTeX 反斜杠被转义"))
+            for line_no, raw in find_plain_parenthesized_math(source):
+                issues.append((path.relative_to(ROOT), line_no,
+                               f"普通括号里的数学 {raw!r} 不会渲染；改用 \\(…\\) 或代码反引号"))
+            for line_no, raw in find_dollar_delimited_math(source):
+                issues.append((path.relative_to(ROOT), line_no,
+                               f"美元定界数学 {raw!r} 不会渲染；自动页统一改用 \\(…\\)"))
 
     # 再查最终 HTML，而不是只猜 Markdown 写法；排除 <pre>，数字账本和伪代码
     # 本来就应该保留等宽排版。只认无 class 的裸 <code>，显式 code.m 不误报。

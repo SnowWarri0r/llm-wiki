@@ -113,7 +113,7 @@ PPO / TRPO / A3C / SAC 全都是 actor-critic 结构。GRPO 是个例外 —— 
 
 ## Reward 偏移不变性 (advantage 的关键性质)
 
-如果环境的 reward 整体加一个常数 C, V 也跟着变 (V_new = V_old + C/(1-γ)). **A 不变**.
+如果环境的 reward 整体加一个常数 \(C\)，\(V\) 也跟着变：\(V_{\mathrm{new}}=V_{\mathrm{old}}+C/(1-\gamma)\)。**\(A\) 不变**。
 
 意义: 你的训练**对 reward 的绝对值不敏感, 只对 reward 的相对差异敏感**. 这让 hyperparameter 调起来方便很多.
 
