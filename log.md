@@ -1461,3 +1461,9 @@ skill 更新:
 - 拆清 RCA 的“未来”是 PersonaPlex 已经生成但暂存的音频：同一动作生命周期覆盖 h(t−3)…h(t+3)，代价为 3×80=240 ms 固定等待，不是读取未知用户未来。
 - 完整覆盖 67,200 synthetic self-play、UniLS best-of-12、PLRS 过滤、1138 h 合计数据、训练配置、主表、人评、RFM/RCA/data/mask 与 Euler-N 消融；full RCA 并非每项指标第一。
 - 明确正文/附录的联合训练与冻结缓存、混合数据与 syntheticv2 corpus 两组口径冲突；新增 rolling-flow-matching、rolling-cross-attention、flame-facial-motion 概念页，并补 flow/full-duplex/cross-attention 来源。
+
+## [2026-08-11] revise | worldtrace §05 重写
+- 起因：P 矩阵凭空出现——没讲为什么要统一记法，PK=[3,9,20,30] 没走一步乘法，两条 attention 公式列完即走，toy 数字没贯通到 softmax。
+- 补齐四块：① 动机（Field 平均/Landmark 挑帧/滑窗丢弃都是「按配方抄写」，统一成 P 才能在 §12 用同一套理论；「标量=暂时关掉相位问题」点明教学隔离）；② P 的读法 caption + 逐行手算（½×2+½×4=3…）；③ 端到端数字（配 V、q=.1：完整版 6 条名单输出 51.0，Field 压缩版 4 条输出 53.7，偏差 5%，大头权重两版都落最近帧——python 复核）；④ 边界框补第二条：P 是分析记法，实现不存 L×T 矩阵、writer 增量维护。
+- 附带：PV 与 K 同一分组的配对理由挪进散文；softmax 格子前移修 define-before-use WARN；md 同步。lint 0/0，浏览器逐屏核过。
+- 环境：render.py 被其他会话加了 yaml/markdown 依赖，本机 pip 走 --break-system-packages 装上。

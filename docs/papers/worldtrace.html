@@ -126,7 +126,8 @@ figure{margin:35px 0;padding:28px;background:rgba(251,248,239,.94);border:1px so
 </section>
 
 <section id="s5"><h2><span class="n">SECTION 05</span><span>P 矩阵不是新网络：它只是写明每个槽抄哪些旧帧</span></h2>
-  <p>把六个历史 Key 暂时压成标量 <code class="m">K=[2,4,8,10,20,30]^\top</code>，要压成 4 格：前两格摘要，后两格保留最近原文。</p>
+  <p class="lead">§ 04 解决了摘要槽“放在哪”，这一节回答“槽里的内容怎么来”。论文的做法是先给所有写入策略一个<strong>统一记法</strong>：不管是 Field 的分组平均、Landmark 的挑帧，还是干脆丢掉旧帧的滑动窗口，本质都是“每个槽按某张配方抄写历史”。把配方写成一个矩阵 P——<strong>一行对应一个槽，一列对应一帧历史，行里的数字就是这个槽从各帧抄多少</strong>。统一成一个接口，两种 writer 才能在 § 12 用同一套理论分析。</p>
+  <p>用玩具数字演一遍。六帧历史的 Key 暂时压成标量 <code class="m">K=[2,4,8,10,20,30]^\top</code>——标量没有方向，也就暂时没有 RoPE 相位问题，先把“抄写”这层机制单独隔离出来，相位到 § 06 再回来。预算 4 格：前两格摘要，后两格保留最近原文。</p>
   <figure><figcaption><span>Fig 06 · 同一个 P 接口，两种 writer</span><b>dense average vs one-hot select</b></figcaption>
     <div class="matrix-pair"><div class="matrix-card field"><h4>WorldTrace-Field</h4><div class="matrix">P = [½ ½ 0  0  0 0]
     [0  0 ½ ½  0 0]
@@ -139,12 +140,19 @@ PK = [3, 9, 20, 30]ᵀ</div><p>前两行做分组均值；后两行是 recent id
     [0 0 0 0 0 1]
 
 PK = [2, 10, 20, 30]ᵀ</div><p>摘要行是 one-hot，原样挑第 1、4 帧。</p></div></div>
+    <p class="caption">读法：每行从左到右对着 6 帧历史。Field 第 1 行 [½ ½ 0 0 0 0] 的意思是“这个槽 = 第 1、2 帧各抄一半”；Landmark 第 1 行 [1 0 0 0 0 0] 是“整格只抄第 1 帧”。两边的后两行都是 identity——最近帧原样保留，两种 writer 只在摘要行上不同。</p>
   </figure>
-  <p class="formula-purpose">完整 attention 与压缩 attention：</p>
+  <p><code class="m">PK</code> 就是普通的矩阵乘法，每行各算一次加权和。拿 Field 的前两行手算：</p>
+  <div class="calc">Field 第 1 行：½×2 + ½×4 + 0×8 + 0×10 + 0×20 + 0×30 = <span class="ans">3</span>（第 1、2 帧的均值）<br>Field 第 2 行：0×2 + 0×4 + ½×8 + ½×10 + 0×20 + 0×30 = <span class="ans">9</span>（第 3、4 帧的均值）<br>Landmark 第 1 行：1×2 + 0×… = <span class="ans">2</span>（one-hot 就是“挑中谁抄谁”）<br>后两行 identity：20、30 原样通过 → PK = [3, 9, 20, 30]ᵀ ✓</div>
+  <p>这个接口还能写下滑动窗口：所有行都是只指向最近 4 帧的 one-hot，等价于旧帧一列全零、彻底不抄。三种 cache 策略的差别，全部落在这一张矩阵的填法上。</p>
+  <p class="formula-purpose">于是完整 attention 和压缩 attention 只差“名单换了”：</p>
   <div class="formula" data-expr="\mathcal A(q,K,V)=\operatorname{softmax}(qK^\top)V"></div>
   <div class="formula" data-expr="\widehat{\mathcal A}(q,K,V;P)=\operatorname{softmax}\!\left(q(PK)^\top\right)PV"></div>
-  <div class="symbols"><div class="sym"><code class="m">P\in\mathbb R^{L\times T}</code>L 个 cache 槽怎样汇总 T 帧历史。</div><div class="sym"><code class="m">PK</code>压缩后的检索 Key。</div><div class="sym"><code class="m">PV</code>使用同一分组得到的 Value。</div><div class="sym"><code class="m">q(PK)^\top</code>Query 对 L 个槽的原始分数。</div><div class="sym"><code class="m">\operatorname{softmax}</code>把 L 个分数变成非负且和为 1 的权重。</div><div class="sym"><code class="m">\widehat{\mathcal A}</code>固定槽位近似出来的 attention 输出。</div></div>
-  <div class="boundary"><strong>NMF 只用于解释，不是推理算法。</strong>附录把寻找理想 P 放松成非负矩阵分解<a class="jr" href="#g-08">08</a>；实际 WorldTrace 不在每轮在线优化 NMF，而是直接用上图两种结构化 P。</div>
+  <div class="symbols"><div class="sym"><code class="m">\operatorname{softmax}</code>把分数变成非负且和为 1 的权重。</div><div class="sym"><code class="m">P\in\mathbb R^{L\times T}</code>L 个 cache 槽怎样汇总 T 帧历史。</div><div class="sym"><code class="m">PK</code>压缩后的检索 Key，L 条。</div><div class="sym"><code class="m">PV</code>用同一张 P 合并的 Value。</div><div class="sym"><code class="m">q(PK)^\top</code>Query 对 L 个槽的原始分数。</div><div class="sym"><code class="m">\widehat{\mathcal A}</code>固定槽位近似出来的 attention 输出。</div></div>
+  <p>两条公式长得几乎一样，唯一的变化是 softmax 面前的候选名单从 T = 6 帧缩成 L = 4 格。注意 P 同时作用在 K 和 V 上：Key 平均了、Value 不按同一分组合并，检索到的地址和取回的内容就对不上了。把玩具数字从头走到尾（配上 <code class="m">V=[10,20,30,40,50,60]^\top</code>、<code class="m">q=.1</code>），看看压缩后的输出离完整版有多远：</p>
+  <div class="calc">完整版（6 条名单）<br>分数 qK = [.2, .4, .8, 1.0, 2.0, 3.0]<br>取 exp → [1.221, 1.492, 2.226, 2.718, 7.389, 20.086]，总和 35.13<br>权重 = [.035, .042, .063, .077, .210, <span class="hi">.572</span>]<br>输出 = Σ 权重×V = <span class="ans">51.0</span><br><br>Field 压缩版（4 条名单）<br>PK = [3, 9, 20, 30] → 分数 [.3, .9, 2.0, 3.0]<br>PV = [15, 35, 50, 60]（V 用同一张 P：前两格也是均值）<br>取 exp → [1.350, 2.460, 7.389, 20.086]，总和 31.28<br>权重 = [.043, .079, .236, <span class="hi">.642</span>]<br>输出 = <span class="ans">53.7</span>，偏差约 5%</div>
+  <p>两边最像的地方：真正的大头（最近那帧，分数 3.0）在两个版本里都拿走了最大权重；被平均掉的远处历史只贡献了小头，所以输出只差约 5%。这就是“固定 4 格近似 6 帧”在一次前向里的样子——近似误差集中在被合并的旧帧上，这正是 § 08 讨论两种 writer 取舍的出发点。</p>
+  <div class="boundary"><strong>两个边界。</strong>① NMF 只用于解释，不是推理算法：附录把寻找理想 P 放松成非负矩阵分解<a class="jr" href="#g-08">08</a>；实际 WorldTrace 不在每轮在线优化 NMF，而是直接用上图两种结构化 P。② P 本身也是分析记法：真实实现不会随历史增长存一个 L×T 矩阵去乘（T 会无限涨），两种 writer 都按 § 06 的方式增量维护等价的槽内容。</div>
 </section>
 
 <section id="s6"><h2><span class="n">SECTION 06</span><span>Field：先去旧地址，再平均内容，最后写新地址</span></h2>
