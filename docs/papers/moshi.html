@@ -1,0 +1,282 @@
+<!doctype html>
+<!-- bespoke -->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Moshi · 把语音对话改写成每 80 毫秒一次的联合预测</title>
+<style>
+:root{--paper:#f0e9d6;--paper2:#e8e0c8;--card:#faf4e1;--ink:#181410;--ink2:#3a3128;--muted:#6f6453;--rule:#b9ad93;--teal:#087f8c;--teal2:#c8e6e4;--blue:#1f3a5f;--blue2:#c8d4e2;--orange:#b55b24;--orange2:#efd6c8;--yellow:#a77712;--yellow2:#f0e0a8;--green:#416a45;--green2:#d8e6ce;--dark:#11283c}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font-family:"Noto Serif SC","Songti SC",Georgia,serif;font-size:18px;line-height:1.78}body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:20;opacity:.18;background-image:linear-gradient(rgba(31,58,95,.13) 1px,transparent 1px),linear-gradient(90deg,rgba(31,58,95,.13) 1px,transparent 1px);background-size:32px 32px}.page{max-width:1180px;margin:auto;padding:54px 36px 120px}.mast{display:flex;justify-content:space-between;border-top:4px double var(--ink);border-bottom:1px solid var(--rule);padding:12px 0;font:700 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}.hero{padding:64px 0 28px}.eyebrow,.num,.figtag,.tag{font:700 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:2px;text-transform:uppercase}.eyebrow,.num,.figtag{color:var(--teal)}h1{font-size:clamp(54px,8vw,104px);line-height:.94;letter-spacing:-.05em;margin:16px 0 26px;font-family:Georgia,"Noto Serif SC",serif}h1 em{color:var(--teal);font-weight:400}.dek{font-size:clamp(21px,2.5vw,30px);line-height:1.45;max-width:920px;color:var(--ink2)}.byline{font:500 12px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}.tldr{margin:38px 0 70px;padding:24px 28px;background:var(--dark);color:#f8f2df;border-left:6px solid #42c5c7}.tldr b{color:#7ee8e5}.tldr strong{color:#fff}h2{display:grid;grid-template-columns:72px 1fr;gap:18px;align-items:start;margin:86px 0 22px;font-size:38px;line-height:1.2;letter-spacing:-.03em}h2 .num{padding-top:11px}h3{font-size:24px;margin:34px 0 10px}p{margin:12px 0}a{color:#006c79;text-underline-offset:3px}strong{color:#101820}code{font:500 .86em/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;background:#fffaf0;border:1px solid var(--rule);padding:1px 5px;border-radius:3px}.jr{font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;text-decoration:none;background:var(--yellow2);color:#624700;border:1px solid #9d7415;border-radius:4px;padding:2px 5px;vertical-align:super}.jr:hover,.jr:focus{background:#6a4c08;color:#fff}.lead{font-size:21px;color:var(--ink2)}.note{margin:24px 0;padding:17px 20px;background:var(--card);border-left:4px solid var(--teal)}.note .tag{display:block;color:var(--teal);margin-bottom:5px}.formula-purpose{font-weight:700;color:var(--blue);margin-top:28px}.formula{overflow-x:auto;margin:12px 0;padding:18px 20px;background:var(--dark);color:#fff;border-left:5px solid #42c5c7;font-size:1.12em}.symbols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0 24px}.sym{padding:12px 14px;background:rgba(255,255,255,.45);border:1px solid var(--rule);font-size:15px}.sym b{display:block;color:var(--blue)}figure{margin:38px 0;padding:30px;background:rgba(250,244,225,.92);border:1px solid var(--rule);box-shadow:10px 10px 0 rgba(91,75,47,.08)}figcaption{display:flex;justify-content:space-between;gap:20px;border-bottom:1px dashed var(--rule);padding-bottom:13px;margin-bottom:24px;font:700 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}figcaption b{color:var(--teal)}.caption{font-size:15px;color:var(--muted);margin-top:18px}.flow{display:grid;grid-template-columns:1fr 34px 1fr 34px 1fr;align-items:stretch;gap:8px}.box{padding:17px;border:1px solid var(--blue);background:#fff}.box b,.box strong{display:block}.box b{font:700 10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--teal);letter-spacing:1px}.box strong{font-size:19px;margin:5px 0}.box p{font-size:15px;line-height:1.5;color:var(--ink2)}.arrow{align-self:center;justify-self:center;font:700 28px/1 ui-monospace;color:var(--teal)}.bad .box{border-color:#a8402b}.bad .arrow{color:#a8402b}.overview{display:grid;grid-template-columns:180px 1fr 190px;gap:18px;align-items:center}.io{display:grid;gap:12px}.io .box{min-height:100px}.core{border:2px solid var(--dark);padding:18px;background:#fff}.core h3{text-align:center;margin:0 0 15px}.coregrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.coregrid .box{min-height:126px}.coregrid .wide{grid-column:1/-1}.rail{height:4px;background:var(--teal);position:relative;margin:10px 0}.rail:after{content:"";position:absolute;right:-1px;top:-5px;border-left:10px solid var(--teal);border-top:7px solid transparent;border-bottom:7px solid transparent}.tick{display:grid;grid-template-columns:100px repeat(4,1fr);border:1px solid var(--rule)}.tick>*{padding:12px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}.tick>*:nth-child(5n){border-right:0}.tick .head{font:700 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--dark);color:white}.tick .row{font-weight:700;background:var(--paper2)}.tick .text{background:var(--yellow2)}.tick .sem{background:var(--teal2)}.tick .ac{background:var(--blue2)}.split{display:grid;grid-template-columns:1fr 64px 1fr;gap:16px;align-items:center}.stack{display:grid;gap:8px}.layer{padding:14px;border:1px solid var(--blue);background:var(--blue2)}.layer.sem{background:var(--teal2);border-color:var(--teal)}.plus{text-align:center;font-size:38px;color:var(--teal)}.twolevel{display:grid;grid-template-columns:1.3fr 40px 1fr;gap:14px;align-items:center}.temporal{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.temporal .cell{padding:20px 8px;text-align:center;border:1px solid var(--blue);background:var(--blue2);font-family:ui-monospace,monospace}.depth{display:grid;gap:7px}.depth .cell{padding:10px 12px;border:1px solid var(--teal);background:var(--teal2)}.streams{display:grid;grid-template-columns:1fr 1fr;gap:18px}.stream{border:2px solid var(--blue);background:#fff;padding:18px}.stream.agent{border-color:var(--teal)}.stream h4{font-size:22px;margin:0 0 8px}.stream .wave{height:50px;background:repeating-linear-gradient(90deg,transparent 0 9px,currentColor 10px 12px,transparent 13px 20px);opacity:.5}.delay{display:grid;grid-template-columns:105px repeat(5,1fr);border-top:1px solid var(--rule);border-left:1px solid var(--rule)}.delay>*{padding:10px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);text-align:center}.delay .lab{background:var(--paper2);font-weight:700;text-align:left}.delay .now{background:var(--teal2)}.delay .later{background:var(--blue2)}.train{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.stage{padding:15px 13px;border-top:5px solid var(--teal);background:#fff;border-left:1px solid var(--rule);border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}.stage b{font:700 10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--teal)}.stage strong{display:block;margin:8px 0}.stage p{font-size:14px;line-height:1.5}.tablewrap{overflow-x:auto;margin:20px 0}table{width:100%;border-collapse:collapse;min-width:650px;font-size:15px}th,td{padding:11px 12px;border-bottom:1px solid var(--rule);text-align:right}th:first-child,td:first-child{text-align:left}thead th{font:700 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.6px;color:var(--blue);border-bottom:2px solid var(--blue)}tr.win{background:var(--teal2)}tr.warn{background:var(--orange2)}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.metric{padding:18px;border:1px solid var(--rule);background:#fff}.metric b{display:block;font:700 10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}.metric strong{font-size:30px;color:var(--teal)}.metric p{font-size:14px;line-height:1.5}.boundary{display:grid;grid-template-columns:1fr 1fr;gap:16px}.boundary>div{padding:20px;border:1px solid var(--rule);background:#fff}.boundary .paper{border-top:6px solid var(--teal)}.boundary .repo{border-top:6px solid var(--blue)}.gloss{margin-top:90px;padding-top:30px;border-top:2px solid var(--rule)}.gloss h2{display:block;margin:0 0 20px;font-size:30px}.gloss ol{list-style:none;padding:0;counter-reset:g}.gloss li{counter-increment:g;position:relative;padding:14px 10px 14px 54px;border-bottom:1px dashed var(--rule);font-size:16px}.gloss li:before{content:counter(g,decimal-leading-zero);position:absolute;left:8px;top:15px;font:700 11px ui-monospace,monospace;color:var(--teal)}.gloss li:target{background:var(--yellow2)}.term{font-weight:700;color:var(--blue)}.sources{margin-top:54px;padding:20px;background:var(--dark);color:#e9e4d8;font-size:14px}.sources a{color:#7ee8e5}.colophon{display:flex;justify-content:space-between;margin-top:34px;padding-top:14px;border-top:1px solid var(--rule);font:500 11px/1.5 ui-monospace,monospace;color:var(--muted)}
+@media(max-width:760px){body{font-size:17px}.page{padding:34px 18px 90px}.mast{gap:12px;letter-spacing:1px}.hero{padding-top:42px}h1{font-size:52px}h2{grid-template-columns:1fr;gap:5px;font-size:31px;margin-top:66px}h2 .num{padding:0}.symbols,.cards,.streams,.boundary,.coregrid{grid-template-columns:1fr}.flow,.overview,.twolevel,.split{grid-template-columns:1fr}.arrow{transform:rotate(90deg);padding:3px}.overview>.arrow{display:none}.train{grid-template-columns:1fr}.tick{grid-template-columns:80px repeat(4,120px);overflow-x:auto}.delay{grid-template-columns:90px repeat(5,120px);overflow-x:auto}.temporal{grid-template-columns:repeat(5,90px);overflow-x:auto}.coregrid .wide{grid-column:auto}figure{padding:20px 15px;margin-left:-4px;margin-right:-4px}figcaption{align-items:flex-start;flex-direction:column}.colophon{display:block}.colophon span{display:block;margin:6px 0}}
+</style>
+<style>
+.overview{grid-template-columns:170px 30px 1fr 30px 180px;gap:10px}
+@media(max-width:760px){.overview{grid-template-columns:1fr}.overview>.arrow{display:block;transform:rotate(90deg)}.twolevel>*{min-width:0}.temporal{width:100%;max-width:100%}}
+</style>
+<!-- katex-head:start -->
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<!-- katex-head:end -->
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · moshi</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page">
+<div class="mast"><span>Connectionism · Paper Notes</span><span>Kyutai · 2024 · 67 pages</span></div>
+<section class="hero">
+  <div class="eyebrow">Speech-to-speech · full duplex · 80 ms clock</div>
+  <h1>边听，边说，<br><em>不等轮到自己</em></h1>
+  <p class="dek">Moshi 把语音对话改写成每 80 毫秒一次的联合预测：用户声音继续进来，助手文字和声音继续出去，重叠、附和与打断不再需要额外的“话轮开关”。</p>
+  <p class="byline">A. DÉFOSSEZ · L. MAZARÉ · M. ORSINI · A. ROYER · P. PÉREZ · H. JÉGOU · E. GRAVE · N. ZEGHIDOUR</p>
+</section>
+<div class="tldr"><b>TL;DR　</b>Moshi 的关键不是“给 LLM 接一个语音头”，而是把整台系统统一到 <strong>12.5 Hz 的真实时间轴</strong>。Mimi 每 80 ms 把声音变成 8 路码；7B Temporal Transformer 每格只走一次，小 Depth Transformer 在格内生成文字与音频码；用户和助手各占一条独立音轨。最终延迟账是 <strong>80 ms codec 首帧 + 80 ms 声学错位 = 160 ms 理论值</strong>，L4 上约 200 ms。</div>
+
+<h2><span class="num">§ 00</span><span>先看旧语音助手为什么不像打电话</span></h2>
+<p class="lead">一个人说“订上海的票……等等，改北京”，真正的对话允许第二句话盖住第一句话。传统流水线却得先判断“用户说完了”，再转写、回答、合成；它的控制单位是一整轮，不是不断流动的声音。</p>
+<figure class="bad"><figcaption><span>Fig 01 · 三级流水线的三笔代价</span><b>each stage waits</b></figcaption><div class="flow"><div class="box"><b>01 · ASR</b><strong>先收完，再转文字</strong><p>停顿多久才算说完，本身就要等。</p></div><div class="arrow">→</div><div class="box"><b>02 · TEXT LLM</b><strong>只看到转写</strong><p>语气、笑声、周围声音在中间层丢了。</p></div><div class="arrow">→</div><div class="box"><b>03 · TTS</b><strong>最后才开始发声</strong><p>系统朗读时，常常没有一条持续更新的用户输入路径。</p></div></div><p class="caption">三段延迟会相加；更根本的问题是文字成为窄口，且流程假设双方严格轮流说。论文引用的自然对话平均响应时间约 230 ms，重叠语音约占 10%–20%。</p></figure>
+<p>Moshi 直接学习“过去两条声音之后，下一小格双方各会发出什么”。<strong>沉默也是音频</strong>：助手没开口时，它仍生成接近静音的声码；文字流则生成 <code>PAD</code>。因此“谁的回合”不再是系统外部的布尔开关，而是模型每格都重新做的预测。全双工<a class="jr" href="#g-01">1</a>指的正是这件事，不只是首包快。</p>
+
+<h2><span class="num">§ 01</span><span>先把整机摆出来：一格 80 毫秒怎样走完</span></h2>
+<p>这里只先认顺序。后面会逐块拆 Mimi、两级 Transformer、声学错位与 Inner Monologue；此处先把输入、主干、训练目标和推理输出放在同一张图里。</p>
+<figure><figcaption><span>Fig 02 · Moshi 的完整数据流</span><b>arrows follow runtime</b></figcaption><div class="overview"><div class="io"><div class="box"><b>LIVE INPUT</b><strong>用户新到的 80 ms 音频</strong><p>24 kHz 波形</p></div><div class="box"><b>PAST STATE</b><strong>双方历史 + 助手文字历史</strong><p>KV cache 继续向前</p></div></div><div class="arrow">→</div><div class="core"><h3>Moshi · 每 80 ms 前进一步</h3><div class="coregrid"><div class="box"><b>MIMI ENCODER</b><strong>用户波形 → 8 路码</strong><p>1 路语义 + 7 路声学</p></div><div class="box"><b>TEMPORAL · 7B</b><strong>沿时间理解对话</strong><p>每格只跑一次大模型</p></div><div class="box wide"><b>DEPTH · 6 LAYERS</b><strong>本格按顺序预测：文字 → 助手语义码 → 助手声学码</strong><p>训练时也预测用户码；上线时用户码由真实麦克风覆盖。</p></div></div></div><div class="arrow">→</div><div class="io"><div class="box"><b>TEXT TRACE</b><strong>助手当前文字 token</strong><p>可读的逐帧草稿</p></div><div class="box"><b>MIMI DECODER</b><strong>8 路码 → 下一段声音</strong><p>继续播放并进入下一格</p></div></div></div><p class="caption">训练：17 路都算交叉熵。推理：采样助手文字与助手 8 路音频码；用户 8 路预测丢掉，换成麦克风真实编码结果。</p></figure>
+<div class="note"><span class="tag">一句话答案</span><strong>为什么能被打断？</strong>因为助手发声期间，用户流没有关闭。第 <code>s+1</code> 格的 Temporal Transformer 会同时看到助手刚说的声音和用户刚插入的声音，后半句自然可以改向。</div>
+
+<h2><span class="num">§ 02</span><span>一秒声音为什么不是一个 token</span></h2>
+<p>语言模型只能预测离散编号，麦克风给的却是每秒 24,000 个连续采样值。Mimi<a class="jr" href="#g-02">2</a>先把波形压成每秒 12.5 帧；每帧再用 8 个 codebook 编号保存从“说什么”到“具体怎么响”的信息。</p>
+<p class="formula-purpose">每个码本每帧选 2048 个编号之一，因此码率是：</p>
+<div class="formula" data-expr="12.5\ \text{frames/s}\times 8\ \text{codebooks}\times \log_2(2048)=1100\ \text{bits/s}=1.1\ \text{kbps}"></div>
+<div class="symbols"><div class="sym"><b>12.5 frames/s</b>一秒切成 12.5 格，所以一格 <code class="m">1/12.5=0.08\,\mathrm{s}</code>。</div><div class="sym"><b>8 codebooks</b>每格有 8 个离散编号。</div><div class="sym"><b>2048</b>每个码本有 2048 个候选；编号需要 <code class="m">\log_2 2048=11</code> bit。</div><div class="sym"><b>1.1 kbps</b>这只是离散码流，不是原始 PCM 波形码率。</div></div>
+<p>Mimi 的卷积步幅依次是 <code class="m">4\times5\times6\times8\times2=1920</code>。24,000 个采样点除以 1920，正好得到每秒 12.5 帧。所有卷积和瓶颈 Transformer 都是因果的<a class="jr" href="#g-03">3</a>：编码第 10 帧不会偷看第 11 帧，因此第一段 80 ms 一到就能编码和解码。</p>
+
+<h2><span class="num">§ 03</span><span>Mimi 的关键不是 8 层，而是把第一层拆出去</span></h2>
+<p>普通 RVQ<a class="jr" href="#g-04">4</a>像逐层修图：第 1 层给粗略版本，第 2 层编码第 1 层留下的误差，后面继续补残差。如果强迫第 1 层既像 WavLM 那样突出语音内容，又必须给后续重建保留所有声学线索，两项目标会拉扯。</p>
+<figure><figcaption><span>Fig 03 · 单链 RVQ 与 Split RVQ</span><b>semantic no longer owns the residual</b></figcaption><div class="split"><div class="stack"><div class="layer sem"><strong>旧：第 1 层同时背两份任务</strong><br>语义蒸馏 + 声音粗重建</div><div class="layer">第 2 层只能修第 1 层的残差</div><div class="layer">……直到第 8 层</div></div><div class="plus">→</div><div class="stack"><div class="layer sem"><strong>语义 VQ · 1 层</strong><br>单独匹配 WavLM 表示</div><div class="plus">＋</div><div class="layer"><strong>声学 RVQ · 7 层</strong><br>并行保存重建所需细节</div></div></div><p class="caption">两个分支的量化向量最后相加送进 decoder。语义分支不再决定声学分支“还能看到什么残差”。</p></figure>
+<p>训练时，WavLM 把 16 kHz 音频变成 50 Hz、1024 维表示；平均池化把它降到 12.5 Hz，作为第一路语义 VQ 的教师。这个教师允许看未来，但只在训练中出现；上线编码仍由因果 Mimi 完成。Split RVQ 的消融把 MUSHRA 从 57.8 提到 64.0，同时 ABX<a class="jr" href="#g-05">5</a>从 6.5% 变为 8.1%：重建听感更好，但音素区分略差，说明这是折中而非全面胜利。</p>
+
+<h2><span class="num">§ 04</span><span>8 路码为什么不能全塞进大模型的时间轴</span></h2>
+<p>单方一秒有 <code class="m">12.5\times8=100</code> 个音频 token。把 5 分钟全部摊平，会得到 <code class="m">100\times300=30{,}000</code> 个位置；大 Transformer 的自注意力要在这条长轴上工作。Moshi 借 RQ-Transformer<a class="jr" href="#g-06">6</a>把“跨时间”和“同帧多码本”分账。</p>
+<figure><figcaption><span>Fig 04 · Temporal 走时间，Depth 走帧内层级</span><b>big model 12.5 steps/s</b></figcaption><div class="twolevel"><div><div class="temporal"><div class="cell">t−3</div><div class="cell">t−2</div><div class="cell">t−1</div><div class="cell">t</div><div class="cell">t+1</div></div><p class="caption">7B Temporal：每个时间格先把 17 路上一格 embedding 相加，再沿历史生成上下文 <code class="m">z_s</code>。</p></div><div class="arrow">→</div><div class="depth"><div class="cell">1 · 文字</div><div class="cell">2 · 语义码</div><div class="cell">3…9 · 助手声学码</div><div class="cell">10…17 · 用户音频码</div></div></div><p class="caption">Depth 只有 6 层、宽 1024。它没有消灭 17 次分类，而是避免让最贵的 7B 跨时间模型为每个码本重复前进。</p></figure>
+<p class="formula-purpose">定义式：先把过去压成当前时间上下文。</p>
+<div class="formula" data-expr="z_s=\mathrm{Tr}_{\mathrm{Temp}}(V_0,\ldots,V_{s-1})\in\mathbb{R}^{d}"></div>
+<div class="symbols"><div class="sym"><b>s</b>当前 80 ms 时间格的编号。</div><div class="sym"><b><code class="m">V_s</code></b>第 <code>s</code> 格全部 K 路 token 的集合，不是一个标量。</div><div class="sym"><b>TrTemp</b>7B Temporal Transformer；输入只到 <code class="m">s-1</code>，所以因果。</div><div class="sym"><b><code class="m">z_s\in\mathbb{R}^d</code></b>当前格的上下文向量；Moshi 的宽度 <code>d=4096</code>。</div></div>
+<p class="formula-purpose">预测式：在当前格内，已生成的前几路继续条件化后几路。</p>
+<div class="formula" data-expr="l_{s,k}=\mathrm{Tr}_{\mathrm{Depth}}(z_s,V_{s,1},\ldots,V_{s,k-1})\in\mathbb{R}^{N_k}"></div>
+<div class="symbols"><div class="sym"><b>k</b>当前格内部第几路，Moshi 共 <code>K=17</code> 路。</div><div class="sym"><b><code class="m">l_{s,k}</code></b>长度为 <code class="m">N_k</code> 的 logits；softmax 后才是每个编号的概率。</div><div class="sym"><b><code class="m">N_k</code></b>第 k 路词表大小：文字约 32k，音频为 2048。</div><div class="sym"><b><code class="m">V_{s,1},\ldots,V_{s,k-1}</code></b>本格已经确定的较上层 token，保证文字→语义→声学的顺序。</div></div>
+<h3>一组小数字把两式接起来</h3>
+<p>把真实 4096 维状态缩成标量演示。假设过去三格经过 Temporal 得到 <code class="m">z_4=1.5</code>。文字头给出 logits <code>[2,1,0]</code>，softmax 约为 <code>[0.665,0.245,0.090]</code>，采样到第 1 个文字 token。Depth 接着读取 <code class="m">z_4</code> 与这个文字 token，再给语义码 logits；采到语义码后，声学码预测又多一个已知条件。最终收齐本格 8 个助手音频码，Mimi 才能解出波形。<strong>Temporal 的输出不是声音；它只是给帧内各次选择提供同一份对话上下文。</strong></p>
+
+<h2><span class="num">§ 05</span><span>为什么故意让声学细节晚一格</span></h2>
+<p>如果同一格的语义码和七路声学码同时预测，小模型要在语义尚未确定时猜音色、韵律与细节。Moshi 让第一路语义码按当前时刻生成，其余声学码读取一格前的内容。上一格的语义已经进入 Temporal 历史，依赖更容易建模。</p>
+<p class="formula-purpose">错位定义：语义保持原位，声学码读取早 <code class="m">\tau</code> 格的真实音频帧。</p>
+<div class="formula" data-expr="V_{s,1}=A_{s,1},\qquad V_{s,q}=A_{s-\tau,q}\ \ (q>1)"></div>
+<div class="symbols"><div class="sym"><b><code class="m">A_{t,q}</code></b>原始音频在第 t 帧、第 q 个码本的 token。</div><div class="sym"><b><code class="m">V_{s,q}</code></b>真正排给模型第 s 格、第 q 路的 token。</div><div class="sym"><b>q=1</b>语义码，不延迟。</div><div class="sym"><b><code class="m">\tau</code></b>声学错位格数；最终微调取 <code class="m">\tau=1</code>。</div></div>
+<figure><figcaption><span>Fig 05 · τ=1 的真实排法</span><b>one fixed frame of cost</b></figcaption><div class="delay"><div class="lab">模型时间格</div><div>10</div><div>11</div><div>12</div><div>13</div><div>14</div><div class="lab">语义码</div><div class="now">S₁₀</div><div class="now">S₁₁</div><div class="now">S₁₂</div><div class="now">S₁₃</div><div class="now">S₁₄</div><div class="lab">声学码</div><div>起始 0</div><div class="later">A₁₀</div><div class="later">A₁₁</div><div class="later">A₁₂</div><div class="later">A₁₃</div></div><p class="caption">第 10 帧的语义在模型格 10 出现；同一帧的声学细节到格 11 才出现。解码第 10 帧要等到格 11，因此多等 80 ms。</p></figure>
+<p>延迟不是越多越好。MusicGen 式 <code>[0,1,2,3,4,5,6,7]</code>让后层更容易预测，却把理论延迟拖到 640 ms。Moshi 预训练用两格，最终微调用一格：<code>80 ms</code> codec 首帧加 <code>80 ms</code>错位，得到 160 ms 理论延迟。实际 L4 上约 200 ms；网络、音频设备与回声消除不在这笔模型账里。</p>
+
+<h2><span class="num">§ 06</span><span>双音轨如何取消“现在轮到谁”</span></h2>
+<p>上一节只解决单人发声。真实通话还要允许双方重叠。Moshi 给用户和助手各放 8 路 Mimi 码，时间戳完全对齐；再加助手文字流，一格共 <code>1+8+8=17</code> 路。</p>
+<figure><figcaption><span>Fig 06 · 两条声音一直都在</span><b>silence is also modeled</b></figcaption><div class="streams"><div class="stream agent"><h4>Moshi 音轨 · 8 路</h4><div class="wave" style="color:#087f8c"></div><p>上线时由模型采样。没说话也会生成自然静音，不是空指针。</p></div><div class="stream"><h4>用户音轨 · 8 路</h4><div class="wave" style="color:#1f3a5f"></div><p>上线时由麦克风经 Mimi 编码后强制写入，模型对它的预测直接忽略。</p></div></div><div class="rail"></div><p class="caption">两条轨道共用同一条 80 ms 时间线。谁开口、谁停顿、何时重叠，都由训练数据里的音频模式表达，不需要单独的 turn token。</p></figure>
+<div class="note"><span class="tag">训练与推理别混</span>训练时让模型也预测用户音轨，是为了学会双方联合分布，也方便离线自行生成整段双人对话。真实通话时，用户未来说什么不由模型决定，预测值必须被麦克风输入覆盖。</div>
+
+<h2><span class="num">§ 07</span><span>Inner Monologue：不是先写完答案，而是每格先写一点</span></h2>
+<p>纯音频模型既要从音频码里找词义，又要同时决定声音细节。Moshi 在助手一侧增加一条与音频对齐的文字流<a class="jr" href="#g-07">7</a>，并把它排在本格最前面：<strong>文字 token → 语义音频 token → 声学 token</strong>。文字只是当前一小格的语义草稿，不会先生成完整句子。</p>
+<figure><figcaption><span>Fig 07 · “okay” 怎样落到 80 ms 网格</span><b>epad then word pieces</b></figcaption><div class="tick"><div class="head">格 / 时间</div><div class="head">9 / .72s</div><div class="head">10 / .80s</div><div class="head">11 / .88s</div><div class="head">12 / .96s</div><div class="row">文字</div><div class="text">EPAD</div><div class="text">ok</div><div class="text">ay</div><div class="text">PAD</div><div class="row">语义码</div><div class="sem">silence</div><div class="sem">S₁₀</div><div class="sem">S₁₁</div><div class="sem">S₁₂</div><div class="row">声学码</div><div class="ac">A₈</div><div class="ac">A₉</div><div class="ac">A₁₀</div><div class="ac">A₁₁</div></div><p class="caption">示例用 0-based 编号便于手算。<code>EPAD</code>把“停顿结束”与“下一词是什么”拆成两次选择；声学码因 τ=1 落后语义一格。</p></figure>
+<p>Whisper 给出每个词的起始时间；时间除以 80 ms，得到词应放进哪个格。一个词若被 SentencePiece<a class="jr" href="#g-08">8</a>切成多个 token，就连续占几格；两词之间用 <code>PAD</code>填满。英语对话里约 65% 的文字位置都是 padding，因此训练时把 padding 的损失权重减半。</p>
+<p><strong>为什么它仍然是 speech-to-speech？</strong>用户侧没有外部实时 ASR；模型直接读取用户的语义与声学码，语调、笑声和背景声仍可进入状态。文字流只描述助手自己的输出，并给后续音频提供更紧凑的语义前缀。</p>
+
+<h2><span class="num">§ 08</span><span>17 路联合序列到底是哪 17 路</span></h2>
+<p>把前面所有零件合起来，当前格 <code>s</code> 的顺序如下。这里的“顺序”是 Depth Transformer 的条件顺序，不是 17 次 7B 前向。</p>
+<div class="tablewrap"><table><thead><tr><th>k</th><th>流</th><th>第 s 格放什么</th><th>推理时来源</th></tr></thead><tbody><tr><td>1</td><td>Moshi 文字</td><td><code class="m">W_s</code></td><td>采样</td></tr><tr><td>2</td><td>Moshi 语义码</td><td><code class="m">A_{s,1}</code></td><td>采样</td></tr><tr><td>3–9</td><td>Moshi 声学码</td><td><code class="m">A_{s-\tau,2\ldots8}</code></td><td>采样</td></tr><tr><td>10</td><td>用户语义码</td><td><code class="m">A'_{s,1}</code></td><td>麦克风覆盖</td></tr><tr><td>11–17</td><td>用户声学码</td><td><code class="m">A'_{s-\tau,2\ldots8}</code></td><td>麦克风覆盖</td></tr></tbody></table></div>
+<p>论文公式里的撇号 <code>A′</code>只是在区分“另一条音轨”，不是导数。逗号 <code class="m">A_{s,1}</code>也不是相乘，而是二维索引：第 <code>s</code> 个时间格、第 1 个码本。</p>
+
+<h2><span class="num">§ 09</span><span>训练不是一步到位：先会语言，再会声音，再会抢话</span></h2>
+<p>结构拼完后，还缺一条课程表。直接把 7B 模型扔进双人对话，既没有足够数据，也容易把文本知识洗掉。论文用五个阶段逐步加难度。</p>
+<figure><figcaption><span>Fig 08 · 从 Helium 到 Moshi</span><b>one capability per stage</b></figcaption><div class="train"><div class="stage"><b>01 · TEXT</b><strong>Helium</strong><p>2.1T 英文 token；500k 步。学知识、句法与推理。</p></div><div class="stage"><b>02 · AUDIO</b><strong>单音轨预训练</strong><p>700 万小时；1M 步。Temporal 继承 Helium，Depth 随机初始化。</p></div><div class="stage"><b>03 · TWO STREAMS</b><strong>模拟双音轨</strong><p>说话人分离后拆主说话人 / 其余声音；100k 步。</p></div><div class="stage"><b>04 · NATURAL DIALOGUE</b><strong>Fisher</strong><p>2000 小时双通道电话；10k 步。第一次看到真实重叠与底噪。</p></div><div class="stage"><b>05 · ASSISTANT</b><strong>指令微调</strong><p>超过 20k 小时合成对话；30k 步。固定助手身份与声音。</p></div></div></figure>
+<p>最容易漏掉的是两个边界。第一，170 小时高质量双人录音<strong>不直接训练 Moshi</strong>，而是训练一个双音轨流式 TTS，再由它合成指令数据。第二，Helium 权重只初始化 Temporal Transformer；Depth Transformer、音频 embedding 和音频输出头都要从头学。预训练一半 batch 继续喂纯文本，并用独立 optimizer state，目的是减轻灾难性遗忘<a class="jr" href="#g-09">9</a>。</p>
+<p>指令数据并非把网页问答直接念出来。作者先让 Helium 把 Wikipedia / StackExchange 上下文改写成短轮次、带附和的口语对话，再用单一演员声音合成 Moshi 侧、随机声音合成用户侧。附录列出 92 种说话风格；训练还加入 −24 到 +15 dB 增益、噪声、100–500 ms 回声和混响，逼模型适应真实麦克风。</p>
+
+<h2><span class="num">§ 10</span><span>损失函数怎样给文字、语义和声学分账</span></h2>
+<p class="formula-purpose">目标：每个时间格里，文字整体占一半重要性，全部音频码合起来占另一半；音频内部再把语义码权重拉高。</p>
+<div class="formula" data-expr="L=\frac{1}{S}\sum_{s=1}^{S}\left[\mathrm{CE}(l_{s,1},V_{s,1})+\frac{\sum_{k=2}^{K}\alpha_k\,\mathrm{CE}(l_{s,k},V_{s,k})}{\sum_{k=2}^{K}\alpha_k}\right]"></div>
+<div class="symbols"><div class="sym"><b>S</b>训练片段包含多少个 80 ms 时间格。</div><div class="sym"><b>K=17</b>每格 1 路文字 + 双方各 8 路音频。</div><div class="sym"><b>CE(l,V)</b>交叉熵：正确 token 的预测概率越低，惩罚越大。</div><div class="sym"><b><code class="m">\alpha_k</code></b>语义音频码取 100，声学码取 1。</div></div>
+<h3>把数字完整代进去</h3>
+<p>只看一个时间格。假设文字 CE 为 <code>0.50</code>；双方两个语义码 CE 分别为 <code>0.40</code>和 <code>0.60</code>；14 个声学码的 CE 都是 <code>1.00</code>。音频权重和是 <code>100+100+14=214</code>：</p>
+<div class="formula" data-expr="L_s=0.50+\frac{100\times0.40+100\times0.60+14\times1.00}{214}=0.50+0.533=1.033"></div>
+<p>先在音频内部做加权平均，再与文字 CE 相加。<strong>“语义权重 100”不等于整条总损失乘 100</strong>；分母也随权重增加。它改变的是音频内部的梯度份额，让两个语义码远比任意单个声学码重要。</p>
+
+<h2><span class="num">§ 11</span><span>消融真正证明了哪几块不可少</span></h2>
+<p>不同 delay 对应不同条件概率，perplexity 不能跨 delay 直接比较。作者因此把生成音频转写，再用外部小语言模型打 NLL，并用转写长度检查模型是否坍成沉默。</p>
+<div class="tablewrap"><table><thead><tr><th>配置逐步增加</th><th>转写 NLL ↓</th><th>转写长度 ↑</th><th>能说明什么</th></tr></thead><tbody><tr><td>无错位，语义权重 1</td><td>4.36</td><td>486</td><td>基线</td></tr><tr><td>一格错位</td><td>4.12</td><td>529</td><td>固定 80 ms 换来更稳</td></tr><tr><td>两格错位</td><td>4.09</td><td>519</td><td>继续改善有限</td></tr><tr><td>语义权重 100</td><td>3.75</td><td>538</td><td>先保证“说得懂”</td></tr><tr><td>再加逐码本参数</td><td>3.65</td><td>602</td><td>减少各层参数竞争</td></tr><tr class="win"><td>再加 Inner Monologue</td><td><strong>2.77</strong></td><td><strong>1920</strong></td><td>最大单步提升</td></tr></tbody></table></div>
+<p>RQ-Transformer 的作用也依赖延迟预算。宽松的逐层错位 <code>[0,1,2,3,4,5,6,7]</code>下，独立头到 RQ 只把 perplexity 从 42.2 改到 40.3；压到低延迟 <code>[0,2,2,2,2,2,2,2]</code>后，独立头是 135.4，RQ 则是 36.8。结论不是“RQ 永远更强”，而是<strong>当延迟不允许靠多格历史化解码本依赖时，小 Depth Transformer 才成为关键</strong>。</p>
+
+<h2><span class="num">§ 12</span><span>实验：会聊天、会知识，但文本能力确实掉了</span></h2>
+<div class="cards"><div class="metric"><b>WEB QUESTIONS</b><strong>9.2 → 26.6</strong><p>无/有 Inner Monologue；纯文本 Helium 为 32.3。</p></div><div class="metric"><b>LLAMA QUESTIONS</b><strong>21.0 → 62.3</strong><p>纯文本 Helium 为 75.0。</p></div><div class="metric"><b>AUDIO TRIVIAQA</b><strong>7.3 → 22.8</strong><p>纯文本 Helium 为 56.4，长书面句式仍是弱项。</p></div></div>
+<p>三项 spoken QA 近似变成原来的三倍，直接支持文字脚手架；但 Moshi 仍落后 Helium，MMLU 也从 54.3 降到 49.7。论文发现，口语微调数据缺少复杂书面句法，可能是 TriviaQA 跌得尤其多的原因。这个实验同时说明“继承文本模型”与“保住全部文本能力”不是一回事。</p>
+<p>双人对话统计里，温度 1.0 的 Moshi 得到 4.5 秒 gap、4.1 秒 overlap，接近 Fisher 真值的 4.2 / 3.3；温度 0.8 则 gap 12.5 秒、overlap 1.2 秒。<strong>话轮行为高度依赖采样温度</strong>。而且基线 dGSLM 使用 50 个提示，Moshi 使用 1000 个，评测池不同；表格可看趋势，不宜把每个小数当严格横比。</p>
+
+<h2><span class="num">§ 13</span><span>同一套排法为什么还能变成 ASR 或 TTS</span></h2>
+<p>Inner Monologue 让文字和音频共享时间轴。改变谁领先，再在推理时强制写入已知那一侧，就能改任务；架构、损失和训练数据形式都不用另换。</p>
+<figure><figcaption><span>Fig 09 · delay 决定哪种模态拥有内容决定权</span><b>teacher force one side</b></figcaption><div class="flow"><div class="box"><b>ASR</b><strong>音频领先文字 2 秒</strong><p>真实音频码强制写入；自由采样滞后的文字，得到转写与 80 ms 对齐。</p></div><div class="arrow">↔</div><div class="box"><b>MOSHI</b><strong>文字与语义同格</strong><p>文字只领先本格后续音频码，不等完整句子。</p></div><div class="arrow">↔</div><div class="box"><b>TTS</b><strong>文字领先音频 2 秒</strong><p>给定文字 token；模型自由采样 PAD/EPAD 与音频码，并能调语速。</p></div></div></figure>
+<p>流式 TTS 在 LibriSpeech test-clean 得到 4.7% WER，优于 Vall-E 的 5.9%，但差于 NaturalSpeech 3 的 1.81%；后两者要看完整文本，Moshi TTS 只看 2 秒前瞻。流式 ASR 为 5.7% WER，差于相近前瞻的 Streaming FastConformer 3.6%。作者明确把这组实验定位为统一框架的演示，不是 ASR/TTS SOTA 宣称。</p>
+
+<h2><span class="num">§ 14</span><span>压到 4 bit：声音还能听，不代表知识没掉</span></h2>
+<p>量化<a class="jr" href="#g-10">10</a>把权重改成更少 bit。论文的 W4A8 意味着权重 4 bit、进入线性层的激活动态量化到 8 bit。Helium 的 4-bit、block 32 模型从约 15 GB 缩到 4.37 GB，MMLU 54.3→52.97；最终 Moshi 同设置从 49.7→42.2，敏感得多。因此在线 demo 选择 8-bit，而不是仅凭音频听感上 4-bit 似乎还行。</p>
+<div class="tablewrap"><table><thead><tr><th>模型</th><th>乱码</th><th>嘈杂</th><th>背景噪声</th><th>重复</th><th>无伪影</th></tr></thead><tbody><tr><td>未量化</td><td>0</td><td>4.1%</td><td>0.1%</td><td>0.1%</td><td>95.8%</td></tr><tr class="win"><td>W4A8 · block 32</td><td>0</td><td>3.8%</td><td>0.1%</td><td>0.4%</td><td>95.7%</td></tr><tr class="warn"><td>W3A8 · block 256</td><td>0.2%</td><td>12.2%</td><td>3.1%</td><td>21.9%</td><td>62.7%</td></tr><tr class="warn"><td>W2A8 · block 256</td><td>83.1%</td><td>0</td><td>0</td><td>11.0%</td><td>5.9%</td></tr></tbody></table></div>
+<p>作者用 token 熵<a class="jr" href="#g-11">11</a>做伪影代理：文字熵过高常对应胡言乱语，文字熵为零而音频熵仍高常对应背景噪声，熵曲线近乎平坦且非零常对应重复。阈值是经验规则，依赖窗口长度与词表；它能补 MOSNet 的盲点，不能替代真人听评。</p>
+
+<h2><span class="num">§ 15</span><span>安全部分不只是一个 toxicity 分数</span></h2>
+<div class="cards"><div class="metric"><b>ALERT SAFETY</b><strong>83.05</strong><p>只评转写文本，无法覆盖语气、讽刺与非语言声音；位于当时文本模型中游。</p></div><div class="metric"><b>VOICE CONSISTENCY</b><strong>98.7%</strong><p>10,249 段更接近 Moshi 参考声，133 段更接近用户参考声。</p></div><div class="metric"><b>DEDUP TEST</b><strong>0 / 100k</strong><p>去重后，对最频繁 16 秒片段未观察到精确复现；不等于所有训练内容都不会记忆。</p></div></div>
+<p>音频去重不是只比文字。附录先把 Mel 频谱<a class="jr" href="#g-12">12</a>压成 64 个频带、40 Hz 时间格，选能量高且在时间/频率上突出的关键点；每个中心点与前后邻居组合成 26-bit 指纹，再用时间偏移投票验证两段音频是否真的对齐。出现至少 10 次的重复片段会被汇总成去重签名集，训练片段命中阈值就过滤。</p>
+<p>水印结果反而是负面证据。AudioSeal 在不改音频时检测接近 1，但经 RVQGAN 或 Mimi 低码率重编码后，分数掉到接近未加水印。直接在生成 token 上做水印也遇到 codec 非幂等<a class="jr" href="#g-13">13</a>：token 解码成波形再编码，第一层也只有 76.6% 保持相同，后层更低；轻微时间平移还会继续破坏一致性。论文没有把这包装成已解决方案。</p>
+
+<h2><span class="num">§ 16</span><span>最后分清：论文模型、发布权重与今天的仓库</span></h2>
+<div class="boundary"><div class="paper"><h3>2024 论文回答什么</h3><p>7B Helium + 6 层 Depth、8 路 Mimi、3000 个时间步训练上下文（约 4 分钟）、约 5 分钟对话实验、160/200 ms 延迟、训练与安全评测。</p><p>它没有今天常见的完整打断基准、真人长期双工偏好评测，也没有证明英语之外同等有效。</p></div><div class="repo"><h3>2026-05-16 官方仓库是什么</h3><p>检查 commit <code>e6a55d2</code>：同时维护 PyTorch 研究栈、MLX 本地栈、Rust 生产栈和 Web 客户端；发布 Moshiko、Moshika 与 Mimi，多种后端和精度。</p><p>这些后续工程能力是实现补充，不能反推论文表格。仓库模型使用 CC-BY 4.0；训练代码另见官方 finetune 仓库。</p></div></div>
+<div class="note"><span class="tag">读完该带走什么</span>Moshi 的系统创新是一条完整因果链：<strong>低帧率因果 codec</strong>把实时声音变成可预测的码；<strong>Temporal/Depth</strong>避免大模型在码本维度重复走长时间轴；<strong>一格声学错位</strong>用固定 80 ms 换稳定依赖；<strong>双音轨</strong>让重叠和打断进入训练分布；<strong>逐帧文字脚手架</strong>再把文本知识带回音频生成。少一块，都不是论文报告的那台 Moshi。</div>
+
+<section class="gloss"><h2>引用 / 术语表</h2><ol>
+<li id="g-01"><span class="term">Full-duplex · 全双工</span>：系统输出时仍持续接收输入，新输入能改变后续输出；与“低延迟开口”不是同义词。详见 <a href="../concepts/full-duplex-multimodal-interaction.html">概念页</a>。</li>
+<li id="g-02"><span class="term">Mimi</span>：Kyutai 的 24 kHz 流式神经音频 codec，以 12.5 Hz、8 路码和 1.1 kbps 表示声音。</li>
+<li id="g-03"><span class="term">Causal · 因果</span>：计算当前输出只使用当前与过去输入，不读取未来帧；这是在线流式处理的前提。</li>
+<li id="g-04"><span class="term">RVQ</span>：Residual Vector Quantization，残差向量量化。先量化原向量，再逐层量化前层留下的误差。详见 <a href="../concepts/rvq-codec.html">RVQ Codec</a>。</li>
+<li id="g-05"><span class="term">ABX</span>：拿两个同音素样本 A/X 与一个最小差异音素 B 比距离；判断错边的比例越低，表示越能区分语音内容。</li>
+<li id="g-06"><span class="term">RQ-Transformer</span>：用大 Temporal Transformer 处理跨时间历史，再用小 Depth Transformer 处理同一时间格内的多层离散码。详见 <a href="../concepts/temporal-depth-transformer.html">Temporal–Depth</a>。</li>
+<li id="g-07"><span class="term">Inner Monologue</span>：助手自己的文字 token 在每个时间格中先于音频码生成，充当逐帧语义脚手架。详见 <a href="../concepts/inner-monologue-speech.html">概念页</a>。</li>
+<li id="g-08"><span class="term">SentencePiece</span>：把文本切成可建模的子词 token；Moshi 的词表约 32,000，主要面向英语。</li>
+<li id="g-09"><span class="term">Catastrophic forgetting</span>：模型继续学新模态时，参数更新破坏原来文本能力。Moshi 用纯文本 batch 与独立 optimizer state 缓解。</li>
+<li id="g-10"><span class="term">PTQ</span>：Post-Training Quantization，训练完成后再把浮点权重映射到低 bit 整数，不重新完整训练。</li>
+<li id="g-11"><span class="term">Entropy · 熵</span>：一段 token 分布有多分散。这里用滑窗内 token 多样性检测重复、乱码与噪声，是经验代理而非音质定义。</li>
+<li id="g-12"><span class="term">Mel spectrogram</span>：按时间与接近人耳感知的频率刻度显示能量的二维图；附录从中挑稳定关键点做音频指纹。</li>
+<li id="g-13"><span class="term">Idempotence · 幂等</span>：操作重复一次结果不变。codec 若幂等，token 解码再编码应回到同一 token；Mimi 实验并不满足。</li>
+</ol></section>
+<div class="sources"><strong>Primary sources</strong>　<a href="https://arxiv.org/abs/2410.00037">论文与 67 页附录</a> · <a href="https://github.com/kyutai-labs/moshi">官方仓库</a>（实现核对 commit <code>e6a55d2</code>） · 论文原始 LaTeX source（2024-10-03）。正文中的原文结论、表格事实与当前仓库实现已分账。</div>
+<footer class="colophon"><span>INGESTED 2026-08-12 · REVIEWED TWICE</span><span>MOSHI · COGNITIVE ORDER, NOT PAPER ORDER</span></footer>
+</main>
+<script>
+(function(){
+  function renderFormulaBlocks(){
+    if(!window.katex){setTimeout(renderFormulaBlocks,40);return;}
+    document.querySelectorAll('.formula[data-expr]').forEach(function(el){
+      if(el.dataset.rendered)return;
+      katex.render(el.dataset.expr,el,{throwOnError:true,displayMode:true});
+      el.dataset.rendered='1';
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',renderFormulaBlocks);
+  else renderFormulaBlocks();
+})();
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;top:50%;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;display:none;}
+.jr-pop.show{display:block;animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!document.getElementById(id))return;
+      e.preventDefault();
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>

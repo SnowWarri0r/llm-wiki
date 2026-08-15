@@ -1,7 +1,7 @@
 ---
 name: temporal-depth-transformer
 type: concept
-sources: [personaplex]
+sources: [moshi, personaplex]
 updated: 2026-08-12
 ---
 
@@ -30,6 +30,7 @@ PersonaPlex 每帧有 17 路输入：用户 8 路音频码、agent 8 路音频�
 
 ## 链接
 
-- [[personaplex]] · 来源
+- [[moshi]] · 原始系统与完整公式
+- [[personaplex]] · 沿用并增加角色 / 音色提示
 - [[rvq-codec]] · 为什么一个音频帧有多层 codebook
 - [[audio-codebook-delay]] · 为什么声学细节晚一帧

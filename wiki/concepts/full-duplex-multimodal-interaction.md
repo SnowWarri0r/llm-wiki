@@ -1,7 +1,7 @@
 ---
 name: full-duplex-multimodal-interaction
 type: concept
-sources: [duplexomni, personaplex, wan-streamer-v01, wan-streamer-v02, wan-streamer-v03, videofdb, dyaplex, faceplex, interactive-avatar]
+sources: [moshi, duplexomni, personaplex, wan-streamer-v01, wan-streamer-v02, wan-streamer-v03, videofdb, dyaplex, faceplex, interactive-avatar]
 updated: 2026-08-12
 ---
 
@@ -65,6 +65,7 @@ DuplexOmni 的时间片是 480 ms。它不是先生成完整句子再播放，�
 
 ## 链接
 
+- [[moshi]] · 以两条独立 12.5 Hz 音频流取消显式话轮边界
 - [[duplexomni]] · 以 480 ms 时间片实现音视频全双工，并接入异步思考层
 - [[dual-model-architecture]] · 前台交互和后台慢推理怎样分工
 - [[thinker-talker]] · 交互模型内部又怎样把文本理解与语音生成拆开
