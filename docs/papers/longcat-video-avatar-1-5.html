@@ -102,20 +102,46 @@
   <div class="claim"><span class="label">情绪优先级</span>6 > 5 > 4 > 2 > 1 > 3；合成视频、超过两人、身份跳变或主体太小直接剔除。EmotiEffLib 看 Top-10/20 关键帧，若第一名为 Neutral，改用第二情绪。</div>
 
   <h2><span class="n">§ 04</span>8 秒音频怎样变成 50 个视频 latent 时刻</h2>
-  <p class="lead">最容易读错的一句是“把 33 层池化成 5 个通道”。Whisper layer pooling<a class="jr" href="#g-04">04</a> 的 33→5 沿网络层轴发生；50 Hz→25 FPS 才沿时间轴发生。</p>
+  <p class="lead">最容易读错的一句是“把 33 层池化成 5 个通道”。Whisper layer pooling<a class="jr" href="#g-04">04</a> 的 33→5 沿网络层轴发生；50 Hz→25 FPS 才沿时间轴发生。这一节先把 400、33、1280 三个数字的来历交代清楚，再沿两根轴各走一遍，最后看它怎么接进 DiT。</p>
+
+  <h3>第一步 · 400、33、1280 都从哪来</h3>
+  <p>Whisper 不直接吃波形：16 kHz 的音频先变成 log-Mel 谱，每 10 ms 一列（每秒 100 列）；编码器开头是两层卷积，第二层步长为 2，把时间列数减半——从这里往后，<strong>每 20 ms 一个位置，也就是 50 Hz</strong>。三个数字就都有了着落：</p>
+  <div class="calc">
+    <div class="step"><b>400 = 时间</b><span>8 秒 × 每秒 50 个位置 = <strong>400</strong> 个时间位置。</span></div>
+    <div class="step"><b>33 = 深度</b><span>输入 embedding 的输出 1 份，加 32 个 Transformer 层每层 1 份，共 <strong>33</strong> 份表征——同一个时间位置，浅到深全都留着。</span></div>
+    <div class="step"><b>1280 = 宽度</b><span>Whisper-large 的隐藏维。每份表征就是一个 <strong>1280</strong> 维向量。</span></div>
+    <div class="step"><b>超 30 秒</b><span>Whisper 一次最多吃 30 秒；更长的音频把谱沿时间切窗、分段过编码器（滑动窗口），本例 8 秒一窗装下。</span></div>
+  </div>
+
   <figure id="fig-3">
     <figcaption><span>Fig 03 · 两根轴分别变换</span><b>层池化 ≠ 时间下采样</b></figcaption>
     <div class="axisflow">
       <div class="tensor reveal"><span>Whisper-large · 8 秒</span><strong>400 × 33 × 1280</strong><span>400 个时间位置 · 33 份层表征</span></div>
       <div class="arrow reveal d2">→</div>
-      <div class="tensor reveal d2"><span>每 8 层平均 + 最后一份</span><strong>400 × 5 × 1280</strong><span>只压“层”轴，时间仍是 50 Hz</span></div>
+      <div class="tensor reveal d2"><span>每 8 份平均 + 最深一份</span><strong>400 × 5 × 1280</strong><span>只压“层”轴，时间仍是 50 Hz</span></div>
       <div class="arrow reveal d3">→</div>
       <div class="tensor reveal d3"><span>线性插值到 25 FPS</span><strong>200 × 5 × 1280</strong><span>再由 audio projector 对齐约 50 个 VAE 时刻</span></div>
     </div>
-    <div class="layerstrip reveal d4"><div>层 1–8<br><b>均值 4.5</b></div><div>层 9–16<br><b>均值 12.5</b></div><div>层 17–24<br><b>均值 20.5</b></div><div>层 25–32<br><b>均值 28.5</b></div><div>singleton<br><b>33</b></div></div>
-    <p class="note reveal d4"><span class="label">为什么保留五档</span>浅层偏声学细节，深层偏语言上下文；数字人同时需要“说了什么”和“怎样说”。但论文没有单独做只用最后层的消融，因此这是合理设计动机，不是已被隔离证明的收益。</p>
+    <div class="layerstrip reveal d4"><div>第 1–8 份<br><b>平均 → 1 份</b></div><div>第 9–16 份<br><b>平均 → 1 份</b></div><div>第 17–24 份<br><b>平均 → 1 份</b></div><div>第 25–32 份<br><b>平均 → 1 份</b></div><div>第 33 份<br><b>单独保留</b></div></div>
   </figure>
-  <p>Whisper 的 30 秒输入上限由滑动窗口处理。每个 DiT block 在文本 cross-attention 后加入音频 cross-attention<a class="jr" href="#g-05">05</a>：视频 token 产 Query，音频特征产 Key/Value。前置 adaLN<a class="jr" href="#g-06">06</a> 根据条件调节归一化后的尺度与偏移，让新音频分支更平稳地接入旧骨干。</p>
+
+  <h3>第二步 · 层轴：33 份压成 5 份，压的是“读哪一层”</h3>
+  <p>压法是分组平均：前 32 份按顺序分成 4 组、每组 8 份，组内 8 个 1280 维向量<strong>逐元素平均</strong>成 1 个；最深一份单独保留。4 + 1 = 5 份，每份仍是 1280 维——被压掉的只有“深度”这根轴，时间一格没动。</p>
+  <p>拿玩具数字过一遍：盯住某个时间位置的某一维，假设它在第 1–8 份里的值恰好是 1, 2, …, 8，平均就是 4.5；第 9–16 份平均 12.5，第 17–24 份平均 20.5，第 25–32 份平均 28.5，第 33 份原样是 33。33 个数变成 [4.5, 12.5, 20.5, 28.5, 33]——真实的每份是 1280 维向量而不是标量，但每一维都按这个算法各自平均。</p>
+  <p class="note"><span class="label">为什么保留五档</span>浅层偏声学细节（音色、节奏、韵律），深层偏语言上下文；数字人既要“说了什么”（驱动嘴形语义），又要“怎样说”（驱动表情和身体节奏）。这套分组池化不是 LongCat 自创，论文注明沿用 HuMo（Chen et al. 2025b）的做法。</p>
+
+  <h3>第三步 · 时间轴：两段压缩，各有各的理由</h3>
+  <div class="calc">
+    <div class="step"><b>50 Hz → 25 FPS</b><span>视频是 25 FPS，音频特征要一帧配一帧。50 → 25 恰好二比一，线性插值把 400 个位置并成 <strong>200 帧</strong>，得到 (200, 5, 1280)。</span></div>
+    <div class="step"><b>25 FPS → latent</b><span>3D VAE 在时间轴上再压 4 倍：DiT 里一个 latent 时刻 ≈ 4 帧画面 ≈ 160 ms。音频若停在 25 FPS，Key 和 Query 的时间刻度就差 4 倍。</span></div>
+    <div class="step"><b>audio projector</b><span>在时间窗口内聚合相邻音频帧，把 200 帧下采样到<strong>约 50 个 latent 时刻</strong>——每个视觉 latent 时刻名下，都有一份聚合了对应约 4 帧（160 ms）语音的特征。</span></div>
+  </div>
+  <p>两段压缩的动机不同：第一段是<strong>对帧率</strong>（音频一帧对视频一帧），第二段是<strong>对刻度</strong>（视频进了 latent 空间，音频必须跟着进同一个时间刻度）。论文强调注入 cross-attention 之前要 strict temporal alignment——“哪个时刻的嘴查哪个时刻的音频”这件事由对齐保证，注意力不必自己学时间换算。</p>
+
+  <h3>第四步 · 进 DiT：插在文本之后，adaLN 当闸门</h3>
+  <p>底座 DiT block 的原有顺序是 3D self-attention → 文本 cross-attention → FFN。1.5 在<strong>文本 cross-attention 之后</strong>插入音频 cross-attention<a class="jr" href="#g-05">05</a>：视频 token 出 Query，对齐好的音频特征出 Key/Value。</p>
+  <p>每个音频 cross-attention 之前保留一个 adaLN<a class="jr" href="#g-06">06</a> 当<strong>闸门</strong>：新插入的音频分支是随机初始化的，一上来就全力输出会把 13.6B 预训练视觉先验冲垮（灾难性遗忘）。adaLN 根据条件调节该分支的尺度与偏移，让音频控制渐进地放进来——论文原话是它 functions as a gating mechanism，训练更稳、音画映射也更容易学准。</p>
+  <div class="warning"><span class="label">报告未交代</span>audio projector 的具体结构与窗口大小；5 个通道进 Key/Value 的排法（拼成 5 个 token 还是合成 1 个）；分组边界与 singleton 具体是哪一份（按顺序四组、最深一份单列是最自然的读法，图按此画）；也没有“只用最后一层 vs 五组池化”的隔离消融——五档设计是合理动机，不是已被单独证明的收益。</div>
 
   <h2><span class="n">§ 05</span>基础训练：模型到底在预测什么</h2>
   <p>Flow matching<a class="jr" href="#g-07">07</a> 先把干净视频 latent <code class="m">x_0</code> 与高斯噪声 <code class="m">\epsilon</code> 按时刻 <code class="m">t</code> 线性混合。模型看到中间点 <code class="m">x_t</code> 与条件 <code class="m">c</code>，学习往干净视频方向走的速度。</p>
@@ -301,7 +327,7 @@
     </ol>
   </section>
 
-  <section class="sources"><span class="label">Sources · accessed 2026-08-05</span><ul><li><a href="https://arxiv.org/abs/2605.26486">LongCat-Video-Avatar 1.5 Technical Report · arXiv</a></li><li><a href="https://meigen-ai.github.io/LongCat-Video-Avatar-1.5-Page/">官方项目页</a></li><li><a href="https://github.com/meituan-longcat/LongCat-Video">官方 GitHub</a></li><li><a href="https://huggingface.co/meituan-longcat/LongCat-Video-Avatar-1.5">官方权重与模型卡</a></li><li><a href="https://arxiv.org/html/2505.22647">MultiTalk · L-RoPE 来源</a></li></ul></section>
+  <section class="sources"><span class="label">Sources · accessed 2026-08-05</span><ul><li><a href="https://arxiv.org/abs/2605.26486">LongCat-Video-Avatar 1.5 Technical Report · arXiv</a></li><li><a href="https://meigen-ai.github.io/LongCat-Video-Avatar-1.5-Page/">官方项目页</a></li><li><a href="https://github.com/meituan-longcat/LongCat-Video">官方 GitHub</a></li><li><a href="https://huggingface.co/meituan-longcat/LongCat-Video-Avatar-1.5">官方权重与模型卡</a></li><li><a href="https://arxiv.org/html/2505.22647">MultiTalk · L-RoPE 来源</a></li><li><a href="https://arxiv.org/abs/2509.08519">HuMo · 分组层池化来源</a></li></ul></section>
 </div>
 <script>
 document.querySelectorAll("figure").forEach((fig)=>{const obs=new IntersectionObserver((entries)=>{entries.forEach((e)=>{if(e.isIntersecting){fig.classList.add("play");obs.disconnect();}})},{threshold:.12});obs.observe(fig)});
