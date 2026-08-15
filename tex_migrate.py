@@ -147,6 +147,10 @@ def is_math(s: str) -> bool:
         return False
     if len(re.findall(r"_[A-Za-z]{2,}", s)) >= 2:             # a_memory_search / _get_init_query
         return False
+    # Big-O / Θ 复杂度写法是数学，不是函数调用。先于下方“带下划线的函数调用”
+    # 启发式判断，否则 O(TS_tS_r) 会被误当成代码并在页面露出下划线。
+    if re.fullmatch(r"(?:O|Theta|Omega|Θ|Ω)\([^)]*[_^][^)]*\)", s):
+        return True
     if re.match(r"^[A-Za-z_][A-Za-z0-9_]*\(", s) and re.search(r"_[A-Za-z]{2,}", s):
         return False                                          # 带下划线的函数调用
     # CONST_NAME，但首段得有 2 个以上字符——D_KL / L_CLIP 是数学不是常量名

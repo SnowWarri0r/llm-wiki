@@ -145,7 +145,7 @@ figure{margin:36px 0;padding:24px;border:1px solid var(--rule);background:rgba(2
   </figure>
   <div class="warning"><span class="label">别把示意数字当实现尺寸</span>论文用目标空间分辨率说明参考空间索引偏移；官方代码把三维 RoPE 的参考偏移写入轴向参数。上图只用 4+2 个 token 把“同时间、不同空间”讲清楚，不是模型真实网格大小。</div>
 
-  <h2><span class="n">§ 06</span>Sparse-Ref：只裁跨分支连边，不裁目标视频自己的全局协调</h2>
+  <h2 id="s6"><span class="n">§ 06</span>Sparse-Ref：只裁跨分支连边，不裁目标视频自己的全局协调</h2>
   <p>有了时间地址后，Sparse-Ref Attention<a class="jr" href="#g-03">03</a> 的 mask 可以精确放行：目标第 <code>t</code> 帧只读取参考第 <code>t</code> 帧。目标分支自己的 K/V 仍全部可见，因此人物在目标视频中的颜色、背景和身份仍能跨帧协调。</p>
   <figure>
     <figcaption><span>Fig 06 · 查询帧与可读 K/V</span><b>蓝色是目标内部全连接，绿色是同时间参考</b></figcaption>
@@ -156,13 +156,13 @@ figure{margin:36px 0;padding:24px;border:1px solid var(--rule);background:rgba(2
       <div class="head">目标 2</div><div class="self">可读</div><div class="self">可读</div><div class="self">可读</div><div class="no">×</div><div class="no">×</div><div class="yes">可读</div>
     </div></div>
   </figure>
-  <p>先定义符号，再算复杂度：<code>T</code> 是帧数，<code class="m">S_t</code> 是每帧目标 token 数，<code class="m">S_r</code> 是每帧参考 token 数。</p>
+  <p>先定义符号，再算复杂度：<code class="m">T</code> 是帧数，<code class="m">S_t</code> 是每帧目标 token 数，<code class="m">S_r</code> 是每帧参考 token 数。</p>
   <div class="math" data-expr="\text{全量跨分支}=T^2S_tS_r,\qquad \text{按时间稀疏}=TS_tS_r"></div>
   <div class="calc">
-    <div class="step"><b>教学设置</b><span><code>T=3</code>，每帧目标 <code class="m">S_t=4</code> 个 token，参考 <code class="m">S_r=2</code> 个 token。</span></div>
+    <div class="step"><b>教学设置</b><span><code class="m">T=3</code>，每帧目标 <code class="m">S_t=4</code> 个 token，参考 <code class="m">S_r=2</code> 个 token。</span></div>
     <div class="step"><b>全量</b><span>目标共 <code class="m">3\times4=12</code> 个 query，参考共 <code class="m">3\times2=6</code> 个 K/V，所以 <code class="m">12\times6=72</code> 条跨分支连边。</span></div>
     <div class="step"><b>稀疏</b><span>每个时刻 <code class="m">4\times2=8</code> 条，三个时刻共 <code class="m">3\times8=24</code> 条；这组例子减少 3 倍。</span></div>
-    <div class="step"><b>论文的 O(Nₗ)</b><span>把每帧参考 token 数视作固定常数时，跨分支成本随目标长度线性增长；展开常数后就是 <code>O(TS_tS_r)</code>。</span></div>
+    <div class="step"><b>论文的 O(Nₗ)</b><span>把每帧参考 token 数视作固定常数时，跨分支成本随目标长度线性增长；展开常数后就是 <code class="m">\mathcal{O}(T S_t S_r)</code>。</span></div>
   </div>
 
   <h2><span class="n">§ 07</span>Viewpoint LoRA：动作来自驱动视频，镜头不必跟着它走</h2>
