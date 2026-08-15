@@ -1,8 +1,8 @@
 ---
 name: kv-cache
 type: concept
-sources: [interaction-models-tml, fish-speech-s2-pro, unlimited-ocr, turboquant, hierarchical-denoising-visual-reasoning, solaris-multiplayer-world-model, interactive-video-world-modeling-survey]
-updated: 2026-07-24
+sources: [interaction-models-tml, fish-speech-s2-pro, unlimited-ocr, turboquant, hierarchical-denoising-visual-reasoning, solaris-multiplayer-world-model, interactive-video-world-modeling-survey, worldtrace]
+updated: 2026-08-11
 ---
 
 # KV Cache
@@ -20,6 +20,10 @@ Attention 公式里 Query 是"当前 token 在问什么"，Key/Value 是"序列�
 - **prefix sharing**：相同 prompt prefix 复用 cache（RadixAttention）
 - **流式视频世界模型**：Solaris 只保留最近 6 个 latent frame 的滚动 K/V；综述中的 RELIC 进一步把近期 KV cache 与压缩的长期空间 memory 分层。
 
+## 存着不等于读得到
+
+KV cache 解决的是“不重算历史”，不自动保证“超长历史仍能被 attention 正确检索”。若 Key 使用 RoPE，Query 与旧 Key 的相对位置超出训练范围，即使旧 K/V 还物理存在，检索分数也可能失真。WorldTrace 把这叫作 **addressability** 问题：长期记忆还需要可读的虚拟位置，以及不会被相位平均破坏的内容写入方式。
+
 ## 链接
 - [[prefill-decode]] · prefill 阶段填 cache、decode 阶段读 cache
 - [[split-kv]] · 切 cache 沿序列维并行算
@@ -28,3 +32,5 @@ Attention 公式里 Query 是"当前 token 在问什么"，Key/Value 是"序列�
 - [[ai-memory-hierarchy]] · KV cache 正是最吃 HBM 那层带宽/容量的数据
 - [[solaris-multiplayer-world-model]] · 6 latent / 24 真实帧滑窗与 Checkpointed Self Forcing
 - [[interactive-video-world-modeling-survey]] · KV cache 与长期世界记忆不是同一层东西
+- [[addressable-kv-memory]] · “仍在 cache”与“attention 读得到”的区别
+- [[worldtrace]] · 固定大小 recent + summary cache 的实例

@@ -1424,3 +1424,12 @@ skill 更新:
 - Ulysses 节补「回程」块矩阵图：整层激活切成 4×4 块（token 段 × head 组），token 布局=持有一行、head 布局=持有一列；去程按 head 切按 token 段拼，回程反着做，收发块数对称。
 - 新增「Ring Attention 具体怎么走」节：Q 不动、K/V 沿环流动 4 轮的手排轮转表；点破它=flash-attention 的「分块+在线 softmax」从 HBM↔SRAM 抬到卡↔卡；三笔账（每轮 16.4 MB 藏进计算/显存随卡数线性扩/因果 mask 负载不均用 zigzag 修）+ 与 Ulysses 的取舍。
 - online softmax 不重写，指回 flash-attention 页的完整手算（[1,3|2,5] 例，python 复核仍 36.8806 两法一致）。
+
+## [2026-08-11] ingest | WorldTrace
+
+- 新增 NVIDIA WorldTrace 论文精读与 bespoke HTML；不照论文目录平铺，改按“AR 记忆前置 → 地址/内容两种失败 → 固定 cache 总览 → slot-rank → P 矩阵 → Field → Landmark → LoopBench → 实验/资源/理论边界”组织。
+- 用 A→B→C→D→A 贯穿全文：q=20、7 格 cache 算出摘要虚拟位置 14/15/16；用 4×6 的 P 把 `[2,4,8,10,20,30]` 压成 `[3,9,20,30]`；用 0°/180° 二维 Key 完整演示 naive 平均相消与 canonical unrotate/rerotate。
+- 每条核心公式均先说明目的，再逐符号定义并带入数字；单独说明 canonical averaging 只保平均 pre-softmax score，不保证 softmax 权重与最终 attention 完全相等。
+- 完整覆盖主表、四层 LoopBench、N=256 PAC sweep、LingBot 跨架构、slot split、Field/Landmark 混合、MemRoPE/YaRN、streaming writer、显存、运行时、算法与条件理论界限。
+- 明确口径：WorldTrace-Field 主实验的 GPU attention cache 为 O(1)，但 recompute writer 的 CPU host state 每 latent frame +5.4 MB；严格 O(Ns) 状态是附录 streaming writer。官方未开放可下载代码，scene-entry 阈值等复现细节仍缺。
+- 新增 addressable-kv-memory、canonical-rope-keys、field-vs-landmark-memory 三个概念页，并补充 kv-cache / RoPE 的长期寻址与相位平均边界。
