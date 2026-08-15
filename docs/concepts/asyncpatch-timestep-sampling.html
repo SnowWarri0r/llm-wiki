@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Diffusion Timestep Conditioning · 告诉去噪网络“现在噪到哪一步” · Concept</title>
+<title>AsyncPatch Timestep Sampling · 先选全局噪声，再分配局部时钟 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,59 +53,72 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · diffusion-timestep-conditioning</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · asyncpatch-timestep-sampling</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Diffusion Timestep Conditioning · 告诉去噪网络“现在噪到哪一步”</h1>
+  <h1>AsyncPatch Timestep Sampling · 先选全局噪声，再分配局部时钟</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>同一个去噪网络要处理从纯噪声到近乎干净的所有状态；先把时刻 <span class="tex math-inline" data-display="false">t</span> 编成向量，再送进每个 block，让网络随噪声强度切换工作方式。</p>
-<h2>为什么不能只喂 <span class="tex math-inline" data-display="false">x_t</span></h2>
-<p>输入数值本身不一定能唯一说明噪声等级。早期步骤要先搭全局结构，晚期步骤只需修小纹理。不给 <span class="tex math-inline" data-display="false">t</span>，相当于让同一个修图师不知道现在拿到的是草稿还是终稿。</p>
-<h2>正弦时间嵌入</h2>
-<p>一个常见写法是：</p>
-<div class="tex math-display" data-display="true">e_{2i}(t)=\sin\left(\frac{t}{10000^{2i/d}}\right),\qquad
-e_{2i+1}(t)=\cos\left(\frac{t}{10000^{2i/d}}\right)</div>
-<p><span class="tex math-inline" data-display="false">d</span> 是嵌入维度，<span class="tex math-inline" data-display="false">i</span> 选择不同频率。高频分量分得清相邻时刻，低频分量表示长范围进度。</p>
-<h2>数字例子</h2>
-<p>用两档频率 <span class="tex math-inline" data-display="false">1</span> 与 <span class="tex math-inline" data-display="false">0.1</span> 做四维玩具版：</p>
-<div class="tex math-display" data-display="true">e(t)=[\sin t,\cos t,\sin(0.1t),\cos(0.1t)]</div>
-<p>当 <span class="tex math-inline" data-display="false">t=0</span>：</p>
-<div class="tex math-display" data-display="true">e(0)=[0,1,0,1]</div>
-<p>当 <span class="tex math-inline" data-display="false">t=\pi</span>：</p>
-<div class="tex math-display" data-display="true">e(\pi)\approx[0,-1,0.309,0.951]</div>
-<p>同一个时刻被多档“钟表指针”共同编码，不需要为 1000 个时刻各存一张互不相关的表。</p>
-<h2>怎样进入 ResBlock</h2>
-<p>时间向量先过 MLP，再投影成 scale 与 shift。OpenAI guided-diffusion 的代码形式是：</p>
-<div class="tex math-display" data-display="true">h&#x27;=(1+s_t)\operatorname{GN}(h)+b_t</div>
-<p><span class="tex math-inline" data-display="false">h</span> 是当前空间特征，<span class="tex math-inline" data-display="false">s_t</span> 与 <span class="tex math-inline" data-display="false">b_t</span> 都由时间嵌入生成。若 <span class="tex math-inline" data-display="false">\operatorname{GN}(h)=[-1,1]</span>：</p>
-<pre><code class="language-text">时刻 A：scale=.5, shift=.2 → [-1.3, 1.7]
-时刻 B：scale=-.2, shift=.1 → [-.7, .9]
+<p>不让每个 patch 在 <span class="tex math-inline" data-display="false">[0,1]</span> 各抽各的，而是先均匀抽一个全图平均时刻 <span class="tex math-inline" data-display="false">\bar t</span>，再在以 <span class="tex math-inline" data-display="false">\bar t</span> 为中心的对称区间内给各 patch 抽时刻。</p>
+<h2>为什么独立均匀抽反而不够自由</h2>
+<p>若 <span class="tex math-inline" data-display="false">M</span> 个 patch 的 <span class="tex math-inline" data-display="false">t_i</span> 都独立服从 <span class="tex math-inline" data-display="false">U(0,1)</span>，单个时刻的方差是 <span class="tex math-inline" data-display="false">1/12</span>，样本均值的方差则是：</p>
+<div class="tex math-display" data-display="true">\begin{aligned}
+\operatorname{Var}(\bar t)&amp;=\frac{1}{12M},\\
+\operatorname{Std}(\bar t)&amp;=\frac{1}{\sqrt{12M}}
+\end{aligned}</div>
+<ul>
+<li><span class="tex math-inline" data-display="false">M</span>：patch 数量。</li>
+<li><span class="tex math-inline" data-display="false">t_i</span>：第 <span class="tex math-inline" data-display="false">i</span> 块的噪声时刻。</li>
+<li><span class="tex math-inline" data-display="false">\bar t=M^{-1}\sum_i t_i</span>：这张图的 patch 平均时刻。</li>
+<li><span class="tex math-inline" data-display="false">\operatorname{Var}</span>：方差，衡量平均值的波动平方。</li>
+<li><span class="tex math-inline" data-display="false">\operatorname{Std}</span>：标准差，回到与时刻相同的量纲。</li>
+</ul>
+<p>当 <span class="tex math-inline" data-display="false">M=64</span> 时，标准差只有 <span class="tex math-inline" data-display="false">\sqrt{1/768}\approx.036</span>。因此平均时刻经常在 <span class="tex math-inline" data-display="false">0.5\pm0.07</span> 附近，很少跑到接近 0 或 1 的区域。</p>
+<h2>采样公式</h2>
+<div class="tex math-display" data-display="true">\begin{aligned}
+\bar t&amp;\sim U(t_{\min},t_{\max}),\\
+\delta&amp;=\min(\bar t-t_{\min},\ t_{\max}-\bar t,\ .5),\\
+t^-&amp;=\bar t-\delta,\qquad t^+=\bar t+\delta,\\
+t_i&amp;\sim U(t^-,t^+).
+\end{aligned}</div>
+<ul>
+<li><span class="tex math-inline" data-display="false">t_{\min},t_{\max}</span>：允许的时刻范围，常可看成 0 到 1。</li>
+<li><span class="tex math-inline" data-display="false">\bar t</span>：先均匀抽到的全图中心时刻。</li>
+<li><span class="tex math-inline" data-display="false">\delta</span>：从中心向左右能对称张开的半宽；不越界，也不超过 0.5。</li>
+<li><span class="tex math-inline" data-display="false">t^-,t^+</span>：本张图各 patch 可使用的最小、最大时刻。</li>
+<li><span class="tex math-inline" data-display="false">U(a,b)</span>：区间 <span class="tex math-inline" data-display="false">[a,b]</span> 上的均匀分布。</li>
+</ul>
+<h2>两组数字</h2>
+<pre><code class="language-text">全局偏干净：bar_t=.25
+delta=min(.25,.75,.5)=.25
+各 patch 从 [0,.5] 抽，区间中心是 .25
+
+全局偏噪：bar_t=.80
+delta=min(.80,.20,.5)=.20
+各 patch 从 [.60,1] 抽，区间中心是 .80
 </code></pre>
-<p>输入特征相同，仅时刻不同，block 的处理结果就不同。这才是“条件注入”真正改动的地方。</p>
+<p>这样既能看到整体很干净 / 很噪的图，又保留同一张图内的局部时刻差。严格说，独立抽出的有限个 <span class="tex math-inline" data-display="false">t_i</span> 的样本均值会在 <span class="tex math-inline" data-display="false">\bar t</span> 周围波动；对称区间保证的是期望中心。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/diffusion-unet.html">diffusion-unet</a> · 时间嵌入送进每个残差块</li>
-<li><a href="../concepts/group-normalization.html">group-normalization</a> · 被 scale / shift 调制的归一化</li>
-<li><a href="../concepts/adaptive-layernorm.html">adaptive-layernorm</a> · DiT 用 LayerNorm 实现的后继版本</li>
-<li><a href="../concepts/positional-encoding.html">positional-encoding</a> · 同一套正弦编码最早在 Transformer 里表示位置</li>
-<li><a href="../papers/asyncpatch-diffusion.html">asyncpatch-diffusion</a> · 把广播到全图的标量时刻升级为二维时间图，并在各层做空间 FiLM</li>
+<li><a href="../papers/asyncpatch-diffusion.html">asyncpatch-diffusion</a> · 给出这个采样器的论文</li>
+<li><a href="../concepts/joint-diffusion.html">joint-diffusion</a> · 这些时刻怎样变成联合加噪状态</li>
+<li><a href="../concepts/diffusion-timestep-conditioning.html">diffusion-timestep-conditioning</a> · 时刻条件如何进入去噪网络</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 7 处</span>
-  <ul><li><a href="../papers/asyncpatch-diffusion.html"><span class="cat">paper</span>AsyncPatch Diffusion · 不再让整张图共用一只去噪时钟</a></li><li><a href="../papers/diffusion-unet.html"><span class="cat">paper</span>Diffusion U-Net · 同一张网，反复回答“这一步该擦掉什么”</a></li><li><a href="../papers/sana-video-2.html"><span class="cat">paper</span>SANA-Video 2.0 · 用三层“速写”加一层“精查”生成长视频</a></li><li><a href="../concepts/asyncpatch-timestep-sampling.html"><span class="cat">concept</span>AsyncPatch Timestep Sampling · 先选全局噪声，再分配局部时钟</a></li><li><a href="../concepts/content-aware-flow-shift.html"><span class="cat">concept</span>Content-Aware Flow Shift · 不同视频多练不同噪声段</a></li><li><a href="../concepts/group-normalization.html"><span class="cat">concept</span>Group Normalization · 分组归一化</a></li><li><a href="../concepts/joint-diffusion.html"><span class="cat">concept</span>Joint Diffusion · 每个位置单独加噪，网络仍联合看全图</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/asyncpatch-diffusion.html"><span class="cat">paper</span>AsyncPatch Diffusion · 不再让整张图共用一只去噪时钟</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/diffusion-timestep-conditioning.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/asyncpatch-timestep-sampling.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 

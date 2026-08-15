@@ -1,8 +1,8 @@
 ---
 name: diffusion-timestep-conditioning
 type: concept
-sources: [diffusion-unet, dit, sana-video-2]
-updated: 2026-07-28
+sources: [diffusion-unet, dit, sana-video-2, asyncpatch-diffusion]
+updated: 2026-08-14
 ---
 
 # Diffusion Timestep Conditioning · 告诉去噪网络“现在噪到哪一步”
@@ -71,3 +71,4 @@ h'=(1+s_t)\operatorname{GN}(h)+b_t
 - [[group-normalization]] · 被 scale / shift 调制的归一化
 - [[adaptive-layernorm]] · DiT 用 LayerNorm 实现的后继版本
 - [[positional-encoding]] · 同一套正弦编码最早在 Transformer 里表示位置
+- [[asyncpatch-diffusion]] · 把广播到全图的标量时刻升级为二维时间图，并在各层做空间 FiLM

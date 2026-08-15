@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Diffusion Timestep Conditioning · 告诉去噪网络“现在噪到哪一步” · Concept</title>
+<title>Joint Diffusion · 每个位置单独加噪，网络仍联合看全图 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,59 +53,62 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · diffusion-timestep-conditioning</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · joint-diffusion</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Diffusion Timestep Conditioning · 告诉去噪网络“现在噪到哪一步”</h1>
+  <h1>Joint Diffusion · 每个位置单独加噪，网络仍联合看全图</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>同一个去噪网络要处理从纯噪声到近乎干净的所有状态；先把时刻 <span class="tex math-inline" data-display="false">t</span> 编成向量，再送进每个 block，让网络随噪声强度切换工作方式。</p>
-<h2>为什么不能只喂 <span class="tex math-inline" data-display="false">x_t</span></h2>
-<p>输入数值本身不一定能唯一说明噪声等级。早期步骤要先搭全局结构，晚期步骤只需修小纹理。不给 <span class="tex math-inline" data-display="false">t</span>，相当于让同一个修图师不知道现在拿到的是草稿还是终稿。</p>
-<h2>正弦时间嵌入</h2>
-<p>一个常见写法是：</p>
-<div class="tex math-display" data-display="true">e_{2i}(t)=\sin\left(\frac{t}{10000^{2i/d}}\right),\qquad
-e_{2i+1}(t)=\cos\left(\frac{t}{10000^{2i/d}}\right)</div>
-<p><span class="tex math-inline" data-display="false">d</span> 是嵌入维度，<span class="tex math-inline" data-display="false">i</span> 选择不同频率。高频分量分得清相邻时刻，低频分量表示长范围进度。</p>
-<h2>数字例子</h2>
-<p>用两档频率 <span class="tex math-inline" data-display="false">1</span> 与 <span class="tex math-inline" data-display="false">0.1</span> 做四维玩具版：</p>
-<div class="tex math-display" data-display="true">e(t)=[\sin t,\cos t,\sin(0.1t),\cos(0.1t)]</div>
-<p>当 <span class="tex math-inline" data-display="false">t=0</span>：</p>
-<div class="tex math-display" data-display="true">e(0)=[0,1,0,1]</div>
-<p>当 <span class="tex math-inline" data-display="false">t=\pi</span>：</p>
-<div class="tex math-display" data-display="true">e(\pi)\approx[0,-1,0.309,0.951]</div>
-<p>同一个时刻被多档“钟表指针”共同编码，不需要为 1000 个时刻各存一张互不相关的表。</p>
-<h2>怎样进入 ResBlock</h2>
-<p>时间向量先过 MLP，再投影成 scale 与 shift。OpenAI guided-diffusion 的代码形式是：</p>
-<div class="tex math-display" data-display="true">h&#x27;=(1+s_t)\operatorname{GN}(h)+b_t</div>
-<p><span class="tex math-inline" data-display="false">h</span> 是当前空间特征，<span class="tex math-inline" data-display="false">s_t</span> 与 <span class="tex math-inline" data-display="false">b_t</span> 都由时间嵌入生成。若 <span class="tex math-inline" data-display="false">\operatorname{GN}(h)=[-1,1]</span>：</p>
-<pre><code class="language-text">时刻 A：scale=.5, shift=.2 → [-1.3, 1.7]
-时刻 B：scale=-.2, shift=.1 → [-.7, .9]
+<p>普通扩散给整张图一个噪声时刻；联合扩散给第 <span class="tex math-inline" data-display="false">i</span> 个空间单元自己的 <span class="tex math-inline" data-display="false">t_i</span>，却仍用一个网络同时读全部单元，所以它学到的是联合分布，不是一堆互不相干的局部去噪器。</p>
+<h2>前向加噪</h2>
+<p>把图像或 latent 展开成 <span class="tex math-inline" data-display="false">N</span> 个空间 token：</p>
+<div class="tex math-display" data-display="true">\begin{aligned}
+\mu_i&amp;=\alpha_{t_i}x_i,\\
+v_i&amp;=\sigma_{t_i}^{2},\\
+q_i&amp;=\mathcal N(z_{i,t_i};\mu_i,v_iI),\\
+q(\mathbf z_{\mathbf t}\mid\mathbf x)&amp;=\prod_{i=1}^{N}q_i
+\end{aligned}</div>
+<ul>
+<li><span class="tex math-inline" data-display="false">\mathbf x=(x_1,\dots,x_N)</span>：干净图像的 <span class="tex math-inline" data-display="false">N</span> 个 token。</li>
+<li><span class="tex math-inline" data-display="false">\mathbf t=(t_1,\dots,t_N)</span>：时刻场；第 <span class="tex math-inline" data-display="false">i</span> 个 token 使用 <span class="tex math-inline" data-display="false">t_i</span>。</li>
+<li><span class="tex math-inline" data-display="false">z_{i,t_i}</span>：第 <span class="tex math-inline" data-display="false">i</span> 个 token 加噪后的状态。</li>
+<li><span class="tex math-inline" data-display="false">\alpha_{t_i}</span>：该位置保留的干净信号系数。</li>
+<li><span class="tex math-inline" data-display="false">\sigma_{t_i}</span>：该位置的噪声系数。</li>
+<li><span class="tex math-inline" data-display="false">\mu_i,v_i</span>：只是把该位置的高斯均值与方差暂时缩写，分别等于 <span class="tex math-inline" data-display="false">\alpha_{t_i}x_i</span> 和 <span class="tex math-inline" data-display="false">\sigma_{t_i}^{2}</span>。</li>
+<li><span class="tex math-inline" data-display="false">q_i=q(z_{i,t_i}\mid x_i,t_i)</span>：第 <span class="tex math-inline" data-display="false">i</span> 个位置的局部加噪分布简称。</li>
+<li><span class="tex math-inline" data-display="false">I</span>：单位协方差，表示加入标准独立高斯噪声。</li>
+<li><span class="tex math-inline" data-display="false">\prod_i</span>：给定干净图后，前向噪声按 token 独立采样。</li>
+</ul>
+<p>“前向独立”不等于“反向也独立”。网络在预测第 <span class="tex math-inline" data-display="false">i</span> 个位置的 score 时，输入是整个 <span class="tex math-inline" data-display="false">\mathbf z_{\mathbf t}</span>；它可以用已经干净的左半边帮助去噪右半边。</p>
+<h2>四格数字例</h2>
+<p>设四个 token 的时刻为 <span class="tex math-inline" data-display="false">[0,0,.8,.8]</span>。前两格保持干净，后两格高度加噪。若干净值是 <span class="tex math-inline" data-display="false">[2,1,4,3]</span>，且玩具日程在 <span class="tex math-inline" data-display="false">t=.8</span> 取 <span class="tex math-inline" data-display="false">\alpha=.6,\sigma=.8</span>，后两格噪声取 <span class="tex math-inline" data-display="false">[-1,.5]</span>：</p>
+<pre><code class="language-text">前两格：t=0 → [2, 1]
+第三格：.6×4 + .8×(-1) = 1.6
+第四格：.6×3 + .8× .5   = 2.2
+联合输入：[2, 1, 1.6, 2.2]
 </code></pre>
-<p>输入特征相同，仅时刻不同，block 的处理结果就不同。这才是“条件注入”真正改动的地方。</p>
+<p>网络不是只看 1.6 猜第三格；它看完整的四格布局再给第三格修改方向。补图能成立，靠的就是这个“噪声独立、预测联合”。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/diffusion-unet.html">diffusion-unet</a> · 时间嵌入送进每个残差块</li>
-<li><a href="../concepts/group-normalization.html">group-normalization</a> · 被 scale / shift 调制的归一化</li>
-<li><a href="../concepts/adaptive-layernorm.html">adaptive-layernorm</a> · DiT 用 LayerNorm 实现的后继版本</li>
-<li><a href="../concepts/positional-encoding.html">positional-encoding</a> · 同一套正弦编码最早在 Transformer 里表示位置</li>
-<li><a href="../papers/asyncpatch-diffusion.html">asyncpatch-diffusion</a> · 把广播到全图的标量时刻升级为二维时间图，并在各层做空间 FiLM</li>
+<li><a href="../papers/asyncpatch-diffusion.html">asyncpatch-diffusion</a> · 把这个定义做成可训练的采样器和 U-Net</li>
+<li><a href="../concepts/score-function.html">score-function</a> · 为什么 score 是与输入同形的修改方向</li>
+<li><a href="../concepts/diffusion-timestep-conditioning.html">diffusion-timestep-conditioning</a> · 从单一时刻条件到空间时刻场</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 7 处</span>
-  <ul><li><a href="../papers/asyncpatch-diffusion.html"><span class="cat">paper</span>AsyncPatch Diffusion · 不再让整张图共用一只去噪时钟</a></li><li><a href="../papers/diffusion-unet.html"><span class="cat">paper</span>Diffusion U-Net · 同一张网，反复回答“这一步该擦掉什么”</a></li><li><a href="../papers/sana-video-2.html"><span class="cat">paper</span>SANA-Video 2.0 · 用三层“速写”加一层“精查”生成长视频</a></li><li><a href="../concepts/asyncpatch-timestep-sampling.html"><span class="cat">concept</span>AsyncPatch Timestep Sampling · 先选全局噪声，再分配局部时钟</a></li><li><a href="../concepts/content-aware-flow-shift.html"><span class="cat">concept</span>Content-Aware Flow Shift · 不同视频多练不同噪声段</a></li><li><a href="../concepts/group-normalization.html"><span class="cat">concept</span>Group Normalization · 分组归一化</a></li><li><a href="../concepts/joint-diffusion.html"><span class="cat">concept</span>Joint Diffusion · 每个位置单独加噪，网络仍联合看全图</a></li></ul>
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/asyncpatch-diffusion.html"><span class="cat">paper</span>AsyncPatch Diffusion · 不再让整张图共用一只去噪时钟</a></li><li><a href="../concepts/asyncpatch-timestep-sampling.html"><span class="cat">concept</span>AsyncPatch Timestep Sampling · 先选全局噪声，再分配局部时钟</a></li><li><a href="../concepts/spatial-diffusion-schedule.html"><span class="cat">concept</span>Spatial Diffusion Schedule · 让每块都有自己的去噪进度表</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/diffusion-timestep-conditioning.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/joint-diffusion.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
