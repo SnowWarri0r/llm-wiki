@@ -44,7 +44,7 @@
   <h1>AsyncPatch<br><em>Diffusion</em></h1>
   <p class="byline">Samuele Papa · Valentin De Bortoli · Guillaume Couairon · Daniel Sýkora · Romuald Elie · Klaus Greff</p>
   <p class="dek">普通扩散让整张图共用一只时钟。AsyncPatch 给每个 patch 一只局部时钟，再让一个联合网络同时看全图：于是“已知区域保持干净、未知区域继续生成”不再是外挂规则，而是模型训练时就见过的状态。</p>
-  <div class="tldr"><span class="label">先记这一句</span><strong>它没有发明新的去噪目标，而是把标量时间 <code class="m">t</code> 升级为与图像对齐的时间场 <code class="m">\mathbf t=(t_1,\ldots,t_N)</code>。</strong>训练时补齐“全局噪声水平 × 局部差异”的组合；推理时只换各位置的时间路径，同一份 U-Net 就能做整图生成、补图、空间自回归和输入细节引导。</div>
+  <div class="tldr"><span class="label">先记这一句</span><strong>它没有发明新的去噪目标，而是把标量时间 <code class="m">t</code> 升级为与图像对齐的时间场 <code class="m">\mathbf t=(t_1,\ldots,t_N)</code>。</strong>训练时补齐“全局噪声水平 × 局部差异”的组合；推理时只换各位置的时间路径，同一份 U-Net 就能做整图生成、补图、空间自回归和输入细节引导。同款思路沿时间轴切就是视频里的 diffusion-forcing（每个视频 chunk 独立配 t，见 <a href="causal-rcm.html">Causal-rCM</a> § 02）——一个切空间、一个切时间，都是把「半干净半噪」变成训练内状态。</div>
 </header>
 <nav class="toc"><a href="#vocab">00 前置</a><a href="#map">01 总览</a><a href="#joint">02 联合加噪</a><a href="#failure">03 采样缺口</a><a href="#sampler">04 AsyncPatch</a><a href="#loss">05 训练目标</a><a href="#arch">06 架构</a><a href="#routes">07 推理路径</a><a href="#inpaint">08 补图</a><a href="#guidance">09 引导</a><a href="#elbo">10 ELBO</a><a href="#recipe">11 配方</a><a href="#results">12 实验</a><a href="#limits">13 边界</a></nav>
 
