@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lyra 2.0 · 先让视频模型当虚拟相机，再把走过的世界重建成 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..800&family=Newsreader:opsz,wght@6..72,350..700&family=Noto+Serif+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<style>
+:root{--paper:#eee9dc;--card:#faf7ed;--ink:#14191d;--ink2:#333b40;--muted:#665f55;--rule:#aaa18f;--navy:#17364b;--blue:#1c6480;--blue2:#d7eaf0;--teal:#176f68;--teal2:#d5ebe5;--rust:#a33b25;--rust2:#f3d9ce;--gold:#916000;--gold2:#f1dfaa;--violet:#635078;--violet2:#e7deef;--dark:#102b3d;--white:#fff}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:18px/1.74 'Newsreader','Noto Serif SC',serif;-webkit-font-smoothing:antialiased}body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.32;background-image:linear-gradient(rgba(28,100,128,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(28,100,128,.045) 1px,transparent 1px);background-size:34px 34px}.wiki-nav{position:sticky;top:0;z-index:1001;display:flex;justify-content:space-between;align-items:center;padding:8px 22px;background:#14191d;color:#f2ead6;border-bottom:1px solid #39434a;font:600 11px/1.5 'JetBrains Mono';letter-spacing:2px;text-transform:uppercase}.wiki-nav a{color:#f2ead6;text-decoration:none}.wiki-nav .ws-r a{color:#e0b34b}.page{position:relative;max-width:1190px;margin:auto;padding:54px 38px 120px}.mast{display:flex;justify-content:space-between;border-top:4px double var(--ink);border-bottom:1px solid var(--rule);padding:12px 0;color:var(--muted);font:600 11px/1.5 'JetBrains Mono';letter-spacing:1.8px;text-transform:uppercase}.hero{padding:58px 0 34px}.issue{display:flex;gap:14px;align-items:center;color:var(--blue);font:700 11px/1.5 'JetBrains Mono';letter-spacing:3px;text-transform:uppercase}.issue:after{content:"";height:1px;background:var(--rule);flex:1}.hero h1{margin:16px 0 8px;font:750 clamp(58px,10vw,118px)/.86 'Fraunces','Noto Serif SC';letter-spacing:-.055em}.hero h1 em{color:var(--teal);font-weight:600}.byline{color:var(--muted);font:600 11px/1.6 'JetBrains Mono';letter-spacing:.65px}.dek{max-width:980px;font:italic 400 clamp(21px,2.5vw,29px)/1.45 'Fraunces','Noto Serif SC';color:var(--ink2)}nav.toc{position:sticky;top:35px;z-index:10;display:flex;gap:7px;overflow-x:auto;margin:0 -14px 52px;padding:10px 14px;background:rgba(238,233,220,.97);border-block:1px solid var(--rule);scrollbar-width:none}nav.toc a{flex:none;padding:6px 9px;border:1px solid var(--rule);color:var(--navy);background:var(--card);font:600 10px/1.2 'JetBrains Mono';text-decoration:none}nav.toc a:hover,nav.toc a:focus-visible{background:var(--navy);color:#fff;outline:2px solid var(--navy);outline-offset:1px}h2{display:flex;gap:16px;align-items:baseline;margin:78px 0 20px;font:700 clamp(30px,4vw,44px)/1.1 'Fraunces','Noto Serif SC';letter-spacing:-.025em}h2 .n{min-width:55px;color:var(--teal);font:700 11px/1.4 'JetBrains Mono';letter-spacing:2px}h3{margin:34px 0 10px;font:700 23px/1.28 'Fraunces','Noto Serif SC'}p{margin:12px 0}.lead{font-size:22px;line-height:1.58;color:var(--ink2)}a{color:#872f20;text-decoration-thickness:1px;text-underline-offset:3px}strong{font-weight:700}code{font:500 .88em/1.5 'JetBrains Mono';background:#fffaf0;border:1px solid var(--rule);border-radius:3px;padding:1px 5px}.tldr,.note,.warning,.truth{margin:24px 0;padding:18px 22px;background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--blue)}.warning{border-left-color:var(--rust);background:#fff0e9}.truth{border-left-color:var(--teal);background:#edf6f1}.label{display:block;margin-bottom:5px;color:var(--blue);font:700 10px/1.5 'JetBrains Mono';letter-spacing:2px;text-transform:uppercase}.warning .label{color:var(--rust)}.truth .label{color:var(--teal)}.jr{vertical-align:super;margin:0 2px;padding:1px 5px;border:1px solid var(--gold);border-radius:999px;background:var(--gold2);color:#4d3100;text-decoration:none;font:700 9px/1.2 'JetBrains Mono'}.jr:hover,.jr:focus-visible,.jr.jr-active{background:#4d3100;color:#fff;outline:2px solid var(--gold);outline-offset:2px}.grid2,.grid3,.grid4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid4{grid-template-columns:repeat(4,minmax(0,1fr))}.card{min-width:0;padding:20px;background:var(--card);border:1px solid var(--rule);box-shadow:5px 5px 0 rgba(23,54,75,.07)}.card h3{margin:8px 0 5px}.card p{font-size:16px;line-height:1.58}.tag{display:inline-block;padding:3px 8px;background:var(--blue2);color:#114b62;font:700 10px/1.4 'JetBrains Mono';letter-spacing:1px;text-transform:uppercase}.tag.rust{background:var(--rust2);color:#772718}.tag.teal{background:var(--teal2);color:#19574f}.tag.gold{background:var(--gold2);color:#523500}.tag.violet{background:var(--violet2);color:#49375d}figure{margin:38px 0;padding:28px;background:rgba(250,247,237,.88);border:1px solid var(--rule);box-shadow:8px 8px 0 rgba(23,54,75,.07);overflow:hidden}figcaption{display:flex;justify-content:space-between;gap:16px;margin-bottom:22px;padding-bottom:12px;border-bottom:1px dashed var(--rule);color:var(--muted);font:600 11px/1.4 'JetBrains Mono';letter-spacing:1.2px;text-transform:uppercase}figcaption b{color:var(--teal)}.formula{margin:18px 0;padding:21px 16px;overflow-x:auto;text-align:center;background:var(--dark);color:#fff;border-left:6px solid var(--teal);font-size:1.05em}.formula .katex{color:#fff}.vars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0}.vars>div{min-width:0;padding:10px 12px;background:var(--card);border:1px solid var(--rule);font-size:14px}.vars code{display:block;margin-bottom:4px;color:#7a291b}.calc{counter-reset:step;display:grid;gap:8px;margin:18px 0}.step{position:relative;padding:13px 14px 13px 56px;background:#fff;border:1px solid var(--rule);font-size:15px}.step:before{counter-increment:step;content:counter(step,decimal-leading-zero);position:absolute;left:16px;top:14px;color:var(--teal);font:700 11px/1.5 'JetBrains Mono'}.step b{display:block;color:var(--navy)}.flow{display:grid;grid-template-columns:1fr 42px 1fr 42px 1fr 42px 1fr;align-items:stretch}.node{min-width:0;padding:17px;background:#fff;border:2px solid var(--blue)}.node.rust{border-color:var(--rust);background:#fff0e9}.node.teal{border-color:var(--teal);background:#edf7f3}.node.gold{border-color:var(--gold);background:#fff8df}.node.violet{border-color:var(--violet);background:#f8f2fb}.node b{display:block;margin:4px 0;font:700 18px/1.3 'Fraunces','Noto Serif SC'}.node small{color:var(--muted);font:700 9px/1.4 'JetBrains Mono';letter-spacing:1px}.node p{font-size:14px;line-height:1.5}.arrow{display:flex;align-items:center;justify-content:center;color:var(--rust);font:700 27px/1 'JetBrains Mono'}.two-fail{display:grid;grid-template-columns:1fr 1fr;gap:16px}.scene{position:relative;min-height:310px;padding:22px;background:#fff;border:2px solid var(--blue)}.scene.drift{border-color:var(--rust)}.film{display:flex;gap:7px;margin:22px 0}.frame{flex:1;aspect-ratio:4/3;display:grid;place-items:center;border:1px solid var(--rule);background:linear-gradient(160deg,#bcd7d9 0 54%,#7b996f 55% 100%);color:var(--navy);font:700 10px/1.2 'JetBrains Mono';text-align:center}.frame.faded{filter:saturate(.55) hue-rotate(15deg);transform:skewX(-2deg)}.frame.lost{background:repeating-linear-gradient(45deg,#eee6d7 0 10px,#fff 10px 20px);color:var(--rust)}.loop{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;align-items:center}.loop .box{min-height:92px;padding:12px;border:2px solid var(--blue);background:#fff;text-align:center}.loop .box b{display:block;color:var(--navy);font-size:16px}.loop .box small{display:block;margin-top:5px;color:var(--muted);font:600 9px/1.4 'JetBrains Mono'}.loop .box.em{border-color:var(--teal);background:var(--teal2)}.loop .box.out{border-color:var(--rust);background:var(--rust2)}.loop .arr{display:none}.memory{display:grid;grid-template-columns:1.1fr .8fr 1.1fr;gap:18px;align-items:center}.stack{display:grid;gap:8px}.memrow{display:grid;grid-template-columns:54px 1fr 76px;gap:8px;align-items:center;padding:10px;background:#fff;border:1px solid var(--rule);font-size:13px}.thumb{height:38px;background:linear-gradient(145deg,#b9d5dd,#688f7d);border:1px solid var(--blue)}.cover{height:9px;background:#ded7ca}.cover i{display:block;height:100%;background:var(--teal)}.target{aspect-ratio:4/3;position:relative;background:linear-gradient(160deg,#d3e6e8 0 54%,#859b78 55% 100%);border:3px solid var(--rust)}.target:before{content:"TARGET VIEW";position:absolute;inset:12px auto auto 12px;color:var(--rust);font:700 9px/1 'JetBrains Mono'}.pixels{display:grid;grid-template-columns:repeat(6,1fr);gap:2px;padding:12px;background:#fff;border:1px solid var(--rule)}.pixels i{aspect-ratio:1;background:#e4ded1}.pixels i.hit1{background:#64a7b3}.pixels i.hit2{background:#75a987}.pixels i.hit3{background:#d6a849}.coord{display:grid;grid-template-columns:1fr 52px 1fr;gap:12px;align-items:center}.gridmap{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;padding:12px;background:#fff;border:2px solid var(--blue)}.gridmap i{aspect-ratio:1;display:grid;place-items:center;background:var(--blue2);color:var(--navy);font:600 8px/1 'JetBrains Mono'}.gridmap.warp{transform:perspective(500px) rotateY(-4deg) skewY(-2deg);border-color:var(--teal)}.gridmap.warp i:nth-child(1),.gridmap.warp i:nth-child(6),.gridmap.warp i:nth-child(21){visibility:hidden}.slots{display:grid;grid-template-columns:repeat(16,minmax(22px,1fr));gap:4px;min-width:770px}.slot{min-height:86px;padding:8px 3px;border:1px solid var(--rule);display:flex;flex-direction:column;justify-content:space-between;background:#fff;text-align:center}.slot b{font:700 10px/1.2 'JetBrains Mono'}.slot small{font:600 8px/1.2 'JetBrains Mono';color:var(--muted)}.slot.anchor{grid-column:span 1;background:var(--gold2);border-color:var(--gold)}.slot.spatial2{grid-column:span 4;background:var(--teal2);border-color:var(--teal)}.slot.spatial1{grid-column:span 2;background:#bce0d8;border-color:var(--teal)}.slot.temp4{grid-column:span 3;background:var(--blue2);border-color:var(--blue)}.slot.temp2{grid-column:span 2;background:#c9dce9;border-color:var(--blue)}.slot.temp1{grid-column:span 1;background:#bdd3e2;border-color:var(--blue)}.slot.gen{grid-column:span 3;background:var(--rust2);border-color:var(--rust)}.recon{display:grid;grid-template-columns:1fr 42px 1fr 42px 1fr;align-items:stretch}.gauss{display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:3px;min-height:150px;padding:14px;background:#fff;border:2px solid var(--teal)}.gauss i{width:24px;height:13px;border-radius:50%;background:var(--teal);opacity:.55;transform:rotate(var(--r))}.mesh{min-height:150px;padding:16px;background-color:#fff;border:2px solid var(--violet);background-image:linear-gradient(30deg,transparent 49%,rgba(99,80,120,.33) 50% 51%,transparent 52%),linear-gradient(-30deg,transparent 49%,rgba(99,80,120,.33) 50% 51%,transparent 52%);background-size:28px 24px}.bars{display:grid;gap:11px}.bar{display:grid;grid-template-columns:185px 1fr 70px;gap:11px;align-items:center;font-size:14px}.track{height:21px;background:#ddd6ca}.fill{height:100%;background:var(--teal)}.fill.rust{background:var(--rust)}.fill.blue{background:var(--blue)}.scroll{overflow-x:auto;margin:18px 0;border:1px solid var(--rule)}table{width:100%;border-collapse:collapse;background:var(--card);font-size:14px;white-space:nowrap}th,td{padding:10px 12px;border-bottom:1px solid var(--rule);text-align:right}th:first-child,td:first-child{text-align:left}thead th{background:var(--navy);color:#fff;font:600 10px/1.4 'JetBrains Mono';letter-spacing:.7px}.win{background:var(--teal2);color:#154f48;font-weight:700}.caution{background:var(--rust2);color:#722719;font-weight:700}.gloss{margin-top:78px;padding-top:30px;border-top:3px double var(--ink)}.gloss ol{list-style:none;padding:0;counter-reset:g}.gloss li{position:relative;padding:13px 10px 13px 48px;border-bottom:1px dashed var(--rule);font-size:15px}.gloss li:before{counter-increment:g;content:counter(g,decimal-leading-zero);position:absolute;left:7px;color:var(--teal);font:700 10px/1.8 'JetBrains Mono'}.gloss .term{font-weight:700;color:var(--navy)}.sources{margin-top:54px;padding:22px;background:var(--card);border:1px solid var(--rule);font-size:14px}.sources li{margin:7px 0}.reveal{opacity:0;transform:translateY(8px);transition:.5s ease}.play .reveal{opacity:1;transform:none}.d2{transition-delay:.08s}.d3{transition-delay:.16s}.d4{transition-delay:.24s}.d5{transition-delay:.32s}
+@media(max-width:900px){.page{padding:34px 18px 90px}.grid3,.grid4{grid-template-columns:1fr 1fr}.flow{grid-template-columns:1fr}.flow .arrow{height:34px;transform:rotate(90deg)}.vars{grid-template-columns:1fr}.two-fail{grid-template-columns:1fr}.memory{grid-template-columns:1fr}.coord{grid-template-columns:1fr}.coord .arrow{transform:rotate(90deg);height:34px}.slots{min-width:720px}.slot{min-height:76px}.bar{grid-template-columns:150px 1fr 65px}}
+@media(max-width:560px){body{font-size:17px}.page{padding-inline:12px}.hero h1{font-size:58px}.mast .r,.wiki-nav .ws-r{display:none}figure{padding:18px 12px;margin-inline:0}.grid2,.grid3,.grid4{grid-template-columns:1fr}.vars{grid-template-columns:1fr}.loop{grid-template-columns:1fr}.loop .box{min-height:auto}.recon{grid-template-columns:1fr}.recon .arrow{height:34px;transform:rotate(90deg)}.bar{grid-template-columns:1fr}.formula{font-size:.91em;padding-inline:8px}figcaption{display:block}figcaption b{display:block;margin-top:5px}nav.toc{top:34px;margin-inline:0;padding-inline:0}.slots{min-width:690px}}
+</style>
+<style>
+.loop .box{position:relative}
+.loop .box:not(:last-child):after{content:"→";position:absolute;z-index:2;right:-17px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:24px;height:24px;background:var(--card);color:var(--rust);font:700 20px/1 'JetBrains Mono'}
+@media(max-width:560px){.loop .box:not(:last-child):after{right:50%;top:auto;bottom:-18px;transform:translateX(50%) rotate(90deg)}}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · lyra-2</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page">
+<div class="mast"><span>EXPLORABLE GENERATIVE 3D WORLDS · FIELD NOTES</span><span class="r">ARXIV 2604.13036 · NVIDIA · 2026</span></div>
+<header class="hero">
+  <div class="issue">From one image to a walkable possible world</div>
+  <h1>Lyra <em>2.0</em></h1>
+  <p class="byline">Tianchang Shen · Sherwin Bahmani · Kai He · Sangeetha Grama Srinivasan · Tianshi Cao · Jiawei Ren · Ruilong Li · Zian Wang · Nicholas Sharp · Zan Gojcic · Sanja Fidler · Jiahui Huang · Huan Ling · Jun Gao · Xuanchi Ren</p>
+  <p class="dek">一张图看不到门后和街角，传统重建没法凭空恢复；视频模型可以补，却会走远就忘、越滚越歪。Lyra 2.0 的办法是让粗糙 3D 只当“地图索引”，把旧观察准确找回来，画面仍交给生成模型，再把完整旅程统一重建成 3D。</p>
+  <div class="tldr"><span class="label">先记这一句</span><strong>几何负责找路，生成负责画图，重建负责收尾。</strong>逐帧 3D cache 修空间遗忘；self-augmentation 修分段自回归漂移；微调 DAv3 把最终长视频变成 3DGS 或 mesh。</div>
+</header>
+<nav class="toc"><a href="#boundary">00 边界</a><a href="#overview">01 总览</a><a href="#failure">02 两种坏法</a><a href="#base">03 基础</a><a href="#memory">04 记忆</a><a href="#corr">05 对应</a><a href="#context">06 上下文</a><a href="#drift">07 防漂移</a><a href="#recon">08 重建</a><a href="#train">09 训练</a><a href="#results">10 实验</a><a href="#limits">11 局限</a></nav>
+
+<section id="boundary">
+<h2><span class="n">§ 00</span>先把名字里的“3D 世界”拆开</h2>
+<p class="lead">这不是一个直接维护完整真值 3D 状态、按物理动作实时更新的游戏引擎。它先生成一条相机可控的长视频，再把视频重建成显式 3D。</p>
+<div class="grid3">
+  <div class="card"><span class="tag">DiT / VAE</span><h3>负责生成视频</h3><p>VAE 先把像素视频压成小 latent；DiT 是在 latent 里预测去噪方向的 Transformer。</p></div>
+  <div class="card"><span class="tag teal">DAv3</span><h3>负责整理多视角 3D</h3><p>Depth Anything v3 的前馈重建模型；一次网络推理就从多帧预测 Gaussian 属性，不逐场景慢慢优化。</p></div>
+  <div class="card"><span class="tag violet">3DGS / mesh</span><h3>两种交付格式</h3><p>3DGS 是许多可实时投影的半透明椭球；mesh 是物理引擎更常用的三角形表面。<a class="jr" href="#g-04">04</a></p></div>
+</div>
+<div class="grid4">
+  <div class="card"><span class="tag">INPUT</span><h3>一张图片</h3><p>可见区域是证据；背后、遮挡和远处没有唯一答案。</p></div>
+  <div class="card"><span class="tag teal">CONTROL</span><h3>相机轨迹</h3><p>用户指定相机怎么走；不是键鼠动作、角色状态或碰撞反馈。<a class="jr" href="#g-01">01</a></p></div>
+  <div class="card"><span class="tag gold">MIDDLE</span><h3>生成长视频</h3><p>每轮 80 帧，新的片段继续吃前面历史。</p></div>
+  <div class="card"><span class="tag violet">OUTPUT</span><h3>3DGS / mesh</h3><p>全部视角生成完后，再统一重建成可渲染资产。</p></div>
+</div>
+<div class="warning"><span class="label">“重建”不等于恢复真相</span>输入只有正面街景时，拐角后是咖啡店还是停车场没有观测答案。Lyra 生成的是与输入相容的<strong>一种合理世界</strong>。已看见区域应保持一致；未见区域属于生成，不属于测量。</div>
+</section>
+
+<section id="overview">
+<h2><span class="n">§ 01</span>完整闭环：每走一段，就把这一段写回记忆</h2>
+<figure id="fig-loop">
+  <figcaption><span>Fig 01 · 一轮 80 帧更新到底发生什么</span><b>箭头表示真实数据流方向</b></figcaption>
+  <div class="loop">
+    <div class="box reveal"><b>输入图 / 当前历史</b><small>已经走过的画面</small></div>
+    <div class="box em reveal d2"><b>给下一段轨迹</b><small>目标相机位置</small></div>
+    <div class="box em reveal d3"><b>3D cache 检索</b><small>找回 5 张相关旧帧</small></div>
+    <div class="box em reveal d4"><b>DiT 生成 80 帧</b><small>新视角与新区域</small></div>
+    <div class="box out reveal d5"><b>估深度并写回</b><small>缓存继续增长</small></div>
+  </div>
+  <div style="display:flex;justify-content:flex-end;margin:14px 6% 0"><span style="display:inline-block;padding:6px 12px;border:1px solid var(--rust);color:var(--rust);font:700 11px/1.4 'JetBrains Mono'">末端回到开头，接受下一段轨迹 ↺</span></div>
+  <div class="note"><span class="label">最终 3D 不在这个小循环里</span>循环期间的点云是检索用代理；用户结束探索后，完整生成视频才送入 DAv3，输出最终 3DGS / mesh。别把“循环里的 3D cache”和“交付的 3D 资产”混成一个东西。</div>
+</figure>
+<div class="grid3">
+  <div class="card"><span class="tag">ROUTING</span><h3>粗几何找旧帧</h3><p>目标视角能看到哪张旧图，就把哪张旧图调回来。</p></div>
+  <div class="card"><span class="tag teal">SYNTHESIS</span><h3>视频模型画新图</h3><p>在旧观察与相机提示下补洞、解决冲突、生成未见内容。</p></div>
+  <div class="card"><span class="tag violet">LIFTING</span><h3>重建器整理 3D</h3><p>把长视频里的多视角证据变成显式 Gaussian 或三角面。</p></div>
+</div>
+</section>
+
+<section id="failure">
+<h2><span class="n">§ 02</span>两个失败看起来都叫“变差”，根因却不同</h2>
+<figure id="fig-fail">
+  <figcaption><span>Fig 02 · 空间遗忘 vs 时间漂移</span><b>一个缺旧证据 · 一个吃错历史</b></figcaption>
+  <div class="two-fail">
+    <div class="scene reveal">
+      <span class="tag">SPATIAL FORGETTING</span><h3>转一圈回来，旧地点退出上下文</h3>
+      <div class="film"><div class="frame">门 A</div><div class="frame">街道</div><div class="frame">拐角</div><div class="frame lost">门 A？<br>重新编</div></div>
+      <p>模型最近只看见街道和拐角；最初的门已经不在有限 token 窗口里。回头时它不是“画坏”，而是根本没有旧证据可抄。</p>
+    </div>
+    <div class="scene drift reveal d2">
+      <span class="tag rust">TEMPORAL DRIFTING</span><h3>每段只偏一点，循环后滚成大错</h3>
+      <div class="film"><div class="frame">原色</div><div class="frame faded">偏暖</div><div class="frame faded" style="filter:saturate(.4) hue-rotate(25deg)">变形</div><div class="frame faded" style="filter:saturate(.25) hue-rotate(45deg);transform:skewX(-6deg)">崩坏</div></div>
+      <p>训练总读真实历史；部署却读前一轮模型输出。颜色偏一点、结构歪一点，下一轮继续把误差当事实。</p>
+    </div>
+  </div>
+</figure>
+<div class="truth"><span class="label">对应修法</span><strong>防遗忘</strong>要从全历史里按空间重叠找回旧帧；<strong>防漂移</strong>要让训练阶段也出现“模型自己生成过、略带瑕疵的前文”。FramePack 延长时间历史，但无法单独解决走出视野又返回的空间重访。</div>
+</section>
+
+<section id="base">
+<h2><span class="n">§ 03</span>基础模型：80 张 RGB 帧为什么只写成 20 个 latent 帧</h2>
+<p>Lyra 2.0 以 Wan 2.1-14B DiT 为主干，输入分辨率 832×480。Wan VAE 对宽高各压 8 倍，对时间压 4 倍，但第一帧单独保留：</p>
+<div class="formula">F'=\left\lfloor\frac{F-1}{4}\right\rfloor+1,qquad C=16,qquad h=\frac H8,quad w=\frac W8</div>
+<div class="vars">
+  <div><code class="m">F,H,W</code>原 RGB 视频的帧数、高和宽。</div><div><code class="m">F',h,w</code>VAE latent 的时间、高和宽。</div>
+  <div><code class="m">C=16</code>每个 latent 位置的通道数。</div><div><code class="m">\lfloor\cdot\rfloor</code>向下取整；第一帧单独计入，所以先减 1 再除 4。</div>
+</div>
+<div class="calc">
+  <div class="step"><b>代入 80 帧</b><span><code class="m">F'=\lfloor(80-1)/4\rfloor+1=\lfloor19.75\rfloor+1=20</code>。</span></div>
+  <div class="step"><b>代入 832×480</b><span>按“高 H=480、宽 W=832”写，latent 空间是 <code class="m">60\times104</code>。</span></div>
+  <div class="step"><b>所以论文里的 g20</b><span>表示生成 20 个 latent 时间位置，解码后对应 80 张 RGB 帧，不是只生成 20 张图。</span></div>
+</div>
+<h3>Flow matching 在学哪条方向</h3>
+<div class="formula">z_t=(1-t)z_0+t\epsilon,qquad \mathcal L=\mathbb E\left[\left\lVert v_\theta(z_t,t,c)-(\epsilon-z_0)\right\rVert_2^2\right]</div>
+<div class="vars">
+  <div><code class="m">z_0</code>干净视频经 VAE 得到的 latent。</div><div><code class="m">\epsilon\sim\mathcal N(0,I)</code>与 latent 同形状的标准高斯噪声。</div>
+  <div><code class="m">t\in[0,1]</code>直线上走了多少；0 是数据，1 是纯噪声。</div><div><code class="m">z_t</code>数据与噪声的线性混合。</div>
+  <div><code class="m">c</code>文字、相机、历史帧和空间记忆等条件。</div><div><code class="m">v_\theta</code>DiT 预测的速度场。</div>
+  <div><code class="m">\epsilon-z_0</code>这条直线的真实速度；因为对 <code class="m">t</code> 求导正好得到它。</div><div><code class="m">\lVert\cdot\rVert_2^2</code>每个位置预测误差平方后求和。</div>
+</div>
+<p>训练从干净数据朝噪声方向学速度；生成时反过来，从噪声沿速度走回视频。后面的 self-augmentation 会复用同一条直线公式。</p>
+<h3>相机条件为什么要两套</h3>
+<div class="grid2">
+  <div class="card"><span class="tag">DEPTH WARP</span><h3>近邻视角控制准</h3><p>用最近帧深度投到目标相机，直接告诉模型结构应移动到哪里；但转身太大、没有像素落入新画面时，条件会变成空洞。</p></div>
+  <div class="card"><span class="tag teal">PLÜCKER RAY</span><h3>大转向还有方向提示</h3><p>每个像素用 6 维射线 <code class="m">(d,o\times d)</code> 描述相机原点与朝向；即使旧图完全看不到新区域，模型仍知道相机在怎么转。<a class="jr" href="#g-02">02</a></p></div>
+</div>
+<div class="formula">T_i=[R_i\mid t_i]\in\mathbb R^{3\times4},\qquad K_i\in\mathbb R^{3\times3},\qquad r_i(u,v)=(d,o\times d)\in\mathbb R^6</div>
+<div class="vars"><div><code class="m">R_i,t_i</code>第 i 帧相机的旋转和平移。</div><div><code class="m">T_i</code>world-to-camera 外参，把世界点变到相机坐标。</div><div><code class="m">K_i</code>内参，包含焦距与主点，用于投到像素平面。</div><div><code class="m">o,d</code>世界坐标中的相机原点与该像素射线方向；<code class="m">\times</code> 是叉乘。</div></div>
+</section>
+
+<section id="memory">
+<h2><span class="n">§ 04</span>防遗忘：3D cache 不出图，只决定“该找回谁”</h2>
+<p class="lead">每个历史帧独立保存两份几何：全分辨率深度负责精确像素对应；下采样 8 倍的点云负责快速检索。作者刻意不把它们焊成一张全局点云。<a class="jr" href="#g-05">05</a></p>
+<figure id="fig-memory">
+  <figcaption><span>Fig 03 · 用目标视角给旧帧排序</span><b>最多取 5 张 · 贪心补覆盖</b></figcaption>
+  <div class="memory">
+    <div class="stack reveal">
+      <div class="memrow"><span class="thumb"></span><span>旧帧 A · 正对门</span><span class="cover"><i style="width:82%"></i></span></div>
+      <div class="memrow"><span class="thumb" style="filter:hue-rotate(35deg)"></span><span>旧帧 B · 街角</span><span class="cover"><i style="width:55%"></i></span></div>
+      <div class="memrow"><span class="thumb" style="filter:hue-rotate(75deg)"></span><span>旧帧 C · 远处</span><span class="cover"><i style="width:24%"></i></span></div>
+    </div>
+    <div class="arrow reveal d2">→</div>
+    <div class="target reveal d3"></div>
+  </div>
+  <div class="pixels reveal d4" aria-label="目标像素覆盖示意">
+    <i class="hit1"></i><i class="hit1"></i><i class="hit1"></i><i class="hit2"></i><i></i><i></i><i class="hit1"></i><i class="hit1"></i><i class="hit2"></i><i class="hit2"></i><i class="hit3"></i><i></i><i class="hit1"></i><i class="hit2"></i><i class="hit2"></i><i class="hit3"></i><i class="hit3"></i><i></i>
+  </div>
+  <p class="note"><span class="label">颜色只是覆盖来源示意</span>先选能覆盖最多目标像素的旧帧，再只统计仍未覆盖的像素选下一张。因此不会把五个名额浪费在五张几乎相同的近邻机位上。</p>
+</figure>
+<h3>可见性分数怎么得到</h3>
+<p>对目标相机 <code class="m">(T^*,K^*)</code>，把每帧下采样点云投到目标像素平面。同一目标像素可能落入多个前后点，先取最小投影深度处理遮挡：</p>
+<div class="formula">z_{\min}(u,v)=\min_{i,p\to(u,v)}z_{i,p},\qquad \operatorname{visible}(i,p)=\mathbf 1\!\left[\left|z_{i,p}-z_{\min}(u,v)\right|&lt;\delta\right]</div>
+<div class="formula">\phi(i)=\sum_{p\in P_i}\operatorname{visible}(i,p)</div>
+<div class="vars">
+  <div><code class="m">P_i</code>第 i 帧下采样后的世界坐标点云。</div><div><code class="m">p\to(u,v)</code>点 p 通过目标相机投到像素 <code class="m">(u,v)</code>。</div>
+  <div><code class="m">z_{i,p}</code>这个点在目标相机下的深度。</div><div><code class="m">z_{\min}(u,v)</code>该像素最靠近相机的投影点深度。</div>
+  <div><code class="m">\delta=0.1</code>归一化深度容差；足够接近最前表面才算没被挡住。</div><div><code class="m">\phi(i)</code>第 i 帧在目标视角可见的点数，用作检索分数。</div>
+</div>
+<div class="calc">
+  <div class="step"><b>一个目标像素落进三个旧点</b><span>深度分别是 0.40、0.46、0.78，所以 <code class="m">z_{\min}=0.40</code>。</span></div>
+  <div class="step"><b>用 0.1 容差判断</b><span>差值 0、0.06、0.38；前两个算可见，第三个被前景遮住。</span></div>
+  <div class="step"><b>对全点云计数</b><span>每帧所有可见点相加得到 <code class="m">\phi(i)</code>；训练按它抽样，推理按新增覆盖贪心选 5 帧。</span></div>
+</div>
+<div class="warning"><span class="label">为什么不融合全局点云</span>同一墙面在不同帧的估深可能分别是 4.9 m、5.2 m；一融合就形成双层墙。若再把它渲染成 RGB 喂回视频模型，错几何会生成错图，错图又产生更错的深度。逐帧缓存保存证据来源，避免过早把误差固化。</div>
+</section>
+
+<section id="corr">
+<h2><span class="n">§ 05</span>稠密对应：传“地址”，不要传破洞的 RGB</h2>
+<p>只把 5 张旧图放进 attention，模型还得自己猜大视角变化下哪些像素相同。Lyra 给每张旧帧画一张规范坐标图，再把坐标而非颜色投到目标视角。</p>
+<div class="formula">C_j(u,v)=\left(u,v,\frac{2j}{N_s}-1\right)\in[-1,1]^3</div>
+<div class="vars">
+  <div><code class="m">j</code>这张旧帧在空间记忆中的槽编号。</div><div><code class="m">N_s=5</code>每轮空间槽总数。</div>
+  <div><code class="m">u,v\in[-1,1]</code>旧帧中的归一化横纵坐标。</div><div><code class="m">2j/N_s-1</code>把槽编号映射到接近 <code class="m">[-1,1]</code>，让相同坐标也能区分来自哪张旧图。</div>
+</div>
+<p>论文按 <code class="m">j=0,\ldots,N_s-1</code> 写，因此五个第三通道是 −1、−0.6、−0.2、0.2、0.6，并不会正好取到 1；这是槽身份编码，不是概率。</p>
+<div class="formula">\widehat C_j=\operatorname{FwdWarp}(C_j,D_{s_j},T_{s_j},T^*,K_{s_j},K^*)</div>
+<div class="vars"><div><code class="m">D_{s_j}</code>被找回旧帧的全分辨率深度。</div><div><code class="m">T_{s_j},K_{s_j}</code>旧相机外参和内参。</div><div><code class="m">T^*,K^*</code>目标相机外参和内参。</div><div><code class="m">\widehat C_j</code>投到目标平面后的“目标像素 → 旧图地址”表；另附 warp 后深度成第四通道。</div></div>
+<figure id="fig-coord">
+  <figcaption><span>Fig 04 · Warp 的是坐标标签，不是画面颜色</span><b>左边来源地址 · 右边目标位置</b></figcaption>
+  <div class="coord">
+    <div><span class="tag">旧帧 j=2</span><div class="gridmap reveal"><i>−1,−1</i><i></i><i></i><i></i><i>1,−1</i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i>0,0</i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i>−1,1</i><i></i><i></i><i></i><i>1,1</i></div></div>
+    <div class="arrow reveal d2">→</div>
+    <div><span class="tag teal">目标视角</span><div class="gridmap warp reveal d3"><i></i><i>−.5,−1</i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i>0,0</i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i>.7,1</i><i></i></div></div>
+  </div>
+  <div class="warning"><span class="label">空格是信息，不是绘图缺失</span>新视角露出的区域在旧帧没有来源坐标，因此留空，让生成先验补。若 warp RGB，这些地方会变成黑洞，深度边缘还会把前景颜色拖到背景。</div>
+</figure>
+<h3>为什么加到 Q / K，而不是 V</h3>
+<div class="formula">q=W_Q(x+p),\qquad k=W_K(x+p),\qquad v=W_Vx</div>
+<p><code class="m">p</code> 代表相机射线或坐标对应 embedding。Query / Key 决定“当前 token 去读哪张旧帧的哪个 token”；Value 才是被读回的内容。只改 Q / K，相当于给预训练模型加检索路标，不直接篡改它原有的视频内容特征。<a class="jr" href="#g-03">03</a></p>
+</section>
+
+<section id="context">
+<h2><span class="n">§ 06</span>一轮 DiT 到底同时看到哪些帧</h2>
+<p class="lead">FramePack 保存“时间上怎么一路走来”，空间槽保存“现在这个位置曾经从哪里看过”。两者互补，不是重复。</p>
+<figure id="fig-slots">
+  <figcaption><span>Fig 05 · 论文 Eq. 2 扩成可读的上下文槽</span><b>宽度表示示意 token 预算，不表示帧数</b></figcaption>
+  <div style="overflow-x:auto;padding-bottom:8px"><div class="slots">
+    <div class="slot anchor reveal"><b>f1k1</b><small>原始 anchor<br>1 帧全细节</small></div>
+    <div class="slot spatial2 reveal d2"><b>f4k2</b><small>空间记忆<br>4 帧 · 每边压 2</small></div>
+    <div class="slot spatial1 reveal d2"><b>f1k1</b><small>空间记忆<br>1 帧全细节</small></div>
+    <div class="slot temp4 reveal d3"><b>f16k4</b><small>远时间历史<br>16 帧 · 每边压 4</small></div>
+    <div class="slot temp2 reveal d3"><b>f2k2</b><small>中近历史<br>2 帧 · 每边压 2</small></div>
+    <div class="slot temp1 reveal d3"><b>f1k1</b><small>最近历史<br>1 帧全细节</small></div>
+    <div class="slot gen reveal d4"><b>g20</b><small>待生成<br>20 latent = 80 RGB 帧</small></div>
+  </div></div>
+</figure>
+<div class="formula">\underbrace{f1k1}_{\text{anchor}}\quad\underbrace{f4k2\;f1k1}_{\text{spatial slots}}\quad\underbrace{f16k4\;f2k2\;f1k1}_{\text{temporal slots}}\quad\underbrace{g20}_{\text{generate}}</div>
+<div class="vars">
+  <div><code class="m">f_nk_m</code>n 张历史帧，用空间 kernel / 下采样因子 m 压成 token。</div><div><code class="m">k1</code>不做空间压缩，保留细节但 token 贵。</div>
+  <div><code class="m">k2,k4</code>宽高分别压 2 或 4；面积 token 约降到 1/4 或 1/16。</div><div><code class="m">g20</code>本轮 20 个 latent 帧；VAE 解码为 80 RGB 帧。</div>
+</div>
+<div class="grid2">
+  <div class="card"><span class="tag">TEMPORAL</span><h3>离现在越近，留得越细</h3><p>连续历史能稳定短期运动、色调和生成接缝；很旧内容仍留摘要，不会占满 token。</p></div>
+  <div class="card"><span class="tag teal">SPATIAL</span><h3>离现在很远，也可能最相关</h3><p>回到门口时，几百帧前的门比最近的街角更有用；3D 可见性把它重新调回上下文。</p></div>
+</div>
+</section>
+
+<section id="drift">
+<h2><span class="n">§ 07</span>Self-augmentation：只把历史弄得像部署，目标仍保持干净</h2>
+<p>若训练永远是“完美旧帧 → 完美下一段”，推理的“略有瑕疵旧帧 → 下一段”就是没见过的输入。Lyra 以 <code class="m">p_{\mathrm{aug}}=0.7</code> 的概率，给历史 latent 加轻中度噪声并做一次不完美去噪，造出模型自己的误差风格。<a class="jr" href="#g-06">06</a></p>
+<div class="formula">z_t^{\mathrm{hist}}=(1-t)z_0^{\mathrm{hist}}+t\epsilon,\qquad t\sim\mathcal U(0,0.5),\quad\epsilon\sim\mathcal N(0,I)</div>
+<div class="formula">\widetilde z_0^{\mathrm{hist}}=z_t^{\mathrm{hist}}-t\,v_\theta(z_t^{\mathrm{hist}},t,c)</div>
+<div class="vars">
+  <div><code class="m">z_0^{\mathrm{hist}}</code>真实历史帧的干净 latent。</div><div><code class="m">t\sim\mathcal U(0,0.5)</code>在 0 到 0.5 均匀抽噪声强度；不把历史毁成纯噪声。</div>
+  <div><code class="m">z_t^{\mathrm{hist}}</code>被轻中度污染的历史。</div><div><code class="m">v_\theta</code>当前视频模型的一次速度预测。</div>
+  <div><code class="m">\widetilde z_0^{\mathrm{hist}}</code>一步反推得到的近似干净历史；因模型不完美，带着接近推理输出的小误差。</div><div><code class="m">z_0^{\mathrm{cur}}</code>本轮目标段，始终用干净历史 VAE cache 编码，保持监督标签干净。</div>
+</div>
+<h3>为什么“减 <code class="m">t v</code>”能往干净历史走</h3>
+<div class="formula">\begin{aligned}z_t-t v^*&amp;=(1-t)z_0+t\epsilon-t(\epsilon-z_0)\\&=(1-t)z_0+t\epsilon-t\epsilon+t z_0=z_0\end{aligned}</div>
+<p>第一行只是代入 flow 的真实速度 <code class="m">v^*=\epsilon-z_0</code>；第二行里噪声项抵消，两个 <code class="m">z_0</code> 系数相加为 1。预测完全准就精确回到干净历史；预测不准就得到“接近但不完美”的历史，这正是训练想模拟的东西。</p>
+<div class="calc">
+  <div class="step"><b>选一个标量例子</b><span><code class="m">z_0=2,\epsilon=-1,t=0.25</code>，所以 <code class="m">z_t=0.75\times2+0.25\times(-1)=1.25</code>。</span></div>
+  <div class="step"><b>真实速度</b><span><code class="m">v^*=\epsilon-z_0=-1-2=-3</code>。若预测完全准，<code class="m">1.25-0.25\times(-3)=2</code>。</span></div>
+  <div class="step"><b>换成不完美模型</b><span>假设它预测 <code class="m">v_\theta=-2.8</code>，则 <code class="m">\widetilde z_0=1.25-0.25\times(-2.8)=1.95</code>。</span></div>
+  <div class="step"><b>真正训练任务</b><span>下一段收到 1.95 而非完美的 2，但要去噪到干净当前目标；因此学会别把 0.05 偏差继续滚大。</span></div>
+</div>
+<div class="warning"><span class="label">最容易误读的一点</span>不是把当前训练标签也做坏。只替换 DiT 读取的历史条件；当前目标 <code class="m">z_0^{\mathrm{cur}}</code> 仍由干净历史的 causal VAE cache 编码。否则网络可能只是学会复现坏目标，而不是从坏前文恢复。</div>
+</section>
+
+<section id="recon">
+<h2><span class="n">§ 08</span>视频生成完以后，怎样变成 3DGS 和 mesh</h2>
+<figure id="fig-recon">
+  <figcaption><span>Fig 06 · 最终交付链，不是生成循环里的 cache</span><b>视频 → Gaussian → 可选三角网格</b></figcaption>
+  <div class="recon">
+    <div class="node reveal"><small>GENERATED VIEWS</small><b>长视频多视角</b><p>相机轨迹已知，但画面仍有小幅多视角不一致。</p></div><div class="arrow reveal d2">→</div>
+    <div class="gauss reveal d3" aria-label="3D Gaussian 示意"><i style="--r:10deg"></i><i style="--r:-18deg"></i><i style="--r:35deg"></i><i style="--r:-5deg"></i><i style="--r:55deg"></i><i style="--r:-34deg"></i><i style="--r:12deg"></i><i style="--r:73deg"></i><i style="--r:-42deg"></i><i style="--r:3deg"></i><i style="--r:28deg"></i><i style="--r:-61deg"></i></div><div class="arrow reveal d4">→</div>
+    <div class="mesh reveal d5"><span class="tag violet">OPTIONAL MESH</span><h3>稀疏分层 SDF</h3><p>近处细网格、远处粗网格；marching cubes 抽面，再拼接与简化。<a class="jr" href="#g-07">07</a></p></div>
+  </div>
+</figure>
+<h3>为什么 DAv3 需要再微调</h3>
+<p>普通多视图重建默认不同照片能精确解释同一个表面；生成视频却可能让窗框在两帧里偏几像素。作者用 Lyra 自动生成 3,000 段一分钟视频，再微调 DAv3 10,000 步，让前馈 3DGS 头学会吸收这类小矛盾，而不是把它们变成漂浮 Gaussian。<a class="jr" href="#g-04">04</a></p>
+<div class="grid3">
+  <div class="card"><span class="tag">COMPACT</span><h3>Gaussian 数量 ÷4</h3><p>DAv3 的多尺度解码头（论文称 DPT head）把下采样因子设为 2：宽、高各减半，位置数从 <code class="m">H\times W</code> 变成 <code class="m">H/2\times W/2=HW/4</code>。</p></div>
+  <div class="card"><span class="tag teal">ROBUST</span><h3>在生成视频上适配</h3><p>不是只用真实相机视频训练；数据域直接包含模型自己会产生的轻微不一致。</p></div>
+  <div class="card"><span class="tag violet">MESH</span><h3>3DGS 再转表面</h3><p>渲染中位深度与法线 → 带朝向点云 → 带符号距离场 SDF → 等值面抽取 → 拼接、减面。</p></div>
+</div>
+</section>
+
+<section id="train">
+<h2><span class="n">§ 09</span>训练数据与 4 步加速：哪些是测出来的，哪些是模型生成的</h2>
+<div class="flow">
+  <div class="node"><small>DL3DV 10K</small><b>真实长视频</b><p>每段采 1,000 帧。</p></div><div class="arrow">→</div>
+  <div class="node teal"><small>AUTO LABEL</small><b>ViPE / DAv3 / Qwen3-VL</b><p>估相机、深度，生成 caption。</p></div><div class="arrow">→</div>
+  <div class="node gold"><small>PAIRING</small><b>30% I2V · 70% AR</b><p>单图起步，或随机历史预测下一段。</p></div><div class="arrow">→</div>
+  <div class="node rust"><small>WAN 2.1-14B</small><b>7,000 次更新</b><p>64 张 GB200，batch 64。</p></div>
+</div>
+<h3>70% 的分段样本怎么切</h3>
+<div class="formula">S_{\max}=\left\lfloor\frac{T-1}{L}\right\rfloor-1,qquad s\sim\operatorname{Uniform}\{0,\ldots,S_{\max}-1\}</div>
+<div class="vars">
+  <div><code class="m">T</code>这条训练序列总帧数。</div><div><code class="m">L=80</code>每个目标 chunk 的 RGB 帧数。</div>
+  <div><code class="m">S_{\max}</code>保证“历史后面还剩完整下一段”的最大分段数。</div><div><code class="m">s</code>随机抽中的历史终点段编号。</div>
+</div>
+<p>历史取 <code class="m">[0,sL+1)</code>，目标取下一段 <code class="m">s+1</code> 的 80 帧。以 <code class="m">T=1000,L=80</code> 为例，<code class="m">S_{\max}=\lfloor999/80\rfloor-1=11</code>，可从 11 个历史长度中均匀选一个；模型不会只学“永远从第一帧开始”。</p>
+<h3>DMD 为什么能从 194 秒降到 15 秒</h3>
+<div class="grid3">
+  <div class="card"><span class="tag">TEACHER</span><h3>35 步 + CFG</h3><p>Classifier-Free Guidance 用“有文字条件 − 无文字条件”的差增强提示词影响，因此每步通常要跑两次；单段 80 帧约 194 秒。</p></div>
+  <div class="card"><span class="tag gold">STUDENT</span><h3>4 步 + 单分支</h3><p>DMD（Distribution Matching Distillation）让学生少步输出分布接近老师，并把 CFG 效果写进学生参数；推理不再跑无条件分支。</p></div>
+  <div class="card"><span class="tag teal">RUNTIME</span><h3>15 秒 / 80 帧</h3><p>约 13× 加速；空间检索不到 1 秒，主耗时仍是 DiT。不是实时帧流。</p></div>
+</div>
+<div class="note"><span class="label">DMD 没替代长期稳定训练</span>4 步学生仍保留 self-augmentation。减少去噪步数只解决延迟；若历史条件分布错位，少步模型照样会一段段漂。</div>
+</section>
+
+<section id="results">
+<h2><span class="n">§ 10</span>结果：长程画质领先，但相机与几何指标并非全胜</h2>
+<div class="scroll"><table>
+  <thead><tr><th>方法 · Tanks-and-Temples</th><th>SSIM ↑</th><th>LPIPS ↓</th><th>FID ↓</th><th>主观质量 ↑</th><th>风格一致 ↑</th><th>相机控制 ↑</th><th>重投影 ↓</th></tr></thead>
+  <tbody>
+    <tr><td>GEN3C</td><td>.350</td><td>.589</td><td>79.07</td><td>21.75</td><td>75.54</td><td class="win">70.91</td><td class="win">.054</td></tr>
+    <tr><td>SPMem</td><td>.383</td><td>.571</td><td>60.11</td><td>34.41</td><td>79.68</td><td>45.07</td><td>.059</td></tr>
+    <tr><td>Lyra 2.0 · 35 steps</td><td class="win">.384</td><td>.552</td><td>51.33</td><td class="win">43.35</td><td class="win">85.07</td><td>63.87</td><td>.069</td></tr>
+    <tr><td>Lyra 2.0 · DMD 4 steps</td><td>.362</td><td class="win">.545</td><td class="win">49.71</td><td>43.02</td><td>78.91</td><td>58.12</td><td>.077</td></tr>
+  </tbody>
+</table></div>
+<p>完整版最强的是视觉质量与风格稳定；GEN3C 仍有更准的相机控制和更小重投影误差。DMD 的 FID / LPIPS 有时略好，却牺牲相机控制；少步结果不能简单概括成“完全无损”。</p>
+<div class="grid3">
+  <div class="card"><span class="tag">SSIM ↑</span><h3>结构像不像</h3><p>比较局部亮度、对比度和结构；越高越接近参考帧，但不直接保证语义或 3D 正确。</p></div>
+  <div class="card"><span class="tag teal">LPIPS ↓</span><h3>感知特征差多远</h3><p>用预训练网络特征比较两张图；越低通常越像人眼感受到的参考外观。</p></div>
+  <div class="card"><span class="tag violet">FID ↓</span><h3>整批图分布差多远</h3><p>比较生成集与真实集的特征均值和协方差；越低越好，不负责判断某一帧是否几何对齐。</p></div>
+</div>
+<h3>3D 重建为什么要看两个 LPIPS</h3>
+<div class="grid2">
+  <div class="card"><span class="tag">LPIPS-P ↓</span><h3>重建渲染 vs 生成视频</h3><p>若 3DGS 从新视角重放时仍像原生成帧，说明底层视频本身较容易被一个统一 3D 解释。</p></div>
+  <div class="card"><span class="tag teal">LPIPS-G ↓</span><h3>重建渲染 vs 真实帧</h3><p>把视频生成误差和 3D 重建误差一起算进去，衡量最终交付结果离真实场景多远。</p></div>
+</div>
+<div class="scroll"><table>
+  <thead><tr><th>3D 方法 · Tanks-and-Temples</th><th>LPIPS-P ↓</th><th>LPIPS-G ↓</th><th>FID ↓</th><th>主观质量 ↑</th></tr></thead>
+  <tbody><tr><td>SPMem + DAv3</td><td>.412</td><td>.666</td><td>94.11</td><td>9.95</td></tr><tr><td>Lyra 2.0 + 原 DAv3</td><td>.409</td><td>.648</td><td>79.36</td><td>14.42</td></tr><tr><td>Lyra 2.0 + 微调 DAv3</td><td class="win">.372</td><td class="win">.629</td><td class="win">72.47</td><td class="win">18.80</td></tr></tbody>
+</table></div>
+<h3>消融比主表更能说明模块各管什么</h3>
+<div class="scroll"><table>
+  <thead><tr><th>变体 · Tanks-and-Temples</th><th>FID ↓</th><th>主观质量 ↑</th><th>风格一致 ↑</th><th>相机控制 ↑</th><th>重投影 ↓</th></tr></thead>
+  <tbody>
+    <tr><td>完整模型</td><td>51.33</td><td>43.35</td><td class="win">85.07</td><td class="win">63.87</td><td>.069</td></tr>
+    <tr><td>改成全局点云</td><td>52.54</td><td>44.58</td><td>82.42</td><td class="caution">49.86</td><td class="win">.067</td></tr>
+    <tr><td>硬规则融合对应</td><td class="win">49.13</td><td class="win">45.71</td><td>83.28</td><td>57.29</td><td>.071</td></tr>
+    <tr><td>去掉 FramePack</td><td>50.98</td><td>45.27</td><td>80.61</td><td>62.62</td><td class="caution">.079</td></tr>
+    <tr><td>去掉 self-augmentation</td><td class="caution">55.15</td><td class="win">47.88</td><td class="caution">77.98</td><td class="caution">53.92</td><td class="win">.066</td></tr>
+  </tbody>
+</table></div>
+<div class="truth"><span class="label">读表结论</span>去掉 self-augmentation 后，单帧主观质量反而更高，但循环一致性和相机控制显著更差。它不是让某一张图变精致，而是让几百帧之后的系统少滚雪球。全局点云也拿到略好重投影误差，却严重伤相机控制；不要拿一个几何数字代替整个长期生成质量。</div>
+<div class="warning"><span class="label">复现口径</span>CaM 与 SPMem 在论文发表时未开源，表中成绩来自作者基于 Wan 2.1-14B 的重实现；应视为同平台比较，不等于原作者官方实现的最终上限。</div>
+</section>
+
+<section id="limits">
+<h2><span class="n">§ 11</span>边界：论文展示了大范围探索，没有证明真正无限、实时或物理正确</h2>
+<div class="grid3">
+  <div class="card"><span class="tag rust">STATIC ONLY</span><h3>世界不会自己动</h3><p>没有动态人物、车辆状态、碰撞与动作后果；“world”主要指可持续探索的静态外观和几何。</p></div>
+  <div class="card"><span class="tag rust">NOT REAL-TIME</span><h3>15 秒一段</h3><p>DMD 在单张 GB200 上生成 80 帧约 15 秒；GUI 能逐段给路径，不等于实时按键立即反馈。</p></div>
+  <div class="card"><span class="tag gold">GROWING MEMORY</span><h3>缓存随旅程增长</h3><p>每帧 3D 证据持续写入；论文没给固定内存下无限运行的延迟与检索退化曲线。</p></div>
+  <div class="card"><span class="tag gold">ESTIMATED GEOMETRY</span><h3>相机和深度都可能错</h3><p>ViPE 与 DAv3 是估计器；路由变稳不代表几何有测量级精度。</p></div>
+  <div class="card"><span class="tag violet">PHOTOMETRIC DRIFT</span><h3>曝光变化会传下去</h3><p>DL3DV 各视角曝光不一，生成会继承，重建时可能变成亮度接缝与 Gaussian 伪影。</p></div>
+  <div class="card"><span class="tag violet">POSSIBLE WORLD</span><h3>未见区域是脑补</h3><p>结果适合内容创作与模拟展示，但背面结构、真实尺度和物理属性没有单图证据保证。</p></div>
+</div>
+<div class="truth"><span class="label">最值得带走的设计原则</span>当显式几何有用但不够可靠时，不一定让它直接产出像素。可以把它降级为<strong>路由、寻址和约束</strong>，保留生成模型处理遮挡、空洞与冲突的能力；最后再用对生成误差适配过的重建器统一收口。</div>
+</section>
+
+<section class="gloss">
+<h2><span class="n">§ G</span>引用 / 术语表</h2>
+<ol>
+  <li id="g-01"><span class="term">Generative reconstruction</span> · 先生成输入图未观测到的新视角，再把这些虚拟视角送进 3D 重建；详见 <a href="../concepts/generative-reconstruction.html">概念页</a>。</li>
+  <li id="g-02"><span class="term">Plücker ray</span> · 用方向 <code class="m">d</code> 与矩 <code class="m">o\times d</code> 表示一条 3D 射线；同一直线上的不同选点得到相同表示，适合做逐像素相机条件。</li>
+  <li id="g-03"><span class="term">Canonical coordinate correspondence</span> · Warp 旧帧像素地址而非 RGB，给目标 token 一张稠密检索表；详见 <a href="../concepts/canonical-coordinate-correspondence.html">概念页</a>。</li>
+  <li id="g-04"><span class="term">3D Gaussian Splatting</span> · 用许多带位置、形状、颜色和透明度的 3D 高斯椭球表示场景，通过投影与 alpha 混合实时渲染；详见 <a href="../concepts/gaussian-splatting.html">概念页</a>。</li>
+  <li id="g-05"><span class="term">Per-frame 3D memory</span> · 每帧独立保存深度和点云，只做可见性检索与对应，避免把估深误差融合成一个全局错误；详见 <a href="../concepts/per-frame-3d-memory.html">概念页</a>。</li>
+  <li id="g-06"><span class="term">Self-augmented history</span> · 用当前模型的一次去噪近似构造略有瑕疵的历史条件，缩小训练读真值、推理读自产结果的差距；详见 <a href="../concepts/self-augmented-history.html">概念页</a>。</li>
+  <li id="g-07"><span class="term">SDF / marching cubes</span> · SDF 给空间每点记录“到最近表面的带符号距离”，零值位置就是表面；marching cubes 在体素格里沿零值等值面拼出三角形。</li>
+</ol>
+</section>
+
+<section class="sources"><span class="label">Primary sources</span><ol>
+  <li><a href="https://arxiv.org/abs/2604.13036">Lyra 2.0: Explorable Generative 3D Worlds · arXiv 2604.13036</a>，正文、附录、公式、训练配置、运行时间与实验表。</li>
+  <li><a href="https://research.nvidia.com/labs/sil/lyra2/">NVIDIA Spatial Intelligence Lab · Lyra 2.0 project page</a>，项目演示与补充可视化。</li>
+</ol></section>
+</main>
+<script>
+(function(){function math(){if(!window.katex){setTimeout(math,40);return}document.querySelectorAll('.formula').forEach(function(e){if(e.dataset.done)return;try{katex.render(e.textContent.trim(),e,{displayMode:true,throwOnError:true});e.dataset.done='1'}catch(x){e.classList.add('katex-error');e.title=String(x)}})}math();document.querySelectorAll('figure').forEach(function(fig){var obs=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){fig.classList.add('play');obs.disconnect()}})},{threshold:.12});obs.observe(fig)})})();
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;left:auto;top:50%;bottom:auto;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;opacity:1;pointer-events:auto;transition:none;display:none;}
+.jr-pop.show{display:block;transform:translateY(-50%);animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop,.jr-pop.show{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!document.getElementById(id))return;
+      e.preventDefault();
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>

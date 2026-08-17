@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Chunk-wise Self-Forcing · 整段定方向，分块算梯度 · Concept</title>
+<title>Self-Augmented History · 训练时故意给下一段一份“自己生成过的轻微坏历史” · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,58 +53,52 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · chunk-wise-self-forcing</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · self-augmented-history</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Chunk-wise Self-Forcing · 整段定方向，分块算梯度</h1>
+  <h1>Self-Augmented History · 训练时故意给下一段一份“自己生成过的轻微坏历史”</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>先让 score 网络看完整生成视频，再把生成器按块重放、累加梯度，兼顾长程质量与显存。</p>
-<h2>直觉</h2>
-<p>批改长作文时，老师先通读全文判断人物是否前后一致，再逐段标修改意见。若每段只看自己，省内存却看不见跨段漂移；若整篇同时反传，又容易撑爆显存。</p>
-<h2>怎么做的</h2>
-<ol>
-<li><strong>无梯度 rollout</strong>：生成完整视频，记录每块最后一次带噪输入与最终干净输出。</li>
-<li><strong>整段算方向</strong>：重新加噪后，由 real-score 与 fake-score 网络看完整序列，得到 DMD 方向；这一步不保留生成器计算图。</li>
-<li><strong>逐块重放</strong>：一次只重放一个块，接上预先算好的 score 方向，得到该块对生成器参数的梯度。</li>
-<li><strong>累加后更新</strong>：块与块之间 detach，所有块梯度相加，只做一次参数更新。</li>
-</ol>
-<div class="tex math-display" data-display="true">g=\sum_{i=1}^{M}\nabla_{\theta_s}L_i</div>
-<div class="tex math-display" data-display="true">\theta_s\leftarrow\theta_s-\eta g</div>
-<ul>
-<li><span class="tex math-inline" data-display="false">M</span>：视频被切成的块数；</li>
-<li><span class="tex math-inline" data-display="false">L_i</span>：第 <span class="tex math-inline" data-display="false">i</span> 块的蒸馏损失；</li>
-<li><span class="tex math-inline" data-display="false">\theta_s</span>：学生生成器参数；</li>
-<li><span class="tex math-inline" data-display="false">g</span>：所有块累积出的总梯度；</li>
-<li><span class="tex math-inline" data-display="false">\eta</span>：学习率。</li>
-</ul>
-<h2>数字例子</h2>
-<p>三块重放得到梯度 <span class="tex math-inline" data-display="false">g_1=0.4</span>、<span class="tex math-inline" data-display="false">g_2=-0.1</span>、<span class="tex math-inline" data-display="false">g_3=0.2</span>：</p>
-<div class="tex math-display" data-display="true">g=0.4-0.1+0.2=0.5</div>
-<p>若当前参数 <span class="tex math-inline" data-display="false">\theta_s=2</span>，学习率 <span class="tex math-inline" data-display="false">\eta=0.1</span>：</p>
-<div class="tex math-display" data-display="true">\theta_s^{\mathrm{new}}=2-0.1\times0.5=1.95</div>
-<p>stop-gradient 不是把模型永久冻结；它只是让上一块的计算图在进入下一块前断开。当前块仍正常反向传播，最后三个块的梯度仍共同更新同一套参数。</p>
+<p>长视频推理会反复读取模型自己的输出；若训练永远只给干净真值历史，模型就没学过怎样从自己的小错误里恢复。Self-augmentation 用一次去噪预测廉价造出这种 imperfect history。</p>
+<h2>一步估计为什么近似回到干净历史</h2>
+<p>rectified flow 的加噪路径与目标速度为：</p>
+<div class="tex math-display" data-display="true">z_t=(1-t)z_0+t\epsilon,
+\qquad v^*=\epsilon-z_0.</div>
+<p>从 <span class="tex math-inline" data-display="false">z_t</span> 沿速度反走 <span class="tex math-inline" data-display="false">t</span>：</p>
+<div class="tex math-display" data-display="true">z_t-tv^*
+=(1-t)z_0+t\epsilon-t(\epsilon-z_0)
+=z_0.</div>
+<p>真实模型预测的是 <span class="tex math-inline" data-display="false">v_\theta</span> 而非完美 <span class="tex math-inline" data-display="false">v^*</span>，所以：</p>
+<div class="tex math-display" data-display="true">\tilde z_0=z_t-t v_\theta(z_t,t,c)</div>
+<p>只会回到 <span class="tex math-inline" data-display="false">z_0</span> 附近，带着模型自己的典型误差。</p>
+<p>数字例：<span class="tex math-inline" data-display="false">z_0=2,\epsilon=-1,t=.25</span>，则 <span class="tex math-inline" data-display="false">z_t=1.25</span>、正确速度 <span class="tex math-inline" data-display="false">v^*=-3</span>。若模型只预测 <span class="tex math-inline" data-display="false">-2.8</span>：</p>
+<pre><code class="language-text">z̃₀ = 1.25 − .25×(−2.8)
+    = 1.95
+</code></pre>
+<p>历史从 2 变成略有误差的 1.95。Lyra 让当前目标段保持干净，只用 1.95 做条件，教网络不要把这点偏差继续放大。</p>
+<h2>它和“给目标加噪”不是一回事</h2>
+<p>扩散训练本来就会给当前目标加噪，再学习去噪。这里额外改的是<strong>条件历史</strong>：模拟部署时上一段已经由模型生成。Lyra 以 0.7 概率启用，且 <code>t</code> 只从 <code>[0,0.5]</code> 采样，避免把历史破坏得完全不可识别。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/wan-animate-2.html">wan-animate-2</a> · 用于 8 帧分块的 Lite 模型</li>
-<li><a href="../concepts/dmd-distillation.html">dmd-distillation</a> · real/fake score 差为什么能提供分布匹配方向</li>
-<li><a href="../concepts/teacher-forcing-video-diffusion.html">teacher-forcing-video-diffusion</a> · Self-Forcing 要修复的训练/推理错位</li>
+<li><a href="../papers/lyra-2.html">lyra-2</a> · 防止 80 帧一段的自回归误差滚雪球</li>
+<li><a href="../concepts/flow-matching.html">flow-matching</a> · 直线路径与速度目标</li>
+<li><a href="../concepts/chunk-wise-self-forcing.html">chunk-wise-self-forcing</a> · 同样缩小训练 / 推理历史差异，但构造方式不同</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 5 处</span>
-  <ul><li><a href="../papers/causal-rcm.html"><span class="cat">paper</span>Causal-rCM · 把 rCM 的正反散度互补搬进自回归视频</a></li><li><a href="../papers/interactive-avatar.html"><span class="cat">paper</span>InteractiveAvatar · 让实时数字人记得过去，也听得懂“现在该做什么”</a></li><li><a href="../papers/wan-animate-2.html"><span class="cat">paper</span>Wan-Animate 2 · 不先提骨架，直接让参考视频教角色怎么动</a></li><li><a href="../concepts/error-buffer-training.html"><span class="cat">concept</span>Error Buffer Training · 把模型会犯的小错加回训练历史</a></li><li><a href="../concepts/self-augmented-history.html"><span class="cat">concept</span>Self-Augmented History · 训练时故意给下一段一份“自己生成过的轻微坏历史”</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/lyra-2.html"><span class="cat">paper</span>Lyra 2.0 · 先让视频模型当虚拟相机，再把走过的世界重建成 3D</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/chunk-wise-self-forcing.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/self-augmented-history.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 

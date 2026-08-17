@@ -1,8 +1,8 @@
 ---
 name: gaussian-splatting
 type: concept
-sources: []
-updated: 2026-06-17
+sources: [lyra-2]
+updated: 2026-08-17
 ---
 
 # 3D Gaussian Splatting · 3DGS · 用一堆高斯椭球表示场景
@@ -79,6 +79,7 @@ HuggingFace 上有个 `Qwen-Image-Edit-2511-Gaussian-Splash` **LoRA**([[lora]]),
 - 例子 LoRA:huggingface.co/dx8152/Qwen-Image-Edit-2511-Gaussian-Splash(2D 扩散模仿,非真 3D)
 
 ## 链接
+- [[lyra-2]] · 先生成长视频，再用微调过的 DAv3 一次前馈预测大场景 3DGS
 - [[lora]] · 那个"高斯泼溅"是个 LoRA,不是新模型
 - [[qwen-image-2]] · LoRA 挂的编辑底模(条件→目标)
 - [[pixel-diffusion-decoder]] · 同思路:几何/信息算不出的,交给扩散脑补
