@@ -1606,3 +1606,10 @@ skill 更新:
 - 旧版把 ALERT 83.05、音色一致性 98.7%、去重 0/100k 和水印失败挤在三张卡里，读者不知道数字分别回答什么。新版先给四问题总览，再按“风险 → 检测流程 → 结果 → 不能证明什么”逐项展开。
 - 补齐原文正文 §6 与附录 B/E：解释 Shazam 式 26-bit 音频指纹的五步数据流、原始模型为何确有复读、说话人向量二选一协议、服务器索引与水印的前提差异，并搬入 AudioSeal/Mimi 重编码和 token 非幂等的关键数字。
 - Review 1 对照 PDF 第 36–41、54–56、62 页重查实验口径；Review 2 以最终 HTML 检查桌面/手机、浮卡、对比度、表格与两张新图，修正项记录在本条提交中。
+
+## [2026-08-17] ingest | PeakPatch · 从 CLIP 中层捞回被末层压掉的否定结构
+- 按“最终症状 → 逐层诊断 → LCD 算法 → 双支路整机 → ECN / SCN → 训练 → 实验与边界”重排，不照论文目录平铺；用同一组二维向量贯穿余弦、残差归一化和有界分数修正。
+- 完整拆解 LCD、视觉对齐、ECN cross-attention 与 4d 拼接、SCN 的 258 维输入、InfoNCE 困难负样本、MCQ 交叉熵和联合损失；每个符号都就地解释。
+- 主结果与附录分账：COCO MCQ 39.2→74.3、OOD retrieval R@5 47.9→56.9、文生图 Combined 28.3→45.8；同时保留 ImageNet −2.8pp、COCO 同域检索落后双塔微调、VOC 与生成落后显式解析器的边界。
+- 新增 layerwise-compositional-divergence、peakpatch-ecn、peakpatch-scn、set-valued-negation 四个概念页，并回写 cross-attention / contrastive-learning 来源。
+- Review 1 逐节回查正文与附录 A–J，补回逐层投影公式、SCN 三路输入、外部基准与零样本分类；复算二维余弦、L2 归一化、LCD 和 tanh 修正。Review 2 实测桌面 1440 / 手机 390：10 个块公式与全部行内公式零失败、页面零横向溢出、7 个术语引用双向一致；点击浮卡、总览箭头、表格滚动和小字对比度均核过。

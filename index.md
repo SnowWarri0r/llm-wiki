@@ -73,6 +73,7 @@
 - [Lumine · 从像素玩 3D 开放世界](wiki/papers/lumine.md) — VLM(Qwen2-VL)直接吃画面像素吐键鼠, 端到端打通原神5h主线零样本迁移; 动作即文本token + action chunking(5Hz看30Hz动) + hybrid thinking(该想才想); 2424h人类录像纯模仿零RL + W8A8实时
 - [ViT · An Image is Worth 16×16 Words](wiki/papers/vit.md) — 把图切成 16×16 patch 当 token，纯 Transformer 干视觉；CNN 在视觉的护城河被填平
 - [CLIP · Learning Transferable Visual Models](wiki/papers/clip.md) — 4 亿图文对对比学习, 图像和文本对齐到同一向量空间; DALL-E / SD / LLaVA 都靠它
+- [PeakPatch · CLIP 中层懂“没有”，最后一层却把它忘了](wiki/papers/peakpatch.md) — 逐层 LCD 发现肯定/否定差异在中层见顶、末层随图文对齐增强而坍缩；冻结 CLIP，从 peak/anchor/full tokens 预测 embedding 残差，再用有界 SCN 修近似平局。COCO MCQ 39.2→74.3、OOD retrieval R@5 47.9→56.9，但只改文本端、需白盒中层，VOC 上仍输显式解析器。
 - [SAM · Segment Anything](wiki/papers/sam.md) — 分割界的基础模型(Meta): 可提示分割(给点/框/字返回掩码,歧义就吐3个+IoU挑)+重编码器跑一次轻解码器~50ms可交互+数据引擎飞轮造出SA-1B(11M图/1.1B掩码,99.1%全自动,400×); 零样本迁移多任务; 图像编码器被DeepSeek-OCR借去当DeepEncoder前半
 - [PPO · Proximal Policy Optimization](wiki/papers/ppo.md) — 用新旧策略概率比率校正旧 rollout，再用 clip 限制单轮更新；从 critic+GAE 到 GRPO/GSPO 的共同起点
 - [TurboQuant · 随机旋转把向量分布变已知](wiki/papers/turboquant.md) — 在线向量量化(ICLR2026,Google): 在线量化看不到数据统计只能盲切格子; 洞察=随机旋转让每坐标服从固定已知的集中Beta(挤±1/√d)+高维近独立→离线预制最优标量量化器在线只旋转+套(data-oblivious),逼近信息论下界差≈2.7×; 两阶段治内积偏差(MSE最优→内积系统偏小,1-bit QJL残差纠无偏); KV 3.5bit无损/2.5bit微降,≥6×省内存+H100 attention快8×; recall超PQ建索引近零成本
