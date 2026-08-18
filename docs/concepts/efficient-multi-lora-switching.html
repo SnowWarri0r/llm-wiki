@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Audiovisual Cross-Attention · 音视频双向交叉注意力 · Concept</title>
+<title>Efficient Multi-LoRA Switching · 一套冻结主干，轮流扮演三个 DMD 角色 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,62 +53,65 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · audiovisual-cross-attention</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · efficient-multi-lora-switching</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Audiovisual Cross-Attention · 音视频双向交叉注意力</h1>
+  <h1>Efficient Multi-LoRA Switching · 一套冻结主干，轮流扮演三个 DMD 角色</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>视频拿自己的问题去查声音，声音也拿自己的问题去查视频，并用共同时间轴对齐事件。</p>
+<p>Teacher、Generator、Critic 不各存一套巨型模型，只各带一份 LoRA，需要谁就临时挂谁。</p>
 <h2>直觉</h2>
-<p>self-attention 只能在同一模态内部找关系：画面知道杯子碰桌子，却不知道应产生什么声音；音频知道有一声脆响，却不知道画面里是哪件物体。cross-attention 让一边提供 query，另一边提供 key/value。</p>
-<p>双向很重要：</p>
-<ul>
-<li><span class="tex math-inline" data-display="false">audio \to video</span>：语音音素、节拍和撞击声可以修正嘴型、动作时机；</li>
-<li><span class="tex math-inline" data-display="false">video \to audio</span>：说话人、碰撞物、房间和镜头可以修正音源、音色、Foley 与混响。</li>
-</ul>
+<p>三位检验员都使用同一台昂贵仪器，只是各自有一块不同的校准片。没必要买三台仪器；轮到谁工作，就换上谁的校准片。</p>
+<p>省下的是三套 backbone 参数常驻显存，不是三位角色的计算。Teacher、Generator、Critic 仍要分别前向。</p>
 <h2>怎么做的</h2>
-<div class="tex math-display" data-display="true">A_{V\leftarrow A}=\operatorname{softmax}\left(\frac{Q_VK_A^\top}{\sqrt d}\right)V_A</div>
+<p>令冻结主干权重为 <span class="tex math-inline" data-display="false">W_0</span>，第 <span class="tex math-inline" data-display="false">r</span> 个角色的 LoRA 更新为 <span class="tex math-inline" data-display="false">B_rA_r</span>：</p>
+<div class="tex math-display" data-display="true">W_r=W_0+B_rA_r,
+\qquad
+r\in\{T,G,D\}.</div>
 <ul>
-<li><span class="tex math-inline" data-display="false">Q_V</span>：视频 token 提出的查询；</li>
-<li><span class="tex math-inline" data-display="false">K_A</span>：音频 token 的检索索引；</li>
-<li><span class="tex math-inline" data-display="false">V_A</span>：匹配后真正取回的音频内容；</li>
-<li><code>d</code>：query/key 的共同宽度；</li>
-<li><span class="tex math-inline" data-display="false">\sqrt{d}</span>：控制点积分布，避免 softmax 太尖；</li>
-<li>反方向把 V/A 交换即可。</li>
+<li><span class="tex math-inline" data-display="false">W_0</span>：共享且不更新的 LTX-2.3 权重；</li>
+<li><span class="tex math-inline" data-display="false">A_r,B_r</span>：第 <span class="tex math-inline" data-display="false">r</span> 个角色的小型低秩矩阵；</li>
+<li><span class="tex math-inline" data-display="false">T/G/D</span>：Teacher、Generator、Critic；</li>
+<li>一次前向只启用对应角色的 <span class="tex math-inline" data-display="false">A_r,B_r</span>。</li>
 </ul>
-<p>LTX-2 在跨模态 Q/K 上只使用 1D 时间 RoPE。声音没有画面 <code>x,y</code>，所以跨模态先回答“是不是同一时刻”，空间位置由视频内容特征自行决定。</p>
+<p>UniSwap 中，Teacher 用冻结 Stage-1 LoRA，Generator 从 Stage-2 LoRA 初始化，Critic LoRA 随机初始化。最终只保留 Generator LoRA。</p>
 <h2>数字例子</h2>
-<p>视频中 <code>0.40s</code> 的碰撞 token，对三个音频 token 的缩放后 score 为 <code>[1,3,1]</code>：</p>
-<pre><code class="language-text">softmax ≈ [0.107, 0.787, 0.107]
-audio values = [0.2, 1.0, 0.1]
-output = .107×.2 + .787×1 + .107×.1 ≈ .819
-</code></pre>
-<p>中间时刻的声音获得约 78.7% 权重，取回的碰撞特征接近 1。自检：权重和约为 <code>1.001</code>，差异来自三位小数舍入。</p>
-<h2>跟普通 cross-attention 的区别</h2>
-<p>普通文生图 cross-attention 通常只有“图像 query 查文本 K/V”；LTX-2 这里是两个生成模态互查，并额外让各自噪声时间步调制输入、让对方噪声进度控制写回门。</p>
+<p>把一层 <span class="tex math-inline" data-display="false">4096\times4096</span> 的矩阵当作主干：</p>
+<div class="tex math-display" data-display="true">4096\times4096=16{,}777{,}216</div>
+<p>个参数。三份完整副本要 <span class="tex math-inline" data-display="false">50{,}331{,}648</span> 个参数。</p>
+<p>若 LoRA rank 为 128，每个角色只需两块矩阵：</p>
+<div class="tex math-display" data-display="true">4096\times128+128\times4096=1{,}048{,}576.</div>
+<p>一份主干加三套 LoRA共有：</p>
+<div class="tex math-display" data-display="true">16{,}777{,}216+3\times1{,}048{,}576
+=19{,}922{,}944.</div>
+<p>相比三份完整矩阵，参数常驻量约减少 60.4%。这只是单层教学账，真实模型还要算多层、优化器状态和激活；论文实测峰值显存从 80 GB 卡上 OOM 降到 65.34 GB。</p>
+<h2>边界</h2>
+<ul>
+<li>顺序切换角色会省显存，但训练总前向次数没有消失。</li>
+<li>三个角色必须共享同一 backbone 结构；完全不同架构无法靠换 LoRA 扮演。</li>
+<li>若同时需要三套角色的梯度或激活，峰值显存仍可能由激活而非参数主导。</li>
+</ul>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/ltx-2.html">ltx-2</a> · 逐层 A↔V 交互</li>
-<li><a href="../concepts/cross-attention.html">cross-attention</a> · 通用机制</li>
-<li><a href="../concepts/rotary-position-embedding.html">rotary-position-embedding</a> · 共同时间坐标的注入方式</li>
-<li><a href="../concepts/adaptive-layernorm.html">adaptive-layernorm</a> · 不同去噪进度下控制信息交换</li>
+<li><a href="../papers/uniswap-av.html">uniswap-av</a> · 三阶段蒸馏里的具体用法。</li>
+<li><a href="../concepts/lora.html">lora</a> · 低秩增量怎样挂到冻结权重上。</li>
+<li><a href="../concepts/dmd-distillation.html">dmd-distillation</a> · 为什么要 Teacher、Generator 与 Critic 三种角色。</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 4 处</span>
-  <ul><li><a href="../papers/ltx-2.html"><span class="cat">paper</span>LTX-2 · 让声音和画面在同一段去噪过程中彼此校正</a></li><li><a href="../papers/uniswap-av.html"><span class="cat">paper</span>UniSwap · 一套模型同时换脸、换声，并按块流式生成</a></li><li><a href="../concepts/asymmetric-dual-stream-transformer.html"><span class="cat">concept</span>Asymmetric Dual-Stream Transformer · 不对称双流 Transformer</a></li><li><a href="../concepts/modality-aware-cfg.html"><span class="cat">concept</span>Modality-Aware CFG · 把“听 prompt”和“跟另一模态同步”分开加力</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/uniswap-av.html"><span class="cat">paper</span>UniSwap · 一套模型同时换脸、换声，并按块流式生成</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/audiovisual-cross-attention.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/efficient-multi-lora-switching.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 

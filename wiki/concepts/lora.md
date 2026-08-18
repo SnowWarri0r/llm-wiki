@@ -1,8 +1,8 @@
 ---
 name: lora
 type: concept
-sources: [omnieraser, wan-animate-2]
-updated: 2026-08-12
+sources: [omnieraser, wan-animate-2, uniswap-av]
+updated: 2026-08-18
 ---
 
 # LoRA · 低秩适配 · 不动底模，只训一个小增量
@@ -46,3 +46,4 @@ LoRA 属于 **PEFT(参数高效微调)**家族,是 [[pretrain-finetune-paradigm]
 - [[pretrain-finetune-paradigm]] · LoRA 是 finetune 那步的参数高效版
 - [[gaussian-splatting]] · 那个"高斯泼溅"就是挂在 [[qwen-image-2]] 上的一个 LoRA
 - [[qwen-image-2]] · [[flux-1]] · 文生图底模,社区常挂 LoRA 加技能
+- [[uniswap-av]] · 一份冻结主干同时挂三套 LoRA，分别承担 teacher、generator 与 critic

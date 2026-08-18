@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Audiovisual Cross-Attention · 音视频双向交叉注意力 · Concept</title>
+<title>Swap-and-Reconstruct Supervision · 把真片改坏，再让模型恢复 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,79 +53,61 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · audiovisual-cross-attention</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · swap-and-reconstruct-supervision</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Audiovisual Cross-Attention · 音视频双向交叉注意力</h1>
+  <h1>Swap-and-Reconstruct Supervision · 把真片改坏，再让模型恢复</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>视频拿自己的问题去查声音，声音也拿自己的问题去查视频，并用共同时间轴对齐事件。</p>
+<p>真实片始终当干净标签；人工改身份只负责制造输入，从而绕开难收集的跨身份逐帧配对。</p>
 <h2>直觉</h2>
-<p>self-attention 只能在同一模态内部找关系：画面知道杯子碰桌子，却不知道应产生什么声音；音频知道有一声脆响，却不知道画面里是哪件物体。cross-attention 让一边提供 query，另一边提供 key/value。</p>
-<p>双向很重要：</p>
-<ul>
-<li><span class="tex math-inline" data-display="false">audio \to video</span>：语音音素、节拍和撞击声可以修正嘴型、动作时机；</li>
-<li><span class="tex math-inline" data-display="false">video \to audio</span>：说话人、碰撞物、房间和镜头可以修正音源、音色、Foley 与混响。</li>
-</ul>
+<p>要训练“把甲的动作换成乙的外观和声音”，理想数据得让甲和乙说同一句话、做同一动作、处在同一背景，而且每一帧都对齐。这种数据几乎不存在。</p>
+<p>Swap-and-reconstruct 换个问法：从乙的真实视频出发，先把乙的身份线索拿掉或换乱，再把乙的一张照片和一段声音交给模型，让它恢复原视频。答案仍是现实里拍到的真片，不是旧模型生成的伪标签。</p>
 <h2>怎么做的</h2>
-<div class="tex math-display" data-display="true">A_{V\leftarrow A}=\operatorname{softmax}\left(\frac{Q_VK_A^\top}{\sqrt d}\right)V_A</div>
-<ul>
-<li><span class="tex math-inline" data-display="false">Q_V</span>：视频 token 提出的查询；</li>
-<li><span class="tex math-inline" data-display="false">K_A</span>：音频 token 的检索索引；</li>
-<li><span class="tex math-inline" data-display="false">V_A</span>：匹配后真正取回的音频内容；</li>
-<li><code>d</code>：query/key 的共同宽度；</li>
-<li><span class="tex math-inline" data-display="false">\sqrt{d}</span>：控制点积分布，避免 softmax 太尖；</li>
-<li>反方向把 V/A 交换即可。</li>
-</ul>
-<p>LTX-2 在跨模态 Q/K 上只使用 1D 时间 RoPE。声音没有画面 <code>x,y</code>，所以跨模态先回答“是不是同一时刻”，空间位置由视频内容特征自行决定。</p>
-<h2>数字例子</h2>
-<p>视频中 <code>0.40s</code> 的碰撞 token，对三个音频 token 的缩放后 score 为 <code>[1,3,1]</code>：</p>
-<pre><code class="language-text">softmax ≈ [0.107, 0.787, 0.107]
-audio values = [0.2, 1.0, 0.1]
-output = .107×.2 + .787×1 + .107×.1 ≈ .819
+<p>以 UniSwap 为例：</p>
+<pre><code class="language-text">真实目标：乙的视频 + 乙的声音
+  ├─ 人物分割后换成姿态骨架 → 保动作 / 背景，弱化外观
+  ├─ 变声到随机说话人       → 保台词 / 韵律，打乱音色
+  ├─ 抽乙的一帧             → 参考外观
+  └─ 抽乙声音全长的 30%     → 参考音色
+
+模型输入：退化源视频 + 变声源音频 + 参考图 + 参考声音
+训练目标：恢复原始真实视频和真实声音
 </code></pre>
-<p>中间时刻的声音获得约 78.7% 权重，取回的碰撞特征接近 1。自检：权重和约为 <code>1.001</code>，差异来自三位小数舍入。</p>
-<h2>跟普通 cross-attention 的区别</h2>
-<p>普通文生图 cross-attention 通常只有“图像 query 查文本 K/V”；LTX-2 这里是两个生成模态互查，并额外让各自噪声时间步调制输入、让对方噪声进度控制写回门。</p>
+<h2>数字例子</h2>
+<p>一条训练片长 10 秒：参考音频取 30%，就是 3 秒。余下 7 秒的原音色不能从参考音频逐采样复制，模型必须把这 3 秒里提取到的说话人音色，迁移到整段源台词。</p>
+<p>视频侧若每秒 25 帧，10 秒约 250 帧；参考图只有 1 帧。模型不能把这一帧当动画逐帧复印，必须结合姿态源恢复另外约 249 帧的动作与视角。</p>
+<p>自检：参考只提供“是谁”，源只提供“说什么、怎么动、背景是什么”，两边信息合起来才足以重建目标。</p>
+<h2>边界</h2>
+<ul>
+<li>人工退化若没把身份拿干净，模型可能走捷径，直接从源里抄脸或音色。</li>
+<li>退化器的伪影可能成为训练域特征；部署输入若来自真实的另一身份，分布并不完全相同。</li>
+<li>“标签是真实片”不等于全部输入都是真实分布；姿态渲染和变声音频仍是人工构造。</li>
+</ul>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/ltx-2.html">ltx-2</a> · 逐层 A↔V 交互</li>
-<li><a href="../concepts/cross-attention.html">cross-attention</a> · 通用机制</li>
-<li><a href="../concepts/rotary-position-embedding.html">rotary-position-embedding</a> · 共同时间坐标的注入方式</li>
-<li><a href="../concepts/adaptive-layernorm.html">adaptive-layernorm</a> · 不同去噪进度下控制信息交换</li>
+<li><a href="../papers/uniswap-av.html">uniswap-av</a> · 同时打乱视觉与声音身份。</li>
+<li><a href="../papers/wan-animate-2.html">wan-animate-2</a> · 视觉角色替换中的自重建数据路线。</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 4 处</span>
-  <ul><li><a href="../papers/ltx-2.html"><span class="cat">paper</span>LTX-2 · 让声音和画面在同一段去噪过程中彼此校正</a></li><li><a href="../papers/uniswap-av.html"><span class="cat">paper</span>UniSwap · 一套模型同时换脸、换声，并按块流式生成</a></li><li><a href="../concepts/asymmetric-dual-stream-transformer.html"><span class="cat">concept</span>Asymmetric Dual-Stream Transformer · 不对称双流 Transformer</a></li><li><a href="../concepts/modality-aware-cfg.html"><span class="cat">concept</span>Modality-Aware CFG · 把“听 prompt”和“跟另一模态同步”分开加力</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/uniswap-av.html"><span class="cat">paper</span>UniSwap · 一套模型同时换脸、换声，并按块流式生成</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/audiovisual-cross-attention.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/swap-and-reconstruct-supervision.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
 </div>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  document.querySelectorAll('.tex').forEach(function (el) {
-    try {
-      katex.render(el.textContent.trim(), el, {
-        displayMode: el.dataset.display === 'true',
-        throwOnError: false,
-        strict: false
-      });
-    } catch (e) { el.classList.add('tex-error'); }
-  });
-});
-</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

@@ -1,8 +1,8 @@
 ---
 name: chunk-wise-self-forcing
 type: concept
-sources: [wan-animate-2, interactive-avatar, causal-rcm]
-updated: 2026-08-14
+sources: [wan-animate-2, interactive-avatar, causal-rcm, uniswap-av]
+updated: 2026-08-18
 ---
 
 # Chunk-wise Self-Forcing · 整段定方向，分块算梯度
@@ -57,3 +57,4 @@ stop-gradient 不是把模型永久冻结；它只是让上一块的计算图在
 - [[wan-animate-2]] · 用于 8 帧分块的 Lite 模型
 - [[dmd-distillation]] · real/fake score 差为什么能提供分布匹配方向
 - [[teacher-forcing-video-diffusion]] · Self-Forcing 要修复的训练/推理错位
+- [[uniswap-av]] · 音频和视频一起滚动，并用 Feature-RoPE 修正滑窗位置

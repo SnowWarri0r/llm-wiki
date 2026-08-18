@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UniSwap · 一套模型同时换外观、换声音并流式输出</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..800&family=Newsreader:opsz,wght@6..72,350..700&family=Noto+Serif+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<style>
+:root{--paper:#eee8d8;--card:#fbf7eb;--ink:#111a20;--ink2:#344047;--muted:#665f54;--rule:#a99f8b;--video:#06677c;--video2:#cce8eb;--audio:#6c4b87;--audio2:#e9ddf0;--source:#9b5e00;--source2:#f3dfad;--target:#a83227;--target2:#f3d2c9;--ok:#28664e;--ok2:#d7eadf;--dark:#102a39;--white:#fff}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:18px/1.72 'Newsreader','Noto Serif SC',serif;-webkit-font-smoothing:antialiased}body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.28;background-image:linear-gradient(rgba(6,103,124,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(108,75,135,.045) 1px,transparent 1px);background-size:36px 36px}.wiki-nav{position:sticky;top:0;z-index:1001;display:flex;justify-content:space-between;align-items:center;padding:8px 22px;background:#111a20;color:#f4ecd9;border-bottom:1px solid #42515a;font:600 11px/1.5 'JetBrains Mono';letter-spacing:2px;text-transform:uppercase}.wiki-nav a{color:#f4ecd9;text-decoration:none}.wiki-nav .ws-r a{color:#8dd7dd}.page{position:relative;max-width:1190px;margin:auto;padding:54px 38px 120px}.mast{display:flex;justify-content:space-between;border-top:4px double var(--ink);border-bottom:1px solid var(--rule);padding:12px 0;color:var(--muted);font:600 11px/1.5 'JetBrains Mono';letter-spacing:1.6px;text-transform:uppercase}.hero{padding:58px 0 34px}.issue{display:flex;gap:14px;align-items:center;color:var(--video);font:700 11px/1.5 'JetBrains Mono';letter-spacing:3px;text-transform:uppercase}.issue:after{content:"";height:1px;background:var(--rule);flex:1}.hero h1{margin:16px 0 8px;font:750 clamp(58px,10vw,118px)/.86 'Fraunces','Noto Serif SC';letter-spacing:-.055em}.hero h1 em{color:var(--audio);font-weight:600}.byline{color:var(--muted);font:600 11px/1.6 'JetBrains Mono';letter-spacing:.55px}.dek{max-width:960px;font:italic 400 clamp(21px,2.5vw,29px)/1.45 'Fraunces','Noto Serif SC';color:var(--ink2)}nav.toc{position:sticky;top:35px;z-index:20;display:flex;gap:7px;overflow-x:auto;margin:0 -14px 52px;padding:10px 14px;background:rgba(238,232,216,.97);border-block:1px solid var(--rule);scrollbar-width:none}nav.toc a{flex:none;padding:6px 9px;border:1px solid var(--rule);color:var(--dark);background:var(--card);font:600 10px/1.2 'JetBrains Mono';text-decoration:none}nav.toc a:hover,nav.toc a:focus-visible{background:var(--dark);color:#fff;outline:2px solid var(--dark);outline-offset:1px}h2{display:flex;gap:16px;align-items:baseline;margin:78px 0 20px;font:700 clamp(30px,4vw,44px)/1.1 'Fraunces','Noto Serif SC';letter-spacing:-.025em}h2 .n{min-width:55px;color:var(--video);font:700 11px/1.4 'JetBrains Mono';letter-spacing:2px}h3{margin:34px 0 10px;font:700 23px/1.28 'Fraunces','Noto Serif SC'}p{margin:12px 0}.lead{font-size:22px;line-height:1.58;color:var(--ink2)}a{color:#7c2d22;text-decoration-thickness:1px;text-underline-offset:3px}strong{font-weight:700}code{font:500 .88em/1.5 'JetBrains Mono';background:#fffaf0;border:1px solid var(--rule);border-radius:3px;padding:1px 5px}.tldr,.note,.warning,.truth{margin:24px 0;padding:18px 22px;background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--video)}.warning{border-left-color:var(--target);background:#fff0e9}.truth{border-left-color:var(--ok);background:#edf7f1}.label{display:block;margin-bottom:5px;color:var(--video);font:700 10px/1.5 'JetBrains Mono';letter-spacing:2px;text-transform:uppercase}.warning .label{color:var(--target)}.truth .label{color:var(--ok)}.jr{vertical-align:super;margin:0 2px;padding:1px 5px;border:1px solid var(--source);border-radius:999px;background:var(--source2);color:#4d3100;text-decoration:none;font:700 9px/1.2 'JetBrains Mono'}.jr:hover,.jr:focus-visible{background:#4d3100;color:#fff;outline:2px solid var(--source);outline-offset:2px}.grid2,.grid3,.grid4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid4{grid-template-columns:repeat(4,minmax(0,1fr))}.card{min-width:0;padding:20px;background:var(--card);border:1px solid var(--rule);box-shadow:5px 5px 0 rgba(16,42,57,.07)}.card h3{margin:8px 0 5px}.card p{font-size:16px;line-height:1.58}.tag{display:inline-block;padding:3px 8px;background:var(--video2);color:#084d5d;font:700 10px/1.4 'JetBrains Mono';letter-spacing:1px;text-transform:uppercase}.tag.audio{background:var(--audio2);color:#4f3767}.tag.source{background:var(--source2);color:#614000}.tag.target{background:var(--target2);color:#70271e}.tag.ok{background:var(--ok2);color:#1b503b}figure{margin:38px 0;padding:28px;background:rgba(251,247,235,.9);border:1px solid var(--rule);box-shadow:8px 8px 0 rgba(16,42,57,.07);overflow:hidden}figcaption{display:flex;justify-content:space-between;gap:16px;margin-bottom:22px;padding-bottom:12px;border-bottom:1px dashed var(--rule);color:var(--muted);font:600 11px/1.4 'JetBrains Mono';letter-spacing:1.2px;text-transform:uppercase}figcaption b{color:var(--video)}.formula{margin:18px 0;padding:21px 16px;overflow-x:auto;text-align:center;background:var(--dark);color:#fff;border-left:6px solid var(--audio);font-size:1.05em}.formula .katex{color:#fff}.vars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0}.vars>div{min-width:0;padding:10px 12px;background:var(--card);border:1px solid var(--rule);font-size:14px}.vars code{display:block;margin-bottom:4px;color:#77271e}.calc{counter-reset:step;display:grid;gap:8px;margin:18px 0}.step{position:relative;padding:13px 14px 13px 56px;background:#fff;border:1px solid var(--rule);font-size:15px}.step:before{counter-increment:step;content:counter(step,decimal-leading-zero);position:absolute;left:16px;top:14px;color:var(--video);font:700 11px/1.5 'JetBrains Mono'}.step b{display:block;color:var(--dark)}.flow{display:grid;grid-template-columns:1fr 42px 1fr 42px 1fr;align-items:stretch}.node{min-width:0;padding:17px;background:#fff;border:2px solid var(--video)}.node.source{border-color:var(--source);background:#fff8df}.node.target{border-color:var(--target);background:#fff0e9}.node.audio{border-color:var(--audio);background:#f8f2fb}.node.ok{border-color:var(--ok);background:#edf7f1}.node b{display:block;margin:4px 0;font:700 18px/1.3 'Fraunces','Noto Serif SC'}.node small{color:var(--muted);font:700 9px/1.4 'JetBrains Mono';letter-spacing:1px}.node p{font-size:14px;line-height:1.5}.arrow{display:flex;align-items:center;justify-content:center;color:var(--target);font:700 27px/1 'JetBrains Mono'}.pipeline{display:grid;grid-template-columns:180px 42px 1fr 42px 1fr;gap:0;align-items:stretch;margin:11px 0}.pipeline .node{display:flex;flex-direction:column;justify-content:center}.stages{display:grid;grid-template-columns:1fr 38px 1fr 38px 1fr;align-items:stretch}.stage{position:relative;min-width:0;padding:20px;background:#fff;border:2px solid var(--video)}.stage.s2{border-color:var(--source)}.stage.s3{border-color:var(--audio)}.stage .big{font:800 34px/1 'Fraunces';color:var(--video)}.stage.s2 .big{color:var(--source)}.stage.s3 .big{color:var(--audio)}.stage ul{padding-left:18px;font-size:14px}.mask{display:grid;grid-template-columns:180px repeat(5,minmax(90px,1fr));min-width:760px;border:1px solid var(--rule)}.mask div{min-height:54px;display:grid;place-items:center;padding:8px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);font:600 11px/1.3 'JetBrains Mono';text-align:center}.mask .head{background:var(--dark);color:#fff}.mask .yes{background:var(--ok2);color:#164a36}.mask .self{background:var(--video2);color:#064a5a}.mask .no{background:#ebe4d7;color:#71695c}.roles{display:grid;grid-template-columns:1fr 42px 1fr 42px 1fr;align-items:stretch}.role{padding:18px;background:#fff;border:2px solid var(--video)}.role.generator{border-color:var(--target);background:var(--target2)}.role.critic{border-color:var(--audio);background:var(--audio2)}.role b{display:block;font:700 21px/1.3 'Fraunces'}.role small{font:600 9px/1.4 'JetBrains Mono';color:var(--muted)}.cache{display:grid;grid-template-columns:1.15fr repeat(4,1fr);gap:7px;min-width:720px}.slot{min-height:108px;padding:13px;display:flex;flex-direction:column;justify-content:space-between;border:2px solid var(--rule);background:#fff}.slot.ref{border-color:var(--audio);background:var(--audio2)}.slot.sink{border-color:var(--source);background:var(--source2)}.slot.hist{border-color:var(--video);background:var(--video2)}.slot.now{border-color:var(--target);background:var(--target2)}.slot b{font:700 15px/1.25 'Fraunces'}.slot small{font:600 9px/1.35 'JetBrains Mono';color:var(--muted)}.shift{display:grid;grid-template-columns:1fr 42px 1fr;align-items:center;margin-top:15px}.timeline{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.time{padding:10px;text-align:center;border:1px solid var(--video);background:#fff;font:600 11px/1.3 'JetBrains Mono'}.bars{display:grid;gap:10px}.bar{display:grid;grid-template-columns:190px 1fr 75px;gap:10px;align-items:center;font-size:14px}.track{height:22px;background:#ddd6ca}.fill{height:100%;background:var(--video)}.fill.audio{background:var(--audio)}.fill.target{background:var(--target)}.scroll{overflow-x:auto;margin:18px 0;border:1px solid var(--rule)}table{width:100%;border-collapse:collapse;background:var(--card);font-size:14px;white-space:nowrap}th,td{padding:10px 12px;border-bottom:1px solid var(--rule);text-align:right}th:first-child,td:first-child{text-align:left}thead th{background:var(--dark);color:#fff;font:600 10px/1.4 'JetBrains Mono';letter-spacing:.7px}.win{background:var(--ok2);color:#154d38;font-weight:700}.caution{background:var(--target2);color:#722719;font-weight:700}.gloss{margin-top:78px;padding-top:30px;border-top:3px double var(--ink)}.gloss ol{list-style:none;padding:0;counter-reset:g}.gloss li{position:relative;padding:13px 10px 13px 48px;border-bottom:1px dashed var(--rule);font-size:15px}.gloss li:before{counter-increment:g;content:counter(g,decimal-leading-zero);position:absolute;left:7px;color:var(--video);font:700 10px/1.8 'JetBrains Mono'}.gloss .term{font-weight:700;color:var(--dark)}.sources{margin-top:54px;padding:22px;background:var(--card);border:1px solid var(--rule);font-size:14px}.sources li{margin:7px 0}.reveal{opacity:0;transform:translateY(8px);transition:.45s ease}.play .reveal{opacity:1;transform:none}.d2{transition-delay:.08s}.d3{transition-delay:.16s}.d4{transition-delay:.24s}.d5{transition-delay:.32s}
+@media(max-width:900px){.page{padding:34px 18px 90px}.grid3,.grid4{grid-template-columns:1fr 1fr}.flow,.stages,.roles{grid-template-columns:1fr}.flow .arrow,.stages .arrow,.roles .arrow{height:34px;transform:rotate(90deg)}.pipeline{grid-template-columns:1fr}.pipeline .arrow{height:32px;transform:rotate(90deg)}.vars{grid-template-columns:1fr}.bar{grid-template-columns:150px 1fr 65px}}
+@media(max-width:560px){body{font-size:17px}.page{padding-inline:12px}.hero h1{font-size:58px}.mast .r,.wiki-nav .ws-r{display:none}figure{padding:18px 12px;margin-inline:0}.grid2,.grid3,.grid4{grid-template-columns:1fr}.vars{grid-template-columns:1fr}.bar{grid-template-columns:1fr}.formula{font-size:.9em;padding-inline:8px}figcaption{display:block}figcaption b{display:block;margin-top:5px}nav.toc{top:34px;margin-inline:0;padding-inline:0}.cache{min-width:670px}.mask{min-width:700px}.shift{grid-template-columns:1fr}.shift>.arrow{height:32px;transform:rotate(90deg)}}
+</style>
+<style>.reveal{opacity:1!important;transform:none!important}.d2,.d3,.d4,.d5{transition-delay:0s!important}</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · uniswap-av</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page">
+<div class="mast"><span>STREAMING AUDIO-VISUAL IDENTITY SWAP · FIELD NOTES</span><span class="r">ARXIV 2608.11752 · CUHK × QWEN · 2026</span></div>
+<header class="hero">
+  <div class="issue">One model · another appearance · another voice · same performance</div>
+  <h1>Uni<em>Swap</em></h1>
+  <p class="byline">Yuxuan Zhang · Haozhong Xiong · Jiayi Song · Jinpeng Yu · Yang Shi · Jiaming Liu · Ruihua Huang · Liwei Wang</p>
+  <p class="dek">别把它理解成“先换脸，再把音轨换掉”。它让视频与音频在同一个生成模型里互相看：参考资料决定换成谁，原片决定说什么、怎么动，滚动缓存负责让长视频里的身份别越走越丢。</p>
+  <div class="tldr"><span class="label">先记这一句</span><strong>先学会整段联合换人，再学会按块生成，最后才压到三步并适应自己的历史。</strong> 三个阶段分别解决任务、流式接口和长程误差，不能压缩成一句“用了 DMD”。</div>
+</header>
+<nav class="toc"><a href="#scope">00 边界</a><a href="#overview">01 总览</a><a href="#data">02 造数据</a><a href="#stage1">03 整段</a><a href="#flow">04 公式</a><a href="#stage2">05 流式</a><a href="#stage3">06 蒸馏</a><a href="#rope">07 缓存</a><a href="#train">08 训练</a><a href="#results">09 实验</a><a href="#limits">10 局限</a></nav>
+
+<section id="scope">
+<h2><span class="n">§ 00</span>先分清“流式”“实时”和“小时级”</h2>
+<div class="grid3">
+  <div class="card"><span class="tag ok">论文实测</span><h3>最长量化到 1 分钟</h3><p>短视频 100 条、每条约 10 秒；长视频 20 条、每条 1 分钟。三步模型在一张 H100 上是 <strong>13.6 FPS</strong>。</p></div>
+  <div class="card"><span class="tag source">项目页宣称</span><h3>稳定生成数小时</h3><p>项目页写 hour-scale，但论文没有小时级指标表。它可以是展示结论，不能写成已被论文量化证明。</p></div>
+  <div class="card"><span class="tag target">仓库现状</span><h3>实现尚未公开</h3><p>截至 2026-08-18，官方仓库仍写 <code>Code coming soon</code>。掩码、缓存与训练循环只能按论文理解，不能假装已由代码核验。</p></div>
+</div>
+<div class="warning"><span class="label">13.6 FPS 不是 25 FPS 实时播放</span>“流式”表示模型不用等整条视频做完，完成一块就能吐一块；“实时”还要求平均生成速度追得上播放。13.6 小于 25，所以它有流式接口，却还不能在单张 H100 上无积压地按 25 FPS 播放。</div>
+</section>
+
+<section id="overview">
+<h2><span class="n">§ 01</span>完整拼图：四路条件怎样变成另一个人</h2>
+<p class="lead">输出要同时满足两组互不相同的约束：<strong>身份来自参考</strong>，<strong>动作、台词、背景与时间来自源片</strong>。模型不能把“换成谁”和“演了什么”混在一起。</p>
+<figure id="fig-system">
+  <figcaption><span>Fig 01 · 从真实输入到音视频输出</span><b>箭头就是数据流方向</b></figcaption>
+  <div class="flow">
+    <div class="node source reveal"><small>SOURCE PERFORMANCE</small><b>源视频 + 源音频</b><p>保留动作、表情节奏、台词、韵律和背景。</p></div><div class="arrow">→</div>
+    <div class="node audio reveal d2"><small>REFERENCE IDENTITY</small><b>参考图 + 参考声音</b><p>告诉模型目标人物长什么样、声音是什么音色。</p></div><div class="arrow">→</div>
+    <div class="node target reveal d3"><small>JOINT OUTPUT</small><b>目标视频 + 目标音频</b><p>目标身份演出源片的动作和台词，嘴型与转换后的声音共同生成。</p></div>
+  </div>
+  <div class="note"><span class="label">中间不是两条互不相干的流水线</span>LTX-2.3 内部有视频流和音频流；每层用双向 cross-attention 交换信息。画面能参考声音的时间结构，声音也能参考画面的动作状态。</div>
+  <div class="stages">
+    <div class="stage reveal"><span class="big">01</span><h3>先学整段换人</h3><ul><li>参考、源、目标一起进上下文</li><li>只给目标加噪</li><li>联合恢复画面和声音</li></ul></div><div class="arrow">→</div>
+    <div class="stage s2 reveal d2"><span class="big">02</span><h3>再学按块向前</h3><ul><li>当前只看参考与过去</li><li>每块约 24 像素帧</li><li>历史写进 KV cache</li></ul></div><div class="arrow">→</div>
+    <div class="stage s3 reveal d3"><span class="big">03</span><h3>最后适应自己的历史</h3><ul><li>self-forcing rollout</li><li>DMD 压到 3 步</li><li>Feature-RoPE 固定窗口</li></ul></div>
+  </div>
+</figure>
+</section>
+
+<section id="data">
+<h2><span class="n">§ 02</span>没有跨身份对齐数据，就从一条真片自己造</h2>
+<p>互联网上几乎找不到“甲和乙说同一句话、做同一动作、站在同一背景、逐帧严格对齐”的成对视频。UniSwap 采用 swap-and-reconstruct<a class="jr" href="#g-01">01</a>：真片始终当答案，只把输入身份人工改乱。</p>
+<figure id="fig-data">
+  <figcaption><span>Fig 02 · 标签不合成，条件输入才被人工退化</span><b>四路条件来自同一真实片段</b></figcaption>
+  <div class="pipeline"><div class="node target"><b>真实视频 <code class="m">V_t</code></b><p>最终监督标签</p></div><div class="arrow">→</div><div class="node source"><b>ViTPose + SAM 2</b><p>找关键点、分出人物、挖掉身份外观</p></div><div class="arrow">→</div><div class="node"><b>源视频 <code class="m">V_s</code></b><p>背景 + 渲染姿态，动作和时间保留</p></div></div>
+  <div class="pipeline"><div class="node target"><b>真实声音 <code class="m">A_t</code></b><p>最终监督标签</p></div><div class="arrow">→</div><div class="node audio"><b>Seed-VC</b><p>换成随机说话人的音色</p></div><div class="arrow">→</div><div class="node"><b>源音频 <code class="m">A_s</code></b><p>台词、语速和韵律尽量保留</p></div></div>
+  <div class="pipeline"><div class="node target"><b>原片身份</b><p>答案中的那个人</p></div><div class="arrow">→</div><div class="node ok"><b>抽 1 帧 + 截 30%</b><p>一张人物图；一段原声音</p></div><div class="arrow">→</div><div class="node audio"><b><code class="m">I_r</code> + <code class="m">A_r</code></b><p>参考外观与参考音色</p></div></div>
+</figure>
+<div class="truth"><span class="label">Seed-VC 到底扮演什么角色</span>它没有替作者制造“正确答案”。正确音频一直是原始真实录音 <code class="m">A_t</code>；Seed-VC 只把条件音频 <code class="m">A_s</code> 的音色换掉，迫使模型从参考声音 <code class="m">A_r</code> 找回目标音色。</div>
+</section>
+
+<section id="stage1">
+<h2><span class="n">§ 03</span>Stage 1：参考、源、目标各自放在哪里</h2>
+<p>视频和音频分别拼成三段序列，再用双向音视频 cross-attention<a class="jr" href="#g-03">03</a> 交换信息。分号表示沿 token 维拼接，不是相加：</p>
+<div class="formula">x^v=[z_r^v;z_s^v;z_t^v],\qquad x^a=[z_r^a;z_s^a;z_t^a]</div>
+<div class="vars">
+  <div><code class="m">v / a</code>上标表示 video 或 audio。</div><div><code class="m">r / s / t</code>下标表示 reference、source、target。</div>
+  <div><code class="m">z</code>编码后的 latent token，不是像素或波形。</div><div><code class="m">x^v,x^a</code>最终送进视频流、音频流的完整上下文。</div>
+</div>
+<div class="grid3"><div class="card"><span class="tag audio">REFERENCE</span><h3>身份依据</h3><p>保持干净，使用固定位置偏移，避免参考长度改变时位置关系漂移。</p></div><div class="card"><span class="tag source">SOURCE</span><h3>内容依据</h3><p>保持干净；与目标描述同一时间，因此共享物理时间位置。</p></div><div class="card"><span class="tag target">TARGET</span><h3>训练答案</h3><p>只有这一段被加噪；模型要在另外两段条件下把它还原。</p></div></div>
+<p>视频 VAE 每 8 个像素帧压成 1 个 latent 帧；音频每秒 25 个 latent token。token 数虽然不同，但两边位置编码都对应同一物理时间，因此同一声“啪”和画面里的碰撞能在 cross-attention 里相遇。</p>
+</section>
+
+<section id="flow">
+<h2><span class="n">§ 04</span>Flow matching：目标速度不是凭空规定的</h2>
+<p class="lead">Flow matching<a class="jr" href="#g-02">02</a> 先在“干净 latent”和“随机噪声”之间画一条直线，再让网络预测沿这条线前进的速度。</p>
+<div class="formula">z_\sigma=(1-\sigma)z_0+\sigma\epsilon</div>
+<div class="vars"><div><code class="m">z_0</code>干净目标 latent。</div><div><code class="m">\epsilon</code>与 <code class="m">z_0</code> 同形状的高斯噪声。</div><div><code class="m">\sigma\in[0,1]</code>当前噪声比例；0 是干净端，1 是噪声端。</div><div><code class="m">z_\sigma</code>两端按比例混出的训练输入。</div></div>
+<p>对 <code class="m">\sigma</code> 求导，直线的速度自然出现：</p>
+<div class="formula">\frac{\mathrm d z_\sigma}{\mathrm d\sigma}=-z_0+\epsilon=\epsilon-z_0</div>
+<div class="formula">\mathcal L_{\mathrm{FM}}=\mathbb E\!\left[\left\lVert v_\theta(z_\sigma,\sigma)-(\epsilon-z_0)\right\rVert_2^2\right]</div>
+<div class="vars"><div><code class="m">v_\theta</code>带可训练 LoRA 参数 <code class="m">\theta</code> 的速度预测器。</div><div><code class="m">\epsilon-z_0</code>这条直线的正确速度。</div><div><code class="m">\lVert q\rVert_2^2</code>把向量 <code>q</code> 每一维平方后相加。</div><div><code class="m">\mathbb E</code>对片段、噪声和噪声比例取平均。</div></div>
+<div class="calc"><div class="step"><b>给定两端</b><span><code class="m">z_0=2,\ \epsilon=-1,\ \sigma=0.25</code>。</span></div><div class="step"><b>混出训练输入</b><span><code class="m">z_\sigma=0.75\times2+0.25\times(-1)=1.25</code>。</span></div><div class="step"><b>算正确速度</b><span><code class="m">v^*=\epsilon-z_0=-1-2=-3</code>。</span></div><div class="step"><b>算一次损失</b><span>模型若预测 <code>-2.5</code>，损失是 <code class="m">[-2.5-(-3)]^2=0.25</code>。</span></div></div>
+<p>从 <code>2</code> 沿速度 <code>-3</code> 走满一个 <code class="m">\sigma</code> 单位，正好到 <code>-1</code>。这就是为什么监督目标是 <code class="m">\epsilon -z_{0}</code>。</p>
+</section>
+
+<section id="stage2">
+<h2><span class="n">§ 05</span>Stage 2：模型这一块究竟准看谁<a class="jr" href="#g-10">10</a></h2>
+<p>目标按 <code>K=3</code> 个 video latent 帧切块。视频 VAE 时间压缩 8 倍，因此普通块解码后是 <code class="m">3\times 8=24</code> 个像素帧，25 FPS 下约 <code>24/25=0.96</code> 秒；首块因因果 VAE 索引使用 4 个 latent 帧。</p>
+<figure id="fig-mask">
+  <figcaption><span>Fig 03 · 生成第三个目标块时的可见范围</span><b>绿色能看 · 灰色禁止</b></figcaption>
+  <div class="scroll"><div class="mask"><div class="head">B₂ 的 query</div><div class="head">参考</div><div class="head">源 S₂</div><div class="head">历史 B₀</div><div class="head">历史 B₁</div><div class="head">未来 B₃</div><div class="head">读取权限</div><div class="yes">✓ 身份</div><div class="yes">✓ 对齐条件</div><div class="yes">✓ 过去</div><div class="yes">✓ 过去</div><div class="no">× 不可见</div></div></div>
+  <div class="note"><span class="label">“解耦”指角色分开，不是音视频分开</span>参考、每个源块和目标历史拥有不同读取规则；同一规则同时用于视频 self-attention、音频 self-attention 和音视频 cross-attention。两种模态块长不同，但覆盖相同真实时间。</div>
+</figure>
+<p>训练历史先使用真实干净块，也就是 teacher forcing<a class="jr" href="#g-04">04</a>。损失只算当前 noisy 块：</p>
+<div class="formula">\mathcal L_{\mathrm{S2}}=\mathbb E_{i,\sigma}\!\left[\mathcal L_{\mathrm{FM}}\bigl(B_i\mid \mathrm{ref},S_i,B_{&lt;i}^{\mathrm{clean}}\bigr)\right]</div>
+<div class="warning"><span class="label">它只解决“看不看未来”，还没解决误差累积</span>训练时历史全对，部署时历史却来自模型自己。上一块脸型偏一点，下一块会把偏差当条件继续用；Stage 3 才让训练真正接触这种历史。</div>
+</section>
+
+<section id="stage3">
+<h2><span class="n">§ 06</span>Stage 3：三套 LoRA<a class="jr" href="#g-07">07</a> 为什么不是三套 22B 模型</h2>
+<p>学生按 self-forcing<a class="jr" href="#g-05">05</a> 的部署方式滚完整段音视频，每个新块都读取自己之前生成的结果。每块只经过三个噪声点 <code>[0.999, 0.757, 0.522]</code>。这既让模型接触自身误差，又把原来的约 30 次网络调用压到 3 次。</p>
+<figure id="fig-roles"><figcaption><span>Fig 04 · DMD 的三个角色共享冻结 backbone</span><b>只给当前角色挂对应 LoRA</b></figcaption><div class="roles"><div class="role"><small>FROZEN STAGE-1 LORA</small><b>Teacher</b><p>双向看完整目标，提供条件目标分布的方向。</p></div><div class="arrow">→</div><div class="role generator"><small>STAGE-2 INIT</small><b>Generator</b><p>块因果三步生成；唯一被训练并在发布时保留的角色。</p></div><div class="arrow">↔</div><div class="role critic"><small>RANDOM LORA</small><b>Critic</b><p>追踪学生当前生成分布，告诉生成器“你现在偏到哪了”。</p></div></div><div class="note"><span class="label">省显存，不等于省掉前向</span>三者轮流复用一份冻结 LTX-2.3 权重，避免保留三套巨型 backbone；Teacher、Generator、Critic 仍要分别做自己的前向。峰值显存从单卡 80 GB 直接 OOM 降到 65.34 GB。</div></figure>
+<h3>DMD<a class="jr" href="#g-06">06</a> 先算带 CFG 的老师，再减掉学生 critic</h3>
+<p>先对学生生成的整段 <code class="m">\hat z</code> 随机重新加噪，噪声强度按 <code class="m">\sigma\sim\mathcal U[0.02,0.98]</code> 采样，再比较两套方向：</p>
+<div class="formula">g_{\hat z}=D_\phi(\hat z_\sigma,\sigma)-\left[T_\psi^+(\hat z_\sigma,\sigma)+\gamma\bigl(T_\psi^+(\hat z_\sigma,\sigma)-T_\psi^-(\hat z_\sigma,\sigma)\bigr)\right]</div>
+<div class="vars"><div><code class="m">\hat z</code>Generator 生成的整段音视频 latent。</div><div><code class="m">\hat z_\sigma</code>给学生结果随机重新加噪后的样本。</div><div><code class="m">T_\psi^+,T_\psi^-</code>Teacher 有条件、无条件时的预测。</div><div><code class="m">\gamma</code>CFG 强度；视频 3，音频 5。</div><div><code class="m">D_\phi</code>Critic 对学生当前分布的预测。</div><div><code class="m">g_{\hat z}</code>样本空间修正方向，再经链式法则更新 Generator。</div></div>
+<div class="calc"><div class="step"><b>先算视频 CFG teacher</b><span>若 <code class="m">T^+=0.8,T^-=0.2,\gamma=3</code>，则 <code class="m">T_{CFG}=0.8+3(0.8-0.2)=2.6</code>。</span></div><div class="step"><b>再与 critic 比</b><span>若 <code class="m">D=3.1</code>，则 <code class="m">g_{\hat z}=3.1-2.6=0.5</code>。</span></div><div class="step"><b>什么时候停止推这一维</b><span>Critic 也变成 2.6 时，差值为 0，Generator 在这一维不再收到修正。</span></div></div>
+<div class="warning"><span class="label">论文没有给 critic 完整 loss</span>正文只说明 critic 在带噪学生样本上训练，并给出 Generator 使用的 DMD 方向。没有公开代码时，不应补写一套作者没披露的 critic 目标。</div>
+</section>
+
+<section id="rope">
+<h2><span class="n">§ 07</span>Feature-RoPE：内容缓存一次，地址每轮重贴</h2>
+<p class="lead">普通 KV cache<a class="jr" href="#g-09">09</a> 存的是已经做过 RoPE 的 Key。视频越长，位置编号越大，最后会跑出训练范围。Feature-RoPE<a class="jr" href="#g-08">08</a> 改存未旋转 Key，让“这个 token 是什么”和“它现在位于第几格”分开。</p>
+<div class="formula">K_{\mathrm{cache}}=k,\qquad K_{\mathrm{attn}}=R(\widetilde p_i)k</div>
+<div class="vars"><div><code class="m">k</code>attention 投影得到、尚未加入位置的内容 Key。</div><div><code class="m">K_{\mathrm{cache}}</code>真正长期保存的值，因此窗口移动时不用重算特征。</div><div><code class="m">R(\widetilde p_i)</code>本轮局部位置对应的 RoPE 旋转矩阵。</div><div><code class="m">K_{\mathrm{attn}}</code>当前 attention 点积实际使用、已经贴好新地址的 Key。</div></div>
+<div class="formula">\widetilde p_i(\tau)=\tau-\tau(h_i)</div>
+<div class="vars"><div><code class="m">\tau</code>token 在共同音视频时间轴上的物理时间。</div><div><code class="m">h_i</code>第 <code>i</code> 轮里最早保留的滚动历史块。</div><div><code class="m">\tau(h_i)</code>这个最早块的起始时间。</div><div><code class="m">\widetilde p_i</code>减去窗口起点后重新得到的本地位置。</div></div>
+<figure id="fig-cache"><figcaption><span>Fig 05 · 固定窗口里四种生命周期</span><b>参考永久 · 源临时 · 历史滚动</b></figcaption><div class="scroll"><div class="cache"><div class="slot ref"><b>参考身份区</b><small>永久 KV · 每轮相对当前块重新定位</small></div><div class="slot sink"><b>B₀ sink</b><small>首个目标块永久保留</small></div><div class="slot hist"><b>历史槽 0</b><small>最近完成块 · 未旋转 Key</small></div><div class="slot hist"><b>历史槽 1</b><small>次近完成块 · 未旋转 Key</small></div><div class="slot now"><b>当前块 Bᵢ</b><small>源 Sᵢ 临时加入 · 三次去噪</small></div></div></div>
+<div class="shift"><div class="timeline"><div class="time">物理 100<br>本地 0</div><div class="time">物理 101<br>本地 1</div><div class="time">物理 102<br>本地 2</div></div><div class="arrow">→</div><div class="timeline"><div class="time">物理 101<br>本地 0</div><div class="time">物理 102<br>本地 1</div><div class="time">物理 103<br>本地 2</div></div></div>
+<div class="note"><span class="label">箭头表示窗口向下一轮推进</span>物理时间仍从 100 走到 103；只是 attention 看到的位置标签每轮回到 <code>0,1,2</code>。内容特征没有重算，只有 RoPE 相位按新槽位重新施加。</div></figure>
+<h3>一块完整缓存事务</h3>
+<div class="calc"><div class="step"><b>预填参考</b><span>参考图与参考音频只算一次，KV 永久保留。</span></div><div class="step"><b>临时加入源块</b><span>只把与当前目标块对齐的 <code class="m">S_i</code> 放进当前槽。</span></div><div class="step"><b>只读去噪三次</b><span><code class="m">B_i</code> 三次去噪期间读取 cache，但不把中间脏状态提交成历史。</span></div><div class="step"><b>提交干净目标</b><span>完成后再编码一次干净 <code class="m">B_i</code>；首块进 sink，其他块进滚动区。</span></div><div class="step"><b>淘汰并重定位</b><span>滚动区满时踢掉最老块，保留块重新获得本地位置。</span></div><div class="step"><b>回滚源块</b><span>删除临时 <code class="m">S_i</code> 的 KV，开始下一块。</span></div></div>
+</section>
+
+<section id="train">
+<h2><span class="n">§ 08</span>训练配方：哪些参数真的在动</h2>
+<div class="grid4"><div class="card"><span class="tag">DATA</span><h3>AVSpeech</h3><p>241 帧、25 FPS，约 9.6 秒；三种分辨率桶：512²、416×704、704×416。</p></div><div class="card"><span class="tag audio">BACKBONE</span><h3>冻结 LTX-2.3</h3><p>bf16、8 张 GPU、FSDP。项目 README 称 conditioned model 为 22B。</p></div><div class="card"><span class="tag source">S1 / S2</span><h3>各 50k 步</h3><p>rank-128 LoRA，学习率 <code class="m">10^{-4}</code>；S2 覆盖 attention、FFN 和 cross-attention。</p></div><div class="card"><span class="tag target">S3</span><h3>20k 步</h3><p>三套 rank-128 LoRA，学习率 <code class="m">10^{-5}</code>，<code class="m">\beta_{1}=0,\beta_{2}=.999</code>；每次生成器更新前，critic 更新 5 次。</p></div></div>
+<div class="truth"><span class="label">最终发布什么</span>只保留 Generator LoRA 与冻结 backbone 的组合。Teacher 和 Critic 是训练脚手架，不是线上还要同时跑的三个角色。</div>
+</section>
+
+<section id="results">
+<h2><span class="n">§ 09</span>实验：它赢的是联合一致性，不是每一列</h2>
+<div class="grid4"><div class="card"><span class="tag">SYNC-C / D</span><h3>嘴和声对不对</h3><p>Sync-C 越高越好；Sync-D 是音画嵌入距离，越低越好。两者都来自同步网络，不是主观分。</p></div><div class="card"><span class="tag audio">DINO-S</span><h3>长得像不像</h3><p>用 DINO 图像特征比较输出人物与参考身份；越高通常表示视觉身份更接近。</p></div><div class="card"><span class="tag source">IQA / ASE</span><h3>画质与审美</h3><p>IQA 估图像技术质量，ASE 估审美观感；身份稳定不自动代表画质更高。</p></div><div class="card"><span class="tag target">SIG / SECS</span><h3>声音好不好、像不像</h3><p>SIG 属于 DNSMOS 语音质量分；SECS 比较说话人嵌入。代理指标不能替代真人听感。</p></div></div>
+<div class="scroll"><table><thead><tr><th>观察维度</th><th>UniSwap</th><th>最值得比较的数</th><th>应怎样读</th></tr></thead><tbody><tr><td>短片同步</td><td class="win">Sync-C 3.633 / Sync-D 10.304</td><td>两项均为最好</td><td>联合音视频建模的核心收益</td></tr><tr><td>视觉身份</td><td>DINO-S 0.629</td><td>SCAIL-2 0.630</td><td>几乎持平，IQA 不占优</td></tr><tr><td>声音质量</td><td>SIG 3.486</td><td>Seed-VC 3.489</td><td>接近，但其他声音指标没全赢</td></tr><tr><td>吞吐</td><td class="win">13.6 FPS</td><td>Wan-Animate 1.367 FPS</td><td>约 10×，仍低于 25 FPS 播放</td></tr><tr><td>1 分钟身份</td><td class="win">.596 → .590 → .596</td><td>SCAIL-2 .566 → .538 → .517</td><td>身份更稳，画质未必更高</td></tr></tbody></table></div>
+<h3>三阶段的代价交换</h3>
+<div class="grid3"><div class="card"><span class="tag">STAGE 1</span><h3>离线上限最好</h3><p>双向整段上下文让同步、画质和说话人相似度最好，但不能按固定 cache 滚动。</p></div><div class="card"><span class="tag source">STAGE 2</span><h3>换来流式结构</h3><p>块因果和缓存可部署，部分同步与声音指标下降；训练仍吃真历史。</p></div><div class="card"><span class="tag audio">STAGE 3</span><h3>换来少步与自历史</h3><p>30→3 步，身份与部分声音指标回升；同步、ASE、IQA、SSIM 又付出代价。</p></div></div>
+<div class="grid2"><div class="card"><span class="tag target">关键消融 A</span><h3>删 condition PE offset</h3><p>Sync-C 从 <strong>4.620</strong> 降到 <strong>1.738</strong>，DINO-S 从 <strong>.623</strong> 降到 <strong>.463</strong>。参考、源与目标的位置身份不能混。</p></div><div class="card"><span class="tag target">关键消融 B</span><h3>删 reference re-anchoring</h3><p>末段 IQA 从 <strong>3.741</strong> 降到 <strong>3.208</strong>，DINO-S 从 <strong>.595</strong> 降到 <strong>.491</strong>。参考身份也会因地址越来越远而难以读取。</p></div></div>
+<p>30 人盲测、每人 4 条源视频：UniSwap 的外观身份 4.16、嘴型同步 4.11、自然度 3.96 都最高；声音身份 3.87 反而低于四个 Seed-VC 级联对手。它把优势集中在“人、声、嘴是否对得上”，没有在纯声音克隆上击败专用系统。</p>
+</section>
+
+<section id="limits">
+<h2><span class="n">§ 10</span>哪些结论现在还不能写满</h2>
+<div class="grid2"><div class="card"><span class="tag target">任务边界</span><h3>单人、遮挡与互动</h3><p>论文明确把多人同时说话、严重遮挡和复杂交互列为局限；表情由音频驱动，不能单独编辑。</p></div><div class="card"><span class="tag target">复现边界</span><h3>缺实现细节</h3><p>清洗规模、mask 增强分布、speaker 抽样、critic 完整目标、缓存 tensor 形状都没有公开代码可核。</p></div><div class="card"><span class="tag source">证据边界</span><h3>小时级未量化</h3><p>论文长视频表只到 1 分钟；代理指标与 30 人小型用户研究也不能覆盖全部主观质量。</p></div><div class="card"><span class="tag audio">安全边界</span><h3>同时换脸换声</h3><p>冒充风险更高，需要身份授权、来源标记、显著披露、访问控制和取证检测，不应把可生成等同于可任意使用。</p></div></div>
+<div class="truth"><span class="label">这篇最值得带走的方法论</span>不要让一个训练阶段同时解决所有问题。Stage 1 先把任务学会；Stage 2 才让训练的可见范围对齐部署；Stage 3 再让学生面对自己的错误历史并做少步蒸馏。每一步都有明确新增能力，也有实验能看见的代价。</div>
+</section>
+
+<section class="gloss"><h2><span class="n">词汇</span>直接可触达的前置概念</h2><ol>
+<li id="g-01"><span class="term">Swap-and-reconstruct</span>：从一条真片制造身份被改乱的输入，再以原片为监督。<a href="../concepts/swap-and-reconstruct-supervision.html">展开</a></li>
+<li id="g-02"><span class="term">Flow matching</span>：回归噪声与数据之间概率路径的速度场。<a href="../concepts/conditional-flow-matching.html">展开</a></li>
+<li id="g-03"><span class="term">双向音视频 cross-attention</span>：视频查声音，声音也查视频。<a href="../concepts/audiovisual-cross-attention.html">展开</a></li>
+<li id="g-04"><span class="term">Teacher forcing</span>：训练下一块时先喂真实历史。<a href="../concepts/teacher-forcing-video-diffusion.html">展开</a></li>
+<li id="g-05"><span class="term">Self-forcing</span>：训练时滚动读取自己生成的历史。<a href="../concepts/chunk-wise-self-forcing.html">展开</a></li>
+<li id="g-06"><span class="term">DMD</span>：用目标分布与学生分布的方向差训练少步生成器。<a href="../concepts/dmd-distillation.html">展开</a></li>
+<li id="g-07"><span class="term">LoRA switching</span>：共享冻结主干，只切换小型低秩参数。<a href="../concepts/efficient-multi-lora-switching.html">展开</a></li>
+<li id="g-08"><span class="term">Feature-RoPE</span>：缓存未旋转内容，读取时再贴当前位置相位。<a href="../concepts/feature-rope-decomposition.html">展开</a></li>
+<li id="g-09"><span class="term">KV cache</span>：保存 attention 已算出的 Key / Value，下一块不重算历史。<a href="../concepts/kv-cache.html">展开</a></li>
+<li id="g-10"><span class="term">Block-causal mask</span>：当前块能看自己和过去，不能看未来。<a href="../concepts/block-causal-attention.html">展开</a></li>
+</ol></section>
+<section class="sources"><strong>Sources</strong><ul><li><a href="https://arxiv.org/html/2608.11752">论文 HTML：UniSwap</a>（正文、表格与补充材料）</li><li><a href="https://uniswap-av.github.io/">官方项目页</a>（演示与 hour-scale 宣称）</li><li><a href="https://github.com/uniswap-av/UniSwap">官方仓库</a>（截至 2026-08-18：Code coming soon）</li></ul></section>
+</main>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  document.querySelectorAll('.formula').forEach(function(el){
+    try{katex.render(el.textContent.trim(),el,{throwOnError:true,displayMode:true})}
+    catch(e){console.warn('[formula]',e.message)}
+  });
+});
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;left:auto;top:50%;bottom:auto;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;opacity:1;pointer-events:auto;transition:none;display:none;}
+.jr-pop.show{display:block;transform:translateY(-50%);animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop,.jr-pop.show{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!document.getElementById(id))return;
+      e.preventDefault();
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>
