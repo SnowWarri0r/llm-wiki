@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>JVP · 只问模型沿这一条方向会怎样变 · Concept</title>
+<title>Residual stream · Transformer 每层共用的工作底稿 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,64 +53,56 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · jacobian-vector-product</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · residual-stream</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>JVP · 只问模型沿这一条方向会怎样变</h1>
+  <h1>Residual stream · Transformer 每层共用的工作底稿</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>JVP 不展开完整 Jacobian，只计算输入沿指定方向移动时，输出的瞬时变化。</p>
+<p>Residual stream 是每个 token 随层数不断改写的一条向量，attention 和 FFN 都从它读、再把新结果加回去。</p>
 <h2>直觉</h2>
-<p>一张地形图在每个方向都有坡度。完整 Jacobian 像把东西南北所有坡度都测一遍；JVP 只问“我现在沿东北走，海拔每秒变多少”。连续时间一致性只需要老师轨迹这一条方向，因此不用构造巨大 Jacobian。</p>
+<p>把一道题写在白板上。第 1 组人标出关键词，第 2 组人补关系，第 3 组人算中间答案；每组都不另起一块白板，而是在同一块白板上添笔。Transformer 里的这块白板就是 residual stream。</p>
+<p>它不是 KV cache。KV cache 保存过去 token 在各层算出的 Key / Value，供以后的位置读取；residual stream 是当前层、当前位置正在被加工的主状态。</p>
 <h2>怎么做的</h2>
-<p>模型 <span class="tex math-inline" data-display="false">F:\mathbb R^n\to\mathbb R^m</span>，输入为 <span class="tex math-inline" data-display="false">x</span>，指定方向为 <span class="tex math-inline" data-display="false">v</span>：</p>
-<div class="tex math-display" data-display="true">\operatorname{JVP}(F,x,v)=J_F(x)v
-=\left.\frac{d}{d\epsilon}F(x+\epsilon v)\right|_{\epsilon=0}.</div>
+<p>把第 <span class="tex math-inline" data-display="false">\ell</span> 层输入记作 <span class="tex math-inline" data-display="false">h_\ell</span>，一个典型 Transformer block 可简写成：</p>
+<div class="tex math-display" data-display="true">u_\ell=h_\ell+\operatorname{Attn}_\ell(h_\ell),
+\qquad
+h_{\ell+1}=u_\ell+\operatorname{MLP}_\ell(u_\ell).</div>
 <ul>
-<li><span class="tex math-inline" data-display="false">J_F(x)</span>：输出每一维对输入每一维偏导组成的 <span class="tex math-inline" data-display="false">m\times n</span> Jacobian。</li>
-<li><span class="tex math-inline" data-display="false">v</span>：输入移动方向，与 <span class="tex math-inline" data-display="false">x</span> 同形。</li>
-<li><span class="tex math-inline" data-display="false">J_F(x)v</span>：输出沿 <span class="tex math-inline" data-display="false">v</span> 的方向导数，与模型输出同形。</li>
-<li><span class="tex math-inline" data-display="false">\epsilon</span>：只用于定义“移动一丁点”的标量。</li>
+<li><span class="tex math-inline" data-display="false">h_\ell</span>：进入第 <span class="tex math-inline" data-display="false">\ell</span> 层的 residual-stream 向量。</li>
+<li><span class="tex math-inline" data-display="false">\operatorname{Attn}_\ell</span>：从本位置与其他位置搬来相关信息。</li>
+<li><span class="tex math-inline" data-display="false">\operatorname{MLP}_\ell</span>：在每个位置上做非线性变换。</li>
+<li>两个加号：新计算不是把旧状态整块覆盖，而是作为修正量写回同一条流。</li>
 </ul>
+<p>最后一层的状态经 normalization 和 unembedding 矩阵 <span class="tex math-inline" data-display="false">W_U</span> 变成词表分数：</p>
+<div class="tex math-display" data-display="true">z=W_U\operatorname{norm}(h_L).</div>
 <h2>数字例子</h2>
-<p>令 <span class="tex math-inline" data-display="false">F(x_1,x_2)=[x_1^2+x_2,\;3x_1-x_2]</span>，在 <span class="tex math-inline" data-display="false">x=[2,1]</span> 沿 <span class="tex math-inline" data-display="false">v=[1,-2]</span> 移动。</p>
-<div class="tex math-display" data-display="true">J_F(2,1)=\begin{bmatrix}4&amp;1\\3&amp;-1\end{bmatrix},\qquad
-J_Fv=\begin{bmatrix}4&amp;1\\3&amp;-1\end{bmatrix}
-\begin{bmatrix}1\\-2\end{bmatrix}
-=\begin{bmatrix}2\\5\end{bmatrix}.</div>
-<p>用小步长 <span class="tex math-inline" data-display="false">\epsilon=0.001</span> 自检：</p>
-<pre><code class="language-text">F([2,1]) = [5,5]
-F([2.001,.998]) ≈ [5.002001, 5.005]
-(新−旧)/.001 ≈ [2.001,5] ≈ [2,5]  ✓
-</code></pre>
-<h2>跟反向传播的对照</h2>
-<ul>
-<li>JVP / forward mode：给定输入方向，求所有输出怎样变；适合“输入和输出同样大”的生成网络切线。</li>
-<li>VJP / reverse mode：给定输出方向，求所有输入或参数怎样受影响；普通反向传播主要用这一类。</li>
-<li>JVP 不是没有梯度。训练 rCM 时，JVP 先构造目标，参数更新仍会做反向传播。</li>
-</ul>
+<p>设当前 token 的底稿是 <span class="tex math-inline" data-display="false">h_0=[2,1]</span>。attention 找回一条修正 <span class="tex math-inline" data-display="false">[0.5,-0.2]</span>：</p>
+<div class="tex math-display" data-display="true">u_0=[2,1]+[0.5,-0.2]=[2.5,0.8].</div>
+<p>MLP 再写回 <span class="tex math-inline" data-display="false">[-0.1,0.7]</span>：</p>
+<div class="tex math-display" data-display="true">h_1=[2.5,0.8]+[-0.1,0.7]=[2.4,1.5].</div>
+<p>旧信息没有消失；两次计算都只在底稿上添改。解释工具读取中间层时，看的就是这些 <span class="tex math-inline" data-display="false">h_\ell</span>。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/rcm.html">rcm</a> · 用 FlashAttention-2 JVP 把切线计算扩到 14B。</li>
-<li><a href="../concepts/continuous-time-consistency.html">continuous-time-consistency</a> · 为什么连续一致性需要方向导数。</li>
-<li><a href="../concepts/flash-attention.html">flash-attention</a> · rCM 把原值和切线一起分块流式计算。</li>
-<li><a href="../concepts/gradient-backprop.html">gradient-backprop</a> · 与反向模式自动微分的关系。</li>
+<li><a href="../papers/global-workspace.html">global-workspace</a> · J-lens 逐层读取 residual stream，并在其中做替换与删除实验。</li>
+<li><a href="../concepts/residual-connection.html">residual-connection</a> · 为什么用加法把旧状态和修正量接起来。</li>
+<li><a href="../concepts/kv-cache.html">kv-cache</a> · 与“保存过去位置的 K / V”区分。</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 4 处</span>
-  <ul><li><a href="../papers/global-workspace.html"><span class="cat">paper</span>Verbalizable Representations Form a Global Workspace in Language Models</a></li><li><a href="../papers/rcm.html"><span class="cat">paper</span>rCM · 把连续时间一致性蒸馏扩到 14B 视频模型</a></li><li><a href="../concepts/continuous-time-consistency.html"><span class="cat">concept</span>连续时间一致性 · 不逐步走完，也要认出同一个终点</a></li><li><a href="../concepts/jacobian-lens.html"><span class="cat">concept</span>Jacobian lens · 把中间向量翻成“它可能让模型说什么”</a></li></ul>
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/global-workspace.html"><span class="cat">paper</span>Verbalizable Representations Form a Global Workspace in Language Models</a></li><li><a href="../concepts/jacobian-lens.html"><span class="cat">concept</span>Jacobian lens · 把中间向量翻成“它可能让模型说什么”</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/jacobian-vector-product.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/residual-stream.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 

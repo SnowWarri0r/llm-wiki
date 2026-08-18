@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>JVP · 只问模型沿这一条方向会怎样变 · Concept</title>
+<title>Jacobian lens · 把中间向量翻成“它可能让模型说什么” · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,64 +53,72 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · jacobian-vector-product</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · jacobian-lens</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>JVP · 只问模型沿这一条方向会怎样变</h1>
+  <h1>Jacobian lens · 把中间向量翻成“它可能让模型说什么”</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>JVP 不展开完整 Jacobian，只计算输入沿指定方向移动时，输出的瞬时变化。</p>
+<p>J-lens 用平均 Jacobian 近似中间层到输出层的变化，再借模型自己的词表输出层把中间状态翻成候选词。</p>
 <h2>直觉</h2>
-<p>一张地形图在每个方向都有坡度。完整 Jacobian 像把东西南北所有坡度都测一遍；JVP 只问“我现在沿东北走，海拔每秒变多少”。连续时间一致性只需要老师轨迹这一条方向，因此不用构造巨大 Jacobian。</p>
+<p>直接把第 30 层的向量塞进最后一层词表投影，像拿三楼半成品去套一楼出货标签：坐标系还没对齐。J-lens 先估一张“三楼的一个小改动，平均会怎样传到出货口”的转换表，再读词表。</p>
+<p>它回答的不是“模型下一词一定说什么”，而是“这段内部活动通常有能力把哪些词推向未来输出”。</p>
 <h2>怎么做的</h2>
-<p>模型 <span class="tex math-inline" data-display="false">F:\mathbb R^n\to\mathbb R^m</span>，输入为 <span class="tex math-inline" data-display="false">x</span>，指定方向为 <span class="tex math-inline" data-display="false">v</span>：</p>
-<div class="tex math-display" data-display="true">\operatorname{JVP}(F,x,v)=J_F(x)v
-=\left.\frac{d}{d\epsilon}F(x+\epsilon v)\right|_{\epsilon=0}.</div>
+<p>对第 <span class="tex math-inline" data-display="false">\ell</span> 层位置 <span class="tex math-inline" data-display="false">t</span> 的 residual stream <span class="tex math-inline" data-display="false">h_{\ell,t}</span>，论文把它对当前及未来位置最终状态的 Jacobian 在 1,000 条提示、各位置上取平均：</p>
+<div class="tex math-display" data-display="true">J_\ell=
+\mathbb E_{t,\,t&#x27;\ge t,\,\text{prompt}}
+\left[
+\frac{\partial h_{L,t&#x27;}}{\partial h_{\ell,t}}
+\right].</div>
 <ul>
-<li><span class="tex math-inline" data-display="false">J_F(x)</span>：输出每一维对输入每一维偏导组成的 <span class="tex math-inline" data-display="false">m\times n</span> Jacobian。</li>
-<li><span class="tex math-inline" data-display="false">v</span>：输入移动方向，与 <span class="tex math-inline" data-display="false">x</span> 同形。</li>
-<li><span class="tex math-inline" data-display="false">J_F(x)v</span>：输出沿 <span class="tex math-inline" data-display="false">v</span> 的方向导数，与模型输出同形。</li>
-<li><span class="tex math-inline" data-display="false">\epsilon</span>：只用于定义“移动一丁点”的标量。</li>
+<li><span class="tex math-inline" data-display="false">J_\ell</span>：第 <span class="tex math-inline" data-display="false">\ell</span> 层到最终层的平均一阶传递矩阵。</li>
+<li><span class="tex math-inline" data-display="false">t</span>：被检查的源 token 位置。</li>
+<li><span class="tex math-inline" data-display="false">t&#x27;\ge t</span>：当前或未来输出位置；因果模型不会让当前位置影响过去。</li>
+<li><span class="tex math-inline" data-display="false">h_{L,t&#x27;}</span>：最终层在位置 <span class="tex math-inline" data-display="false">t&#x27;</span> 的状态。</li>
 </ul>
+<p>读一个中间向量时：</p>
+<div class="tex math-display" data-display="true">\operatorname{lens}(h_\ell)
+=\operatorname{softmax}
+\left(W_U\operatorname{norm}(J_\ell h_\ell)\right).</div>
+<p>先用 <span class="tex math-inline" data-display="false">J_\ell</span> 把中间坐标变到最终层附近，再归一化、乘 unembedding <span class="tex math-inline" data-display="false">W_U</span>，最后 softmax 得到词表排名。</p>
 <h2>数字例子</h2>
-<p>令 <span class="tex math-inline" data-display="false">F(x_1,x_2)=[x_1^2+x_2,\;3x_1-x_2]</span>，在 <span class="tex math-inline" data-display="false">x=[2,1]</span> 沿 <span class="tex math-inline" data-display="false">v=[1,-2]</span> 移动。</p>
-<div class="tex math-display" data-display="true">J_F(2,1)=\begin{bmatrix}4&amp;1\\3&amp;-1\end{bmatrix},\qquad
-J_Fv=\begin{bmatrix}4&amp;1\\3&amp;-1\end{bmatrix}
-\begin{bmatrix}1\\-2\end{bmatrix}
-=\begin{bmatrix}2\\5\end{bmatrix}.</div>
-<p>用小步长 <span class="tex math-inline" data-display="false">\epsilon=0.001</span> 自检：</p>
-<pre><code class="language-text">F([2,1]) = [5,5]
-F([2.001,.998]) ≈ [5.002001, 5.005]
-(新−旧)/.001 ≈ [2.001,5] ≈ [2,5]  ✓
-</code></pre>
-<h2>跟反向传播的对照</h2>
+<p>假设中间状态 <span class="tex math-inline" data-display="false">h=[2,1]</span>，平均传递矩阵与三词输出矩阵为：</p>
+<div class="tex math-display" data-display="true">J=\begin{bmatrix}1&amp;0.5\\0&amp;2\end{bmatrix},
+\qquad
+W_U=\begin{bmatrix}1&amp;0\\0&amp;1\\-1&amp;0\end{bmatrix}.</div>
+<p>先对齐坐标：</p>
+<div class="tex math-display" data-display="true">Jh=[2.5,2].</div>
+<p>暂时省略 normalization，三个词的 logit 是：</p>
+<div class="tex math-display" data-display="true">W_UJh=[2.5,2,-2.5].</div>
+<p>softmax 后约为 <span class="tex math-inline" data-display="false">[0.62,0.38,0.004]</span>。第一个词排第一。若直接把 <span class="tex math-inline" data-display="false">h</span> 送进 <span class="tex math-inline" data-display="false">W_U</span>，logit 会是 <span class="tex math-inline" data-display="false">[2,1,-2]</span>，说明少了层间坐标修正，排名与差距都可能变。</p>
+<h2>跟 logit lens 的对照</h2>
 <ul>
-<li>JVP / forward mode：给定输入方向，求所有输出怎样变；适合“输入和输出同样大”的生成网络切线。</li>
-<li>VJP / reverse mode：给定输出方向，求所有输入或参数怎样受影响；普通反向传播主要用这一类。</li>
-<li>JVP 不是没有梯度。训练 rCM 时，JVP 先构造目标，参数更新仍会做反向传播。</li>
+<li>logit lens 相当于把 <span class="tex math-inline" data-display="false">J_\ell</span> 当单位阵，快，但早层坐标错位更严重。</li>
+<li>tuned lens 训练一个线性映射去拟合最终输出，善于猜答案，却可能跳过真正的中间步骤。</li>
+<li>J-lens 来自输出对内部激活的导数，因果联系更直接；但它仍是一阶、跨上下文平均的近似。</li>
 </ul>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/rcm.html">rcm</a> · 用 FlashAttention-2 JVP 把切线计算扩到 14B。</li>
-<li><a href="../concepts/continuous-time-consistency.html">continuous-time-consistency</a> · 为什么连续一致性需要方向导数。</li>
-<li><a href="../concepts/flash-attention.html">flash-attention</a> · rCM 把原值和切线一起分块流式计算。</li>
-<li><a href="../concepts/gradient-backprop.html">gradient-backprop</a> · 与反向模式自动微分的关系。</li>
+<li><a href="../papers/global-workspace.html">global-workspace</a> · J-lens 的提出与主要实验。</li>
+<li><a href="../concepts/residual-stream.html">residual-stream</a> · 被读取的中间状态是什么。</li>
+<li><a href="../concepts/jacobian-vector-product.html">jacobian-vector-product</a> · Jacobian 描述“小改动怎样传到输出”。</li>
+<li><a href="../concepts/activation-intervention.html">activation-intervention</a> · 如何沿 J-lens 方向写入、删除或互换概念。</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 4 处</span>
-  <ul><li><a href="../papers/global-workspace.html"><span class="cat">paper</span>Verbalizable Representations Form a Global Workspace in Language Models</a></li><li><a href="../papers/rcm.html"><span class="cat">paper</span>rCM · 把连续时间一致性蒸馏扩到 14B 视频模型</a></li><li><a href="../concepts/continuous-time-consistency.html"><span class="cat">concept</span>连续时间一致性 · 不逐步走完，也要认出同一个终点</a></li><li><a href="../concepts/jacobian-lens.html"><span class="cat">concept</span>Jacobian lens · 把中间向量翻成“它可能让模型说什么”</a></li></ul>
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/global-workspace.html"><span class="cat">paper</span>Verbalizable Representations Form a Global Workspace in Language Models</a></li><li><a href="../concepts/activation-intervention.html"><span class="cat">concept</span>Activation intervention · 直接改内部状态，区分“看见相关”与“真的在用”</a></li><li><a href="../concepts/global-workspace-theory.html"><span class="cat">concept</span>Global Workspace Theory · 许多专用模块共用的一块小黑板</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/jacobian-vector-product.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/jacobian-lens.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
