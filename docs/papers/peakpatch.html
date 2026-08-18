@@ -122,6 +122,10 @@
 </div>
 <p>另一条视觉对齐曲线只用肯定句与配对图片：</p>
 <div class="formula">A(\ell)=\frac1{|\mathcal D|}\sum_i\cos\!\left(f_T^\ell(T_i^+),f_{I_i}\right)</div>
+<div class="vars">
+  <div><code class="m">T_i^+</code>只用肯定句——这条曲线测「这层多适合对图」，与否定无关。</div><div><code class="m">f_{I_i}</code>配对图片的向量；不随层变，始终是图像编码器最终输出。</div>
+  <div><code class="m">f_T^\ell(T_i^+)</code>与 LCD 同款口径：第 ℓ 层 EOS 借最终投影头投出的单位向量。</div><div><code class="m">A(\ell)</code>全诊断集平均余弦，越大 = 这层的投影越像「能直接拿去对图」的成品。</div>
+</div>
 <p>它不是说中层“含有多少视觉像素”，而是看这层投影结果已经被训练成多适合与图片向量对齐。峰值层自动取 <code class="m">\ell_p=\arg\max_\ell D_{\mathrm{LCD}}(\ell)</code>；换预训练数据后，峰值会从 L8 移到 L4，说明它不是手写死的超参数。<a class="jr" href="#g-05">05</a></p>
 </section>
 
@@ -160,6 +164,10 @@
   <div><code class="m">h_{\mathrm{EOS}}^{\ell_a}</code>anchor 层稳定参照。</div><div><code class="m">\bar h^{\ell_p}</code>峰值层所有 token 的平均，补充全句背景。</div>
   <div><code class="m">[\,;\,]</code>沿特征维拼接；四个 d 维向量变成 4d 维。</div><div><code class="m">d=512</code>ViT-B/32 的文本维度；MLP 为 2048→1024→1024→512。</div>
 </div>
+<p>先把 <code class="m">\mathrm{CrossAttn}(q,H^{\ell_p},H^{\ell_p})</code> 拆开（论文配置：8 头、单枚可学 query、后接 LayerNorm）。三步：① 打分——q 与每个 token 的 key 点积、除 <code class="m">\sqrt{d}</code>，得 N 个分数（每头独立）；② softmax 把分数变成和为 1 的权重；③ 按权重加权平均各 token 的 value，得摘要 a。q 是学出来的，训练把它推成「专找否定结构」的探针——§ 10 的旁证：8 头里 H0/H1/H5 对否定 token 的注意力是内容词的 1.8–2.6 倍。</p>
+<div class="calc">
+  <div class="step"><b>注意力小例</b><span>3 个 token「not / a / dog」打分 [2, .5, .5]：softmax 得权重 [.69, .15, .15]，摘要 <code class="m">a\approx.69\,h_{\mathrm{not}}+.15\,h_a+.15\,h_{\mathrm{dog}}</code>——「not」的表示占了摘要七成。</span></div>
+</div>
 <div class="calc">
   <div class="step"><b>把 512 维缩成二维</b><span>设原向量 <code class="m">f_T=[0.8,0.6]</code>，ECN 预测 <code class="m">\delta=[-0.3,0.4]</code>，<code class="m">\alpha=0.5</code>。</span></div>
   <div class="step"><b>先加偏移</b><span><code class="m">f_T+\alpha\delta=[0.8,0.6]+0.5[-0.3,0.4]=[0.65,0.80]</code>。</span></div>
@@ -180,8 +188,9 @@ c=\mathrm{MLP}_{\mathrm{cross}}(f_I\odot\hat f_T),\\
 \hat s(I,T)&amp;=\cos(f_I,\hat f_T)+\Delta s
 \end{aligned}</div>
 <div class="vars">
-  <div><code class="m">s=[\cos(f_T^{\ell_p},f_I);\cos(\hat f_T,f_I)]</code>峰值层和修后向量各自与图片的两枚分数。</div>
+  <div><code class="m">s=[\cos(f_T^{\ell_p},f_I);\cos(\hat f_T,f_I)]</code>峰值层和修后向量各自与图片的两枚分数；两枚不一致，正是「坍缩曾在这条样本上丢过否定信息」的信号（论文原话）。</div>
   <div><code class="m">t\in\mathbb R^{128}</code>峰值向量与修后向量差异的文本摘要。</div>
+  <div><code class="m">\odot</code>逐元素相乘：512 维图、文向量对应位相乘。点积把 512 个乘积加成一个总分，⊙ 保留逐维明细——哪些维同向、哪些维顶牛，交给 MLP 自己读。</div>
   <div><code class="m">c\in\mathbb R^{128}</code>从 <code class="m">f_I\odot\hat f_T</code> 压出的图文交互摘要。</div>
   <div><code class="m">[s;t;c]\in\mathbb R^{258}</code>2＋128＋128 维 SCN 输入。</div>
   <div><code class="m">\alpha_{\max}=0.20</code>修正上限。</div><div><code class="m">\Delta s</code>落在 [-0.2, 0.2] 的标量，不是向量。</div>
@@ -214,9 +223,18 @@ c=\mathrm{MLP}_{\mathrm{cross}}(f_I\odot\hat f_T),\\
   <div><code class="m">B</code>一个 batch 的图片数；共有 2B 条肯定 / 否定文字。</div><div><code class="m">T_i^+</code>图片 i 的正确肯定 caption。</div>
   <div><code class="m">\mathcal N_i</code>分母里的错误文字集合，明确包含同图否定句 <code class="m">T_i^-</code>。</div><div><code class="m">\tau</code>温度；实现固定 logit scale 100，即 <code class="m">1/\tau=100</code>。</div>
 </div>
+<div class="calc">
+  <div class="step"><b>为什么必须把温度定到 100 · 先看不放大</b><span>设正确句修后余弦 .80、同图否定句 .78（词面几乎一样，差距只有 .02）。若 τ=1：<code class="m">e^{.80}/(e^{.80}+e^{.78})=.505</code>，损失 <code class="m">-\log(.505)=.683</code>；就算否定句反超，损失也只是 .703——对错几乎同价，梯度对这 .02 无感。</span></div>
+  <div class="step"><b>放大 100 倍</b><span>logit 变成 80 与 78，比值 <code class="m">e^{2}\approx7.39</code>：答对时正确句概率 .881、损失 .127；答错时概率掉到 .119、损失 2.13——对错差 17 倍。温度把「细小但关键」的 .02 放大成陡峭的奖惩，模型才有动力把否定句真正推开。</span></div>
+</div>
 <p>分数越高，指数项越大；前面的负对数要求正确句在整个分母里占尽量大的比例。论文还加上文字到图片的对称方向，合成 <code class="m">\mathcal L_{\mathrm{ECN}}</code>。</p>
 <h3>SCN：四个选项做交叉熵，同时罚过大的改分</h3>
 <div class="formula">\mathcal L_{\mathrm{SCN}}=-\log\frac{\exp(\hat s_{y})}{\sum_{k=1}^{K}\exp(\hat s_k)}+\frac{\beta}{K}\sum_{k=1}^{K}(\Delta s_k)^2</div>
+<div class="vars">
+  <div><code class="m">K=4</code>每道题四个候选：正确句 + 同图否定改写 + 两条其他图片的句子（上面 SCN 数据流）。</div><div><code class="m">\hat s_k</code>第 k 个候选修正后的配对分数，即 § 06 最后一行的输出。</div>
+  <div><code class="m">y</code>正确选项的下标；第一项 = 四选一 softmax 交叉熵，要求 <code class="m">\hat s_y</code> 在四者中最大。</div><div><code class="m">\Delta s_k</code>SCN 给第 k 个候选的改分；平方惩罚把每个改分往 0 拉。</div>
+  <div><code class="m">\beta</code>惩罚权重。论文只说「ℓ2 惩罚按 K 个选项取平均」，数值未公布——复现以代码为准。</div><div><code class="m">\exp(\hat s_k)</code>注意这里没有温度（与 ECN 的 1/τ=100 不同）：<code class="m">\hat s</code> 量级只有 ±1.2，四个候选直接比。</div>
+</div>
 <p>第一项让正确选项 <code class="m">y</code> 排第一；第二项把每个 <code class="m">\Delta s_k</code> 往 0 拉，避免 SCN 靠大改分蒙题。总目标是：</p>
 <div class="formula">\mathcal L=\mathcal L_{\mathrm{ECN}}+\lambda_{\mathrm{SCN}}\mathcal L_{\mathrm{SCN}},\qquad\lambda_{\mathrm{SCN}}=1</div>
 <div class="grid3">
