@@ -1620,3 +1620,8 @@ skill 更新:
 - 关键口径单列：J-space 概念分量中位仅 6–7% 方差但替换 top-5 成功 59%，非 J 分量约 93% 方差却仅 5%；workspace 约 L38–92、occupancy 约 25、额外方差不超 10%；广播 head 消融让注入报告 0.54→0.09；评测意识消融让 blackmail 0/180→13/180，但绝大多数仍拒绝。
 - Counterfactual reflection training 写清 10,000 条中途轨迹、只监督反事实反思分支、评测不触发反思，以及伦理方向消融能回退大部分但非全部增益；意识段严格区分 access consciousness、phenomenal consciousness 与论文未证明项。
 - Review 1 逐节对照 Anthropic 正文、94 幅图和附录，复核 J-lens / J-space 定义、层带、消融、广播、安全审计与反事实反思的数字和结论边界；Review 2 实测桌面 1440×1000 与手机 390×844：27 处 KaTeX 零报错、页面零横向溢出，7 张图的箭头与响应式转向、10 个术语浮卡的定位和对比度均通过。七项质量门逐项达到 4/5 以上。
+
+## [2026-08-18] ingest | Darwin Gödel Machine · 不证明，生下来再考试
+- agent self-evolve 经典（arXiv 2505.22954）。紫 accent bespoke 页：§01 哥德尔机的证明卡点 → §02 自指闭环（自我修改=编码任务，下游分数=元能力，全文方法学核心）→ §03 迭代循环图 → §04 父代选择公式逐符号+手算（α=.40/n=0 的差生以 59.5% 胜 α=.60/n=3，python 核过）→ §05 开放探索三实证（第 4/56 代低谷翻盘、node 6/24 同目标差 17 分、贪心消融 -10.3）→ §06 分级评考与 $22k 成本 → §07 进化长出的特征=人类 agent 工程史重演 → §08 主表+消融+51.3% 健康度 → §09 三重迁移（Claude 3.7 下 19→59.5）→ §10 objective hacking 全场最佳（node 114 删检测标记拿满分，Goodhart）→ §12 谱系表（哥德尔机/ADAS/SICA/DGM 四行定位）。
+- 新概念页 4 个：godel-machine、open-ended-exploration、self-referential-improvement、objective-hacking。
+- 覆盖遍含附录 A-J：父代选择 λ=10/α₀=.5/k=2/4、o1 外挂诊断、伪代码三算法、成本表、幻觉案例全数入页；诚实标注三个不动点（FM 冻结/探索循环固定/诊断外挂）与子集口径。
