@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wave Forcing · 砍一条边，换一条流水线</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..800&family=Newsreader:opsz,wght@6..72,350..700&family=Noto+Serif+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js" integrity="sha384-oLmuahJgYYR1aWgZwdMQQ2AClE6A2eEwV2x1Z7cbIHehfkkmommQLH3wX1NDEszb" crossorigin="anonymous"></script>
+<style>
+:root{--paper:#eff1f0;--card:#f9faf7;--ink:#171719;--ink2:#3d3937;--muted:#756c60;--rule:#adb3ac;--navy:#163a58;--navy2:#d9e6eb;--rust:#a83b25;--rust2:#f4d8ce;--gold:#bd7a00;--gold2:#f4dfaa;--green:#3f7354;--green2:#d7e7d8;--wave:#0d6aa8;--wave2:#d7e8f4;--accent:#0d6aa8}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:18px/1.76 'Newsreader','Noto Serif SC',serif;-webkit-font-smoothing:antialiased}body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.3;background-image:linear-gradient(rgba(13,106,168,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(13,106,168,.05) 1px,transparent 1px);background-size:32px 32px}.page{position:relative;max-width:1180px;margin:auto;padding:58px 38px 120px}.mast{display:flex;justify-content:space-between;border-top:4px double var(--ink);border-bottom:1px solid var(--rule);padding:12px 0;color:var(--muted);font:600 11px/1.5 'JetBrains Mono';letter-spacing:2px;text-transform:uppercase}.hero{padding:58px 0 32px}.issue{display:flex;gap:14px;align-items:center;color:var(--wave);font:700 11px/1.5 'JetBrains Mono';letter-spacing:3px;text-transform:uppercase}.issue:after{content:"";height:1px;background:var(--rule);flex:1}.hero h1{margin:18px 0 12px;font:750 clamp(46px,7.5vw,96px)/.92 'Fraunces','Noto Serif SC';letter-spacing:-.05em}.hero h1 em{color:var(--wave);font-weight:600}.byline{color:var(--muted);font:600 12px/1.5 'JetBrains Mono';letter-spacing:1px}.dek{max-width:900px;font:italic 400 clamp(21px,2.5vw,29px)/1.43 'Fraunces','Noto Serif SC';color:var(--ink2)}.tldr,.note,.warning,.truth{margin:24px 0;padding:18px 22px;background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--navy)}.warning{border-left-color:var(--rust);background:#fff0e8}.truth{border-left-color:var(--green);background:#edf5ea}.label{display:block;margin-bottom:5px;color:var(--navy);font:700 10px/1.5 'JetBrains Mono';letter-spacing:2px;text-transform:uppercase}.warning .label{color:var(--rust)}.truth .label{color:var(--green)}nav.toc{position:sticky;top:0;z-index:10;display:flex;gap:7px;overflow-x:auto;margin:0 -14px 50px;padding:10px 14px;background:rgba(239,241,240,.96);border-block:1px solid var(--rule);scrollbar-width:none}nav.toc a{flex:none;padding:6px 9px;border:1px solid var(--rule);color:var(--navy);background:var(--card);font:600 10px/1.2 'JetBrains Mono';text-decoration:none}nav.toc a:hover{background:var(--wave);color:#fff}h2{display:flex;gap:16px;align-items:baseline;margin:76px 0 20px;font:700 clamp(30px,4vw,43px)/1.1 'Fraunces','Noto Serif SC';letter-spacing:-.025em}h2 .n{min-width:55px;color:var(--wave);font:700 11px/1.4 'JetBrains Mono';letter-spacing:2px}h3{margin:34px 0 10px;font:700 23px/1.3 'Fraunces','Noto Serif SC'}p{margin:12px 0}a{color:#0b568a;text-decoration-thickness:1px;text-underline-offset:3px}strong{font-weight:700}.lead{font-size:22px;line-height:1.58;color:var(--ink2)}code{font:500 .88em/1.5 'JetBrains Mono';background:#fffaf0;border:1px solid var(--rule);border-radius:3px;padding:1px 5px}.jr{vertical-align:super;margin:0 2px;padding:1px 5px;border:1px solid var(--gold);border-radius:999px;background:var(--gold2);color:#563700;text-decoration:none;font:700 9px/1.2 'JetBrains Mono'}.jr:hover{background:#614000;color:#fff}.grid2,.grid3{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}.card{min-width:0;padding:20px;background:var(--card);border:1px solid var(--rule);box-shadow:5px 5px 0 rgba(13,106,168,.07)}.card h3{margin:8px 0 5px}.card p{font-size:16px;line-height:1.58}.tag{display:inline-block;padding:3px 8px;background:var(--navy2);color:var(--navy);font:700 10px/1.4 'JetBrains Mono';letter-spacing:1px;text-transform:uppercase}.tag.rust{background:var(--rust2);color:#7b291a}.tag.gold{background:var(--gold2);color:#634000}.tag.green{background:var(--green2);color:#285438}.tag.wave{background:var(--wave2);color:#084a77}figure{margin:38px 0;padding:28px;background:rgba(249,250,247,.9);border:1px solid var(--rule);box-shadow:8px 8px 0 rgba(13,106,168,.08);overflow:hidden}figcaption{display:flex;justify-content:space-between;gap:16px;margin-bottom:22px;padding-bottom:12px;border-bottom:1px dashed var(--rule);color:var(--muted);font:600 11px/1.4 'JetBrains Mono';letter-spacing:1.3px;text-transform:uppercase}figcaption b{color:var(--rust)}.calc{counter-reset:step;display:grid;gap:8px;margin:18px 0}.step{position:relative;padding:13px 14px 13px 56px;background:#fff;border:1px solid var(--rule);font-size:15px}.step:before{counter-increment:step;content:counter(step,decimal-leading-zero);position:absolute;left:16px;top:14px;color:var(--wave);font:700 11px/1.5 'JetBrains Mono'}.step b{display:block;color:var(--navy)}.scroll{overflow-x:auto;margin:18px 0;border:1px solid var(--rule)}table{width:100%;border-collapse:collapse;background:var(--card);font-size:14px;white-space:nowrap}th,td{padding:10px 12px;border-bottom:1px solid var(--rule);text-align:right}th:first-child,td:first-child{text-align:left}thead th{position:sticky;top:0;background:var(--navy);color:#fff;font:600 10px/1.4 'JetBrains Mono';letter-spacing:.7px}.win{background:var(--green2);color:#1f5237;font-weight:700}.gloss{margin-top:76px;padding-top:30px;border-top:3px double var(--ink)}.gloss ol{list-style:none;padding:0;counter-reset:g}.gloss li{position:relative;padding:13px 10px 13px 48px;border-bottom:1px dashed var(--rule);font-size:15px}.gloss li:before{counter-increment:g;content:counter(g,decimal-leading-zero);position:absolute;left:7px;color:var(--wave);font:700 10px/1.8 'JetBrains Mono'}.gloss .term{font-weight:700;color:var(--navy)}.sources{margin-top:54px;padding:22px;background:var(--card);border:1px solid var(--rule);font-size:14px}.sources li{margin:7px 0}
+.abar{display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap}
+.abar button{padding:7px 14px;border:1px solid var(--rule);background:#fff;color:var(--navy);font:700 12px/1.2 'JetBrains Mono';cursor:pointer}
+.abar button:hover:not(:disabled){background:var(--wave);color:#fff}
+.abar button:disabled{opacity:.35;cursor:default}
+.acap{flex:1;min-width:240px;padding:10px 14px;background:#fff;border:1px solid var(--rule);font-size:14.5px;line-height:1.55}
+@media(max-width:850px){.page{padding:34px 18px 90px}.grid3{grid-template-columns:1fr}figcaption{display:block}figcaption b{display:block;margin-top:5px}}
+@media(max-width:520px){body{font-size:17px}.page{padding-inline:12px}.hero h1{font-size:42px}figure{padding:18px 12px}.grid2{grid-template-columns:1fr}.mast .r{display:none}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<!-- katex-head:start -->
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<!-- katex-head:end -->
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · waveforcing</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page">
+<div class="mast"><span>STREAMING VIDEO · MLSYS FIELD NOTES</span><span class="r">PROJECT BLOG · SJTU DENG LAB · 论文未出</span></div>
+<header class="hero">
+  <div class="issue">算法砍一条边 · 系统换一条流水线</div>
+  <h1>Wave Forcing<br><em>砍一条边，换一条流水线</em></h1>
+  <p class="byline">DENG Lab MLSys Team · Shanghai Jiao Tong University · 项目博客（2026，arXiv 未出）</p>
+  <p class="dek">流式视频生成有两派：Rolling Forcing 的滑窗上下文是活的，但每层 Transformer 都要全窗同步；Live Avatar 的硬件流水很干净，但每段历史被冻死。Wave Forcing 的问题只有一个：能不能两头都要？答案藏在一条注意力边里。</p>
+  <div class="tldr"><span class="label">先记这一句</span>造成同步的<strong>不是混合噪声窗口，是「噪→净」那条反向注意力边</strong>。砍掉它，执行图从环变成 DAG：每张 GPU 放一个完整模型副本、管一个去噪阶段，chunk 像波一样斜着流过 GPU×阶段矩阵，KV 单向发布、通信藏进最慢 rank 的计算里。8×H200：100 秒视频 13.56 秒出片，117.7 FPS，单卡 7.9×，质量与 Rolling Forcing 打平、长视频漂移反而更小。</div>
+</header>
+<nav class="toc"><a href="#misread">00 先排雷</a><a href="#gap">01 三代取舍</a><a href="#dag">02 环变DAG</a><a href="#wave">03 波前</a><a href="#overlap">04 藏通信</a><a href="#vae">05 VAE</a><a href="#results">06 数字与质量</a></nav>
+
+<section id="misread">
+<h2><span class="n">§ 00</span>先排除四种误读</h2>
+<div class="grid2">
+  <div class="card"><span class="tag rust">口径</span><h3>没有论文，只有博客</h3><p>本页全部内容出自项目页与 README；训练代码未开源，rollout-aligned 蒸馏只有一句话描述。arXiv 出来后本页会对照修订。</p></div>
+  <div class="card"><span class="tag">算法基座</span><h3>它是 Rolling Forcing 的去环版</h3><p>混合噪声滑窗、少步蒸馏全部继承自 Rolling Forcing<a class="jr" href="#g-01">01</a>；算法上只改一件事——跨 chunk 注意力改成块因果<a class="jr" href="#g-03">03</a>。仓库里 <code>naive_rt/rolling_forcing/</code> 就是基座本座。</p></div>
+  <div class="card"><span class="tag gold">14B 行</span><h3>系统原型 ≠ 生成质量</h3><p>14B 的 28.1 FPS 用的是 shape-accurate 的<strong>随机初始化权重</strong>，只证明系统可扩展，不是画质结果。已放出的唯一权重是 1.3B 5-step preview。</p></div>
+  <div class="card"><span class="tag green">数字口径</span><h3>FPS 有三种</h3><p>稳态 FPS（掐头去尾的 tick p50）、DiT FPS（含流水线灌入/排空）、E2E FPS（再含流式 VAE）。正文引用以 E2E 为主。</p></div>
+</div>
+</section>
+
+<section id="gap">
+<h2><span class="n">§ 01</span>三代流式方案：各拿半张好牌</h2>
+<div class="grid3">
+  <div class="card"><span class="tag">块优先（CausVid / Self-Forcing 系）</span><h3>一块做完才下一块</h3><p>chunk c 的全部去噪步结束才开始 c+1——请求内部是串行链，多卡吃不满。</p></div>
+  <div class="card"><span class="tag wave">Rolling Forcing</span><h3>活窗口，环形执行</h3><p>混合噪声窗<a class="jr" href="#g-02">02</a>里几个 chunk 同时推进（越早越干净），每步吐最净那块。上下文是活的；代价是窗内注意力<strong>双向</strong>——每层 Transformer 都要全窗同步，Ulysses/Ring 也逃不掉逐层全局协调。</p></div>
+  <div class="card"><span class="tag gold">Live Avatar</span><h3>干净流水，冻结历史</h3><p>一卡一阶段的反对角流水、只传 latent；但每阶段的历史 KV 冻在固定噪声态，不被后面更干净的表示刷新——建模上的让步。</p></div>
+</div>
+<p class="lead">Wave Forcing 各拿两家的好牌：Rolling Forcing 的活上下文 + Live Avatar 的硬件流水。钥匙是下面这条边。</p>
+</section>
+
+<section id="dag">
+<h2><span class="n">§ 02</span>关键观察：窗口无罪，反向边有罪</h2>
+<figure id="fig-dag">
+<figcaption><span>Fig 01 · 砍掉「噪→净」这条边</span><b>环 → DAG · 同步 → 流水</b></figcaption>
+<svg id="dagsvg" viewBox="0 0 920 300" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
+<defs><marker id="mW" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#0d6aa8"/></marker>
+<marker id="mR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#a83b25"/></marker></defs>
+<text x="230" y="34" text-anchor="middle" font-size="14.5" font-weight="700" fill="#163a58">Rolling Forcing · 窗内双向</text>
+<rect x="60" y="70" width="100" height="64" rx="8" fill="#d7e8f4" stroke="#0d6aa8" stroke-width="2"/><text x="110" y="98" text-anchor="middle" font-size="13">C₀ 较净</text><text x="110" y="118" text-anchor="middle" font-size="11" fill="#756c60">还差 1 步</text>
+<rect x="185" y="70" width="100" height="64" rx="8" fill="#f4dfaa" stroke="#bd7a00" stroke-width="2"/><text x="235" y="98" text-anchor="middle" font-size="13">C₁ 半噪</text><text x="235" y="118" text-anchor="middle" font-size="11" fill="#756c60">还差 3 步</text>
+<rect x="310" y="70" width="100" height="64" rx="8" fill="#f4d8ce" stroke="#a83b25" stroke-width="2"/><text x="360" y="98" text-anchor="middle" font-size="13">C₂ 最噪</text><text x="360" y="118" text-anchor="middle" font-size="11" fill="#756c60">刚进窗</text>
+<path d="M 160 88 L 181 88" stroke="#0d6aa8" stroke-width="2" marker-end="url(#mW)"/>
+<path d="M 285 88 L 306 88" stroke="#0d6aa8" stroke-width="2" marker-end="url(#mW)"/>
+<path id="rev1" d="M 306 120 L 164 120" stroke="#a83b25" stroke-width="2.4" stroke-dasharray="7 5" marker-end="url(#mR)"/>
+<text id="revlab" x="235" y="152" text-anchor="middle" font-size="12.5" fill="#a83b25" font-weight="700">反向边：净块也要看噪块 → 有环</text>
+<text id="scissors" x="235" y="124" text-anchor="middle" font-size="22" opacity="0">✂</text>
+<text x="230" y="204" text-anchor="middle" font-size="12.5" fill="#756c60">环 = 每层 Transformer 一次全窗 all-gather</text>
+<line x1="470" y1="26" x2="470" y2="240" stroke="#adb3ac" stroke-dasharray="3 6"/>
+<text x="690" y="34" text-anchor="middle" font-size="14.5" font-weight="700" fill="#0d6aa8">Wave Forcing · 只留净→噪</text>
+<g id="dagside" opacity=".25">
+<rect x="520" y="70" width="100" height="64" rx="8" fill="#d7e8f4" stroke="#0d6aa8" stroke-width="2"/><text x="570" y="98" text-anchor="middle" font-size="13">C₀ 较净</text><text x="570" y="118" text-anchor="middle" font-size="11" fill="#756c60">GPU 3</text>
+<rect x="645" y="70" width="100" height="64" rx="8" fill="#f4dfaa" stroke="#bd7a00" stroke-width="2"/><text x="695" y="98" text-anchor="middle" font-size="13">C₁ 半噪</text><text x="695" y="118" text-anchor="middle" font-size="11" fill="#756c60">GPU 1</text>
+<rect x="770" y="70" width="100" height="64" rx="8" fill="#f4d8ce" stroke="#a83b25" stroke-width="2"/><text x="820" y="98" text-anchor="middle" font-size="13">C₂ 最噪</text><text x="820" y="118" text-anchor="middle" font-size="11" fill="#756c60">GPU 0</text>
+<path d="M 620 88 L 641 88" stroke="#0d6aa8" stroke-width="2" marker-end="url(#mW)"/>
+<path d="M 745 88 L 766 88" stroke="#0d6aa8" stroke-width="2" marker-end="url(#mW)"/>
+<text x="690" y="164" text-anchor="middle" font-size="12.5" fill="#3f7354" font-weight="700">DAG：KV 只朝一个方向发布 → 可流水</text>
+<text x="690" y="204" text-anchor="middle" font-size="12.5" fill="#756c60">混合噪声 ✓ 活上下文 ✓ 无全局同步 ✓</text>
+</g>
+<text x="460" y="272" text-anchor="middle" font-size="12.5" fill="#756c60">配套：rollout-aligned 蒸馏——训练就用推理这套有向前沿，与「训练 = 推理」的 self-forcing 哲学同源</text>
+</svg>
+<div class="abar"><button id="dagBtn" type="button">✂ 砍掉反向边</button><div class="acap" id="dagCap">左边是 Rolling Forcing：窗里的净块也要回头看噪块（红色虚线）——图有环，每层都得全窗碰头。点按钮砍掉它。</div></div>
+</figure>
+<p>砍掉反向边之后：噪块照旧看到<strong>所有更净的前辈</strong>（活上下文原样保留），净块不再回头——依赖图成了 DAG，不同 chunk 就能落在不同 GPU 上错步执行。质量的代价由重新蒸馏来付：§ 06 的对照显示，拿 Rolling Forcing 的旧权重硬套块因果推理，长视频质量漂移<a class="jr" href="#g-08">08</a>恶化 4 倍；按有向前沿重新蒸馏后反而比原版更稳。</p>
+</section>
+
+<section id="wave">
+<h2><span class="n">§ 03</span>Wave Parallelism：chunk 像波一样斜着流</h2>
+<p class="lead">每张 GPU 放<strong>完整模型副本</strong>、固定负责一个阶段：4 个去噪阶段 + 1 个干净 KV 存档位 + 3 段 VAE（「4+3」拓扑，正好 8 卡）。chunk 每 tick 挪到下一个 GPU——在 GPU×时间的矩阵上就是一条斜波。</p>
+<figure id="fig-wave">
+<figcaption><span>Fig 02 · GPU × 时间的波前</span><b>同色 = 同一 chunk · 每 tick 斜进一格</b></figcaption>
+<div id="waveGrid" style="position:relative"></div>
+<div class="abar"><button id="wvPlay" type="button">▶ 播放</button><button id="wvStep" type="button">单步 +1</button><button id="wvReset" type="button">重置</button><div class="acap" id="wvCap">按「播放」看 chunk 波前推进。行 = GPU（上噪下净，再往下是存档位和 VAE），列 = 时间 tick。</div></div>
+</figure>
+<div class="calc">
+<div class="step"><b>读图要点</b><span>盯住一种颜色沿对角线走：它在 r0 做第 1 步去噪（最噪、要看全部前辈的 KV），下一 tick 到 r1 做第 2 步……第 4 步做完变干净，KV 进存档位，再流过三段 VAE 出帧。<strong>稳态时 8 张卡全满，每 tick 吐一块 = 12 帧画面</strong>（chunk = 3 个 latent 帧 × VAE 时间 4×）。</span></div>
+<div class="step"><b>KV 单向发布<a class="jr" href="#g-04">04</a></b><span>每一层 Transformer 算完，较净的 rank 把该层 K/V 直接发给更噪的消费者（图中蓝色上行箭头）——没有全局 collective，这正是 § 02 砍边换来的东西。去噪时间表 [1000, 800, 600, 400, 200]。</span></div>
+<div class="step"><b>两个工程细节</b><span>每 chunk × 每阶段用确定性种子重加噪，跨卡可复现；扩散与 VAE 用两个互不相交的 NCCL 世界，中间靠 CPU 队列衔接，避免跨流水线死锁。</span></div>
+</div>
+</section>
+
+<section id="overlap">
+<h2><span class="n">§ 04</span>慢 rank 不是瓶颈，是藏通信的口袋</h2>
+<p>块因果给了一个白捡的礼物：<strong>各 rank 的每层计算量天然不等</strong>。最噪的 r0 上下文最长（约 8 块，要看全部前辈），每层算得最慢；越净的 rank 上下文越短（约 5 块）、算得越快。快的先发 KV、慢的还在算——通信恰好塞进关键 rank 的计算窗里。14B 实测：r0 每层 646ms，其余 575–581ms，约 70ms 顺风差。</p>
+<figure id="fig-gantt">
+<figcaption><span>Fig 03 · 同一层的两种命运</span><b>同步：逐层碰头 · 重叠：预取塞进计算</b></figcaption>
+<svg id="ganttsvg" viewBox="0 0 920 330" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
+<text x="20" y="30" font-size="14" font-weight="700" fill="#163a58">A · 同步（每层 all-gather）</text>
+<text x="120" y="62" text-anchor="end" font-size="12" fill="#756c60">r0 计算</text>
+<g id="gSyncRow"></g>
+<text x="20" y="170" font-size="14" font-weight="700" fill="#0d6aa8">B · 重叠（深度-1 预取 + 单边写）</text>
+<text x="120" y="202" text-anchor="end" font-size="12" fill="#756c60">r0 计算</text>
+<text x="120" y="232" text-anchor="end" font-size="12" fill="#756c60">KV 传输</text>
+<g id="gOvRow"></g>
+<text x="470" y="120" text-anchor="middle" font-size="12" fill="#a83b25" id="gSyncNote" opacity="0">红色 = 暴露在关键路径上的通信：每层都停下来碰头（14B 诊断 ≈79ms/层）</text>
+<text x="470" y="290" text-anchor="middle" font-size="12" fill="#3f7354" id="gOvNote" opacity="0">传输沉到计算窗底下：r0 用到时只为残余部分把门（gate），不再付全额通信费</text>
+</svg>
+<div class="abar"><button id="gtBtn" type="button">▶ 播放对比</button><div class="acap" id="gtCap">上排：算一层、停下通信、再算下一层。下排:通信提前一层预取、塞进计算窗。点播放看差别。</div></div>
+</figure>
+<h3>传输本身再拆三种税</h3>
+<div class="grid3">
+  <div class="card"><span class="tag">字节税</span><h3>FP8 KV</h3><p>DMA 字节减半，通信 ≈79→40ms；但配 SageAttention<a class="jr" href="#g-07">07</a> 时重量化开销反噬——标为实验性，单独可用。</p></div>
+  <div class="card"><span class="tag wave">协调税</span><h3>copy engine 单边写<a class="jr" href="#g-05">05</a></h3><p>生产者用 <code>cuMemcpyPeerAsync</code> 直写消费者的 IPC 显存，设备端 generation flag 替代 NCCL 配对收发——不占 SM，微基准 343 GB/s。</p></div>
+  <div class="card"><span class="tag green">组装税</span><h3>paged 直写<a class="jr" href="#g-06">06</a></h3><p>生产者写进消费者注意力缓冲的固定槽位，注意力就地读前缀——免每层 <code>torch.cat</code>（18.49→4.08ms）。推荐组合 = causal + paged。</p></div>
+</div>
+</section>
+
+<section id="vae">
+<h2><span class="n">§ 05</span>VAE：跨卡重叠，且按实测时间切</h2>
+<p>扩散提速到极限后，解码成了尾巴。同一张卡上并发解两块视频听着并行，实则抢同一批 SM、两个都变慢；正解是解码器也切成 3 段各占一卡，连续 chunk 在<strong>卡间</strong>错开。切分点有讲究：480×832 下高分辨率上采样块是 memory-bound，<strong>同 FLOPs 的块壁钟能差 6×</strong>——按 FLOPs 均分必然一段过载。</p>
+<figure id="fig-vae">
+<figcaption><span>Fig 04 · 同一个解码器的两种切法</span><b>按 FLOPs 切：146ms 瓶颈 · 按实测时间切：99ms 齐步</b></figcaption>
+<svg id="vaesvg" viewBox="0 0 920 240" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
+<text x="120" y="52" text-anchor="end" font-size="12.5" fill="#756c60">GPU 5</text>
+<text x="120" y="112" text-anchor="end" font-size="12.5" fill="#756c60">GPU 6</text>
+<text x="120" y="172" text-anchor="end" font-size="12.5" fill="#756c60">GPU 7</text>
+<rect id="vb1" x="140" y="30" width="330" height="34" rx="4" fill="#d7e8f4" stroke="#0d6aa8" stroke-width="1.5"/>
+<rect id="vb2" x="140" y="90" width="620" height="34" rx="4" fill="#f4d8ce" stroke="#a83b25" stroke-width="1.8"/>
+<rect id="vb3" x="140" y="150" width="330" height="34" rx="4" fill="#d7e8f4" stroke="#0d6aa8" stroke-width="1.5"/>
+<text id="vt1" x="150" y="52" font-size="12.5" fill="#084a77">Stage A</text>
+<text id="vt2" x="150" y="112" font-size="12.5" fill="#7b291a">Stage B · 146ms —— 全流水在这等它</text>
+<text id="vt3" x="150" y="172" font-size="12.5" fill="#084a77">Stage C</text>
+<text id="vnote" x="470" y="222" text-anchor="middle" font-size="12.5" fill="#756c60">现在：FLOPs 均分 → 时间失衡 ≈1.8×。点按钮换「按实测时间切」。</text>
+</svg>
+<div class="abar"><button id="vaeBtn" type="button">改成按实测时间切</button><div class="acap" id="vaeCap">逐块实测每个解码单元的延迟，用连续 DP 做 min–max 划分（结果与原始切分 bit-exact）。</div></div>
+</figure>
+<div class="note"><span class="label">5+2 拓扑为什么有 85 FPS 的天花板</span>preview checkpoint 用 5 去噪 + 2 VAE：扩散侧能跑过 120 FPS，但两段 VAE 每段太厚，最长段拖过下一块到达时刻——相邻 chunk 被迫在同两张 VAE 卡上抢 SM，双双变慢。4+3 的三段时间均衡 VAE（95/99/96ms）跟上 DiT 的 ~95ms 节奏，只剩 ~3.5ms 残余壁垒。</div>
+</section>
+
+<section id="results">
+<h2><span class="n">§ 06</span>数字与质量：快了 7.9×，漂移反而小了 20×</h2>
+<div class="scroll"><table>
+<thead><tr><th>配置（8×H200 · 399 latent 帧 = 1596 输出帧）</th><th>稳态 FPS(p50)</th><th>DiT FPS</th><th>E2E FPS</th></tr></thead>
+<tbody>
+<tr class="win"><td>1.3B · 4+3 · Sage · causal paged</td><td>125.7</td><td>124.1</td><td>117.7（13.56 秒出全片）</td></tr>
+<tr><td>1.3B · 4+3 · Sage + W8A8</td><td>126.5</td><td>121.5</td><td>115.9</td></tr>
+<tr><td>1.3B Preview · 5+2 · BF16/SDPA</td><td>86.5</td><td>84.9</td><td>84.2（两段 VAE 天花板）</td></tr>
+<tr><td>14B 系统原型（随机权重）· 4+3</td><td>28.5</td><td>28.1</td><td>28.1</td></tr>
+<tr><td>单卡基线（匹配口径）</td><td>–</td><td>–</td><td>15.0（7.9× 差距）</td></tr>
+</tbody></table></div>
+<p>质量看 VBench-Long（100 秒长视频、5-step 口径），关键在最后一列的质量漂移（越低越稳）：</p>
+<div class="scroll"><table>
+<thead><tr><th>模型</th><th>主观质量（美学/成像）</th><th>一致性（主体/背景）</th><th>Quality Drift ↓</th></tr></thead>
+<tbody>
+<tr><td>Rolling Forcing</td><td>53.83 / 69.58</td><td>97.34 / 96.42</td><td>0.618</td></tr>
+<tr><td>RF 权重硬套块因果推理</td><td>55.18 / 66.82</td><td>96.82 / 96.14</td><td class="lose" style="background:#f4d8ce;color:#7c2b1d">2.825</td></tr>
+<tr class="win"><td>Wave Forcing（重新蒸馏）</td><td>54.93 / 69.66</td><td>98.00 / 96.79</td><td>0.030</td></tr>
+</tbody></table></div>
+<p>中间那行是全页最有信息量的对照：<strong>光改推理 mask 不重训，漂移恶化 4.6 倍；配套按有向前沿重新蒸馏，漂移比原版还小 20 倍</strong>——算法与系统是绑着交付的，谁也不能单飞。</p>
+<div class="warning"><span class="label">边界清单</span>训练代码与 4-step 正主 checkpoint 未放出；蒸馏细节只有「rollout-aligned」一个词；14B 行是随机权重的系统刻度；质量表的 4-step 部分是 5-step 权重强行 4 步推理的口径。arXiv 出来之前，本页所有结论的信源都是作者自述的博客与可复跑的开源 runtime。</div>
+<div class="note"><span class="label">和 wiki 里已有页的连线</span>混合噪声窗是 diffusion-forcing 一族（<a href="causal-rcm.html">Causal-rCM</a> § 02 的三范式）；「砍反向边换流水」与 TF mask 同源；「计算盖通信」与 <a href="../concepts/distributed-training-parallelism.html">Ulysses/Ring 页</a>一脉——只是这里的时间差来自因果上下文长度天然不等，不用人为制造。</div>
+</section>
+
+<section class="gloss" id="glossary">
+<h2><span class="n">附录</span>词汇表</h2>
+<ol>
+<li id="g-01"><span class="term">Rolling Forcing</span> — 流式视频生成方法：维护一个混合噪声滑窗，窗内多个 chunk 一次联合前向共同推进，每步吐出最干净的一块。Wave Forcing 的算法基座。</li>
+<li id="g-02"><span class="term">混合噪声窗（mixed-noise frontier）</span> — 同一时刻窗内各 chunk 处于不同去噪进度（越早越干净）的滑动窗口；好处是后面的噪块始终能看到前面「越来越干净」的活上下文。</li>
+<li id="g-03"><span class="term">块因果注意力（block-causal）</span> — chunk 内部全注意力、chunk 之间只允许「噪看净」的单向注意力；Wave Forcing 对 Rolling Forcing 的唯一算法修改。</li>
+<li id="g-04"><span class="term">KV 发布</span> — 每层 Transformer 算完后，把该层的 Key/Value 状态发给下游消费者；块因果保证这个发布是单向的，无需全局 collective。</li>
+<li id="g-05"><span class="term">copy engine 单边写</span> — 用 GPU 的拷贝引擎（cuMemcpyPeerAsync）直写远端 IPC 显存，配设备端 generation flag 判定数据就绪；不占计算 SM、免 NCCL 配对收发。</li>
+<li id="g-06"><span class="term">paged 直写</span> — 生产者把 KV 直接写进消费者注意力缓冲中的固定页槽，消费者就地读前缀、免每层重新拼接（torch.cat 18.49→4.08ms）。</li>
+<li id="g-07"><span class="term">SageAttention / W8A8</span> — 两档推理加速：SageAttention 是量化注意力 kernel；W8A8 是权重与激活的 8-bit 量化档。与 FP8 KV（只压通信字节）是三件不同的事。</li>
+<li id="g-08"><span class="term">Quality Drift</span> — 长视频质量随时间的漂移度量（沿用 Rolling Forcing 论文的算法，越低越好）；流式生成最怕的就是「越播越糊」。</li>
+</ol>
+</section>
+
+<div class="sources">
+<strong>来源与延伸</strong>
+<ul>
+<li><a href="https://sjtu-deng-lab.github.io/WaveForcing/">项目页（博客版论文，含交互结果矩阵）</a> · <a href="https://github.com/SJTU-DENG-Lab/WaveForcing">代码（推理 runtime 已开源）</a> · <a href="https://huggingface.co/SJTU-DENG-Lab/WaveForcing-T2V-1.3B-5step-Preview">1.3B 5-step preview 权重</a></li>
+<li>基座模型 Wan2.1-T2V-1.3B；runtime 构建在 SGLang Diffusion 的模型层后端上；波前动画为本页按项目页叙述重画的示意。</li>
+</ul>
+</div>
+
+</main>
+<script>
+(function(){
+var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* ---------- Fig 01: cut the reverse edge ---------- */
+var dagBtn=document.getElementById('dagBtn'),dagCap=document.getElementById('dagCap'),cut=false;
+dagBtn.addEventListener('click',function(){
+  if(cut)return; cut=true; dagBtn.disabled=true;
+  anime.timeline({easing:'easeInOutQuad'})
+    .add({targets:'#scissors',opacity:[0,1],scale:[0.3,1.4],duration:450})
+    .add({targets:'#rev1',opacity:[1,0],duration:500},'-=100')
+    .add({targets:'#revlab',opacity:[1,0],duration:400},'-=400')
+    .add({targets:'#scissors',opacity:0,duration:300})
+    .add({targets:'#dagside',opacity:[0.25,1],duration:700});
+  setTimeout(function(){ // 保险丝:rAF 被节流时仍保证终态
+    ['rev1','revlab','scissors'].forEach(function(id){document.getElementById(id).style.opacity=0});
+    var d=document.getElementById('dagside'); d.style.opacity=1; d.setAttribute('opacity','1');
+  },2400);
+  dagCap.textContent='反向边没了：噪块照旧看全部更净的前辈（活上下文保住），净块不再回头。右边的 DAG 里每个 chunk 落在不同 GPU 上,KV 只朝一个方向发布——可以流水了。';
+});
+/* ---------- Fig 02: wavefront grid ---------- */
+var ROWS=['r0 · 去噪① 最噪','r1 · 去噪②','r2 · 去噪③','r3 · 去噪④ 最净','store · 干净KV','VAE A','VAE B','VAE C'];
+var TICKS=14, CHUNKS=10;
+var COLORS=['#0d6aa8','#bd7a00','#3f7354','#a83b25','#5b3a8f','#0e7490'];
+var grid=document.getElementById('waveGrid');
+var cellW=0, tbl=document.createElement('div');
+tbl.style.cssText='display:grid;grid-template-columns:150px repeat('+TICKS+',1fr);gap:3px;font:600 10px/1.3 "JetBrains Mono";';
+tbl.innerHTML='<div></div>'+Array.from({length:TICKS},(_,t)=>'<div style="text-align:center;color:#756c60">'+t+'</div>').join('');
+for(var r=0;r<ROWS.length;r++){
+  tbl.innerHTML+='<div style="color:#3d3937;white-space:nowrap;overflow:hidden;padding-right:4px;align-self:center">'+ROWS[r]+'</div>'+
+    Array.from({length:TICKS},(_,t)=>'<div class="wcell" data-r="'+r+'" data-t="'+t+'" style="height:26px;border:1px solid #cfd4ce;background:#fff;border-radius:3px;position:relative"></div>').join('');
+}
+grid.appendChild(tbl);
+var kvNote=document.createElement('div');
+kvNote.id='kvnote';kvNote.style.cssText='margin-top:8px;font:600 11px/1.4 "JetBrains Mono";color:#0d6aa8;opacity:0';
+kvNote.textContent='↑ 本列内：较净 rank 与 store 把各层 KV 单向发布给上方更噪的消费者';
+grid.appendChild(kvNote);
+var T=-1, timer=null;
+var wvCap=document.getElementById('wvCap');
+function chunkAt(r,t){var c=t-r;return (c>=0&&c<CHUNKS)?c:null}
+function paintTick(){
+  T++;
+  if(T>=TICKS){stop();wvCap.textContent='流水线跑完示意窗口。真实运行里波前一直推进：399 个 latent 帧 ≈ 133 块,稳态 tick ~95ms。点「重置」重看。';return}
+  var pops=[];
+  for(var r=0;r<ROWS.length;r++){
+    var c=chunkAt(r,T); if(c===null)continue;
+    var cell=grid.querySelector('.wcell[data-r="'+r+'"][data-t="'+T+'"]');
+    cell.style.background=COLORS[c%COLORS.length]; cell.style.borderColor=COLORS[c%COLORS.length];
+    pops.push(cell);
+  }
+  if(!reduced){anime({targets:pops,scale:[0.4,1],duration:320,easing:'easeOutBack'});
+    setTimeout(function(){pops.forEach(function(el){el.style.transform='none'})},700);}
+  var col=grid.querySelectorAll('.wcell[data-t="'+T+'"]');
+  col.forEach(function(el){el.style.boxShadow='0 0 0 2px rgba(13,106,168,.35)'});
+  grid.querySelectorAll('.wcell[data-t="'+(T-1)+'"]').forEach(function(el){el.style.boxShadow='none'});
+  if(T>=1&&T<=9){anime({targets:'#kvnote',opacity:[0,1],duration:300});setTimeout(function(){document.getElementById('kvnote').style.opacity=1},600);}
+  if(T===0)wvCap.textContent='tick 0：第一块（蓝）进 r0 做第 1 步去噪——它最噪、要看全部前辈的 KV，所以每层算得最慢。';
+  else if(T===3)wvCap.textContent='tick 3：蓝块到 r3 做最后一步；同列下方,更早的块已经在更净的阶段——快的先把 KV 发上来。';
+  else if(T===4)wvCap.textContent='tick 4：蓝块干净了,KV 进存档位（store）,此后所有新块都能引用它。';
+  else if(T===7)wvCap.textContent='tick 7：蓝块流完三段 VAE,第一批 12 帧画面出炉！从这刻起 8 张卡全满——稳态,每 tick 出一块。';
+  else if(T===10)wvCap.textContent='稳态巡航中:同一列 8 个不同颜色 = 8 个 chunk 同时在不同阶段;对角线 = 同一 chunk 的旅程。';
+}
+function stop(){if(timer){clearInterval(timer);timer=null;document.getElementById('wvPlay').textContent='▶ 播放'}}
+document.getElementById('wvPlay').addEventListener('click',function(){
+  if(timer){stop();return}
+  this.textContent='⏸ 暂停';
+  timer=setInterval(paintTick, reduced?400:700);
+});
+document.getElementById('wvStep').addEventListener('click',function(){stop();paintTick()});
+document.getElementById('wvReset').addEventListener('click',function(){
+  stop();T=-1;
+  grid.querySelectorAll('.wcell').forEach(function(el){el.style.background='#fff';el.style.borderColor='#cfd4ce';el.style.boxShadow='none';el.style.opacity=1});
+  document.getElementById('kvnote').style.opacity=0;
+  wvCap.textContent='按「播放」看 chunk 波前推进。行 = GPU（上噪下净，再往下是存档位和 VAE），列 = 时间 tick。';
+});
+/* ---------- Fig 03: sync vs overlap gantt ---------- */
+var gs=document.getElementById('gSyncRow'), go=document.getElementById('gOvRow');
+var ns='http://www.w3.org/2000/svg';
+function bar(g,x,y,w,h,fill,stroke){var r=document.createElementNS(ns,'rect');r.setAttribute('x',x);r.setAttribute('y',y);r.setAttribute('width',0);r.setAttribute('height',h);r.setAttribute('rx',3);r.setAttribute('fill',fill);r.setAttribute('stroke',stroke);r.dataset.w=w;g.appendChild(r);return r}
+var syncBars=[],ovBars=[],ovComm=[];
+var x=140;
+for(var i=0;i<4;i++){ syncBars.push(bar(gs,x,44,140,26,'#d7e8f4','#0d6aa8')); x+=140; syncBars.push(bar(gs,x,44,52,26,'#f4d8ce','#a83b25')); x+=52; }
+x=140;
+for(var i=0;i<4;i++){ ovBars.push(bar(go,x,184,150,26,'#d7e8f4','#0d6aa8')); ovComm.push(bar(go,x+18,214,110,18,'#d7e7d8','#3f7354')); x+=150; }
+var gtBtn=document.getElementById('gtBtn'),gtCap=document.getElementById('gtCap'),gtRan=false;
+gtBtn.addEventListener('click',function(){
+  if(gtRan)return; gtRan=true; gtBtn.disabled=true;
+  var tl=anime.timeline({easing:'linear'});
+  syncBars.forEach(function(b){tl.add({targets:b,width:+b.dataset.w,duration:+b.dataset.w*2.2})});
+  tl.add({targets:'#gSyncNote',opacity:1,duration:400});
+  var tl2=anime.timeline({easing:'linear',delay:400});
+  ovBars.forEach(function(b,i){tl2.add({targets:b,width:+b.dataset.w,duration:+b.dataset.w*2.2},i*150*2.2)});
+  ovComm.forEach(function(b,i){tl2.add({targets:b,width:+b.dataset.w,duration:+b.dataset.w*2.2},i*150*2.2+80)});
+  tl2.add({targets:'#gOvNote',opacity:1,duration:400});
+  setTimeout(function(){ // 保险丝
+    syncBars.concat(ovBars,ovComm).forEach(function(b){b.setAttribute('width',b.dataset.w)});
+    document.getElementById('gSyncNote').style.opacity=1;
+    document.getElementById('gOvNote').style.opacity=1;
+  },3800);
+  gtCap.textContent='同样 4 层:上排每层被 ≈79ms 的红色通信墙打断;下排绿色传输条整条沉在计算窗底下——r0 的 646ms/层 比别人多出的 ~70ms,恰好是这些传输的藏身处。';
+});
+/* ---------- Fig 04: VAE split morph ---------- */
+var vaeBtn=document.getElementById('vaeBtn'),vaeCap=document.getElementById('vaeCap'),vaeDone=false;
+vaeBtn.addEventListener('click',function(){
+  if(vaeDone)return; vaeDone=true; vaeBtn.disabled=true;
+  anime({targets:'#vb1',width:400,easing:'easeInOutQuad',duration:800});
+  anime({targets:'#vb2',width:418,fill:'#d7e8f4',stroke:'#0d6aa8',easing:'easeInOutQuad',duration:800});
+  anime({targets:'#vb3',width:405,easing:'easeInOutQuad',duration:800});
+  setTimeout(function(){
+    var v1=document.getElementById('vb1'),v2=document.getElementById('vb2'),v3=document.getElementById('vb3');
+    v1.setAttribute('width',400); v3.setAttribute('width',405);
+    v2.setAttribute('width',418); v2.setAttribute('fill','#d7e8f4'); v2.setAttribute('stroke','#0d6aa8');
+    document.getElementById('vt1').textContent='Stage A · 95ms';
+    var t2=document.getElementById('vt2'); t2.textContent='Stage B · 99ms'; t2.setAttribute('fill','#084a77');
+    document.getElementById('vt3').textContent='Stage C · 96ms';
+    document.getElementById('vnote').textContent='按实测时间切:95 / 99 / 96ms 齐步,最长段 99ms 恰好跟上 DiT 的 ~95ms tick,残余壁垒 ~3.5ms。';
+  },820);
+  vaeCap.textContent='高分辨率上采样块 memory-bound,同 FLOPs 壁钟差 6×——所以量尺子必须是实测毫秒,不是运算量表格。';
+});
+})();
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;left:auto;top:50%;bottom:auto;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;opacity:1;pointer-events:auto;transition:none;display:none;}
+.jr-pop.show{display:block;transform:translateY(-50%);animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop,.jr-pop.show{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!document.getElementById(id))return;
+      e.preventDefault();
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>
