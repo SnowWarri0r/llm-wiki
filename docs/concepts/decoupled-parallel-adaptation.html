@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Chunk-wise Self-Forcing · 整段定方向，分块算梯度 · Concept</title>
+<title>解耦并行适配 · 两门课分开学，部署时再合卷 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,59 +53,46 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · chunk-wise-self-forcing</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · decoupled-parallel-adaptation</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Chunk-wise Self-Forcing · 整段定方向，分块算梯度</h1>
+  <h1>解耦并行适配 · 两门课分开学，部署时再合卷</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>先让 score 网络看完整生成视频，再把生成器按块重放、累加梯度，兼顾长程质量与显存。</p>
-<h2>直觉</h2>
-<p>批改长作文时，老师先通读全文判断人物是否前后一致，再逐段标修改意见。若每段只看自己，省内存却看不见跨段漂移；若整篇同时反传，又容易撑爆显存。</p>
-<h2>怎么做的</h2>
-<ol>
-<li><strong>无梯度 rollout</strong>：生成完整视频，记录每块最后一次带噪输入与最终干净输出。</li>
-<li><strong>整段算方向</strong>：重新加噪后，由 real-score 与 fake-score 网络看完整序列，得到 DMD 方向；这一步不保留生成器计算图。</li>
-<li><strong>逐块重放</strong>：一次只重放一个块，接上预先算好的 score 方向，得到该块对生成器参数的梯度。</li>
-<li><strong>累加后更新</strong>：块与块之间 detach，所有块梯度相加，只做一次参数更新。</li>
-</ol>
-<div class="tex math-display" data-display="true">g=\sum_{i=1}^{M}\nabla_{\theta_s}L_i</div>
-<div class="tex math-display" data-display="true">\theta_s\leftarrow\theta_s-\eta g</div>
+<p>从同一组基础权重 <span class="tex math-inline" data-display="false">\theta_0</span> 出发，用两条互不依赖的训练支路分别学习“少步生成质量”和“长时间抗漂移”，最后把两份参数增量相加。</p>
+<h2>Avatar-Forever 的具体形式</h2>
+<div class="tex math-display" data-display="true">\theta^\star=\theta_0+\Delta\theta_{\mathrm{DMD}}+\Delta\theta_{\mathrm{RRT}}.</div>
 <ul>
-<li><span class="tex math-inline" data-display="false">M</span>：视频被切成的块数；</li>
-<li><span class="tex math-inline" data-display="false">L_i</span>：第 <span class="tex math-inline" data-display="false">i</span> 块的蒸馏损失；</li>
-<li><span class="tex math-inline" data-display="false">\theta_s</span>：学生生成器参数；</li>
-<li><span class="tex math-inline" data-display="false">g</span>：所有块累积出的总梯度；</li>
-<li><span class="tex math-inline" data-display="false">\eta</span>：学习率。</li>
+<li><span class="tex math-inline" data-display="false">\Delta\theta_{\mathrm{DMD}}</span>：全参数更新，把多步 LTX-2.3 蒸成 4 步；</li>
+<li><span class="tex math-inline" data-display="false">\Delta\theta_{\mathrm{RRT}}</span>：rank 128 的 video-side LoRA，只补长 rollout 时的恢复能力；</li>
+<li>两条支路都从同一个 <span class="tex math-inline" data-display="false">\theta_0</span> 起步，所以更新拥有共同坐标系，论文直接组合后部署。</li>
 </ul>
-<h2>数字例子</h2>
-<p>三块重放得到梯度 <span class="tex math-inline" data-display="false">g_1=0.4</span>、<span class="tex math-inline" data-display="false">g_2=-0.1</span>、<span class="tex math-inline" data-display="false">g_3=0.2</span>：</p>
-<div class="tex math-display" data-display="true">g=0.4-0.1+0.2=0.5</div>
-<p>若当前参数 <span class="tex math-inline" data-display="false">\theta_s=2</span>，学习率 <span class="tex math-inline" data-display="false">\eta=0.1</span>：</p>
-<div class="tex math-display" data-display="true">\theta_s^{\mathrm{new}}=2-0.1\times0.5=1.95</div>
-<p>stop-gradient 不是把模型永久冻结；它只是让上一块的计算图在进入下一块前断开。当前块仍正常反向传播，最后三个块的梯度仍共同更新同一套参数。</p>
+<h2>为什么不是先 DMD，再在 DMD 权重上训 RRT</h2>
+<p>串行训练会让第二阶段继承第一阶段的所有分布偏移；第一阶段一变，后面都要重跑，也难判断最终退化来自哪一段。并行适配让两份目标可以独立调试和扩展。</p>
+<h2>重要边界</h2>
+<p>“参数增量可以相加”不是普适定理。两条支路如果更新幅度过大、修改同一功能方向，仍可能互相干扰。Avatar-Forever 的设计把稳定性支路限制成 LoRA，并用消融证明组合优于 DMD-only 和 FM-only；论文没有给出不同合并系数或冲突度分析。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/wan-animate-2.html">wan-animate-2</a> · 用于 8 帧分块的 Lite 模型</li>
-<li><a href="../concepts/dmd-distillation.html">dmd-distillation</a> · real/fake score 差为什么能提供分布匹配方向</li>
-<li><a href="../concepts/teacher-forcing-video-diffusion.html">teacher-forcing-video-diffusion</a> · Self-Forcing 要修复的训练/推理错位</li>
-<li><a href="../papers/uniswap-av.html">uniswap-av</a> · 音频和视频一起滚动，并用 Feature-RoPE 修正滑窗位置</li>
+<li><a href="../papers/avatar-forever.html">avatar-forever</a> · 原始设计与消融</li>
+<li><a href="../concepts/lora.html">lora</a> · 低秩增量为什么便于合并</li>
+<li><a href="../concepts/dmd-distillation.html">dmd-distillation</a> · 效率支路</li>
+<li><a href="../concepts/recovery-oriented-rollout-training.html">recovery-oriented-rollout-training</a> · 稳定性支路</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 9 处</span>
-  <ul><li><a href="../papers/causal-rcm.html"><span class="cat">paper</span>Causal-rCM · 把 rCM 的正反散度互补搬进自回归视频</a></li><li><a href="../papers/interactive-avatar.html"><span class="cat">paper</span>InteractiveAvatar · 让实时数字人记得过去，也听得懂“现在该做什么”</a></li><li><a href="../papers/uniswap-av.html"><span class="cat">paper</span>UniSwap · 一套模型同时换脸、换声，并按块流式生成</a></li><li><a href="../papers/wan-animate-2.html"><span class="cat">paper</span>Wan-Animate 2 · 不先提骨架，直接让参考视频教角色怎么动</a></li><li><a href="../papers/waveforcing.html"><span class="cat">paper</span>Wave Forcing · 砍一条边，换一条流水线</a></li><li><a href="../concepts/error-buffer-training.html"><span class="cat">concept</span>Error Buffer Training · 把模型会犯的小错加回训练历史</a></li><li><a href="../concepts/recovery-oriented-rollout-training.html"><span class="cat">concept</span>RRT · 等错误滚起来以后，再教模型怎么救回来</a></li><li><a href="../concepts/self-augmented-history.html"><span class="cat">concept</span>Self-Augmented History · 训练时故意给下一段一份“自己生成过的轻微坏历史”</a></li><li><a href="../concepts/stop-gradient.html"><span class="cat">concept</span>Stop-gradient · 数值继续往前，梯度到此为止</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/avatar-forever.html"><span class="cat">paper</span>Avatar-Forever · 把“跑得快”和“跑得久”拆开学</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/chunk-wise-self-forcing.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/decoupled-parallel-adaptation.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
