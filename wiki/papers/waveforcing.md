@@ -28,7 +28,7 @@ year: 2026
 2. **Wave Parallelism**：4 个去噪 rank 与 1 个 store rank 各有完整 DiT 副本；3 个 VAE rank 各自只保存解码器的一段。chunk 每 tick 挪到下一阶段，在 GPU×时间矩阵里走对角线。逐层 KV 改成单向发布，不再逐层全组 all-gather；但当前代码在 tick 边界搬 latent 仍有 world `all_gather`，初始化 clean anchor 也有 broadcast。
 3. **负载不均 = overlap 预算**:最噪 rank 上下文最长(≈8 块)算得最慢,较净 rank(≈5 块)快——快者先发 KV,通信藏进关键 rank 计算窗(14B 实测 r0 646ms/层 vs 其余 575–581,~70ms 顺风差)。
 4. **KV 传输三税**:FP8 KV 减字节(79→40ms,配 Sage 反噬、实验性);copy engine 单边写免 NCCL 配对(0 SM、343GB/s);paged 直写免 torch.cat(18.49→4.08ms)。推荐 causal+paged。
-5. **VAE 按实测时间切**:高分辨率上采样块 memory-bound、同 FLOPs 壁钟差 6×;FLOPs 均分 →146ms 瓶颈段,实测均分 →95/99/96ms 跟上 DiT ~95ms tick。连续 DP min–max 划分,bit-exact。
+5. **VAE 按实测时间切**:高分辨率上采样块 memory-bound、同 FLOPs 壁钟差 6×;FLOPs 均分 →146ms 瓶颈段,实测均分 →95/99/96ms 跟上 DiT ~95ms tick。连续 DP min–max 划分,bit-exact。切得动的前提:decoder 是纯前馈单元列(无注意力、无跨块交互),段边界点对点递一次激活;因果 VAE 的时间缓存跟单元驻卡,流水错位恰好满足"块 c 用块 c−1 的缓存"。
 
 ## 先分清三个版本
 

@@ -208,6 +208,7 @@ window.addEventListener('DOMContentLoaded',function(){
 <section id="vae">
 <h2><span class="n">§ 06</span>VAE：跨卡重叠，且按实测时间切</h2>
 <p>扩散提速到极限后，解码成了尾巴。同一张卡上并发解两块视频听着并行，实则抢同一批 SM、两个都变慢；正解是解码器也切成 3 段各占一卡，连续 chunk 在<strong>卡间</strong>错开。切分点有讲究：480×832 下高分辨率上采样块是 memory-bound，<strong>同 FLOPs 的块壁钟能差 6×</strong>——按 FLOPs 均分必然一段过载。</p>
+<div class="note"><span class="label">解码器为什么切得动</span>它是一条<strong>纯前馈的单行道</strong>：几十个卷积 / 上采样单元排成一列，数据只从上一个单元流向下一个，没有回头路、也没有跨视频块的全局交互。runtime 把 decoder 拍平成有序单元列表，第 k 张卡领 <code>units[cuts[k] : cuts[k+1]]</code> 连续一段；每块视频在每个段边界只需<strong>点对点递一次</strong>中间激活。Wan 因果 VAE 的时间缓存也不碍事：每个单元的缓存跟着单元留在本卡，块 c 到达 stage A 时，块 c−1 早已流过 A、缓存就位——和去噪侧的波前是同一条对角线。对照去噪侧看取舍：DiT 每层注意力都要读跨 chunk 的历史 KV，按层切会把几十个层间全变成跨卡通信，所以那边选择整模型复制、按噪声阶段分工；VAE 没有注意力，按层切只付每段一次搬运的钱——<strong>两边的并行方式都是照着各自的依赖结构挑的</strong>。还有笔吞吐账：整只 decoder 解一块约 95+99+96 ≈ 290ms，单卡追不上 DiT 约 95ms 的 tick；三段流水后每卡每 tick 只干自己那段，正好咬住节奏。切分只改哪张卡算哪段，单元顺序与数值不动，所以结果 bit-exact。</div>
 <figure id="fig-vae">
 <figcaption><span>Fig 05 · 同一个解码器的两种切法</span><b>按 FLOPs 切：146ms 瓶颈 · 按实测时间切：99ms 齐步</b></figcaption>
 <svg id="vaesvg" viewBox="0 0 920 240" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
