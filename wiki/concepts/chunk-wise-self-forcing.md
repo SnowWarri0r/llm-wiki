@@ -1,8 +1,8 @@
 ---
 name: chunk-wise-self-forcing
 type: concept
-sources: [wan-animate-2, interactive-avatar, causal-rcm, uniswap-av]
-updated: 2026-08-18
+sources: [wan-animate-2, interactive-avatar, causal-rcm, uniswap-av, waveforcing]
+updated: 2026-08-19
 ---
 
 # Chunk-wise Self-Forcing · 整段定方向，分块算梯度
