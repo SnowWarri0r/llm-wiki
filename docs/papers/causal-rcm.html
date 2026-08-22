@@ -386,6 +386,107 @@ code.mathified{border:none;background:none;padding:0;font-size:1em}
 </div>
 <p>论文收尾画了一张「终极管线」路线图：现有蒸馏方法都是两条管线的子集——<strong>CM 路线</strong>（dCM → sCM → DMD/GAN，因果版对应 TF-dCM → TF-sCM → SF-DMD）与 <strong>CTM 路线</strong>（MeanFlow<a class="jr" href="#g-18">18</a> 有限差分版 → JVP 版 → DMD/GAN，AnyFlow 在这条线上）。离散/有限差分方法当热身、连续时间 JVP 方法当主菜，是它给后续工作的统一建议；系统侧的下一步是 torch.compile、CUDA Graphs、NVFP4。</p>
 <div class="note"><span class="label">CTM 路线到底改了什么</span>CM 的一致性函数只会「跳到底」（f(x_t, t) → x₀），多步采样只能之字形折返：去噪到底、加噪回中途、再去噪到底，每次折返注入随机噪声。CTM 多带一个时间条件 s，学 <code class="m">\bm{f}(\bm{x}_t,t,s)\to\bm{x}_s</code>——轨迹上任意两点间直接跳，多步采样变成原生接力 t→s→s′→0。两个端点各有妙用：<strong>s=0 退化成 CM</strong>；<strong>s=t（原地无穷小跳）退化成普通扩散去噪器</strong>——这个端点叫锚点，可直接施加普通扩散损失，稳定训练、保多步采样、甚至支持不要老师从零训。所以说 CTM 是扩散模型与 CM 之间的插值。训练目标与 sCM 同构（向冻结输出 + 归一化切线做 MSE），JVP 方向向量是 (v, 1, <strong>0</strong>)——s 是冻住的目标、方向填零，和 TF-sCM 给干净历史段填零是同一招。</div>
+<p>下面的手算先在坐标系里演一遍再列算式：横轴是噪声时间 t（右端纯噪、左端干净），纵轴是 latent 值 x——<strong>轨迹是一条线、速度是它的斜率、CTM 的一跳就是沿线滑一段</strong>。点「下一步」跟着走：</p>
+<style>
+#fig-ctm .st{opacity:0;transition:opacity .55s ease}
+#fig-ctm .st.on{opacity:1}
+#fig-ctm .traj{stroke-dasharray:400;stroke-dashoffset:400;transition:stroke-dashoffset 1s ease .1s}
+#fig-ctm .traj.on{stroke-dashoffset:0}
+#fig-ctm .segA{stroke-dasharray:200;stroke-dashoffset:200;transition:stroke-dashoffset 1.1s ease}
+#fig-ctm .segA.on{stroke-dashoffset:0}
+#fig-ctm .segB{stroke-dasharray:120;stroke-dashoffset:120;transition:stroke-dashoffset .9s ease}
+#fig-ctm .segB.on{stroke-dashoffset:0}
+#fig-ctm #ctmDot{transition:transform 1.1s ease-in-out}
+#fig-ctm .ctm-bar{display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap}
+#fig-ctm .ctm-bar button{padding:7px 14px;border:1px solid var(--rule);background:#fff;color:var(--navy);font:700 12px/1.2 'JetBrains Mono';cursor:pointer}
+#fig-ctm .ctm-bar button:hover:not(:disabled){background:var(--teal);color:#fff}
+#fig-ctm .ctm-bar button:disabled{opacity:.35;cursor:default}
+#fig-ctm .ctm-cap{flex:1;min-width:240px;padding:10px 14px;background:#fff;border:1px solid var(--rule);font-size:14.5px;line-height:1.55}
+@media(prefers-reduced-motion:reduce){#fig-ctm .st,#fig-ctm .traj,#fig-ctm .segA,#fig-ctm .segB,#fig-ctm #ctmDot{transition:none}}
+</style>
+<figure id="fig-ctm">
+<figcaption><span>Fig 07 · CTM 的一跳，画在坐标系里</span><b>轨迹是线 · 速度是斜率 · 跳一段 = 沿线滑</b></figcaption>
+<svg viewBox="0 0 920 452" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
+<text x="248" y="30" text-anchor="middle" font-size="14" font-weight="700" fill="#163a58">直线老师轨迹（本页手算的数字）</text>
+<line x1="60" y1="380" x2="436" y2="380" stroke="#756c60" stroke-width="1.3"/><polygon points="436,380 428,376 428,384" fill="#756c60"/>
+<line x1="80" y1="70" x2="80" y2="386" stroke="#756c60" stroke-width="1.3"/><polygon points="80,70 76,78 84,78" fill="#756c60"/>
+<text x="430" y="402" text-anchor="end" font-size="11.5" fill="#756c60">t（噪声时间）→</text>
+<text x="66" y="62" font-size="11.5" fill="#756c60">x（latent 值）</text>
+<g font-size="11" fill="#756c60" text-anchor="middle">
+<line x1="80" y1="378" x2="80" y2="384" stroke="#756c60"/><text x="80" y="398">0</text>
+<line x1="176" y1="378" x2="176" y2="384" stroke="#756c60"/><text x="176" y="398">.3</text>
+<line x1="336" y1="378" x2="336" y2="384" stroke="#756c60"/><text x="336" y="398">.8</text>
+<line x1="400" y1="378" x2="400" y2="384" stroke="#756c60"/><text x="400" y="398">1</text>
+</g>
+<g font-size="11" fill="#756c60" text-anchor="end">
+<line x1="74" y1="100" x2="86" y2="100" stroke="#756c60"/><text x="70" y="104">2</text>
+<line x1="74" y1="172" x2="86" y2="172" stroke="#756c60"/><text x="70" y="176">1.1</text>
+<line x1="74" y1="292" x2="86" y2="292" stroke="#756c60"/><text x="70" y="296">−.4</text>
+<line x1="74" y1="340" x2="86" y2="340" stroke="#756c60"/><text x="70" y="344">−1</text>
+</g>
+<line class="traj st" data-s="1" x1="400" y1="340" x2="80" y2="100" stroke="#163a58" stroke-width="2.4"/>
+<g class="st" data-s="1"><circle cx="400" cy="340" r="6" fill="#756c60"/><text x="404" y="326" font-size="12" fill="#756c60">ε=−1 · 纯噪端</text></g>
+<g class="st" data-s="1"><circle cx="80" cy="100" r="7" fill="none" stroke="#3f7354" stroke-width="2.2"/><text x="94" y="96" font-size="12" fill="#3f7354">x<tspan dy="2.5" font-size="9">0</tspan><tspan dy="-2.5">=2 · 干净端</tspan></text></g>
+<g class="st" data-s="1"><text x="218" y="180" font-size="12.5" fill="#163a58" transform="rotate(36.87 218 180)">x<tspan dy="2.5" font-size="9.5">t</tspan><tspan dy="-2.5"> = 2 − 3t（斜率 = −3）</tspan></text></g>
+<g class="st" data-s="2"><line x1="336" y1="380" x2="336" y2="292" stroke="#bd7a00" stroke-width="1.2" stroke-dasharray="4 4"/><text x="336" y="420" text-anchor="middle" font-size="11.5" fill="#634000">出发 t=.8</text></g>
+<g class="st" data-s="2"><line x1="176" y1="380" x2="176" y2="172" stroke="#bd7a00" stroke-width="1.2" stroke-dasharray="4 4"/><text x="176" y="420" text-anchor="middle" font-size="11.5" fill="#634000">目标 s=.3</text></g>
+<g class="st" data-s="2"><text x="348" y="284" font-size="12" fill="#0e6e78">x<tspan dy="2.5" font-size="9.5">t</tspan><tspan dy="-2.5">=−.4</tspan></text></g>
+<g class="st" data-s="2"><circle cx="176" cy="172" r="7" fill="none" stroke="#0e6e78" stroke-width="2" stroke-dasharray="3 3"/><text x="188" y="166" font-size="12" fill="#0e6e78">x<tspan dy="2.5" font-size="9.5">s</tspan><tspan dy="-2.5">=1.1（该落的点）</tspan></text></g>
+<line class="segA" data-s="3" x1="336" y1="292" x2="176" y2="172" stroke="#0e6e78" stroke-width="4" stroke-linecap="round"/>
+<g class="st" data-s="3">
+<line x1="336" y1="292" x2="176" y2="292" stroke="#a83b25" stroke-width="1.3" stroke-dasharray="5 4"/>
+<line x1="176" y1="292" x2="176" y2="172" stroke="#a83b25" stroke-width="1.3" stroke-dasharray="5 4"/>
+<text x="256" y="310" text-anchor="middle" font-size="11.5" fill="#a83b25">Δt = −.5（向干净端走）</text>
+<text x="168" y="236" text-anchor="end" font-size="11.5" fill="#a83b25">Δx = +1.5</text>
+<text x="118" y="262" font-size="12" fill="#a83b25" font-weight="700">F = 1.5/(−.5) = −3</text>
+</g>
+<line class="segB" data-s="4" x1="176" y1="172" x2="80" y2="100" stroke="#3f7354" stroke-width="4" stroke-linecap="round"/>
+<g class="st" data-s="4"><text x="96" y="130" font-size="12" fill="#3f7354" font-weight="700">s=0 → 落在 x<tspan dy="2.5" font-size="9.5">0</tspan><tspan dy="-2.5">=2：CM 特例</tspan></text></g>
+<g id="ctmDot" class="st" data-s="2" transform="translate(336,292)"><circle r="8" fill="#0e6e78"/><circle r="3.2" fill="#faf7ea"/></g>
+<line x1="470" y1="30" x2="470" y2="430" stroke="#b9ae98" stroke-dasharray="3 6"/>
+<text x="712" y="30" text-anchor="middle" font-size="14" font-weight="700" fill="#a83b25">弯的老师轨迹（真实情形）</text>
+<line x1="520" y1="380" x2="896" y2="380" stroke="#756c60" stroke-width="1.3"/><polygon points="896,380 888,376 888,384" fill="#756c60"/>
+<line x1="540" y1="70" x2="540" y2="386" stroke="#756c60" stroke-width="1.3"/><polygon points="540,70 536,78 544,78" fill="#756c60"/>
+<g font-size="11" fill="#756c60" text-anchor="middle">
+<line x1="636" y1="378" x2="636" y2="384" stroke="#756c60"/><text x="636" y="398">.3</text>
+<line x1="796" y1="378" x2="796" y2="384" stroke="#756c60"/><text x="796" y="398">.8</text>
+</g>
+<path d="M860,340 Q700,100 540,100" fill="none" stroke="#163a58" stroke-width="2.4"/>
+<circle cx="796" cy="254" r="6" fill="#0e6e78"/><circle cx="636" cy="122" r="6" fill="#0e6e78"/>
+<line x1="796" y1="254" x2="636" y2="122" stroke="#3f7354" stroke-width="2.6"/>
+<text x="640" y="106" font-size="12" fill="#3f7354" font-weight="700">割线 = 平均速度 F(.8→.3) = −3.3</text>
+<line x1="736" y1="182" x2="856" y2="326" stroke="#a83b25" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="862" y="344" text-anchor="end" font-size="12" fill="#a83b25" font-weight="700">切线 = 瞬时速度 v(.8) = −4.8</text>
+<text x="712" y="430" text-anchor="middle" font-size="12" fill="#756c60">弯轨迹上割线 ≠ 切线：F 随 (t,s) 变，MeanFlow 学的就是这张「割线表」</text>
+</svg>
+<div class="ctm-bar">
+<button id="ctmPrev" type="button">◀ 上一步</button>
+<button id="ctmNext" type="button">下一步 ▶</button>
+<div class="ctm-cap" id="ctmCap">点「下一步」，从画出老师轨迹开始。</div>
+</div>
+</figure>
+<script>
+(function(){
+var fig=document.getElementById('fig-ctm');if(!fig)return;
+var caps=[
+'点「下一步」，从画出老师轨迹开始。',
+'① 轨迹：x_t=(1−t)·2+t·(−1)=2−3t。右端纯噪（t=1，ε=−1）、左端干净（t=0，x₀=2）；速度就是这条线的斜率 −3，直线所以处处一样。',
+'② 出发与目标：站在 t=.8（x_t=−.4），CTM 要一步跳到 s=.3 的轨迹点上（x_s=1.1，虚线圈）。',
+'③ 跳 = 沿线滑：f=x_t−(t−s)F。斜率三角：横走 Δt=−.5、竖升 Δx=+1.5，F=1.5/(−.5)=−3；落点 −.4+1.5=1.1=x_s，正中虚线圈。',
+'④ 把目标改成 s=0：同一条式子继续滑到最左端，落点 2=x₀——CM 就是「永远跳到头」的特例。右图是真实弯轨迹：那时割线（F）≠切线（v），F 随 (t,s) 变。'];
+var pos={2:[336,292],3:[176,172],4:[80,100]};
+var st=0,MAX=4;
+var prev=document.getElementById('ctmPrev'),next=document.getElementById('ctmNext'),cap=document.getElementById('ctmCap');
+function set(n){st=n;cap.textContent=caps[n];prev.disabled=(n===0);next.disabled=(n===MAX);
+fig.querySelectorAll('[data-s]').forEach(function(el){el.classList.toggle('on',+el.dataset.s<=n)});
+var d=document.getElementById('ctmDot'),p=pos[Math.min(Math.max(n,2),4)];
+if(n>=2){d.style.transform='translate('+p[0]+'px,'+p[1]+'px)'}else{d.style.transform='translate(336px,292px)'}}
+prev.addEventListener('click',function(){if(st>0)set(st-1)});
+next.addEventListener('click',function(){if(st<MAX)set(st+1)});
+new IntersectionObserver(function(es,o){es.forEach(function(e){if(e.isIntersecting){if(st===0)set(1);o.disconnect()}})},{threshold:.25}).observe(fig);
+set(0);
+})();
+</script>
 <div class="calc"><div class="step"><b>备料 · 轨迹哪来的</b><span>RF 加噪定义 <code class="m">x_t=(1-t)x_0+t\epsilon</code>。取 <code class="m">x_0=2</code>、<code class="m">\epsilon=-1</code> 代入：<code class="m">x_t=(1-t)\times2+t\times(-1)=2-3t</code>——直线轨迹的来历。真速度 = 对它求导 <code class="m">dx_t/dt=-3</code>（用 RF 速度公式 <code class="m">v=\epsilon-x_0=-3</code> 交叉验证，一致）。</span></div>
 <div class="step"><b>先亮定义式</b><span>RF 日程下 CTM 的参数化：<code class="m">f(x_t,t,s)=x_t-(t-s)\,F(x_t,t,s)</code>——从 x<sub>t</sub> 沿速度 F 倒走 (t−s) 的时间。对照 CM 的 <code class="m">f=x-t\,v</code>（走满 t 到 0），只是把「走到底」换成「走一段」。</span></div>
 <div class="step"><b>理想 F 是反解出来的</b><span>CTM 要求 f 落在 x<sub>s</sub>。把要求塞进定义式解 F：<code class="m">x_t-(t-s)F=x_s\iff F=(x_t-x_s)/(t-s)</code>——位移除以时间，即<strong>区间平均速度</strong>，不是天上掉的。</span></div>
