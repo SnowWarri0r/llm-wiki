@@ -1613,3 +1613,10 @@ skill 更新:
 - 主结果与附录分账：COCO MCQ 39.2→74.3、OOD retrieval R@5 47.9→56.9、文生图 Combined 28.3→45.8；同时保留 ImageNet −2.8pp、COCO 同域检索落后双塔微调、VOC 与生成落后显式解析器的边界。
 - 新增 layerwise-compositional-divergence、peakpatch-ecn、peakpatch-scn、set-valued-negation 四个概念页，并回写 cross-attention / contrastive-learning 来源。
 - Review 1 逐节回查正文与附录 A–J，补回逐层投影公式、SCN 三路输入、外部基准与零样本分类；复算二维余弦、L2 归一化、LCD 和 tanh 修正。Review 2 实测桌面 1440 / 手机 390：10 个块公式与全部行内公式零失败、页面零横向溢出、7 个术语引用双向一致；点击浮卡、总览箭头、表格滚动和小字对比度均核过。
+
+## [2026-08-18] ingest | A Global Workspace in Language Models · Claude 内部的可言说概念白板
+- 不照 94 幅图顺序平铺，按“残差流里找什么 → J-lens 怎么读 → J-space 怎么定义 → 五道功能检验 → 容量与广播 → 审计和训练 → 意识边界”重排；先给整机图，再进入局部公式。
+- 完整拆平均 Jacobian、unembedding、稀疏非负分解、steering / ablation / coordinate swap；用同一条 spider→ant 两跳推理贯穿“相关不等于因果”，并补 residual-stream、jacobian-lens、activation-intervention、global-workspace-theory 四个 concept。
+- 关键口径单列：J-space 概念分量中位仅 6–7% 方差但替换 top-5 成功 59%，非 J 分量约 93% 方差却仅 5%；workspace 约 L38–92、occupancy 约 25、额外方差不超 10%；广播 head 消融让注入报告 0.54→0.09；评测意识消融让 blackmail 0/180→13/180，但绝大多数仍拒绝。
+- Counterfactual reflection training 写清 10,000 条中途轨迹、只监督反事实反思分支、评测不触发反思，以及伦理方向消融能回退大部分但非全部增益；意识段严格区分 access consciousness、phenomenal consciousness 与论文未证明项。
+- Review 1 逐节对照 Anthropic 正文、94 幅图和附录，复核 J-lens / J-space 定义、层带、消融、广播、安全审计与反事实反思的数字和结论边界；Review 2 实测桌面 1440×1000 与手机 390×844：27 处 KaTeX 零报错、页面零横向溢出，7 张图的箭头与响应式转向、10 个术语浮卡的定位和对比度均通过。七项质量门逐项达到 4/5 以上。

@@ -23,6 +23,7 @@
 - [GPT-2](wiki/papers/gpt-2.md) — 同架构 scale 13× 到 1.5B + WebText，发现 prompt 能 zero-shot 触发任务
 - [GPT-3](wiki/papers/gpt-3.md) — 同架构再 scale 100× 到 175B，prompt 里给几个例子模型现学（ICL），ChatGPT 时代由此开始
 - [Stealing Reasoning Traces · 密文没被破解，推理为什么仍被偷走](wiki/papers/stealing-reasoning-traces.md) — 不是破译密钥，而是把合法 opaque reasoning envelope 跨 session/user/model 重放给较弱兼容模型转述；完整拆开 AEAD 内容认证与上下文绑定、三层 portability、token-ratio 证据、6,708 条公开轨迹中的 704 个真实 artifacts、风格漂移不等于蒸馏，以及 user/session/hash-chain/legacy-key 多层修复。论文已责任披露，作者称 2026 年 8 月原攻击无法复现。
+- [A Global Workspace in Language Models · Claude 内部那块能被读写的“小白板”](wiki/papers/global-workspace.md) — Anthropic 用平均 Jacobian 把中间 residual stream 翻成可言说概念，再靠替换、删除与跨任务复用证明这些方向不只是旁观记录：spider→ant 会让 8→6，France→China 能同时改首都/语言/洲/货币。J-space 只占约 6–7% 概念方差、典型约 25 个方向，却选择性承载灵活推理；完整拆 J-lens、稀疏 J-space、广播 head、安全审计、反事实反思训练，并严格分开功能性 conscious access 与主观体验。
 - [GRAPE · 最好的微调数据是"合身"的那条](wiki/papers/grape.md) — SFT数据选择(NeurIPS25 spotlight): 别默认挑最强老师那条回答,数据好坏是相对模型说的; 让目标模型给每个候选算长度归一概率=困惑度,选最低(最合身)那条做SFT(只前向不训练); 为什么=on-policy>off-policy同构+纯自产会塌缩故选外部多样; 超405B最强老师+13.8%、超3×数据+30.9%、约1/6算力超Tulu3-SFT
 - [ReLAT · 给潜在推理闭环](wiki/papers/relat.md) — 潜在推理(把"想"压进K个连续向量省token)是开环:生成完没人验它是否还忠于原问题。ReLAT用"能否从潜在重建回问题Q"当保真信号(必要非充分,纯自监督);潜在用softmax期望嵌入做成可微,测试时只调临时LoRA(N=16步)最小化重建损失再答、答完复位;Qwen3-8B AIME24 50→73.3(比开环+16.6)、比Self-Refine省84%token还更准
 - [Flow Matching](wiki/papers/flow-matching.md) — 把 diffusion 的 score matching 换成"学速度场 + ODE 积分"，简单 + 少步推理

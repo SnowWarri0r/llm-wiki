@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>JVP · 只问模型沿这一条方向会怎样变 · Concept</title>
+<title>Activation intervention · 直接改内部状态，区分“看见相关”与“真的在用” · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,64 +53,67 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · jacobian-vector-product</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · activation-intervention</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>JVP · 只问模型沿这一条方向会怎样变</h1>
+  <h1>Activation intervention · 直接改内部状态，区分“看见相关”与“真的在用”</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>JVP 不展开完整 Jacobian，只计算输入沿指定方向移动时，输出的瞬时变化。</p>
+<p>不是只观察某个概念与答案同时出现，而是改掉那段激活，看答案是否跟着变。</p>
 <h2>直觉</h2>
-<p>一张地形图在每个方向都有坡度。完整 Jacobian 像把东西南北所有坡度都测一遍；JVP 只问“我现在沿东北走，海拔每秒变多少”。连续时间一致性只需要老师轨迹这一条方向，因此不用构造巨大 Jacobian。</p>
+<p>比分牌和球场比分高度相关，但改比分牌不会改变比赛。要证明某个内部方向参与了计算，不能只看它会不会亮；得把“蜘蛛”换成“蚂蚁”，再看“8 条腿”是否跟着变成“6 条腿”。</p>
 <h2>怎么做的</h2>
-<p>模型 <span class="tex math-inline" data-display="false">F:\mathbb R^n\to\mathbb R^m</span>，输入为 <span class="tex math-inline" data-display="false">x</span>，指定方向为 <span class="tex math-inline" data-display="false">v</span>：</p>
-<div class="tex math-display" data-display="true">\operatorname{JVP}(F,x,v)=J_F(x)v
-=\left.\frac{d}{d\epsilon}F(x+\epsilon v)\right|_{\epsilon=0}.</div>
+<h3>写入 / steering</h3>
+<p>沿目标概念方向 <span class="tex math-inline" data-display="false">v_t</span> 给内部状态加一段：</p>
+<div class="tex math-display" data-display="true">h&#x27;=h+\alpha v_t.</div>
+<p><span class="tex math-inline" data-display="false">\alpha&gt;0</span> 增强概念；<span class="tex math-inline" data-display="false">\alpha&lt;0</span> 压低概念。</p>
+<h3>删除 / ablation</h3>
+<p>若 <span class="tex math-inline" data-display="false">v</span> 已归一化，从 <span class="tex math-inline" data-display="false">h</span> 中删掉沿 <span class="tex math-inline" data-display="false">v</span> 的投影：</p>
+<div class="tex math-display" data-display="true">h&#x27;=h-(v^\top h)v.</div>
+<h3>互换 / coordinate swap</h3>
+<p>论文把源概念和目标概念的方向并成 <span class="tex math-inline" data-display="false">V=[v_s\;v_t]</span>，先读出两维坐标 <span class="tex math-inline" data-display="false">c=V^\dagger h</span>，交换后写回：</p>
+<div class="tex math-display" data-display="true">h_{\text{swap}}=h+V\bigl(\sigma(c)-c\bigr).</div>
 <ul>
-<li><span class="tex math-inline" data-display="false">J_F(x)</span>：输出每一维对输入每一维偏导组成的 <span class="tex math-inline" data-display="false">m\times n</span> Jacobian。</li>
-<li><span class="tex math-inline" data-display="false">v</span>：输入移动方向，与 <span class="tex math-inline" data-display="false">x</span> 同形。</li>
-<li><span class="tex math-inline" data-display="false">J_F(x)v</span>：输出沿 <span class="tex math-inline" data-display="false">v</span> 的方向导数，与模型输出同形。</li>
-<li><span class="tex math-inline" data-display="false">\epsilon</span>：只用于定义“移动一丁点”的标量。</li>
+<li><span class="tex math-inline" data-display="false">V^\dagger</span>：伪逆；方向不正交时也能求最合适的两维坐标。</li>
+<li><span class="tex math-inline" data-display="false">\sigma(c)</span>：把源、目标两个坐标互换。</li>
+<li>其余与 <span class="tex math-inline" data-display="false">\operatorname{span}\{v_s,v_t\}</span> 正交的部分不动。</li>
 </ul>
 <h2>数字例子</h2>
-<p>令 <span class="tex math-inline" data-display="false">F(x_1,x_2)=[x_1^2+x_2,\;3x_1-x_2]</span>，在 <span class="tex math-inline" data-display="false">x=[2,1]</span> 沿 <span class="tex math-inline" data-display="false">v=[1,-2]</span> 移动。</p>
-<div class="tex math-display" data-display="true">J_F(2,1)=\begin{bmatrix}4&amp;1\\3&amp;-1\end{bmatrix},\qquad
-J_Fv=\begin{bmatrix}4&amp;1\\3&amp;-1\end{bmatrix}
-\begin{bmatrix}1\\-2\end{bmatrix}
-=\begin{bmatrix}2\\5\end{bmatrix}.</div>
-<p>用小步长 <span class="tex math-inline" data-display="false">\epsilon=0.001</span> 自检：</p>
-<pre><code class="language-text">F([2,1]) = [5,5]
-F([2.001,.998]) ≈ [5.002001, 5.005]
-(新−旧)/.001 ≈ [2.001,5] ≈ [2,5]  ✓
-</code></pre>
-<h2>跟反向传播的对照</h2>
+<p>为方便手算，设两个概念方向正交：<span class="tex math-inline" data-display="false">v_s=[1,0]</span>、<span class="tex math-inline" data-display="false">v_t=[0,1]</span>，内部状态 <span class="tex math-inline" data-display="false">h=[3,1]</span>。</p>
+<p>此时 <span class="tex math-inline" data-display="false">V=I</span>、<span class="tex math-inline" data-display="false">V^\dagger=I</span>，所以：</p>
+<div class="tex math-display" data-display="true">c=[3,1],\qquad \sigma(c)=[1,3].</div>
+<p>写回差值：</p>
+<div class="tex math-display" data-display="true">h_{\text{swap}}
+=[3,1]+I([1,3]-[3,1])
+=[1,3].</div>
+<p>源方向强度从 3 变 1，目标方向从 1 变 3；若输出也稳定改成目标对应答案，才有证据说下游计算确实读了这组坐标。</p>
+<h2>三类结论别混</h2>
 <ul>
-<li>JVP / forward mode：给定输入方向，求所有输出怎样变；适合“输入和输出同样大”的生成网络切线。</li>
-<li>VJP / reverse mode：给定输出方向，求所有输入或参数怎样受影响；普通反向传播主要用这一类。</li>
-<li>JVP 不是没有梯度。训练 rCM 时，JVP 先构造目标，参数更新仍会做反向传播。</li>
+<li>只读到概念：相关性证据。</li>
+<li>改概念后输出改变：因果证据。</li>
+<li>同一次替换能重定向多种不同任务：共享、可复用表示的证据。</li>
 </ul>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/rcm.html">rcm</a> · 用 FlashAttention-2 JVP 把切线计算扩到 14B。</li>
-<li><a href="../concepts/continuous-time-consistency.html">continuous-time-consistency</a> · 为什么连续一致性需要方向导数。</li>
-<li><a href="../concepts/flash-attention.html">flash-attention</a> · rCM 把原值和切线一起分块流式计算。</li>
-<li><a href="../concepts/gradient-backprop.html">gradient-backprop</a> · 与反向模式自动微分的关系。</li>
+<li><a href="../papers/global-workspace.html">global-workspace</a> · Soccer→Rugby、spider→ant、France→China 等干预实验。</li>
+<li><a href="../concepts/jacobian-lens.html">jacobian-lens</a> · 提供论文使用的概念方向。</li>
+<li><a href="../concepts/gradient-backprop.html">gradient-backprop</a> · 干预实验与“只看梯度相关”有什么区别。</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 4 处</span>
-  <ul><li><a href="../papers/global-workspace.html"><span class="cat">paper</span>Verbalizable Representations Form a Global Workspace in Language Models</a></li><li><a href="../papers/rcm.html"><span class="cat">paper</span>rCM · 把连续时间一致性蒸馏扩到 14B 视频模型</a></li><li><a href="../concepts/continuous-time-consistency.html"><span class="cat">concept</span>连续时间一致性 · 不逐步走完，也要认出同一个终点</a></li><li><a href="../concepts/jacobian-lens.html"><span class="cat">concept</span>Jacobian lens · 把中间向量翻成“它可能让模型说什么”</a></li></ul>
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/global-workspace.html"><span class="cat">paper</span>Verbalizable Representations Form a Global Workspace in Language Models</a></li><li><a href="../concepts/global-workspace-theory.html"><span class="cat">concept</span>Global Workspace Theory · 许多专用模块共用的一块小黑板</a></li><li><a href="../concepts/jacobian-lens.html"><span class="cat">concept</span>Jacobian lens · 把中间向量翻成“它可能让模型说什么”</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/jacobian-vector-product.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/activation-intervention.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
