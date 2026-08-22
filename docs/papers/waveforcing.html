@@ -16,14 +16,35 @@
 .abar button:hover:not(:disabled){background:var(--wave);color:#fff}
 .abar button:disabled{opacity:.35;cursor:default}
 .acap{flex:1;min-width:240px;padding:10px 14px;background:#fff;border:1px solid var(--rule);font-size:14.5px;line-height:1.55}
+.system-flow{display:grid;grid-template-columns:1fr auto 1.45fr auto .7fr auto 1.25fr auto 1fr;gap:10px;align-items:stretch;margin:20px 0}
+.flow-box{display:flex;min-width:0;flex-direction:column;justify-content:center;padding:17px 14px;background:#fff;border:1px solid var(--rule);text-align:center}
+.flow-box b{color:var(--navy);font-size:16px}.flow-box small{display:block;margin-top:5px;color:var(--muted);font:600 10px/1.45 'JetBrains Mono'}
+.flow-box.diff{background:var(--wave2);border-color:var(--wave)}.flow-box.store{background:var(--gold2);border-color:var(--gold)}.flow-box.vae{background:var(--green2);border-color:var(--green)}
+.flow-arrow{align-self:center;color:var(--rust);font:800 25px/1 'JetBrains Mono'}
+.formula{overflow-x:auto;margin:16px 0;padding:17px 20px;background:var(--navy);color:#fff;border-left:5px solid var(--wave);text-align:center}
+.formula .katex{color:#fff}.version-table td:first-child{font-weight:700;color:var(--navy)}
+.boundary-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}.boundary-list .card{box-shadow:none}
 @media(max-width:850px){.page{padding:34px 18px 90px}.grid3{grid-template-columns:1fr}figcaption{display:block}figcaption b{display:block;margin-top:5px}}
-@media(max-width:520px){body{font-size:17px}.page{padding-inline:12px}.hero h1{font-size:42px}figure{padding:18px 12px}.grid2{grid-template-columns:1fr}.mast .r{display:none}}
+@media(max-width:850px){.system-flow{grid-template-columns:1fr}.flow-arrow{transform:rotate(90deg);justify-self:center}.boundary-list{grid-template-columns:1fr}}
+@media(max-width:520px){body{font-size:17px}.page{padding-inline:12px}.hero h1{font-size:42px}figure{padding:18px 12px}.grid2{grid-template-columns:1fr}.mast .r{display:none}.formula{padding:14px 10px;text-align:left}nav.toc{margin-inline:-12px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 <!-- katex-head:start -->
 <link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
 <script defer src="../vendor/katex/katex.min.js"></script>
 <!-- katex-head:end -->
+<script>
+window.addEventListener('DOMContentLoaded',function(){
+  if(!window.katex)return;
+  document.querySelectorAll('.formula[data-display="true"]').forEach(function(el){
+    if(el.dataset.mathified)return;
+    try{
+      katex.render(el.textContent.trim(),el,{displayMode:true,throwOnError:true,strict:false});
+      el.dataset.mathified='1';
+    }catch(e){console.warn('[formula] KaTeX 拒绝:',el.textContent,e.message);}
+  });
+});
+</script>
 </head>
 <body>
 <!-- wiki-nav:start -->
@@ -52,19 +73,26 @@
   <div class="issue">算法砍一条边 · 系统换一条流水线</div>
   <h1>Wave Forcing<br><em>砍一条边，换一条流水线</em></h1>
   <p class="byline">DENG Lab MLSys Team · Shanghai Jiao Tong University · 项目博客（2026，arXiv 未出）</p>
-  <p class="dek">流式视频生成有两派：Rolling Forcing 的滑窗上下文是活的，但每层 Transformer 都要全窗同步；Live Avatar 的硬件流水很干净，但每段历史被冻死。Wave Forcing 的问题只有一个：能不能两头都要？答案藏在一条注意力边里。</p>
-  <div class="tldr"><span class="label">先记这一句</span>造成同步的<strong>不是混合噪声窗口，是「噪→净」那条反向注意力边</strong>。砍掉它，执行图从环变成 DAG：每张 GPU 放一个完整模型副本、管一个去噪阶段，chunk 像波一样斜着流过 GPU×阶段矩阵，KV 单向发布、通信藏进最慢 rank 的计算里。8×H200：100 秒视频 13.56 秒出片，117.7 FPS，单卡 7.9×，质量与 Rolling Forcing 打平、长视频漂移反而更小。</div>
+  <p class="dek">它要让长视频一边生成、一边解码，而且在稳态时每隔约 95 毫秒就交出下一块画面。难点不是“多放几张卡”，而是前后视频块在每层注意力里互相依赖，卡与卡不得不反复碰头。Wave Forcing 从依赖关系本身下手：删掉不必要的反向边，再让 runtime 沿着剩下的单向依赖跑流水线。</p>
+  <div class="tldr"><span class="label">先记这一句</span>造成逐层同步的<strong>不是混合噪声窗口本身，而是「噪块影响净块」那条反向注意力边</strong>。删掉它，执行图从环变成 DAG：扩散侧的完整 DiT 副本各守一个去噪阶段，较净阶段逐层把 KV 发给较噪阶段；后面再接独立的 VAE 解码流水线。作者在 8×H200 上报告 117.7 E2E FPS：生成约 100 秒视频需要 13.56 秒。不过这仍是项目博客与开源推理系统的结果，论文和训练代码尚未公开。</div>
 </header>
-<nav class="toc"><a href="#misread">00 先排雷</a><a href="#gap">01 三代取舍</a><a href="#dag">02 环变DAG</a><a href="#wave">03 波前</a><a href="#overlap">04 藏通信</a><a href="#vae">05 VAE</a><a href="#results">06 数字与质量</a></nav>
+<nav class="toc"><a href="#misread">00 先排雷</a><a href="#gap">01 痛点</a><a href="#overview">02 总览</a><a href="#dag">03 环变 DAG</a><a href="#wave">04 波前</a><a href="#overlap">05 藏通信</a><a href="#vae">06 VAE</a><a href="#results">07 实验</a><a href="#limits">08 边界</a></nav>
 
 <section id="misread">
 <h2><span class="n">§ 00</span>先排除四种误读</h2>
 <div class="grid2">
-  <div class="card"><span class="tag rust">口径</span><h3>没有论文，只有博客</h3><p>本页全部内容出自项目页与 README；训练代码未开源，rollout-aligned 蒸馏只有一句话描述。arXiv 出来后本页会对照修订。</p></div>
-  <div class="card"><span class="tag">算法基座</span><h3>它是 Rolling Forcing 的去环版</h3><p>混合噪声滑窗、少步蒸馏全部继承自 Rolling Forcing<a class="jr" href="#g-01">01</a>；算法上只改一件事——跨 chunk 注意力改成块因果<a class="jr" href="#g-03">03</a>。仓库里 <code>naive_rt/rolling_forcing/</code> 就是基座本座。</p></div>
+  <div class="card"><span class="tag rust">口径</span><h3>没有论文，只有项目博客和代码</h3><p>本页以 2026-08-19 的仓库 commit <code>b320dbc</code> 为准。推理代码已开源；训练代码没开，rollout-aligned 蒸馏也没有公式、数据配比和超参数。凡是训练细节，本页都明确写“不知道”。</p></div>
+  <div class="card"><span class="tag">算法基座</span><h3>它从 Rolling Forcing 上删掉反向依赖</h3><p>混合噪声滑窗<a class="jr" href="#g-02">02</a>来自 Rolling Forcing<a class="jr" href="#g-01">01</a>。Wave Forcing 明确公开的算法变化是：跨 chunk 注意力改成块因果<a class="jr" href="#g-03">03</a>，再针对这套推理前沿重新蒸馏。</p></div>
   <div class="card"><span class="tag gold">14B 行</span><h3>系统原型 ≠ 生成质量</h3><p>14B 的 28.1 FPS 用的是 shape-accurate 的<strong>随机初始化权重</strong>，只证明系统可扩展，不是画质结果。已放出的唯一权重是 1.3B 5-step preview。</p></div>
   <div class="card"><span class="tag green">数字口径</span><h3>FPS 有三种</h3><p>稳态 FPS（掐头去尾的 tick p50）、DiT FPS（含流水线灌入/排空）、E2E FPS（再含流式 VAE）。正文引用以 E2E 为主。</p></div>
 </div>
+<div class="scroll"><table class="version-table">
+<thead><tr><th>对象</th><th>去噪步</th><th>8 卡拓扑</th><th>权重状态</th><th>这页能怎样解读</th></tr></thead>
+<tbody>
+<tr><td>公开 Preview</td><td>5</td><td>5 个去噪 rank + 1 个 store + 2 个 VAE stage</td><td>1.3B 已公开</td><td>能复跑；README 示例是 BF16 / SDPA，84.2 E2E FPS</td></tr>
+<tr><td>最佳 1.3B 系统行</td><td>4</td><td>4 个去噪 rank + 1 个 store + 3 个 VAE stage</td><td>4-step 权重未公开</td><td>117.7 FPS 是作者系统测量，不能拿公开 Preview 原样复现</td></tr>
+<tr><td>14B 系统原型</td><td>4</td><td>同上</td><td>随机初始化、形状对齐</td><td>只说明吞吐扩展，不说明画质</td></tr>
+</tbody></table></div>
 </section>
 
 <section id="gap">
@@ -77,10 +105,29 @@
 <p class="lead">Wave Forcing 各拿两家的好牌：Rolling Forcing 的活上下文 + Live Avatar 的硬件流水。钥匙是下面这条边。</p>
 </section>
 
+<section id="overview">
+<h2><span class="n">§ 02</span>先把整机拼起来：一块视频从噪声走到画面</h2>
+<p>先只认数据流，不急着记通信名词。输入是文本和一长串随机 latent；扩散组逐块去噪，store rank 把已经干净的历史整理成可复用 KV；CPU 队列把完成的 latent 块交给另一组 GPU；VAE 组只持有各自那一段解码器，最后吐出像素帧。</p>
+<figure id="fig-overview">
+<figcaption><span>Fig 01 · WaveRT 端到端总览</span><b>扩散组是完整 DiT 副本 · VAE 组只放解码器分段</b></figcaption>
+<div class="system-flow">
+  <div class="flow-box"><b>文本 + 随机 latent</b><small>每块 3 个 latent 帧</small></div><div class="flow-arrow">→</div>
+  <div class="flow-box diff"><b>去噪 rank 0…S−1</b><small>每卡完整 DiT · 每卡固定一个噪声阶段</small></div><div class="flow-arrow">→</div>
+  <div class="flow-box store"><b>store</b><small>干净历史 KV</small></div><div class="flow-arrow">→</div>
+  <div class="flow-box"><b>CPU 队列</b><small>扩散 / VAE 两个独立通信组</small></div><div class="flow-arrow">→</div>
+  <div class="flow-box vae"><b>VAE A → B → C</b><small>每卡只有连续一段 decoder</small></div><div class="flow-arrow">→</div>
+  <div class="flow-box"><b>像素视频</b><small>latent 时间轴放大 4×</small></div>
+</div>
+</figure>
+<p><strong>拿 4+3 的长视频实验走一遍：</strong>399 个 latent 帧先切成 133 块，每块 3 帧。扩散组共有 5 个进程：4 个去噪阶段加 1 个 store；VAE 组另有 3 个进程，所以一共 8 张卡。流水线灌满后，每个 tick 完成一块，VAE 的 4× 时间放大把 3 个 latent 帧变成 12 个像素帧。</p>
+<div class="formula" data-display="true">N_{\text{chunk}}=399\div3=133,\qquad N_{\text{tick}}=133+5-1=137</div>
+<p>第二条式子里的 5 是<strong>扩散组的进程数</strong>，不是去噪步数；多出来的 1 就是 store。前面的 <code class="m">+5-1</code> 是流水线灌入和排空的固定开销。后文先讲为什么依赖图能变成单向，再讲这 137 个 tick 怎么斜着跑。</p>
+</section>
+
 <section id="dag">
-<h2><span class="n">§ 02</span>关键观察：窗口无罪，反向边有罪</h2>
+<h2><span class="n">§ 03</span>关键观察：窗口无罪，反向边有罪</h2>
 <figure id="fig-dag">
-<figcaption><span>Fig 01 · 砍掉「噪→净」这条边</span><b>环 → DAG · 同步 → 流水</b></figcaption>
+<figcaption><span>Fig 02 · 砍掉「噪→净」这条边</span><b>环 → DAG · 逐层同步 → 单向发布</b></figcaption>
 <svg id="dagsvg" viewBox="0 0 920 300" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
 <defs><marker id="mW" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#0d6aa8"/></marker>
 <marker id="mR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#a83b25"/></marker></defs>
@@ -103,35 +150,36 @@
 <path d="M 620 88 L 641 88" stroke="#0d6aa8" stroke-width="2" marker-end="url(#mW)"/>
 <path d="M 745 88 L 766 88" stroke="#0d6aa8" stroke-width="2" marker-end="url(#mW)"/>
 <text x="690" y="164" text-anchor="middle" font-size="12.5" fill="#3f7354" font-weight="700">DAG：KV 只朝一个方向发布 → 可流水</text>
-<text x="690" y="204" text-anchor="middle" font-size="12.5" fill="#756c60">混合噪声 ✓ 活上下文 ✓ 无全局同步 ✓</text>
+<text x="690" y="204" text-anchor="middle" font-size="12.5" fill="#756c60">混合噪声 ✓ 活上下文 ✓ 逐层 KV 不再全组同步 ✓</text>
 </g>
 <text x="460" y="272" text-anchor="middle" font-size="12.5" fill="#756c60">配套：rollout-aligned 蒸馏——训练就用推理这套有向前沿，与「训练 = 推理」的 self-forcing 哲学同源</text>
 </svg>
 <div class="abar"><button id="dagBtn" type="button">✂ 砍掉反向边</button><div class="acap" id="dagCap">左边是 Rolling Forcing：窗里的净块也要回头看噪块（红色虚线）——图有环，每层都得全窗碰头。点按钮砍掉它。</div></div>
 </figure>
-<p>砍掉反向边之后：噪块照旧看到<strong>所有更净的前辈</strong>（活上下文原样保留），净块不再回头——依赖图成了 DAG，不同 chunk 就能落在不同 GPU 上错步执行。质量的代价由重新蒸馏来付：§ 06 的对照显示，拿 Rolling Forcing 的旧权重硬套块因果推理，长视频质量漂移<a class="jr" href="#g-08">08</a>恶化 4 倍；按有向前沿重新蒸馏后反而比原版更稳。</p>
+<p>砍掉反向边之后：噪块照旧看到<strong>所有更净的前辈</strong>，净块不再回头。于是“谁必须等谁”有了固定方向，不同 chunk 才能落在不同 GPU 上错步执行。代价是旧权重并没学过这张 mask：§ 07 的对照显示，直接把 Rolling Forcing 权重切成块因果推理，长视频质量漂移<a class="jr" href="#g-08">08</a>从 0.618 升到 2.825；重新蒸馏后才降到 0.030。</p>
 </section>
 
 <section id="wave">
-<h2><span class="n">§ 03</span>Wave Parallelism：chunk 像波一样斜着流</h2>
-<p class="lead">每张 GPU 放<strong>完整模型副本</strong>、固定负责一个阶段：4 个去噪阶段 + 1 个干净 KV 存档位 + 3 段 VAE（「4+3」拓扑，正好 8 卡）。chunk 每 tick 挪到下一个 GPU——在 GPU×时间的矩阵上就是一条斜波。</p>
+<h2><span class="n">§ 04</span>Wave Parallelism：chunk 像波一样斜着流</h2>
+<p class="lead">现在把 § 03 的单向依赖放到硬件上。4 个去噪 rank 和 1 个 store rank 各自加载完整 DiT；3 个 VAE rank 只加载解码器的连续分段。chunk 每个 tick 向下一阶段移动一格，在 GPU×时间矩阵里就形成一条斜波。</p>
 <figure id="fig-wave">
-<figcaption><span>Fig 02 · GPU × 时间的波前</span><b>同色 = 同一 chunk · 每 tick 斜进一格</b></figcaption>
+<figcaption><span>Fig 03 · GPU × 时间的波前</span><b>同色 = 同一 chunk · 每 tick 斜进一格</b></figcaption>
 <div id="waveGrid" style="position:relative"></div>
 <div class="abar"><button id="wvPlay" type="button">▶ 播放</button><button id="wvStep" type="button">单步 +1</button><button id="wvReset" type="button">重置</button><div class="acap" id="wvCap">按「播放」看 chunk 波前推进。行 = GPU（上噪下净，再往下是存档位和 VAE），列 = 时间 tick。</div></div>
 </figure>
 <div class="calc">
 <div class="step"><b>读图要点</b><span>盯住一种颜色沿对角线走：它在 r0 做第 1 步去噪（最噪、要看全部前辈的 KV），下一 tick 到 r1 做第 2 步……第 4 步做完变干净，KV 进存档位，再流过三段 VAE 出帧。<strong>稳态时 8 张卡全满，每 tick 吐一块 = 12 帧画面</strong>（chunk = 3 个 latent 帧 × VAE 时间 4×）。</span></div>
-<div class="step"><b>KV 单向发布<a class="jr" href="#g-04">04</a></b><span>每一层 Transformer 算完，较净的 rank 把该层 K/V 直接发给更噪的消费者（图中蓝色上行箭头）——没有全局 collective，这正是 § 02 砍边换来的东西。去噪时间表 [1000, 800, 600, 400, 200]。</span></div>
-<div class="step"><b>两个工程细节</b><span>每 chunk × 每阶段用确定性种子重加噪，跨卡可复现；扩散与 VAE 用两个互不相交的 NCCL 世界，中间靠 CPU 队列衔接，避免跨流水线死锁。</span></div>
+<div class="step"><b>KV 单向发布<a class="jr" href="#g-04">04</a></b><span>每层 Transformer 算完，较净的 rank 把这一层的 K/V 发给更噪的消费者。4-step 默认时间表是 [1000, 750, 500, 250]；公开 Preview 是另一套 5-step [1000, 800, 600, 400, 200]，两者不能混写。</span></div>
+<div class="step"><b>阶段之间为什么还要“重加噪”</b><span>每个 rank 先预测一份较干净的 <code class="m">x_0</code>；下一个 rank 却期待自己噪声等级上的输入，所以 runtime 调用 scheduler 的 <code>add_noise</code> 把它送回下一档噪声。种子固定为 <code>1000 × chunk编号 + stage编号</code>，同一块跨进程仍能复现。</span></div>
+<div class="step"><b>“没有 collective”要加限定</b><span>优化掉的是<strong>每一层 KV 的全组 all-gather</strong>。当前 commit 在 tick 边界搬 latent 仍调用一次 world <code>all_gather</code>，第一个 clean anchor 也会广播。它减少的是几十层里反复出现的同步墙，不是把所有集合通信都删光。</span></div>
 </div>
 </section>
 
 <section id="overlap">
-<h2><span class="n">§ 04</span>慢 rank 不是瓶颈，是藏通信的口袋</h2>
+<h2><span class="n">§ 05</span>慢 rank 不是瓶颈，是藏通信的口袋</h2>
 <p>块因果给了一个白捡的礼物：<strong>各 rank 的每层计算量天然不等</strong>。最噪的 r0 上下文最长（约 8 块，要看全部前辈），每层算得最慢；越净的 rank 上下文越短（约 5 块）、算得越快。快的先发 KV、慢的还在算——通信恰好塞进关键 rank 的计算窗里。14B 实测：r0 每层 646ms，其余 575–581ms，约 70ms 顺风差。</p>
 <figure id="fig-gantt">
-<figcaption><span>Fig 03 · 同一层的两种命运</span><b>同步：逐层碰头 · 重叠：预取塞进计算</b></figcaption>
+<figcaption><span>Fig 04 · 同一层的两种命运</span><b>同步：逐层碰头 · 重叠：预取塞进计算</b></figcaption>
 <svg id="ganttsvg" viewBox="0 0 920 330" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
 <text x="20" y="30" font-size="14" font-weight="700" fill="#163a58">A · 同步（每层 all-gather）</text>
 <text x="120" y="62" text-anchor="end" font-size="12" fill="#756c60">r0 计算</text>
@@ -147,17 +195,17 @@
 </figure>
 <h3>传输本身再拆三种税</h3>
 <div class="grid3">
-  <div class="card"><span class="tag">字节税</span><h3>FP8 KV</h3><p>DMA 字节减半，通信 ≈79→40ms；但配 SageAttention<a class="jr" href="#g-07">07</a> 时重量化开销反噬——标为实验性，单独可用。</p></div>
+  <div class="card"><span class="tag">字节税</span><h3>FP8 KV</h3><p>BF16 每个值 2 字节，FP8 每个值 1 字节，所以同样数量的 KV 理论字节先减半；项目微测的通信约 79→40ms。可量化、还原也要时间，配 SageAttention<a class="jr" href="#g-07">07</a> 时净收益反而不稳。当前 paged 模式也明确不支持 one-sided FP8，不能把所有优化画成一条必然叠加的直线。</p></div>
   <div class="card"><span class="tag wave">协调税</span><h3>copy engine 单边写<a class="jr" href="#g-05">05</a></h3><p>生产者用 <code>cuMemcpyPeerAsync</code> 直写消费者的 IPC 显存，设备端 generation flag 替代 NCCL 配对收发——不占 SM，微基准 343 GB/s。</p></div>
   <div class="card"><span class="tag green">组装税</span><h3>paged 直写<a class="jr" href="#g-06">06</a></h3><p>生产者写进消费者注意力缓冲的固定槽位，注意力就地读前缀——免每层 <code>torch.cat</code>（18.49→4.08ms）。推荐组合 = causal + paged。</p></div>
 </div>
 </section>
 
 <section id="vae">
-<h2><span class="n">§ 05</span>VAE：跨卡重叠，且按实测时间切</h2>
+<h2><span class="n">§ 06</span>VAE：跨卡重叠，且按实测时间切</h2>
 <p>扩散提速到极限后，解码成了尾巴。同一张卡上并发解两块视频听着并行，实则抢同一批 SM、两个都变慢；正解是解码器也切成 3 段各占一卡，连续 chunk 在<strong>卡间</strong>错开。切分点有讲究：480×832 下高分辨率上采样块是 memory-bound，<strong>同 FLOPs 的块壁钟能差 6×</strong>——按 FLOPs 均分必然一段过载。</p>
 <figure id="fig-vae">
-<figcaption><span>Fig 04 · 同一个解码器的两种切法</span><b>按 FLOPs 切：146ms 瓶颈 · 按实测时间切：99ms 齐步</b></figcaption>
+<figcaption><span>Fig 05 · 同一个解码器的两种切法</span><b>按 FLOPs 切：146ms 瓶颈 · 按实测时间切：99ms 齐步</b></figcaption>
 <svg id="vaesvg" viewBox="0 0 920 240" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
 <text x="120" y="52" text-anchor="end" font-size="12.5" fill="#756c60">GPU 5</text>
 <text x="120" y="112" text-anchor="end" font-size="12.5" fill="#756c60">GPU 6</text>
@@ -172,11 +220,19 @@
 </svg>
 <div class="abar"><button id="vaeBtn" type="button">改成按实测时间切</button><div class="acap" id="vaeCap">逐块实测每个解码单元的延迟，用连续 DP 做 min–max 划分（结果与原始切分 bit-exact）。</div></div>
 </figure>
+<p>代码里的目标可以写成下面这句：VAE 的解码单元顺序不能打乱，只能挑两个切点，把连续单元分成三段；在所有合法切法中，让“最慢那一段”的实测时间尽量小。</p>
+<div class="formula" data-display="true">\min_{0=c_0&lt;c_1&lt;c_2&lt;c_3=L}\;\max_{j\in\{0,1,2\}}\;\sum_{i=c_j}^{c_{j+1}-1} t_i</div>
+<p><code class="m">L</code> 是解码单元总数；<code class="m">t_i</code> 是第 <code class="m">i</code> 个单元实测多少毫秒；<code class="m">c_1,c_2</code> 是待选择的两个切点；外层 <code class="m">\min</code> 表示遍历切法，内层 <code class="m">\max</code> 只盯最慢 stage。举个手算例：6 个单元实测为 [12,10,45,14,15,13] ms。按单元数二等分会切成 [12+10] / [45+14] / [15+13]，三段是 22 / 59 / 28 ms，流水线每轮得等 59ms；改切成 [12+10] / [45] / [14+15+13]，变成 22 / 45 / 42 ms，最慢段从 59 降到 45ms。仓库用动态规划把真实几十个单元做同一件事。</p>
 <div class="note"><span class="label">5+2 拓扑为什么有 85 FPS 的天花板</span>preview checkpoint 用 5 去噪 + 2 VAE：扩散侧能跑过 120 FPS，但两段 VAE 每段太厚，最长段拖过下一块到达时刻——相邻 chunk 被迫在同两张 VAE 卡上抢 SM，双双变慢。4+3 的三段时间均衡 VAE（95/99/96ms）跟上 DiT 的 ~95ms 节奏，只剩 ~3.5ms 残余壁垒。</div>
 </section>
 
 <section id="results">
-<h2><span class="n">§ 06</span>数字与质量：快了 7.9×，漂移反而小了 20×</h2>
+<h2><span class="n">§ 07</span>数字与质量：先把三种 FPS 分账</h2>
+<p>先看两条真正用到的公式，避免把稳态吞吐和整条链路混成一个数。每个稳态 tick 交出 12 个像素帧；最佳 Sage+paged 配置的 tick p50 是 95.4ms，所以稳态 FPS 是：</p>
+<div class="formula" data-display="true">\mathrm{FPS}_{\text{steady}}=\frac{12\ \text{frames}}{95.4\ \text{ms}\div1000}=125.79\approx125.7</div>
+<p>整条链路还要付灌入、排空和 VAE 尾巴。完整 1596 帧用了约 13.56 秒，因此：</p>
+<div class="formula" data-display="true">\mathrm{FPS}_{\text{E2E}}=\frac{1596\ \text{frames}}{13.56\ \text{s}}=117.70</div>
+<p>这也解释了为什么 126.5 的“最快稳态 FPS”不是最终赢家：那一行用了 Sage+W8A8，DiT 与 VAE 的完整时钟算下来只有 115.9 E2E FPS；不带 W8A8 的 Sage+paged 最后反而是 117.7。</p>
 <div class="scroll"><table>
 <thead><tr><th>配置（8×H200 · 399 latent 帧 = 1596 输出帧）</th><th>稳态 FPS(p50)</th><th>DiT FPS</th><th>E2E FPS</th></tr></thead>
 <tbody>
@@ -186,7 +242,7 @@
 <tr><td>14B 系统原型（随机权重）· 4+3</td><td>28.5</td><td>28.1</td><td>28.1</td></tr>
 <tr><td>单卡基线（匹配口径）</td><td>–</td><td>–</td><td>15.0（7.9× 差距）</td></tr>
 </tbody></table></div>
-<p>质量看 VBench-Long（100 秒长视频、5-step 口径），关键在最后一列的质量漂移（越低越稳）：</p>
+<p>质量看 VBench-Long 的 5-step 主表：同一组 50 条 MovieGen prompt，每条生成 1593 帧、16 FPS、约 99.56 秒。关键在最后一列的质量漂移（越低越稳）：</p>
 <div class="scroll"><table>
 <thead><tr><th>模型</th><th>主观质量（美学/成像）</th><th>一致性（主体/背景）</th><th>Quality Drift ↓</th></tr></thead>
 <tbody>
@@ -194,9 +250,21 @@
 <tr><td>RF 权重硬套块因果推理</td><td>55.18 / 66.82</td><td>96.82 / 96.14</td><td class="lose" style="background:#f4d8ce;color:#7c2b1d">2.825</td></tr>
 <tr class="win"><td>Wave Forcing（重新蒸馏）</td><td>54.93 / 69.66</td><td>98.00 / 96.79</td><td>0.030</td></tr>
 </tbody></table></div>
-<p>中间那行是全页最有信息量的对照：<strong>光改推理 mask 不重训，漂移恶化 4.6 倍；配套按有向前沿重新蒸馏，漂移比原版还小 20 倍</strong>——算法与系统是绑着交付的，谁也不能单飞。</p>
-<div class="warning"><span class="label">边界清单</span>训练代码与 4-step 正主 checkpoint 未放出；蒸馏细节只有「rollout-aligned」一个词；14B 行是随机权重的系统刻度；质量表的 4-step 部分是 5-step 权重强行 4 步推理的口径。arXiv 出来之前，本页所有结论的信源都是作者自述的博客与可复跑的开源 runtime。</div>
+<p>中间那行是全页最有信息量的对照：<strong>只换推理 mask、不重训，漂移扩大到原来的 4.57 倍；按有向前沿重新蒸馏后，漂移降到原版的约 1/20.6</strong>。计算分别是 <code class="m">2.825\div0.618=4.57</code> 和 <code class="m">0.618\div0.030=20.6</code>。这证明公开权重不能只靠 runtime 开关变成 Wave Forcing；训练目标也必须配套改变。</p>
+<div class="note"><span class="label">别把两张质量表横着比</span>项目页另有“算法 × runtime”矩阵，只用 10 条对齐 prompt，而且 FPS 是单次 399-latent 的 DiT-only 吞吐；上面主表用 50 条 prompt，报告的是另一套 5-step 质量协议。两张表的样本池、运行口径都不同，只能各自在表内比较。</div>
 <div class="note"><span class="label">和 wiki 里已有页的连线</span>混合噪声窗是 diffusion-forcing 一族（<a href="causal-rcm.html">Causal-rCM</a> § 02 的三范式）；「砍反向边换流水」与 TF mask 同源；「计算盖通信」与 <a href="../concepts/distributed-training-parallelism.html">Ulysses/Ring 页</a>一脉——只是这里的时间差来自因果上下文长度天然不等，不用人为制造。</div>
+</section>
+
+<section id="limits">
+<h2><span class="n">§ 08</span>代码能确认什么，仍然缺什么</h2>
+<p>最后把“博客主张”“当前实现”和“尚未公开”分开。这样等论文出来时，哪些地方需要重写一眼就能看见。</p>
+<div class="boundary-list">
+  <div class="card"><span class="tag green">代码可确认</span><h3>波前调度不是概念图</h3><p><code>engine.py</code> 里确实用 <code class="m">c=t-r</code> 决定本 rank 当前处理哪一块，其中 <code class="m">r</code> 是 rank 编号；总 tick 数写成 <code class="m">N_{\mathrm{block}}+N_{\mathrm{rank}}-1</code>。每个阶段只在自己的对角线上工作。</p></div>
+  <div class="card"><span class="tag green">代码可确认</span><h3>长历史不是无限 KV</h3><p>runtime 最多保留 8 个 clean page：第一个锚点加最近 7 个；真正送进注意力的 working set 还受最大窗口限制。所谓“无限生成”是输出长度可持续推进，不是每次注意力都回看从第 1 帧到现在的全部历史。</p></div>
+  <div class="card"><span class="tag gold">实现边界</span><h3>逐层 KV 去 collective，不等于全系统零 collective</h3><p>paged / one-sided 路径把 KV 直写远端槽位；但 tick 边界的 latent migration 仍是 world <code>all_gather</code>，初始化 clean anchor 也有 broadcast。博客的“no global collective barrier”应限定为关键的逐层 KV 路径。</p></div>
+  <div class="card"><span class="tag rust">尚未公开</span><h3>训练过程仍是黑箱</h3><p>没有教师模型、rollout 长度、蒸馏 loss、数据规模、优化器和训练成本；也没有 4-step 正式 checkpoint。现阶段能复现的是推理 runtime 与公开 5-step Preview，不是完整训练闭环。</p></div>
+</div>
+<div class="warning"><span class="label">我的判断</span>这是信息量很高的系统 release，但还不是一篇可逐项复现的论文。最扎实的部分是 WaveRT 的通信、buffer 与 VAE 流水；最关键、同时最缺证据的部分是 rollout-aligned 蒸馏。arXiv 出来后，优先补训练目标、teacher/student rollout 对齐方式、block-causal mask 的正式定义和消融。</div>
 </section>
 
 <section class="gloss" id="glossary">
@@ -205,7 +273,7 @@
 <li id="g-01"><span class="term">Rolling Forcing</span> — 流式视频生成方法：维护一个混合噪声滑窗，窗内多个 chunk 一次联合前向共同推进，每步吐出最干净的一块。Wave Forcing 的算法基座。</li>
 <li id="g-02"><span class="term">混合噪声窗（mixed-noise frontier）</span> — 同一时刻窗内各 chunk 处于不同去噪进度（越早越干净）的滑动窗口；好处是后面的噪块始终能看到前面「越来越干净」的活上下文。</li>
 <li id="g-03"><span class="term">块因果注意力（block-causal）</span> — chunk 内部全注意力、chunk 之间只允许「噪看净」的单向注意力；Wave Forcing 对 Rolling Forcing 的唯一算法修改。</li>
-<li id="g-04"><span class="term">KV 发布</span> — 每层 Transformer 算完后，把该层的 Key/Value 状态发给下游消费者；块因果保证这个发布是单向的，无需全局 collective。</li>
+<li id="g-04"><span class="term">KV 发布</span> — 每层 Transformer 算完后，把该层的 Key/Value 状态发给下游消费者；块因果保证发布方向固定，因此不用让所有 rank 在每一层都做全组 collective。tick 边界搬 latent 仍有一次 <code>all_gather</code>。</li>
 <li id="g-05"><span class="term">copy engine 单边写</span> — 用 GPU 的拷贝引擎（cuMemcpyPeerAsync）直写远端 IPC 显存，配设备端 generation flag 判定数据就绪；不占计算 SM、免 NCCL 配对收发。</li>
 <li id="g-06"><span class="term">paged 直写</span> — 生产者把 KV 直接写进消费者注意力缓冲中的固定页槽，消费者就地读前缀、免每层重新拼接（torch.cat 18.49→4.08ms）。</li>
 <li id="g-07"><span class="term">SageAttention / W8A8</span> — 两档推理加速：SageAttention 是量化注意力 kernel；W8A8 是权重与激活的 8-bit 量化档。与 FP8 KV（只压通信字节）是三件不同的事。</li>
@@ -216,7 +284,7 @@
 <div class="sources">
 <strong>来源与延伸</strong>
 <ul>
-<li><a href="https://sjtu-deng-lab.github.io/WaveForcing/">项目页（博客版论文，含交互结果矩阵）</a> · <a href="https://github.com/SJTU-DENG-Lab/WaveForcing">代码（推理 runtime 已开源）</a> · <a href="https://huggingface.co/SJTU-DENG-Lab/WaveForcing-T2V-1.3B-5step-Preview">1.3B 5-step preview 权重</a></li>
+<li><a href="https://sjtu-deng-lab.github.io/WaveForcing/">项目页（博客版论文，含交互结果矩阵）</a> · <a href="https://github.com/SJTU-DENG-Lab/WaveForcing/tree/b320dbc935bf662fa8358de41f7e5cac31711a66">代码（本文核对的 commit b320dbc）</a> · <a href="https://huggingface.co/SJTU-DENG-Lab/WaveForcing-T2V-1.3B-5step-Preview">1.3B 5-step preview 权重</a></li>
 <li>基座模型 Wan2.1-T2V-1.3B；runtime 构建在 SGLang Diffusion 的模型层后端上；波前动画为本页按项目页叙述重画的示意。</li>
 </ul>
 </div>
@@ -239,7 +307,7 @@ dagBtn.addEventListener('click',function(){
     ['rev1','revlab','scissors'].forEach(function(id){document.getElementById(id).style.opacity=0});
     var d=document.getElementById('dagside'); d.style.opacity=1; d.setAttribute('opacity','1');
   },2400);
-  dagCap.textContent='反向边没了：噪块照旧看全部更净的前辈（活上下文保住），净块不再回头。右边的 DAG 里每个 chunk 落在不同 GPU 上,KV 只朝一个方向发布——可以流水了。';
+  dagCap.textContent='反向边没了：噪块照旧看全部更净的前辈（活上下文保住），净块不再回头。右边的 DAG 里，每个 chunk 落在不同 GPU 上，KV 只朝一个方向发布——可以流水了。';
 });
 /* ---------- Fig 02: wavefront grid ---------- */
 var ROWS=['r0 · 去噪① 最噪','r1 · 去噪②','r2 · 去噪③','r3 · 去噪④ 最净','store · 干净KV','VAE A','VAE B','VAE C'];
@@ -263,7 +331,7 @@ var wvCap=document.getElementById('wvCap');
 function chunkAt(r,t){var c=t-r;return (c>=0&&c<CHUNKS)?c:null}
 function paintTick(){
   T++;
-  if(T>=TICKS){stop();wvCap.textContent='流水线跑完示意窗口。真实运行里波前一直推进：399 个 latent 帧 ≈ 133 块,稳态 tick ~95ms。点「重置」重看。';return}
+  if(T>=TICKS){stop();wvCap.textContent='流水线跑完示意窗口。真实运行里波前一直推进：399 个 latent 帧约等于 133 块，稳态 tick 约 95ms。点「重置」重看。';return}
   var pops=[];
   for(var r=0;r<ROWS.length;r++){
     var c=chunkAt(r,T); if(c===null)continue;
@@ -278,9 +346,9 @@ function paintTick(){
   grid.querySelectorAll('.wcell[data-t="'+(T-1)+'"]').forEach(function(el){el.style.boxShadow='none'});
   if(T>=1&&T<=9){anime({targets:'#kvnote',opacity:[0,1],duration:300});setTimeout(function(){document.getElementById('kvnote').style.opacity=1},600);}
   if(T===0)wvCap.textContent='tick 0：第一块（蓝）进 r0 做第 1 步去噪——它最噪、要看全部前辈的 KV，所以每层算得最慢。';
-  else if(T===3)wvCap.textContent='tick 3：蓝块到 r3 做最后一步；同列下方,更早的块已经在更净的阶段——快的先把 KV 发上来。';
-  else if(T===4)wvCap.textContent='tick 4：蓝块干净了,KV 进存档位（store）,此后所有新块都能引用它。';
-  else if(T===7)wvCap.textContent='tick 7：蓝块流完三段 VAE,第一批 12 帧画面出炉！从这刻起 8 张卡全满——稳态,每 tick 出一块。';
+  else if(T===3)wvCap.textContent='tick 3：蓝块到 r3 做最后一步；同列下方，更早的块已经在更净的阶段——快的先把 KV 发上来。';
+  else if(T===4)wvCap.textContent='tick 4：蓝块干净了，KV 进存档位（store），此后所有新块都能引用它。';
+  else if(T===7)wvCap.textContent='tick 7：蓝块流完三段 VAE，第一批 12 帧画面出炉！从这刻起 8 张卡全满——进入稳态后，每个 tick 出一块。';
   else if(T===10)wvCap.textContent='稳态巡航中:同一列 8 个不同颜色 = 8 个 chunk 同时在不同阶段;对角线 = 同一 chunk 的旅程。';
 }
 function stop(){if(timer){clearInterval(timer);timer=null;document.getElementById('wvPlay').textContent='▶ 播放'}}
@@ -320,7 +388,7 @@ gtBtn.addEventListener('click',function(){
     document.getElementById('gSyncNote').style.opacity=1;
     document.getElementById('gOvNote').style.opacity=1;
   },3800);
-  gtCap.textContent='同样 4 层:上排每层被 ≈79ms 的红色通信墙打断;下排绿色传输条整条沉在计算窗底下——r0 的 646ms/层 比别人多出的 ~70ms,恰好是这些传输的藏身处。';
+  gtCap.textContent='同样是 4 层：上排每层都被约 79ms 的红色通信墙打断；下排绿色传输条沉在计算窗底下——r0 每层需要 646ms，比其他 rank 多出的约 70ms，恰好可以用来遮住传输。';
 });
 /* ---------- Fig 04: VAE split morph ---------- */
 var vaeBtn=document.getElementById('vaeBtn'),vaeCap=document.getElementById('vaeCap'),vaeDone=false;
@@ -336,9 +404,9 @@ vaeBtn.addEventListener('click',function(){
     document.getElementById('vt1').textContent='Stage A · 95ms';
     var t2=document.getElementById('vt2'); t2.textContent='Stage B · 99ms'; t2.setAttribute('fill','#084a77');
     document.getElementById('vt3').textContent='Stage C · 96ms';
-    document.getElementById('vnote').textContent='按实测时间切:95 / 99 / 96ms 齐步,最长段 99ms 恰好跟上 DiT 的 ~95ms tick,残余壁垒 ~3.5ms。';
+    document.getElementById('vnote').textContent='按实测时间切：三段分别是 95 / 99 / 96ms；最慢段 99ms 基本跟上 DiT 约 95ms 的 tick，只剩约 3.5ms 没被遮住。';
   },820);
-  vaeCap.textContent='高分辨率上采样块 memory-bound,同 FLOPs 壁钟差 6×——所以量尺子必须是实测毫秒,不是运算量表格。';
+  vaeCap.textContent='高分辨率上采样块受显存带宽限制；即使 FLOPs 相同，实际耗时也能相差 6 倍。因此切分时应该比较实测毫秒，而不是只看运算量。';
 });
 })();
 </script>
