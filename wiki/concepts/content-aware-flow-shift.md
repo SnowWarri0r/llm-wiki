@@ -1,8 +1,8 @@
 ---
 name: content-aware-flow-shift
 type: concept
-sources: [sana-video-2]
-updated: 2026-07-28
+sources: [sana-video-2, causal-rcm]
+updated: 2026-08-17
 ---
 
 # Content-Aware Flow Shift · 不同视频多练不同噪声段
@@ -35,8 +35,13 @@ t_s=\frac{st}{1+(s-1)t}.
 
 不要把它理解成“高质量视频只学细节、运动视频完全不学细节”。概率密度只是倾斜，没有删除其余时间步。
 
+## Causal-rCM 的静态用法（同一变换的三处同源）
+
+不做内容自适应、s 固定也一样常用。一个更直觉的等价读法：RF 里定义噪声/信号幅度比 \(r=t/(1-t)\)，shift 变换恰好是 \(r\to s\cdot r\)——每一站噪声浓度调浓 s 倍（与 logit 加 \(\log s\) 是同一句话：\(\operatorname{logit}(t)=\log r\)）。为什么高维数据要调浓：k 个强相关像素取平均，噪声标准差降 \(\sqrt{k}\)、信号不动，等效信噪比抬 \(\sqrt{k}\)；同样 t=1/2 小图已面目全非、高清视频还看得清轮廓。Causal-rCM 里三处同源：老师合成数据 shift 3、训练时间采样 UniformShift(5)、推理停靠站——均匀网格 {3/4, 1/2, 1/4} 过 shift 5 得 {15/16, 5/6, 5/8}（t=1/2 即 r=1，调浓 5 倍即 t=5/6）。
+
 ## 链接
 
 - [[flow-matching]] · 被重新分配训练时间步的基础目标。
 - [[diffusion-timestep-conditioning]] · 网络怎样知道当前噪声等级。
 - [[sana-video-2]] · 阈值、阶段和验证分桶。
+- [[causal-rcm]] · 静态 shift 3/5 的三处同源用法与推理停靠站换算。

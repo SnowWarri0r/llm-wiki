@@ -79,11 +79,14 @@
 <li>目标函数没换；改变的是哪些 <span class="tex math-inline" data-display="false">t</span> 更常被抽到。</li>
 </ul>
 <p>不要把它理解成“高质量视频只学细节、运动视频完全不学细节”。概率密度只是倾斜，没有删除其余时间步。</p>
+<h2>Causal-rCM 的静态用法（同一变换的三处同源）</h2>
+<p>不做内容自适应、s 固定也一样常用。一个更直觉的等价读法：RF 里定义噪声/信号幅度比 <span class="tex math-inline" data-display="false">r=t/(1-t)</span>，shift 变换恰好是 <span class="tex math-inline" data-display="false">r\to s\cdot r</span>——每一站噪声浓度调浓 s 倍（与 logit 加 <span class="tex math-inline" data-display="false">\log s</span> 是同一句话：<span class="tex math-inline" data-display="false">\operatorname{logit}(t)=\log r</span>）。为什么高维数据要调浓：k 个强相关像素取平均，噪声标准差降 <span class="tex math-inline" data-display="false">\sqrt{k}</span>、信号不动，等效信噪比抬 <span class="tex math-inline" data-display="false">\sqrt{k}</span>；同样 t=1/2 小图已面目全非、高清视频还看得清轮廓。Causal-rCM 里三处同源：老师合成数据 shift 3、训练时间采样 UniformShift(5)、推理停靠站——均匀网格 {3/4, 1/2, 1/4} 过 shift 5 得 {15/16, 5/6, 5/8}（t=1/2 即 r=1，调浓 5 倍即 t=5/6）。</p>
 <h2>链接</h2>
 <ul>
 <li><a href="../concepts/flow-matching.html">flow-matching</a> · 被重新分配训练时间步的基础目标。</li>
 <li><a href="../concepts/diffusion-timestep-conditioning.html">diffusion-timestep-conditioning</a> · 网络怎样知道当前噪声等级。</li>
 <li><a href="../papers/sana-video-2.html">sana-video-2</a> · 阈值、阶段和验证分桶。</li>
+<li><a href="../papers/causal-rcm.html">causal-rcm</a> · 静态 shift 3/5 的三处同源用法与推理停靠站换算。</li>
 </ul>
 </article>
 
