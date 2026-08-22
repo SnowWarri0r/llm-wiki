@@ -30,21 +30,26 @@
 <div class="page">
 <div class="masthead">
   <span class="l">Connectionism · Personal Wiki</span>
-  <span class="r">精读页 · Deep Dives · 108 条目</span>
+  <span class="r">精读页 · Deep Dives · 109 条目</span>
 </div>
 
 <section class="hero">
   <div class="issue"><a href="index.html" style="color:var(--brick);text-decoration:none;">← index</a> · 按时间倒序</div>
   <h1 class="title">精读页 · Deep Dives</h1>
-  <p class="dek">共 108 条，最新在上。</p>
+  <p class="dek">共 109 条，最新在上。</p>
 </section>
 
 <div class="search">
   <input id="q" type="search" placeholder="搜索 标题 / 概念 / 术语…" autocomplete="off" spellcheck="false" />
-  <div class="chips"><button class="chip active" data-dom="">全部 <span class="c">108</span></button><button class="chip" data-dom="ML">ML <span class="c">99</span></button><button class="chip" data-dom="系统">系统 <span class="c">1</span></button><button class="chip" data-dom="金融">金融 <span class="c">7</span></button><button class="chip" data-dom="史">史 <span class="c">1</span></button></div>
+  <div class="chips"><button class="chip active" data-dom="">全部 <span class="c">109</span></button><button class="chip" data-dom="ML">ML <span class="c">100</span></button><button class="chip" data-dom="系统">系统 <span class="c">1</span></button><button class="chip" data-dom="金融">金融 <span class="c">7</span></button><button class="chip" data-dom="史">史 <span class="c">1</span></button></div>
 </div>
 <div id="nores" class="nores" hidden>没有匹配的条目 — 换个词试试</div>
 <div class="entries">
+<div class="entry paper" data-domains="ML" data-s="avatar-forever · 把“跑得快”和“跑得久”拆开学 从同一个 22b ltx-2.3 基座并行训练两条支路：dmd 全参数蒸馏负责把生成压到 4 步，rrt lora 负责在错误已经滚过 4 个 chunk 后学会恢复；部署时合并两份更新，再用 forevercache 避免每个去噪步重算固定历史。 avatar-forever paper ml § 00先把整张拼图放桌上 § 01为什么“少步”和“长稳”是两门课 § 02总体结构：两条支路最后在哪里碰头 § 03效率支路：dmd 只管“4 步也像老师” § 04rrt：先让小错滚四次，再考第五码怎样救 § 05两份能力为什么能直接相加 § 06forevercache：历史固定，为什么还每步重算 § 07训练数据：先合成长片，再把“假运动”筛掉 § 08训练配方：哪些参数被训练，哪些被冻住 § 09实验：先分清 5 秒、30 秒和 11 分钟 § 10论文没有回答什么 附录词汇表 22b ltx-2.3 dmd 全参数更新 rrt lora 合并 + cache 常见串行训练 avatar-forever step 1 · 只污染最早历史 step 2 · 用自己的输出滚出四块历史 step 3 · 只给第 5 块真值加噪 step 4 · 在已经漂移的历史条件下，只学第 5 块速度 局部漂亮，长片会漂 会救火，但底片糊了 两份能力组合 5 秒 × 40 样本 30 秒 × 40 样本 连续 11 分钟 速度：为什么 30 秒的缓存收益更大 解耦训练：最直接的因果证据 人评与自动指标怎样读 仓库仍是预告页 没有规模与阈值 没有冲突分析 证据最远 11 分钟 dmd score function autoregressive rollout rrt stop-gradient lora flow matching forevercache fid / fvd cfg">
+  <h3><a href="papers/avatar-forever.html">Avatar-Forever · 把“跑得快”和“跑得久”拆开学</a></h3>
+  <p class="hook">从同一个 22B LTX-2.3 基座并行训练两条支路：DMD 全参数蒸馏负责把生成压到 4 步，RRT LoRA 负责在错误已经滚过 4 个 chunk 后学会恢复；部署时合并两份更新，再用 ForeverCache 避免每个去噪步重算固定历史。</p>
+  <div class="pills"><span class="pill dom dom-ML">ML</span><span class="pill">paper</span><span class="pill">ingested 2026-08-19</span><a class="pill" href="https://github.com/leeruibin/avatarforever" target="_blank" style="text-decoration:none;color:var(--muted);">↗ upstream</a><span class="pill ready">bespoke HTML ✓</span></div>
+</div>
 <div class="entry paper" data-domains="ML" data-s="wave forcing · 砍一条边，换一条流水线 **造成逐层全组同步的不是 rolling forcing 的混合噪声窗口，而是「噪块影响净块」这条反向注意力边；砍掉它，执行图从环变成 dag，去噪阶段才有条件错步流水。** waveforcing paper ml § 00先排除四种误读 § 01三代流式方案：各拿半张好牌 § 02先把整机拼起来：一块视频从噪声走到画面 § 03关键观察：窗口无罪，反向边有罪 § 04wave parallelism：chunk 像波一样斜着流 § 05慢 rank 不是瓶颈，是藏通信的口袋 § 06vae：跨卡重叠，且按实测时间切 § 07数字与质量：先把三种 fps 分账 § 08代码能确认什么，仍然缺什么 附录词汇表 没有论文，只有项目博客和代码 它从 rolling forcing 上删掉反向依赖 系统原型 ≠ 生成质量 fps 有三种 一块做完才下一块 活窗口，环形执行 干净流水，冻结历史 传输本身再拆三种税 fp8 kv copy engine 单边写05 paged 直写06 波前调度不是概念图 长历史不是无限 kv 逐层 kv 去 collective，不等于全系统零 collective 训练过程仍是黑箱 rolling forcing 混合噪声窗（mixed-noise frontier） 块因果注意力（block-causal） kv 发布 copy engine 单边写 paged 直写 sageattention / w8a8 quality drift">
   <h3><a href="papers/waveforcing.html">Wave Forcing · 砍一条边，换一条流水线</a></h3>
   <p class="hook"><strong>造成逐层全组同步的不是 Rolling Forcing 的混合噪声窗口，而是「噪块影响净块」这条反向注意力边；砍掉它，执行图从环变成 DAG，去噪阶段才有条件错步流水。</strong></p>
