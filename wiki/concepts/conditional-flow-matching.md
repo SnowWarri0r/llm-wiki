@@ -1,8 +1,8 @@
 ---
 name: conditional-flow-matching
 type: concept
-sources: [flow-matching, hierarchical-denoising-visual-reasoning, wan-streamer-v01, wan-streamer-v03]
-updated: 2026-08-06
+sources: [flow-matching, hierarchical-denoising-visual-reasoning, wan-streamer-v01, wan-streamer-v03, uniswap-av]
+updated: 2026-08-18
 ---
 
 # Conditional Flow Matching · 条件流匹配
@@ -32,3 +32,4 @@ Flow Matching 论文的核心训练目标；TML 用它解释音频输出 head �
 - [[optimal-transport]] · 常见路径选择
 - [[wan-streamer-v01]] · 音频与视频 latent 共用干净上下文并联合回归速度
 - [[wan-streamer-v03]] · 沿用条件流匹配生成连续音视频 latent，离散语言和行为仍走 next-token prediction
+- [[uniswap-av]] · 先用条件流匹配学整段换人，再把同一速度目标改造成块流式训练

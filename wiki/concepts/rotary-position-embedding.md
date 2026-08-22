@@ -1,8 +1,8 @@
 ---
 name: rotary-position-embedding
 type: concept
-sources: [rope, krea-2, meshflow, ltx-2, worldtrace, dyaplex]
-updated: 2026-08-11
+sources: [rope, krea-2, meshflow, ltx-2, worldtrace, dyaplex, uniswap-av]
+updated: 2026-08-18
 ---
 
 # Rotary Position Embedding · RoPE · 旋转位置编码
@@ -121,3 +121,4 @@ RoPE 还有一个好性质：**当两个 token 距离越远，位置对 attentio
 - [[kv-cache]] · 缓存旋转后的 K，推理时不重复计算
 - [[canonical-rope-keys]] · 为什么不同时间的 Key 不能直接平均
 - [[addressable-kv-memory]] · 为什么 Key 还在也可能读不到
+- [[uniswap-av]] · 滑动窗口里把内容特征与 RoPE 相位拆开保存

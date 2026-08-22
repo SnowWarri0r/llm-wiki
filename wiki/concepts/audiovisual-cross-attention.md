@@ -1,8 +1,8 @@
 ---
 name: audiovisual-cross-attention
 type: concept
-sources: [ltx-2]
-updated: 2026-07-17
+sources: [ltx-2, uniswap-av]
+updated: 2026-08-18
 ---
 
 # Audiovisual Cross-Attention · 音视频双向交叉注意力
@@ -57,4 +57,3 @@ output = .107×.2 + .787×1 + .107×.1 ≈ .819
 - [[cross-attention]] · 通用机制
 - [[rotary-position-embedding]] · 共同时间坐标的注入方式
 - [[adaptive-layernorm]] · 不同去噪进度下控制信息交换
-

@@ -1,8 +1,8 @@
 ---
 name: dmd-distillation
 type: concept
-sources: [dmd, dmd2, data-forcing-distillation, senseflow, qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2, drifting-models, drift-ar, minwm, wonder-video-world-model, longcat-video-avatar-1-5, klingavatar-2, wan-animate-2, interactive-avatar, rcm, lyra-2]
-updated: 2026-08-17
+sources: [dmd, dmd2, data-forcing-distillation, senseflow, qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2, drifting-models, drift-ar, minwm, wonder-video-world-model, longcat-video-avatar-1-5, klingavatar-2, wan-animate-2, interactive-avatar, rcm, lyra-2, uniswap-av]
+updated: 2026-08-18
 ---
 
 # DMD 蒸馏 · 匹配整批图像，不逐步临摹老师
@@ -86,3 +86,4 @@ Lyra 2.0 把相机控制长视频 teacher 从 35 步蒸成 4 步，并把 CFG �
 - [[trajectory-distribution-matching]] · 从只看终点扩展到沿途多个时刻
 - [[minwm]] · 因果少步学生用双向 real/fake score 做 asymmetric DMD
 - [[wan-animate-2]] · score 先看完整视频，学生再按 8 帧块重放并累积梯度
+- [[uniswap-av]] · 冻结一个音视频主干，用三套 LoRA 分别扮演老师、流式学生和 fake-score 网络

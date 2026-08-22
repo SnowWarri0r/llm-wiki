@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Audiovisual Cross-Attention · 音视频双向交叉注意力 · Concept</title>
+<title>Decoupled Streaming Conditioning Mask · 条件各自编码，当前块只看该看的 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,62 +53,95 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · audiovisual-cross-attention</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · decoupled-streaming-conditioning-mask</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Audiovisual Cross-Attention · 音视频双向交叉注意力</h1>
+  <h1>Decoupled Streaming Conditioning Mask · 条件各自编码，当前块只看该看的</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>视频拿自己的问题去查声音，声音也拿自己的问题去查视频，并用共同时间轴对齐事件。</p>
+<p>把参考、源块、历史和当前目标分成不同角色，训练时就按推理时的可见范围挡住未来。</p>
 <h2>直觉</h2>
-<p>self-attention 只能在同一模态内部找关系：画面知道杯子碰桌子，却不知道应产生什么声音；音频知道有一声脆响，却不知道画面里是哪件物体。cross-attention 让一边提供 query，另一边提供 key/value。</p>
-<p>双向很重要：</p>
-<ul>
-<li><span class="tex math-inline" data-display="false">audio \to video</span>：语音音素、节拍和撞击声可以修正嘴型、动作时机；</li>
-<li><span class="tex math-inline" data-display="false">video \to audio</span>：说话人、碰撞物、房间和镜头可以修正音源、音色、Foley 与混响。</li>
-</ul>
+<p>离线模型像拿到整部电影后补第 20 秒：它能偷看第 21 秒。流式模型到了第 20 秒，手里只有参考身份、原视频当前片段和自己已经生成的过去。训练若不堵住未来，模型会学会依赖部署时拿不到的信息。</p>
+<p>“Decoupled” 指不同区域按职责使用不同可见规则，不是整张注意力矩阵只套一个普通下三角。</p>
 <h2>怎么做的</h2>
-<div class="tex math-display" data-display="true">A_{V\leftarrow A}=\operatorname{softmax}\left(\frac{Q_VK_A^\top}{\sqrt d}\right)V_A</div>
+<p>生成第 <span class="tex math-inline" data-display="false">i</span> 个目标块 <span class="tex math-inline" data-display="false">B_i</span> 时：</p>
+<div class="tex math-display" data-display="true">B_i\leftarrow f(\mathrm{ref},S_i,B_{&lt;i}^{\mathrm{clean}},B_i^{\mathrm{noisy}}).</div>
 <ul>
-<li><span class="tex math-inline" data-display="false">Q_V</span>：视频 token 提出的查询；</li>
-<li><span class="tex math-inline" data-display="false">K_A</span>：音频 token 的检索索引；</li>
-<li><span class="tex math-inline" data-display="false">V_A</span>：匹配后真正取回的音频内容；</li>
-<li><code>d</code>：query/key 的共同宽度；</li>
-<li><span class="tex math-inline" data-display="false">\sqrt{d}</span>：控制点积分布，避免 softmax 太尖；</li>
-<li>反方向把 V/A 交换即可。</li>
+<li><span class="tex math-inline" data-display="false">\mathrm{ref}</span>：永久参考图与参考声音；</li>
+<li><span class="tex math-inline" data-display="false">S_i</span>：时间上与当前目标对齐的源视频/音频块；</li>
+<li><span class="tex math-inline" data-display="false">B_{&lt;i}^{\mathrm{clean}}</span>：已经完成的目标历史；</li>
+<li><span class="tex math-inline" data-display="false">B_i^{\mathrm{noisy}}</span>：本轮正在去噪的当前块；</li>
+<li>未来目标块 <span class="tex math-inline" data-display="false">B_{&gt;i}</span>：不可见。</li>
 </ul>
-<p>LTX-2 在跨模态 Q/K 上只使用 1D 时间 RoPE。声音没有画面 <code>x,y</code>，所以跨模态先回答“是不是同一时刻”，空间位置由视频内容特征自行决定。</p>
+<p>参考和各源块独立编码，防止它们相互偷传未来；目标历史按块因果读取。视频 self-attention、音频 self-attention 和双向 cross-attention 都套相同的角色规则，但各模态用能覆盖同一真实时段的块长。</p>
 <h2>数字例子</h2>
-<p>视频中 <code>0.40s</code> 的碰撞 token，对三个音频 token 的缩放后 score 为 <code>[1,3,1]</code>：</p>
-<pre><code class="language-text">softmax ≈ [0.107, 0.787, 0.107]
-audio values = [0.2, 1.0, 0.1]
-output = .107×.2 + .787×1 + .107×.1 ≈ .819
-</code></pre>
-<p>中间时刻的声音获得约 78.7% 权重，取回的碰撞特征接近 1。自检：权重和约为 <code>1.001</code>，差异来自三位小数舍入。</p>
-<h2>跟普通 cross-attention 的区别</h2>
-<p>普通文生图 cross-attention 通常只有“图像 query 查文本 K/V”；LTX-2 这里是两个生成模态互查，并额外让各自噪声时间步调制输入、让对方噪声进度控制写回门。</p>
+<p>假设有四个目标块 <span class="tex math-inline" data-display="false">B_0,B_1,B_2,B_3</span>，现在生成 <span class="tex math-inline" data-display="false">B_2</span>：</p>
+<table>
+<thead>
+<tr>
+<th>区域</th>
+<th style="text-align: right;">能否看见</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>参考身份</td>
+<td style="text-align: right;">是</td>
+<td>整段都要保持同一个人和声音</td>
+</tr>
+<tr>
+<td>源块 <span class="tex math-inline" data-display="false">S_2</span></td>
+<td style="text-align: right;">是</td>
+<td>提供这一秒的动作与台词</td>
+</tr>
+<tr>
+<td>历史 <span class="tex math-inline" data-display="false">B_0,B_1</span></td>
+<td style="text-align: right;">是</td>
+<td>保持生成连续</td>
+</tr>
+<tr>
+<td>当前 <span class="tex math-inline" data-display="false">B_2</span></td>
+<td style="text-align: right;">是</td>
+<td>去噪必须在块内互相计算</td>
+</tr>
+<tr>
+<td>未来 <span class="tex math-inline" data-display="false">B_3</span></td>
+<td style="text-align: right;">否</td>
+<td>流式推理时还不存在</td>
+</tr>
+<tr>
+<td>源块 <span class="tex math-inline" data-display="false">S_3</span></td>
+<td style="text-align: right;">否</td>
+<td>防止提前读取未来源内容</td>
+</tr>
+</tbody>
+</table>
+<p>若把 <span class="tex math-inline" data-display="false">B_3</span> 放开，训练损失可能更低，但部署时这条信息突然消失，等于考试前一直看答案、考试时才收走。</p>
+<h2>跟普通 causal mask 的区别</h2>
+<p>普通 token-causal mask 要求每个 token 只能看更早 token。这里当前块内部允许双向注意力，因为一次要共同去噪整块；因果边界落在“块与块之间”，同时还要处理参考和对齐源块两种非生成条件。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/ltx-2.html">ltx-2</a> · 逐层 A↔V 交互</li>
-<li><a href="../concepts/cross-attention.html">cross-attention</a> · 通用机制</li>
-<li><a href="../concepts/rotary-position-embedding.html">rotary-position-embedding</a> · 共同时间坐标的注入方式</li>
-<li><a href="../concepts/adaptive-layernorm.html">adaptive-layernorm</a> · 不同去噪进度下控制信息交换</li>
+<li><a href="../papers/uniswap-av.html">uniswap-av</a> · Stage 2 的核心掩码。</li>
+<li><a href="../concepts/block-causal-attention.html">block-causal-attention</a> · 块内并行、块间因果的通用版本。</li>
+<li><a href="../concepts/kv-cache.html">kv-cache</a> · 掩码可见范围如何落到缓存区。</li>
+<li><a href="../concepts/teacher-forcing-video-diffusion.html">teacher-forcing-video-diffusion</a> · 干净历史为何还会造成训练/推理错位。</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 4 处</span>
-  <ul><li><a href="../papers/ltx-2.html"><span class="cat">paper</span>LTX-2 · 让声音和画面在同一段去噪过程中彼此校正</a></li><li><a href="../papers/uniswap-av.html"><span class="cat">paper</span>UniSwap · 一套模型同时换脸、换声，并按块流式生成</a></li><li><a href="../concepts/asymmetric-dual-stream-transformer.html"><span class="cat">concept</span>Asymmetric Dual-Stream Transformer · 不对称双流 Transformer</a></li><li><a href="../concepts/modality-aware-cfg.html"><span class="cat">concept</span>Modality-Aware CFG · 把“听 prompt”和“跟另一模态同步”分开加力</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/uniswap-av.html"><span class="cat">paper</span>UniSwap · 一套模型同时换脸、换声，并按块流式生成</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/audiovisual-cross-attention.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/decoupled-streaming-conditioning-mask.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 

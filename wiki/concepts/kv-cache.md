@@ -1,8 +1,8 @@
 ---
 name: kv-cache
 type: concept
-sources: [interaction-models-tml, fish-speech-s2-pro, unlimited-ocr, turboquant, hierarchical-denoising-visual-reasoning, solaris-multiplayer-world-model, interactive-video-world-modeling-survey, worldtrace, interactive-avatar]
-updated: 2026-08-12
+sources: [interaction-models-tml, fish-speech-s2-pro, unlimited-ocr, turboquant, hierarchical-denoising-visual-reasoning, solaris-multiplayer-world-model, interactive-video-world-modeling-survey, worldtrace, interactive-avatar, uniswap-av]
+updated: 2026-08-18
 ---
 
 # KV Cache
@@ -34,3 +34,4 @@ KV cache 解决的是“不重算历史”，不自动保证“超长历史仍�
 - [[interactive-video-world-modeling-survey]] · KV cache 与长期世界记忆不是同一层东西
 - [[addressable-kv-memory]] · “仍在 cache”与“attention 读得到”的区别
 - [[worldtrace]] · 固定大小 recent + summary cache 的实例
+- [[uniswap-av]] · 参考永久保留、源块临时加入、目标历史滚动提交的三类 cache 生命周期

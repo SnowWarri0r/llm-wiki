@@ -1,8 +1,8 @@
 ---
 name: teacher-forcing-video-diffusion
 type: concept
-sources: [minwm, solaris-multiplayer-world-model, wan-streamer-v01, wan-animate-2]
-updated: 2026-08-12
+sources: [minwm, solaris-multiplayer-world-model, wan-streamer-v01, wan-animate-2, uniswap-av]
+updated: 2026-08-18
 ---
 
 # 视频扩散里的 Teacher Forcing · 训练时喂真历史
@@ -37,3 +37,4 @@ LLM 训练时用真实前词预测下一个词，推理时读取自己刚生成�
 - [[autoregressive-vs-bidirectional-video-diffusion]] · 因果生成与整段双向去噪的取舍
 - [[wan-streamer-v01]] · rolling distillation 让少步学生连续读取自己的生成历史
 - [[wan-animate-2]] · 用 Error Buffer 先污染干净历史，再用分块 Self-Forcing 真正读取自身输出
+- [[uniswap-av]] · Stage 2 喂真实目标历史，Stage 3 再改成读取自己的历史

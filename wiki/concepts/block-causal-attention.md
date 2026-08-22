@@ -1,8 +1,8 @@
 ---
 name: block-causal-attention
 type: concept
-sources: [wan-streamer-v01, wan-streamer-v03, interactive-avatar, causal-rcm]
-updated: 2026-08-14
+sources: [wan-streamer-v01, wan-streamer-v03, interactive-avatar, causal-rcm, uniswap-av]
+updated: 2026-08-18
 ---
 
 # Block-Causal Attention · 块因果注意力
@@ -45,3 +45,4 @@ Wan-Streamer 的 25 FPS 视频每帧 40 ms；160 ms 流式单元包含 4 帧。�
 - [[causal-language-model]] · token 级因果注意力与自回归预测的基础
 - [[kv-cache]] · 历史块为什么不必反复重算
 - [[full-duplex-multimodal-interaction]] · 输入输出并行的产品目标
+- [[uniswap-av]] · 源条件只在对应时间块可见，目标块只读过去与当前
