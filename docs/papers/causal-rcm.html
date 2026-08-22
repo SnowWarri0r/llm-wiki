@@ -226,7 +226,14 @@ code.mathified{border:none;background:none;padding:0;font-size:1em}
 <text x="580" y="348" font-size="12.5" fill="#0e6e78">的「接龙练习」，一条序列练 3 道题</text>
 </svg>
 </figure>
-<p>配上 RF 回归目标 <code class="m">\bm{v}=\bm{\epsilon}-\bm{x}_0</code>（rectified flow<a class="jr" href="#g-10">10</a> 日程下的标准速度目标），这就是阶段 1 的 TF 损失，训出全步数因果模型。<strong>TF-dCM</strong> 在同一布局上做离散一致性<a class="jr" href="#g-11">11</a>：干净上下文按住不动，带噪段沿因果老师的 ODE 解一小步到 <code class="m">t-\Delta t</code>，要求 student 在两个时刻输出一致——正是 rCM 页 § 03 的离散损失，只是每一项都套上了 TF mask。</p>
+<p>配上 RF 回归目标 <code class="m">\bm{v}=\bm{\epsilon}-\bm{x}_0</code>（rectified flow<a class="jr" href="#g-10">10</a> 日程下的标准速度目标），这就是阶段 1 的 TF 损失，训出全步数因果模型。<strong>TF-dCM</strong> 在同一布局上做离散一致性<a class="jr" href="#g-11">11</a>——语义与 rCM 页 § 03 的离散损失一字不差（同一条老师轨迹上相邻两点须报同一个干净终点），只是每个角色都换了因果版。一次迭代的完整动作：</p>
+<div class="calc">
+<div class="step"><b>备料</b><span>取干净历史块；对目标块从<strong>离散网格</strong>抽共享时刻 t（均匀 RF 网格、shift 3、48 格点——阶段 2 配置）并加噪得带噪段。</span></div>
+<div class="step"><b>问因果老师要「轨迹邻居」</b><span>把 [干净历史, 带噪段] 按 TF mask 喂给因果老师（阶段 1 TF 训出的 14B，CFG 3.0），沿其 PF-ODE 从 t 数值解一小步到 <code class="m">t-\Delta t</code>（最简单如 Euler 一步 <code class="m">\hat{\bm{x}}=\bm{x}_t-\Delta t\,\bm{v}_{\mathrm{teacher}}</code>）；Δt = 网格相邻一格（skip=1）。<strong>干净历史全程按住不动</strong>。</span></div>
+<div class="step"><b>student 前向两次</b><span>同一张 TF mask：活的 <code class="m">\bm{f}_\theta</code> 吃 ([历史, x<sub>t</sub>], t)，冻结的 <code class="m">\bm{f}_{\theta^-}</code> 吃 ([历史, x̂], t−Δt)；都只取带噪段输出。</span></div>
+<div class="step"><b>拉近 + 白送的边界</b><span>距离 d(两个输出) 做损失，θ⁻ 端不吃梯度；RF 参数化 <code class="m">\bm{f}=\bm{x}-t\bm{v}</code> 自动满足 f(x, 0) = x，边界条件不用额外约束。跑 10k 迭代。</span></div>
+</div>
+<p>它和 § 06 的 TF-sCM 是同一目标的两档实现：dCM 靠「真解一小步 + 两次前向」逼近，标准 FlashAttention-2 就能跑，实现门槛低；sCM 取 Δt→0 极限、JVP 一次算切线，必须有 custom-mask JVP kernel，但 1k 迭代顶 dCM 的 10k。论文路线图把 dCM 定位成 sCM 的<strong>热身档</strong>——先低门槛跑通，有 kernel 后换 sCM 拿收敛速度；而 § 10 的消融显示 frame-wise 下 dCM 在 SF-DMD 期反而更稳、峰值更高，两档各有用处。</p>
 <div class="note"><span class="label">为什么非要「拼接 + 特制 mask」，分两遍跑不行吗</span>可以：先在块因果 mask 下把干净 token 的 KV 算好缓存，第二遍让噪 token 来查。但这样干净 KV 必须留在计算图里等反传，跟激活检查点<a class="jr" href="#g-12">12</a>合不来、更费显存。packed 单遍是为了让「TF 训练」长得和普通训练一样——一条序列进、一个损失出，SAC / FSDP / CP 全部照常工作（§ 09 的兼容性全靠它）。这类 mask 用 FlexAttention<a class="jr" href="#g-13">13</a> 或 MagiAttention 这样的自定义 mask 算子实现。</div>
 </section>
 
