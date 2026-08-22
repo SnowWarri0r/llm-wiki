@@ -1,8 +1,8 @@
 ---
 name: dmd-distillation
 type: concept
-sources: [dmd, dmd2, data-forcing-distillation, senseflow, qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2, drifting-models, drift-ar, minwm, wonder-video-world-model, longcat-video-avatar-1-5, klingavatar-2, wan-animate-2, interactive-avatar, rcm]
-updated: 2026-08-12
+sources: [dmd, dmd2, data-forcing-distillation, senseflow, qwen-image-2, mrt, pid-pixel-diffusion, flux-1, krea-2, drifting-models, drift-ar, minwm, wonder-video-world-model, longcat-video-avatar-1-5, klingavatar-2, wan-animate-2, interactive-avatar, rcm, lyra-2]
+updated: 2026-08-17
 ---
 
 # DMD 蒸馏 · 匹配整批图像，不逐步临摹老师
@@ -68,6 +68,8 @@ L_{\mathrm{pseudo}}=\tfrac12
 | TDM | 去噪轨迹多个时刻的分布 | 取决于具体实现 | 灵活少步 |
 
 LongCat-Video-Avatar 1.5 把 DMD2 用在 13.6B 视频 DiT 上：基础权重作 real score，同一 backbone 切换 Generator LoRA 与 Fake-Score LoRA，最终蒸成总计 8 NFE。共享权重减少完整模型副本，但三种角色的计算不会因此自动合并。详见 [[longcat-video-avatar-1-5]]。
+
+Lyra 2.0 把相机控制长视频 teacher 从 35 步蒸成 4 步，并把 CFG 双分支一起蒸进单次 conditional 前向；每段 80 帧从约 194 秒降到 15 秒。它保留 self-augmentation，避免少步学生在分段自回归时更快积累漂移。详见 [[lyra-2]]。
 
 ## 链接
 
