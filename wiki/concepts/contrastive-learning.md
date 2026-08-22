@@ -1,8 +1,8 @@
 ---
 name: contrastive-learning
 type: concept
-sources: [clip]
-updated: 2026-05-28
+sources: [clip, peakpatch]
+updated: 2026-08-17
 ---
 
 # Contrastive Learning · 对比学习
