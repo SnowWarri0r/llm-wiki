@@ -1,8 +1,8 @@
 ---
 name: causal-streaming-vae
 type: concept
-sources: [wan-streamer-v01]
-updated: 2026-08-06
+sources: [wan-streamer-v01, uniswap-av]
+updated: 2026-08-18
 ---
 
 # 因果流式 VAE · 压缩当前音视频时不偷看未来
@@ -36,3 +36,4 @@ updated: 2026-08-06
 - [[audio-vae]] · 音频怎样压成适合生成的连续 latent
 - [[native-streaming-contract]] · 为什么整条链都必须遵守同一因果约束
 - [[autoregressive-vs-bidirectional-video-diffusion]] · 离线双向生成与流式因果生成的区别
+- [[uniswap-av]] · 使用 LTX-2.3 的因果视频 VAE，把 3 个 latent 帧变成约 24 个像素帧

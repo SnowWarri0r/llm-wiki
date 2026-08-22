@@ -1,8 +1,8 @@
 ---
 name: canonical-rope-keys
 type: concept
-sources: [worldtrace]
-updated: 2026-08-11
+sources: [worldtrace, uniswap-av]
+updated: 2026-08-18
 ---
 
 # Canonical RoPE Keys · 去掉位置旋转的 Key
@@ -52,3 +52,4 @@ Canonical 平均借助点积线性，能保住来源 Key 在共同虚拟位置�
 - [[rotary-position-embedding]] · 旋转矩阵来自哪里
 - [[dot-product]] · 为什么平均 Key 的点积等于点积的平均
 - [[softmax]] · 为什么 pre-softmax 相等不等于最终权重相等
+- [[uniswap-av]] · 缓存未旋转的 Key，再按当前滑窗位置重新施加 RoPE
