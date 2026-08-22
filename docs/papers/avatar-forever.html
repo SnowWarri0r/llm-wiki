@@ -192,6 +192,7 @@ window.addEventListener('DOMContentLoaded',function(){
   <div class="card"><span class="tag coral">FM only</span><h3>会救火，但底片糊了</h3><p>Overall 2.308。只训长时恢复会破坏短片视觉先验与音画同步。</p></div>
   <div class="card"><span class="tag teal">DMD + RRT</span><h3>两份能力组合</h3><p>Overall 4.105，FVD 901.81；这张消融才是“解耦有用”的直接证据。</p></div>
 </div>
+<div class="note"><span class="label">30-step 训的 LoRA 装到 4-step 模型上，为什么没有“比例尺”问题</span>容易把 RRT 记成“在 30 步去噪下训练”，其实 30-step 只是<strong>造坏历史的工厂</strong>：前 K 块用基座 30-step 无 CFG 滚出漂移，全程 stop-gradient；真正反传的第 K+1 块是标准 flow matching，σ∈[0,1] 全区间采样。在这套参数化里“步数”不属于模型坐标系——30-step 与 4-step 是<strong>同一条连续速度场上取 30 个还是 4 个采样点</strong>的区别。DMD 改场的形状（4 个大步也落准），RRT 改条件端的行为（历史漂了时场指向哪）；部署时 4-step 访问的 σ 点是 RRT 训练分布的子集，这一维反而是超集覆盖。真正的分布错位在别处：训练时的漂移由<strong>基座</strong>滚出，部署时的历史由<strong>合并后的 4-step 模型</strong>自己生成，两台机器的错误纹理未必相同——RRT 赌的是累积漂移的宏观形状（身份走样、色偏、纹理糊）通用、恢复技能可迁移，这一点论文只有端到端结果背书，没有单独消融。</div>
 <div class="warning"><span class="label">不要推广成万能公式</span>参数增量可加不是数学定理。两份大更新如果抢同一功能方向仍可能冲突；这里把稳健支路限制成 LoRA，并用结果证明这一具体组合有效。论文没有给合并系数、方向夹角或冲突消融。</div>
 </section>
 
