@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PeakPatch · CLIP 中层懂“没有”，最后一层却把它忘了</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..800&family=Newsreader:opsz,wght@6..72,350..700&family=Noto+Serif+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<style>
+:root{--paper:#f2ecdd;--card:#fbf7ea;--ink:#17181b;--ink2:#3d3a37;--muted:#6d6255;--rule:#b9ae97;--blue:#184f74;--blue2:#d7e7ef;--cyan:#066a7a;--cyan2:#ccebef;--rust:#a43c28;--rust2:#f2d7cd;--gold:#976300;--gold2:#f2dfaa;--green:#3f7253;--green2:#d8e8d9;--purple:#644978;--purple2:#e6dcec;--dark:#122a3c}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:18px/1.75 'Newsreader','Noto Serif SC',serif;-webkit-font-smoothing:antialiased}body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.32;background-image:linear-gradient(rgba(24,79,116,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(24,79,116,.045) 1px,transparent 1px);background-size:32px 32px}.page{position:relative;max-width:1180px;margin:auto;padding:58px 38px 120px}.mast{display:flex;justify-content:space-between;border-top:4px double var(--ink);border-bottom:1px solid var(--rule);padding:12px 0;color:var(--muted);font:600 11px/1.5 'JetBrains Mono';letter-spacing:2px;text-transform:uppercase}.hero{padding:58px 0 32px}.issue{display:flex;gap:14px;align-items:center;color:var(--cyan);font:700 11px/1.5 'JetBrains Mono';letter-spacing:3px;text-transform:uppercase}.issue:after{content:"";height:1px;background:var(--rule);flex:1}.hero h1{margin:18px 0 14px;font:750 clamp(54px,8.8vw,108px)/.88 'Fraunces','Noto Serif SC';letter-spacing:-.052em}.hero h1 em{color:var(--cyan);font-weight:600}.byline{color:var(--muted);font:600 12px/1.5 'JetBrains Mono';letter-spacing:.8px}.dek{max-width:930px;font:italic 400 clamp(21px,2.5vw,29px)/1.43 'Fraunces','Noto Serif SC';color:var(--ink2)}.tldr,.note,.warning,.truth{margin:24px 0;padding:18px 22px;background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--cyan)}.warning{border-left-color:var(--rust);background:#fff0e8}.truth{border-left-color:var(--green);background:#edf5eb}.label{display:block;margin-bottom:5px;color:var(--cyan);font:700 10px/1.5 'JetBrains Mono';letter-spacing:2px;text-transform:uppercase}.warning .label{color:var(--rust)}.truth .label{color:var(--green)}nav.toc{position:sticky;top:0;z-index:10;display:flex;gap:7px;overflow-x:auto;margin:0 -14px 50px;padding:10px 14px;background:rgba(242,236,221,.97);border-block:1px solid var(--rule);scrollbar-width:none}nav.toc a{flex:none;padding:6px 9px;border:1px solid var(--rule);color:var(--blue);background:var(--card);font:600 10px/1.2 'JetBrains Mono';text-decoration:none}nav.toc a:hover,nav.toc a:focus-visible{background:var(--blue);color:#fff;outline:2px solid var(--blue);outline-offset:1px}h2{display:flex;gap:16px;align-items:baseline;margin:76px 0 20px;font:700 clamp(30px,4vw,43px)/1.1 'Fraunces','Noto Serif SC';letter-spacing:-.025em}h2 .n{min-width:55px;color:var(--cyan);font:700 11px/1.4 'JetBrains Mono';letter-spacing:2px}h3{margin:34px 0 10px;font:700 23px/1.3 'Fraunces','Noto Serif SC'}p{margin:12px 0}a{color:#8b2f1e;text-decoration-thickness:1px;text-underline-offset:3px}strong{font-weight:700}.lead{font-size:22px;line-height:1.58;color:var(--ink2)}code{font:500 .88em/1.5 'JetBrains Mono';background:#fffaf0;border:1px solid var(--rule);border-radius:3px;padding:1px 5px}.jr{vertical-align:super;margin:0 2px;padding:1px 5px;border:1px solid var(--gold);border-radius:999px;background:var(--gold2);color:#4f3200;text-decoration:none;font:700 9px/1.2 'JetBrains Mono'}.jr:hover,.jr:focus-visible,.jr.jr-active{background:#4f3200;color:#fff;outline:2px solid var(--gold);outline-offset:2px}.grid2,.grid3,.grid4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid4{grid-template-columns:repeat(4,minmax(0,1fr))}.card{min-width:0;padding:20px;background:var(--card);border:1px solid var(--rule);box-shadow:5px 5px 0 rgba(24,79,116,.06)}.card h3{margin:8px 0 5px}.card p{font-size:16px;line-height:1.58}.tag{display:inline-block;padding:3px 8px;background:var(--blue2);color:var(--blue);font:700 10px/1.4 'JetBrains Mono';letter-spacing:1px;text-transform:uppercase}.tag.rust{background:var(--rust2);color:#7a291b}.tag.cyan{background:var(--cyan2);color:#075b67}.tag.gold{background:var(--gold2);color:#573800}.tag.green{background:var(--green2);color:#28543a}.tag.purple{background:var(--purple2);color:#4a3358}figure{margin:38px 0;padding:28px;background:rgba(251,247,234,.87);border:1px solid var(--rule);box-shadow:8px 8px 0 rgba(24,79,116,.07);overflow:hidden}figcaption{display:flex;justify-content:space-between;gap:16px;margin-bottom:22px;padding-bottom:12px;border-bottom:1px dashed var(--rule);color:var(--muted);font:600 11px/1.4 'JetBrains Mono';letter-spacing:1.3px;text-transform:uppercase}figcaption b{color:var(--cyan)}.formula{margin:18px 0;padding:21px 16px;overflow-x:auto;text-align:center;background:var(--dark);color:#fff;border-left:6px solid var(--cyan);font-size:1.08em}.formula .katex{color:#fff}.vars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0}.vars>div{min-width:0;padding:10px 12px;background:var(--card);border:1px solid var(--rule);font-size:14px}.vars code{display:block;margin-bottom:4px;color:#7b291a}.calc{counter-reset:step;display:grid;gap:8px;margin:18px 0}.step{position:relative;padding:13px 14px 13px 56px;background:#fff;border:1px solid var(--rule);font-size:15px}.step:before{counter-increment:step;content:counter(step,decimal-leading-zero);position:absolute;left:16px;top:14px;color:var(--cyan);font:700 11px/1.5 'JetBrains Mono'}.step b{display:block;color:var(--blue)}.flow{display:grid;grid-template-columns:1fr 44px 1fr 44px 1fr 44px 1fr;align-items:stretch}.node{min-width:0;padding:18px;background:#fff;border:2px solid var(--blue)}.node.rust{border-color:var(--rust);background:#fff0e9}.node.cyan{border-color:var(--cyan);background:#edf9fa}.node.green{border-color:var(--green);background:#edf5eb}.node.gold{border-color:var(--gold);background:#fff8df}.node b{display:block;margin:4px 0;font:700 18px/1.3 'Fraunces','Noto Serif SC'}.node small{color:var(--muted);font:700 9px/1.4 'JetBrains Mono';letter-spacing:1px}.node p{font-size:14px;line-height:1.5}.arrow{display:flex;align-items:center;justify-content:center;color:var(--rust);font:700 28px/1 'JetBrains Mono'}.vocab{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.vocab .card{box-shadow:none;padding:16px}.vocab b{display:block;color:var(--blue)}.vocab p{margin:4px 0;font-size:14px}.sentences{display:grid;grid-template-columns:1fr 70px 1fr;gap:12px;align-items:center}.sentence{padding:24px;background:#fff;border:2px solid var(--blue);text-align:center}.sentence.neg{border-color:var(--rust);background:#fff0e9}.near{text-align:center}.near b{display:block;color:var(--rust);font:700 26px/1 'JetBrains Mono'}.curve{display:grid;grid-template-columns:repeat(12,minmax(42px,1fr));gap:6px;align-items:end;min-width:650px;height:280px;padding:28px 8px 38px;border-bottom:3px solid var(--ink)}.layer{position:relative;height:100%}.layer:before{content:"";position:absolute;left:15%;right:15%;bottom:0;height:calc(var(--d)*1%);min-height:3px;background:var(--cyan);border-radius:3px 3px 0 0}.layer:after{content:attr(data-l);position:absolute;bottom:-29px;left:0;right:0;text-align:center;color:var(--muted);font:600 10px/1 'JetBrains Mono'}.layer .align{position:absolute;left:36%;right:36%;bottom:0;height:calc(var(--a)*1%);background:var(--rust);opacity:.72}.layer.peak{background:linear-gradient(transparent 0 15%,rgba(242,223,170,.55) 15% 100%)}.curve-key{display:flex;justify-content:center;gap:18px;margin-top:42px;font:600 10px/1.4 'JetBrains Mono';color:var(--muted)}.curve-key i{display:inline-block;width:12px;height:12px;margin-right:5px;vertical-align:-2px}.branch{display:grid;grid-template-columns:1fr 44px 1fr;gap:0;align-items:center}.branch+.branch{margin-top:14px}.stage{padding:16px;background:#fff;border:2px solid var(--blue)}.stage.peak{border-color:var(--gold);background:#fff8df}.stage.correct{border-color:var(--green);background:#edf5eb}.stage.score{border-color:var(--purple);background:#f7effb}.stage b{display:block;color:var(--blue)}.bracket{margin:16px 0;padding:16px;border:1px dashed var(--rule);background:#fff}.mini-score{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center;margin:18px 0}.scorebox{padding:18px;text-align:center;background:#fff;border:2px solid var(--blue)}.scorebox strong{display:block;font:700 27px/1.2 'JetBrains Mono';color:var(--blue)}.scorebox.final{border-color:var(--green);background:var(--green2)}.op{font:700 24px/1 'JetBrains Mono';color:var(--rust)}.bars{display:grid;gap:12px}.bar{display:grid;grid-template-columns:190px 1fr 80px;gap:12px;align-items:center;font-size:14px}.track{height:21px;background:#e2dace}.fill{height:100%;background:var(--cyan)}.fill.rust{background:var(--rust)}.fill.green{background:var(--green)}.fill.gold{background:var(--gold)}.scroll{overflow-x:auto;margin:18px 0;border:1px solid var(--rule)}table{width:100%;border-collapse:collapse;background:var(--card);font-size:14px;white-space:nowrap}th,td{padding:10px 12px;border-bottom:1px solid var(--rule);text-align:right}th:first-child,td:first-child{text-align:left}thead th{background:var(--blue);color:#fff;font:600 10px/1.4 'JetBrains Mono';letter-spacing:.7px}.win{background:var(--green2);color:#1f5237;font-weight:700}.caution{background:var(--rust2);color:#742919;font-weight:700}.gloss{margin-top:76px;padding-top:30px;border-top:3px double var(--ink)}.gloss ol{list-style:none;padding:0;counter-reset:g}.gloss li{position:relative;padding:13px 10px 13px 48px;border-bottom:1px dashed var(--rule);font-size:15px}.gloss li:before{counter-increment:g;content:counter(g,decimal-leading-zero);position:absolute;left:7px;color:var(--cyan);font:700 10px/1.8 'JetBrains Mono'}.gloss .term{font-weight:700;color:var(--blue)}.sources{margin-top:54px;padding:22px;background:var(--card);border:1px solid var(--rule);font-size:14px}.sources li{margin:7px 0}.reveal{opacity:0;transform:translateY(8px);transition:.55s ease}.play .reveal{opacity:1;transform:none}.d2{transition-delay:.1s}.d3{transition-delay:.2s}.d4{transition-delay:.3s}
+@media(max-width:900px){.page{padding:34px 18px 90px}.grid3,.grid4,.vocab{grid-template-columns:1fr 1fr}.flow{grid-template-columns:1fr}.arrow{height:34px;transform:rotate(90deg)}.vars{grid-template-columns:1fr}.curve{min-width:700px}.curve-wrap{overflow-x:auto}.bar{grid-template-columns:150px 1fr 65px}}
+@media(max-width:560px){body{font-size:17px}.page{padding-inline:12px}.hero h1{font-size:50px}figure{padding:18px 12px;margin-inline:0}.grid2,.grid3,.grid4,.vocab{grid-template-columns:1fr}.mast .r{display:none}.sentences{grid-template-columns:1fr}.near{padding:4px}.vars{grid-template-columns:1fr}.branch{grid-template-columns:1fr}.branch .arrow{transform:rotate(90deg)}.mini-score{grid-template-columns:1fr}.op{transform:rotate(90deg);text-align:center}.bar{grid-template-columns:1fr}.formula{font-size:.92em;padding-inline:8px}figcaption{display:block}figcaption b{display:block;margin-top:5px}nav.toc{margin-inline:0;padding-inline:0}}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · peakpatch</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page">
+<div class="mast"><span>NEGATION IN FROZEN VISION–LANGUAGE MODELS · FIELD NOTES</span><span class="r">ARXIV 2607.23271 · 2026</span></div>
+<header class="hero">
+  <div class="issue">What CLIP knows but cannot say</div>
+  <h1>Peak<em>Patch</em></h1>
+  <p class="byline">Chen-Yi Lu · Yueh-Shao Chen · Somali Chaterji · Purdue University</p>
+  <p class="dek">CLIP 不是完全没学会“没有”。中间层已经把肯定句与否定句分开；只是越靠近输出，网络越急着按图片里的物体做匹配，刚形成的句法差别又被压掉了。PeakPatch 做的事，就是在它消失前把信号捞出来，再补回标准 CLIP 接口。</p>
+  <div class="tldr"><span class="label">先记这一句</span><strong>诊断先于修复：</strong>LCD 找到“否定信息最强”的中层；ECN 把这层的差异写回最终 embedding；SCN 再给近似打平的图文分数做不超过 ±0.2 的微调。CLIP 全程冻结，但必须能读取中间层。</div>
+</header>
+<nav class="toc"><a href="#vocab">00 前置</a><a href="#failure">01 症状</a><a href="#probe">02 逐层诊断</a><a href="#lcd">03 LCD</a><a href="#map">04 总览</a><a href="#ecn">05 ECN</a><a href="#scn">06 SCN</a><a href="#train">07 训练</a><a href="#results">08 结果</a><a href="#ablate">09 消融</a><a href="#controls">10 验证</a><a href="#limits">11 边界</a></nav>
+
+<section id="vocab">
+<h2><span class="n">§ 00</span>先扫清四个容易混的词</h2>
+<p class="lead">这篇论文里“负样本”“否定句”“负分数”是三回事。先分清，后面的公式才不会串台。</p>
+<div class="vocab">
+  <div class="card"><span class="tag">embedding</span><b>一段内容的坐标</b><p>CLIP 把图与文字各压成一个向量；方向越近，余弦相似度越高。</p></div>
+  <div class="card"><span class="tag rust">negation</span><b>语言里的否定</b><p><em>no / not / without</em> 改的是整句话的真假条件，不是把某个数变成负数。<a class="jr" href="#g-01">01</a></p></div>
+  <div class="card"><span class="tag gold">hard negative</span><b>最会迷惑模型的错配</b><p>同一张狗图配“没有狗”，词几乎一样、意思相反，比随机句子难得多。<a class="jr" href="#g-02">02</a></p></div>
+  <div class="card"><span class="tag green">EOS token</span><b>整句话的汇总位</b><p>CLIP 取最后层 EOS hidden state，经 LayerNorm 和投影头得到最终文本向量。<a class="jr" href="#g-03">03</a></p></div>
+</div>
+</section>
+
+<section id="failure">
+<h2><span class="n">§ 01</span>症状：两个意思相反的句子，最后几乎落在同一点</h2>
+<p>给一张有狗的图片。正确肯定句是“a dog”，否定句是“not a dog”。人的判断完全相反；CLIP 的文本向量却可能几乎同向，因为两句都含有最显眼的物体词 <em>dog</em>。</p>
+<figure id="fig-failure">
+  <figcaption><span>Fig 01 · 否定词改了真值，CLIP 最终向量却几乎没动</span><b>句义相反 · 向量近乎重合</b></figcaption>
+  <div class="sentences">
+    <div class="sentence"><span class="tag green">AFFIRMATIVE</span><h3>“a dog”</h3><p>这张图里有狗</p></div>
+    <div class="near"><b>cos ≈ 1</b><span>最终向量几乎同向</span></div>
+    <div class="sentence neg"><span class="tag rust">NEGATED</span><h3>“not a dog”</h3><p>这张图里没有狗</p></div>
+  </div>
+  <div class="warning"><span class="label">不是小毛病</span>NegBench 的 VOC MCQ 里，原始 CLIP 对肯定句有 80.9% 准确率，对否定句只有 3.0%，比四选一随机猜还差。它形成了“看见物体词就倾向相信存在”的肯定偏置。</div>
+</figure>
+<h3>余弦相似度到底在算什么</h3>
+<div class="formula">s(I,T)=\cos(f_I,f_T)=\frac{f_I^\top f_T}{\lVert f_I\rVert_2\,\lVert f_T\rVert_2}</div>
+<div class="vars">
+  <div><code class="m">I,T</code>输入图片与文字。</div><div><code class="m">E_I,E_T</code>CLIP 的图片编码器与文本编码器。</div>
+  <div><code class="m">f_I=E_I(I)</code>图片向量。</div><div><code class="m">f_T=E_T(T)</code>文本向量。</div>
+  <div><code class="m">f_I^\top f_T</code>两向量点积。</div><div><code class="m">\lVert f\rVert_2</code>向量长度；除掉长度后只比较方向。</div>
+</div>
+<p>若两个单位向量分别是 <code class="m">[0.8,0.6]</code> 与 <code class="m">[0.78,0.62]</code>，相似度约为 0.9996。CLIP 只看到这个最终接口时，几乎没有空间把两句话排出相反结果。</p>
+</section>
+
+<section id="probe">
+<h2><span class="n">§ 02</span>关键发现：中层先把两句拉开，后层又把它们压回去</h2>
+<p class="lead">作者没有只盯最终层，而是把每一层的 EOS 都借用 CLIP 最终投影头送到同一空间里比较。这样得到两条同步曲线：句子分得多开，以及这层已经多像图片。</p>
+<figure id="fig-curve">
+  <figcaption><span>Fig 02 · 一条代表组合差异，一条代表图文对齐</span><b>蓝色先升后降 · 红色后程上升</b></figcaption>
+  <div class="curve-wrap"><div class="curve">
+    <div class="layer" data-l="L1" style="--d:18;--a:8"><i class="align" style="--a:8"></i></div><div class="layer" data-l="L2" style="--d:29;--a:9"><i class="align" style="--a:9"></i></div><div class="layer" data-l="L3" style="--d:38;--a:10"><i class="align" style="--a:10"></i></div><div class="layer" data-l="L4" style="--d:49;--a:12"><i class="align" style="--a:12"></i></div><div class="layer" data-l="L5" style="--d:58;--a:15"><i class="align" style="--a:15"></i></div><div class="layer" data-l="L6" style="--d:68;--a:20"><i class="align" style="--a:20"></i></div><div class="layer" data-l="L7" style="--d:82;--a:31"><i class="align" style="--a:31"></i></div><div class="layer peak" data-l="L8 峰" style="--d:100;--a:48"><i class="align" style="--a:48"></i></div><div class="layer" data-l="L9" style="--d:84;--a:65"><i class="align" style="--a:65"></i></div><div class="layer" data-l="L10" style="--d:61;--a:79"><i class="align" style="--a:79"></i></div><div class="layer" data-l="L11" style="--d:36;--a:91"><i class="align" style="--a:91"></i></div><div class="layer" data-l="L12" style="--d:20;--a:100"><i class="align" style="--a:100"></i></div>
+  </div></div>
+  <div class="curve-key"><span><i style="background:var(--cyan)"></i>LCD · 肯定 / 否定分离度</span><span><i style="background:var(--rust)"></i>视觉对齐度</span></div>
+  <div class="note"><span class="label">图的读法</span>柱高按论文曲线的相对趋势画，不是把图 2 的纵轴数值重新伪造一遍。真正的结论是形状：组合差异在 L8 见顶，视觉对齐随后占主导，最终层重新靠拢。</div>
+</figure>
+<div class="grid3">
+  <div class="card"><span class="tag">ANCHOR · L6</span><h3>稳定参照</h3><p>组合差异正在建立，图文对齐尚未急剧上升；拿来判断峰值层到底新添了什么。</p></div>
+  <div class="card"><span class="tag gold">PEAK · L8</span><h3>组合峰值</h3><p>肯定与否定分得最开。ECN 在这里读取完整 token 序列。</p></div>
+  <div class="card"><span class="tag rust">FINAL · L12</span><h3>坍缩输出</h3><p>最适合与图片匹配，却把“not”造成的结构差别压小了。<a class="jr" href="#g-04">04</a></p></div>
+</div>
+<div class="warning"><span class="label">因果表述要收住</span>论文认为网页图文里否定稀少，InfoNCE 因而更奖励“图片里有什么物体”，让后层覆盖句法。逐层曲线和控制实验支持这个解释；但论文没有通过替换训练目标的消融，单独证明 InfoNCE 必然造成这条曲线。</div>
+</section>
+
+<section id="lcd">
+<h2><span class="n">§ 03</span>LCD 怎么算：把“分得开”写成一个可测的数</h2>
+<p>诊断集 <code class="m">\mathcal D</code> 里的每条数据都有图片、肯定句和对应否定句。第 <code class="m">\ell</code> 层的 EOS 经最终 LayerNorm 与投影头得到 <code class="m">f_T^\ell</code>，再计算：</p>
+<div class="formula">f_T^\ell(T)=\operatorname{norm}_2\!\left(W_T\,\mathrm{LN}\!\left(h_{\mathrm{EOS}}^\ell(T)\right)\right),\qquad f_T^L\equiv f_T</div>
+<div class="vars">
+  <div><code class="m">h_{\mathrm{EOS}}^\ell(T)</code>文字 T 经过第 <code class="m">\ell</code> 层后的 EOS hidden state。</div><div><code class="m">W_T</code>CLIP 原本的最终文本投影矩阵；逐层诊断时复用同一份冻结权重。</div>
+  <div><code class="m">\mathrm{LN}</code>CLIP 最终 LayerNorm。</div><div><code class="m">\operatorname{norm}_2(v)=v/\lVert v\rVert_2</code>把向量缩放成长度 1，方便每层用同一种余弦口径比较。</div>
+</div>
+<div class="formula">D_{\mathrm{LCD}}(\ell)=\frac1{|\mathcal D|}\sum_i\left[1-\cos\!\left(f_T^\ell(T_i^+),f_T^\ell(T_i^-)\right)\right]</div>
+<div class="vars">
+  <div><code class="m">\mathcal D</code>图片—肯定句—否定句三元组集合。</div><div><code class="m">|\mathcal D|</code>三元组数量。</div>
+  <div><code class="m">T_i^+,T_i^-</code>第 i 条肯定句和否定改写。</div><div><code class="m">f_T^\ell(T)</code>第 <code class="m">\ell</code> 层 EOS 投到 CLIP 共享空间后的单位向量。</div>
+  <div><code class="m">1-\cos(\cdot)</code>余弦距离；相同方向为 0，越分开越大。</div><div><code class="m">D_{\mathrm{LCD}}(\ell)</code>这一层在全诊断集上的平均分离度，不是准确率。</div>
+</div>
+<div class="calc">
+  <div class="step"><b>句对 A</b><span>这一层两句余弦相似度 0.80，所以差异 <code class="m">1-0.80=0.20</code>。</span></div>
+  <div class="step"><b>句对 B</b><span>余弦相似度 0.90，所以差异 <code class="m">1-0.90=0.10</code>。</span></div>
+  <div class="step"><b>求诊断集平均</b><span><code class="m">D_{\mathrm{LCD}}=(0.20+0.10)/2=0.15</code>。</span></div>
+  <div class="step"><b>跟下一层比较</b><span>若下一层两组相似度变成 0.97、0.95，LCD 是 0.04：说明后层把它们重新拉近。</span></div>
+</div>
+<p>另一条视觉对齐曲线只用肯定句与配对图片：</p>
+<div class="formula">A(\ell)=\frac1{|\mathcal D|}\sum_i\cos\!\left(f_T^\ell(T_i^+),f_{I_i}\right)</div>
+<p>它不是说中层“含有多少视觉像素”，而是看这层投影结果已经被训练成多适合与图片向量对齐。峰值层自动取 <code class="m">\ell_p=\arg\max_\ell D_{\mathrm{LCD}}(\ell)</code>；换预训练数据后，峰值会从 L8 移到 L4，说明它不是手写死的超参数。<a class="jr" href="#g-05">05</a></p>
+</section>
+
+<section id="map">
+<h2><span class="n">§ 04</span>完整系统：先改向量，再改少数难分的分数</h2>
+<p class="lead">一段文字只跑一次冻结 CLIP，但抽出 anchor、peak、final 三处特征。上支路 ECN 产出通用新向量；下支路 SCN 还要看到图片，只产出当前图文对的分数修正。</p>
+<figure id="fig-map">
+  <figcaption><span>Fig 03 · 输入、冻结主干、两条补丁支路和最终输出</span><b>ECN 可复用 · SCN 只管当前配对</b></figcaption>
+  <div class="flow">
+    <div class="node"><small>INPUT</small><b>图片 I ＋ 候选文字 T</b><p>图片走图像编码器；文字走文本 Transformer。</p></div><div class="arrow">→</div>
+    <div class="node gold"><small>FROZEN CLIP</small><b>抽 L6 / L8 / L12</b><p>主干权重不更新，但必须暴露中间 hidden state。</p></div><div class="arrow">→</div>
+    <div class="node cyan"><small>ECN · 4.7M</small><b>补回 embedding</b><p>峰值 token ＋ anchor 参照 → 偏移 <code class="m">\delta</code> → <code class="m">\hat f_T</code>。</p></div><div class="arrow">→</div>
+    <div class="node green"><small>SCN · 0.49M</small><b>微调当前分数</b><p>图、峰值、修后文本共同决定 <code class="m">\Delta s</code>。</p></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><span class="tag cyan">给检索 / 生成</span><h3><code class="m">\hat f_T</code></h3><p>仍是 L2 归一化的标准 CLIP 文本向量，可继续做余弦检索，也能喂给冻结 GALIP。</p></div>
+    <div class="card"><span class="tag purple">给 MCQ / 配对判断</span><h3><code class="m">\hat s(I,T)</code></h3><p>绑定当前图片与句子，换图片必须重新算；不能当通用文本表示缓存。</p></div>
+  </div>
+</figure>
+</section>
+
+<section id="ecn">
+<h2><span class="n">§ 05</span>ECN：不是把中层直接当输出，而是只拿它算“该改多少”</h2>
+<p>峰值层有句法但视觉对齐还不够，最终层视觉对齐好却忽略否定。直接二选一都会丢一头。ECN 因此保留最终向量，只让中层预测一个残差：</p>
+<div class="formula">\hat f_T=\frac{f_T+\alpha\delta}{\lVert f_T+\alpha\delta\rVert_2}</div>
+<div class="vars">
+  <div><code class="m">f_T</code>冻结 CLIP 最终层的原文本向量。</div><div><code class="m">\delta\in\mathbb R^d</code>ECN 预测的修正方向。</div>
+  <div><code class="m">\alpha</code>可学习的修正强度，初始化约 0.5。</div><div><code class="m">\hat f_T</code>归一化后的新文本向量，仍能直接算余弦。</div>
+</div>
+<h3>偏移 <code class="m">\delta</code> 从哪来</h3>
+<div class="formula">\begin{aligned}a&amp;=\mathrm{LN}\!\left(\mathrm{CrossAttn}(q,H^{\ell_p},H^{\ell_p})\right),\\[2pt]\delta&amp;=\mathrm{MLP}_{\mathrm{ECN}}\!\left([h_{\mathrm{EOS}}^{\ell_p};a;h_{\mathrm{EOS}}^{\ell_a};\bar h^{\ell_p}]\right)
+\end{aligned}</div>
+<div class="vars">
+  <div><code class="m">q\in\mathbb R^d</code>训练出来的一枚 query，负责在整段 token 中找否定结构。</div><div><code class="m">H^{\ell_p}\in\mathbb R^{N\times d}</code>峰值层全部 N 个 token。</div>
+  <div><code class="m">a</code>cross-attention 抽出的否定相关摘要。</div><div><code class="m">h_{\mathrm{EOS}}^{\ell_p}</code>峰值层整句汇总。</div>
+  <div><code class="m">h_{\mathrm{EOS}}^{\ell_a}</code>anchor 层稳定参照。</div><div><code class="m">\bar h^{\ell_p}</code>峰值层所有 token 的平均，补充全句背景。</div>
+  <div><code class="m">[\,;\,]</code>沿特征维拼接；四个 d 维向量变成 4d 维。</div><div><code class="m">d=512</code>ViT-B/32 的文本维度；MLP 为 2048→1024→1024→512。</div>
+</div>
+<div class="calc">
+  <div class="step"><b>把 512 维缩成二维</b><span>设原向量 <code class="m">f_T=[0.8,0.6]</code>，ECN 预测 <code class="m">\delta=[-0.3,0.4]</code>，<code class="m">\alpha=0.5</code>。</span></div>
+  <div class="step"><b>先加偏移</b><span><code class="m">f_T+\alpha\delta=[0.8,0.6]+0.5[-0.3,0.4]=[0.65,0.80]</code>。</span></div>
+  <div class="step"><b>算长度</b><span><code class="m">\sqrt{0.65^2+0.80^2}=\sqrt{1.0625}\approx1.0308</code>。</span></div>
+  <div class="step"><b>归一化</b><span><code class="m">\hat f_T\approx[0.6306,0.7761]</code>。若图片向量为 <code class="m">[1,0]</code>，分数从 0.8 降到 0.6306。</span></div>
+</div>
+<div class="note"><span class="label">为什么还要 anchor</span>只有 peak，网络看见的是“这一层现在有什么”；加入较早的 anchor，才多了一条“从还没受强视觉对齐影响的状态，到组合峰值究竟新增了什么”的参照。去掉 anchor，COCO MCQ 从 74.3 降到 68.7。</div>
+</section>
+
+<section id="scn">
+<h2><span class="n">§ 06</span>SCN：向量已经修过，为什么还要再改分数</h2>
+<p>检索关心一个通用向量能否在大图库里找到正确图片；四选一只关心四个几乎相同的候选谁排第一。一个全局 embedding 偏移不一定能解决每张图片上的近似平局，于是 SCN 专门看当前图片与候选句子的关系。<a class="jr" href="#g-06">06</a></p>
+<div class="formula">\begin{aligned}
+s&amp;=[\cos(f_T^{\ell_p},f_I);\cos(\hat f_T,f_I)],\\
+t&amp;=\mathrm{MLP}_{\mathrm{text}}([f_T^{\ell_p};\hat f_T]),\qquad
+c=\mathrm{MLP}_{\mathrm{cross}}(f_I\odot\hat f_T),\\
+\Delta s&amp;=\alpha_{\max}\tanh\!\left(\mathrm{MLP}_{\mathrm{SCN}}([s;t;c])\right),\\
+\hat s(I,T)&amp;=\cos(f_I,\hat f_T)+\Delta s
+\end{aligned}</div>
+<div class="vars">
+  <div><code class="m">s=[\cos(f_T^{\ell_p},f_I);\cos(\hat f_T,f_I)]</code>峰值层和修后向量各自与图片的两枚分数。</div>
+  <div><code class="m">t\in\mathbb R^{128}</code>峰值向量与修后向量差异的文本摘要。</div>
+  <div><code class="m">c\in\mathbb R^{128}</code>从 <code class="m">f_I\odot\hat f_T</code> 压出的图文交互摘要。</div>
+  <div><code class="m">[s;t;c]\in\mathbb R^{258}</code>2＋128＋128 维 SCN 输入。</div>
+  <div><code class="m">\alpha_{\max}=0.20</code>修正上限。</div><div><code class="m">\Delta s</code>落在 [-0.2, 0.2] 的标量，不是向量。</div>
+</div>
+<figure id="fig-scn">
+  <figcaption><span>Fig 04 · 一次受限的分数修正</span><b>tanh 防止小网络推翻整个 CLIP</b></figcaption>
+  <div class="mini-score"><div class="scorebox"><span>ECN 后余弦</span><strong>0.631</strong></div><div class="op">＋</div><div class="scorebox"><span><code class="m">0.2\tanh(-0.75)</code></span><strong>−0.127</strong></div></div>
+  <div class="arrow" style="height:34px;transform:rotate(90deg)">→</div>
+  <div class="scorebox final" style="max-width:360px;margin:auto"><span>最终配对分数</span><strong>0.504</strong></div>
+  <p class="note">真实 MLP 看 258 维输入；这里用输出 -0.75 做标量演示。<code class="m">\tanh(-0.75)\approx-0.635</code>，乘 0.2 得 -0.127。即使 MLP 输出趋近负无穷，修正也不会低于 -0.2。</p>
+</figure>
+<p>联合训练很关键：SCN 吃的是 <code class="m">\hat f_T</code>，它的选择题梯度会继续流回 ECN。把这条梯度断开，MCQ 从 74.3 降到 67.1；说明两者不是各训各的再机械相加。</p>
+</section>
+
+<section id="train">
+<h2><span class="n">§ 07</span>训练：一条数据流拉开通用向量，另一条练四选一重排</h2>
+<figure id="fig-train">
+  <figcaption><span>Fig 05 · CC12M caption 如何变成两套监督</span><b>同源数据 · 不同训练问题</b></figcaption>
+  <div class="flow">
+    <div class="node"><small>SOURCE</small><b>CC12M 原图文</b><p>例如“a dog sitting on a bench”。</p></div><div class="arrow">→</div>
+    <div class="node gold"><small>LLAMA 3.1-8B</small><b>生成否定改写</b><p>只否定一个显著对象或属性，其余尽量不动。</p></div><div class="arrow">→</div>
+    <div class="node cyan"><small>ECN STREAM</small><b>约 106 万对</b><p>原句是正配；否定改写进同一 batch 当 hard negative。</p></div><div class="arrow">→</div>
+    <div class="node green"><small>SCN STREAM</small><b>31.3 万道 MCQ</b><p>正确句＋否定改写＋两条其他图片的句子，另有 7.8 万验证题。</p></div>
+  </div>
+</figure>
+<h3>ECN：让正确图文胜过包括否定改写在内的所有候选</h3>
+<p>论文使用对称 InfoNCE。把其中图片到文字的一项单独写开，便于看清 hard negative 在哪：</p>
+<div class="formula">\mathcal L_{i}^{I\to T}=-\log\frac{\exp(\cos(f_{I_i},\hat f_{T_i^+})/\tau)}{\exp(\cos(f_{I_i},\hat f_{T_i^+})/\tau)+\sum_{T\in\mathcal N_i}\exp(\cos(f_{I_i},\hat f_T)/\tau)}</div>
+<div class="vars">
+  <div><code class="m">B</code>一个 batch 的图片数；共有 2B 条肯定 / 否定文字。</div><div><code class="m">T_i^+</code>图片 i 的正确肯定 caption。</div>
+  <div><code class="m">\mathcal N_i</code>分母里的错误文字集合，明确包含同图否定句 <code class="m">T_i^-</code>。</div><div><code class="m">\tau</code>温度；实现固定 logit scale 100，即 <code class="m">1/\tau=100</code>。</div>
+</div>
+<p>分数越高，指数项越大；前面的负对数要求正确句在整个分母里占尽量大的比例。论文还加上文字到图片的对称方向，合成 <code class="m">\mathcal L_{\mathrm{ECN}}</code>。</p>
+<h3>SCN：四个选项做交叉熵，同时罚过大的改分</h3>
+<div class="formula">\mathcal L_{\mathrm{SCN}}=-\log\frac{\exp(\hat s_{y})}{\sum_{k=1}^{K}\exp(\hat s_k)}+\frac{\beta}{K}\sum_{k=1}^{K}(\Delta s_k)^2</div>
+<p>第一项让正确选项 <code class="m">y</code> 排第一；第二项把每个 <code class="m">\Delta s_k</code> 往 0 拉，避免 SCN 靠大改分蒙题。总目标是：</p>
+<div class="formula">\mathcal L=\mathcal L_{\mathrm{ECN}}+\lambda_{\mathrm{SCN}}\mathcal L_{\mathrm{SCN}},\qquad\lambda_{\mathrm{SCN}}=1</div>
+<div class="grid3">
+  <div class="card"><span class="tag">FROZEN CACHE</span><h3>CLIP 不反传</h3><p>预先缓存 final EOS、peak 全 token、anchor EOS、图片 embedding 和 SCN 所需投影特征。</p></div>
+  <div class="card"><span class="tag cyan">OPTIMIZER</span><h3>10 个 epoch</h3><p>AdamW；ECN 学习率 1e−5，SCN 1e−4；batch 1024，梯度范数裁到 1.0。</p></div>
+  <div class="card"><span class="tag green">COST</span><h3>单张 A100</h3><p>5.2M 可训练参数，约占 CLIP 主干 3.5%；训练约 2.7 小时。</p></div>
+</div>
+</section>
+
+<section id="results">
+<h2><span class="n">§ 08</span>结果：选择题提升最大，检索和生成也能吃到 ECN 向量</h2>
+<div class="scroll"><table>
+  <thead><tr><th>任务 / 指标</th><th>CLIP</th><th>强基线</th><th>PeakPatch</th><th>该怎么读</th></tr></thead>
+  <tbody>
+    <tr><td>COCO MCQ Avg ↑</td><td>39.2</td><td>56.5 · NegCLIP+NF</td><td class="win">74.3</td><td>SCN 对近似平局贡献很大</td></tr>
+    <tr><td>VOC MCQ Avg ↑</td><td>37.9</td><td>60.1 · CLIP+NF</td><td class="win">65.5</td><td>主表里超过微调基线</td></tr>
+    <tr><td>COCO OOD retrieval R@1 / R@5 ↑</td><td>25.0 / 47.9</td><td>30.4 / 55.0 · CLIP+NF</td><td class="win">31.4 / 56.9</td><td>没有用 COCO 训练</td></tr>
+    <tr><td>MSR-VTT OOD R@1 / R@5 ↑</td><td>23.8 / 45.9</td><td>28.4 / 51.6 · CLIP+NF</td><td class="win">29.1 / 53.7</td><td>文本端补丁也能迁移到视频检索</td></tr>
+    <tr><td>文生图 Neg / Combined ↑</td><td>29.2 / 28.3</td><td>45.2 / 44.5 · NegationCLIP</td><td class="win">47.6 / 45.8</td><td>只使用 ECN embedding</td></tr>
+  </tbody>
+</table></div>
+<div class="note"><span class="label">生成评测口径</span>把 ECN 文本向量喂给冻结 GALIP，在 107 条提示上生成；Gemma-3-27B 判断该出现的对象是否出现、该排除的属性是否真的消失。Combined 只有两项同时满足才算对。</div>
+<h3>普通能力有没有被补丁带坏</h3>
+<div class="grid3">
+  <div class="card"><span class="tag green">COCO RETRIEVAL</span><h3>29.9 → 32.1</h3><p>普通肯定句 text-to-image R@1 反而上升 2.2 点。</p></div>
+  <div class="card"><span class="tag green">FLICKR30K</span><h3>57.9 → 60.4</h3><p>普通检索 R@1 上升 2.5 点。</p></div>
+  <div class="card"><span class="tag rust">IMAGENET TOP-1</span><h3>47.4 → 44.6</h3><p>下降 2.8 点；“总体完全无损”并不准确。</p></div>
+</div>
+</section>
+
+<section id="ablate">
+<h2><span class="n">§ 09</span>消融：ECN 和 SCN 各管一类问题，合起来才完整</h2>
+<div class="scroll"><table>
+  <thead><tr><th>变体</th><th>COCO Neg ↑</th><th>MCQ Avg ↑</th><th>Retrieval R@5 ↑</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>CLIP</td><td>6.6</td><td>39.2</td><td>47.9</td><td>否定盲区</td></tr>
+    <tr><td>ECN only</td><td>16.5</td><td>51.2</td><td class="win">58.2</td><td>通用 embedding 明显改善检索</td></tr>
+    <tr><td>SCN only</td><td class="win">67.3</td><td>71.6</td><td>48.1</td><td>会重排，但几乎不改检索</td></tr>
+    <tr><td>去掉 anchor</td><td>61.7</td><td>68.7</td><td>60.5</td><td>少了稳定参照，MCQ 掉 5.6</td></tr>
+    <tr><td>SCN 梯度不回 ECN</td><td>57.3</td><td>67.1</td><td class="win">64.8</td><td>检索还行，联合判别变差</td></tr>
+    <tr><td>联合 PeakPatch</td><td>63.2</td><td class="win">74.3</td><td class="win">64.3</td><td>综合最好</td></tr>
+  </tbody>
+</table></div>
+<figure id="fig-neartie">
+  <figcaption><span>Fig 06 · 在 CLIP 最没把握的四分之一问题上</span><b>SCN 的价值集中出现在近似平局</b></figcaption>
+  <div class="bars">
+    <div class="bar"><b>CLIP</b><div class="track"><div class="fill rust" style="width:46.7%"></div></div><span>29.1</span></div>
+    <div class="bar"><b>ECN only</b><div class="track"><div class="fill gold" style="width:73%"></div></div><span>45.5</span></div>
+    <div class="bar"><b>NegCLIP+NF</b><div class="track"><div class="fill" style="width:85.9%"></div></div><span>53.5</span></div>
+    <div class="bar"><b>PeakPatch joint</b><div class="track"><div class="fill green" style="width:100%"></div></div><span>62.3</span></div>
+  </div>
+  <p class="note">这 1,479 道题由原始 CLIP 的 top-1 与 top-2 分差最小的 25% 组成。ECN 从全量 54.6 降到 45.5，联合模型从 67.2 降到 62.3；SCN 正是在细小分差里发挥作用。</p>
+</figure>
+</section>
+
+<section id="controls">
+<h2><span class="n">§ 10</span>作者怎样证明这不是一条偶然曲线</h2>
+<div class="grid2">
+  <div class="card"><span class="tag">LINEAR PROBE</span><h3>中层信息真能被读出来</h3><p>117K 对句子逐层训逻辑回归：L1 87.6%，L5 达 94.0%，最终层又降到 87.9%。这与 LCD 的先升后降一致。</p></div>
+  <div class="card"><span class="tag cyan">THREE CONTROLS</span><h3>只有否定先升后降</h3><p>同义改写的 LCD 始终接近 0；随机句子一路变大；否定句才出现峰值后回落。</p></div>
+  <div class="card"><span class="tag gold">BACKBONES</span><h3>不是 ViT-B/32 特例</h3><p>ViT-L/14 同样在 L8 见顶；LAION-2B 预训练的 ViT-B/32 峰值自动移到 L4；ViT-g/14 也有明显提升。</p></div>
+  <div class="card"><span class="tag purple">ATTENTION HEADS</span><h3>query 真在看否定词</h3><p>ECN 8 个 head 中 H0、H1、H5 对否定 token 的平均注意力是内容词的 1.8–2.6 倍；其余 head 补被否定对象的语境。</p></div>
+</div>
+<div class="scroll"><table>
+  <thead><tr><th>主干 / 预训练</th><th>检测峰值</th><th>COCO Neg</th><th>VOC Neg</th></tr></thead>
+  <tbody><tr><td>ViT-B/32 · WIT</td><td>L8</td><td>6.6 → <b>63.2</b></td><td>3.0 → <b>57.9</b></td></tr><tr><td>ViT-B/32 · LAION-2B</td><td>L4</td><td>14.0 → <b>70.2</b></td><td>5.4 → <b>64.6</b></td></tr><tr><td>ViT-g/14 · LAION-2B</td><td>重新检测</td><td>14.2 → <b>68.9</b></td><td>6.1 → <b>57.9</b></td></tr></tbody>
+</table></div>
+<h3>离开 NegBench，还能不能用</h3>
+<div class="scroll"><table>
+  <thead><tr><th>外部基准</th><th>CLIP</th><th>ECN only</th><th>SCN only</th><th>Hybrid</th><th>NegationCLIP</th></tr></thead>
+  <tbody><tr><td>VALSE Existence ↑</td><td>69.5</td><td>79.8</td><td>73.3</td><td class="win">80.4</td><td>80.2</td></tr><tr><td>NegRefCOCOg ↑</td><td>59.6</td><td>62.5</td><td>61.1</td><td class="win">64.3</td><td>64.1</td></tr></tbody>
+</table></div>
+<p>两项都只领先微调基线 0.2 点，应该读成“至少没有只记住 NegBench 模板”，不该包装成压倒性优势。零样本分类也不是完全不动：CIFAR-10 Top-1 88.3→88.5、CIFAR-100 62.5→62.9，但 ImageNet 47.4→44.6。</p>
+</section>
+
+<section id="limits">
+<h2><span class="n">§ 11</span>边界：它修好了“有没有”，没有把否定变成万能语义</h2>
+<div class="grid2">
+  <div class="card"><span class="tag rust">WHITE-BOX ONLY</span><h3>必须读中间层</h3><p>只有最终 embedding 或相似度的黑盒 API 用不了；“冻结主干”不等于“只看最终输出”。</p></div>
+  <div class="card"><span class="tag rust">TEXT-SIDE ONLY</span><h3>同域检索仍落后</h3><p>COCO 内域 R@1 为 37.1，双塔微调 NegCLIP+NF 是 41.3。图片端不一起适配，就不会拿到内域上限。</p></div>
+  <div class="card"><span class="tag gold">SET-VALUED</span><h3>“不是狗”没有唯一落点</h3><p>它包括猫、桌子、天空等巨大补集。ECN 后否定句形成较松的共享区域是合理的，不应硬聚成一个新物体类。<a class="jr" href="#g-07">07</a></p></div>
+  <div class="card"><span class="tag gold">PARSER TRADE-OFF</span><h3>窄类别上解析器更准</h3><p>附录里 VOC：SpaceVLM 81.1，规则解析法 78.6，PeakPatch 65.5。显式找出“否定了哪个名词”在固定 20 类上占便宜。</p></div>
+</div>
+<div class="warning"><span class="label">生成任务也不是全面领先</span>SpaceVLM 用 Mistral-7B 解析否定结构，文生图 Combined 达 59.7，PeakPatch 是 45.8。PeakPatch 的卖点是无外部解析器、只增 5.2M 参数、保留标准 embedding；不是每个指标都最高。</div>
+<div class="truth"><span class="label">这篇论文真正值得带走的研究套路</span>别一看到最终输出坏了就立刻微调整个模型。先问：信息从没出现，还是出现后被后续目标覆盖？若是后者，中层诊断＋小型残差补丁，往往比重写主干更便宜、更容易保持旧能力。</div>
+</section>
+
+<section class="gloss">
+<h2><span class="n">§ G</span>引用 / 术语表</h2>
+<ol>
+  <li id="g-01"><span class="term">否定 · negation</span> · 语言运算符，改变命题成立条件。“not a dog”不是负向情绪，也不是训练里的负样本。</li>
+  <li id="g-02"><span class="term">hard negative</span> · 与正样本表面极像却语义错误的样本；同图的否定改写比随机 caption 更能逼模型学习差别。</li>
+  <li id="g-03"><span class="term">EOS hidden state</span> · 文本序列结束位置的隐藏向量。CLIP 把最后层 EOS 经 LayerNorm 和线性头投到共享空间。</li>
+  <li id="g-04"><span class="term">Representational Collapse</span> · 本文所指的“表征坍缩”：中层已有的肯定 / 否定分离，在最终图文对齐层重新缩小；不是所有向量变成同一个点的经典训练坍缩。</li>
+  <li id="g-05"><span class="term">LCD</span> · Layer-wise Compositional Divergence，逐层平均 <code class="m">1-\cos</code> 肯定句与否定句向量；详见 <a href="../concepts/layerwise-compositional-divergence.html">概念页</a>。</li>
+  <li id="g-06"><span class="term">SCN</span> · Score Correction Network，读取当前图片、峰值层和 ECN 输出，为一对图文预测受限标量修正；详见 <a href="../concepts/peakpatch-scn.html">概念页</a>。</li>
+  <li id="g-07"><span class="term">set-valued negation</span> · 否定短语表示某类的补集，不对应唯一替代物；详见 <a href="../concepts/set-valued-negation.html">概念页</a>。</li>
+</ol>
+</section>
+
+<section class="sources">
+<span class="label">Primary sources</span>
+<ol>
+  <li><a href="https://arxiv.org/abs/2607.23271">What CLIP Knows but Cannot Say: Recovering Negation from Frozen Intermediate Features · arXiv 2607.23271</a>，正文、附录、公式、数据构造与结构表。</li>
+  <li><a href="https://stevencylu.github.io/PeakPatch/">PeakPatch project page</a>，作者项目页与定性示例。</li>
+</ol>
+</section>
+</main>
+<script>
+(function(){
+  function math(){if(!window.katex){setTimeout(math,40);return}document.querySelectorAll('.formula').forEach(function(e){if(e.dataset.done)return;try{katex.render(e.textContent.trim(),e,{displayMode:true,throwOnError:true});e.dataset.done='1'}catch(x){e.classList.add('katex-error');e.title=String(x)}})}math();
+  document.querySelectorAll('figure').forEach(function(fig){var obs=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){fig.classList.add('play');obs.disconnect()}})},{threshold:.18});obs.observe(fig)});
+})();
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;left:auto;top:50%;bottom:auto;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;opacity:1;pointer-events:auto;transition:none;display:none;}
+.jr-pop.show{display:block;transform:translateY(-50%);animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop,.jr-pop.show{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!document.getElementById(id))return;
+      e.preventDefault();
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>

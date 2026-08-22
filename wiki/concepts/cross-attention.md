@@ -1,8 +1,8 @@
 ---
 name: cross-attention
 type: concept
-sources: [attention-is-all-you-need, ltx-2, diffusion-unet, longcat-video-avatar-1-5, klingavatar-2, dyaplex, faceplex]
-updated: 2026-08-05
+sources: [attention-is-all-you-need, ltx-2, diffusion-unet, longcat-video-avatar-1-5, klingavatar-2, dyaplex, faceplex, peakpatch]
+updated: 2026-08-17
 ---
 
 # Cross-Attention · 交叉注意力
