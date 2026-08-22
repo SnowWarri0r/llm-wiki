@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Jacobian lens · 把中间向量翻成“它可能让模型说什么” · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · jacobian-lens</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Jacobian lens · 把中间向量翻成“它可能让模型说什么”</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>J-lens 用平均 Jacobian 近似中间层到输出层的变化，再借模型自己的词表输出层把中间状态翻成候选词。</p>
+<h2>直觉</h2>
+<p>直接把第 30 层的向量塞进最后一层词表投影，像拿三楼半成品去套一楼出货标签：坐标系还没对齐。J-lens 先估一张“三楼的一个小改动，平均会怎样传到出货口”的转换表，再读词表。</p>
+<p>它回答的不是“模型下一词一定说什么”，而是“这段内部活动通常有能力把哪些词推向未来输出”。</p>
+<h2>怎么做的</h2>
+<p>对第 <span class="tex math-inline" data-display="false">\ell</span> 层位置 <span class="tex math-inline" data-display="false">t</span> 的 residual stream <span class="tex math-inline" data-display="false">h_{\ell,t}</span>，论文把它对当前及未来位置最终状态的 Jacobian 在 1,000 条提示、各位置上取平均：</p>
+<div class="tex math-display" data-display="true">J_\ell=
+\mathbb E_{t,\,t&#x27;\ge t,\,\text{prompt}}
+\left[
+\frac{\partial h_{L,t&#x27;}}{\partial h_{\ell,t}}
+\right].</div>
+<ul>
+<li><span class="tex math-inline" data-display="false">J_\ell</span>：第 <span class="tex math-inline" data-display="false">\ell</span> 层到最终层的平均一阶传递矩阵。</li>
+<li><span class="tex math-inline" data-display="false">t</span>：被检查的源 token 位置。</li>
+<li><span class="tex math-inline" data-display="false">t&#x27;\ge t</span>：当前或未来输出位置；因果模型不会让当前位置影响过去。</li>
+<li><span class="tex math-inline" data-display="false">h_{L,t&#x27;}</span>：最终层在位置 <span class="tex math-inline" data-display="false">t&#x27;</span> 的状态。</li>
+</ul>
+<p>读一个中间向量时：</p>
+<div class="tex math-display" data-display="true">\operatorname{lens}(h_\ell)
+=\operatorname{softmax}
+\left(W_U\operatorname{norm}(J_\ell h_\ell)\right).</div>
+<p>先用 <span class="tex math-inline" data-display="false">J_\ell</span> 把中间坐标变到最终层附近，再归一化、乘 unembedding <span class="tex math-inline" data-display="false">W_U</span>，最后 softmax 得到词表排名。</p>
+<h2>数字例子</h2>
+<p>假设中间状态 <span class="tex math-inline" data-display="false">h=[2,1]</span>，平均传递矩阵与三词输出矩阵为：</p>
+<div class="tex math-display" data-display="true">J=\begin{bmatrix}1&amp;0.5\\0&amp;2\end{bmatrix},
+\qquad
+W_U=\begin{bmatrix}1&amp;0\\0&amp;1\\-1&amp;0\end{bmatrix}.</div>
+<p>先对齐坐标：</p>
+<div class="tex math-display" data-display="true">Jh=[2.5,2].</div>
+<p>暂时省略 normalization，三个词的 logit 是：</p>
+<div class="tex math-display" data-display="true">W_UJh=[2.5,2,-2.5].</div>
+<p>softmax 后约为 <span class="tex math-inline" data-display="false">[0.62,0.38,0.004]</span>。第一个词排第一。若直接把 <span class="tex math-inline" data-display="false">h</span> 送进 <span class="tex math-inline" data-display="false">W_U</span>，logit 会是 <span class="tex math-inline" data-display="false">[2,1,-2]</span>，说明少了层间坐标修正，排名与差距都可能变。</p>
+<h2>跟 logit lens 的对照</h2>
+<ul>
+<li>logit lens 相当于把 <span class="tex math-inline" data-display="false">J_\ell</span> 当单位阵，快，但早层坐标错位更严重。</li>
+<li>tuned lens 训练一个线性映射去拟合最终输出，善于猜答案，却可能跳过真正的中间步骤。</li>
+<li>J-lens 来自输出对内部激活的导数，因果联系更直接；但它仍是一阶、跨上下文平均的近似。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/global-workspace.html">global-workspace</a> · J-lens 的提出与主要实验。</li>
+<li><a href="../concepts/residual-stream.html">residual-stream</a> · 被读取的中间状态是什么。</li>
+<li><a href="../concepts/jacobian-vector-product.html">jacobian-vector-product</a> · Jacobian 描述“小改动怎样传到输出”。</li>
+<li><a href="../concepts/activation-intervention.html">activation-intervention</a> · 如何沿 J-lens 方向写入、删除或互换概念。</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 3 处</span>
+  <ul><li><a href="../papers/global-workspace.html"><span class="cat">paper</span>Verbalizable Representations Form a Global Workspace in Language Models</a></li><li><a href="../concepts/activation-intervention.html"><span class="cat">concept</span>Activation intervention · 直接改内部状态，区分“看见相关”与“真的在用”</a></li><li><a href="../concepts/global-workspace-theory.html"><span class="cat">concept</span>Global Workspace Theory · 许多专用模块共用的一块小黑板</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/jacobian-lens.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>
