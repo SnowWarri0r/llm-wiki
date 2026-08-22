@@ -186,7 +186,7 @@
   <div><code class="m">j</code>这张旧帧在空间记忆中的槽编号。</div><div><code class="m">N_s=5</code>每轮空间槽总数。</div>
   <div><code class="m">u,v\in[-1,1]</code>旧帧中的归一化横纵坐标。</div><div><code class="m">2j/N_s-1</code>把槽编号映射到接近 <code class="m">[-1,1]</code>，让相同坐标也能区分来自哪张旧图。</div>
 </div>
-<p>论文按 <code class="m">j=0,\ldots,N_s-1</code> 写，因此五个第三通道是 −1、−0.6、−0.2、0.2、0.6，并不会正好取到 1；这是槽身份编码，不是概率。</p>
+<p>代入看第三通道：槽编号从 0 数起，<code class="m">j=0..4</code> 逐个代进 <code class="m">2j/N_s-1</code>——<code class="m">2\times0/5-1=-1</code>、<code class="m">2\times1/5-1=-.6</code>、<code class="m">2\times2/5-1=-.2</code>、<code class="m">2\times3/5-1=.2</code>、<code class="m">2\times4/5-1=.6</code>。取不到 1 也是代入的直接后果：最大编号是 <code class="m">N_s-1=4</code>，想到 1 得有第 6 个槽。这五个数只是「我是几号槽」的身份戳——每张旧帧整图填同一个数，warp 混合后模型靠它分清坐标地址来自哪张旧图；数值本身无含义，互不相同才是全部意义，不是概率。</p>
 <div class="formula">\widehat C_j=\operatorname{FwdWarp}(C_j,D_{s_j},T_{s_j},T^*,K_{s_j},K^*)</div>
 <div class="vars"><div><code class="m">D_{s_j}</code>被找回旧帧的全分辨率深度。</div><div><code class="m">T_{s_j},K_{s_j}</code>旧相机外参和内参。</div><div><code class="m">T^*,K^*</code>目标相机外参和内参。</div><div><code class="m">\widehat C_j</code>投到目标平面后的“目标像素 → 旧图地址”表；另附 warp 后深度成第四通道。</div></div>
 <figure id="fig-coord">
