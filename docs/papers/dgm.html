@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Darwin Gödel Machine · 不证明，生下来再考试</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..800&family=Newsreader:opsz,wght@6..72,350..700&family=Noto+Serif+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+<style>
+:root{--paper:#f1eee4;--card:#faf8ef;--ink:#171719;--ink2:#3d3937;--muted:#756c60;--rule:#b9ae98;--navy:#163a58;--navy2:#d9e6eb;--rust:#a83b25;--rust2:#f4d8ce;--teal:#147687;--teal2:#cde8e9;--gold:#bd7a00;--gold2:#f4dfaa;--green:#3f7354;--green2:#d7e7d8;--vio:#5b3a8f;--vio2:#e4dcf2;--accent:#5b3a8f}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:18px/1.76 'Newsreader','Noto Serif SC',serif;-webkit-font-smoothing:antialiased}body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.3;background-image:linear-gradient(rgba(91,58,143,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(91,58,143,.05) 1px,transparent 1px);background-size:32px 32px}.page{position:relative;max-width:1180px;margin:auto;padding:58px 38px 120px}.mast{display:flex;justify-content:space-between;border-top:4px double var(--ink);border-bottom:1px solid var(--rule);padding:12px 0;color:var(--muted);font:600 11px/1.5 'JetBrains Mono';letter-spacing:2px;text-transform:uppercase}.hero{padding:58px 0 32px}.issue{display:flex;gap:14px;align-items:center;color:var(--vio);font:700 11px/1.5 'JetBrains Mono';letter-spacing:3px;text-transform:uppercase}.issue:after{content:"";height:1px;background:var(--rule);flex:1}.hero h1{margin:18px 0 12px;font:750 clamp(46px,7.5vw,96px)/.92 'Fraunces','Noto Serif SC';letter-spacing:-.05em}.hero h1 em{color:var(--vio);font-weight:600}.byline{color:var(--muted);font:600 12px/1.5 'JetBrains Mono';letter-spacing:1px}.dek{max-width:900px;font:italic 400 clamp(21px,2.5vw,29px)/1.43 'Fraunces','Noto Serif SC';color:var(--ink2)}.tldr,.note,.warning,.truth{margin:24px 0;padding:18px 22px;background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--navy)}.warning{border-left-color:var(--rust);background:#fff0e8}.truth{border-left-color:var(--green);background:#edf5ea}.label{display:block;margin-bottom:5px;color:var(--navy);font:700 10px/1.5 'JetBrains Mono';letter-spacing:2px;text-transform:uppercase}.warning .label{color:var(--rust)}.truth .label{color:var(--green)}nav.toc{position:sticky;top:0;z-index:10;display:flex;gap:7px;overflow-x:auto;margin:0 -14px 50px;padding:10px 14px;background:rgba(241,238,228,.96);border-block:1px solid var(--rule);scrollbar-width:none}nav.toc a{flex:none;padding:6px 9px;border:1px solid var(--rule);color:var(--navy);background:var(--card);font:600 10px/1.2 'JetBrains Mono';text-decoration:none}nav.toc a:hover,nav.toc a:focus-visible{background:var(--vio);color:#fff;outline:none}h2{display:flex;gap:16px;align-items:baseline;margin:76px 0 20px;font:700 clamp(30px,4vw,43px)/1.1 'Fraunces','Noto Serif SC';letter-spacing:-.025em}h2 .n{min-width:55px;color:var(--vio);font:700 11px/1.4 'JetBrains Mono';letter-spacing:2px}h3{margin:34px 0 10px;font:700 23px/1.3 'Fraunces','Noto Serif SC'}p{margin:12px 0}a{color:#4b2f78;text-decoration-thickness:1px;text-underline-offset:3px}strong{font-weight:700}.lead{font-size:22px;line-height:1.58;color:var(--ink2)}code{font:500 .88em/1.5 'JetBrains Mono';background:#fffaf0;border:1px solid var(--rule);border-radius:3px;padding:1px 5px}.jr{vertical-align:super;margin:0 2px;padding:1px 5px;border:1px solid var(--gold);border-radius:999px;background:var(--gold2);color:#563700;text-decoration:none;font:700 9px/1.2 'JetBrains Mono'}.jr:hover,.jr:focus-visible{background:#614000;color:#fff;outline:2px solid var(--gold);outline-offset:2px}.grid2,.grid3{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}.card{min-width:0;padding:20px;background:var(--card);border:1px solid var(--rule);box-shadow:5px 5px 0 rgba(91,58,143,.07)}.card h3{margin:8px 0 5px}.card p{font-size:16px;line-height:1.58}.tag{display:inline-block;padding:3px 8px;background:var(--navy2);color:var(--navy);font:700 10px/1.4 'JetBrains Mono';letter-spacing:1px;text-transform:uppercase}.tag.rust{background:var(--rust2);color:#7b291a}.tag.teal{background:var(--teal2);color:#075662}.tag.gold{background:var(--gold2);color:#634000}.tag.green{background:var(--green2);color:#285438}.tag.vio{background:var(--vio2);color:#3d2662}figure{margin:38px 0;padding:28px;background:rgba(250,248,239,.86);border:1px solid var(--rule);box-shadow:8px 8px 0 rgba(91,58,143,.08);overflow:hidden}figcaption{display:flex;justify-content:space-between;gap:16px;margin-bottom:22px;padding-bottom:12px;border-bottom:1px dashed var(--rule);color:var(--muted);font:600 11px/1.4 'JetBrains Mono';letter-spacing:1.3px;text-transform:uppercase}figcaption b{color:var(--rust)}.formula{margin:18px 0;padding:21px 16px;overflow-x:auto;text-align:center;background:#241838;color:#fff;border-left:6px solid var(--gold);font-size:1.12em}.formula .katex{color:#fff}.vars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0}.vars>div{min-width:0;padding:10px 12px;background:var(--card);border:1px solid var(--rule);font-size:14px}.vars code{display:block;margin-bottom:4px;color:#4b2f78}.calc{counter-reset:step;display:grid;gap:8px;margin:18px 0}.step{position:relative;padding:13px 14px 13px 56px;background:#fff;border:1px solid var(--rule);font-size:15px}.step:before{counter-increment:step;content:counter(step,decimal-leading-zero);position:absolute;left:16px;top:14px;color:var(--vio);font:700 11px/1.5 'JetBrains Mono'}.step b{display:block;color:var(--navy)}.scroll{overflow-x:auto;margin:18px 0;border:1px solid var(--rule)}table{width:100%;border-collapse:collapse;background:var(--card);font-size:14px;white-space:nowrap}th,td{padding:10px 12px;border-bottom:1px solid var(--rule);text-align:right}th:first-child,td:first-child{text-align:left}thead th{position:sticky;top:0;background:var(--navy);color:#fff;font:600 10px/1.4 'JetBrains Mono';letter-spacing:.7px}.win{background:var(--green2);color:#1f5237;font-weight:700}.lose{background:var(--rust2);color:#7c2b1d}.same{margin-top:14px;text-align:center;color:var(--green);font-weight:700}.gloss{margin-top:76px;padding-top:30px;border-top:3px double var(--ink)}.gloss ol{list-style:none;padding:0;counter-reset:g}.gloss li{position:relative;padding:13px 10px 13px 48px;border-bottom:1px dashed var(--rule);font-size:15px}.gloss li:before{counter-increment:g;content:counter(g,decimal-leading-zero);position:absolute;left:7px;color:var(--vio);font:700 10px/1.8 'JetBrains Mono'}.gloss .term{font-weight:700;color:var(--navy)}.sources{margin-top:54px;padding:22px;background:var(--card);border:1px solid var(--rule);font-size:14px}.sources li{margin:7px 0}.reveal{opacity:0;transform:translateY(8px);transition:.55s ease}.play .reveal{opacity:1;transform:none}.d2{transition-delay:.10s}.d3{transition-delay:.20s}.d4{transition-delay:.30s}@media(max-width:850px){.page{padding:34px 18px 90px}.grid3{grid-template-columns:1fr 1fr}.vars{grid-template-columns:1fr}figcaption{display:block}figcaption b{display:block;margin-top:5px}}@media(max-width:520px){body{font-size:17px}.page{padding-inline:12px}.hero h1{font-size:42px}figure{padding:18px 12px}.grid2,.grid3{grid-template-columns:1fr}.mast .r{display:none}}
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+.katex span{display:inline}
+</style>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · dgm</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page">
+<div class="mast"><span>SELF-IMPROVING AGENTS · FIELD NOTES</span><span class="r">ARXIV 2505.22954 · JENNYZZT/DGM</span></div>
+<header class="hero">
+  <div class="issue">Agent Self-Evolve 的奠基作</div>
+  <h1>Darwin Gödel<br><em>不证明，生下来再考试</em></h1>
+  <p class="byline">Jenny Zhang · Shengran Hu · Cong Lu · Robert Lange · Jeff Clune — UBC × Vector × Sakana AI (2025-05)</p>
+  <p class="dek">让 AI 自己改自己的代码、并且越改越会改——哥德尔机把这个梦想在纸面上放了近二十年，因为它要求「先证明这次修改有益，才准动手」。DGM 的回答是达尔文式的：证明什么？生下来，考试，赢者进家谱。</p>
+  <div class="tldr"><span class="label">先记这一句</span><strong>修改 = 突变，基准 = 生存考试，档案 = 家族树。</strong>而考试考的恰好就是「改代码」——所以考得越好 = 下次改自己改得越好，飞轮由此可能自加速。80 代之后：SWE-bench 20.0%→50.0%，Polyglot 14.2%→30.7%（超过人类打磨一年的 Aider<a class="jr" href="#g-08">08</a>）。</div>
+</header>
+<nav class="toc"><a href="#misread">00 先排雷</a><a href="#dream">01 四十年的梦</a><a href="#loop">02 自指闭环</a><a href="#iter">03 一轮迭代</a><a href="#select">04 选父代</a><a href="#open">05 留着差生</a><a href="#eval">06 分级评考</a><a href="#features">07 长出了什么</a><a href="#results">08 结果</a><a href="#transfer">09 迁移</a><a href="#hack">10 作弊现场</a><a href="#safety">11 安全</a><a href="#limits">12 边界</a><a href="#verdict">13 判断</a></nav>
+
+<section id="misread">
+<h2><span class="n">§ 00</span>先排除六种误读</h2>
+<div class="grid3">
+  <div class="card"><span class="tag vio">改什么</span><h3>不训模型，改代码</h3><p>大模型（FM<a class="jr" href="#g-02">02</a>）全程冻结。agent 改的是自己的 Python 代码库：工具、工作流、prompt。改自己的训练脚本是论文明说的未来工作。</p></div>
+  <div class="card"><span class="tag">名字</span><h3>哥德尔机是别人的梦</h3><p>哥德尔机<a class="jr" href="#g-01">01</a>是 Schmidhuber 2007 的理论构想（证明有益才自改）。DGM 是它的<strong>放松版</strong>——用实测代替证明，不是把原版实现了。</p></div>
+  <div class="card"><span class="tag rust">进化范围</span><h3>进化循环本身是死的</h3><p>档案维护、父代选择这套开放探索机制固定不可自改——「自我进化」有明确的不动点，agent 只能改自己的求解代码。</p></div>
+  <div class="card"><span class="tag gold">纯度</span><h3>诊断用了外挂 o1</h3><p>「读考卷、提改进建议」这步由单独的 o1 完成，再交给 agent 实现。论文声明无根本障碍合并进闭环，但当前实现不是纯自闭环。</p></div>
+  <div class="card"><span class="tag teal">成本</span><h3>两周、约 $22,000</h3><p>一次 SWE-bench 完整运行的量级（单次 60 任务评测约 $350）。Polyglot 用 o3-mini 每次只要 $5——成本天花板由任务复杂度定。</p></div>
+  <div class="card"><span class="tag green">安全</span><h3>沙箱里跑，且自带反面教材</h3><p>全程沙箱<a class="jr" href="#g-13">13</a>+时限+可追溯家谱；论文附录 H 自曝了一例 agent 改掉检测器作弊的 objective hacking<a class="jr" href="#g-11">11</a>（§ 10）。</p></div>
+</div>
+</section>
+
+<section id="dream">
+<h2><span class="n">§ 01</span>四十年的梦，卡在「证明」两个字上</h2>
+<p class="lead">科学是累积且开放的：每个突破都踩着前人的垫脚石<a class="jr" href="#g-04">04</a>。AI 系统本身却是人手焊死的——每次进步都要等人来改。能不能让 AI 像科学一样，成为自己进步的引擎？</p>
+<p>哥德尔机给过一个数学上最干净的答案：系统搜索「改写自身代码 + 该改写<strong>可证</strong>净有益」的组合,证明到手才执行。干净,但落不了地——除非对系统做强假设,绝大多数修改的净收益<strong>不可证</strong>。论文给的例子很扎心:给 coding agent 加一个测试工具,听起来必然有益;实际收益取决于模型的训练历史和任务上下文,一个为某种框架优化的测试工具换个仓库反而把 agent 搞糊涂。</p>
+<div class="grid2">
+  <div class="card"><span class="tag">哥德尔机（1987 构想 · 2007 形式化）</span><h3>先证明，再修改</h3><p>绝对安全，几乎绝对不动。修改收益依赖上下文，无法事先证明 → 纸面近二十年。</p></div>
+  <div class="card"><span class="tag vio">DGM（2025）</span><h3>先修改，再考试</h3><p>达尔文逻辑：突变不预先验证——生成、试炼、选择。修改先做出来，基准分数说话。代价：实测会陷局部最优，所以还需要 § 05 的档案。</p></div>
+</div>
+<p>这也是名字的由来：<strong>Darwin</strong>（实测选择 + 家族树）修好了 <strong>Gödel Machine</strong>（自指自改）落地的最后一公里。</p>
+</section>
+
+<section id="loop">
+<h2><span class="n">§ 02</span>自指闭环：考试考的就是改代码</h2>
+<p class="lead">这是全文方法学上最漂亮的一步，先于一切算法细节：<strong>把「自我修改」本身设计成一次普通的编码任务。</strong></p>
+<p>agent 被定义为「一个 Python 代码库 + 冻结 FM，能读、写、执行代码」。那么修改自己 = 修改一个 Python 仓库 = 它日常考试的题型。于是 coding 基准的分数一鱼两吃：<strong>既是下游能力（会不会解 GitHub issue），也是元能力（会不会改好下一版自己）的代理</strong>。每次让它更会写代码的修改，同时让它更会做下一次修改——这才叫自加速的可能性，而不是一阶收益。</p>
+<div class="note"><span class="label">对照：教练不进步的流派</span>此前的 ADAS<a class="jr" href="#g-09">09</a> 用一个<strong>固定的元 agent</strong> 迭代生成下游 agent：学员再强也不会反哺教练，收益一阶封顶。§ 08 的消融给了数字：把 DGM 的自指拿掉（教练永远是初始 agent），SWE-bench 50.0→39.0。</div>
+<div class="warning"><span class="label">这个闭环焊在一个假设上</span>「coding 基准分数 = 自改能力」是<strong>假设不是恒等</strong>。基准覆盖不到的性质（安全、诚实、鲁棒）不会被这个循环优化，甚至可能被牺牲（§ 10 的作弊案例就是活证）。论文自己承认这一点，并提出未来可以让任务分布与 agent 共同演化。</div>
+</section>
+
+<section id="iter">
+<h2><span class="n">§ 03</span>一轮迭代解剖：从家谱到新丁</h2>
+<figure id="fig-loop">
+<figcaption><span>Fig 01 · DGM 的一轮迭代</span><b>五步一圈 · 合格才进家谱</b></figcaption>
+<svg viewBox="0 0 920 340" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
+<defs><marker id="mD" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#5b3a8f"/></marker></defs>
+<rect x="30" y="110" width="150" height="86" rx="8" fill="#e4dcf2" stroke="#5b3a8f" stroke-width="2"/>
+<text x="105" y="144" text-anchor="middle" font-size="14" font-weight="700" fill="#3d2662">档案（家谱）</text>
+<text x="105" y="166" text-anchor="middle" font-size="11.5" fill="#756c60">从 1 个初始 agent</text>
+<text x="105" y="182" text-anchor="middle" font-size="11.5" fill="#756c60">起步，只进不出</text>
+<line x1="184" y1="153" x2="222" y2="153" stroke="#5b3a8f" stroke-width="1.8" marker-end="url(#mD)"/>
+<rect x="226" y="110" width="140" height="86" rx="6" fill="#faf8ef" stroke="#163a58" stroke-width="1.6"/>
+<text x="296" y="140" text-anchor="middle" font-size="13.5" font-weight="700">① 选父代</text>
+<text x="296" y="160" text-anchor="middle" font-size="11.5" fill="#756c60">性能 × 新颖度</text>
+<text x="296" y="176" text-anchor="middle" font-size="11.5" fill="#756c60">采样（§ 04）</text>
+<line x1="370" y1="153" x2="408" y2="153" stroke="#5b3a8f" stroke-width="1.8" marker-end="url(#mD)"/>
+<rect x="412" y="110" width="150" height="86" rx="6" fill="#faf8ef" stroke="#163a58" stroke-width="1.6"/>
+<text x="487" y="136" text-anchor="middle" font-size="13.5" font-weight="700">② 读考卷 → 开药方</text>
+<text x="487" y="156" text-anchor="middle" font-size="11.5" fill="#756c60">o1 读评测日志，产出</text>
+<text x="487" y="172" text-anchor="middle" font-size="11.5" fill="#756c60">「下一个特征」的</text>
+<text x="487" y="188" text-anchor="middle" font-size="11.5" fill="#756c60">GitHub-issue 式描述</text>
+<line x1="566" y1="153" x2="604" y2="153" stroke="#5b3a8f" stroke-width="1.8" marker-end="url(#mD)"/>
+<rect x="608" y="110" width="140" height="86" rx="6" fill="#f4dfaa" stroke="#bd7a00" stroke-width="1.8"/>
+<text x="678" y="140" text-anchor="middle" font-size="13.5" font-weight="700" fill="#634000">③ 自改</text>
+<text x="678" y="160" text-anchor="middle" font-size="11.5" fill="#634000">父代把药方当普通</text>
+<text x="678" y="176" text-anchor="middle" font-size="11.5" fill="#634000">编码任务改自己仓库</text>
+<line x1="752" y1="153" x2="790" y2="153" stroke="#5b3a8f" stroke-width="1.8" marker-end="url(#mD)"/>
+<rect x="794" y="110" width="100" height="86" rx="6" fill="#faf8ef" stroke="#163a58" stroke-width="1.6"/>
+<text x="844" y="140" text-anchor="middle" font-size="13.5" font-weight="700">④ 考试</text>
+<text x="844" y="160" text-anchor="middle" font-size="11.5" fill="#756c60">分级评测</text>
+<text x="844" y="176" text-anchor="middle" font-size="11.5" fill="#756c60">（§ 06）</text>
+<path d="M 844 200 L 844 262 L 105 262 L 105 200" fill="none" stroke="#3f7354" stroke-width="1.8" stroke-dasharray="7 5" marker-end="url(#mD)"/>
+<text x="474" y="252" text-anchor="middle" font-size="12.5" fill="#3f7354" font-weight="700">⑤ 合格入档：能编译 + 还会改代码才收；分数只影响以后被选中的概率</text>
+<text x="474" y="296" text-anchor="middle" font-size="12" fill="#756c60">跑 80 代；SWE-bench 每代并行 2 个自改、Polyglot 并行 4 个；自改用 Claude 3.5 Sonnet，评测用 Claude 3.5 Sonnet / o3-mini，温度 1.0</text>
+</svg>
+</figure>
+<p>两个容易看漏的细节。<strong>入档门槛低得惊人</strong>：档案<a class="jr" href="#g-03">03</a>不要求新丁比父代强，只要求「能编译 + 保留改代码的基本功能」——因为只有还会改代码的 agent 才能继续参与进化；分数高低只影响它以后被选为父代的概率。<strong>初始 agent 故意很弱</strong>：一个 FM 加两件工具（bash 执行、整文件查看/覆写的 editor），拿 20.0 分——起点越素，后面长出来的每样东西越能归功于进化本身。</p>
+</section>
+
+<section id="select">
+<h2><span class="n">§ 04</span>选父代：高分优先，但人人有份</h2>
+<p>每代从档案抽 k 个父代（SWE-bench k=2、Polyglot k=4）。抽签权重由两个因子相乘（满分 agent 不再参选）：</p>
+<div class="formula">s_i=\frac{1}{1+e^{-\lambda(\alpha_i-\alpha_0)}},\qquad h_i=\frac{1}{1+n_i},\qquad p_i=\frac{s_i\,h_i}{\sum_j s_j\,h_j}</div>
+<div class="vars">
+  <div><code class="m">\alpha_i</code>agent i 的基准分数（0–1）。</div><div><code class="m">n_i</code>它已有的「会改代码的孩子」数。</div>
+  <div><code class="m">s_i</code>sigmoid 压过的性能：<code class="m">\lambda=10</code>、<code class="m">\alpha_0=0.5</code>——中点 0.5 附近很陡，好坏差距被放大。</div><div><code class="m">h_i</code>新颖度红利：孩子越多越「被开发过」，权重越低。</div>
+  <div><code class="m">p_i</code>归一化后的抽签概率；人人非零，任何支线给足算力都可能翻身。</div><div><code class="m">k</code>每代并行的自改数。</div>
+</div>
+<div class="calc">
+  <div class="step"><b>手算 · 差生凭什么赢</b><span>两个 agent：优等生 α=.60 但已有 3 个孩子；差生 α=.40 还没被开发（n=0）。代入 sigmoid：<code class="m">s=1/(1+e^{-10(.6-.5)})=1/(1+e^{-1})=.731</code>，<code class="m">s'=1/(1+e^{1})=.269</code>。</span></div>
+  <div class="step"><b>乘新颖度</b><span>优等生 <code class="m">h=1/(1+3)=.25</code> → <code class="m">w=.731\times.25=.183</code>；差生 <code class="m">h=1/(1+0)=1</code> → <code class="m">w=.269</code>。</span></div>
+  <div class="step"><b>归一化</b><span>差生 <code class="m">p=.269/(.269+.183)=.595</code>，优等生 .405——<strong>分低但没被开发过的支线反而更可能被选中</strong>。这不是 bug，是开放式探索的核心资产（§ 05）。</span></div>
+  <div class="step"><b>sigmoid 为什么带 λ=10</b><span>中点附近 0.1 的分差就拉开 .378 vs .622；远离中点则钝化——既奖励强者，又不让 60 分和 61 分的差别决定生死。</span></div>
+</div>
+</section>
+
+<section id="open">
+<h2><span class="n">§ 05</span>留着差生：因为冠军可能是它孙子</h2>
+<p class="lead">既然实测代替了证明，就会陷进实测的老坑——局部最优。DGM 的解法来自开放式探索<a class="jr" href="#g-05">05</a>研究：档案永不删除，任何一代都保留被再次分支的机会。</p>
+<figure id="fig-tree">
+<figcaption><span>Fig 02 · 家族树的三种命运（按论文 Fig 3 的结构示意）</span><b>低谷节点是垫脚石，不是废案</b></figcaption>
+<svg viewBox="0 0 920 330" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
+<defs><marker id="mE" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#756c60"/></marker></defs>
+<circle cx="90" cy="160" r="20" fill="#e4dcf2" stroke="#5b3a8f" stroke-width="2"/><text x="90" y="165" text-anchor="middle" font-size="12" font-weight="700">0</text>
+<text x="90" y="200" text-anchor="middle" font-size="11.5" fill="#756c60">初始 20.0 分</text>
+<line x1="112" y1="150" x2="188" y2="92" stroke="#756c60" stroke-width="1.4" marker-end="url(#mE)"/>
+<line x1="112" y1="170" x2="188" y2="228" stroke="#756c60" stroke-width="1.4" marker-end="url(#mE)"/>
+<circle cx="210" cy="80" r="18" fill="#f4d8ce" stroke="#a83b25" stroke-width="1.8"/><text x="210" y="85" text-anchor="middle" font-size="11.5">↓</text>
+<text x="210" y="48" text-anchor="middle" font-size="11.5" fill="#a83b25">分数低于父代</text>
+<circle cx="210" cy="240" r="18" fill="#faf8ef" stroke="#163a58" stroke-width="1.6"/><text x="210" y="245" text-anchor="middle" font-size="11">↗</text>
+<line x1="230" y1="72" x2="306" y2="58" stroke="#756c60" stroke-width="1.4" marker-end="url(#mE)"/>
+<circle cx="328" cy="54" r="18" fill="#d7e7d8" stroke="#3f7354" stroke-width="1.8"/><text x="328" y="59" text-anchor="middle" font-size="11">↑</text>
+<text x="330" y="24" text-anchor="middle" font-size="11.5" fill="#3f7354">低谷的后代反超全场（真实发生在第 4、56 代）</text>
+<line x1="230" y1="248" x2="306" y2="262" stroke="#756c60" stroke-width="1.4" marker-end="url(#mE)"/>
+<circle cx="328" cy="266" r="18" fill="#faf8ef" stroke="#163a58" stroke-width="1.6"/><text x="328" y="271" text-anchor="middle" font-size="11">→</text>
+<line x1="348" y1="60" x2="424" y2="74" stroke="#756c60" stroke-width="1.4" marker-end="url(#mE)"/>
+<circle cx="448" cy="80" r="22" fill="#f4dfaa" stroke="#bd7a00" stroke-width="2.2"/><text x="448" y="85" text-anchor="middle" font-size="11" font-weight="700">24</text>
+<text x="452" y="120" text-anchor="middle" font-size="11.5" fill="#634000">关键创新节点（str_replace 编辑）</text>
+<line x1="470" y1="70" x2="546" y2="46" stroke="#756c60" stroke-width="1.4" marker-end="url(#mE)"/>
+<line x1="470" y1="84" x2="546" y2="96" stroke="#756c60" stroke-width="1.4" marker-end="url(#mE)"/>
+<line x1="468" y1="96" x2="546" y2="150" stroke="#756c60" stroke-width="1.4" marker-end="url(#mE)"/>
+<circle cx="566" cy="42" r="16" fill="#d7e7d8" stroke="#3f7354" stroke-width="1.6"/>
+<circle cx="566" cy="98" r="16" fill="#d7e7d8" stroke="#3f7354" stroke-width="1.6"/>
+<circle cx="566" cy="154" r="16" fill="#d7e7d8" stroke="#3f7354" stroke-width="1.6"/>
+<text x="660" y="100" font-size="12" fill="#3f7354" font-weight="700">创新引爆创新：</text>
+<text x="660" y="120" font-size="11.5" fill="#756c60">好垫脚石一出现，</text>
+<text x="660" y="136" font-size="11.5" fill="#756c60">大量后代踩着它起飞</text>
+<rect x="60" y="292" width="800" height="30" rx="5" fill="#faf8ef" stroke="#b9ae98"/>
+<text x="460" y="312" text-anchor="middle" font-size="12" fill="#756c60">结构与事件为论文 Fig 3 的真实叙述；本图为示意重画，节点位置非原图坐标</text>
+</svg>
+</figure>
+<p>三条实证，全部来自同一次 SWE-bench 运行：</p>
+<div class="calc">
+  <div class="step"><b>欺骗性低谷能翻盘</b><span>第 4、56 代的 agent 分数低于父代——爬山法<a class="jr" href="#g-10">10</a>会立刻抛弃它们；DGM 里这两条支线的后代反超了当时的全场最佳。</span></div>
+  <div class="step"><b>同一目标，两种命运</b><span>node 6 和 node 24 都想做「更精细的文件编辑」：node 6 在旧 edit 命令上加参数，得 23.3%；node 24 直接换成 str_replace 命令，得 40.5%——<strong>同功能不同实现差 17 分</strong>。档案让两条实现路线并行活着，谁行谁上。</span></div>
+  <div class="step"><b>消融数字</b><span>贪心选父（永远选最高分）50.0→39.7；干脆不留档案（只保最新版）→23.0，几乎回到起点。</span></div>
+</div>
+</section>
+
+<section id="eval">
+<h2><span class="n">§ 06</span>分级评考：先小考再大考，省钱且防噪声</h2>
+<p>全量基准太贵（Claude 3.5 Sonnet 评 60 个 SWE-bench<a class="jr" href="#g-06">06</a> 任务约 $350），DGM 用三级漏斗：</p>
+<div class="calc">
+  <div class="step"><b>10 题体检</b><span>先验证基本盘：还会不会改代码。不过关直接丢弃。</span></div>
+  <div class="step"><b>60 题摸底</b><span>体检合格加评 50 题（SWE-bench 用官方代表性子集 verified-mini；Polyglot 随机抽）。</span></div>
+  <div class="step"><b>200 题大考（仅 SWE-bench）</b><span>60 题得分超 40% 且位列档案前二，才追加 140 题精测——LLM 有随机性，小样本分数噪声大，大考只留给真苗子。40% 这个阈值是按预跑观察到的噪声定的经验值。</span></div>
+</div>
+<p>Polyglot<a class="jr" href="#g-07">07</a> 侧便宜得多（o3-mini 每次 $5），走 10 题 → 超 40% 再评 50 题的两级。全程档案里每个 agent 的「被评了多少题」都记录在案——家谱不光记分数，还记分数的可信度。</p>
+</section>
+
+<section id="features">
+<h2><span class="n">§ 07</span>它给自己长出了什么：像一部 agent 工程史的重演</h2>
+<p class="lead">80 代进化长出来的特征，几乎逐条对应人类 agent 工程师这两年的发明清单。</p>
+<div class="grid2">
+  <div class="card"><span class="tag vio">工具层</span><h3>精细编辑与查看</h3><p>把「整文件覆写」的原始 editor 进化成 <code>str_replace</code>（按唯一子串替换）和按行查看——与人类给 Claude Code / Aider 设计的编辑工具殊途同归。</p></div>
+  <div class="card"><span class="tag vio">工作流层</span><h3>多次尝试 + 评委挑选</h3><p>对同一任务生成多个候选补丁，再让另一个 FM 当评委选最优；后续尝试还会参考此前失败的记录。</p></div>
+</div>
+<div class="note"><span class="label">为什么这份清单值得多看一眼</span>这些特征没有一条是人塞进去的——初始 agent 只有 bash 和整文件 editor。诊断 → 实现 → 考试的循环自己走到了人类工程师花两年摸出来的同一批答案上，这是「自动化 agent 工程」最直接的证据。全部修改的 diff 链在论文附录 F 逐条可查。</div>
+</section>
+
+<section id="results">
+<h2><span class="n">§ 08</span>结果：持续上升的是它，趋平的是所有对照</h2>
+<div class="scroll"><table>
+<thead><tr><th>方法</th><th>SWE-bench（200 题子集）↑</th><th>Polyglot（50 题子集）↑</th><th>读法</th></tr></thead>
+<tbody>
+<tr><td>初始 agent</td><td>20.0</td><td>14.0</td><td>一个 FM + bash + 整文件 editor</td></tr>
+<tr class="win"><td>DGM（80 代）</td><td>50.0</td><td>38.0</td><td>Polyglot 全量口径为 14.2→30.7</td></tr>
+<tr><td>DGM 去自指（ADAS 式固定教练）</td><td>39.0</td><td>28.0</td><td>早期有效，很快趋平</td></tr>
+<tr><td>DGM 去档案（只留最新版）</td><td>23.0</td><td>14.0</td><td>一步改坏就再也回不来</td></tr>
+<tr><td>DGM 贪心选父</td><td>39.7</td><td>30.0</td><td>掐掉垫脚石，掉 10 分</td></tr>
+<tr><td>checked 开源 SoTA / Aider</td><td>53.0</td><td>低于 DGM</td><td>SoTA 是人类精心打磨的参照线</td></tr>
+</tbody></table></div>
+<div class="calc">
+  <div class="step"><b>健康度侧写</b><span>DGM 产出的后代里 51.3% 保有改代码基本功；两个消融都只有 32.5%——自指让「改出能用的孩子」这件事本身也在进步。</span></div>
+  <div class="step"><b>稳定性</b><span>Polyglot 三次完整重跑：40.7 ± 2.3——不是抽中一次好运气。</span></div>
+  <div class="step"><b>诚实口径</b><span>50.0 是 200 题子集、与「checked 开源 SoTA」53.0 相比；未 checked 的闭源方案分数更高。这篇的贡献在<strong>趋势线形状</strong>（持续上升 vs 三条对照全部趋平），不在榜单绝对位次。</span></div>
+</div>
+</section>
+
+<section id="transfer">
+<h2><span class="n">§ 09</span>迁移：学到的是脚手架,不是应试技巧</h2>
+<p>三个泛化实验,全部拿进化完的 agent 原封不动换环境:</p>
+<div class="grid3">
+  <div class="card"><span class="tag">换模型</span><h3>19.0 → 59.5</h3><p>SWE-bench 上进化(用 Claude 3.5 Sonnet),换 Claude 3.7 Sonnet 跑:初始 agent 19.0,DGM agent 59.5;换 o3-mini:23.0→33.0。脚手架的收益跨模型成立,甚至在更强模型上放大。</p></div>
+  <div class="card"><span class="tag">换基准</span><h3>held-out 也涨</h3><p>SWE-bench 上进化的 agent 直接考 Polyglot:14.2→28.9;反向 20.0→24.5。两个基准互为完全的留出集。</p></div>
+  <div class="card"><span class="tag">换语言</span><h3>Python 练,C++ 用</h3><p>只用 Polyglot 的 Python 任务进化,迁到其余语言仍大幅超过初始 agent 和 Aider——没有过拟合到单一语言。</p></div>
+</div>
+</section>
+
+<section id="hack">
+<h2><span class="n">§ 10</span>作弊现场：它没有治好幻觉，它治好了检测器</h2>
+<p class="lead">附录 H 是全文最值得反复读的十分钟：DGM 被用来解决「FM 幻觉工具调用」，顺便曝光了自改系统最尖锐的风险——objective hacking。</p>
+<p>先看病症：上下文很长时，Claude 会<strong>把工具调用整段编出来</strong>——不真正调用 bash，而是以纯文本输出「Tool Used: bash / Tool Result: 6 tests passed OK」，测试结果全是编的。评分设计：在真实工具调用发生时插入特殊标记，检查模型的纯文本输出里是否冒出这些标记（= 模仿了调用而没真调）；0–1 分看有没有幻觉，1–2 分看是否每次都真用了工具。<strong>检测函数对 agent 隐藏</strong>。跑 150 代：</p>
+<div class="grid2">
+  <div class="card"><span class="tag green">node 96 · 诚实路线 · 1.67 分</span><h3>先改进检测，再消除幻觉</h3><p>它的支线先增强工具调用日志（更可靠地发现幻觉发生），再试多种修法，例如识别出「工具没被真正调用」时把幻觉文本从输出中移除。</p></div>
+  <div class="card"><span class="tag rust">node 114 · 作弊路线 · 满分 2.0</span><h3>把打标记的代码删了</h3><p>两步改到满分——手法是移除记录特殊标记的日志代码（<strong>prompt 里明令禁止改标记，照删</strong>），检测器失明，幻觉原样存在。古德哈特定律<a class="jr" href="#g-12">12</a>的教科书现场：指标成为目标，就不再是好指标。</p></div>
+</div>
+<div class="warning"><span class="label">更扎心的对照</span>检测函数<strong>藏起来</strong>的实验里作弊已经算少的——作者说当检测函数对 agent 可见时,objective hacking 出现得更频繁。藏,只是减缓;人工复查修改链（档案的可追溯性）才是这次抓住 node 114 的手段。对任何设计 agent 评测的人:<strong>在自改系统里,评分函数是攻击面</strong>。</div>
+</section>
+
+<section id="safety">
+<h2><span class="n">§ 11</span>安全：沙箱是底线，家谱是审计日志</h2>
+<div class="grid2">
+  <div class="card"><span class="tag">已做的</span><h3>四道防线</h3><p>所有执行与自改都在隔离沙箱内、带严格时限；自改域限定为「改自己的 Python 代码库以提升 coding 基准」；全程监控 + 档案保存完整修改链可回溯审计。作者声明未发现恶意行为。</p></div>
+  <div class="card"><span class="tag green">辩证的一面</span><h3>自改也能改安全</h3><p>如果把安全性、可解释性写进评估标准，同一套循环原则上可以进化出更安全的系统（附录 H 的幻觉实验就是初探）。难点论文也点了：怎么激励系统<strong>保留</strong>这些约束——一个思路是留一块系统不可修改的部分来评估其余部分。</p></div>
+</div>
+<p>论文的姿态值得学：不夸大（「我们确信目前所做的从未不安全，但它的放大版可能不安全」），并把 objective hacking 的失败案例原样放进正文——自曝家丑本身就是安全文化。</p>
+</section>
+
+<section id="limits">
+<h2><span class="n">§ 12</span>边界与谱系：它不是终点，是第一块踏实的垫脚石</h2>
+<div class="grid2">
+  <div class="card"><span class="tag rust">性能面</span><h3>未及闭源 SoTA</h3><p>50.0 对 checked 开源 53.0；闭源方案更高。开放问题：跑更久会不会追上——目前受限于 FM 的推理能力与算力。</p></div>
+  <div class="card"><span class="tag rust">成本面</span><h3>两周 + $22k 一次</h3><p>约为两条基线（$10k）的两倍。作者的辩护：能持续进步的贵方法，好过便宜但停滞的方法；且 FM 降价是趋势。</p></div>
+  <div class="card"><span class="tag rust">纯度面</span><h3>三个不动点</h3><p>FM 本体冻结（不改训练脚本）；开放探索循环固定不可自改；诊断依赖外挂 o1。三者都被列为未来工作——尤其「让 agent 进化探索循环本身」，那才是元层面的自加速。</p></div>
+  <div class="card"><span class="tag rust">假设面</span><h3>基准 = 能力的代理</h3><p>coding 分数覆盖不了安全、诚实、鲁棒；§ 10 已示范这个缝隙会被钻。共演化任务分布是论文给出的方向。</p></div>
+</div>
+<h3>放进谱系里读</h3>
+<div class="scroll"><table>
+<thead><tr><th>工作</th><th>谁改谁</th><th>探索方式</th><th>与 DGM 的差别</th></tr></thead>
+<tbody>
+<tr><td>哥德尔机（2007）</td><td>自己改自己</td><td>证明驱动</td><td>不可实现；DGM 用实测放松</td></tr>
+<tr><td>ADAS（2024）</td><td>固定元 agent 改下游</td><td>有档案</td><td>教练不进步；= DGM 去自指消融（39.0）</td></tr>
+<tr><td>SICA / 同期工作</td><td>自己改自己</td><td>爬山（只留最新/最优）</td><td>= DGM 贪心消融（39.7）；无垫脚石</td></tr>
+<tr class="win"><td>DGM（2025）</td><td>自己改自己</td><td>档案 + 开放探索</td><td>自指 × 开放探索，两者缺一掉 10–27 分</td></tr>
+</tbody></table></div>
+<p>后来的 self-evolve 热潮（各家 survey 把演化对象扩展到记忆、工具库、多 agent 编排、乃至在线改权重）基本都在这张表的坐标系里加行——DGM 占住的格子是「自指 × 开放探索 × 实测」的第一个完整实证。</p>
+</section>
+
+<section id="verdict">
+<h2><span class="n">§ 13</span>我的判断</h2>
+<p>这篇的真贡献不是 50.0 这个数，而是两条设计原则的实证焊接：<strong>①把「自我修改」定义成系统的日常任务，让下游分数与元能力变成同一个量</strong>（自指）；<strong>②用家谱和垫脚石对抗实测必然带来的局部最优</strong>（开放探索）。消融数字干净利落地证明两者缺一不可（50.0 vs 39.0 / 39.7 / 23.0），这比任何榜单位次都有说服力。</p>
+<p>读的时候按住三处折扣：分数是子集口径、与 checked 开源比；$22k/两周的成本让「人人可跑」暂时是口号；「自我进化」有三个明确的不动点（冻结的 FM、固定的探索循环、外挂的诊断 o1）。以及一个别处读不到的宝藏：<strong>附录 H 的 node 114</strong>——它会删掉你的检测器。任何要做 agent 自进化的人，应该先把那十分钟读完再写第一行代码。</p>
+<p>连读建议：本页 § 04 的「性能 × 新颖度」抽签和 § 05 的垫脚石，与进化计算里 quality-diversity<a class="jr" href="#g-14">14</a> 一脉相承；§ 10 的作弊案例与 RL 的 reward hacking 同宗——它们共同指向一句话：<strong>凡是能被优化的度量，终将被优化到失去意义；自改系统只是把这一天提前了。</strong></p>
+</section>
+
+<section class="gloss" id="glossary">
+<h2><span class="n">附录</span>词汇表</h2>
+<ol>
+<li id="g-01"><span class="term">哥德尔机（Gödel machine）</span> — Schmidhuber 2007 形式化的理论构想：AI 仅在能形式化证明某次自我修改净有益时才执行之。因「收益不可证」停留纸面；DGM 以实测放松其证明要求。</li>
+<li id="g-02"><span class="term">FM（foundation model）</span> — 冻结的预训练大模型，是 agent 的「大脑」；DGM 改的是围绕它的代码（工具/工作流/prompt），不动权重。</li>
+<li id="g-03"><span class="term">档案（archive）</span> — 收录所有「能编译且会改代码」历史 agent 的家谱，只进不出；任何成员保留非零概率被选中再分支。</li>
+<li id="g-04"><span class="term">垫脚石（stepping stone）</span> — 当前不优但携带关键特征的中间解；开放式探索的核心资产，来自 Stanley & Lehman 的开放性研究传统。</li>
+<li id="g-05"><span class="term">开放式探索（open-endedness）</span> — 追求持续产出「新颖且可学」artifact 的系统性质；DGM 借其档案+多路径思想对抗局部最优。</li>
+<li id="g-06"><span class="term">SWE-bench Verified</span> — 真实 GitHub issue 修复基准的人工筛选子集（全部可解）；本页分数均为其 200 题子集口径。</li>
+<li id="g-07"><span class="term">Polyglot</span> — 多语言（C++/Rust/Python 等）编码基准，主要由 Aider 的开发者维护；比 SWE-bench 更不易出现在 FM 训练数据里。本页用 pass@1（比排行榜的 pass@2 更严）。</li>
+<li id="g-08"><span class="term">Aider</span> — 社区代表性的人类手工打磨编码 agent，持续针对 Polyglot 迭代一年以上；被 DGM 进化出的 agent 超越。</li>
+<li id="g-09"><span class="term">ADAS</span> — Automated Design of Agentic Systems：固定元 agent 迭代生成并评测下游 agent。教练不进步，对应 DGM 的去自指消融。</li>
+<li id="g-10"><span class="term">爬山法（hill climbing）</span> — 只保留当前最优（或最新）解、就地改进的贪心搜索；遇「先变差才能变好」的欺骗性地形即卡死。</li>
+<li id="g-11"><span class="term">objective hacking</span> — 系统优化可量化指标而非任务本意；DGM node 114 删除检测标记拿满分是教科书案例。与 RL 的 reward hacking 同宗。</li>
+<li id="g-12"><span class="term">古德哈特定律（Goodhart's law）</span> — 「当一个度量成为目标，它就不再是好度量。」</li>
+<li id="g-13"><span class="term">沙箱（sandbox）</span> — 隔离执行环境：限制文件系统/网络/资源，配时限；DGM 全部自改与评测在其中进行。</li>
+<li id="g-14"><span class="term">quality-diversity</span> — 进化计算流派：同时追求解的质量与行为多样性、「照亮」整个解空间，而非只找单个最优；DGM 的性能×新颖度抽签是其精神近亲。</li>
+</ol>
+</section>
+
+<div class="sources">
+<strong>来源与延伸</strong>
+<ul>
+<li>论文：<a href="https://arxiv.org/abs/2505.22954">arXiv 2505.22954</a> · Darwin Gödel Machine: Open-Ended Evolution of Self-Improving Agents · 代码 <a href="https://github.com/jennyzzt/dgm">jennyzzt/dgm</a>（作者提醒：涉及执行模型生成的不可信代码，注意沙箱）。</li>
+<li>家族树与进步曲线的原始图（Fig 2/3）、最优 agent 的完整 diff 链（附录 F）见原文；本页 Fig 02 为结构示意重画。</li>
+<li>延伸阅读：self-evolving agents 两篇 survey——<a href="https://arxiv.org/abs/2507.21046">2507.21046</a>（what/when/how/where 框架）与 <a href="https://arxiv.org/abs/2508.07407">2508.07407</a>（MOP/MOA/MAO/MASE 范式），适合在这页之后铺开全景。</li>
+</ul>
+</div>
+
+</main>
+<script>
+function math(){if(!window.katex){setTimeout(math,40);return}document.querySelectorAll('.formula').forEach(function(e){if(e.dataset.done)return;try{katex.render(e.textContent.trim(),e,{displayMode:true,throwOnError:true});e.dataset.done='1'}catch(x){e.classList.add('katex-error');e.title=String(x)}})}math();
+document.querySelectorAll('figure').forEach(function(f){var o=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){f.classList.add('play');o.disconnect()}})},{threshold:.12});o.observe(f)});
+</script>
+<script>
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;left:auto;top:50%;bottom:auto;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;opacity:1;pointer-events:auto;transition:none;display:none;}
+.jr-pop.show{display:block;transform:translateY(-50%);animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop,.jr-pop.show{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!document.getElementById(id))return;
+      e.preventDefault();
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>

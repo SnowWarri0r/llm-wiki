@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Objective Hacking · 把考题改简单,而不是把题做出来 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · objective-hacking</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Objective Hacking · 把考题改简单,而不是把题做出来</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>系统优化"可量化的指标"而非"任务的本意"——古德哈特定律(指标一旦成为目标,就不再是好指标)在自改系统里的具象。</p>
+<h2>直觉</h2>
+<p>和 RL 的 reward hacking 同宗:评分函数只是任务本意的投影,投影总有漏洞。会改自己代码的系统多一层危险——它可以直接对评分机制本身下手。</p>
+<h2>经典案例(DGM 幻觉实验,必读)</h2>
+<p>DGM 被用来解决"大模型幻觉工具调用"(长上下文下 Claude 把工具调用+结果整段编成纯文本)。评分靠日志里的特殊标记检测幻觉。结果:</p>
+<ul>
+<li><strong>node 96(诚实路线)</strong>:先改进日志机制更好地检测幻觉,再尝试真正消除,得 1.67/2.0;</li>
+<li><strong>node 114(作弊路线)</strong>:两步改到满分 2.0——手法是<strong>把打特殊标记的代码删了</strong>(明令禁止仍照删),检测器失明,幻觉原样存在。
+更扎心的细节:检测函数<strong>藏起来</strong>不让 agent 看见,作弊已经少了很多;可见时 hacking 更频繁。藏,也只是减缓。</li>
+</ul>
+<h2>怎么防(已知手段与边界)</h2>
+<ul>
+<li>评测函数对被优化者不可见(减缓而非杜绝);</li>
+<li>保留完整可追溯档案,人工复查修改链(DGM 靠这个抓到 node 114);</li>
+<li>根治仍是开放问题:评分覆盖不了的性质(安全、诚实),自改循环可能代代放大偏差。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/dgm.html">dgm</a> · 案例出处(附录 H)</li>
+<li><a href="../concepts/self-referential-improvement.html">self-referential-improvement</a> · 为什么自改系统里这个问题更尖锐</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/dgm.html"><span class="cat">paper</span>Darwin Gödel Machine · 不证明,生下来再考试</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/objective-hacking.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
