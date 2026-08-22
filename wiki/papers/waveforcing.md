@@ -14,7 +14,7 @@ year: 2026
 
 ## 一句话
 
-**造成多卡同步的不是 Rolling Forcing 的混合噪声窗口，是「噪→净」的反向注意力边；砍掉它，执行图从环变 DAG，每卡一个去噪阶段的完美流水就成立了。**
+**造成逐层全组同步的不是 Rolling Forcing 的混合噪声窗口，而是「噪块影响净块」这条反向注意力边；砍掉它，执行图从环变成 DAG，去噪阶段才有条件错步流水。**
 
 ## 它要解决的痛点
 
@@ -25,10 +25,16 @@ year: 2026
 ## 核心设计
 
 1. **算法只改一件事**:跨 chunk 注意力改块因果(噪看净、净不回头),混合噪声日程与活上下文保留;配 rollout-aligned 蒸馏(训练=推理的有向前沿)。
-2. **Wave Parallelism**:每卡完整模型副本、固定负责一个阶段(4 去噪+1 干净 KV store+3 VAE = 8 卡"4+3");chunk 每 tick 挪到下一卡,GPU×时间矩阵上走对角线;每层 KV 单向发布,无全局 collective。
+2. **Wave Parallelism**：4 个去噪 rank 与 1 个 store rank 各有完整 DiT 副本；3 个 VAE rank 各自只保存解码器的一段。chunk 每 tick 挪到下一阶段，在 GPU×时间矩阵里走对角线。逐层 KV 改成单向发布，不再逐层全组 all-gather；但当前代码在 tick 边界搬 latent 仍有 world `all_gather`，初始化 clean anchor 也有 broadcast。
 3. **负载不均 = overlap 预算**:最噪 rank 上下文最长(≈8 块)算得最慢,较净 rank(≈5 块)快——快者先发 KV,通信藏进关键 rank 计算窗(14B 实测 r0 646ms/层 vs 其余 575–581,~70ms 顺风差)。
 4. **KV 传输三税**:FP8 KV 减字节(79→40ms,配 Sage 反噬、实验性);copy engine 单边写免 NCCL 配对(0 SM、343GB/s);paged 直写免 torch.cat(18.49→4.08ms)。推荐 causal+paged。
 5. **VAE 按实测时间切**:高分辨率上采样块 memory-bound、同 FLOPs 壁钟差 6×;FLOPs 均分 →146ms 瓶颈段,实测均分 →95/99/96ms 跟上 DiT ~95ms tick。连续 DP min–max 划分,bit-exact。
+
+## 先分清三个版本
+
+- 公开的 1.3B Preview 是 **5-step、5+2**，README 时间表为 `[1000,800,600,400,200]`，可复跑到 84.2 E2E FPS。
+- 最佳 117.7 E2E FPS 来自 **4-step、4+3**，代码默认时间表为 `[1000,750,500,250]`，正式 4-step 权重尚未公开。
+- 14B 的 28.1 FPS 使用随机初始化、形状对齐的权重，只测系统扩展，不代表生成质量。
 
 ## 关键数字（8×H200 · 1596 输出帧）
 
@@ -39,6 +45,7 @@ year: 2026
 ## 边界
 
 - 无论文;训练代码未开源,蒸馏细节只有"rollout-aligned"一词;14B 行是随机权重系统刻度;4-step 质量是 5-step 权重强推 4 步的口径。
+- runtime 最多保留第一个 clean anchor 加最近 7 个 clean page，工作注意力窗还会进一步截断；“无限生成”不等于每一步都回看完整历史。
 
 ## 关键概念 → 概念页链接
 
