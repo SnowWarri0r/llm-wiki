@@ -130,7 +130,7 @@ code.mathified{border:none;background:none;padding:0;font-size:1em}
 <text x="460" y="304" text-anchor="middle" font-size="12.5" fill="#0e6e78">SF 的解法：训练时就吃自己生成的前文（on-policy），训练与推理见到的世界一致。</text>
 </svg>
 </figure>
-<p><strong>teacher-forcing（TF）</strong><a class="jr" href="#g-04">04</a>：预测当前带噪块，注意力看到的历史是<strong>干净的真答案</strong>，全部块共用同一个噪声时刻。<strong>diffusion-forcing（DF）</strong><a class="jr" href="#g-05">05</a>：每块独立抽自己的噪声等级，在块因果 mask 下一起训——历史是「别人的、但带噪」。两者都是离线范式，都有曝光偏差<a class="jr" href="#g-06">06</a>。<strong>self-forcing（SF）</strong><a class="jr" href="#g-07">07</a>：训练时直接模拟推理，逐块 rollout、KV cache 全套照跑，历史是<strong>自己生成的</strong>——曝光偏差从根上消失。</p>
+<p><strong>teacher-forcing（TF）</strong><a class="jr" href="#g-04">04</a>：预测当前带噪块，注意力看到的历史是<strong>干净的真答案</strong>，全部块共用同一个噪声时刻。<strong>diffusion-forcing（DF）</strong><a class="jr" href="#g-05">05</a>：每块独立抽自己的噪声等级，在块因果 mask 下一起训——历史是「别人的、但带噪」（同款思路沿空间轴切就是 <a href="asyncpatch-diffusion.html">AsyncPatch</a>：每个空间 patch 独立配 t 来做补图）。两者都是离线范式，都有曝光偏差<a class="jr" href="#g-06">06</a>。<strong>self-forcing（SF）</strong><a class="jr" href="#g-07">07</a>：训练时直接模拟推理，逐块 rollout、KV cache 全套照跑，历史是<strong>自己生成的</strong>——曝光偏差从根上消失。</p>
 <div class="warning"><span class="label">SF 不是免费午餐</span>SF 只解决「前文从哪来」，它本身不提供训练信号——要配 DMD<a class="jr" href="#g-08">08</a> 或 GAN 损失才能训。而这两者都是反向 KL 一族：在 student 自己生成的样本上优化，<strong>对初始化敏感、容易模式坍缩</strong>。所以现有系统各自发明了五花八门的初始化（ODE-pair 回归、DF 因果适配、TF/DF 混合……），但「哪种初始化最好」在这篇之前没人系统比过。</div>
 </section>
 
