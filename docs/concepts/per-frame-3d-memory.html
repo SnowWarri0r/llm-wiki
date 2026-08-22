@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Per-frame 3D Memory · 每帧各存一份几何，只拿它找路 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · per-frame-3d-memory</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Per-frame 3D Memory · 每帧各存一份几何，只拿它找路</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>不把所有历史深度硬融合成一张全局点云；每帧独立保存深度、相机和稀疏点云，生成新视角时再挑出当前真正看得见的几帧。</p>
+<h2>为什么不直接融合</h2>
+<p>估计深度不是精确测量。假设同一墙角在帧 A 被估到 4.9 m，在帧 B 被估到 5.2 m；融合后会留下两层互相打架的墙。若把这张点云渲染成下一轮 RGB 条件，错误会进入生成结果，再被估深度、继续融合，形成闭环放大。</p>
+<p>逐帧缓存保留“谁看见了什么”的来源。目标相机到来时，系统把每帧的低分辨率点云投影到目标平面，处理遮挡后数可见点；再选覆盖最多尚未覆盖像素的帧。选中的原始旧帧供视频模型读取，几何本身只负责路由和坐标对应。</p>
+<p>这不是零误差方案：可见性和对应仍依赖估计深度。优点只是<strong>不把局部误差提前焊成不可撤销的全局外观</strong>。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/lyra-2.html">lyra-2</a> · 每轮选 5 张空间记忆帧</li>
+<li><a href="../papers/worldtrace.html">worldtrace</a> · 另一种固定上下文外记忆，压缩的是 KV 而不是逐帧几何</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/lyra-2.html"><span class="cat">paper</span>Lyra 2.0 · 先让视频模型当虚拟相机，再把走过的世界重建成 3D</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/per-frame-3d-memory.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
