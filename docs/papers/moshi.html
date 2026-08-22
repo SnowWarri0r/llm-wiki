@@ -12,7 +12,8 @@
 </style>
 <style>
 .overview{grid-template-columns:170px 30px 1fr 30px 180px;gap:10px}
-@media(max-width:760px){.overview{grid-template-columns:1fr}.overview>.arrow{display:block;transform:rotate(90deg)}.twolevel>*{min-width:0}.temporal{width:100%;max-width:100%}}
+.audit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.audit-card{background:#fff;border:1px solid var(--rule);border-top:6px solid var(--teal);padding:18px}.audit-card:nth-child(2){border-top-color:var(--orange)}.audit-card:nth-child(3){border-top-color:var(--blue)}.audit-card:nth-child(4){border-top-color:var(--yellow)}.audit-card b{display:block;font:700 10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:1px;color:var(--muted)}.audit-card strong{display:block;font-size:22px;line-height:1.35;margin:7px 0}.audit-card p{font-size:15px;line-height:1.55;color:var(--ink2)}.audit-card .audit-result{border-top:1px dashed var(--rule);padding-top:10px;color:var(--ink)}.result-strip{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}.result-strip>div{padding:16px 18px;background:#fff;border:1px solid var(--rule)}.result-strip b{display:block;color:var(--teal);font:700 11px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:1px}.result-strip strong{display:block;font-size:27px;margin:4px 0}.fingerprint-flow{display:grid;grid-template-columns:1fr 28px 1fr 28px 1fr 28px 1fr 28px 1fr;gap:7px;align-items:stretch}.fp-step{padding:14px 11px;background:#fff;border:1px solid var(--blue);font-size:14px;line-height:1.5}.fp-step b{display:block;color:var(--teal);font:700 10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;margin-bottom:7px}.fp-arrow{align-self:center;text-align:center;color:var(--teal);font:700 23px/1 ui-monospace,monospace}.trace-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.trace-path{padding:19px;border:1px solid var(--rule);background:#fff}.trace-path.works{border-top:6px solid var(--green)}.trace-path.fails{border-top:6px solid var(--orange)}.trace-path h4{font-size:21px;margin:0 0 7px}.trace-path p{font-size:15px;line-height:1.55}.boundary-note{margin:17px 0;padding:15px 18px;background:var(--orange2);border-left:5px solid var(--orange);font-size:16px}.boundary-note strong{color:#6e2b12}
+@media(max-width:760px){.overview{grid-template-columns:1fr}.overview>.arrow{display:block;transform:rotate(90deg)}.twolevel>*{min-width:0}.temporal{width:100%;max-width:100%}.audit-grid,.result-strip,.trace-grid{grid-template-columns:1fr}.fingerprint-flow{grid-template-columns:1fr}.fp-arrow{transform:rotate(90deg);padding:2px}.audit-card,.trace-path{min-width:0}}
 </style>
 <!-- katex-head:start -->
 <link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
@@ -143,10 +144,52 @@
 <div class="tablewrap"><table><thead><tr><th>模型</th><th>乱码</th><th>嘈杂</th><th>背景噪声</th><th>重复</th><th>无伪影</th></tr></thead><tbody><tr><td>未量化</td><td>0</td><td>4.1%</td><td>0.1%</td><td>0.1%</td><td>95.8%</td></tr><tr class="win"><td>W4A8 · block 32</td><td>0</td><td>3.8%</td><td>0.1%</td><td>0.4%</td><td>95.7%</td></tr><tr class="warn"><td>W3A8 · block 256</td><td>0.2%</td><td>12.2%</td><td>3.1%</td><td>21.9%</td><td>62.7%</td></tr><tr class="warn"><td>W2A8 · block 256</td><td>83.1%</td><td>0</td><td>0</td><td>11.0%</td><td>5.9%</td></tr></tbody></table></div>
 <p>作者用 token 熵<a class="jr" href="#g-11">11</a>做伪影代理：文字熵过高常对应胡言乱语，文字熵为零而音频熵仍高常对应背景噪声，熵曲线近乎平坦且非零常对应重复。阈值是经验规则，依赖窗口长度与词表；它能补 MOSNet 的盲点，不能替代真人听评。</p>
 
-<h2><span class="num">§ 15</span><span>安全部分不只是一个 toxicity 分数</span></h2>
-<div class="cards"><div class="metric"><b>ALERT SAFETY</b><strong>83.05</strong><p>只评转写文本，无法覆盖语气、讽刺与非语言声音；位于当时文本模型中游。</p></div><div class="metric"><b>VOICE CONSISTENCY</b><strong>98.7%</strong><p>10,249 段更接近 Moshi 参考声，133 段更接近用户参考声。</p></div><div class="metric"><b>DEDUP TEST</b><strong>0 / 100k</strong><p>去重后，对最频繁 16 秒片段未观察到精确复现；不等于所有训练内容都不会记忆。</p></div></div>
-<p>音频去重不是只比文字。附录先把 Mel 频谱<a class="jr" href="#g-12">12</a>压成 64 个频带、40 Hz 时间格，选能量高且在时间/频率上突出的关键点；每个中心点与前后邻居组合成 26-bit 指纹，再用时间偏移投票验证两段音频是否真的对齐。出现至少 10 次的重复片段会被汇总成去重签名集，训练片段命中阈值就过滤。</p>
-<p>水印结果反而是负面证据。AudioSeal 在不改音频时检测接近 1，但经 RVQGAN 或 Mimi 低码率重编码后，分数掉到接近未加水印。直接在生成 token 上做水印也遇到 codec 非幂等<a class="jr" href="#g-13">13</a>：token 解码成波形再编码，第一层也只有 76.6% 保持相同，后层更低；轻微时间平移还会继续破坏一致性。论文没有把这包装成已解决方案。</p>
+<h2><span class="num">§ 15</span><span>安全审计：四个问题，四套检查，不能混成一个“安全率”</span></h2>
+<p class="lead">前面已经知道 Moshi 怎样实时对话，但“能说话”不等于“可以放心发布”。论文这一章没有再加模型模块，而是分别检查四种风险：<strong>会不会说危险内容、会不会照背训练录音、会不会模仿用户音色、生成声音能不能追溯</strong>。四项用的样本和检测方法都不同，数字不能相加，也不能合成一个总安全率。</p>
+
+<figure id="fig-safety-map"><figcaption><span>Fig 10 · Moshi 的四本安全账</span><b>each number answers a different question</b></figcaption>
+<div class="audit-grid">
+  <div class="audit-card"><b>01 · CONTENT</b><strong>它会说危险内容吗？</strong><p>把生成文字送进 <a class="jr" href="#g-14">ALERT<sup>14</sup></a>，检查仇恨、自残、武器、犯罪、色情与药物等类别。</p><p class="audit-result"><strong>83.05 分</strong>只代表这套文字基准里的得分，而且论文规定分数越高越安全。</p></div>
+  <div class="audit-card"><b>02 · MEMORY</b><strong>它会照背训练录音吗？</strong><p>先用<a class="jr" href="#g-17">音频指纹<sup>17</sup></a>找出训练集中反复出现的片段，再观察模型会不会原样续写。</p><p class="audit-result"><strong>去重后 0 / 100,000</strong>只覆盖最常见那段 16 秒录音的精确复现。</p></div>
+  <div class="audit-card"><b>03 · IDENTITY</b><strong>它会变成用户的声音吗？</strong><p>把每段声音压成<a class="jr" href="#g-16">说话人向量<sup>16</sup></a>，看生成片段更像 Moshi 的参考声，还是更像用户。</p><p class="audit-result"><strong>98.7%</strong>更接近 Moshi 音色；这不是音质得分。</p></div>
+  <div class="audit-card"><b>04 · TRACEABILITY</b><strong>事后能认出是它生成的吗？</strong><p>作者测试服务器侧索引和<a class="jr" href="#g-18">音频水印<sup>18</sup></a>：前者要保留生成记录，后者试图把标记藏进声音。</p><p class="audit-result"><strong>索引有条件可用，水印实验失败。</strong>论文没有交付可靠水印。</p></div>
+</div>
+<p class="caption">这张图只认清四个问题。下面再逐项看检测流程和结论边界。</p></figure>
+
+<h3>15.1 · 有害内容：83.05 不是“83.05% 安全”</h3>
+<p><a class="jr" href="#g-14">ALERT<sup>14</sup></a> 是一组红队问题：故意拿仇恨、自残、武器、犯罪、色情和药物等危险请求试探模型，再给回答打分。论文表格明确规定<strong>分数越高越安全</strong>：99 分以上才算安全，90–99 分仍标成不安全，低于 90 分标成高度不安全。Moshi 的总分是 <strong>83.05</strong>，位于当时表中模型的中间位置；它明显落后于 GPT-3.5 的 96.95、GPT-4 的 99.18 和 Llama 2 的 99.98。</p>
+<div class="boundary-note"><strong>这项检查只看文字。</strong> Moshi 的语气、讽刺、尖叫、哭声和其他非语言声音没有进入评分。它衡量的是“生成文字怎样回答危险问题”，不是完整的语音安全，更不是 83.05% 的回答都安全。</div>
+
+<h3>15.2 · 训练数据复读：先看为什么去重是必要的</h3>
+<p><a class="jr" href="#g-15">复读训练数据<sup>15</sup></a>指模型把训练时听过的录音原样吐出来。对语音模型来说，被背出来的不只是文字，还可能包括真人音色、语调和背景音乐。原始单音轨模型在温度 0.8 的无提示生成中，有 <strong>0.19%</strong> 命中最常见训练片段；如果先播放那段录音的前 3 秒再让模型续写，命中率高达 <strong>98.4%</strong>。这说明问题真实存在，不是为了安全报告凭空设计的检查。</p>
+
+<figure id="fig-audio-fingerprint"><figcaption><span>Fig 11 · 音频指纹怎样找到重复录音</span><b>shazam-like matching, not raw waveform equality</b></figcaption>
+<div class="fingerprint-flow">
+  <div class="fp-step"><b>01 · AUDIO</b>一段训练录音。音量或开头稍有偏移时，原始波形已经无法逐点相等。</div><div class="fp-arrow">→</div>
+  <div class="fp-step"><b>02 · MEL MAP</b>转成 Mel 频谱<a class="jr" href="#g-12">12</a>：每秒 40 个时间格，200–3000 Hz 分成 64 个频带。</div><div class="fp-arrow">→</div>
+  <div class="fp-step"><b>03 · PEAKS</b>只留下能量高、而且在时间和频率邻域里最突出的点，得到“星座图”。</div><div class="fp-arrow">→</div>
+  <div class="fp-step"><b>04 · 26-BIT HASH</b>一个中心峰配前后两个峰；三个频带编号加两段时间差，编码成 26-bit 指纹。</div><div class="fp-arrow">→</div>
+  <div class="fp-step"><b>05 · OFFSET VOTE</b>大量相同指纹若还保持同一时间偏移，才判定两段音频真的对齐。</div>
+</div>
+<p class="caption">为什么是 26 bit：三个频带各有 64 种，分别需要 6 bit，共 18 bit；前后时间差各有 16 种，分别需要 4 bit，再加 8 bit；总计 18+8=26 bit。</p></figure>
+
+<p>全训练集互相比对后，出现至少 10 次的片段会合并成一个“常见重复签名集”。训练新片段时，只要它与这个集合的匹配分超过阈值，就不拿去训练。论文没有公开阈值的具体数值。完成去重后，作者生成 100,000 次；即使给出目标录音的前 3 秒，也没有再次检测到那段最常见的 16 秒录音。</p>
+<div class="boundary-note"><strong>0 / 100,000 的准确读法：</strong>在这 10 万次实验里，没有精确复现<strong>被挑来测试的那一段</strong>。它不能推出“模型不会记住任何训练数据”，也覆盖不了改词、变声、剪短之后的非精确复现。</div>
+
+<h3>15.3 · 音色身份：98.7% 衡量“像谁”，不是“好不好听”</h3>
+<p>作者先让 Moshi 和一个合成用户对话 100 小时，再用 WavLM-large 把每段语音变成一串<a class="jr" href="#g-16">说话人向量<sup>16</sup></a>。这串数字可以看成音色指纹：两串向量方向越接近，通常表示说话人越像。每个 Moshi 片段都做二选一：</p>
+<div class="result-strip"><div><b>更像 MOSHI 参考声</b><strong>10,249 段</strong>占 98.7%；20–45 秒的各时间段仍保持在 98.4%–99.3%。</div><div><b>更像用户参考声</b><strong>133 段</strong>占 1.3%；说明不是绝对不会串音色。</div></div>
+<p>这项实验支持的结论很窄：指令微调时固定使用同一个助手音色，足以让 Moshi 在这组<strong>合成对话</strong>里大多保持自己的声音。它没有证明声音质量达到 98.7%，也没有覆盖所有真人口音、恶意模仿提示或长时间通话。</p>
+
+<h3>15.4 · 来源追踪：服务器索引能查，藏进声音的水印却留不住</h3>
+<p>“以后拿到一段音频，能不能判断它由 Moshi 生成”有两条路。两条路的前提不同，不能混为一谈：</p>
+<div class="trace-grid"><div class="trace-path works"><h4>服务器索引 · 有条件可用</h4><p>生成时把音频指纹存进数据库；以后拿可疑音频回来检索。它像平台保存订单号，前提是生成发生在受控服务器，而且当时留下了记录。</p></div><div class="trace-path fails"><h4>音频水印 · 本文没有解决</h4><p>把人耳不易察觉的标记直接藏进波形或采样规律里，希望音频离开服务器后仍可检测。它更通用，但必须扛住压缩、重采样和时间平移。</p></div></div>
+
+<div class="tablewrap"><table><thead><tr><th>10 秒音频</th><th>未加水印</th><th>加水印、不处理</th><th>加水印后经 RVQGAN</th><th>加水印后经 Mimi</th></tr></thead><tbody><tr><td>AudioSeal 检测分</td><td>0.0855</td><td>0.9999</td><td>0.1101</td><td>0.0805</td></tr></tbody></table></div>
+<p>AudioSeal 会把人耳难以察觉的标记加进波形，再输出一个“像不像带水印”的检测分。不处理时，它几乎满分；但经过低码率 codec 重编码，检测分掉回未加水印附近。原因很直接：codec 优先保住听感，水印这种不影响重建的小信号会被当成可丢细节。</p>
+<p>作者又试着把水印写进 token 的采样规律，但遇到 codec 非幂等<a class="jr" href="#g-13">13</a>。一组 token 解码成波形，再编码回来，即使不加攻击，Mimi 第一层也只有 <strong>76.6%</strong> 保持原编号，第八层只剩 <strong>30.3%</strong>；声音平移 40 ms 后，第一层进一步掉到 <strong>48.3%</strong>。检测器连原 token 序列都恢复不出来，自然难以判断采样规律有没有被动过。</p>
+<p>论文列了几条后续方向：只标记较稳定的前层码、专门训练 codec 提高重编码稳定性、让水印适应时间平移，或者改在文字流里做标记。这些都只是研究建议，本文没有把其中任何一条做成可用方案。</p>
+<div class="note"><span class="tag">本节结论</span><strong>文字安全得分低于 ALERT 的 90 分门槛；精确复读可通过去重明显压低；合成对话中的助手音色较稳定；可靠音频水印仍未解决。</strong>这四句分别对应四项实验；不能压成“Moshi 很安全”，也不能因为水印失败就反推模型其他三项都不安全。</div>
 
 <h2><span class="num">§ 16</span><span>最后分清：论文模型、发布权重与今天的仓库</span></h2>
 <div class="boundary"><div class="paper"><h3>2024 论文回答什么</h3><p>7B Helium + 6 层 Depth、8 路 Mimi、3000 个时间步训练上下文（约 4 分钟）、约 5 分钟对话实验、160/200 ms 延迟、训练与安全评测。</p><p>它没有今天常见的完整打断基准、真人长期双工偏好评测，也没有证明英语之外同等有效。</p></div><div class="repo"><h3>2026-05-16 官方仓库是什么</h3><p>检查 commit <code>e6a55d2</code>：同时维护 PyTorch 研究栈、MLX 本地栈、Rust 生产栈和 Web 客户端；发布 Moshiko、Moshika 与 Mimi，多种后端和精度。</p><p>这些后续工程能力是实现补充，不能反推论文表格。仓库模型使用 CC-BY 4.0；训练代码另见官方 finetune 仓库。</p></div></div>
@@ -166,6 +209,11 @@
 <li id="g-11"><span class="term">Entropy · 熵</span>：一段 token 分布有多分散。这里用滑窗内 token 多样性检测重复、乱码与噪声，是经验代理而非音质定义。</li>
 <li id="g-12"><span class="term">Mel spectrogram</span>：按时间与接近人耳感知的频率刻度显示能量的二维图；附录从中挑稳定关键点做音频指纹。</li>
 <li id="g-13"><span class="term">Idempotence · 幂等</span>：操作重复一次结果不变。codec 若幂等，token 解码再编码应回到同一 token；Mimi 实验并不满足。</li>
+<li id="g-14"><span class="term">ALERT</span>：用仇恨、自残、武器、犯罪、色情和药物等红队问题测试语言模型的安全基准。Moshi 只把生成文字交给它评测，语气和其他声音不在评分范围。</li>
+<li id="g-15"><span class="term">Regurgitation · 训练数据复读</span>：模型不只是学会规律，而是把见过的训练片段近乎原样生成。语音复读还可能带出真人音色、语调或背景音乐。</li>
+<li id="g-16"><span class="term">Speaker embedding · 说话人向量</span>：声纹模型把一段语音压成固定长度向量；比较向量方向，可估计两段声音是否更像同一个人。它衡量“像谁”，不是音质。</li>
+<li id="g-17"><span class="term">Audio fingerprint · 音频指纹</span>：从频谱稳定峰值及其时间关系生成短哈希。相比逐点波形，它更能容忍音量变化和少量时间偏移，常用于听歌识曲、去重与检索。</li>
+<li id="g-18"><span class="term">Audio watermark · 音频水印</span>：把难以察觉的标记写进声音或生成过程，事后据此判断来源。实用水印还必须经受压缩、重采样、裁剪和时间平移。</li>
 </ol></section>
 <div class="sources"><strong>Primary sources</strong>　<a href="https://arxiv.org/abs/2410.00037">论文与 67 页附录</a> · <a href="https://github.com/kyutai-labs/moshi">官方仓库</a>（实现核对 commit <code>e6a55d2</code>） · 论文原始 LaTeX source（2024-10-03）。正文中的原文结论、表格事实与当前仓库实现已分账。</div>
 <footer class="colophon"><span>INGESTED 2026-08-12 · REVIEWED TWICE</span><span>MOSHI · COGNITIVE ORDER, NOT PAPER ORDER</span></footer>
