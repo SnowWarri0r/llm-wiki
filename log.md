@@ -1601,3 +1601,8 @@ skill 更新:
 - 主结果全表搬运：2 步因果 Wan2.1-1.3B VBench 84.63 超 50 步双向 14B（83.35）；三个反直觉（frame-wise 1/2 步>4 步且 4 步长相机漂移、noisy context 两粒度方向相反、DF/TF 初始化分数最高但过平滑）。
 - 顺手补上 rcm 在 index.md 里漏登记的入口；rcm.html §00 卡片改为互链新页。概念页 5 个更新 sources（causal-consistency-distillation / chunk-wise-self-forcing / autoregressive-vs-bidirectional / block-causal-attention / continuous-time-consistency）。
 - Review 1 逐节对照原文大纲（含附录 A 理论、附录 B kernel 算法）；Review 2 渲染/glossary/图审计见本条后续勘误。
+
+## [2026-08-16] revise | Moshi §15 把安全指标拆成四本账
+- 旧版把 ALERT 83.05、音色一致性 98.7%、去重 0/100k 和水印失败挤在三张卡里，读者不知道数字分别回答什么。新版先给四问题总览，再按“风险 → 检测流程 → 结果 → 不能证明什么”逐项展开。
+- 补齐原文正文 §6 与附录 B/E：解释 Shazam 式 26-bit 音频指纹的五步数据流、原始模型为何确有复读、说话人向量二选一协议、服务器索引与水印的前提差异，并搬入 AudioSeal/Mimi 重编码和 token 非幂等的关键数字。
+- Review 1 对照 PDF 第 36–41、54–56、62 页重查实验口径；Review 2 以最终 HTML 检查桌面/手机、浮卡、对比度、表格与两张新图，修正项记录在本条提交中。
