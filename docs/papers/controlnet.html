@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ControlNet · 文字管“画什么”，条件图管“画在哪”</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..800&family=Newsreader:opsz,wght@6..72,350..700&family=Noto+Serif+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet">
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+:root{--paper:#f2ecdc;--card:#fffaf0;--ink:#171512;--ink2:#413b32;--muted:#746a5c;--rule:#b8ac95;--teal:#087b83;--teal2:#cfe8e5;--blue:#173d5c;--blue2:#d9e6ee;--orange:#b54825;--orange2:#f4d8c9;--gold:#9b6906;--gold2:#f3e2ae;--green:#3e6b4b;--green2:#dbe8d7;--accent:#087b83}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:18px/1.76 'Newsreader','Noto Serif SC',serif;-webkit-font-smoothing:antialiased}body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.28;background-image:linear-gradient(rgba(8,123,131,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(8,123,131,.08) 1px,transparent 1px);background-size:24px 24px}.page{position:relative;max-width:1180px;margin:auto;padding:58px 38px 120px}.mast{display:flex;justify-content:space-between;border-top:4px double var(--ink);border-bottom:1px solid var(--rule);padding:12px 0;color:var(--muted);font:600 11px/1.5 'JetBrains Mono';letter-spacing:2px;text-transform:uppercase}.hero{padding:58px 0 32px}.issue{display:flex;gap:14px;align-items:center;color:var(--teal);font:700 11px/1.5 'JetBrains Mono';letter-spacing:3px;text-transform:uppercase}.issue:after{content:"";height:1px;background:var(--rule);flex:1}.hero h1{margin:18px 0 13px;font:750 clamp(48px,8vw,96px)/.93 'Fraunces','Noto Serif SC';letter-spacing:-.05em}.hero h1 em{color:var(--teal);font-weight:600}.byline{color:var(--muted);font:600 12px/1.6 'JetBrains Mono';letter-spacing:.6px}.dek{max-width:930px;font:italic 400 clamp(21px,2.45vw,29px)/1.45 'Fraunces','Noto Serif SC';color:var(--ink2)}.tldr,.note,.warning,.truth{margin:24px 0;padding:18px 22px;background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--teal)}.warning{border-left-color:var(--orange);background:#fff0e9}.truth{border-left-color:var(--green);background:#edf5eb}.label{display:block;margin-bottom:5px;color:var(--teal);font:700 10px/1.5 'JetBrains Mono';letter-spacing:2px;text-transform:uppercase}.warning .label{color:#893218}.truth .label{color:#285d37}nav.toc{position:sticky;top:35px;z-index:10;display:flex;gap:7px;overflow-x:auto;margin:0 -14px 50px;padding:10px 14px;background:rgba(242,236,220,.97);border-block:1px solid var(--rule);scrollbar-width:none}nav.toc a{flex:none;padding:6px 9px;border:1px solid var(--rule);color:var(--blue);background:var(--card);font:600 10px/1.2 'JetBrains Mono';text-decoration:none}nav.toc a:hover,nav.toc a:focus-visible{background:var(--teal);color:#fff;outline:2px solid var(--blue);outline-offset:2px}h2{display:flex;gap:16px;align-items:baseline;margin:76px 0 20px;font:700 clamp(30px,4vw,43px)/1.1 'Fraunces','Noto Serif SC';letter-spacing:-.025em}h2 .n{min-width:55px;color:var(--teal);font:700 11px/1.4 'JetBrains Mono';letter-spacing:2px}h3{margin:32px 0 10px;font:700 23px/1.3 'Fraunces','Noto Serif SC'}p{margin:12px 0}a{color:#05666d;text-decoration-thickness:1px;text-underline-offset:3px}strong{font-weight:700}.lead{font-size:22px;line-height:1.58;color:var(--ink2)}code{font:500 .88em/1.5 'JetBrains Mono';background:#fff8e7;border:1px solid var(--rule);border-radius:3px;padding:1px 5px}.jr{vertical-align:super;margin:0 2px;padding:1px 5px;border:1px solid var(--gold);border-radius:999px;background:var(--gold2);color:#513500;text-decoration:none;font:700 9px/1.2 'JetBrains Mono'}.jr:hover,.jr:focus-visible{background:#604000;color:#fff;outline:2px solid #fff;outline-offset:1px}.grid2,.grid3,.grid4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid4{grid-template-columns:repeat(4,minmax(0,1fr))}.card{min-width:0;padding:20px;background:var(--card);border:1px solid var(--rule);box-shadow:5px 5px 0 rgba(8,123,131,.07)}.card h3{margin:8px 0 5px}.card p{font-size:16px;line-height:1.58}.tag{display:inline-block;padding:3px 8px;background:var(--blue2);color:var(--blue);font:700 10px/1.4 'JetBrains Mono';letter-spacing:.8px;text-transform:uppercase}.tag.teal{background:var(--teal2);color:#055e64}.tag.orange{background:var(--orange2);color:#7b2d16}.tag.green{background:var(--green2);color:#285d37}.tag.gold{background:var(--gold2);color:#533700}figure{margin:38px 0;padding:28px;background:rgba(255,250,240,.94);border:1px solid var(--rule);box-shadow:8px 8px 0 rgba(8,123,131,.08);overflow:hidden}figcaption{display:flex;justify-content:space-between;gap:16px;margin-bottom:22px;padding-bottom:12px;border-bottom:1px dashed var(--rule);color:var(--muted);font:600 11px/1.4 'JetBrains Mono';letter-spacing:1.2px;text-transform:uppercase}figcaption b{color:var(--orange)}.formula{overflow-x:auto;margin:16px 0;padding:17px 20px;background:var(--blue);color:#fff;border-left:5px solid var(--teal);text-align:center}.formula .katex{color:#fff}.formula.light{background:#fff;border:1px solid var(--rule);border-left:5px solid var(--teal);color:var(--ink)}.formula.light .katex{color:var(--ink)}.vars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}.var{padding:12px 14px;background:#fff;border:1px solid var(--rule);font-size:15px}.var>code.m:first-child{display:block;color:#05666d;font-weight:700;margin-bottom:3px}.flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:10px;align-items:stretch}.node{display:flex;flex-direction:column;justify-content:center;min-width:0;padding:18px 14px;background:#fff;border:1px solid var(--rule);text-align:center}.node b{color:var(--blue)}.node small{display:block;margin-top:5px;color:var(--muted);font:600 10px/1.45 'JetBrains Mono'}.node.control{background:var(--teal2);border-color:var(--teal)}.node.locked{background:var(--blue2);border-color:var(--blue)}.node.warn{background:var(--orange2);border-color:var(--orange)}.arrow{align-self:center;color:var(--orange);font:800 24px/1 'JetBrains Mono'}.input-routing{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:12px}.route-card{padding:14px;background:#fff;border:1px solid var(--rule);text-align:center}.route-card b{display:block;color:var(--blue)}.route-card.control-only{background:var(--teal2);border-color:var(--teal)}.route-card .route-arrow{display:block;margin-top:5px;color:var(--orange);font:800 19px/1.2 'JetBrains Mono'}.down-arrow{text-align:center;color:var(--orange);font:800 27px/1.3 'JetBrains Mono'}.lanes{display:grid;grid-template-columns:1fr 84px 1fr;gap:12px;align-items:stretch}.lane{padding:18px;background:#fff;border:1px solid var(--rule)}.lane.locked{border-top:5px solid var(--blue)}.lane.control{border-top:5px solid var(--teal);background:#f0f9f6}.lane h3{margin:0 0 10px}.lane .mini{display:grid;gap:7px}.mini div{padding:10px;background:#fff;border:1px solid var(--rule);font-size:14px}.merge-column{display:grid;place-items:center;color:var(--orange);font:800 15px/1.5 'JetBrains Mono';text-align:center}.output-route{display:grid;grid-template-columns:1fr 84px 1fr;gap:12px;margin-top:10px}.output-route .out{grid-column:3}.compare{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.cmp{padding:18px;background:#fff;border:1px solid var(--rule)}.cmp h3{margin:6px 0}.cmp.bad{border-top:5px solid var(--orange)}.cmp.mid{border-top:5px solid var(--gold)}.cmp.good{border-top:5px solid var(--teal)}.cmp ul{padding-left:18px;font-size:15px}.calc{counter-reset:step;display:grid;gap:8px;margin:18px 0}.step{position:relative;padding:13px 14px 13px 56px;background:#fff;border:1px solid var(--rule);font-size:15px}.step:before{counter-increment:step;content:counter(step,decimal-leading-zero);position:absolute;left:16px;top:14px;color:var(--teal);font:700 11px/1.5 'JetBrains Mono'}.step b{display:block;color:var(--blue)}.gate-demo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.gate-state{padding:18px;background:#fff;border:1px solid var(--rule);opacity:.46;transition:.25s ease}.gate-state.active{opacity:1;border-color:var(--teal);box-shadow:inset 0 5px 0 var(--teal)}.gate-state h3{margin:3px 0 7px}.gate-state code{display:inline-block}.controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px}.controls button{padding:8px 14px;border:1px solid var(--rule);background:#fff;color:var(--blue);font:700 11px/1.2 'JetBrains Mono';cursor:pointer}.controls button:hover,.controls button:focus-visible{background:var(--teal);color:#fff;outline:2px solid var(--blue);outline-offset:2px}.controls .status{flex:1;min-width:250px;padding:9px 12px;background:#fff;border:1px solid var(--rule);font-size:14px}.pyramid{display:grid;gap:8px}.pyr-row{display:grid;grid-template-columns:120px minmax(0,1fr) 48px minmax(0,1fr);gap:8px;align-items:stretch}.pyr-label,.pyr-block,.pyr-plus{display:grid;place-items:center;min-height:62px;padding:9px;border:1px solid var(--rule);text-align:center}.pyr-label{background:var(--blue);color:#fff;font:700 11px/1.4 'JetBrains Mono'}.pyr-block{background:#fff;font-size:14px}.pyr-block.copy{background:var(--teal2);border-color:var(--teal)}.pyr-plus{border:0;color:var(--orange);font:800 22px/1 'JetBrains Mono'}.scale8{margin-inline:12%}.scale16{margin-inline:8%}.scale32{margin-inline:4%}.encoder-account{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.enc-step{padding:13px 8px;background:#fff;border:1px solid var(--rule);text-align:center}.enc-step b{display:block;color:var(--blue)}.enc-step small{color:var(--muted);font:600 10px/1.4 'JetBrains Mono'}.scroll{overflow-x:auto;margin:18px 0;border:1px solid var(--rule)}table{width:100%;border-collapse:collapse;background:var(--card);font-size:14px;white-space:nowrap}th,td{padding:10px 12px;border-bottom:1px solid var(--rule);text-align:right}th:first-child,td:first-child{text-align:left}thead th{background:var(--blue);color:#fff;font:600 10px/1.4 'JetBrains Mono';letter-spacing:.7px}.win{background:var(--teal2);color:#154f50;font-weight:700}.caution{background:var(--orange2);color:#782d1e}.metric-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.metric{padding:18px;background:#fff;border:1px solid var(--rule);text-align:center}.metric b{display:block;color:var(--teal);font:700 31px/1.15 'Fraunces'}.metric small{color:var(--muted);font:600 10px/1.4 'JetBrains Mono'}.gloss{margin-top:76px;padding-top:30px;border-top:3px double var(--ink)}.gloss ol{list-style:none;padding:0;counter-reset:g}.gloss li{position:relative;padding:13px 10px 13px 48px;border-bottom:1px dashed var(--rule);font-size:15px}.gloss li:before{counter-increment:g;content:counter(g,decimal-leading-zero);position:absolute;left:7px;color:var(--teal);font:700 10px/1.8 'JetBrains Mono'}.gloss .term{font-weight:700;color:var(--blue)}.sources{margin-top:54px;padding:22px;background:var(--card);border:1px solid var(--rule);font-size:14px}.sources li{margin:7px 0}.colophon{display:flex;justify-content:space-between;gap:20px;margin-top:50px;padding-top:16px;border-top:1px solid var(--rule);color:var(--muted);font:600 10px/1.5 'JetBrains Mono';letter-spacing:1px}
+@media(max-width:900px){.grid4,.compare,.metric-grid{grid-template-columns:1fr 1fr}.input-routing{grid-template-columns:1fr 1fr}.flow{grid-template-columns:1fr}.arrow{transform:rotate(90deg);justify-self:center}.lanes{grid-template-columns:1fr}.merge-column{min-height:48px}.output-route{display:block}.output-route .out{margin-top:10px}.gate-demo{grid-template-columns:1fr}.pyr-row{grid-template-columns:90px minmax(0,1fr) 36px minmax(0,1fr)}}
+@media(max-width:700px){.page{padding:34px 18px 90px}.grid2,.grid3,.grid4,.compare,.vars,.metric-grid{grid-template-columns:1fr}figcaption{display:block}figcaption b{display:block;margin-top:5px}.input-routing{grid-template-columns:1fr 1fr}.encoder-account{grid-template-columns:1fr 1fr}.pyr-row{grid-template-columns:76px minmax(0,1fr) 28px minmax(0,1fr)}.pyr-label,.pyr-block{font-size:12px;padding:6px}.scale8,.scale16,.scale32{margin-inline:0}.colophon{display:block}.colophon span{display:block;margin-top:6px}}
+@media(max-width:520px){body{font-size:17px}.page{padding-inline:12px}.hero h1{font-size:40px}figure{padding:18px 12px}.mast .r{display:none}.formula{padding:14px 10px;text-align:left}nav.toc{margin-inline:-12px}.input-routing{grid-template-columns:1fr}.pyr-row{grid-template-columns:64px minmax(0,1fr) 24px minmax(0,1fr)}.pyr-block{word-break:break-word}.gate-state{opacity:1}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<script>
+window.addEventListener('DOMContentLoaded',function(){
+  if(window.katex){
+    document.querySelectorAll('.formula[data-display="true"]').forEach(function(el){
+      if(el.dataset.mathified)return;
+      try{katex.render(el.textContent.trim(),el,{displayMode:true,throwOnError:true,strict:false});el.dataset.mathified='1';}
+      catch(e){console.warn('[formula] KaTeX:',e.message);}
+    });
+  }
+  var states=[].slice.call(document.querySelectorAll('.gate-state'));
+  var status=document.getElementById('gate-status');
+  function show(i){states.forEach(function(s,j){s.classList.toggle('active',j===i)});if(status)status.textContent=states[i].dataset.status;}
+  document.querySelectorAll('[data-gate-step]').forEach(function(btn){btn.addEventListener('click',function(){show(Number(btn.dataset.gateStep));});});
+  show(0);
+});
+</script>
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · controlnet</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page">
+<div class="mast"><span>CONTROLLABLE DIFFUSION · PAPER FIELD GUIDE</span><span class="r">ICCV 2023 · ARXIV 2302.05543 V3</span></div>
+<header class="hero">
+  <div class="issue">空间控制不是再写一遍提示词</div>
+  <h1>ControlNet<br><em>文字管“画什么”，条件图管“画在哪”</em></h1>
+  <p class="byline">Lvmin Zhang · Anyi Rao · Maneesh Agrawala · Stanford University</p>
+  <p class="dek">提示词能说“画一个人抬起右手”，却很难钉死肩、肘、手腕的坐标。ControlNet 让边缘图、骨架、分割图或深度图直接规定空间结构，同时把原 Stable Diffusion 冻结起来，避免一小批控制数据把原有画质和语义能力冲坏。</p>
+  <div class="tldr"><span class="label">先记这一句</span><strong>ControlNet 不是另起炉灶训练一个生成器。</strong>它复制 Stable Diffusion 的 12 个编码块和 1 个中间块来读条件图，再把 13 组“应该怎样修正”的多尺度特征加回冻结 U-Net。两端的零卷积让这条旁路在训练第 0 步严格输出 0，因此接上去时与原模型完全相同。</div>
+</header>
+<nav class="toc"><a href="#scope">00 边界</a><a href="#problem">01 痛点</a><a href="#overview">02 总览</a><a href="#alternatives">03 取舍</a><a href="#zero">04 零卷积</a><a href="#unet">05 13 路</a><a href="#training">06 训练</a><a href="#inference">07 推理</a><a href="#data">08 数据</a><a href="#results">09 实验</a><a href="#limits">10 边界</a></nav>
+
+<section id="scope">
+<h2><span class="n">§ 00</span>先把论文、附录、代码和 1.1 分开</h2>
+<p class="lead">这页讲的是 2023 年 ICCV 论文的 ControlNet 1.0。官方仓库后来发布的 ControlNet 1.1 增加了更多预训练模型与推理玩法，但不能倒过来算成原论文贡献。</p>
+<div class="grid4">
+  <div class="card"><span class="tag teal">主文</span><h3>12 页 · v3</h3><p>方法、训练目标、推理方式、主实验和结论。核心公式都以这一版为准。</p></div>
+  <div class="card"><span class="tag gold">补充材料</span><h3>33 页</h3><p>11 类条件的训练配方、六种结构消融、梯度推导、更多结果与失败案例。</p></div>
+  <div class="card"><span class="tag green">官方代码</span><h3>commit ed85cd1</h3><p>只补论文描述不闭合的实现事实：条件编码器与 13 路输出。</p></div>
+  <div class="card"><span class="tag orange">后续版本</span><h3>ControlNet 1.1</h3><p>仓库后来的 lineart、softedge、shuffle、inpaint 等模型，只放在历史定位。</p></div>
+</div>
+<div class="warning"><span class="label">原始材料里有三处账对不上</span>论文写“四个 4×4、stride-2 卷积”把 512×512 变成 64×64，但四次减半应得到 32×32；官方代码实际是三次 stride-2。补充材料对 OpenPifPaf 写了 80K 与 200K 两个样本数，对 User Scribble 也同时写了 300 与 150 GPU-hours。本页保留矛盾，不擅自选一个当唯一真相。</div>
+</section>
+
+<section id="problem">
+<h2><span class="n">§ 01</span>文字已经能控制内容，为什么还要一张条件图</h2>
+<p class="lead">文字条件回答“画什么”；空间条件<a class="jr" href="#g-01">01</a>回答“各部分放在哪里”。两者不是重复输入，而是分工。</p>
+<figure id="fig-what-where">
+<figcaption><span>Fig 01 · 同一句文字，对空间布局约束很弱</span><b>WHAT ≠ WHERE</b></figcaption>
+<div class="grid2">
+  <div class="card"><span class="tag orange">只有文字</span><h3>“一个人在厨房抬起右手”</h3><p>模型知道人物、厨房和动作语义，却可以把人放左边或右边，手抬多高、肘往哪弯也会随随机种子变化。</p><div class="flow"><div class="node">人靠左</div><div class="arrow">或</div><div class="node">人居中</div><div class="arrow">或</div><div class="node">人靠右</div></div></div>
+  <div class="card"><span class="tag teal">文字 + 姿态图</span><h3>骨架先把关节坐标钉住</h3><p>提示词仍决定人物身份、衣服和画风；骨架图直接给肩、肘、手腕的位置。模型不再从句子里猜这些二维坐标。</p><div class="flow"><div class="node control">右手腕<br>在上方</div><div class="arrow">+</div><div class="node control">躯干<br>在中间</div><div class="arrow">+</div><div class="node control">双脚<br>在下方</div></div></div>
+</div>
+</figure>
+<p>边缘图给轮廓，深度图给远近，分割图给每块区域的类别，姿态骨架给关节位置。它们共同的特点是<strong>每个值都带二维坐标</strong>。这正是纯文字 token 缺的东西。</p>
+</section>
+
+<section id="overview">
+<h2><span class="n">§ 02</span>先看整机：一张条件图怎样影响一次去噪</h2>
+<p>这里先认清数据流，不要求立刻记公式。Stable Diffusion 在 latent<a class="jr" href="#g-02">02</a> 空间里工作：当前带噪 latent <code class="m">z_t</code>、噪声时刻 <code class="m">t</code> 和文字 <code class="m">c_t</code> 原本就会进入扩散 U-Net<a class="jr" href="#g-03">03</a>；ControlNet 只多加一张条件图 <code class="m">c_i</code>。</p>
+<div class="vars"><div class="var"><code class="m">z_t</code>第 <code class="m">t</code> 个噪声时刻的带噪 latent；下标 <code class="m">t</code> 是时间索引。</div><div class="var"><code class="m">c_t,c_f</code>前者是文字条件，后者是条件图经过编码器后的特征。</div><div class="var"><code class="m">c_i</code>原始空间条件图；编码关系是 <code class="m">c_f=E(c_i)</code>。</div></div>
+<figure id="fig-overview">
+<figcaption><span>Fig 02 · 一次前向的完整数据流</span><b>主干保底 · 旁路只交修正</b></figcaption>
+<div class="input-routing">
+  <div class="route-card"><b>三项公共输入</b>带噪 latent <code class="m">z_t</code> · 时刻 <code class="m">t</code> · 文字 <code class="m">c_t</code><span class="route-arrow">↓ 同时送入两路</span></div>
+  <div class="route-card control-only"><b>ControlNet 独有输入</b>条件图 <code class="m">c_i</code><span class="route-arrow">↓ 只送控制旁路</span></div>
+</div>
+<div class="lanes">
+  <div class="lane control"><h3>可训练的 ControlNet</h3><div class="mini"><div>条件编码器<a class="jr" href="#g-08">08</a>：512×512 → 64×64</div><div>复制的 12 个编码块 + 中间块</div><div>13 个零卷积输出控制修正</div></div><p>旁路也吃 <code class="m">z_t,t,c_t</code>，但额外读 <code class="m">c_i</code>；它不直接画最终图，只告诉冻结解码器每个尺度该改多少。</p></div>
+  <div class="merge-column">13 组修正<br>逐尺度相加<br>→</div>
+  <div class="lane locked"><h3>冻结的 Stable Diffusion</h3><div class="mini"><div>12 个编码块读取 <code class="m">z_t,t,c_t</code></div><div>中间块接收第 13 组修正</div><div>12 条 skip 接收其余修正，解码器还原分辨率</div></div><p>参数 <code class="m">\Theta</code> 不更新<a class="jr" href="#g-04">04</a>，负责保住原模型的画质、语义和风格能力。</p></div>
+</div>
+<div class="output-route"><div class="node locked out"><span class="down-arrow">↓</span><b>最终噪声预测 <code class="m">\epsilon_\theta(z_t,t,c_t,c_f)</code></b><small>冻结解码器综合原特征与 13 组修正；采样器据此更新 z_t</small></div></div>
+</figure>
+<div class="truth"><span class="label">最容易误解的一点</span>条件图不是在最后“盖”到成图上，也不是与 RGB 图直接拼接后做一次图生图。它先被翻译成多尺度特征，再参与每一次扩散去噪。</div>
+</section>
+
+<section id="alternatives">
+<h2><span class="n">§ 03</span>为什么不用更简单的接法</h2>
+<p>上一节已经知道 ControlNet 多了一条深旁路。现在要回答：为什么不直接微调整个 U-Net，或者只接几层小卷积？论文和附录用六种结构做了消融，核心取舍可以压成三类。</p>
+<figure id="fig-alternatives">
+<figcaption><span>Fig 03 · 三条改造路线的账</span><b>保能力、懂条件、训练稳定缺一不可</b></figcaption>
+<div class="compare">
+  <div class="cmp bad"><span class="tag orange">全参微调</span><h3>原 U-Net 全部更新</h3><ul><li>优点：新条件能改到所有层。</li><li>风险：专用数据远小于预训练数据，容易过拟合和灾难性遗忘<a class="jr" href="#g-10">10</a>。</li><li>额外问题：控制被写进基座，不便组合多种条件或迁移到同结构社区模型。</li></ul></div>
+  <div class="cmp mid"><span class="tag gold">ControlNet-lite</span><h3>随机初始化浅旁路</h3><ul><li>优点：参数和计算更少。</li><li>问题：只靠几层卷积从零学习，没完整提示词时很难识别草图语义。</li><li>消融结果：质量 3.93、忠实度 4.09，均低于完整模型。</li></ul></div>
+  <div class="cmp good"><span class="tag teal">ControlNet</span><h3>冻结主干 + 深副本</h3><ul><li>原主干保住成熟生成能力。</li><li>副本从预训练编码器起步，能读复杂空间条件。</li><li>零卷积让旁路从 0 修正平稳起步。</li></ul></div>
+</div>
+</figure>
+<p>论文还把零卷积换成普通高斯初始化卷积。结果退化到接近 ControlNet-lite：问题不是“卷积不能学”，而是随机旁路在训练初期就向深特征灌入噪声，破坏了复制来的预训练起点。</p>
+</section>
+
+<section id="zero">
+<h2><span class="n">§ 04</span>零卷积为什么输出为 0，却不会永远学不动</h2>
+<p>现在进入单个 ControlNet block。先从没有条件的普通网络块开始。它把输入特征 <code class="m">\mathbf{x}</code> 送入函数 <code class="m">\mathcal{F}</code>：</p>
+<div class="formula" data-display="true">\mathbf{y}=\mathcal{F}(\mathbf{x};\Theta)</div>
+<div class="vars">
+  <div class="var"><code class="m">\mathbf{x}\in\mathbb{R}^{h\times w\times c}</code>输入特征图；<code class="m">h,w,c</code> 分别是高、宽、通道数。</div>
+  <div class="var"><code class="m">\mathcal{F}(\cdot;\Theta)</code>原网络块；<code class="m">\Theta</code> 是它的冻结参数。</div>
+  <div class="var"><code class="m">\mathbf{y}</code>原网络块输出，也是接 ControlNet 前的基线。</div>
+  <div class="var"><code class="m">\mathcal{Z}(\cdot;\Theta_z)</code>零卷积<a class="jr" href="#g-05">05</a>；权重和偏置都从 0 开始。</div>
+</div>
+<p>ControlNet 把原块保留，再加一条可训练副本。第一层零卷积把条件送进副本，第二层零卷积把副本结果变成“修正量”：</p>
+<div class="var"><code class="m">\mathbf{y}_c</code>接入控制后的 block 输出；下标 <code class="m">c</code> 表示 controlled，不是通道数。</div>
+<div class="formula" data-display="true">\mathbf{y}_c=\underbrace{\mathcal{F}(\mathbf{x};\Theta)}_{\text{冻结基线}}+\underbrace{\mathcal{Z}_2\!\left(\mathcal{F}\!\left(\mathbf{x}+\mathcal{Z}_1(\mathbf{c};\Theta_{z1});\Theta_c\right);\Theta_{z2}\right)}_{\text{可训练控制修正}}</div>
+<div class="vars">
+  <div class="var"><code class="m">\mathbf{c}</code>与当前块尺寸相容的条件特征；来源是条件编码器与前面控制块。</div>
+  <div class="var"><code class="m">\Theta_c</code>复制块的可训练参数；初值从原块 <code class="m">\Theta</code> 复制。</div>
+  <div class="var"><code class="m">\Theta_{z1},\Theta_{z2}</code>两个零卷积各自的参数；并不是同一层重复用。</div>
+  <div class="var"><b>两项相加</b>第一项保底，第二项只学空间条件要求的增量；去掉第二项就退回原模型。</div>
+</div>
+<h3>先把 1×1 卷积的梯度算清</h3>
+<p>1×1 卷积<a class="jr" href="#g-06">06</a>只混合同一位置的通道。在位置 <code class="m">p</code>、输出通道 <code class="m">i</code> 上：</p>
+<div class="formula light" data-display="true">Z(I)_{p,i}=b_i+\sum_j I_{p,j}W_{i,j}</div>
+<p>初始化 <code class="m">W=0,b=0</code> 时，输出当然是 0。但 <code class="m">\partial Z/\partial W_{i,j}=I_{p,j}</code>，只要输入特征不全为 0，权重梯度就不为 0；<code class="m">\partial Z/\partial I=W=0</code>，说明第一步暂时不把梯度传回输入。这正是“先学开门，再训练门后模块”。</p>
+<h3>一组标量，从第 0 步算到条件入口收到梯度</h3>
+<p>把整块网络缩成一条标量式。冻结基线输出 2；复制块用 <code class="m">2(x+ac)</code> 表示，取 <code class="m">x=1,c=3</code>；<code class="m">a</code> 和 <code class="m">b</code> 分别代替输入、输出两个零卷积的权重。目标是 1：</p>
+<div class="formula light" data-display="true">\hat y=2+b\cdot2(1+3a),\qquad L=\frac{1}{2}(\hat y-1)^2</div>
+<figure id="fig-gate">
+<figcaption><span>Fig 04 · 两扇零门怎样依次放行梯度</span><b>点击三步逐项核账</b></figcaption>
+<div class="gate-demo">
+  <div class="gate-state" data-status="第 0 步：旁路严格为 0，模型输出与冻结基线完全相同。"><span class="tag orange">Step 0</span><h3>两扇门都关着</h3><p><code class="m">a=0,\ b=0</code></p><p><code class="m">\hat y=2</code>，<code class="m">L=.5</code></p><p><code class="m">\frac{\partial L}{\partial b}=(2-1)\times2=2</code><br><code class="m">\frac{\partial L}{\partial a}=(2-1)\times b\times6=0</code></p></div>
+  <div class="gate-state" data-status="先更新输出门 b；复制块和条件入口还没被随机梯度乱改。"><span class="tag gold">Step 1</span><h3>输出门先打开</h3><p>学习率 <code class="m">.1</code></p><p><code class="m">b=0-.1\times2=-.2</code></p><p><code class="m">\hat y=2+(-.2)\times2=1.6</code><br><code class="m">L=.5\times.6^2=.18</code></p></div>
+  <div class="gate-state" data-status="b 已经非零，第二次反传终于能到达输入门 a 和复制块。"><span class="tag teal">Step 2</span><h3>条件入口开始学习</h3><p><code class="m">\frac{\partial L}{\partial a}=.6\times(-.2)\times6=-.72</code></p><p><code class="m">a=0-.1\times(-.72)=.072</code></p><p>条件 <code class="m">c=3</code> 终于能改变副本输入。</p></div>
+</div>
+<div class="controls"><button type="button" data-gate-step="0">第 0 步</button><button type="button" data-gate-step="1">更新输出门</button><button type="button" data-gate-step="2">放行条件梯度</button><div class="status" id="gate-status"></div></div>
+</figure>
+<div class="truth"><span class="label">自检</span>第 0 步 <code class="m">\hat y=2</code>，正好等于冻结基线；第一步只有 <code class="m">b</code> 收到非零梯度；<code class="m">b</code> 变成 −0.2 后，<code class="m">a</code> 的梯度才从 0 变成 −0.72。真实模型有张量和更多层，但链式法则完全一样。</div>
+</section>
+
+<section id="unet">
+<h2><span class="n">§ 05</span>一个小 block 怎么扩成 13 路 ControlNet</h2>
+<p>单块的门已经讲清。完整 Stable Diffusion U-Net 有 12 个编码块、1 个中间块和 12 个解码块。ControlNet <strong>只复制前 13 个</strong>，再把 13 个输出分别加到 12 条 skip connection<a class="jr" href="#g-07">07</a>和中间块。</p>
+<figure id="fig-pyramid">
+<figcaption><span>Fig 05 · 四个尺度、13 组控制修正</span><b>不是复制整个 U-Net</b></figcaption>
+<div class="pyramid">
+  <div class="pyr-row"><div class="pyr-label">64×64<br>3 组</div><div class="pyr-block copy">可训练编码块 A ×3</div><div class="pyr-plus">+</div><div class="pyr-block">冻结 skip A ×3 → 解码器</div></div>
+  <div class="pyr-row scale32"><div class="pyr-label">32×32<br>3 组</div><div class="pyr-block copy">可训练编码块 B ×3</div><div class="pyr-plus">+</div><div class="pyr-block">冻结 skip B ×3 → 解码器</div></div>
+  <div class="pyr-row scale16"><div class="pyr-label">16×16<br>3 组</div><div class="pyr-block copy">可训练编码块 C ×3</div><div class="pyr-plus">+</div><div class="pyr-block">冻结 skip C ×3 → 解码器</div></div>
+  <div class="pyr-row scale8"><div class="pyr-label">8×8<br>3+1</div><div class="pyr-block copy">可训练编码块 D ×3 + 中间块</div><div class="pyr-plus">+</div><div class="pyr-block">冻结 skip D ×3 + 中间块</div></div>
+</div>
+</figure>
+<p>高分辨率路径保留边缘和局部位置；低分辨率路径看更大范围，适合整体姿态和布局。13 路不是把同一个条件重复加 13 次，而是让条件在每个尺度先经过对应深度的控制编码器，再输出该尺度的修正。</p>
+<h3>条件图怎样从 512×512 对齐到 64×64</h3>
+<p>论文把条件编码写成 <code class="m">c_f=E(c_i)</code>：<code class="m">c_i</code> 是像素空间条件图，<code class="m">E</code> 是小卷积网络，<code class="m">c_f</code> 是送进 ControlNet 的 64×64 特征。</p>
+<div class="formula light" data-display="true">c_f=E(c_i)</div>
+<figure id="fig-encoder-account">
+<figcaption><span>Fig 06 · 官方代码里的真实尺寸账</span><b>三次 stride-2 才是 512 → 64</b></figcaption>
+<div class="encoder-account">
+  <div class="enc-step"><b>512×512</b><small>原条件图</small></div>
+  <div class="enc-step"><b>256×256</b><small>第 1 次减半</small></div>
+  <div class="enc-step"><b>128×128</b><small>第 2 次减半</small></div>
+  <div class="enc-step"><b>64×64</b><small>第 3 次减半</small></div>
+</div>
+<p><code>512÷2÷2÷2=64</code>。官方 1.0 代码使用 3×3 卷积、通道大致沿 16→32→96→256 增长，最后再映射到 U-Net 基础通道。论文所写“四次 4×4 stride-2”无法同时得到 64×64，不能混为同一套精确配置。</p>
+</figure>
+<p>冻结编码器不需要保存反向传播中间量。论文在单张 A100 PCIe 40GB 上测得：相对直接优化 Stable Diffusion，ControlNet 训练显存约增加 23%，每步时间约增加 34%。它仍比原模型更重，只是没有“复制半个 U-Net”听起来那么翻倍。</p>
+</section>
+
+<section id="training">
+<h2><span class="n">§ 06</span>训练目标没有换：仍然预测加进去的噪声</h2>
+<p>架构已经完整，接下来把它放回扩散训练。ControlNet 没有新增一套对抗损失；它继续使用 Stable Diffusion 的噪声预测目标<a class="jr" href="#g-09">09</a>。</p>
+<p>先从干净 latent <code class="m">z_0</code> 造训练输入。随机抽时刻 <code class="m">t</code> 和高斯噪声 <code class="m">\epsilon</code>：</p>
+<div class="formula light" data-display="true">z_t=\sqrt{\bar\alpha_t}\,z_0+\sqrt{1-\bar\alpha_t}\,\epsilon</div>
+<div class="vars">
+  <div class="var"><code class="m">z_0</code>VAE 编码后的干净图像 latent；来自训练目标图。</div>
+  <div class="var"><code class="m">\bar\alpha_t\in[0,1]</code>时刻 <code class="m">t</code> 还保留多少原信号；由噪声日程给定。</div>
+  <div class="var"><code class="m">\epsilon\sim\mathcal N(0,1)</code>本次随机加进去的噪声，也是监督答案。</div>
+  <div class="var"><code class="m">z_t</code>混完后的带噪 latent，是 U-Net 当前输入。</div>
+</div>
+<p>网络同时看到 <code class="m">z_t,t</code>、文字 <code class="m">c_t</code> 和条件特征 <code class="m">c_f</code>，预测噪声。正式损失是：</p>
+<div class="formula" data-display="true">\mathcal L=\mathbb E_{z_0,t,c_t,c_f,\epsilon\sim\mathcal N(0,1)}\!\left[\left\|\epsilon-\epsilon_\theta(z_t,t,c_t,c_f)\right\|_2^2\right]</div>
+<div class="vars">
+  <div class="var"><code class="m">\epsilon_\theta(\cdot)</code>带 ControlNet 的 U-Net；<code class="m">\theta</code> 泛指本轮可训练参数。</div>
+  <div class="var"><code class="m">\|\cdot\|_2^2</code>每个 latent 分量先做差、再平方并求和；上面的 2 是平方，下面的 2 是 L2 范数。</div>
+  <div class="var"><code class="m">\mathbb E[\cdot]</code>对训练图、时刻、文本、条件和噪声取平均；实际用一个 mini-batch 近似。</div>
+  <div class="var"><code class="m">c_t,c_f</code>分别是文字条件与空间条件；竖线没有出现，因为它们已直接作为网络输入列出。</div>
+</div>
+<h3>沿用一组标量，把条件修正算进最终损失</h3>
+<div class="calc">
+  <div class="step"><b>按加噪公式造输入</b>取 <code class="m">z_0=2</code>、<code class="m">\bar\alpha_t=.64</code>、<code class="m">\epsilon=-.5</code>。因为 <code class="m">\sqrt{.64}=.8</code>、<code class="m">\sqrt{1-.64}=.6</code>，所以 <code class="m">z_t=.8\times2+.6\times(-.5)=1.3</code>。</div>
+  <div class="step"><b>冻结基线先给一个预测</b>假设原 U-Net 预测 <code class="m">-.3</code>；真实噪声是 <code class="m">-.5</code>，损失 <code class="m">(-.5-(-.3))^2=.04</code>。</div>
+  <div class="step"><b>ControlNet 学一条条件修正</b>旁路最终让噪声预测再减 <code class="m">.2</code>，得到 <code class="m">-.3-.2=-.5</code>。</div>
+  <div class="step"><b>代回同一条损失</b><code class="m">(-.5-(-.5))^2=0</code>。自检：目标没换，ControlNet 只帮助同一个噪声预测器利用空间条件答得更准。</div>
+</div>
+<h3>为什么训练时把一半文字清空</h3>
+<p>作者随机把 50% 的文字提示换成空字符串。若文字每次都把“房子、猫、人”说得很全，控制分支可能只学轮廓对齐，不必从草图中辨认内容。清空一半文字后，ControlNet 经常只能靠条件图判断语义，这也解释了无提示词推理为何还能工作。</p>
+<p>作者还观察到“突然收敛”：输出画质从一开始就不错，但模型常在 5K–10K 步之间突然开始服从条件，而不是从模糊到清晰地慢慢改善。补充材料只报告现象，没有给出严格机制证明；不能把它说成零卷积必然导致的定理。</p>
+</section>
+
+<section id="inference">
+<h2><span class="n">§ 07</span>推理时，条件放在哪条 CFG 分支差很多</h2>
+<p>Stable Diffusion 用 classifier-free guidance<a class="jr" href="#g-11">11</a>放大文字条件带来的差值。先写原公式：</p>
+<div class="formula" data-display="true">\epsilon_{\mathrm{prd}}=\epsilon_{\mathrm{uc}}+\beta_{\mathrm{cfg}}\left(\epsilon_{\mathrm{c}}-\epsilon_{\mathrm{uc}}\right)</div>
+<div class="vars">
+  <div class="var"><code class="m">\epsilon_{\mathrm{uc}}</code>空提示词的无条件噪声预测。</div>
+  <div class="var"><code class="m">\epsilon_{\mathrm{c}}</code>有提示词的条件噪声预测。</div>
+  <div class="var"><code class="m">\beta_{\mathrm{cfg}}</code>用户设的 guidance scale；补充材料默认 7.0。</div>
+  <div class="var"><code class="m">\epsilon_{\mathrm{prd}}</code>采样器最终采用的预测。</div>
+</div>
+<h3>同一个控制修正，放两边会抵消，放一边会被乘 7</h3>
+<p>取 <code class="m">\epsilon_{uc}=0.2</code>、<code class="m">\epsilon_c=0.5</code>、<code class="m">\beta_{cfg}=7</code>，没有 ControlNet 时：</p>
+<div class="formula light" data-display="true">0.2+7(0.5-0.2)=2.3</div>
+<div class="grid2">
+  <div class="card"><span class="tag gold">控制加到两边</span><p>设控制修正 <code class="m">r=.1</code>：<br><code class="m">(.2+.1)+7[(.5+.1)-(.2+.1)]=2.4</code>。括号里的 <code class="m">r</code> 抵消，控制只剩基线那一份 <code class="m">.1</code>。</p></div>
+  <div class="card"><span class="tag orange">只加到条件边</span><p><code class="m">.2+7[(.5+.1)-.2]=3.0</code>。最终从 2.3 跳到 3.0，正好多 <code class="m">7\times.1=.7</code>，控制可能过强。</p></div>
+</div>
+<p>论文的 CFG Resolution Weighting 把条件只放进 conditional 分支，再按 U-Net 尺度给 13 路连接加权：</p>
+<div class="formula light" data-display="true">w_i=\frac{64}{h_i}</div>
+<p><code class="m">h_i</code> 是第 <code class="m">i</code> 路特征边长，论文列出 8、16、32、64；因此权重分别是 8、4、2、1。它实质上重分配不同分辨率的控制强度，尤其放大低分辨率语义路径；论文没有给出这组权重的理论推导，也不能把它理解成所有控制都统一“变弱”。</p>
+<h3>多个 ControlNet 怎样组合</h3>
+<p>若姿态 ControlNet 给第 <code class="m">i</code> 层修正 <code class="m">r_i^{pose}</code>，深度 ControlNet 给 <code class="m">r_i^{depth}</code>，论文直接相加：</p>
+<div class="formula light" data-display="true">r_i=r_i^{\mathrm{pose}}+r_i^{\mathrm{depth}}</div>
+<p>例如两路分别给 <code class="m">.2</code> 与 <code class="m">-.05</code>，合成修正就是 <code class="m">.15</code>。这让模块可插拔，但论文只展示兼容的姿态+深度；若两张条件图互相矛盾，简单相加不保证会给出合理折中。</p>
+</section>
+
+<section id="data">
+<h2><span class="n">§ 08</span>每一种控制，都要先造“条件图—原图—文字”三元组</h2>
+<p>ControlNet 不是拿几张 Canny 图就自动学会所有控制。每种条件都单独训练一个模型：原图当生成目标，检测器从原图提取条件图，网页文字或 BLIP 生成 caption。推理时也常先用同类检测器把参考图变成条件。</p>
+<div class="grid4">
+  <div class="card"><span class="tag teal">Canny / HED<a class="jr" href="#g-12">12</a></span><h3>边缘</h3><p>Canny 是手工梯度规则，边更硬；HED 用神经网络预测柔和边界，常保留更多细节。</p></div>
+  <div class="card"><span class="tag teal">OpenPose<a class="jr" href="#g-13">13</a></span><h3>人体骨架</h3><p>先检测关节关键点，再画成彩色骨架；ControlNet 读取的是可视化骨架图，不是关节坐标表。</p></div>
+  <div class="card"><span class="tag teal">Segmentation</span><h3>区域类别</h3><p>每种颜色代表一类区域，例如天空、墙、路；它规定布局，不规定纹理。</p></div>
+  <div class="card"><span class="tag teal">Depth / Normal</span><h3>三维几何</h3><p>深度给远近，法线给表面朝向。法线对发型等局部几何通常更敏感。</p></div>
+</div>
+<figure id="fig-training-table">
+<figcaption><span>Fig 07 · 补充材料披露的训练配方</span><b>同一架构，数据规模差 150 倍</b></figcaption>
+<div class="scroll"><table>
+<thead><tr><th>条件</th><th>样本</th><th>来源 / 生成器</th><th>GPU-hours</th><th>基座</th></tr></thead>
+<tbody>
+<tr><td>Canny edge</td><td>3M</td><td>互联网 / Canny</td><td>约 600 A100</td><td>SD 1.5</td></tr>
+<tr><td>Hough line</td><td>600K</td><td>Places2 / M-LSD</td><td>约 150 A100</td><td>接 Canny</td></tr>
+<tr><td>HED boundary</td><td>3M</td><td>互联网 / HED</td><td>约 300 A100</td><td>SD 1.5</td></tr>
+<tr class="caution"><td>User scribble†</td><td>500K</td><td>HED + 随机删线/形态增强</td><td>150 或 300</td><td>表称接 Canny</td></tr>
+<tr class="caution"><td>Pose OpenPifPaf†</td><td>80K 或 200K</td><td>互联网 / OpenPifPaf</td><td>约 400 3090Ti</td><td>SD 2.1</td></tr>
+<tr><td>Pose OpenPose</td><td>200K</td><td>互联网 / OpenPose</td><td>约 300 A100</td><td>SD 1.5</td></tr>
+<tr><td>COCO segmentation</td><td>164K</td><td>COCO-Stuff / BLIP</td><td>约 400 3090Ti</td><td>SD 1.5</td></tr>
+<tr><td>ADE20K segmentation</td><td>20K</td><td>ADE20K / BLIP</td><td>约 200 A100</td><td>SD 1.5</td></tr>
+<tr><td>Depth</td><td>3M</td><td>互联网 / MiDaS + BLIP</td><td>约 500 A100</td><td>SD 1.5</td></tr>
+<tr><td>Normal map</td><td>25,452</td><td>DIODE / BLIP</td><td>约 100 A100</td><td>SD 1.5</td></tr>
+<tr><td>Cartoon lineart</td><td>1M</td><td>互联网 / line extractor</td><td>约 300 A100</td><td>Waifu Diffusion</td></tr>
+</tbody></table></div>
+<p>† 同一补充材料的段落与 Table 1 自相矛盾，因此并列保留。其余共同设置：学习率 <code class="m">10^{-5}</code>，不使用 EMA<a class="jr" href="#g-16">16</a>；多数 batch 32，单卡实验用梯度累积凑有效 batch 18。默认推理用 DDIM 20 步、CFG 7.0。</p>
+</figure>
+<p>数据规模实验从同一 Canny 数据里按分辨率选 1K、10K、50K、500K 等子集。1K 没有训练崩溃，已经能生成可识别的狮子；数据增加后细节和泛化继续改善。因此正确结论是“训练对规模较稳”，不是“1K 与 3M 一样好”。</p>
+</section>
+
+<section id="results">
+<h2><span class="n">§ 09</span>实验要同时看画质和“听不听条件”</h2>
+<p>只看画质，会奖励一个完全忽略条件、照常随机画图的 Stable Diffusion；只看条件，又可能得到轮廓准确但画面难看的结果。论文因此把主观排名、条件重建和分布质量分开报告。</p>
+<div class="metric-grid">
+  <div class="metric"><b>4.22 / 5</b><small>用户排名 · 图像质量</small><p>ControlNet-lite 为 3.93。</p></div>
+  <div class="metric"><b>4.28 / 5</b><small>用户排名 · 条件忠实度</small><p>ControlNet-lite 为 4.09。</p></div>
+  <div class="metric"><b>0.52 ± .17</b><small>辨认工业模型的 precision</small><p>12 人小样本研究中接近随机。</p></div>
+</div>
+<h3>用户研究的口径</h3>
+<p>作者拿 20 张未见手绘草图、5 种方法，让 12 名参与者按 1–5 排名；其中 10 人没有艺术背景，2 人有艺术或设计经验。ControlNet 在质量与忠实度两项都最高。这个结论支持“人更偏好它”，但样本与参与者都不大，不能外推成所有任务的统一胜率。</p>
+<h3>条件重建：生成后再检测一次</h3>
+<p>对 ADE20K 分割条件，先生成图片，再用 OneFormer 把生成图重新分割，与输入条件算 IoU<a class="jr" href="#g-14">14</a>。IoU 越高，说明生成图越能还原指定区域。结果：</p>
+<div class="scroll"><table><thead><tr><th>方法</th><th>ADE20K GT 经 OneFormer</th><th>LDM</th><th>PITI</th><th>ControlNet-lite</th><th>ControlNet</th></tr></thead><tbody><tr><td>重建 IoU ↑</td><td>0.58</td><td>0.31</td><td>0.26</td><td>0.32</td><td class="win">0.35</td></tr></tbody></table></div>
+<p>0.58 不是“完美生成上限”，而是 OneFormer 对真实标注的检测一致度；整个评测本身带检测器误差。</p>
+<h3>FID 为什么不能单独看</h3>
+<div class="scroll"><table><thead><tr><th>方法</th><th>FID ↓</th><th>CLIP 文图 ↑</th><th>美学分 ↑</th></tr></thead><tbody>
+<tr><td>普通 Stable Diffusion</td><td class="win">6.09</td><td>0.26</td><td>6.32</td></tr>
+<tr><td>PITI segmentation</td><td>19.74</td><td>0.20</td><td>5.77</td></tr>
+<tr><td>ControlNet-lite</td><td>17.92</td><td>0.26</td><td>6.30</td></tr>
+<tr><td>ControlNet</td><td>15.27</td><td>0.26</td><td>6.31</td></tr>
+</tbody></table></div>
+<p>FID<a class="jr" href="#g-15">15</a>越低，生成分布越接近真实图片集。普通 Stable Diffusion 的 6.09 最低，却没有完成分割控制任务；“完全不听条件”反而最容易拿到好 FID。ControlNet 应与条件 IoU 一起读：它在可控性更强的同时，比 lite 保住了更好的分布质量。</p>
+<h3>与工业 depth 模型的对照</h3>
+<p>作者用 200K 深度对、单张 RTX 3090Ti 训练 5 天，与 Stable Diffusion V2 Depth-to-Image 的 12M+ 图、数千 A100 GPU-hours 对照。参与者看过各 100 张带标签训练图后，再辨认 200 张测试图，平均 precision 0.52±0.17。它说明这次小用户研究里很难区分两者，不等于两模型在所有基准上完全相同。</p>
+<p><a href="https://arxiv.org/abs/2302.05543" target="_blank" rel="noopener">↗ 定性样图、突然收敛序列与完整消融请看官方论文</a>。本站不复制论文图片，机制图均为重新绘制。</p>
+</section>
+
+<section id="limits">
+<h2><span class="n">§ 10</span>它改变了控制接口，没有解决所有冲突</h2>
+<div class="grid2">
+  <div class="card"><span class="tag orange">语义会猜错</span><h3>条件图本身可能有歧义</h3><p>没有文字时，模型会试着把轮廓解释成某个物体。附录明确展示：一旦语义解释错，后续很难仅靠空间线纠正内容。</p></div>
+  <div class="card"><span class="tag orange">控制可被放松</span><h3>不是一次注入就永久锁死</h3><p>附录只在 50% 去噪迭代启用 ControlNet 时，输出会偏离输入形状。控制强度和启用区间都会改变忠实度。</p></div>
+  <div class="card"><span class="tag orange">组合可能冲突</span><h3>相加只是接口，不是仲裁器</h3><p>姿态与深度能相加，不代表互相矛盾的边缘、分割、姿态会自动找到最优折中。论文没有系统评测冲突条件。</p></div>
+  <div class="card"><span class="tag orange">深旁路仍然重</span><h3>稳健换来额外计算</h3><p>显存 +23%、每步时间 +34% 是论文给定硬件上的训练实测，不是所有实现的固定比例；多 ControlNet 还会继续加成本。</p></div>
+</div>
+<h3>报告没有告诉我们的事</h3>
+<ul>
+  <li>互联网数据的完整来源清单、过滤规则与许可状态没有公开；只说与 LAION 来源不同，以减少版权和重复问题。</li>
+  <li>CFG Resolution Weighting 的 <code class="m">64/h_i</code> 没有理论推导，也没有完整权重消融。</li>
+  <li>多条件只给了少量兼容案例，没有冲突测试、自动归一化或仲裁策略。</li>
+  <li>突然收敛是 5K–10K 步附近的经验观察，不是普遍保证。</li>
+  <li>论文、附录与官方代码对条件编码器有结构差异；复现应以选定代码 commit 和配置为准。</li>
+</ul>
+<div class="truth"><span class="label">我的判断</span>ControlNet 真正经得住时间的贡献，是把“成熟生成器”和“新控制能力”拆成冻结基线与可插拔残差旁路。零卷积不是魔法，只是一个非常干净的初始化与梯度闸门。它让新模块第 0 步不伤旧模型，却没有免费消除算力、数据偏差和条件冲突。</div>
+</section>
+
+<section class="gloss">
+<h2>引用 / 术语表</h2>
+<ol>
+  <li id="g-01"><span class="term">Spatial conditioning · 空间条件</span>：保留二维位置的条件图，例如边缘、骨架、分割、深度。详见 <a href="../concepts/spatial-conditioning.html">spatial-conditioning</a>。</li>
+  <li id="g-02"><span class="term">Latent · 潜变量</span>：VAE 把 512×512 RGB 压成较小特征；Stable Diffusion 在这里加噪与去噪。</li>
+  <li id="g-03"><span class="term">Diffusion U-Net</span>：接收带噪 latent、时刻和条件，输出噪声或速度预测的多尺度网络。详见 <a href="diffusion-unet.html">diffusion-unet</a>。</li>
+  <li id="g-04"><span class="term">Frozen / locked · 冻结</span>：参数不参与优化器更新；前向仍执行，不等于删掉这条路径。</li>
+  <li id="g-05"><span class="term">Zero convolution · 零卷积</span>：权重和偏置初始化为 0 的卷积。详见 <a href="../concepts/zero-convolution.html">zero-convolution</a>。</li>
+  <li id="g-06"><span class="term">1×1 convolution</span>：每个空间位置独立做通道线性变换，不读取相邻像素。详见 <a href="../concepts/convolution.html">convolution</a>。</li>
+  <li id="g-07"><span class="term">Skip connection · 跳连</span>：U-Net 把编码器同尺度特征直接送给解码器；ControlNet 的 12 路修正正加在这些特征上。</li>
+  <li id="g-08"><span class="term">Condition encoder · 条件编码器</span>：把 512×512 条件图压成与 64×64 latent 对齐的特征。</li>
+  <li id="g-09"><span class="term">Noise prediction objective · 噪声预测目标</span>：让网络回归训练时实际加入的高斯噪声。详见 <a href="../concepts/noise-prediction-objective.html">noise-prediction-objective</a>。</li>
+  <li id="g-10"><span class="term">Catastrophic forgetting · 灾难性遗忘</span>：用窄任务数据继续训练时，模型新能力涨了，旧的通用能力却被覆盖。</li>
+  <li id="g-11"><span class="term">CFG</span>：比较有条件与无条件预测，再放大差值。详见 <a href="../concepts/classifier-free-guidance.html">classifier-free-guidance</a>。</li>
+  <li id="g-12"><span class="term">Canny / HED</span>：两种边缘提取方法；Canny 是手工梯度流程，HED 是学习式边界检测网络。</li>
+  <li id="g-13"><span class="term">OpenPose</span>：从图像检测人体关节并组装多人骨架的方法；ControlNet 用画出来的骨架作条件。</li>
+  <li id="g-14"><span class="term">IoU</span>：预测区域与目标区域交集面积除以并集面积。详见 <a href="../concepts/iou-intersection-over-union.html">IoU</a>。</li>
+  <li id="g-15"><span class="term">FID</span>：比较生成图与真实图在 Inception 特征分布中的距离；越低越好，但不衡量是否服从条件。</li>
+  <li id="g-16"><span class="term">EMA</span>：训练时维护参数的指数滑动平均副本；本论文各 ControlNet 实验声明不使用 EMA 权重。</li>
+</ol>
+</section>
+
+<section class="sources">
+<span class="label">Primary sources</span>
+<ul>
+  <li><a href="https://arxiv.org/abs/2302.05543" target="_blank" rel="noopener">Adding Conditional Control to Text-to-Image Diffusion Models · arXiv v3 / ICCV 2023</a></li>
+  <li><a href="https://openaccess.thecvf.com/content/ICCV2023/supplemental/Zhang_Adding_Conditional_Control_ICCV_2023_supplemental.pdf" target="_blank" rel="noopener">ICCV supplementary material · 33 pages</a></li>
+  <li><a href="https://github.com/lllyasviel/ControlNet" target="_blank" rel="noopener">Official ControlNet repository</a></li>
+  <li><a href="https://github.com/lllyasviel/ControlNet/blob/ed85cd1e25a5ed592f7d8178495b4483de0331bf/cldm/cldm.py#L135" target="_blank" rel="noopener">Pinned implementation · condition encoder and 13 control outputs · commit ed85cd1</a></li>
+</ul>
+</section>
+<div class="colophon"><span>Study note · 2026-08-24 · primary-source reconstruction</span><span>机制图为本站重绘 · 样图见官方论文</span></div>
+</main>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;left:auto;top:50%;bottom:auto;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;opacity:1;pointer-events:auto;transition:none;display:none;}
+.jr-pop.show{display:block;transform:translateY(-50%);animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop,.jr-pop.show{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!document.getElementById(id))return;
+      e.preventDefault();
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>

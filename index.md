@@ -10,6 +10,7 @@
 - [CNN · 卷积神经网络](wiki/papers/cnn.md) — 视觉骨架基础: 小核滑遍全图+权重共享, 把局部性/平移不变焊进结构; 卷积滑窗动画 + LeNet→ResNet→ViT 谱系
 - [U-Net · 一边看清是什么，一边记住它在哪](wiki/papers/unet.md) — MICCAI 2015 像素分割祖师爷：编码器缩图拿上下文，解码器放大还网格，同尺度 skip 裁剪后 concat 补回边界；原版 572→388 尺寸账、overlap-tile、弹性形变和细胞窄缝加权损失完整手算
 - [Diffusion U-Net · 一次去噪到底经过了什么](wiki/papers/diffusion-unet.md) — 不把“扩散 U-Net”当黑盒：DDPM→ADM→LDM 谱系，从加噪监督、时间条件 ResBlock、GroupNorm、同尺度 skip 到 self/cross-attention；Stable Diffusion v1 的 64×64×4 latent 与 320/640/1280/1280 通道账完整走一遍，同一组标量算清训练损失和恢复，最后分开 U-Net、scheduler、CFG 与 DiT 的职责
+- [ControlNet · 文字管“画什么”，条件图管“画在哪”](wiki/papers/controlnet.md) — 冻结 Stable Diffusion，复制 12 个编码块和 1 个中间块专门读取边缘、骨架、分割、深度；完整拆 13 路多尺度注入、两层零卷积的分阶段梯度、条件编码器 512→64 尺寸账、50% 空提示训练、CFG 条件放两边/一边的差异，以及 11 类数据配方、消融、IoU/FID 和原文与代码矛盾。
 - [AsyncPatch Diffusion · 不再让整张图共用一只去噪时钟](wiki/papers/asyncpatch-diffusion.md) — 每个 patch 各有噪声时刻、一个 U-Net 仍联合看全图；先采全图平均时刻再采局部差异，修掉独立时刻均值总挤在 0.5 的缺口。同一权重只换空间时间路径即可做整图生成、补图、栅格 AR 与 Input Guidance；含联合 score、空间 FiLM、ELBO 路径证明、250-step 配方与生成 / 补图边界。
 - [Deep Residual Learning · ResNet](wiki/papers/resnet.md) — 残差连接的起源，把"网络越深越好"做成现实，也给两年后的 Transformer 留好 sublayer 模板
 - [YOLO · 看一眼就把框和类一起吐出来](wiki/papers/yolo.md) — CVPR2016 YOLO v1:原始 R-CNN 逐框提特征,Fast R-CNN 共享整图卷积但仍等 Selective Search,Faster R-CNN 用 RPN 提候选;YOLO 一次前向输出 7×7×30。训练损失拆责任框中心/尺寸/置信度、空框置信度、类别五块;√w,h 让同样 1% 图宽误差对小框产生 7.20× 平方损失。VOC2007:63.4%mAP@45FPS;错误画像是 19.0% 定位 vs 4.75% 背景误检;与最佳 Fast R-CNN 组合 71.8→75.0(+3.2)。VOC2012 57.9,小物体仍弱;Picasso/People-Art 显示艺术画迁移优势但不外推为普遍域泛化。
