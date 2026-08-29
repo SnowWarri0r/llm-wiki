@@ -1,8 +1,8 @@
 ---
 name: pretrain-finetune-paradigm
 type: concept
-sources: [bert, gpt-1]
-updated: 2026-05-21
+sources: [bert, gpt-1, controlnet]
+updated: 2026-08-24
 ---
 
 # Pretrain-Finetune Paradigm · 先预训练再微调

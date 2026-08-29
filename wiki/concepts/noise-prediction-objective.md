@@ -1,8 +1,8 @@
 ---
 name: noise-prediction-objective
 type: concept
-sources: [diffusion-unet, dit]
-updated: 2026-07-27
+sources: [diffusion-unet, dit, controlnet]
+updated: 2026-08-24
 ---
 
 # Noise Prediction Objective · 让网络猜“刚才加进去的噪声”
@@ -72,4 +72,3 @@ U-Net、DiT 都能训练这个目标。网络回答“拿什么结构预测”�
 - [[dit]] · 换成 Transformer 仍能预测同一个目标
 - [[flow-matching]] · 改成预测速度场的另一套训练目标
 - [[ode-vs-sde]] · 不同采样器怎样使用网络输出
-

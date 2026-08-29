@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Pretrain-Finetune Paradigm · 先预训练再微调 · Concept</title>
+<title>Spatial Conditioning · 用一张图直接指定“哪里该长什么结构” · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,93 +53,71 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · pretrain-finetune-paradigm</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · spatial-conditioning</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Pretrain-Finetune Paradigm · 先预训练再微调</h1>
+  <h1>Spatial Conditioning · 用一张图直接指定“哪里该长什么结构”</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>先在<strong>无标注</strong>大语料上用自监督任务（MLM / LM）预训练一个 transformer，再在每个下游任务的<strong>小标注集</strong>上 finetune —— 一个 backbone 万能。</p>
+<p>文字给语义，空间条件图给每个位置的结构约束。</p>
 <h2>直觉</h2>
-<p>2018 之前 NLP 几乎每个任务都是从头训：取 word2vec 或 GloVe embedding，搭一个 LSTM/CNN 上去，标注几千到几万条数据训一个专门模型。每个任务一个模型，互不复用，标注成本高。</p>
-<p>Pretrain-finetune 的核心洞察：<strong>语言知识的 99% 来自语法/常识/事实，跟具体下游任务无关</strong>。这部分可以从无标注的 wiki/书/网页里学（自监督），只要 1% 的标注数据就够"指明"特定任务的输出格式。</p>
-<p>类比：先让人学语言（pretrain），再训练他做客服 / 法律 / 翻译岗位（finetune）。每个岗位不用从婴儿学起。</p>
+<p>“一个人站在厨房”只说了画面里有什么；一张骨架图还能说清头、手、膝盖各在哪。边缘图、深度图、分割图和姿态骨架都保留二维坐标，因此模型不用从一句话里猜布局。</p>
 <h2>怎么做的</h2>
-<p><strong>Pretrain 阶段</strong>（数百 GB 文本 + 几千卡天 + 一次）：</p>
-<pre><code class="language-python">for batch in unlabeled_corpus:
-    # BERT: 随机 mask，预测被遮住的 token
-    masked_input, target = mask_15_percent(batch)
-    loss = bert(masked_input).predict(target)
-
-    # GPT: 因果预测下一个 token
-    # loss = gpt(batch[:-1]).predict(batch[1:])
-
-    loss.backward()
-</code></pre>
-<p><strong>Finetune 阶段</strong>（几千条标注 + 几个 GPU 时 + 每个任务一次）：</p>
-<pre><code class="language-python">model = load_pretrained_bert()
-model.add_head(classifier_for_this_task)   # 一个小线性层
-for batch in labeled_data:
-    pred = model(batch.text)
-    loss = task_loss(pred, batch.label)
-    loss.backward()                         # 同时更新 BERT 和 head
-</code></pre>
-<p>各任务通常加什么 head：</p>
+<p>条件图 <span class="tex math-inline" data-display="false">c_i\in\mathbb{R}^{512\times512\times3}</span> 先经过小编码器 <span class="tex math-inline" data-display="false">E</span>，得到与 Stable Diffusion latent 空间对齐的特征 <span class="tex math-inline" data-display="false">c_f</span>：</p>
+<div class="tex math-display" data-display="true">c_f=E(c_i),\qquad c_f\in\mathbb{R}^{64\times64\times C}.</div>
+<p>这里 <span class="tex math-inline" data-display="false">c_i</span> 是输入图片，<span class="tex math-inline" data-display="false">E</span> 负责下采样和换通道，<span class="tex math-inline" data-display="false">c_f</span> 是送进控制分支的特征。之后控制分支继续在 64、32、16、8 四个尺度提取信息：高分辨率保轮廓细节，低分辨率更容易看整体姿态与布局。</p>
+<h2>数字例子</h2>
+<p>官方 ControlNet 1.0 实现用了三次 stride-2 下采样。stride 2 可以近似理解成边长减半：</p>
+<div class="tex math-display" data-display="true">512\times512
+\rightarrow256\times256
+\rightarrow128\times128
+\rightarrow64\times64.</div>
+<p>边长缩了 <span class="tex math-inline" data-display="false">512/64=8</span> 倍，格子数缩了 <span class="tex math-inline" data-display="false">8^2=64</span> 倍；512×512 共 262,144 个位置，64×64 只剩 4,096 个。自检：<span class="tex math-inline" data-display="false">4096\times64=262144</span>，尺寸账闭合。</p>
+<p>论文正文写“四个 4×4、stride-2 卷积”却又说输出 64×64；若四次都减半，结果应是 32×32。官方代码 commit <code>ed85cd1</code> 实际使用三次 stride-2，因此不能把论文这句当成精确实现。</p>
+<h2>跟文字条件的对照</h2>
 <ul>
-<li>分类（情感、NLI）：[CLS] 的 hidden → 线性层</li>
-<li>序列标注（NER、POS）：每个 token 的 hidden → 线性层</li>
-<li>问答（SQuAD）：两个线性层预测 answer 的 start/end 位置</li>
-</ul>
-<h2>为什么这条路赢了</h2>
-<ol>
-<li><strong>算力规模化</strong>：一次昂贵 pretrain，无数次便宜 finetune</li>
-<li><strong>标注数据稀缺友好</strong>：很多任务只有几千条标注，从头训会过拟合</li>
-<li><strong>跨任务迁移</strong>：pretrain 学到的语法/常识对所有 NLP 任务都有用</li>
-<li><strong>工程简化</strong>：所有任务用同一个 backbone，infra 复用</li>
-</ol>
-<h2>后续演化</h2>
-<ul>
-<li><strong>GPT-2 (2019)</strong>：发现 pretrain 模型大到一定程度，<strong>不 finetune 也能 zero-shot 做下游任务</strong>（prompt-based）</li>
-<li><strong>GPT-3 (2020)</strong>：in-context learning · 不改 weight，只在 prompt 里给几个例子就行</li>
-<li><strong>InstructGPT / ChatGPT (2022)</strong>：finetune 阶段换成 RLHF，不再针对单一任务，而是针对"听人指令"</li>
-<li><strong>Pretrain + RLHF</strong> 现在是大多 LLM 的标配</li>
-</ul>
-<p><strong>Finetune 在 LLM 时代退潮</strong>：因为 prompt + ICL 已经够好；但在小模型（&lt; 1B）和企业内部任务里仍是主力。</p>
-<h2>在 BERT 论文里的具体演示</h2>
-<p>BERT 论文 Fig 3 给了 4 种典型下游任务的 head 添加方式：</p>
-<ul>
-<li>(a) Sentence pair classification (MNLI, QQP) — [CLS] 的 hidden 接二/三分类</li>
-<li>(b) Single sentence classification (SST-2) — 同上</li>
-<li>(c) Question answering (SQuAD) — 每个 token 的 hidden 预测 start/end logit</li>
-<li>(d) Single sentence tagging (NER) — 每个 token 的 hidden 接序列标注分类头</li>
+<li>文字条件：token 没有固定二维坐标，擅长指定物体、属性和风格。</li>
+<li>空间条件：每个像素或关键点有明确位置，擅长指定轮廓、姿态、区域和几何。</li>
+<li>两者一起用：文字决定“画成谁、什么风格”，条件图决定“结构放在哪里”。</li>
 </ul>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/bert.html">bert</a> · 立住这个范式的论文</li>
-<li><a href="../papers/gpt-1.html">gpt-1</a> · 同期且更早的 paper（也是 pretrain+finetune，只是用 causal LM）</li>
-<li><a href="../concepts/masked-language-model.html">masked-language-model</a> · BERT 的 pretrain 任务</li>
-<li><a href="../concepts/in-context-learning.html">in-context-learning</a> · 替代它的下一代范式</li>
-<li><a href="../concepts/lora.html">lora</a> · finetune 那步的参数高效版(冻底模、只训低秩小增量)</li>
+<li><a href="../papers/controlnet.html">controlnet</a> · 把空间条件接进冻结 Stable Diffusion</li>
+<li><a href="../concepts/semantic-segmentation.html">semantic-segmentation</a> · 用类别颜色图规定每块区域是什么</li>
+<li><a href="../concepts/cross-attention.html">cross-attention</a> · 文字 token 怎样进入图像特征</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 7 处</span>
-  <ul><li><a href="../papers/bert.html"><span class="cat">paper</span>BERT · Bidirectional Encoder Representations from Transformers</a></li><li><a href="../papers/gpt-1.html"><span class="cat">paper</span>GPT-1 · Improving Language Understanding by Generative Pre-Training</a></li><li><a href="../papers/grape.html"><span class="cat">paper</span>GRAPE · 最好的指令微调数据，是&quot;合身&quot;的那条</a></li><li><a href="../concepts/distribution-aligned-sft.html"><span class="cat">concept</span>分布对齐的 SFT · 数据好不好，是相对你这个模型说的</a></li><li><a href="../concepts/frozen-backbone-side-network.html"><span class="cat">concept</span>Frozen Backbone + Side Network · 主干保能力，旁路学增量</a></li><li><a href="../concepts/input-transformations.html"><span class="cat">concept</span>Input Transformations · 用输入格式喂任务</a></li><li><a href="../concepts/lora.html"><span class="cat">concept</span>LoRA · 低秩适配 · 不动底模，只训一个小增量</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/controlnet.html"><span class="cat">paper</span>ControlNet · 文字管“画什么”，条件图管“画在哪”</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/pretrain-finetune-paradigm.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/spatial-conditioning.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
 <script>
 // 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
 (function () {

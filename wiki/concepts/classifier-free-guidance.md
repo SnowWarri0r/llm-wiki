@@ -1,8 +1,8 @@
 ---
 name: classifier-free-guidance
 type: concept
-sources: [ideogram-4, flux-1, diffusionnft, viitorvoice, ltx-2, drifting-models, dmd, diffusion-unet, wan-streamer-v01, klingavatar-2, asyncpatch-diffusion]
-updated: 2026-08-14
+sources: [ideogram-4, flux-1, diffusionnft, viitorvoice, ltx-2, drifting-models, dmd, diffusion-unet, wan-streamer-v01, klingavatar-2, asyncpatch-diffusion, controlnet]
+updated: 2026-08-24
 ---
 
 # Classifier-Free Guidance · CFG

@@ -1,8 +1,8 @@
 ---
 name: semantic-segmentation
 type: concept
-sources: [unet]
-updated: 2026-07-24
+sources: [unet, controlnet]
+updated: 2026-08-24
 ---
 
 # Semantic Segmentation · 语义分割 · 给每个像素分类
