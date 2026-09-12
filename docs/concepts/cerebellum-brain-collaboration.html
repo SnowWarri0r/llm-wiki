@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>Full-Duplex-Bench Metrics · 不只看答对，还要看该不该接话 · Concept</title>
+<title>Cerebellum–Brain Collaboration · 小脑管接话，大脑管干活 · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,49 +53,46 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · full-duplex-bench-metrics</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · cerebellum-brain-collaboration</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>Full-Duplex-Bench Metrics · 不只看答对，还要看该不该接话</h1>
+  <h1>Cerebellum–Brain Collaboration · 小脑管接话，大脑管干活</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>用接管话轮、短附和、响应时机和打断后的反应，衡量语音模型是否真的会“边听边说”。</p>
-<h2>四把尺子</h2>
+<p>把实时交互和长程推理拆给两个模型：小脑毫秒级听说看，大脑分钟级跑任务，工具调用当神经。</p>
+<h2>直觉</h2>
+<p>人接电话时"嗯、好、您说"是脊髓反射级的快，真正想问题是另一套慢系统——把这两件事塞进同一个模型，就得在"反应快"和"想得深"之间二选一。拆开以后各自量级合适：小脑是个小而快的全双工流式模型，永远在线；大脑是现成的通用 agent（Codex / Claude Code），<strong>免训练即插即用</strong>——上游 agent 变强，整个系统白嫖升级，不用重训小脑。</p>
+<h2>怎么做的</h2>
 <ul>
-<li><strong>TOR / takeover rate</strong>：一次测试中，模型是否真正开始说内容；只发静音或极短附和不算接管。</li>
-<li><strong>backchannel frequency</strong>：用户说话时，模型每秒发多少次“嗯、对、我懂”之类短附和。</li>
-<li><strong>JSD</strong>：模型附和时机分布与真人分布差多远，越小越像真人节奏。</li>
-<li><strong>latency</strong>：用户结束或打断后，到模型开始正确反应之间隔了多久。</li>
+<li>小脑自己能扛日常闲聊和简单检索；判断"这活儿要几分钟"时发结构化工具调用委派给大脑：<code>task_start</code>（开任务）、<code>task_send</code>（追加输入：main=转向主任务，fork=只读旁问不动主线程）、<code>task_resolve</code>（cancel / allow_once / allow_session / deny）。</li>
+<li>中间的编排 runtime 是执行底座：管流式数据传输、推理调度，还把工具参数<strong>绑定到传输层确认的真实用户轮次</strong>——防止小脑幻觉出任务参数。两种控制面：lean（直通，低延迟）和 coordinator（多一个只出声明式控制计划的模型，管推理强度/权限/交付策略）。</li>
+<li>大脑执行期间用户随时能跟小脑继续聊或改任务；大脑经 <code>share</code> 把关键进展推回小脑，小脑口语化转述。</li>
 </ul>
-<p>同一个 TOR 在不同测试里方向相反：用户只是停顿或模型只该附和时，越低越好；用户真的说完或打断模型时，越高越好。</p>
-<h2>数字例子</h2>
-<p>做 10 次“用户只是停顿”的测试，模型有 2 次误以为轮到自己并开始长答：</p>
-<p><code>TOR = 2 / 10 = 0.2</code>。</p>
-<p>再做 10 次“用户已经说完”的测试，模型有 9 次及时接话：</p>
-<p><code>TOR = 9 / 10 = 0.9</code>。</p>
-<p>两个结果都好，因为测试想要的行为不同。只看“TOR 越大越好”会把第一项读反。</p>
-<h2>JSD 的小例子</h2>
-<p>把附和时机粗分成“用户句中”和“用户句尾”。真人分布是 <code>[0.5, 0.5]</code>，模型也是 <code>[0.5, 0.5]</code>，JSD 为 0；若模型总在句中附和，分布变成 <code>[1, 0]</code>，JSD 就大于 0。真实基准用更细的时间分桶，但含义不变：不是只数次数，还看发生在什么时候。</p>
+<h2>代码出处</h2>
+<ul>
+<li>Gander 开源 runtime：gateway 五实体（Project/Task/Run/WorkerEvent/Delivery）+ worker provider 接口；默认 provider 是 Codex app server，一条任务谱系挂一个持久 Codex 线程。</li>
+</ul>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/personaplex.html">personaplex</a> · 来源与完整结果</li>
-<li><a href="../concepts/full-duplex-multimodal-interaction.html">full-duplex-multimodal-interaction</a> · 全双工交互是什么</li>
+<li><a href="../papers/gander.html">gander</a> — 提出并开源这套双层架构</li>
+<li><a href="../concepts/streaming-chunk-flattening.html">streaming-chunk-flattening</a> — 小脑内部的流式建模</li>
+<li><a href="../concepts/thinker-talker.html">thinker-talker</a> — 小脑再往下拆：想和说分两条路</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
   <span class="label">引用此页的内容 · 2 处</span>
-  <ul><li><a href="../papers/gander.html"><span class="cat">paper</span>Gander · 会插话的全能助手，闲聊归小脑、长活归大脑</a></li><li><a href="../concepts/backchannel-vs-barge-in.html"><span class="cat">concept</span>Backchannel vs Barge-in · &quot;嗯嗯&quot;是附和，不是抢话</a></li></ul>
+  <ul><li><a href="../papers/gander.html"><span class="cat">paper</span>Gander · 会插话的全能助手，闲聊归小脑、长活归大脑</a></li><li><a href="../concepts/streaming-chunk-flattening.html"><span class="cat">concept</span>Streaming Chunk Flattening · 听到的、看到的、说出的，拍平进一条 token 流</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/full-duplex-bench-metrics.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/cerebellum-brain-collaboration.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 

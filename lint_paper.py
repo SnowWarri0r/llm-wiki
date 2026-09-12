@@ -370,7 +370,9 @@ def check_unrendered_math_in_heading(html, name, issues):
 # "混 KaTeX 进等宽块会毁掉列对齐"，实测是错的：只要同一列各行插入相同，
 # 列位置分毫不动（三行 τ_c 右侧列 x 都是 338）。unicode 下标（x₀ / V⁺）同样可以。
 LEDGER = re.compile(r'<div class="(?:math-sheet|calc)"[^>]*>(.*?)</div>', re.S)
-FAKE_SUB = re.compile(r"(?<![A-Za-z0-9])[A-Za-z\u0370-\u03ff][A-Za-z0-9]*_[A-Za-z][A-Za-z0-9]*")
+# \u4e0b\u5212\u7ebf\u524d\u5fc5\u987b\u662f\u5355\u4e2a\u5b57\u6bcd\u624d\u7b97\u4e0b\u6807\uff08w_norm \u662f\u4e0b\u6807\uff1bgen_data / task_start \u662f\u4ee3\u7801\u6807\u8bc6\u7b26\uff09\u2014\u2014
+# \u4e0e SKILL.md \u00a77.2 \u7684\u7ad9\u70b9\u60ef\u4f8b\u4e00\u81f4\uff0c\u591a\u5b57\u6bcd\u8bcd\u5934\u7684 identifier \u4e0d\u8bef\u62a5\u3002
+FAKE_SUB = re.compile(r"(?<![A-Za-z0-9])[A-Za-z\u0370-\u03ff]_[A-Za-z][A-Za-z0-9]*")
 
 
 def check_ledger_pseudo_latex(html, name, issues):

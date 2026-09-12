@@ -1768,3 +1768,7 @@ skill 更新:
 | §10 边界 | 5/5/5/4/4/5/5 | 四类局限卡片与五条未披露项保持高对比，来源链接和“本站重绘”声明可见。 |
 
 最终浏览器验收：桌面 1440×1000 与手机 390×844 的页面宽度分别严格为 1440 / 390，正文零横向溢出；11 个展示公式与 113 个行内数学格全部正向生成 KaTeX，0 个 error、0 个裸数学残留；16 个术语入口与 16 个 glossary 条目一一对应，浮卡桌面固定右侧、手机固定底部；7 个 <code>fig-*</code> id 唯一，按钮交互全部实点，控制台 0 error / 0 warning。静态门禁 <code>lint_paper.py --warn controlnet</code> 为 0 ERROR / 0 WARN，<code>git diff --check</code> 通过。
+
+## [2026-09-11] ingest | gander
+
+arXiv 2609.08977v2（Omni Interaction Agent 技术报告，腾讯混元语音）。bespoke 页 14 节 + 6 图（三件套架构 / 委派双泳道时间线 / 感知 token 账 / chunk 拍平流 / 打断时间线监督 / 时机双指标散点）；新 concept：cerebellum-brain-collaboration、streaming-chunk-flattening、backchannel-vs-barge-in；thinker-talker、full-duplex-multimodal-interaction、full-duplex-bench-metrics、vad 补 sources。lint_paper.py 的 FAKE_SUB 按站点惯例收窄为单字母词头（task_start 这类标识符不再误报）。

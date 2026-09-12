@@ -1,7 +1,7 @@
 ---
 name: thinker-talker
 type: concept
-sources: [minimind-o, duplexomni]
+sources: [minimind-o, duplexomni, gander]
 updated: 2026-07-29
 ---
 

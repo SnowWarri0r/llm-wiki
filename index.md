@@ -44,6 +44,7 @@
 - [DiffusionOPD · 扩散的 On-Policy 蒸馏](wiki/papers/diffusion-opd.md) — 多奖励对齐扩散: 先各训单任务专家老师, 再沿学生rollout轨迹蒸进一个学生; 扩散=高斯马尔可夫链→同协方差KL塌成均值MSE; 接 ppo+ode-sde+cross-entropy
 - [dMel](wiki/papers/dmel.md) — 跳过 neural codec 直接 bin quantize log-mel，简单方案跟 RVQ 一样好
 - [Interaction Models · Thinking Machines](wiki/papers/interaction-models-tml.md) — 把交互能力做进权重的 276B MoE 模型
+- [Gander · 会插话的全能助手](wiki/papers/gander.md) — 腾讯混元语音的 Omni Interaction Agent：9B 全双工小脑按 1 秒 chunk 拍平音视频与文本、每窗先预测听/说/打断，免训练大脑（Codex）经 task_start/send/resolve 三工具接长活；InteractionSpeech 26 万条打断合成管线、FDB v3 时机双指标 100/8.0 全场唯一双赢、back-brain-only 消融定位瓶颈在路由与 ASR 通道。
 - [Fish Audio S2 Pro](wiki/papers/fish-speech-s2-pro.md) — Dual-AR + RVQ + GRPO 的开源 TTS
 - [DuplexOmni · 边听边说时，后台还能继续想](wiki/papers/duplexomni.md) — 把实时交互 S1 与后台思考 S2 拆成并行线；交互模型内部再用 480 ms 时间片、Thinker–Talker 和 16 层 Mimi codec 生成语音。完整拆开控制标记闭环、两阶段交替冻结与交叉熵手算；ToR 72.6 最强，但 Daily-Omni 53.8、WER 11.92%，论文结果与至少 8×H20 的公开部署口径分开记录。
 - [PersonaPlex · 同一套实时语音模型，既能换声音，也能换身份](wiki/papers/personaplex.md) — 在 Moshi 的 80 ms 全双工骨干前拼入参考声音与角色文字，不改成 ASR–LLM–TTS 级联；完整拆开 17 路输入、Temporal–Depth、声学码延迟、prompt 缓存、加权 loss、2,250 小时合成数据、两套 duplex benchmark，并严格分开论文实验模型与公开 personaplex-7b-v1 的数据和评测口径。

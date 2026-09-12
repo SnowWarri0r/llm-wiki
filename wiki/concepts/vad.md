@@ -1,7 +1,7 @@
 ---
 name: vad
 type: concept
-sources: [interaction-models-tml, replace-heuristics-with-weights]
+sources: [interaction-models-tml, replace-heuristics-with-weights, gander]
 updated: 2026-05-22
 ---
 

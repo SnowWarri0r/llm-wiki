@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Streaming Chunk Flattening · 听到的、看到的、说出的，拍平进一条 token 流 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · streaming-chunk-flattening</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Streaming Chunk Flattening · 听到的、看到的、说出的，拍平进一条 token 流</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>按 1 秒切窗，每窗 = [感知 token + 控制 token + 文本 token]，串成单条因果序列，让模型每秒决定一次听还是说。</p>
+<h2>直觉</h2>
+<p>turn-based 对话里"用户说完"是一个特权信号，靠 VAD 判端点触发生成。拍平之后没有特权角色：外界输入只是持续被观测的世界状态，模型活在一个永远在线的环境里，<strong>每个 chunk 都要回答"要不要出声"</strong>——接话时机从外挂模块变成模型自己的自回归预测，能随模型智能一起变强。</p>
+<h2>怎么做的</h2>
+<ul>
+<li>每 1 秒组一个 chunk：该窗内到达的音频 token（≈10/s）+ 视觉 token，接一个<strong>控制 token</strong>，再接模型选择输出的 N 个文本 token（N 可以是 0）。chunk 依次拼接喂标准因果 LLM；窗内先看新感知再生成，保证每个输出 token 都以最新观测为条件。</li>
+<li>控制 token 三选一：<strong>listen</strong>（本窗沉默继续观察）、<strong>speak</strong>（本窗要说话，后面的文本送去合成语音）、<strong>interrupt</strong>（掐掉自己没说完的话——用户开口了或场景变了）。控制先于内容：把"要不要说"和"说什么"解耦，比混在一步预测里更稳。</li>
+<li>上下文固定 128 chunk ≈ 2 分钟滑窗，滚动淘汰最老的 chunk，长会话推理成本恒定。</li>
+</ul>
+<h2>数字例子</h2>
+<p>一场 96 秒的对话：96 个 chunk；模型若在其中 30 个 chunk 说话、语速被数据改写约到 8 token/s，文本输出 ≈ 30×8=240 token；其余 66 个 chunk 只出 1 个 listen token。同样 96 秒若让 LLM 直接自回归 50 帧/s 的语音 token，仅输出侧就是 96×50=4800 步——拍平+控制 token 把解码步数压了一个数量级。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/gander.html">gander</a> — 本页机制的出处（其小脑）</li>
+<li><a href="../concepts/cerebellum-brain-collaboration.html">cerebellum-brain-collaboration</a> — chunk 流之上的双层架构</li>
+<li><a href="../concepts/full-duplex-multimodal-interaction.html">full-duplex-multimodal-interaction</a> — 它服务的交互形态</li>
+<li><a href="../concepts/vad.html">vad</a> — 被它内化掉的外挂端点检测</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/gander.html"><span class="cat">paper</span>Gander · 会插话的全能助手，闲聊归小脑、长活归大脑</a></li><li><a href="../concepts/cerebellum-brain-collaboration.html"><span class="cat">concept</span>Cerebellum–Brain Collaboration · 小脑管接话，大脑管干活</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/streaming-chunk-flattening.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

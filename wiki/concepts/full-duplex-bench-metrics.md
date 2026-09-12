@@ -1,7 +1,7 @@
 ---
 name: full-duplex-bench-metrics
 type: concept
-sources: [personaplex]
+sources: [personaplex, gander]
 updated: 2026-08-12
 ---
 
