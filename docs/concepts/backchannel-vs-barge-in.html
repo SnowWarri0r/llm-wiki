@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Backchannel vs Barge-in · &quot;嗯嗯&quot;是附和，不是抢话 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · backchannel-vs-barge-in</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Backchannel vs Barge-in · &quot;嗯嗯&quot;是附和，不是抢话</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>用户短促出声分两种：支持性附和（你继续说）和竞争性抢话（你闭嘴听我说），全双工模型必须分得开。</p>
+<h2>直觉</h2>
+<p>人对话里"嗯、对、我懂"是在给对方递话头，说话人不该停；但"等等，不对"哪怕再短也是夺麦。turn-based 系统一律当新轮次处理，一听见声就停——体验就是"我嗯了一声它把话咽回去了"。分不开这两种，全双工就是假的。</p>
+<h2>怎么做的（Gander 数据构造的判据）</h2>
+<ul>
+<li><strong>竞争性打断</strong>：用户在助手说完前插入；助手没说完的后半句保留为"隐藏续写"——文本留着（时间线上占位）但<strong>不合成音频</strong>，模型只观测真实听者听得到的声学证据；且后续用户轮次校验过不引用没听到的内容。</li>
+<li><strong>支持性 backchannel</strong> 的接收判据（不满足就降级为普通轮次）：嵌在对方持续话轮<strong>内部</strong>；长度 ≤8 个汉字 / 6 个英文词；命中词表或生成时显式标注。带疑问、请求、否定立场的候选一律不算附和——那是真夺麦。</li>
+<li>附和词从双语词表采样（266 中 / 170 英，11 个意图类，按上下文条件挑），避免小词表导致的重复腔。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/gander.html">gander</a> — InteractionSpeech 合成管线（26 万条全双工对话）的判据出处</li>
+<li><a href="../concepts/full-duplex-multimodal-interaction.html">full-duplex-multimodal-interaction</a> — 这对区分是全双工的必修课</li>
+<li><a href="../concepts/full-duplex-bench-metrics.html">full-duplex-bench-metrics</a> — 评测端对应的 Take-turn / Interrupt 读法</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/gander.html"><span class="cat">paper</span>Gander · 会插话的全能助手，闲聊归小脑、长活归大脑</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/backchannel-vs-barge-in.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
