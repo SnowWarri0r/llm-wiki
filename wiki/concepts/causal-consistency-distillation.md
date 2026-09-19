@@ -1,7 +1,7 @@
 ---
 name: causal-consistency-distillation
 type: concept
-sources: [minwm, causal-rcm]
+sources: [minwm, causal-rcm, solarwm]
 updated: 2026-08-14
 ---
 

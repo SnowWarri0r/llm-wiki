@@ -1,7 +1,7 @@
 ---
 name: teacher-forcing-video-diffusion
 type: concept
-sources: [minwm, solaris-multiplayer-world-model, wan-streamer-v01, wan-animate-2, uniswap-av]
+sources: [minwm, solaris-multiplayer-world-model, wan-streamer-v01, wan-animate-2, uniswap-av, solarwm]
 updated: 2026-08-18
 ---
 
