@@ -1,7 +1,7 @@
 ---
 name: trajectory-distribution-matching
 type: concept
-sources: [krea-2]
+sources: [krea-2, lynnreal-omni]
 updated: 2026-06-25
 ---
 

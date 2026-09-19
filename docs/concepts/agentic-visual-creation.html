@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Agentic Visual Creation · agent 搭台，扩散唱戏 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · agentic-visual-creation</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Agentic Visual Creation · agent 搭台，扩散唱戏</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>让 agent 写代码造出显式可控的场景（参考图、可编辑 3D、可执行游戏），再让视频扩散模型往上面渲染细节。</p>
+<h2>直觉</h2>
+<p>视频扩散和 agent 造景各缺半边：扩散画得漂亮但随机难控（精确内容靠反复抽卡、长镜头会漂），agent 写出来的 3D 场景和游戏控制精确可重放，但低模贴图糙、离"能看"差得远。把两者拼起来正好互补——几何、运动、碰撞由程序说了算（可检查、可回放、可改参数），外观交给扩散模型补。相当于剧组分工：agent 是置景和场记，扩散模型是摄影和调色。</p>
+<h2>怎么做的（LynnReal-Omni 的版本）</h2>
+<ul>
+<li><strong>场景构建</strong>：agent 读参考图和任务描述，用网格/层级/变换/材质/光照/相机写出可执行场景，先搭主结构再精修，靠执行反馈抓实现错误。</li>
+<li><strong>位姿与相机精修</strong>：从参考视角渲染、和输入图比构图/剪影/透视/遮挡，每次更新都重渲验证；先整体视角后局部比例，防"局部几何迁就错误透视"。</li>
+<li><strong>接触校正与验证</strong>：多视角渲染暴露隐藏几何与穿插；碰撞检测定位缝隙和重叠；改完复查邻近物体。</li>
+<li><strong>游戏逻辑</strong>：显式状态更新（位置/速度/朝向/动作相位）+ 控制输入；录制脚本按固定输出时间间隔推进仿真逐帧截图，状态与交互事件随帧存档——录制耗时与播放速度解耦。</li>
+<li>渲染出的序列作为布局/运动参考喂给视频模型（帧对齐控制），程序本体保留，随时改参数重渲。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/lynnreal-omni.html">lynnreal-omni</a> — 把这套控制流接进统一视频模型的系统</li>
+<li><a href="../concepts/world-foundation-model.html">world-foundation-model</a> — 对照：世界模型路线是"让模型自己学世界规则"，这里是"把规则写成程序"</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/lynnreal-omni.html"><span class="cat">paper</span>LynnReal-Omni · agent 搭台，扩散唱戏：一个模型接所有视觉控制</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/agentic-visual-creation.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>
