@@ -1,7 +1,7 @@
 ---
 name: projective-rope
 type: concept
-sources: [minwm]
+sources: [minwm, solarwm]
 updated: 2026-07-24
 ---
 

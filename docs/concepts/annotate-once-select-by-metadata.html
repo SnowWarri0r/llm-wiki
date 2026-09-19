@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>先全量标注，后做决定 · 选择只是元数据运算 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · annotate-once-select-by-metadata</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>先全量标注，后做决定 · 选择只是元数据运算</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>贵的标注（相机估计、caption、质量模型）每条 clip 只跑一次；筛选、分层、混比全是对元数据的索引运算，改门限不再烧 GPU。</p>
+<h2>直觉</h2>
+<p>数据管线最常见的写法是"边处理边筛"：不合格的当场丢掉。省了存储，但每次想改门限、换配比、救回某类样本，都得把整条 GPU 管线重跑一遍——而且被丢掉的样本连"为什么被丢"都没留下。反过来，把标注和选择拆成两层：标注是<strong>物理事实</strong>（一次算清、永久入库），选择是<strong>政策</strong>（随时改、改了只需重索引）。被拒的样本带着全套指标和机器可读的 reject reasons 留在拒收分区里——它们不是垃圾，是换个门限就能复活的候选。</p>
+<h2>怎么做的（SolarWM 数据引擎的版本）</h2>
+<ul>
+<li>1.43M canonical clip 全部过完相机估计、caption、质量指标，再按逐源冻结的政策打三互斥标签：xhigh / high / rejected；549k 拒收样本照常发布，reason 机器可读。</li>
+<li>三命名空间分离：<strong>物理语料</strong>（样本+标注）/ <strong>逻辑配方</strong>（split、tier 政策、源权重、repeat 因子）/ <strong>模型视图</strong>（骨干专属窗口与 latent）。改配方不复制视频，换 VAE 不动数据选择。</li>
+<li>门限<strong>逐源不对称</strong>：高速游戏源不设通用几何/饱和门，Clean 衍生源加更严的重建校验——通用阈值会在一个域里删掉有用轨迹、在另一个域里留下伪影。</li>
+<li>规则引用的指标缺失或非有限一律 fail-closed 拒——"keep-rate 掉到 0"更常见的原因是某个标注适配器系统性挂了，而不是门限太严。</li>
+</ul>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/solarwm.html">solarwm</a> — 这套原则的成文出处（开源数据引擎）</li>
+<li><a href="../concepts/world-foundation-model.html">world-foundation-model</a> — 它服务的模型物种</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/solarwm.html"><span class="cat">paper</span>SolarWM · 世界模型的公共地基：数据引擎 + 四条骨干一套配方</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/annotate-once-select-by-metadata.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+</body>
+</html>

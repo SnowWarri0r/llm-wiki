@@ -1,0 +1,2424 @@
+
+
+SolarWM: Open Data and Scalable Training for Long-Horizon Video World Models
+
+ Report GitHub Issue
+ ×
+
+ Title:
+
+ Content selection saved. Describe the issue below:
+
+ Description:
+
+ Submit without GitHub
+ Submit in GitHub
+
+ arXiv is now an independent nonprofit!
+ Learn more
+ ×
+
+ Back to arXiv
+
+ Why HTML?
+
+ Report Issue
+
+ Back to Abstract
+
+ Download PDF
+
+Abstract
+1 Introduction
+2 Open-Source Release
+3 Related Work
+
+3.1 Interactive Video World Models
+3.2 Training Frameworks and Open Research Stacks
+
+3.3 Data for Interactive World Modeling
+
+4 Training Pipeline
+
+4.1 Bidirectional Adaptation
+4.2 Teacher-Forced AnyFlow Initialization
+4.3 DMD-based Causal Training
+
+5 Open Data Engine
+
+5.1 Unified Data Representation
+
+Unified sample schema.
+
+5.2 Metric-Scale Camera Annotation
+5.3 LTX Clean Plate Processing
+5.4 Dense Captioning and Multi-Axis Annotation
+
+Kimi-K2.6 captions.
+Quality and motion metrics.
+
+5.5 Source-Aware Filtering and Quality Tiers
+5.6 Open Recipes and Split Construction
+5.7 Final Corpus and Temporal Views
+
+6 SolarWM Model Family
+
+6.1 Unified Camera Conditioning with Fused-PRoPE
+6.2 Comparison of the Four SolarWM Models
+
+SolarWM-wan2.2-5B
+SolarWM-wan2.2-14B
+SolarWM-ltx-2.5-22B
+SolarWM-minimax-h3-33B
+
+7 Experiments
+
+7.1 Configurations
+7.2 Bidirectional Pretrained Models
+7.3 Distilled Causal Generation
+
+7.3.1 In-Domain Validation Results
+7.3.2 Out-of-Domain Initialization
+7.3.3 Long Video Generation
+
+Minute-scale rollouts.
+Hour-scale rollouts.
+
+8 Conclusion
+
+References
+
+ License: CC BY 4.0
+
+arXiv:2609.02886v1 [cs.CV] 02 Sep 2026
+
+\setheadertext\setreportdate
+2026.9
+
+\setheadertitle
+\correspondingemail\emailicon junchaoh.cs@gmail.com
+
+  Dataset
+
+  Code
+
+  † Project Lead
+  ‡ Corresponding Author
+
+SolarWM:
+Open Data and Scalable Training for Long-Horizon Video World Models
+
+Junchao Huang
+
+Guian Fang
+
+Shengju Qian
+
+Xianghao Kong
+
+Zhuoran Zhao
+
+Wei Huang
+
+Yihua Du
+
+Zixin Zhang
+
+Justin Cui
+
+Yuchao Gu
+
+Yukang Chen
+
+Xinting Hu
+
+Tianyu HeShaoshuai Shi
+
+Zhuotao TianXin Wang
+
+Mike Zheng Shou
+
+Li Jiang
+
+CUHK-SZ
+ SLAI
+ NUS
+ CUHK
+ HKUST
+ HKUST-GZ
+ NVIDIA
+ UCLA
+ MSRA
+
+Abstract
+
+We introduce SolarWM, a fully open foundation for building interactive video world models from data preparation through long-horizon inference.
+Training across heterogeneous data sources and video backbones is challenging: datasets differ in temporal scale, camera geometry, visual quality, motion, and captioning styles, while video generators use distinct representations and architectures. Naive data mixing and model-specific implementations therefore produce inconsistent supervision and make results difficult to reproduce and compare.
+SolarWM addresses this coupling with a reconfigurable multi-source data engine and a backbone-native adaptation framework. The engine converts 1.43 million canonical clips from 10 datasets into a unified, frame-aligned contract covering visual observations, metric camera geometry, captions, quality metadata, selection decisions, and provenance, while decoupling source processing from mixture construction. Under shared camera-conditioning, training, and inference interfaces, we instantiate four 5B–33B models based on Wan2.2, LTX-2.5, and MiniMax-H3 while preserving their native representations and objectives. A unified three-stage recipe combines bidirectional adaptation, teacher-forced autoregressive initialization, and distribution matching distillation. The resulting causal models enable real-time interaction over rollouts ranging from minutes to hours after being trained on only 5s sequences.
+By releasing the resulting data, pipeline, recipes, weights, and framework, SolarWM provides a reproducible and extensible foundation for interactive world-model research.
+
+Website (Dataset & Code & Model):
+https://junchao-cs.github.io/SolarWM-Web/
+
+1 Introduction
+
+“Imagination will often carry us to worlds that never were.” — Carl Sagan
+
+Interactive video world models imagine future visual observations conditioned on camera motion, player actions, or semantic instructions, transforming passive video generators into environments that can be interactively explored and controlled
+[Bruce et al., 2024, Valevski et al., 2024, Mao et al., 2025, Zhang et al., 2026b]. Recent systems have demonstrated increasingly realistic interaction in game environments and open visual domains, highlighting their potential for simulation, embodied learning, and interactive content creation [He et al., 2025, DreamX Team et al., 2026, Zhu et al., 2026a, Huang et al., 2025b, Wang et al., 2026a, Gao et al., 2026, Zhang et al., 2026a, Kong et al., 2026].
+However, the transition from short-clip generation to interactive long-horizon rollout requires models to maintain visual quality and temporal coherence while remaining responsive to control
+[Wang et al., 2026b, AlayaWorld Team et al., 2026, Jiang et al., 2026, Gao et al., 2026].
+Achieving this capability requires coherent supervision
+across heterogeneous data sources and effective adaptation of diverse video-generation backbones without compromising their pretrained capabilities.
+
+These two requirements are closely coupled. On the data side, existing datasets differ in temporal scale, visual quality, motion distribution, captioning styles, and camera conventions
+[Ju et al., 2024, Ling et al., 2023, Zheng et al., 2025, Wang et al., 2025, Li et al., 2025, Hu et al., 2026]. Naively combining them can introduce inconsistent supervision, causing models that perform well on individual sources to deteriorate under multi-source training. On the model side, video generators differ substantially in architecture, including their latent representations, attention structures, and conditioning mechanisms
+[Zhao et al., 2026a, Rui et al., 2026]. Although a shared adaptation strategy is desirable for scalability, overlooking this heterogeneity can compromise the pretrained capabilities; conversely, backbone-specific adaptation limits systematic comparison and extensibility.
+Existing open systems often overlook this coupling, relying on restricted data sources and largely model-specific implementations [Zhu et al., 2026a, Zhao et al., 2026a, Rui et al., 2026, Li et al., 2026].
+Consequently, the field still lacks a unified and reproducible foundation that coordinates multi-source data construction and backbone adaptation while providing a standardized and efficient training protocol across backbones.
+
+We introduce SolarWM, a fully open and unified interactive video world-model foundation comprising a reconfigurable multi-source data infrastructure and a scalable backbone-native adaptation framework. At the data level, SolarWM converts
+heterogeneous sources into a common training contract with consistent temporal, geometric, semantic, and quality supervision. At the model level, SolarWM provides shared interfaces for camera conditioning, optimization, and rollout
+while preserving the native representations of individual video generators. We further establish a unified three-stage training recipe for heterogeneous backbones that combines simplicity with high efficiency, comprising bidirectional model training, autoregressive (AR) adaptation [Chen et al., 2024, Gu et al., 2026], and distribution matching distillation (DMD) [Yin et al., 2024, Huang et al., 2026b, Zhuang et al., 2026].
+
+The data infrastructure contains approximately 1.43 million canonical clips from 10 source datasets, corresponding to over 25 TB of physical data. The corpus spans real-world, synthetic, and game environments across diverse scene layouts, camera motions, temporal scales, and motion patterns. Each source is converted into a canonical representation that aligns visual observations, camera geometry, language supervision, and quality metadata. We release the complete processed corpus together with the end-to-end processing pipeline, enabling reproducible reconstruction, extension, and reuse.
+A key design principle of the infrastructure is to construct a reconfigurable and comprehensive training resource for world models by decoupling computationally intensive source preprocessing from training-mixture construction. Researchers can reproduce the released mixture or define alternative recipes by modifying filtering criteria, sampling ratios, and source weights without rerunning source-level processing.
+
+Built on the canonical corpus produced by this infrastructure, we instantiate a scalable SolarWM model family comprising SolarWM-wan2.2-5B, SolarWM-wan2.2-14B, SolarWM-ltx-2.5-22B, and SolarWM-minimax-h3-33B [Wan et al., 2025, HaCohen et al., 2026, MiniMax, 2026], with model sizes spanning 5B to 33B parameters. The backbone-native adaptation introduces only the interfaces required for camera conditioning and long-horizon rollout while preserving each generator’s native representations and optimization objectives. This design yields an extensible and directly comparable model family that supports high-fidelity, camera-controllable video generation across real-world, synthetic, and game environments.
+
+Experiments further reveal that strong long-horizon world models can be obtained with a simple yet highly efficient training procedure.
+First, our models achieve state-of-the-art performance without specialized ODE or consistency-distillation (CD) initialization [Yin et al., 2025, Huang et al., 2026b, Zhu et al., 2026b]. Second, most optimization should be performed during bidirectional training; AR adaptation then converges rapidly, while DMD requires even fewer optimization steps. Third, after training on only 5s sequences, the resulting models support open-ended rollouts over minutes-to-hours horizons without additional long-sequence fine-tuning or attention-sink mechanisms. These key findings show that scalable long-horizon generation can be achieved without a complex training pipeline or computationally intensive training on long videos, provided that data construction, backbone adaptation, and training stages are properly aligned.
+
+Our main contributions are summarized as follows:
+
+• 
+
+A fully open and unified foundation.
+We introduce SolarWM, a fully open and unified interactive video world-model foundation integrating a reconfigurable multi-source data infrastructure with a scalable backbone-native adaptation framework across data construction, model
+training, and long-horizon inference.
+
+• 
+
+A reconfigurable multi-source data infrastructure.
+We process approximately 1.43 million clips from 10 datasets covering real-world, synthetic, and game environments, and release the corpus and processing pipeline to support reproducible and flexible training-mixture
+construction.
+
+• 
+
+A scalable backbone-native adaptation framework and model family.
+We train four 5B–33B models across heterogeneous backbones using a unified data recipe and a simple, efficient three-stage training procedure comprising bidirectional training, AR adaptation, and DMD. The models achieve state-of-the-art performance and support open-ended rollouts over minutes-to-hours horizons after training solely on 5s sequences.
+
+2 Open-Source Release
+
+We will release the complete processed corpus including all 1.43 million canonical clips from 10 source datasets, together with their annotations, metadata, intermediate records, quality assessments, selection decisions, and provenance information, as well as the end-to-end data-processing pipeline. Because source-level preprocessing is decoupled from mixture construction, researchers can define alternative training recipes by changing filtering criteria, sampling ratios, source weights, or split definitions, without rerunning the computationally intensive source preprocessing. We will also release the training recipes, model weights, and implementations of bidirectional training, AR adaptation and rollout, and DMD training and inference. Collectively, these artifacts provide a complete and reproducible foundation for interactive video world-model research, enabling flexible data-mixture design, controlled cross-backbone comparison, and systematic extension to new data and models.
+
+3 Related Work
+
+3.1 Interactive Video World Models
+
+Interactive video world models extend passive video generation into visual
+simulation: given an initial observation, they roll out future observations in
+response to actions, camera motion, or semantic instructions. Early systems
+focused on compact action spaces: Genie learns latent actions from Internet
+videos [Bruce et al., 2024], DIAMOND models Atari environments
+[Alonso et al., 2024b], and GameNGen simulates DOOM from recorded
+state–action trajectories [Valevski et al., 2024]. Minecraft later became
+a common testbed for autoregressive and streaming interaction, as illustrated
+by MineWorld [Guo et al., 2025], Memory Forcing [Huang et al., 2025a], and the Matrix-Game series
+[Zhang et al., 2025, He et al., 2025]. Their progress
+establishes video generators
+as interactive simulators, but many remain tied to a particular environment,
+collection process, or control vocabulary.
+
+Recent work extends the setting to open-domain visual exploration. Yume,
+WorldPlay, and AlayaWorld support camera- or keyboard-controlled world
+extension with mechanisms for long-range consistency
+[Mao et al., 2025, Sun et al., 2025, AlayaWorld Team et al., 2026]. LingBot-World,
+ABot-World-0, DreamX-World, SANA-WM, Genie 3, LIVE, and recent Matrix-Game variants
+further improve visual quality, rollout length, interaction, or deployment
+efficiency
+[Robbyant Team et al., 2026, Gao et al., 2026, Jiang et al., 2026, DreamX Team et al., 2026, Zhu et al., 2026a, Parker-Holder and Fruchter, 2025, Wang et al., 2026b, Huang et al., 2026a, Riemann Dynamics, 2026b]. Together, these systems
+show that an interactive world model depends not only on the base video generation model, but also on the data, adaptation, causal-training, and inference pipelines surrounding
+it.
+
+3.2 Training Frameworks and Open Research Stacks
+
+Most high-quality video generators are pretrained with bidirectional temporal
+attention, whereas interactive rollout requires causal prediction from
+generated history. Diffusion Forcing provides a causal sequence formulation
+[Chen et al., 2024]; later methods convert bidirectional video models
+through staged distillation, train on model-generated context to reduce
+exposure bias, and enable few-step sampling through ODE, consistency, flow-map,
+or distribution-matching objectives
+[Yin et al., 2025, Huang et al., 2026b, Zhu et al., 2026b, Zhao et al., 2026b, Gu et al., 2026, Yin et al., 2024]. Astrolabe studies forward-process reinforcement learning
+for post-training distilled autoregressive video models
+[Zhang et al., 2026d]. KVPO further proposes ODE-native GRPO
+for aligning streaming autoregressive video models through semantic
+exploration over historical KV caches [Zhang et al., 2026c]. These methods provide the main ingredients for long-horizon causal
+generation, but they do not by themselves provide a unified training stack
+that can be applied reproducibly across heterogeneous video backbones.
+
+Beyond these algorithmic advances, only a limited number of systems release
+training implementations. DIAMOND, Yume, minWM, BiWM, ForgeWM, SANA-WM,
+WorldPlay, and AlayaWorld expose code for some or all training stages
+[Alonso et al., 2024b, Mao et al., 2025, Zhao et al., 2026a, Rui et al., 2026, Li et al., 2026, Zhu et al., 2026a, Sun et al., 2025, AlayaWorld Team et al., 2026], whereas most
+systems release only checkpoints, inference code, or demonstrations. Even when
+training code is available, the released package is not always directly
+reproducible or reconfigurable: processed data, source-to-training
+construction, exact selection and mixture recipes, or checkpoint-matched
+optimization configurations may still be missing. Reproducing a model or
+adapting the pipeline to a new dataset or backbone can therefore require
+reconstructing substantial parts of the original system. Moreover, existing
+multi-backbone releases typically cover only two or three backbone families,
+leaving it unclear whether a training design transfers broadly or depends on
+model-specific engineering. Section 3.2 provides a systematic comparison of
+representative interactive video world models based on their official project
+pages, code repositories, and released artifacts. Specifically, it examines
+the availability of model weights, inference and training code, processed
+training data, complete data-selection records, executable source-to-training
+pipelines, exact data and optimization recipes, and support for multiple
+video-backbone families
+[Alonso et al., 2024a, Decart and Etched, 2024, Microsoft Research, 2026, Skywork AI, 2026, Robbyant Team, 2026b, Robbyant Team, 2026a, Amap CVLab, 2026, Parker-Holder and Fruchter, 2025, DreamX Team, 2026, NVIDIA Research, 2026, Yume Team, 2026, Tencent Hunyuan, 2026, ShengShu AI MIN Lab, 2026, LynnReal AI, 2026, Alaya Lab, 2026, ForgeWM Team, 2026, Riemann Dynamics, 2026a].
+
+SolarWM addresses both gaps with a compact, unified, and fully open training
+framework. The same three-stage recipe—bidirectional camera-conditioned
+adaptation, teacher-forced AnyFlow autoregressive initialization, and DMD-based
+causal training—is designed for all four models in the SolarWM family:
+SolarWM-wan2.2-5B, SolarWM-wan2.2-14B, SolarWM-ltx-2.5-22B, and
+SolarWM-minimax-h3-33B. Rather than assembling a separate training system for
+each model, SolarWM shares the data, camera-conditioning, optimization, and
+rollout interfaces while retaining only the backbone-native representations
+and objectives required by each generator. This demonstrates that the simple
+recipe is a reusable cross-backbone framework, rather than a model-specific
+training procedure.
+
+We will open-source the complete stack for all four model instantiations,
+including the implementation and configuration of every training stage,
+backbone adapters, processed corpus and complete selection records, executable
+source-to-training pipeline, exact data-mixture and optimization recipes,
+checkpoint-matched settings, model weights, and inference code. The released
+artifacts will therefore support both end-to-end reproduction of each of the
+four models and controlled reconfiguration across data filters, mixtures,
+backbones, schedules, and stage settings. The value of SolarWM lies not only
+in simplifying causal world-model training, but also in making a
+four-model, recipe-complete research stack available for direct reproduction,
+comparison, and extension.
+
+Table 1: Release matrix for representative interactive video world models.
+Release status was verified from official artifacts as of August 18, 2026; SolarWM entries indicate commitments for this release.
+✓: public; $\triangle$ : reduced, or temporarily unavailable; —: not identified.
+“Pipeline”: executable source-to-training workflow; “Full Rec.”: complete annotations, scores, provenance, and decisions; “Exact Recipe”: executable data and optimization configurations.
+Statistics cover public or committed payloads; “Multi-BB” denotes multiple video-backbone families.
+
+System | 
+
+Domain
+ | 
+Weights | 
+Infer. | 
+Train | 
+
+Data
+ | 
+Full Rec. | 
+Pipeline | 
+Exact Recipe | 
+Multi-BB | 
+
+Link
+ | 
+
+3.3 Data for Interactive World Modeling
+
+Data for interactive world modeling draws on several overlapping data
+traditions. Large video–text corpora such as WebVid-10M
+[Bain et al., 2021], InternVid [Wang et al., 2024], and MiraData
+[Ju et al., 2024] provide visual and semantic diversity but generally lack
+frame-aligned geometric control. Camera-oriented datasets such as DL3DV-10K,
+RealCam-Vid, SpatialVID, and MultiCamVideo provide complementary pose, depth,
+or trajectory supervision
+[Ling et al., 2023, Zheng et al., 2025, Wang et al., 2025, Bai et al., 2025]. Multi-domain collections including OmniWorld, Sekai,
+MIND, and ABOT-World broaden the range of scenes and interaction settings
+[Zhou et al., 2025, Li et al., 2025, Ye et al., 2026, Jiang et al., 2026].
+
+These sources are complementary but not directly interchangeable. They differ
+in temporal scale, resolution, visual quality, camera evidence, coordinate
+conventions, metric scale, captions, and motion distributions. Their released
+media and annotations also do not necessarily specify the processing that
+produces model-ready samples. The challenge is therefore to construct a
+consistent and auditable training contract, not simply to concatenate more
+datasets.
+
+SolarWM addresses this gap with the open data engine in Section 5. It
+normalizes heterogeneous sources into a frame-aligned representation and
+separates source processing from mixture construction. We will release the
+processed corpus, annotations, quality and provenance records, accepted and
+rejected samples, executable pipeline, and exact recipes. This allows users to
+reproduce our mixtures or reconfigure filters, source weights, temporal views,
+and model readers without rerunning the annotation pipeline.
+
+4 Training Pipeline
+
+Figure 1: Overview of the SolarWM-5B training pipeline and hour-scale inference results
+
+We train the world model in three stages: bidirectional adaptation, teacher-forced AnyFlow autoregressive initialization, and DMD-based causal training. The first stage adapts the pretrained video generator to camera-conditioned world data under bidirectional attention. The second switches to causal attention and combines teacher forcing with the AnyFlow loss [Gu et al., 2026], directly producing a few-step autoregressive initializer. This stage is fast because it mainly activates causal prediction in the well-trained bidirectional model rather than relearning appearance and motion. By making the autoregressive initializer few-step from the outset, TF-AnyFlow removes the need for the additional Causal ODE and Causal Consistency Distillation (CD) initialization stages used by Causal Forcing [Zhu et al., 2026b] and Causal Forcing++ [Zhao et al., 2026b], respectively. The final DMD [Yin et al., 2024] stage then trains on model-generated trajectories to align the causal generator with its inference-time distribution.
+
+4.1 Bidirectional Adaptation
+
+Let $\mathbf{z}_{0}$ denote a clean video latent and let
+ $\mathbf{c}$ collect the text, image, and camera conditions. Given a noisy
+latent $\mathbf{z}_{t}$ , the model predicts the native flow or velocity target
+ $\mathbf{u}_{t}$ of its backbone. The first stage minimizes
+
+ | 
+ $\mathcal{L}_{\mathrm{bid}}=\mathbb{E}_{\mathbf{z}_{0},t,\boldsymbol{\epsilon}}\left[\left\|f_{\theta}(\mathbf{z}_{t},t,\mathbf{c})-\mathbf{u}_{t}\right\|_{2}^{2}\right],$ | 
+ | 
+(1) | 
+
+using bidirectional attention over the complete training window. This stage adapts the pretrained visual prior to camera-conditioned world data while retaining unrestricted temporal context. Camera control is injected through fused-PRoPE (Section 6.1): projective rotations act directly on the query, key, and value tensors in the existing self-attention path, requiring neither a separate control branch nor an additional attention pass. The resulting checkpoint provides both the initialization for causal training and the fixed bidirectional reference for DMD.
+
+4.2 Teacher-Forced AnyFlow Initialization
+
+We next introduce causality while keeping the optimization target fully
+supervised. The latent sequence is divided into ordered blocks. When
+predicting the current block, the model can attend only to the current noisy
+state and clean ground-truth history; future blocks are hidden. For a sampled
+pair of noise levels $(t,r)$ , the training objective is
+
+ | 
+ $\mathcal{L}_{\mathrm{TF\text{-}AF}}=\mathbb{E}\left[\sum_{k}\ell_{\mathrm{AF}}\left(f_{\phi};\mathbf{z}^{k}_{t},t,r,\mathbf{z}^{ | 
+(2) | 
+
+where $\ell_{\mathrm{AF}}$ supervises the flow map between arbitrary noise
+levels, directly enabling few-step autoregressive generation.
+
+Initialized from the bidirectional model, this stage is a short causal
+adaptation rather than a new round of representation learning. The AnyFlow
+objective exposes the model directly to the finite noise transitions used by
+few-step sampling, while teacher forcing supplies a stable clean history.
+Their combination yields a few-step autoregressive checkpoint that can be
+passed directly to DMD, without a separate Causal ODE or Causal CD stage.
+
+4.3 DMD-based Causal Training
+
+Teacher-forced training still observes clean history, while inference
+conditions on the model’s own predictions. We address this exposure gap with
+DMD-based causal training. A causal student generates trajectories under the
+same temporal rule used at inference with a detached rollout-and-replay procedure [Zhuang et al., 2026] to allow KV Cache gradients. A frozen bidirectional teacher estimates
+the target distribution, while a trainable fake-distribution model follows the
+student’s evolving rollout distribution. Their difference provides the
+distribution-matching direction for the student.
+
+Writing $G_{\psi}$ for the causal generator, $s_{\mathrm{real}}$ for the
+teacher score, and $s_{\mathrm{fake}}$ for the score of the generated
+distribution, the DMD update takes the general form
+
+ | 
+ $\nabla_{\psi}\mathcal{L}_{\mathrm{DMD}}=\mathbb{E}\left[J_{G_{\psi}}^{\top}w(t)\left(s_{\mathrm{fake}}(\mathbf{z}_{t},t,\mathbf{c})-s_{\mathrm{real}}(\mathbf{z}_{t},t,\mathbf{c})\right)\right],$ | 
+ | 
+(3) | 
+
+where $J_{G_{\psi}}$ maps the distribution-matching signal back to the
+generator parameters and $w(t)$ controls its scale across noise levels. The
+fake-distribution model is optimized on generated samples, whereas the
+bidirectional teacher remains fixed. This separation preserves a stable
+quality reference while allowing the training signal to track the changing
+student distribution.
+
+5 Open Data Engine
+
+The data component of SolarWM is designed as an engine rather than
+as a fixed list of training clips. Its central principle is to process and
+annotate every canonical clip from every source before applying any
+training-time selection criteria. A clip that does not satisfy our released
+default recipe is therefore retained in a separate rejected partition,
+together with its annotations, metric values, and machine-readable rejection
+reasons. The released high and xhigh partitions are two
+convenient quality tiers, not an irreversible definition of valid data.
+Users can change thresholds, disable a filtering criterion, rebalance sources,
+or construct a backbone-specific temporal view without rerunning the expensive
+camera-estimation, captioning, and quality-assessment pipelines.
+
+Our current corpus contains 1.43M canonical clips derived from 10 source datasets and organized into 14 independently addressable processing partitions, which we refer to as dataset owners. The 10 source datasets are ABOT-World [Jiang et al., 2026], DL3DV [Ling et al., 2023], MiraData [Ju et al., 2024], RealCam [Zheng et al., 2025], SpatialVID [Wang et al., 2025], Sekai-Game and Sekai-Walking [Li et al., 2025], MIND [Ye et al., 2026], MultiCamVideo [Kling Team, 2026], and OmniWorld [Zhou et al., 2025]. At the owner level, DL3DV is divided into two temporal views, DL3DV-10s and DL3DV-60s, while three additional Clean Plate owners are derived from MiraData, Sekai-Walking, and SpatialVID. This organization yields 14 dataset owners in total, each of which can be filtered, weighted, and selected independently during training-recipe construction. As illustrated in Figure 2, the Solar Open Data Engine exposes the complete path from source ingestion to training-recipe construction. The remainder of this section describes the unified data contract, processing stages, selection policies, and resulting corpus.
+
+Figure 2: Overview of the Solar open data engine.
+
+5.1 Unified Data Representation
+
+We normalize every source into a unified, frame-aligned sample representation.
+Each sample is assigned a stable identifier, and all temporal modalities,
+including video, camera poses, intrinsics, captions, and audio when available,
+are aligned to the same, deterministically selected frame interval.
+
+Unified sample schema.
+
+Every sample follows the same logical contract:
+
+ | 
+ $\mathcal{S}_{i}=\bigl(V_{i},\,P_{i},\,K_{i},\,C_{i},\,m_{i},\,q_{i},\,\pi_{i}\bigr),$ | 
+ | 
+(4) | 
+
+where $V_{i}$ is the video, $P_{i}\in\mathbb{R}^{N\times 4\times 4}$ contains
+metric camera-to-world transforms, $K_{i}\in\mathbb{R}^{N\times 4}$ stores
+per-frame $(f_{x},f_{y},c_{x},c_{y})$ , $C_{i}$ is the dense caption, $m_{i}$ contains
+source and media metadata, $q_{i}$ is the complete metric record, and $\pi_{i}$ 
+stores provenance and lineage. The schema records the source owner, original
+identifier, temporal interval, processing versions, and the outcome of every
+stage. This makes samples from different sources interchangeable to the
+training reader while keeping each derived artifact traceable to its input.
+
+We separate three namespaces that are often conflated in dataset releases.
+The physical corpus contains the canonical samples and annotations; a
+logical recipe contains split membership, tier policy, source weights,
+and repeat factors; and a model view contains backbone-specific windows
+or precomputed latents. Changing a recipe therefore does not duplicate the
+underlying videos, and changing a VAE does not alter the underlying data
+selection.
+
+5.2 Metric-Scale Camera Annotation
+
+We follow the robust camera-annotation design of SANA-WM
+[Zhu et al., 2026a], selecting the annotation path according to the geometry
+available from each source. For video-only sources, Pi3X estimates a
+temporally consistent but scale-ambiguous scene structure, while MoGe-2
+provides per-frame metric-depth anchors. Their depths are aligned and fused
+before being passed to a modified VIPE SLAM backend. VIPE then estimates the
+6-DoF camera trajectory and performs bundle adjustment with independently
+optimizable per-frame $(f_{x},f_{y},c_{x},c_{y})$ , initialized by GeoCalib. This
+per-frame formulation is important for clips containing zoom or focal-length
+drift, for which a single intrinsic matrix for the entire video is
+insufficient.
+
+When a source provides ground-truth or COLMAP camera poses, we preserve the
+supplied trajectory rather than replacing it with a SLAM estimate. Pi3X is
+used only to connect the predicted scene structure to the trajectory’s metric
+gauge: predicted and reference camera centers are aligned with a robust
+Umeyama Sim(3) fit, which is re-estimated from the lowest-residual 80% of
+frames. The pipeline also supports sources with metric depth but no camera
+trajectory, using the depth directly as the scale anchor for VIPE.
+
+All modes emit a frame-aligned metric camera-to-world (c2w) trajectory
+ $P_{i}\in\mathbb{R}^{N\times 4\times 4}$ and per-frame pixel-space intrinsics
+ $K_{i}\in\mathbb{R}^{N\times 4}$ . Translations remain in metric units; no
+corpus-wide translation normalization is applied. Source-specific coordinate
+conversion is performed once at ingestion and recorded in the sample metadata.
+We require video frames, poses, and intrinsics to share exactly the same frame
+indices. Each sample is further checked for finite geometry, positive focal
+lengths, field of view in a plausible range, focal consistency
+ $|f_{x}-f_{y}|/(\frac{1}{2}(f_{x}+f_{y})+\epsilon)$ , and temporal scale stability
+ $\operatorname{std}(s)/\operatorname{mean}(s)$ . Missing or non-finite camera
+evidence fails closed whenever the corresponding recipe uses a camera gate.
+
+5.3 LTX Clean Plate Processing
+
+Dynamic people and vehicles are a frequent source of ambiguity for
+camera-controlled world models: they introduce motion that is neither
+explained by the camera nor consistently controllable. We therefore produce
+three additional Clean Plate derivative owners with the LTX-2.3 Clean Plate
+IC-LoRA pipeline. Figure 3 provides a visual comparison of
+the source clips and their cleaned counterparts.
+For each accepted source interval, the transformation removes people and
+vehicles while retaining scene layout and camera motion. We use eight denoising steps with strength $1.0$ and the Clean Plate prompt. Inputs are processed at $1248\!\times\!704$ , and outputs are saved at $1280\!\times\!720$ and 16 fps.
+
+Figure 3: LTX Clean Plate processing. Representative frames before
+(left) and after (right) applying the LTX-2.3 Clean Plate pipeline. The
+transformation removes dynamic people and vehicles while preserving the
+static scene layout and the source camera trajectory, yielding cleaner
+supervision for camera-controlled world-model training.
+
+Clean outputs are not assumed to inherit the quality of their source clips.
+Removal can introduce texture artifacts, temporal discontinuities, or altered
+motion statistics, so captions, visual metrics, semantic metrics, and camera
+diagnostics are recomputed for every output window. Metric scale is restored
+from deterministic source-frame correspondences; invalid or ambiguous scale
+reconstruction fails closed. The current release contains 543k clean
+clips: 298k SpatialVID-Clean clips (73k at 81 frames and 224k at
+160 frames), 135k MiraData-Clean clips, and 109k
+Sekai-Walking-Clean clips. These are independent recipe owners, rather than
+silent replacements for the original datasets.
+
+5.4 Dense Captioning and Multi-Axis Annotation
+
+Kimi-K2.6 captions.
+
+All 1.43M canonical clips are captioned by the same Kimi-K2.6 production
+pipeline. Its prompt asks the model to inspect the entire clip and describe
+only the persistent environment and stable scene content. Dynamic entities,
+actions, camera motion, shot terminology, and speculative or media-related
+wording are excluded from the training caption, thereby reducing the risk that
+the text condition leaks camera-control information. The prompt and response
+contract is summarized in Table 2.
+
+Table 2: Kimi-K2.6 prompt and structured-output contract. The response
+is a strict JSON object with exactly six top-level fields.
+
+Item | 
+
+Type or allowed values
+ | 
+
+Prompt requirement and released representation
+ | 
+
+Visual input | 
+
+1 fps; at most 64 frames
+ | 
+
+Sample the entire clip with ffmpeg
+round-up; maximum image edge 768 pixels, JPEG qscale 3, and no audio.
+ | 
+
+Caption target
+ | 
+
+One English paragraph; 60–150 words
+ | 
+
+Describe persistent
+architecture, terrain, vegetation, water, furniture, materials, lighting,
+weather, atmosphere, and stable spatial relations.
+ | 
+
+Caption exclusions
+ | 
+
+Hard negative instruction
+ | 
+
+Exclude people and animals,
+dynamic or uncertain vehicles, actions, camera motion, shot/viewpoint terms,
+media terminology, speculation, and invented details.
+ | 
+
+Response protocol
+ | 
+
+Strict JSON; no extra keys
+ | 
+
+Temperature 0, seed 0,
+thinking=false; return only the JSON object, without Markdown or
+explanatory text.
+ | 
+
+dense_caption
+ | 
+
+String satisfying the caption contract
+ | 
+
+Becomes
+meta.caption and prompt.txt (caption followed by one newline).
+ | 
+
+vlm_entity_density
+ | 
+
+Integer in $\{1,2,3\}$ 
+ | 
+
+Peak combined density
+of visible people, vehicles, and animals: none, sparse, or dense;
+stored as metrics.vlm_entity_density.
+ | 
+
+vlm_quality
+ | 
+
+Number in $\{1.0,2.0,3.0,4.0,5.0\}$ 
+ | 
+
+Overall visual
+usability from unusable to clean and richly describable; stored as
+metrics.vlm_quality.
+ | 
+
+reject_flags
+ | 
+
+Deduplicated subset of eight flags
+ | 
+
+Allowed values are
+text_heavy, watermark, ui_overlay,
+blurry, near_static, low_light, nsfw,
+and single_color; stored as metrics.vlm_reject_flags.
+ | 
+
+scene_type
+ | 
+
+real_world, rendered, game,
+animation, or mixed
+ | 
+
+Classifies the visible world and is
+stored as metrics.vlm_scene_type.
+ | 
+
+scene_transition
+ | 
+
+Object with exactly label,
+count, timestamps_sec, and evidence
+ | 
+
+The label is
+none, possible, or definite; continuous fast motion
+is not a transition. Stored as metrics.vlm_scene_transition.
+ | 
+
+  | 
+ | 
+ | 
+
+Only dense_caption becomes a text condition; the remaining fields are
+stored as structured annotations and can be used by source-specific recipe
+policies. Transition predictions remain marked unverified, and
+the presence of a caption alone does not affect tier assignment.
+
+Quality and motion metrics.
+
+No single score captures the properties needed for interactive world-model
+training. We consequently retain a vector of complementary measurements:
+
+• 
+
+camera integrity: finite pose/intrinsic tests, horizontal and
+vertical field of view, focal divergence, and scale coefficient of
+variation;
+
+• 
+
+visual quality: saturation statistics and the mean of DOVER’s
+technical and aesthetic scores;
+
+• 
+
+motion: FFmpeg VMAF Motion and dense correspondence magnitude
+from UniMatch/GMFlow;
+
+• 
+
+temporal consistency: PySceneDetect cut count and the
+Kimi-K2.6 transition field; and
+
+• 
+
+semantic suitability: Kimi-K2.6 quality, entity density,
+scene type, and explicit flags such as blurry,
+ui_overlay, watermark, and near_static.
+
+All measurements, including ones unused by our default selection, remain in
+the released record. This is important because different source domains have
+different natural score distributions: a universal motion or aesthetic
+threshold would remove useful camera trajectories from one domain while
+retaining artifacts in another.
+
+5.5 Source-Aware Filtering and Quality Tiers
+
+We freeze a versioned policy per dataset owner. The policy produces three
+disjoint physical labels: xhigh, high, and
+rejected. A sample is xhigh if it satisfies both the kept
+rule and the stricter promotion rule; otherwise, a sample satisfying the kept
+rule is high. All other samples are retained as rejected
+with their failure reasons. Every metric named by a rule must be present,
+finite, and correctly typed.
+
+For compactness, Table 3 uses the following notation. $N$ is
+the frame count; $Q$ is Kimi-K2.6 quality; $R$ is its reject-flag set; $T$ is
+the Kimi transition count; $E$ is entity density; $D$ is mean DOVER; $V$ is
+VMAF Motion; $U$ is UniMatch motion; $S$ is mean saturation; and $J$ is the
+PySceneDetect cut count. $C_{120}$ requires both fields of view in
+ $[25,120]$ degrees, focal divergence $\leq 0.20$ , and scale coefficient of
+variation $\leq 2$ ; $C_{125}$ changes only the upper field-of-view bound to
+125 degrees. $G$ denotes the stricter post-Clean geometry and lineage check,
+and $A$ denotes a non-empty caption. All intervals are inclusive. An
+“xhigh extra” is applied in addition to the kept rule.
+
+Table 3: Frozen source-aware selection policies. The table is executable
+policy documentation rather than a qualitative summary.
+
+Dataset owner | 
+
+Kept rule
+ | 
+
+xhigh extra
+ | 
+
+DL3DV-10s | 
+
+ $C_{120}$ ; $S\!\in[0,180]$ ; $Q\!\geq 4$ ; $D\!\geq.20$ 
+ | 
+
+ $Q=5$ ; $D\!\geq.30$ 
+ | 
+
+DL3DV-60s
+ | 
+
+ $C_{120}$ ; $S\!\in[0,180]$ ; $Q\!\geq 4$ ; $D\!\geq.20$ 
+ | 
+
+ $Q=5$ ; $D\!\geq.30$ 
+ | 
+
+MIND
+ | 
+
+ $C_{125}$ ; $R=\varnothing$ ; $T=0$ ; $Q\!\geq 4$ 
+ | 
+
+ $Q=5$ 
+ | 
+
+ABOT
+ | 
+
+ $C_{120}$ ; $S\!\in[0,180]$ ; $R=\varnothing$ ; $T=0$ ; $Q\!\geq 4$ 
+ | 
+
+ $Q=5$ 
+ | 
+
+OmniWorld
+ | 
+
+ $C_{120}$ ; $S\!\in[0,180]$ ; $R=\varnothing$ ; $T=0$ ; $Q\!\geq 4$ ; $D\!\geq.30$ ; $V\!\in[.5,100]$ ; $U\!\in[3,250]$ 
+ | 
+
+ $Q=5$ ; $U\!\leq 200$ 
+ | 
+
+Sekai-Game
+ | 
+
+ $U\!\leq 350$ ; $D\!\geq.20$ ; $Q\!\in[3,5]$ ; $\texttt{blurry}\notin R$ 
+ | 
+
+ $Q\!\in[4,5]$ ; $R=\varnothing$ 
+ | 
+
+MiraData
+ | 
+
+ $A$ ; $N\!\geq 81$ ; $C_{120}$ ; $S\!\in[0,180]$ ; $Q\!\geq 4$ ; $D\!\geq.40$ ; $\mathrm{resolution}=1280\!\times\!720$ ; $R=\varnothing$ ; $T=0$ ; $V\!\in[.5,50]$ ; $U\!\in[3,120]$ 
+ | 
+
+ $Q=5$ ; $U\!\leq 100$ 
+ | 
+
+RealCam
+ | 
+
+ $N\!\geq 81$ ; $C_{120}$ ; $S\!\in[0,180]$ ; $T=0$ ; $Q\!\geq 4$ ; $V\!\in[.5,100]$ ; $D\!\geq.30$ ; $U\!\in[3,200]$ ; $\{\texttt{blurry},\texttt{ui\_overlay}\}\cap R=\varnothing$ 
+ | 
+
+ $Q=5$ ; $R\!\subseteq\!\{\texttt{near\_static}\}$ 
+ | 
+
+MultiCamVideo
+ | 
+
+ $C_{120}$ ; $S\!\in[0,180]$ ; $R=\varnothing$ ; $T=0$ ; $Q\!\geq 4$ ; $D\!\geq.40$ 
+ | 
+
+ $Q=5$ 
+ | 
+
+Sekai-Walking
+ | 
+
+ $A$ ; $N\!\geq 81$ ; $C_{120}$ ; $S\!\in[0,180]$ ; $T=0$ ; $Q\!\geq 4$ ; $V\!\in[.5,50]$ ; $D\!\geq.35$ ; $U\!\in[3,120]$ ; $R\!\subseteq\!\{\texttt{watermark},\texttt{near\_static}\}$ 
+ | 
+
+ $Q=5$ ; $R=\varnothing$ 
+ | 
+
+MiraData-Clean
+ | 
+
+exact kept-source lineage; $A$ ; $N\!\geq 81$ ; $G$ ; $\mathrm{resolution}_{\mathrm{src}}=\mathrm{resolution}_{\mathrm{out}}=1280\!\times\!720$ ; $S\!\in[0,180]$ ; $Q\!\geq 4$ ; $D\!\geq.40$ ; $V\!\in[.5,50]$ ; $U\!\in[3,120]$ ; $R=\varnothing$ ; $T=0$ ; $J\!\in[0,1]$ 
+ | 
+
+ $Q=5$ ; $D\!\geq.45$ ; $U\!\leq 100$ 
+ | 
+
+Sekai-Walking-Clean
+ | 
+
+ $A$ ; $N\!\geq 81$ ; $G$ ; $S\!\in[0,180]$ ; $T=0$ ; $Q\!\geq 4$ ; $D\!\geq.35$ ; $U\!\in[3,120]$ ; $V\!\in[.5,50]$ ; $E\!\neq 3$ ; $R\!\subseteq\!\{\texttt{watermark},\texttt{near\_static}\}$ 
+ | 
+
+ $Q=5$ ; $R=\varnothing$ 
+ | 
+
+SpatialVID
+ | 
+
+ $A$ ; $N\!\geq 81$ ; $C_{120}$ ; $S\!\in[0,180]$ ; $T=0$ ; $Q\!\geq 4$ ; $V\!\in[.5,50]$ ; $D\!\geq.35$ ; $U\!\in[3,120]$ ; $J=0$ ; $R\!\subseteq\!\{\texttt{watermark},\texttt{near\_static}\}$ 
+ | 
+
+ $Q=5$ ; $R=\varnothing$ 
+ | 
+
+SpatialVID-Clean
+ | 
+
+ $A$ ; $N\!\geq 81$ ; $G$ ; $S\!\in[0,180]$ ; $T=0$ ; $Q\!\geq 4$ ; $V\!\in[.5,50]$ ; $D\!\geq.35$ ; $U\!\in[3,120]$ ; $J=0$ ; $E\!\neq 3$ ; $R\!\subseteq\!\{\texttt{watermark},\texttt{near\_static}\}$ 
+ | 
+
+ $Q=5$ ; $R=\varnothing$ 
+ | 
+
+  | 
+ | 
+ | 
+
+The table intentionally contains asymmetric policies. For example,
+Sekai-Game preserves high-motion game trajectories without imposing the
+generic camera-geometry or saturation gates, whereas clean owners require
+post-transformation geometry checks. Likewise, some metrics are retained only
+as annotations for a given source. This avoids retroactively presenting every
+computed metric as a selection gate. It also distinguishes the current
+Kimi-K2.6 tier policy from earlier internal recipes that used different
+semantic-score scales or fewer visual gates.
+
+5.6 Open Recipes and Split Construction
+
+The physical WebDataset release stores every canonical row under one of
+kept-high, kept-xhigh, or rejected, while recipe
+indices provide logical training and evaluation membership. Splits are
+constructed using stable sample identifiers and are verified to contain no
+overlapping identifiers. We also publish independent 100-sample test views
+for each owner (1,400 rows in total) for data inspection and reader validation.
+
+A recipe may reference a row repeatedly without copying it. For example,
+our 81f short recipe spans ten owners and contains 600,320 physical training
+rows, but source balancing applies a repeat factor of six to ABOT, MiraData,
+and Sekai-Game, producing 870,210 virtual occurrences per epoch; its held-out
+test view contains 1,000 rows. Because selection, balancing, and
+temporalization are expressed in indices, users can audit the released recipe
+or create alternatives such as a metric-camera-only subset, less aggressive
+motion filtering, a different source mixture, or a longer temporal curriculum.
+Rejected rows remain useful
+for such experiments because they carry the same annotations and explicit
+rejection provenance as kept rows.
+
+5.7 Final Corpus and Temporal Views
+
+Figures 5 and 5 summarize the released
+corpus from complementary source and temporal perspectives. The owner-level
+accounting in Figure 5 shows that 876k of the 1.4M canonical clips are retained: 471k in the high tier and 404k in
+xhigh. The remaining 549k fully processed clips are published in
+the rejected partition. In physical storage, the complete corpus comprises
+29k shards and approximately 25.85 TB.
+
+Figure 5 instead aggregates the same corpus by raw
+clip length, making the tier composition of each temporal range directly
+visible. The majority of clips fall in the 153–956-frame interval, which
+contains 858k clips overall and 553k kept clips. All 78k clips shorter
+than 81 frames belong to the rejected partition, whereas the long tail of clips
+with at least 957 frames contains 82k kept clips.
+
+Figure 4: Canonical clip inventory by dataset owner. High and xhigh
+are disjoint tiers; kept is their sum.
+
+Dataset owner | 
+
+All
+ | 
+
+High
+ | 
+
+xhigh
+ | 
+
+Rejected
+ | 
+
+ABOT | 
+
+30,966
+ | 
+
+127
+ | 
+
+30,715
+ | 
+
+124
+ | 
+
+DL3DV-10s
+ | 
+
+120,924
+ | 
+
+54,528
+ | 
+
+60,396
+ | 
+
+6,000
+ | 
+
+DL3DV-60s
+ | 
+
+10,077
+ | 
+
+3,578
+ | 
+
+6,065
+ | 
+
+434
+ | 
+
+MIND
+ | 
+
+533
+ | 
+
+117
+ | 
+
+402
+ | 
+
+14
+ | 
+
+MiraData
+ | 
+
+140,877
+ | 
+
+3,683
+ | 
+
+17,806
+ | 
+
+119,388
+ | 
+
+MiraData-Clean
+ | 
+
+135,224
+ | 
+
+12,865
+ | 
+
+5,740
+ | 
+
+116,619
+ | 
+
+MultiCamVideo
+ | 
+
+123,117
+ | 
+
+89,587
+ | 
+
+5,369
+ | 
+
+28,161
+ | 
+
+OmniWorld
+ | 
+
+19,632
+ | 
+
+3,773
+ | 
+
+13,552
+ | 
+
+2,307
+ | 
+
+RealCam
+ | 
+
+45,697
+ | 
+
+16,154
+ | 
+
+16,074
+ | 
+
+13,469
+ | 
+
+Sekai-Game
+ | 
+
+2,550
+ | 
+
+537
+ | 
+
+1,410
+ | 
+
+603
+ | 
+
+Sekai-Walking
+ | 
+
+22,990
+ | 
+
+6,054
+ | 
+
+12,976
+ | 
+
+3,960
+ | 
+
+Sekai-Walking-Clean
+ | 
+
+109,248
+ | 
+
+46,831
+ | 
+
+33,660
+ | 
+
+28,757
+ | 
+
+SpatialVID
+ | 
+
+365,345
+ | 
+
+100,815
+ | 
+
+127,180
+ | 
+
+137,350
+ | 
+
+SpatialVID-Clean
+ | 
+
+298,514
+ | 
+
+133,149
+ | 
+
+73,450
+ | 
+
+91,915
+ | 
+
+Total
+ | 
+
+1,425,694
+ | 
+
+471,798
+ | 
+
+404,795
+ | 
+
+549,101
+ | 
+
+  | 
+ | 
+ | 
+ | 
+ | 
+
+Figure 5: Distribution of canonical clips by clip length and quality
+tier.
+
+From these physical clips, we construct model-ready temporal views for short- and long-horizon generation. The release separates the annotated source corpus from temporal windowing, data-mixture policies, and backbone-specific latent representations, with each layer indexed reproducibly. This design allows researchers to adapt temporal coverage, filtering criteria, source mixtures, and backbone-specific requirements without rebuilding the underlying corpus.
+
+6 SolarWM Model Family
+
+SolarWM is organized as one interactive world-model framework rather
+than as four isolated model releases. The framework fixes a common data
+recipe, a shared processing and annotation contract, a camera-geometry
+interface, and a consistent training and inference workflow. Different
+video-generation backbones are then instantiated under this interface so
+that their behavior can be studied under comparable data and system
+conditions. The shared interface does not erase backbone-specific
+semantics: each route retains the temporal representation, attention
+layout, conditioning details, and native optimization objective required
+by its base model.
+
+The resulting family contains four interactive video world models:
+SolarWM-wan2.2-5B, SolarWM-wan2.2-14B, SolarWM-ltx-2.5-22B, and
+SolarWM-minimax-h3-33B. They cover four independent video-generation
+routes—Wan 2.2-5B, Wan 2.2-14B, LTX-2.5, and MiniMax-H3—under one SolarWM contract.
+This organization makes two comparisons possible at the same time. The
+common data and camera interface isolates differences between backbones,
+while the route-specific adapters preserve the mechanisms that make each
+backbone usable for interactive generation.
+
+6.1 Unified Camera Conditioning with Fused-PRoPE
+
+Camera control is a shared requirement of the SolarWM family. Each
+camera trajectory is converted into a geometric condition aligned with the
+video frames and injected into the video attention computation. This
+condition contains the camera poses, intrinsics, frame alignment, and the
+associated normalization transforms. A route adapter maps this common
+condition into the representation expected by each backbone while
+preserving the same underlying camera motion.
+
+SolarWM uses fused projective rotary positional embeddings (fused-PRoPE),
+as in MosaicMem [Yu et al., 2026]. At a high level, the procedure is the same for all
+four models. The backbone first applies its native video RoPE to represent
+the temporal and spatial positions of video tokens. Camera poses and
+intrinsics then determine projective rotations that are applied to the
+query, key, and value tensors. A single self-attention operation follows,
+after which the matching output transform is applied before the native
+output projection. Camera motion is therefore introduced through the
+attention computation itself, rather than by appending an unrelated
+condition token or a separate camera branch.
+This procedure is shared across all four routes; backbone-specific details
+are deferred to their respective paragraphs below.
+
+6.2 Comparison of the Four SolarWM Models
+
+The four model routes and their backbone-specific parameter, conditioning, and
+latent-compression contracts are summarized in
+Table 4.
+
+Table 4: Backbone-level differences within the SolarWM model family.
+All routes share the same data, camera, and training/inference interfaces while
+retaining backbone-specific parameter and conditioning contracts.
+
+Model | 
+
+Retained Components
+ | 
+
+Image Conditioning
+ | 
+
+Audio Handling
+ | 
+
+VAE DS (T / S)
+ | 
+
+SolarWM-
+
+wan2.2-5B
+ | 
+
+5B
+ | 
+
+Native TI2V latent path; no separate $y$ 
+ | 
+
+None
+ | 
+
+ $4\times$ / $16\times$ 
+
+ | 
+
+SolarWM-
+
+wan2.2-14B
+
+ | 
+
+High-noise expert; full-timestep route
+ | 
+
+Official $y$ : 4-channel mask + 16-channel image latent
+ | 
+
+None
+ | 
+
+ $4\times$ / $8\times$ 
+
+ | 
+
+SolarWM-
+
+ltx-2.5-22B
+
+ | 
+
+14.74B video path; 1.61B Gemma connector frozen
+ | 
+
+Native first-frame latent
+ | 
+
+3.69B audio stream and 2.58B AV cross-attention removed
+ | 
+
+ $8\times$ / $32\times$ 
+
+ | 
+
+SolarWM-
+
+minimax-h3-33B
+
+ | 
+
+33B Omni Transformer
+ | 
+
+Qwen image/caption rows + VisualVAE first-image anchor
+ | 
+
+Audio target rows retained; audio loss disabled
+ | 
+
+ $17n+5$ $\mapsto 5n+2$ 
+
+/ $16\times$ 
+
+ | 
+
+  | 
+ | 
+ | 
+ | 
+ | 
+
+The common SolarWM interface is designed to preserve, rather than
+replace, the capabilities of each video-generation base. We therefore
+retain each backbone’s native temporal grid, text representation, attention
+mask, training objective, and other settings wherever they are essential
+to its behavior, while exposing them through the same data and camera
+contracts. The following paragraphs summarize these backbone-specific
+choices before we introduce the shared training methodology.
+
+SolarWM-wan2.2-5B
+
+is the TI2V member of the family. The model
+represents a clip with a 48-channel Wan2.2 VAE latent and does not take
+a separate image condition tensor $y$ . SolarWM keeps this native interface:
+the first latent is used as the clean image anchor and is excluded from the
+video loss, while the remaining latents are denoised as video targets under
+the shared camera condition.
+
+SolarWM-wan2.2-14B
+
+starts from the Wan 2.2 I2V-A14B model, whose released
+checkpoint contains separate high-noise and low-noise experts. SolarWM uses
+the high-noise expert for initialization and trains it as one dense model
+over all timesteps; the two-expert routing rule and its noise boundary are
+not retained. Its image interface is also distinct from the 5B route. We
+construct the official $y$ by encoding a video whose first frame is the
+input image and whose later frames are zero, then concatenate a four-channel
+first-frame mask and the resulting 16-channel image latent to the noisy
+16-channel target. Thus $y$ is an explicit input, and the first target
+latent remains noisy and supervised.
+
+SolarWM-ltx-2.5-22B
+
+is released as an audio-visual checkpoint, but SolarWM uses it
+as a video-only backbone. The audited checkpoint assigns 3.7B parameters
+to the audio stream and 2.6B to bidirectional audio–video cross-attention;
+both components are removed. SolarWM retains the 13.1B video core and
+loads the 1.6B Gemma video connector frozen, giving a 14.7B retained
+video route driven by cached Gemma4 features. The route keeps LTX’s native
+first-frame latent convention and rectified-flow objective, and inserts the
+shared camera condition only in video self-attention.
+
+SolarWM-minimax-h3-33B
+
+keeps MiniMax-H3’s multimodal packing rather than
+turning H3 into a video-only DiT. Each packed sequence contains Qwen
+caption/image conditions, a one-frame VisualVAE image anchor, audio rows,
+and target-video rows. The audio rows are retained because they are small;
+they are filled with an official AudioVAE encoding of silence and assigned
+zero audio loss, so only target-video rows are supervised. The Qwen
+conditioner, VisualVAE, and AudioVAE are frozen, while the H3 Omni
+Transformer is trained with its native temporal, masking, and camera
+semantics. Its camera injection also preserves the pretrained head split:
+dimensions $[0{:}96)$ retain the native content representation and MM-RoPE,
+whereas only dimensions $[96{:}128)$ receive camera-relative-pose PRoPE on
+the VisualVAE anchor and target-video rows.
+
+7 Experiments
+
+We evaluate two stages of the SolarWM training pipeline. We
+first examine the bidirectional pretrained models across all four
+backbone routes on 10-second OOD generations initialized from images
+created with GPT Image 2 or Krea, testing how consistently the shared data and
+camera contract transfers across heterogeneous video generators and unseen
+visual domains. We then examine distilled causal generation under both
+in-domain and OOD settings, spanning 10-second, minute-scale, and hour-scale
+horizons. Together, these settings expose model behavior across heterogeneous
+backbones, input domains, training stages, and rollout horizons.
+
+7.1 Configurations
+
+We use checkpoints produced by the training pipeline in
+Section 4. All
+reported SolarWM causal results are generated at 16 fps with
+four sampling steps and no attention sink. Every sequence is initialized from
+one image and conditioned on a text description and a frame-aligned camera
+trajectory. Bidirectional generation produces 10-second clips with
+bidirectional temporal attention. Causal generation instead conditions each new unit on model-generated history to reach the reported 10-second, minute-scale, and
+hour-scale horizons. The scene prompt remains fixed throughout each sequence,
+while the prescribed camera trajectory provides the only time-varying external
+control. We use the native latent representation, conditioning interface, and
+sampling objective of each backbone, as described in Section 6.
+
+7.2 Bidirectional Pretrained Models
+
+We begin with the model family after bidirectional pretraining and before
+causal adaptation or distillation. Each model receives an OOD first frame
+created with GPT Image 2 or Krea, a fixed scene caption, and a frame-aligned
+camera trajectory, and generates the remaining frames.
+Evaluating this stage separately tests whether the unified data and
+camera-conditioning contract generalizes beyond the training domains while
+preserving the visual prior of each native backbone.
+
+As shown in Figure 6, the four backbone routes are
+evaluated on representative OOD inputs under translation, rotation, and mixed
+6-DoF camera paths.
+
+Figure 6: OOD qualitative results of the bidirectional pretrained
+model family. Each backbone route generates a 10-second video from an OOD
+first frame and a prescribed camera trajectory.
+
+7.3 Distilled Causal Generation
+
+We next examine distilled causal generation across familiar held-out inputs,
+externally synthesized initial images, and increasingly long autoregressive
+horizons.
+
+7.3.1 In-Domain Validation Results
+
+We draw the in-domain evaluation examples from a held-out
+validation pool. The pool is in-domain in the operational
+sense that its samples are drawn from the same source families and processed by
+the same canonical pipeline as the training mixture, while no validation
+sample is used for optimization.
+
+For the selected examples, we report two complementary settings. First,
+Figure 7 presents 10-second third-person rollouts in
+which a visible subject is observed from an external viewpoint. These examples
+test whether the model can follow the prescribed camera trajectory while
+maintaining the subject’s appearance and its spatial relationship to the
+surrounding scene. Second, Figure 8 presents
+uninterrupted minute-scale rollouts spanning representative real-world, synthetic,
+and game-domain scenes under translation, rotation, and mixed 6-DoF camera
+paths.
+
+Figure 7: In-domain third-person qualitative results
+generated by the SolarWM-wan2.2-5B-fast causal student. Each sequence
+is initialized from a real first frame and follows a prescribed camera
+trajectory. All subsequent frames are generated autoregressively, testing
+subject consistency and camera response from an external viewpoint.
+
+Figure 8: In-domain minute-scale qualitative results generated by the
+SolarWM-wan2.2-5B-fast causal student. Each uninterrupted sequence is
+initialized from its real first frame and follows a given camera trajectory;
+all subsequent frames are generated autoregressively.
+
+7.3.2 Out-of-Domain Initialization
+
+A useful interactive world model should not require every explorable world to
+originate from its training collection. We therefore construct a separate
+stress test in which each first frame is synthesized with GPT Image 2 or Krea.
+The prompts deliberately cover visual conditions uncommon in the curated
+corpus, such as stylized illustration, surreal geometry, unusual material
+combinations, dramatic lighting, and imaginative indoor or outdoor
+environments.
+
+For every initial image, we apply several camera trajectories,
+including forward motion, lateral translation, turning, orbit-like motion, and
+compositions of translation and rotation. Using multiple trajectories from
+the same image separates robustness to appearance shift from responsiveness to
+the control signal. We first report 10-second OOD rollouts in this subsection;
+the minute-scale OOD stress test is presented in
+Section 7.3.3.
+
+As illustrated in Figure 9, the model turns a broad range of
+externally synthesized still images into navigable video while largely
+retaining the initial style, palette, and dominant scene elements. The
+examples are particularly informative when camera motion reveals regions that
+were not visible in the input: all newly exposed content must be inferred by
+the world model, rather than copied from the image generator.
+
+Figure 9: OOD generalization from externally synthesized
+initial images, generated by the SolarWM-wan2.2-5B-fast causal student.
+Initial frames are paired with independently specified camera trajectories.
+Only the first image is externally provided; every subsequent frame in each
+10-second rollout is generated autoregressively. The examples span photorealistic, stylized, and
+deliberately unusual scenes outside the released validation set.
+
+7.3.3 Long Video Generation
+
+We evaluate continuous autoregressive generation at minute-scale and hour-scale
+horizons. Each long video starts from a single image, keeps the scene prompt
+fixed, and follows a predetermined camera trajectory throughout the complete
+run. We do not restart from the input image, inject reference frames,
+independently generate and splice short clips, or use an attention sink.
+
+Minute-scale rollouts.
+
+We evaluate uninterrupted minute-scale generation from
+synthesized first frames under camera trajectories that combine forward motion,
+turning, lateral translation, and pauses. These compound trajectories test
+both sustained response to a control and transitions between successive
+camera commands without resetting the model.
+
+As shown in Figure 10, the model navigates five visually
+distinct scenes while preserving their principal
+layout and appearance. Across the sampled timelines, newly revealed stairs,
+rooms, vegetation, terraces, cliffs, and waterways remain compatible with the
+initial observation, and the views continue to evolve with the prescribed
+camera motion throughout the minute-scale rollout. These results demonstrate
+OOD appearance generalization and sustained camera control well beyond the
+5-second sequences used during training.
+
+Figure 10: Minute-scale OOD autoregressive rollouts generated by the
+SolarWM-wan2.2-5B-fast causal student. Frames are sampled from uninterrupted
+generations initialized by a single OOD image. The scene prompt remains
+fixed for the entire run.
+
+Figure 11: Hour-scale world rollout generated by the
+SolarWM-wan2.2-5B-fast causal student. Sparse frames are sampled throughout a single
+uninterrupted autoregressive session initialized with a real first frame from
+the held-out validation pool, spanning the initial observation to the 60-minute
+endpoint. The scene prompt remains fixed and the model follows a
+predetermined camera trajectory.
+
+Hour-scale rollouts.
+
+We further evaluate uninterrupted hour-scale
+generation from real first frames selected from the held-out validation pool.
+The model is trained only on 5-second sequences. During evaluation, it follows the
+given camera trajectory. Consequently, all later frames are generated
+autoregressively by repeatedly conditioning on model-generated history, making
+the generation substantially longer than the training horizon.
+
+As shown in Figure 11, the model sustains diverse scenes through uninterrupted hour-scale rollouts. Across the
+sampled timeline, the generated views continue to respond to camera control
+while retaining the principal scene layout and visual identity established by
+the initial observation. The 60-minute endpoints remain recognizable and
+visually coherent.
+
+8 Conclusion
+
+We presented SolarWM, an open foundation for building interactive video world
+models across heterogeneous data sources and video backbones. SolarWM combines a reconfigurable multi-source data engine with backbone-native
+adaptation and a unified three-stage training recipe, yielding four
+camera-controllable models spanning 5B–33B parameters. The resulting causal
+models support real-time interaction and continuous hour-scale rollouts after
+training on only 5-second sequences. By releasing the data, processing
+pipeline, training recipes, model weights, and training & inference
+framework, we hope to provide a reproducible and extensible basis for future world-model research.
+
+References
+
+Alaya Lab (2026)
+Alaya Lab
+
+AlayaWorld.
+
+Note: Official code repositoryRepository state inspected at commit ce3dad3cefc3fad2599877bf1b8ef82eb9aec9a2 on August 18, 2026
+
+External Links: Link
+
+Cited by: §3.2.
+
+AlayaWorld Team et al. (2026)
+AlayaWorld Team, K. Zhang, C. Li, Y. Zhan, Y. Ge, Y. Yin, J. Tan, K. He, L. Fan, M. Zhai, R. Liu, X. Xu, X. Chu, Z. Li, Z. Lin, Z. Wang, Z. Meng, and Z. Gao
+
+AlayaWorld: interactive long-horizon world modeling – full technical report (v1.1).
+
+arXiv preprint arXiv:2608.13492.
+
+External Links: 2608.13492,
+Link
+
+Cited by: §1,
+§3.1,
+§3.2.
+
+Alonso et al. (2024a)
+E. Alonso, A. Jelley, V. Micheli, A. Kanervisto, A. Storkey, T. Pearce, and F. Fleuret
+
+DIAMOND: diffusion for world modeling.
+
+Note: Official code repositoryRepository state inspected at commit 5bcd1599755b4f2fae8e5e079e02f0728e174965 on August 18, 2026
+
+External Links: Link
+
+Cited by: §3.2.
+
+Alonso et al. (2024b)
+E. Alonso, A. Jelley, V. Micheli, A. Kanervisto, A. Storkey, T. Pearce, and F. Fleuret
+
+Diffusion for world modeling: visual details matter in atari.
+
+arXiv preprint arXiv:2405.12399.
+
+External Links: 2405.12399,
+Link
+
+Cited by: §3.1,
+§3.2.
+
+Amap CVLab (2026)
+Amap CVLab
+
+ABot-world-0.
+
+Note: Official code, model, and dataset repositoryRepository state inspected at commit d91c2ca43643bda5ed4b8c1831fa85a41fe3d1bb on August 18, 2026
+
+External Links: Link
+
+Cited by: §3.2.
+
+Bai et al. (2025)
+J. Bai, M. Xia, X. Fu, X. Wang, L. Mu, J. Cao, Z. Liu, H. Hu, X. Bai, P. Wan, and D. Zhang
+
+ReCamMaster: camera-controlled generative rendering from a single video.
+
+arXiv preprint arXiv:2503.11647.
+
+External Links: 2503.11647,
+Link
+
+Cited by: §3.3.
+
+Bain et al. (2021)
+M. Bain, A. Nagrani, G. Varol, and A. Zisserman
+
+Frozen in time: a joint video and image encoder for end-to-end retrieval.
+
+In IEEE/CVF International Conference on Computer Vision,
+
+External Links: 2104.00650,
+Link
+
+Cited by: §3.3.
+
+Bruce et al. (2024)
+J. Bruce, M. Dennis, A. Edwards, J. Parker-Holder, Y. Shi, E. Hughes, M. Lai, A. Mavalankar, R. Steigerwald, C. Apps, Y. Aytar, S. Bechtle, F. Behbahani, S. Chan, N. Heess, L. Gonzalez, S. Osindero, S. Ozair, S. Reed, J. Zhang, K. Zolna, J. Clune, N. de Freitas, S. Singh, and T. Rocktäschel
+
+Genie: generative interactive environments.
+
+arXiv preprint arXiv:2402.15391.
+
+External Links: 2402.15391,
+Link
+
+Cited by: §1,
+§3.1.
+
+Chen et al. (2024)
+B. Chen, D. Martí Monsó, Y. Du, M. Simchowitz, R. Tedrake, and V. Sitzmann
+
+Diffusion forcing: next-token prediction meets full-sequence diffusion.
+
+Advances in Neural Information Processing Systems 37, pp. 24081–24125.
+
+Cited by: §1,
+§3.2.
+
+Decart and Etched (2024)
+Decart and Etched
+
+Open oasis.
+
+Note: Official code repositoryRepository state inspected at commit f59deef2c019c212bd0c5a3a5b986a51f3701847 on August 18, 2026
+
+External Links: Link
+
+Cited by: §3.2.
+
+DreamX Team et al. (2026)
+DreamX Team, Y. Bai, R. Chen, X. Chu, R. Dang, H. Dou, B. Gao, Q. Gu, S. Hong, J. Lei, G. Li, J. Li, R. Lin, Q. Shi, B. Song, L. Sun, J. Tang, R. Tian, J. Wang, J. Wu, P. Zhang, S. Zhang, and J. Zhu
+
+DreamX-world 1.0: a general-purpose interactive world model.
+
+arXiv preprint arXiv:2606.16993.
+
+External Links: 2606.16993,
+Link
+
+Cited by: §1,
+§3.1.
+
+DreamX Team (2026)
+DreamX Team
+
+DreamX-world.
+
+Note: Official code and model repositoryRepository state inspected at commit a1f4c6e5e45600718e5236955f2e0702e53fc275 on August 18, 2026
+
+External Links: Link
+
+Cited by: §3.2.
+
+ForgeWM Team (2026)
+ForgeWM Team
+
+ForgeWM.
+
+Note: Official code repositoryRepository state inspected at commit ca94df4c533b3ae44f0bc95ae4bbd9734885cd72 on August 18, 2026
+
+External Links: Link
+
+Cited by: §3.2.
+
+Gao et al. (2026)
+Z. Gao, Q. Wang, J. Zhu, J. Chen, Z. Liu, Q. Bai, J. Wang, Y. Yuan, H. Wang, Y. Lu, K. L. Cheng, H. Zhang, J. Gao, T. Feng, Y. Liu, Y. Yao, Y. Xu, X. Zhu, Y. Shen, and H. Ouyang
+
+Infinite worlds with versatile interactions.
+
+arXiv preprint arXiv:2607.07534.
+
+External Links: 2607.07534,
+Link
+
+Cited by: §1,
+§3.1.
+
+Gu et al. (2026)
+Y. Gu, G. Fang, Y. Jiang, W. Mao, S. Han, H. Cai, and M. Z. Shou
+
+AnyFlow: any-step video diffusion model with on-policy flow map distillation.
+
+External Links: 2605.13724,
+Link
+
+Cited by: §1,
+§3.2,
+§4.
+
+Guo et al. (2025)
+J. Guo, Y. Ye, T. He, H. Wu, Y. Jiang, T. Pearce, and J. Bian
+
+MineWorld: a real-time and open-source interactive world model on minecraft.
+
+arXiv preprint arXiv:2504.08388.
+
+External Links: 2504.08388,
+Link
+
+Cited by: §3.1.
+
+HaCohen et al. (2026)
+Y. HaCohen, B. Brazowski, N. Chiprut, Y. Bitterman, A. Kvochko, A. Berkowitz, D. Shalem, D. Lifschitz, D. Moshe, E. Porat, E. Richardson, G. Shiran, I. Chachy, J. Chetboun, M. Finkelson, M. Kupchick, N. Zabari, N. Guetta, N. Kotler, O. Bibi, O. Gordon, P. Panet, R. Benita, S. Armon, V. Kulikov, Y. Inger, Y. Shiftan, Z. Melumian, and Z. Farbman
+
+LTX-2: efficient joint audio-visual foundation model.
+
+arXiv preprint arXiv:2601.03233.
+
+Cited by: §1.
+
+He et al. (2025)
+X. He, C. Peng, Z. Liu, B. Wang, Y. Zhang, Q. Cui, F. Kang, B. Jiang, M. An, Y. Ren, B. Xu, H. Guo, K. Gong, C. Wu, W. Li, X. Song, Y. Liu, E. Li, and Y. Zhou
+
+Matrix-game 2.0: an open-source, real-time, and streaming interactive world model.
+
+arXiv preprint arXiv:2508.13009.
+
+External Links: 2508.13009,
+Link
+
+Cited by: §1,
+§3.1.
+
+Hu et al. (2026)
+B. Hu, Y. Ma, J. Huang, Z. Zhang, H. Wu, R. Zhang, Y. Li, Z. Wang, Y. Zhang, C. Tseng, et al.
+
+PhysEditWorld: a large-scale dataset toward physics-editable world models.
+
+arXiv preprint arXiv:2606.26694.
+
+Cited by: §1.
+
+Huang et al. (2025a)
+J. Huang, X. Hu, B. Han, S. Shi, Z. Tian, T. He, and L. Jiang
+
+Memory forcing: spatio-temporal memory for consistent scene generation on minecraft.
+
+External Links: 2510.03198,
+Link
+
+Cited by: §3.1.
+
+Huang et al. (2025b)
+J. Huang, X. Hu, S. Shi, Z. Tian, and L. Jiang
+
+Edit360: 2d image edits to 3d assets from any angle.
+
+In ICCV,
+
+Cited by: §1.
+
+Huang et al. (2026a)
+J. Huang, Z. Ye, X. Hu, T. He, G. Zhang, S. Shi, J. Bian, and L. Jiang
+
+LIVE: long-horizon interactive video world modeling.
+
+External Links: 2602.03747,
+Link
+
+Cited by: §3.1.
+
+Huang et al. (2026b)
+X. Huang, Z. Li, G. He, M. Zhou, and E. Shechtman
+
+Self forcing: bridging the train-test gap in autoregressive video diffusion.
+
+Advances in Neural Information Processing Systems 38, pp. 167283–167308.
+
+Cited by: §1,
+§1,
+§3.2.
+
+Jiang et al. (2026)
+F. Jiang, Z. Sun, M. Wang, Z. Zhu, C. Wang, Y. Zhang, W. Liu, Y. Wang, X. Zheng, R. Sun, J. Ni, H. Pan, Z. Sun, F. Yu, Z. Ge, M. Du, N. Fan, M. Sun, Y. Liu, Yongchang, Y. Zhu, J. Wang, N. Ying, Y. Xuan, D. Yang, Z. Liu, Z. Gao, T. Xu, J. Sui, W. Yang, J. Lai, S. Liu, Y. Liu, Z. Zhou, Y. Peng, D. Cao, K. Sheng, Y. Cai, F. Lu, M. Xu, and N. Guo
+
+ABot-world-0: infinite interactive world rollout on a single desktop gpu.
+
+arXiv preprint arXiv:2607.19191.
+
+External Links: 2607.19191,
+Link
+
+Cited by: §1,
+§3.1,
+§3.3,
+§5.
+
+Ju et al. (2024)
+X. Ju, Y. Gao, Z. Zhang, Z. Yuan, X. Wang, A. Zeng, Y. Xiong, Q. Xu, and Y. Shan
+
+MiraData: a large-scale video dataset with long durations and structured captions.
+
+arXiv preprint arXiv:2407.06358.
+
+External Links: 2407.06358,
+Link
+
+Cited by: §1,
+§3.3,
+§5.
+
+Kling Team (2026)
+Kling Team
+
+MultiCamVideo-dataset.
+
+Note: Official dataset releaseAccessed August 19, 2026
+
+External Links: Link
+
+Cited by: §5.
+
+Kong et al. (2026)
+X. Kong, Z. Zhang, Y. Guo, Z. Zhao, S. Zhang, and A. Rao
+
+Composing concepts from images and videos via concept-prompt binding.
+
+In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR),
+
+pp. 14800–14810.
+
+Cited by: §1.
+
+Li et al. (2026)
+X. Li, L. Lin, L. Wang, L. Zhang, J. Cui, Q. Li, G. Wang, Q. Liu, X. Chen, J. Bian, and W. Lam
+
+ForgeWM: progressive causal training for few-step action-conditioned video world models.
+
+arXiv preprint arXiv:2608.14022.
+
+External Links: 2608.14022,
+Link
+
+Cited by: §1,
+§3.2.
+
+Li et al. (2025)
+Z. Li, C. Li, X. Mao, S. Lin, M. Li, S. Zhao, Z. Xu, X. Li, Y. Feng, J. Sun, Z. Li, F. Zhang, J. Ai, Z. Wang, Y. Wu, T. He, J. Pang, Y. Qiao, Y. Jia, and K. Zhang
+
+Sekai: a video dataset towards world exploration.
+
+arXiv preprint arXiv:2506.15675.
+
+External Links: 2506.15675,
+Link
+
+Cited by: §1,
+§3.3,
+§5.
+
+Ling et al. (2023)
+L. Ling, Y. Sheng, Z. Tu, W. Zhao, C. Xin, K. Wan, L. Yu, Q. Guo, Z. Yu, Y. Lu, X. Li, X. Sun, R. Ashok, A. Mukherjee, H. Kang, X. Kong, G. Hua, T. Zhang, B. Benes, and A. Bera
+
+DL3DV-10k: a large-scale scene dataset for deep learning-based 3d vision.
+
+arXiv preprint arXiv:2312.16256.
+
+External Links: 2312.16256,
+Link
+
+Cited by: §1,
+§3.3,
+§5.
+
+LynnReal AI (2026)
+LynnReal AI
+
+BiWM: bidirectional autoregressive video world models.
+
+Note: Official code repositoryRepository state inspected at commit 626a0714ab139f74ee76826f411a9f6076096add on August 18, 2026
+
+External Links: Link
+
+Cited by: §3.2.
+
+Mao et al. (2025)
+X. Mao, S. Lin, Z. Li, C. Li, W. Peng, T. He, J. Pang, M. Chi, Y. Qiao, and K. Zhang
+
+Yume: an interactive world generation model.
+
+arXiv preprint arXiv:2507.17744.
+
+External Links: 2507.17744,
+Link
+
+Cited by: §1,
+§3.1,
+§3.2.
+
+Microsoft Research (2026)
+Microsoft Research
+
+MineWorld.
+
+Note: Official code repositoryRepository state inspected at commit 9f49efbcc68a5f0cf60e78f0abc566eac409282f on August 18, 2026
+
+External Links: Link
+
+Cited by: §3.2.
+
+MiniMax (2026)
+MiniMax
+
+MiniMax h3: an open model breaking the boundaries between tasks and modalities.
+
+Note: Official model release articlePublished July 31, 2026
+
+External Links: Link
+
+Cited by: §1.
+
+NVIDIA Research (2026)
+NVIDIA Research
+
+SANA-wm.
+
+Note: Official code, model, and example-data repositoryRepository state inspected at commit 5498e5b2070ef8c808ee7eab7f7c7707b53cd8ea on August 18, 2026
+
+External Links: Link
+
+Cited by: §3.2.
+
+Parker-Holder and Fruchter (2025)
+J. Parker-Holder and S. Fruchter
+
+Genie 3: a new frontier for world models.
+
+Note: Google DeepMind technical articlePublished August 5, 2025; accessed August 18, 2026
+
+External Links: Link
+
+Cited by: §3.1,
+§3.2.
+
+Riemann Dynamics (2026a)
+Riemann Dynamics
+
+Matrix-game 3.5.
+
+Note: Official code and model repositoryRepository state inspected at commit fa6d2b628ac9b0f1657dc24689536d74bfeb51da on August 18, 2026
+
+External Links: Link
+
+Cited by: §3.2.
+
+Riemann Dynamics (2026b)
+Riemann Dynamics
+
+Matrix-game 3.5: enhancing real-time streaming interactive world models with patch memory.
+
+Technical report
+
+ Riemann Dynamics.
+
+Note: Technical report
+
+External Links: Link
+
+Cited by: §3.1.
+
+Robbyant Team et al. (2026)
+Robbyant Team, Z. Gao, Q. Wang, Y. Zeng, J. Zhu, K. L. Cheng, Y. Li, H. Wang, Y. Xu, S. Ma, Y. Chen, J. Liu, Y. Cheng, Y. Yao, J. Zhu, Y. Meng, K. Zheng, Q. Bai, J. Chen, Z. Shen, Y. Yu, X. Zhu, Y. Shen, and H. Ouyang
+
+Advancing open-source world models.
+
+arXiv preprint arXiv:2601.20540.
+
+External Links: 2601.20540,
+Link
+
+Cited by: §3.1.
+
+Robbyant Team (2026a)
+Robbyant Team
+
+LingBot-world 2.0.
+
+Note: Official code and model repositoryRepository state inspected at commit 2648877f763a06cc743bcd919936da4d25f12e7b on August 18, 2026
+
+External Links: Link
+
+Cited by: §3.2.
+
+Robbyant Team (2026b)
+Robbyant Team
+
+LingBot-world.
+
+Note: Official code and model repositoryRepository state inspected at commit a43bec7f8091c83e9b30b16b912f6fc906236fa6 on August 18, 2026
+
+External Links: Link
+
+Cited by: §3.2.
+
+Rui et al. (2026)
+S. Rui, X. Mao, Z. Zhang, P. Lin, Y. Zhu, Y. Zhang, H. Wan, and W. Ma
+
+BiWM: advancing open-source interactive video world models with bidirectional autoregression.
+
+arXiv preprint arXiv:2606.10135.
+
+External Links: 2606.10135,
+Link
+
+Cited by: §1,
+§3.2.
+
+ShengShu AI MIN Lab (2026)
+ShengShu AI MIN Lab
+
+MinWM: full-stack open-source video world model framework.
+
+Note: Official code repositoryRepository state inspected at commit df522a26cd4409d3e3e8f269cc98eac069b5df47 on August 18, 2026
+
+External Links: Link
+
+Cited by: §3.2.
+
+Skywork AI (2026)
+Skywork AI
+
+Matrix-game.
+
+Note: Official code repositoryRepository state inspected at commit 71c3cd7f741311f8100f6cf9cde942b6c1378d11 on August 18, 2026
+
+External Links: Link
+
+Cited by: §3.2.
+
+Sun et al. (2025)
+W. Sun, H. Zhang, H. Wang, J. Wu, Z. Wang, Z. Wang, Y. Wang, J. Zhang, T. Wang, and C. Guo
+
+WorldPlay: towards long-term geometric consistency for real-time interactive world modeling.
+
+arXiv preprint arXiv:2512.14614.
+
+External Links: 2512.14614,
+Link
+
+Cited by: §3.1,
+§3.2.
+
+Tencent Hunyuan (2026)
+Tencent Hunyuan
+
+HY-world 1.5 (worldplay).
+
+Note: Official code repositoryRepository state inspected at commit 1588e1336e842b03b0a7860c654ebd7c46bb065e on August 18, 2026
+
+External Links: Link
+
+Cited by: §3.2.
+
+Valevski et al. (2024)
+D. Valevski, Y. Leviathan, M. Arar, and S. Fruchter
+
+Diffusion models are real-time game engines.
+
+arXiv preprint arXiv:2408.14837.
+
+External Links: 2408.14837,
+Link
+
+Cited by: §1,
+§3.1.
+
+Wan et al. (2025)
+T. Wan, A. Wang, B. Ai, B. Wen, C. Mao, C. Xie, D. Chen, F. Yu, H. Zhao, J. Yang, J. Zeng, J. Wang, J. Zhang, J. Zhou, J. Wang, J. Chen, K. Zhu, K. Zhao, K. Yan, L. Huang, M. Feng, N. Zhang, P. Li, P. Wu, R. Chu, R. Feng, S. Zhang, S. Sun, T. Fang, T. Wang, T. Gui, T. Weng, T. Shen, W. Lin, W. Wang, W. Wang, W. Zhou, W. Wang, W. Shen, W. Yu, X. Shi, X. Huang, X. Xu, Y. Kou, Y. Lv, Y. Li, Y. Liu, Y. Wang, Y. Zhang, Y. Huang, Y. Li, Y. Wu, Y. Liu, Y. Pan, Y. Zheng, Y. Hong, Y. Shi, Y. Feng, Z. Jiang, Z. Han, Z. Wu, and Z. Liu
+
+Wan: open and advanced large-scale video generative models.
+
+arXiv preprint arXiv:2503.20314.
+
+Cited by: §1.
+
+Wang et al. (2025)
+J. Wang, Y. Yuan, R. Zheng, Y. Lin, J. Gao, L. Chen, Y. Bao, Y. Zhang, C. Zeng, Y. Zhou, X. Long, H. Zhu, Z. Zhang, X. Cao, and Y. Yao
+
+SpatialVID: a large-scale video dataset with spatial annotations.
+
+arXiv preprint arXiv:2509.09676.
+
+External Links: 2509.09676,
+Link
+
+Cited by: §1,
+§3.3,
+§5.
+
+Wang et al. (2026a)
+X. Wang, C. Zhao, F. Zhan, and Y. Ma
+
+LiveEdit: towards real-time diffusion-based streaming video editing.
+
+arXiv preprint arXiv:2606.26740.
+
+Cited by: §1.
+
+Wang et al. (2024)
+Y. Wang, Y. He, Y. Li, K. Li, J. Yu, X. Ma, X. Li, G. Chen, X. Chen, Y. Wang, C. He, P. Luo, Z. Liu, Y. Wang, L. Wang, and Y. Qiao
+
+InternVid: a large-scale video-text dataset for multimodal understanding and generation.
+
+In International Conference on Learning Representations,
+
+External Links: 2307.06942,
+Link
+
+Cited by: §3.3.
+
+Wang et al. (2026b)
+Z. Wang, Z. Liu, J. Li, K. Huang, B. Xu, F. Kang, M. An, P. Wang, B. Jiang, Y. Wei, Y. Xietian, J. Pei, L. Hu, B. Jiang, H. Xue, Z. Wang, H. Sun, W. Li, W. Ouyang, X. He, Y. Liu, Y. Li, and Y. Zhou
+
+Matrix-game 3.0: real-time and streaming interactive world model with long-horizon memory.
+
+arXiv preprint arXiv:2604.08995.
+
+External Links: 2604.08995,
+Link
+
+Cited by: §1,
+§3.1.
+
+Ye et al. (2026)
+Y. Ye, X. Lu, Y. Jiang, Y. Gu, R. Zhao, Q. Liang, J. Pan, F. Zhang, W. Wu, and A. J. Wang
+
+MIND: benchmarking memory consistency and action control in world models.
+
+arXiv preprint arXiv:2602.08025.
+
+External Links: 2602.08025,
+Link
+
+Cited by: §3.3,
+§5.
+
+Yin et al. (2024)
+T. Yin, M. Gharbi, R. Zhang, E. Shechtman, F. Durand, W. T. Freeman, and T. Park
+
+One-step diffusion with distribution matching distillation.
+
+In 2024 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR),
+
+pp. 6613–6623.
+
+Cited by: §1,
+§3.2,
+§4.
+
+Yin et al. (2025)
+T. Yin, Q. Zhang, R. Zhang, W. T. Freeman, F. Durand, E. Shechtman, and X. Huang
+
+From slow bidirectional to fast autoregressive video diffusion models.
+
+In 2025 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR),
+
+pp. 22963–22974.
+
+Cited by: §1,
+§3.2.
+
+Yu et al. (2026)
+W. Yu, R. Qian, Y. Li, L. Wang, S. Yin, S. S. Chakaravarthy P, D. Anthony, Y. Ye, Y. Li, W. Wan, and A. Garg
+
+MosaicMem: hybrid spatial memory for controllable video world models.
+
+arXiv preprint arXiv:2603.17117.
+
+External Links: 2603.17117,
+Link
+
+Cited by: §6.1.
+
+Yume Team (2026)
+Yume Team
+
+Yume: an interactive world generation model.
+
+Note: Official code, model, and data-processing repositoryRepository state inspected at commit 111c3fab7fb020d1e261a68be6ec78a3fecc8d5b on August 18, 2026
+
+External Links: Link
+
+Cited by: §3.2.
+
+Zhang et al. (2026a)
+G. Zhang, Y. Chen, X. Xiang, J. Huang, Z. Wang, and L. Jiang
+
+SymphoMotion: joint control of camera motion and object dynamics for coherent video generation.
+
+arXiv preprint arXiv:2604.03723.
+
+Cited by: §1.
+
+Zhang et al. (2026b)
+R. Zhang, G. Chen, Z. Xu, Z. Liu, Z. Zhong, M. Zhang, J. Zhou, and X. Li
+
+Robostereo: dual-tower 4d embodied world models for unified policy optimization.
+
+arXiv preprint arXiv:2603.12639.
+
+Cited by: §1.
+
+Zhang et al. (2026c)
+R. Zhang, K. Cong, J. Zhou, Z. Zhong, Z. Xu, S. Mao, W. Liu, and X. Li
+
+Kvpo: ode-native grpo for autoregressive video alignment via kv semantic exploration.
+
+arXiv preprint arXiv:2605.14278.
+
+Cited by: §3.2.
+
+Zhang et al. (2026d)
+S. Zhang, Z. Xue, S. Fu, J. Huang, X. Kong, Y. Ma, H. Huang, N. Duan, and A. Rao
+
+Astrolabe: steering forward-process reinforcement learning for distilled autoregressive video models.
+
+External Links: 2603.17051,
+Link
+
+Cited by: §3.2.
+
+Zhang et al. (2025)
+Y. Zhang, C. Peng, B. Wang, P. Wang, Q. Zhu, F. Kang, B. Jiang, Z. Gao, E. Li, Y. Liu, and Y. Zhou
+
+Matrix-game: interactive world foundation model.
+
+arXiv preprint arXiv:2506.18701.
+
+External Links: 2506.18701,
+Link
+
+Cited by: §3.1.
+
+Zhao et al. (2026a)
+M. Zhao, H. Zhu, B. Yan, Z. Zhou, Y. Chen, W. Sun, K. Zheng, G. He, X. Yang, C. Li, F. Bao, and J. Zhu
+
+MinWM: a full-stack open-source framework for real-time interactive video world models.
+
+arXiv preprint arXiv:2605.30263.
+
+External Links: 2605.30263,
+Link
+
+Cited by: §1,
+§3.2.
+
+Zhao et al. (2026b)
+M. Zhao, H. Zhu, K. Zheng, Z. Zhou, B. Yan, X. Li, X. Yang, C. Li, and J. Zhu
+
+Causal forcing++: scalable few-step autoregressive diffusion distillation for real-time interactive video generation.
+
+External Links: 2605.15141,
+Link
+
+Cited by: §3.2,
+§4.
+
+Zheng et al. (2025)
+G. Zheng, T. Li, X. Zhou, and X. Li
+
+RealCam-vid: high-resolution video dataset with dynamic scenes and metric-scale camera movements.
+
+arXiv preprint arXiv:2504.08212.
+
+External Links: 2504.08212,
+Link
+
+Cited by: §1,
+§3.3,
+§5.
+
+Zhou et al. (2025)
+Y. Zhou, Y. Wang, J. Zhou, W. Chang, H. Guo, Z. Li, K. Ma, X. Li, Y. Wang, H. Zhu, M. Liu, D. Liu, J. Yang, Z. Fu, J. Chen, C. Shen, J. Pang, K. Zhang, and T. He
+
+OmniWorld: a multi-domain and multi-modal dataset for 4d world modeling.
+
+arXiv preprint arXiv:2509.12201.
+
+External Links: 2509.12201,
+Link
+
+Cited by: §3.3,
+§5.
+
+Zhu et al. (2026a)
+H. Zhu, H. Liu, Y. Zhao, T. Ye, J. Chen, J. Yu, T. He, S. Han, and E. Xie
+
+SANA-wm: efficient minute-scale world modeling with hybrid linear diffusion transformer.
+
+arXiv preprint arXiv:2605.15178.
+
+External Links: 2605.15178,
+Link
+
+Cited by: §1,
+§1,
+§3.1,
+§3.2,
+§5.2.
+
+Zhu et al. (2026b)
+H. Zhu, M. Zhao, G. He, H. Su, C. Li, and J. Zhu
+
+Causal forcing: autoregressive diffusion distillation done right for high-quality real-time interactive video generation.
+
+arXiv preprint arXiv:2602.02214.
+
+Cited by: §1,
+§3.2,
+§4.
+
+Zhuang et al. (2026)
+J. Zhuang, S. Zhang, Y. Bian, Y. Li, Y. Luo, Y. Liu, W. Jin, S. Zhang, X. He, X. Zhang, H. Li, H. Huang, Z. Xue, and N. Duan
+
+Self gradient forcing: native long video extrapolation.
+
+External Links: 2607.20368
+
+Cited by: §1,
+§4.3.
+
+ Experimental support, please
+ view the build logs
+ for errors. Generated by
+
+ L
+ A
+ T
+ E
+
+ xml
+
+ .
+
+ Instructions for reporting errors
+ We are continuing to improve HTML versions of papers, and your feedback helps enhance accessibility and mobile
+ support. To report errors in the HTML that will help us improve conversion and rendering, choose any of the
+ methods listed below:
+
+ Click the "Report Issue" (
+
+ ) button, located in the page header.
+
+ Tip: You can select the relevant text first, to include it in your report.
+ Our team has already identified the following issues. We appreciate your time reviewing and reporting rendering errors we
+ may not have found yet. Your efforts will help us improve the HTML versions for all readers, because disability
+ should not be a barrier to accessing research. Thank you for your continued support in championing open access for
+ all.
+ Have a free development cycle? Help support accessibility at arXiv! Our collaborators at LaTeXML maintain a list of packages that need conversion, and welcome developer contributions.
+
+ We gratefully acknowledge support from
+ our major funders,
+ member institutions, ,
+ and all contributors.
+
+ About
+ ·
+ Help
+ ·
+ Contact
+ ·
+ Subscribe
+ ·
+ Copyright
+ ·
+ Privacy
+ ·
+ Accessibility
+ ·
+ Operational Status (opens in new tab)
+
+ Major funding support from
+

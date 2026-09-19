@@ -1772,3 +1772,7 @@ skill 更新:
 ## [2026-09-11] ingest | gander
 
 arXiv 2609.08977v2（Omni Interaction Agent 技术报告，腾讯混元语音）。bespoke 页 14 节 + 6 图（三件套架构 / 委派双泳道时间线 / 感知 token 账 / chunk 拍平流 / 打断时间线监督 / 时机双指标散点）；新 concept：cerebellum-brain-collaboration、streaming-chunk-flattening、backchannel-vs-barge-in；thinker-talker、full-duplex-multimodal-interaction、full-duplex-bench-metrics、vad 补 sources。lint_paper.py 的 FAKE_SUB 按站点惯例收窄为单字母词头（task_start 这类标识符不再误报）。
+
+## [2026-09-14] ingest | solarwm
+
+arXiv 2609.02886（SolarWM，交互式视频世界模型全开源基建）。bespoke 页 14 节 + 6 图（全景 / 三阶段 vs 主流四工序 / 三命名空间 / 相机标注双路 / 14-owner 三档判决占比条 / H3 头维切分）；三条公式逐符号（L_bid、TF-AnyFlow、DMD 梯度）+ 七元组契约；语料账本全数字对账（876,593 kept、repeat 因子反解 53,978、ABOT 30,966 三档、Clean 543k、H3 158f→47latent）。新 concept：annotate-once-select-by-metadata、teacher-forced-anyflow；projective-rope、dmd-distillation、teacher-forcing-video-diffusion、causal-consistency-distillation、world-foundation-model 补 sources。

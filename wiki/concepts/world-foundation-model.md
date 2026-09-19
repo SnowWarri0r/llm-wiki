@@ -1,7 +1,7 @@
 ---
 name: world-foundation-model
 type: concept
-sources: [cosmos-3, solaris-multiplayer-world-model, interactive-video-world-modeling-survey]
+sources: [cosmos-3, solaris-multiplayer-world-model, interactive-video-world-modeling-survey, solarwm]
 updated: 2026-07-24
 ---
 
