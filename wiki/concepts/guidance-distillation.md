@@ -1,7 +1,7 @@
 ---
 name: guidance-distillation
 type: concept
-sources: [flux-1, krea-2, diffusionnft]
+sources: [flux-1, krea-2, diffusionnft, lynnreal-omni]
 updated: 2026-06-17
 ---
 

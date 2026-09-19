@@ -1,7 +1,7 @@
 ---
 name: video-vae
 type: concept
-sources: [mrt, ltx-2, longcat-video-avatar-1-5]
+sources: [mrt, ltx-2, longcat-video-avatar-1-5, lynnreal-omni]
 updated: 2026-08-05
 ---
 

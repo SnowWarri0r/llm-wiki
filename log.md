@@ -1776,3 +1776,7 @@ arXiv 2609.08977v2（Omni Interaction Agent 技术报告，腾讯混元语音）
 ## [2026-09-14] ingest | solarwm
 
 arXiv 2609.02886（SolarWM，交互式视频世界模型全开源基建）。bespoke 页 14 节 + 6 图（全景 / 三阶段 vs 主流四工序 / 三命名空间 / 相机标注双路 / 14-owner 三档判决占比条 / H3 头维切分）；三条公式逐符号（L_bid、TF-AnyFlow、DMD 梯度）+ 七元组契约；语料账本全数字对账（876,593 kept、repeat 因子反解 53,978、ABOT 30,966 三档、Clean 543k、H3 158f→47latent）。新 concept：annotate-once-select-by-metadata、teacher-forced-anyflow；projective-rope、dmd-distillation、teacher-forcing-video-diffusion、causal-consistency-distillation、world-foundation-model 补 sources。
+
+## [2026-09-17] ingest | lynnreal-omni
+
+arXiv 2609.15863（LynnReal-Omni，agentic 视觉工作流的原生多模态视频生成）。bespoke 页 15 节 + 5 图（工作流全景 / 打包布局与正偏移 / Flash 三明治压缩 / 长视频接龙与紧凑上下文 / 解码器蒸馏框架）；公式逐符号（clean-time、logistic-normal 双钟——音频四时间步恰为视频时间步映射像已验算、guidance-aware fitting 最优解、残差回填、pseudo-Huber、cycle KL）；MSAVP 全量族表 + 累积延迟消融表（W8A8 不融合反而变慢）。新 concept：agentic-visual-creation、mid-stack-token-compression、lightweight-decoder-distillation；dmd-distillation、trajectory-distribution-matching、guidance-distillation、video-vae、chunk-wise-self-forcing 补 sources。

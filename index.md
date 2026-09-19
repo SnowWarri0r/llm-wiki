@@ -46,6 +46,7 @@
 - [Interaction Models · Thinking Machines](wiki/papers/interaction-models-tml.md) — 把交互能力做进权重的 276B MoE 模型
 - [Gander · 会插话的全能助手](wiki/papers/gander.md) — 腾讯混元语音的 Omni Interaction Agent：9B 全双工小脑按 1 秒 chunk 拍平音视频与文本、每窗先预测听/说/打断，免训练大脑（Codex）经 task_start/send/resolve 三工具接长活；InteractionSpeech 26 万条打断合成管线、FDB v3 时机双指标 100/8.0 全场唯一双赢、back-brain-only 消融定位瓶颈在路由与 ASR 通道。
 - [SolarWM · 世界模型的公共地基](wiki/papers/solarwm.md) — CUHK-SZ 等的全开源基建：1.43M clip 数据引擎（先全量标注后做决定、拒收 54.9 万条带原因留档、三命名空间分离、门限逐源不对称）+ 四条 5B–33B 异构骨干（Wan2.2×2/LTX-2.5/MiniMax-H3）共享相机接口 + 双向→TF-AnyFlow→DMD 三阶段配方；只训 5 秒无 attention sink 漫游 1 小时；实验全定性无数值表。
+- [LynnReal-Omni · agent 搭台，扩散唱戏](wiki/papers/lynnreal-omni.md) — 面向 agentic 视觉工作流的统一视频生成：32B 共享 DiT（MiniMax-H3 骨干）吃全部控制（T2V/参考/结构/编辑/长视频=不同打包布局）；4 步 TDM + Flash 三明治 token 压缩 + 轻量 VAE 解码器（少步化后瓶颈在解码）；warm 540p22帧 843/377ms；自建 MSAVP（冻结清单+盲评审）自家非第一。
 - [Fish Audio S2 Pro](wiki/papers/fish-speech-s2-pro.md) — Dual-AR + RVQ + GRPO 的开源 TTS
 - [DuplexOmni · 边听边说时，后台还能继续想](wiki/papers/duplexomni.md) — 把实时交互 S1 与后台思考 S2 拆成并行线；交互模型内部再用 480 ms 时间片、Thinker–Talker 和 16 层 Mimi codec 生成语音。完整拆开控制标记闭环、两阶段交替冻结与交叉熵手算；ToR 72.6 最强，但 Daily-Omni 53.8、WER 11.92%，论文结果与至少 8×H20 的公开部署口径分开记录。
 - [PersonaPlex · 同一套实时语音模型，既能换声音，也能换身份](wiki/papers/personaplex.md) — 在 Moshi 的 80 ms 全双工骨干前拼入参考声音与角色文字，不改成 ASR–LLM–TTS 级联；完整拆开 17 路输入、Temporal–Depth、声学码延迟、prompt 缓存、加权 loss、2,250 小时合成数据、两套 duplex benchmark，并严格分开论文实验模型与公开 personaplex-7b-v1 的数据和评测口径。

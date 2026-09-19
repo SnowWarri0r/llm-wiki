@@ -1,7 +1,7 @@
 ---
 name: chunk-wise-self-forcing
 type: concept
-sources: [wan-animate-2, interactive-avatar, causal-rcm, uniswap-av, waveforcing]
+sources: [wan-animate-2, interactive-avatar, causal-rcm, uniswap-av, waveforcing, lynnreal-omni]
 updated: 2026-08-19
 ---
 
