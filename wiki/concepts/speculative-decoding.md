@@ -1,7 +1,7 @@
 ---
 name: speculative-decoding
 type: concept
-sources: [drift-ar]
+sources: [drift-ar, raven]
 updated: 2026-07-24
 ---
 

@@ -1,0 +1,2834 @@
+
+
+RAVEN: Real-time Autoregressive Video Extrapolation with Consistency-model GRPO
+
+## Report GitHub Issue
+
+ ×
+
+ Title:
+
+ Content selection saved. Describe the issue below:
+
+ Description:
+
+ Submit without GitHub
+ Submit in GitHub
+
+ arXiv is now an independent nonprofit!
+ Learn more
+ ×
+
+ Back to arXiv
+
+ Why HTML?
+
+ Report Issue
+
+ Back to Abstract
+
+ Download PDF
+
+Abstract
+
+1 Introduction
+
+2 Related Work
+
+3 Methodology
+
+3.1 Preliminaries
+
+3.2 Training-Time Test via RAVEN
+
+3.3 Online RL via CM-GRPO
+
+4 Experiments
+
+4.1 Comparison with Baselines
+
+4.2 Ablation Studies
+
+5 Conclusion
+
+6 Acknowledgements
+
+References
+
+A Algorithm Formulations
+
+B More Implementation Details
+
+C User Study
+
+D Discussion
+
+E Prompts
+
+F Broader Impacts
+
+ License: arXiv.org perpetual non-exclusive license
+
+arXiv:2605.15190v1 [cs.CV] 14 May 2026
+
+## 
+
+RAVEN: Real-time Autoregressive Video
+
+Extrapolation with Consistency-model GRPO
+
+Yanzuo Lu
+
+Ronglai Zuo
+
+Jiankang Deng
+
+Affiliation: Imperial College London
+
+Affiliation: https://yanzuo.lu/raven
+
+## Abstract
+
+Causal autoregressive video diffusion models support real-time streaming generation by extrapolating future chunks from previously generated content.
+Distilling such generators from high-fidelity bidirectional teachers yields competitive few-step models, yet a persistent gap between the history distributions encountered during training and those arising at inference constrains generation quality over long horizons.
+We introduce the Real-time Autoregressive Video Extrapolation Network (RAVEN), a training-time test framework that repacks each self rollout into an interleaved sequence of clean historical endpoints and noisy denoising states.
+This formulation aligns training attention with inference-time extrapolation and allows downstream chunk losses to supervise the history representations on which future predictions depend.
+We further propose Consistency-model Group Relative Policy Optimization (CM-GRPO), which reformulates a consistency sampling step as a conditional Gaussian transition and applies online Reinforcement Learning (RL) directly to this kernel, avoiding the Euler-Maruyama auxiliary process adopted in prior flow-model RL formulations.
+Experiments demonstrate that RAVEN surpasses recent causal video distillation baselines across quality, semantic, and dynamic degree evaluations, and that CM-GRPO provides further gains when combined with RAVEN.
+
+## 1 Introduction
+
+Recent progress in video diffusion has established bidirectional models as the dominant paradigm for high-fidelity generation [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].
+Their reliance on bidirectional context and a large number of denoising steps, however, limits their suitability for real-time generation, where video must be produced continuously as a stream.
+This requirement has motivated causal autoregressive architectures that extrapolate future chunks from previously generated content [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30].
+The strongest generation capability still largely resides in high-step bidirectional models, and recent work has studied asymmetric distillation, which transfers knowledge from such bidirectional teachers to causal student generators [31, 32, 33, 34, 35, 36].
+The resulting few-step generators achieve real-time generation speeds while retaining much of the visual fidelity of their teachers.
+
+A central challenge in autoregressive video diffusion distillation lies in how the model represents and reuses historical chunks, as each generated chunk becomes the context on which all subsequent predictions depend.
+As illustrated in Figure 1, existing training paradigms differ in both the source of historical states and whether those states receive end-to-end supervision from later chunks.
+Teacher Forcing trains with real historical chunks, which provides clean supervision but does not expose the generator to its own test-time history.
+Diffusion Forcing [37, 38] trains causal diffusion models by assigning each token an independently sampled Signal-to-Noise Ratio (SNR), and CausVid [35] adapts this construction to autoregressive video distillation by incorporating Distribution Matching Distillation (DMD) [39, 40].
+This formulation optimizes the causal generator under a history distribution that does not match inference, and the resulting discrepancy can accumulate across autoregressive rollouts.
+Self Forcing [31] reduces this discrepancy by conditioning the DMD objective on self rollouts, yet the historical cache is reused as detached context, so the history representations receive no end-to-end supervision from subsequent chunk losses.
+
+We propose the Real-time Autoregressive Video Extrapolation Network (RAVEN), a training-time test framework that directly supervises the history construction used during autoregressive extrapolation.
+Starting from self rollouts of the few-step causal generator, RAVEN repacks the sampled trajectory into an interleaved sequence of clean historical endpoints and noisy denoising states.
+Within this sequence, clean rollout chunks provide the causal history for subsequent predictions, while noisy states from the same rollout remain the supervised denoising inputs.
+The resulting attention computation aligns more closely with inference than Teacher Forcing or Diffusion Forcing and keeps history representations inside the supervised forward pass, as shown in Figure 1(d).
+This design enables gradients from later chunks to shape the cached representations on which future predictions depend, while avoiding the cost of backpropagating through an entire autoregressive sampling trajectory.
+
+Reinforcement learning (RL) has become an influential post-training paradigm for large generative models, and recent work has begun to adapt it to diffusion and flow models.
+Flow-GRPO [41] demonstrates this direction for flow matching, addressing the conflict between deterministic Ordinary Differential Equation (ODE) sampling and the stochastic exploration required by policy optimization through an ODE-to-Stochastic Differential Equation (SDE) conversion followed by Euler-Maruyama discretization.
+The causal generator in RAVEN employs a few-step consistency sampler, for which Euler-Maruyama introduces a train-test discrepancy by optimizing over stochastic transitions that differ from the deterministic sampling used at inference.
+We observe that a consistency sampling step can be cast as a conditional Gaussian transition parameterized by the predicted clean endpoint, enabling the policy objective to be defined on the same update rule used during generation without an auxiliary stochastic process.
+This correspondence is especially consequential for autoregressive video generation, where each generated chunk alters the history on which subsequent predictions depend.
+We therefore propose Consistency-model Group Relative Policy Optimization (CM-GRPO), which applies group relative policy optimization directly to this consistency transition kernel.
+
+Our contributions are as follows.
+
+• 
+
+We identify a history supervision gap in autoregressive video diffusion distillation, where existing methods are either optimized under history distributions that differ from inference or conditioned on rollout history without end-to-end supervision.
+
+• 
+
+We introduce RAVEN, a training-time test framework that repacks self rollouts into an interleaved sequence of clean historical endpoints and noisy denoising states, allowing supervision to propagate through the history representations used during extrapolation.
+
+• 
+
+We propose CM-GRPO, which reformulates a consistency sampling step as a conditional Gaussian transition kernel and applies group relative policy optimization directly to this kernel, matching the sampler interface used at inference.
+
+• 
+
+We demonstrate that RAVEN surpasses recent causal video distillation baselines and that CM-GRPO provides complementary gains when combined with RAVEN.
+
+Figure 1: Attention Mask Configuration.
+Autoregressive video diffusion training paradigms differ in how historical states enter attention and whether those states receive end-to-end supervision from later chunks.
+Teacher Forcing and Diffusion Forcing rely on data-driven historical states, inducing a training distribution that differs from inference.
+Self Forcing shifts the history distribution toward inference but reuses the historical cache as detached context.
+RAVEN instead repacks each self rollout into clean historical endpoints and noisy denoising states, allowing later chunks to attend to the same history used during extrapolation while their losses supervise the cached representations.
+
+## 2 Related Work
+
+Autoregressive Video Diffusion Distillation.
+Autoregressive video generation encompasses several parallel directions beyond the causal distillation setting studied in this paper.
+One line of work explores the design of the autoregressive rollout itself, either extending the prediction window for longer sequences or conditioning on intermediate noisy latents rather than fully denoised outputs as historical context [42, 43, 32, 44, 34, 45].
+Although our current implementation conditions on clean latents, the training-time test paradigm can simulate these alternative history mechanisms to provide end-to-end supervision.
+A separate direction develops architectures with dedicated temporal memory for managing long-range context during training [42, 46, 47, 48, 49, 50], while a complementary body of training-free methods adapts models at inference time for length extrapolation [51, 52, 53, 54, 55, 56].
+Our framework is orthogonal to both families, as any strategy that generates and caches the next chunk through specialized memory designs can be executed within the self-rollout phase and benefit from the subsequent interleaved optimization.
+
+Online RL in Diffusion Model.
+Online RL has become a practical paradigm for aligning diffusion and flow models after pretraining, beginning with reward-guided optimization for image generation and gradually evolving into policy optimization methods tailored to diffusion and flow trajectories [57, 41, 58, 59, 60].
+This approach has since been extended to autoregressive generators and world models, where reinforcement learning serves not only for preference alignment but also for preserving pretrained capabilities and improving controllable generation over long horizons [61, 62, 63, 64, 65, 66].
+Parallel work applies online RL to distilled and few-step generators, where the central challenge is to improve alignment without sacrificing the efficiency that makes these models practical [67, 68, 69].
+Much of the follow-up work has focused on refining the policy objective itself.
+Some methods revisit regularization to control reward hacking and distribution drift [70, 71, 72, 73], while others study how the stochasticity or numerical form of the sampler shapes policy optimization [74, 75, 76, 77, 78, 79, 80].
+A separate direction makes more deliberate use of the denoising trajectory, for instance through branching, tree search, or stepwise credit assignment [81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97].
+Our method is most closely related to the literature on few-step generation and sampler design.
+Rather than adopting the Euler-Maruyama discretization used in prior online RL formulations for flow models, CM-GRPO formulates the policy objective directly on the consistency transition kernel and combines it with the training-time test framework of RAVEN, more closely matching the inference-time behavior of autoregressive video extrapolation.
+
+## 3 Methodology
+
+## 3.1 Preliminaries
+
+Let $x_{1:T}$ denote a sequence of latent video chunks and $c$ the text condition, with hats used for student-generated quantities.
+Throughout the paper, the subscript $t$ indexes the chunk position, while a superscript in parentheses, such as $(n)$ , $(u)$ , or $(s)$ , denotes the noise level.
+We write the autoregressive video diffusion model as
+
+ | 
+ $p_{\theta}(x_{1:T}\mid c)=\prod_{t=1}^{T}p_{\theta}(x_{t}\mid h_{t},c),\qquad h_{t}=\mathcal{H}(x_{<t}).$ | 
+ | 
+(1) | 
+
+The operator $\mathcal{H}(\cdot)$ denotes the history representation encoded by the model via its cache.
+For a noise level $n$ , we define the noisy current chunk as $z_{t}^{(n)}=\alpha_{n}x_{t}+\sigma_{n}\epsilon$ , with $\epsilon\sim\mathcal{N}(0,I)$ .
+Training paradigms are distinguished primarily by how the history $h_{t}$ is constructed from past chunks, and we detail this distinction in the following subsections.
+
+History Formulation in Diffusion Forcing and Self Forcing.
+Recent methods for autoregressive video diffusion distillation are largely built on either Diffusion Forcing [37] or Self Forcing [31].
+In CausVid [35], training follows Diffusion Forcing and represents the history as $h_{t}^{\mathrm{DF}}=\mathcal{H}\bigl(z_{1}^{(n_{1})},\ldots,z_{t-1}^{(n_{t-1})}\bigr)$ , perturbing each ground-truth prefix chunk with an independently sampled noise level before entering the causal context.
+Self Forcing [31] instead unrolls the autoregressive generator at training time and reuses detached cache representations written as $h_{t}^{\mathrm{SF}}=\operatorname{sg}\!\left(\mathcal{H}(\hat{x}_{<t})\right)$ , where the stop-gradient operator $\operatorname{sg}(\cdot)$ treats historical chunks as fixed context for subsequent denoising steps.
+Both formulations therefore leave the cache construction outside end-to-end supervision, motivating the training-time test formulation introduced next.
+
+Euler-Maruyama Discretization in Flow-GRPO.
+Flow-GRPO [41] starts from the rectified-flow ODE $\mathrm{d}y_{\tau}=v_{\theta}(y_{\tau},\tau,c)\,\mathrm{d}\tau$ , where $y_{\tau}$ denotes the latent variable at denoising time $\tau\in[0,1]$ .
+To inject the stochasticity required for policy optimization, it introduces an ODE-to-SDE conversion and operates on the reverse-time SDE $\mathrm{d}y_{\tau}=b_{\theta}(y_{\tau},\tau,c)\,\mathrm{d}\tau+\sigma_{\tau}\,\mathrm{d}w$ , where $b_{\theta}(y_{\tau},\tau,c)$ is the drift term and $\sigma_{\tau}\,\mathrm{d}w$ the diffusion term.
+The drift term is given by
+
+ | 
+ $b_{\theta}(y_{\tau},\tau,c)=v_{\theta}(y_{\tau},\tau,c)+\frac{\sigma_{\tau}^{2}}{2\tau}\bigl(y_{\tau}+(1-\tau)v_{\theta}(y_{\tau},\tau,c)\bigr).$ | 
+ | 
+(2) | 
+
+Applying Euler-Maruyama discretization yields
+
+ | 
+ $y_{\tau+\Delta\tau}=y_{\tau}+b_{\theta}(y_{\tau},\tau,c)\Delta\tau+\sigma_{\tau}\sqrt{\Delta\tau}\,\epsilon,\quad\epsilon\sim\mathcal{N}(0,I).$ | 
+ | 
+(3) | 
+
+Equivalently, the Euler-Maruyama step defines an isotropic Gaussian policy kernel,
+
+ | 
+ $\pi_{\theta}^{\mathrm{EM}}\bigl(y_{\tau+\Delta\tau}\mid y_{\tau},c\bigr)=\mathcal{N}\!\left(y_{\tau+\Delta\tau};y_{\tau}+b_{\theta}(y_{\tau},\tau,c)\Delta\tau,\sigma_{\tau}^{2}\Delta\tau I\right).$ | 
+ | 
+(4) | 
+
+This auxiliary kernel makes the policy ratio and the KL term tractable in closed form, but its stochastic transitions remain absent from the deterministic ODE sampler used at inference.
+ODE-based samplers are typically deterministic [98, 99, 100, 101, 102, 103, 104], while the consistency sampler [105, 106, 107, 108, 109, 40, 110, 111, 112] is a notable exception in the few-step regime, remaining defined on the probability flow ODE trajectory while still yielding stochastic transitions that can serve as the policy interface directly.
+
+Figure 2: Training Pipeline.
+RAVEN builds on score distillation with a training-time test formulation that aligns the generator’s training context with inference.
+In the fake-score step, the frozen generator performs autoregressive self rollout with KV cache reuse, producing the clean endpoints and noisy denoising states that are subsequently reused in the generator step.
+Rather than discarding these rollout states after critic training, RAVEN repacks them into an interleaved sequence of clean historical endpoints and noisy denoising states, processed under a causal attention mask so that each noisy state attends to the clean history the generator itself produced.
+This allows later chunk losses, scaled chunk-wise, to supervise the history representations on which future predictions depend.
+
+## 3.2 Training-Time Test via RAVEN
+
+RAVEN is a training-time test framework for autoregressive video diffusion that aligns the training procedure with inference-time extrapolation.
+Building upon the asymmetric distillation formulated by CausVid [35], the pipeline distills knowledge from a frozen bidirectional teacher into the causal student generator.
+As illustrated in Figure 2, training alternates between a fake-score step and a generator step.
+In the fake-score step, the bidirectional fake-score critic is updated on self-rollout samples perturbed with Gaussian noise.
+In the generator step, the causal student generator is updated via a reverse Kullback-Leibler (KL) score gradient computed from evaluations by both the bidirectional real-score teacher and the learned fake-score critic.
+
+Let $\tau_{1}>\cdots>\tau_{K}=0$ denote the few-step sampling timesteps of the consistency sampler adopted by the generator.
+During the fake-score step, the frozen causal student generator autoregressively produces, for each chunk index $t$ , a full denoising trajectory $\{\hat{z}_{t}^{(\tau_{k})}\}_{k=1}^{K}$ along with the clean endpoint $\hat{x}_{t}=\hat{z}_{t}^{(0)}$ .
+These clean endpoints are perturbed with Gaussian noise to form the training inputs for the fake-score critic.
+During the generator step, the same self rollout is reused and the noisy state at denoising level $\tau_{k}$ is taken directly from each chunk’s sampled trajectory.
+These rollout states are then packed into an input sequence processed under the attention mask illustrated in Figure 1(d).
+Specifically, for a sampled timestep $u\in\{\tau_{1},\ldots,\tau_{K-1}\}$ , the interleaved sequence takes the form
+
+ | 
+ $\mathcal{I}_{u}=\bigl(\hat{z}_{1}^{(u)},\hat{x}_{1},\hat{z}_{2}^{(u)},\hat{x}_{2},\ldots,\hat{z}_{T-1}^{(u)},\hat{x}_{T-1},\hat{z}_{T}^{(u)}\bigr),$ | 
+ | 
+(5) | 
+
+where $\hat{z}_{t}^{(u)}$ is the noisy state of chunk $t$ at denoising level $u$ and $\hat{x}_{t}$ is the corresponding clean endpoint.
+Within this sequence, the noisy states serve as supervised denoising targets, while the clean endpoints preceding chunk $t$ constitute its history $h_{t}^{\mathrm{RAVEN}}=\mathcal{H}(\hat{x}_{<t})$ .
+The causal student generator encodes these clean endpoints as history representations within the same forward pass, allowing later noisy states to attend to them under the causal attention structure employed during autoregressive extrapolation.
+The resulting predictions are subsequently perturbed with Gaussian noise and evaluated by the bidirectional real-score teacher and the fake-score critic to compute the reverse KL score gradient.
+
+Reuse Self Rollouts.
+The formulation is inspired by the training-time test principle of EAGLE-3 [113], where the model is trained on the context it will produce and encounter during speculative decoding.
+In language generation, this amounts to feeding a predicted draft token representation into the next simulated drafting step.
+The analogous construction is substantially more involved for autoregressive video diffusion, since each chunk is the endpoint of a multi-step denoising trajectory and future chunks depend on the resulting cache.
+A direct simulation would require unrolling the generator across all chunks and denoising steps within a single computation graph, incurring backpropagation through both autoregressive recursion and sampler dynamics.
+RAVEN avoids this cost by exploiting the self rollout already produced during the fake-score step, which is precisely the process that defines future context at inference.
+Repacking its states into an interleaved sequence, where generated clean chunks supply context and later noisy states remain supervised targets, reduces training-time test to a reorganization of existing self rollouts rather than an additional mechanism layered on top of score distillation, while faithfully preserving the dependency structure of autoregressive extrapolation.
+
+Chunk-wise Loss Scaling.
+Within the interleaved training sequence, chunks along the autoregressive horizon are exposed to qualitatively different denoising conditions.
+Earlier chunks operate under limited historical context, whereas later chunks condition on richer accumulated history and must simultaneously maintain contextual consistency and suppress error propagation.
+To account for this positional asymmetry, we introduce a future participation score.
+For a sequence of $J$ chunks, let $m_{j}$ denote the number of scalar elements in chunk $j$ and let $\ell_{j}$ denote its summed loss.
+The future participation score is defined as $p_{j}=\sum_{k=j}^{J}m_{k}\,/\,\sum_{k=1}^{J}m_{k}$ , namely the fraction of supervised elements contributed by chunk $j$ and all subsequent chunks, which is larger for earlier chunks and decreases monotonically toward later ones.
+The resulting profile $\mathcal{P}=(p_{1},\ldots,p_{J})$ is passed to a predefined weighting function $g_{\eta}$ to produce nonnegative raw weights $\tilde{w}_{1:J}=g_{\eta}(\mathcal{P})$ , whose specific form is examined in the ablation studies.
+For any choice of $g_{\eta}$ , the normalized per-chunk weights and the aggregate chunk loss are given by $w_{j}=\tilde{w}_{j}\sum_{k=1}^{J}m_{k}\,/\,\sum_{k=1}^{J}\tilde{w}_{k}m_{k}$ and $\mathcal{L}_{\mathrm{chunk}}=\sum_{j=1}^{J}w_{j}\ell_{j}\,/\,\sum_{j=1}^{J}w_{j}m_{j}$ .
+The normalization ensures that the average element-wise weight is preserved, so $g_{\eta}$ governs only the relative distribution of gradient emphasis across chunk positions.
+The complete training procedure is summarized in Algorithm 1 of Appendix A.
+
+## 3.3 Online RL via CM-GRPO
+
+CM-GRPO is an online policy optimization method for few-step consistency generators.
+As discussed in the preliminaries, Flow-GRPO [41] achieves tractable policy optimization for flow matching by converting the deterministic ODE into an auxiliary SDE via Euler-Maruyama discretization, yet the resulting stochastic transitions are absent from the ODE sampler used at inference.
+A consistency sampler, by contrast, inherently yields stochastic Gaussian transitions through its predicted clean endpoint, enabling CM-GRPO to formulate the policy objective directly on the consistency transition kernel without introducing any auxiliary stochastic process.
+
+Consider a single consistency sampling step from noise level $u$ to a lower level $s$ .
+Given the current latent $\tilde{z}^{(u)}$ and condition $c$ , the model predicts a clean endpoint $\hat{x}_{\theta}=f_{\theta}(\tilde{z}^{(u)},u,c)$ , from which the next latent is drawn as $\tilde{z}^{(s)}=\alpha_{s}\hat{x}_{\theta}+\sigma_{s}\epsilon$ with $\epsilon\sim\mathcal{N}(0,I)$ , where $\alpha_{s}$ and $\sigma_{s}$ are the noise schedule coefficients.
+This sampling rule induces the Gaussian transition probability
+
+ | 
+ $\pi_{\theta}\bigl(\tilde{z}^{(s)}\mid\tilde{z}^{(u)},c\bigr)=\mathcal{N}\!\left(\tilde{z}^{(s)};\mu_{\theta}^{u\to s},\sigma_{s}^{2}I\right),\qquad\mu_{\theta}^{u\to s}=\alpha_{s}\hat{x}_{\theta},$ | 
+ | 
+(6) | 
+
+which constitutes the policy interface in CM-GRPO.
+
+To instantiate group relative policy optimization on this kernel, for each condition $c$ the generator runs $G$ independent consistency trajectories, each terminating in a clean output $\hat{x}^{i}$ on which a scalar reward $R_{i}$ is evaluated.
+Following GRPO [114], the group-normalized advantage is computed as $\hat{A}_{i}=\bigl(R_{i}-\operatorname{mean}(\{R_{j}\}_{j=1}^{G})\bigr)\,/\,\bigl(\operatorname{std}(\{R_{j}\}_{j=1}^{G})+\epsilon\bigr)$ .
+This advantage is broadcast to all consistency sampling transitions within the same trajectory, converting the endpoint reward into a per-transition objective.
+For a transition from $u$ to $s$ , dropping the Gaussian normalization constant and terms independent of $\theta$ , the log probability under the consistency kernel reduces to
+
+ | 
+ $\log\pi_{\theta}\bigl(\tilde{z}^{(s)}_{i}\mid\tilde{z}^{(u)}_{i},c_{i}\bigr)=-\frac{\|\tilde{z}^{(s)}_{i}-\mu_{\theta}^{u\to s}\|^{2}}{2\sigma_{s}^{2}}.$ | 
+ | 
+(7) | 
+
+Because $\mu_{\theta}^{u\to s}=\alpha_{s}\hat{x}_{\theta}$ , the gradient of the advantage-weighted log probability with respect to the predicted clean endpoint takes the form
+
+ | 
+ $\nabla_{\hat{x}_{\theta}}\left[-\hat{A}_{i}\log\pi_{\theta}(\tilde{z}^{(s)}_{i}\mid\tilde{z}^{(u)}_{i},c_{i})\right]=-\hat{A}_{i}\alpha_{s}\frac{\tilde{z}^{(s)}_{i}-\mu_{\theta}^{u\to s}}{\sigma_{s}^{2}}.$ | 
+ | 
+(8) | 
+
+CM-GRPO implements this update through the stop-gradient regression objective
+
+ | 
+ $\mathcal{L}_{\mathrm{CM\text{-}GRPO}}=\mathbb{E}_{i,u,s}\left[\left\|\hat{x}_{\theta}-\operatorname{sg}\!\left(\hat{x}_{\theta}+\frac{\hat{A}_{i}\alpha_{s}}{2\sigma_{s}^{2}}\bigl(\tilde{z}^{(s)}_{i}-\mu_{\theta}^{u\to s}\bigr)\right)\right\|^{2}\right],$ | 
+ | 
+(9) | 
+
+whose gradient with respect to $\hat{x}_{\theta}$ recovers exactly the endpoint gradient derived above, matching the score gradient update used in our implementation.
+The same formulation also admits reference policy KL regularization.
+If a reference consistency model produces a clean endpoint $\hat{x}_{\mathrm{ref}}$ under the same noisy state $\tilde{z}^{(u)}$ , the KL divergence between the two Gaussian kernels reduces to
+
+ | 
+ $D_{\mathrm{KL}}\!\left(\pi_{\theta}(\cdot\mid\tilde{z}^{(u)},c)\middle\|\pi_{\mathrm{ref}}(\cdot\mid\tilde{z}^{(u)},c)\right)=\frac{\alpha_{s}^{2}\|\hat{x}_{\theta}-\hat{x}_{\mathrm{ref}}\|^{2}}{2\sigma_{s}^{2}}.$ | 
+ | 
+(10) | 
+
+This regularizer is tractable in principle, but in our current implementation the bidirectional teacher cannot be sampled through the consistency interface and therefore does not provide $\hat{x}_{\mathrm{ref}}$ on this policy interface.
+We therefore derive this closed-form expression for completeness, leaving its practical application to future work in which a compatible reference consistency model is accessible.
+The complete training procedure is summarized in Algorithm 2 of Appendix A.
+
+Reward Composition.
+Autoregressive video reinforcement learning requires reward signals that jointly capture motion dynamics, visual fidelity, and semantic alignment.
+We empirically find that overweighting visual fidelity or semantic alignment tends to encourage static generations, whereas an overly strong motion reward degrades the remaining two aspects, making reward design challenging.
+This difficulty is compounded by the limited availability of reliable holistic metrics for few-step video generation.
+Reward models based on vision-language models (VLMs) [115, 116] supply useful scalar preferences, yet their preference data are typically collected from high-step or high-quality generators, introducing a distribution shift when applied to outputs of few-step distilled models.
+We therefore combine VLM-based rewards with rewards derived from representation models [117, 118, 119, 120].
+Each reward component is normalized within the sampled group before weighted summation, balancing reward scales and preventing any single metric from dominating the group-relative advantage.
+
+## 4 Experiments
+
+Implementation.
+All experiments are built upon Wan2.1-T2V-1.3B [13] as the base model with 3 latent frames per chunk, consistent with existing baselines.
+RAVEN adopts the same initialization as Causal Forcing [36], which grounds the causal student in ODE distillation from an autoregressive teacher to satisfy frame-level injectivity.
+The CM-GRPO stage then proceeds from the RAVEN checkpoint.
+For reward composition, we integrate several representation models derived from VBench [121] consisting of complementary dimensions with a VLM-based reward trained on human feedback for Text Alignment.
+The representation rewards span both temporal dynamics (i.e., Dynamic Degree and Motion Smoothness) and frame-level visual quality (i.e., Aesthetic Quality and Imaging Quality).
+More implementation details can be found at Appendix B.
+
+Evaluation.
+We adopt VBench [121] and report the Total Score along with the Quality Score and Semantic Score following the protocol shared by all compared baselines.
+Because the Dynamic Degree dimension in VBench is computed from RAFT [120] optical-flow magnitudes and therefore picks up camera jitter and temporal drift alongside genuine motion, we additionally adopt UnifiedReward-32B [116] to evaluate dynamic degree on the full collection of 6,220 videos generated under the VBench prompt suite, as this reward model is trained on human preference annotations and carries complementary prior knowledge from its underlying VLM.
+We also conduct a user study to complement these evaluations in Appendix C.
+
+## 4.1 Comparison with Baselines
+
+Figure 3: Qualitative comparisons. See supplementary for playble video clips.
+
+Table 1: Quantitative comparison results.
+
+Method
+ | 
+
+Total
+
+Score
+
+ | 
+
+Qual.
+
+Score
+
+ | 
+
+Sem.
+
+Score
+
+ | 
+
+Dyn.
+
+Deg.
+
+ | 
+
+CausVid [35]
+ | 
+
+83.01
+ | 
+
+84.18
+ | 
+
+78.34
+ | 
+
+2.340
+ | 
+
+LongLive [34]
+ | 
+
+83.05
+ | 
+
+83.70
+ | 
+
+80.46
+ | 
+
+2.277
+ | 
+
+Rolling Forcing [32]
+ | 
+
+83.25
+ | 
+
+84.00
+ | 
+
+80.25
+ | 
+
+2.536
+ | 
+
+Self Forcing [31]
+ | 
+
+84.27
+ | 
+
+85.10
+ | 
+
+80.97
+ | 
+
+2.543
+ | 
+
+Reward Forcing [33]
+ | 
+
+84.39
+ | 
+
+85.27
+ | 
+
+80.87
+ | 
+
+2.508
+ | 
+
+Causal Forcing [36]
+ | 
+
+84.96
+ | 
+
+86.00
+ | 
+
+80.76
+ | 
+
+2.669
+ | 
+
++ CM-GRPO
+ | 
+
+85.08
+ | 
+
+86.12
+ | 
+
+80.96
+ | 
+
+2.829
+ | 
+
+RAVEN
+ | 
+
+85.15
+ | 
+
+86.18
+ | 
+
+81.04
+ | 
+
+2.951
+ | 
+
++ CM-GRPO
+ | 
+
+85.46
+ | 
+
+86.54
+ | 
+
+81.17
+ | 
+
+2.962
+ | 
+
+Quantitative Comparisons.
+As reported in Table 1, earlier causal distillation baselines cluster within a narrow range on the total score, and gains on quality or semantic alignment are typically offset by reduced motion or the reverse.
+Causal Forcing [36] pushes the overall scores higher and partially recovers motion among the baselines, yet the same trade-off persists.
+RAVEN surpasses every prior baseline across all four dimensions, with the largest margin on dynamic degree, indicating that supervising the cached history alleviates this trade-off rather than redistributing it.
+Adding CM-GRPO to Causal Forcing yields a smaller gain concentrated on motion, whereas its combination with RAVEN produces the leading entry on every dimension, suggesting that the two contributions are complementary and that the policy update benefits from a generator already aligned with inference.
+
+Qualitative Comparisons.
+Figure 3 contrasts Causal Forcing and RAVEN, each with and without CM-GRPO, across four prompts spanning animal motion, urban scenery, and human subjects.
+Causal Forcing exhibits severe structural failures under motion, stretching the corgi’s body into an unnaturally long shape, detaching the lion’s head from its body, and rendering colors in an over-saturated tone that looks unnatural.
+Adding CM-GRPO repairs these structural breakdowns and the facial distortion of the running child, while RAVEN avoids the same failures from the start and produces more realistic colors and proportions, with only mild blurring around fast-moving regions such as the boy’s face and the lion’s body.
+Combining RAVEN with CM-GRPO yields the most coherent results, sustaining structural stability and temporal smoothness through continuous motion such as the woman’s turning hair and the child running in the rain.
+
+## 4.2 Ablation Studies
+
+Table 2: Ablation on Training-time Test.
+
+Method
+ | 
+
+Total
+
+Score
+
+ | 
+
+Qual.
+
+Score
+
+ | 
+
+Sem.
+
+Score
+
+ | 
+
+Dyn.
+
+Deg.
+
+ | 
+
+Teacher Forcing (TF)
+ | 
+
+82.64
+ | 
+
+83.11
+ | 
+
+80.73
+ | 
+
+3.000
+ | 
+
+Diffusion Forcing (DF)
+ | 
+
+84.09
+ | 
+
+84.75
+ | 
+
+81.45
+ | 
+
+2.743
+ | 
+
+Self Forcing (SF)
+ | 
+
+84.06
+ | 
+
+84.68
+ | 
+
+81.56
+ | 
+
+2.347
+ | 
+
+DF w/ Self Rollout
+ | 
+
+83.30
+ | 
+
+83.96
+ | 
+
+80.65
+ | 
+
+2.979
+ | 
+
+RAVEN
+ | 
+
+85.15
+ | 
+
+86.18
+ | 
+
+81.04
+ | 
+
+2.951
+ | 
+
+Effect of Training-time Test.
+All entries in Table 2 share the same ODE-distilled initialization and chunk-wise loss scaling, isolating the effect of how history is formed and supervised.
+TF achieves the strongest motion at the cost of the other two dimensions, while SF leads on semantic alignment but yields the weakest motion, reflecting how a detached cache withholds gradient from the history.
+Replacing real prefixes in DF with self-rollout endpoints recovers motion close to TF yet erodes quality and semantic alignment, indicating that aligning the history distribution without supervising it merely redistributes the error.
+RAVEN routes gradients from later chunks through the clean rollout endpoints used as history, attaining the leading total score while retaining motion close to TF.
+These quantitative tradeoffs are visually validated in Figure 4, where RAVEN consistently maintains structural coherence and object identity across frames, avoiding the severe structural distortions of TF and the blurring artifacts of SF.
+
+Figure 4: Qualitative ablation on Training-time Test. See supplementary for playable video clips.
+
+Effect of Chunk-wise Loss Scaling.
+We compare candidate weighting functions $g_{\eta}$ that map the future participation score $p_{j}$ to a per-chunk weight, summarized in Figure 5.
+Two candidates are inherited from SD3 [122], the mode density at $s\in\{-0.54,0.81\}$ and the logit-normal density at $(\mu,\sigma)=(0,1)$ , each integrated over the participation interval covered by chunk $j$ to produce its raw weight.
+The remaining family follows the shift parameterization $\pi_{\alpha}(p)=\alpha p/(1+(\alpha-1)p)$ borrowed from flow-matching timestep schedules, where $\alpha=1$ biases mass toward early chunks and $\alpha=0$ recovers a uniform schedule, while a negative $\alpha$ applies $\pi_{|\alpha|}$ to the reversed coordinate $p_{J}/p_{j}$ so that emphasis concentrates on later chunks instead.
+Profiles peaked near the middle of the rollout or biased toward early chunks fall below the uniform baseline on total and quality, with the shift at $\alpha=1$ trading semantic alignment for the highest dynamic degree.
+The shift at $\alpha=-1$ , the setting we adopt throughout RAVEN, instead raises the total score by roughly $1.3$ points while keeping motion and semantic alignment competitive.
+
+Weighting Function $g_{\eta}$ 
+ | 
+
+Total
+
+Score
+
+ | 
+
+Qual.
+
+Score
+
+ | 
+
+Sem.
+
+Score
+
+ | 
+
+Dyn.
+
+Deg.
+
+ | 
+
+Mode ( $s=-0.54$ )
+ | 
+
+82.58
+ | 
+
+82.86
+ | 
+
+81.43
+ | 
+
+2.996
+ | 
+
+Mode ( $s=0.81$ )
+ | 
+
+83.08
+ | 
+
+83.74
+ | 
+
+80.47
+ | 
+
+2.971
+ | 
+
+Logit-Normal ( $\mu=0$ , $\sigma=1$ )
+ | 
+
+83.31
+ | 
+
+83.97
+ | 
+
+80.65
+ | 
+
+2.963
+ | 
+
+Shift ( $\alpha=1$ )
+ | 
+
+83.79
+ | 
+
+84.87
+ | 
+
+79.46
+ | 
+
+3.000
+ | 
+
+Shift ( $\alpha=0$ )
+ | 
+
+83.82
+ | 
+
+84.67
+ | 
+
+80.42
+ | 
+
+2.924
+ | 
+
+Shift ( $\boldsymbol{\alpha=-1}$ , Ours)
+ | 
+
+85.15
+ | 
+
+86.18
+ | 
+
+81.04
+ | 
+
+2.951
+ | 
+
+Figure 5: Ablation on Chunk-wise Loss Scaling.
+
+Table 3: Ablation on Reward Composition.
+
+Reward Dimensions | 
+
+Total
+
+Score
+
+ | 
+
+Qual.
+
+Score
+
+ | 
+
+Sem.
+
+Score
+
+ | 
+
+Dyn.
+
+Deg.
+
+ | 
+
+TA
+ | 
+
+DD
+ | 
+
+MS
+ | 
+
+AQ
+ | 
+
+IQ
+ | 
+ | 
+ | 
+ | 
+ | 
+
+RAVEN | 
+
+85.15
+ | 
+
+86.18
+ | 
+
+81.04
+ | 
+
+2.951
+ | 
+
+1
+ | 
+
+0.35
+ | 
+
+0.75
+ | 
+
+1
+ | 
+
+1
+ | 
+
+84.82
+ | 
+
+85.77
+ | 
+
+80.99
+ | 
+
+2.913
+ | 
+
+2
+ | 
+
+0.30
+ | 
+
+0.75
+ | 
+
+1
+ | 
+
+1
+ | 
+
+85.07
+ | 
+
+86.14
+ | 
+
+80.81
+ | 
+
+2.957
+ | 
+
+2
+ | 
+
+0.35
+ | 
+
+1.00
+ | 
+
+1
+ | 
+
+1
+ | 
+
+85.24
+ | 
+
+86.27
+ | 
+
+81.14
+ | 
+
+2.936
+ | 
+
+2
+ | 
+
+0.35
+ | 
+
+0.75
+ | 
+
+2
+ | 
+
+2
+ | 
+
+84.92
+ | 
+
+85.82
+ | 
+
+81.33
+ | 
+
+2.914
+ | 
+
+2
+ | 
+
+0.35
+ | 
+
+0.75
+ | 
+
+1
+ | 
+
+1
+ | 
+
+85.46
+ | 
+
+86.54
+ | 
+
+81.17
+ | 
+
+2.962
+ | 
+
+Effect of Reward Composition.
+Table 3 ablates each reward dimension around our adopted composition.
+Halving the Text Alignment (TA) weight lowers the total and quality scores without a semantic gain, and reducing the Dynamic Degree (DD) weight weakens both the total score and motion, indicating that the optical flow term carries the bulk of motion supervision rather than acting as a redundant complement to Motion Smoothness (MS).
+Raising the MS weight produces a smaller motion regression, while doubling Aesthetic Quality (AQ) and Imaging Quality (IQ) lifts semantic alignment to the highest entry at the cost of motion.
+The adopted composition therefore best balances the three aspects identified in the methodology.
+
+Table 4: Ablation on Consistency Policy.
+
+Policy Interface
+ | 
+
+Total
+
+Score
+
+ | 
+
+Qual.
+
+Score
+
+ | 
+
+Sem.
+
+Score
+
+ | 
+
+Dyn.
+
+Deg.
+
+ | 
+
+RAVEN
+ | 
+
+85.15
+ | 
+
+86.18
+ | 
+
+81.04
+ | 
+
+2.951
+ | 
+
++ EM ( $\sigma=0.1$ , $\beta=0$ )
+ | 
+
+85.06
+ | 
+
+86.10
+ | 
+
+80.92
+ | 
+
+2.949
+ | 
+
++ EM ( $\sigma=0.4$ , $\beta=0$ )
+ | 
+
+85.15
+ | 
+
+86.20
+ | 
+
+80.95
+ | 
+
+2.949
+ | 
+
++ EM ( $\sigma=0.8$ , $\beta=0$ )
+ | 
+
+85.22
+ | 
+
+86.31
+ | 
+
+80.84
+ | 
+
+2.951
+ | 
+
++ EM ( $\sigma=0.1$ , $\beta=0.004$ )
+ | 
+
+85.03
+ | 
+
+86.07
+ | 
+
+80.86
+ | 
+
+2.947
+ | 
+
++ EM ( $\sigma=0.4$ , $\beta=0.004$ )
+ | 
+
+85.14
+ | 
+
+86.16
+ | 
+
+81.09
+ | 
+
+2.950
+ | 
+
++ EM ( $\sigma=0.8$ , $\beta=0.004$ )
+ | 
+
+85.27
+ | 
+
+86.26
+ | 
+
+81.29
+ | 
+
+2.950
+ | 
+
++ CM-GRPO (Ours)
+ | 
+
+85.46
+ | 
+
+86.54
+ | 
+
+81.17
+ | 
+
+2.962
+ | 
+
+Effect of Consistency Policy.
+All entries in Table 4 share the RAVEN initialization and reward composition, differing only in the policy objective.
+The Euler-Maruyama (EM) interfaces follow the discretization of Flow-GRPO [41], with $\sigma$ denoting the auxiliary diffusion noise level and $\beta$ the reference KL weight, and across the resulting grid the EM scores stay within a narrow range, with the strongest setting only marginally exceeding RAVEN.
+CM-GRPO instead defines the policy objective on the consistency transition kernel used at inference and lifts the total, quality, and dynamic dimensions above every EM variant, surrendering only a small margin on semantic alignment.
+This indicates that an auxiliary stochastic process is unnecessary once the policy kernel matches the inference sampler, which also relieves the joint tuning of the diffusion noise and KL weight.
+
+## 5 Conclusion
+
+We presented RAVEN, a training-time test framework that repacks each self rollout into an interleaved sequence of clean historical endpoints and noisy denoising states so that supervision propagates through the cached history used during autoregressive extrapolation.
+We further proposed CM-GRPO, which formulates the policy objective directly on the consistency transition kernel used at inference rather than on an auxiliary Euler-Maruyama process.
+Together they surpass recent causal video distillation baselines across quality, semantic, and dynamic dimensions, with their combination yielding the strongest results on every metric considered.
+Both formulations also admit broader scope than the setting evaluated here, and we discuss their generalizability in greater detail in Appendix D.
+
+## 6 Acknowledgements
+
+We thank Fei Ni and Changrui Chen for their valuable discussions and assistance.
+J. Deng was supported by the NVIDIA Academic Grant.
+The authors acknowledge the use of resources provided by the Isambard-AI National AI Research Resource (AIRR). Isambard-AI [123] is operated by the University of Bristol and is funded by the UK Government’s Department for Science, Innovation and Technology (DSIT) via UK Research and Innovation; and the Science and Technology Facilities Council [ST/AIRR/I-A-I/1023].
+
+## References
+
+[1]
+V. Arkhipkin, V. Korviakov, N. Gerasimenko, D. Parkhomenko, V. Vasilev, A. Letunovskiy, N. Vaulin, M. Kovaleva, I. Kirillov, L. Novitskiy, D. Koposov, N. Kiselev, et al. (2025)
+
+Kandinsky 5.0: a family of foundation models for image and video generation.
+
+arXiv preprint arXiv:2511.14993.
+
+Cited by: §1.
+
+[2]
+J. Chen, Y. Zhao, J. Yu, R. Chu, J. Chen, S. Yang, X. Wang, Y. Pan, D. Zhou, H. Ling, H. Liu, H. Yi, et al. (2026)
+
+SANA-video: efficient video generation with block linear diffusion transformer.
+
+In ICLR,
+
+Cited by: §1.
+
+[3]
+Y. Gao, H. Guo, T. Hoang, W. Huang, L. Jiang, F. Kong, H. Li, J. Li, L. Li, X. Li, X. Li, Y. Li, et al. (2025)
+
+Seedance 1.0: exploring the boundaries of video generation models.
+
+arXiv preprint arXiv:2506.09113.
+
+Cited by: §1.
+
+[4]
+Genmo (2024)
+
+Mochi 1: ai video generator.
+
+Note: https://www.genmo.ai/blog/mochi-1-a-new-sota-in-open-text-to-video
+
+Cited by: §1.
+
+[5]
+Y. HaCohen, N. Chiprut, B. Brazowski, D. Shalem, D. Moshe, E. Richardson, E. Levin, G. Shiran, N. Zabari, O. Gordon, P. Panet, S. Weissbuch, et al. (2024)
+
+LTX-video: realtime video latent diffusion.
+
+arXiv preprint arXiv:2501.00103.
+
+Cited by: §1.
+
+[6]
+Y. HaCohen, B. Brazowski, N. Chiprut, Y. Bitterman, A. Kvochko, A. Berkowitz, D. Shalem, D. Lifschitz, D. Moshe, E. Porat, E. Richardson, G. Shiran, et al. (2026)
+
+LTX-2: efficient joint audio-visual foundation model.
+
+arXiv preprint arXiv:2601.03233.
+
+Cited by: §1.
+
+[7]
+W. Kong, Q. Tian, Z. Zhang, R. Min, Z. Dai, J. Zhou, J. Xiong, X. Li, B. Wu, J. Zhang, K. Wu, Q. Lin, et al. (2025)
+
+HunyuanVideo: a systematic framework for large video generative models.
+
+arXiv preprint arXiv:2412.03603.
+
+Cited by: §1.
+
+[8]
+G. Ma, H. Huang, K. Yan, L. Chen, N. Duan, S. Yin, C. Wan, R. Ming, X. Song, X. Chen, Y. Zhou, D. Sun, et al. (2025)
+
+Step-video-t2v technical report: the practice, challenges, and future of video foundation model.
+
+arXiv preprint arXiv:2502.10248.
+
+Cited by: §1.
+
+[9]
+Meta (2024)
+
+Movie gen: a cast of media foundation models.
+
+Note: https://ai.meta.com/static-resource/movie-gen-research-paper
+
+Cited by: §1.
+
+[10]
+NVIDIA (2025)
+
+Cosmos world foundation model platform for physical ai.
+
+Note: https://research.nvidia.com/publication/2025-01_cosmos-world-foundation-model-platform-physical-ai
+
+Cited by: §1.
+
+[11]
+T. Seedance, H. Chen, S. Chen, X. Chen, Y. Chen, Y. Chen, Z. Chen, F. Cheng, T. Cheng, X. Cheng, X. Chi, J. Cong, et al. (2025)
+
+Seedance 1.5 pro: a native audio-visual joint generation foundation model.
+
+arXiv preprint arXiv:2512.13507.
+
+Cited by: §1.
+
+[12]
+T. Seedance, D. Chen, L. Chen, X. Chen, Y. Chen, Z. Chen, Z. Chen, F. Cheng, T. Cheng, Y. Cheng, M. Chi, X. Chi, et al. (2026)
+
+Seedance 2.0: advancing video generation for world complexity.
+
+arXiv preprint arXiv:2604.14148.
+
+Cited by: §1.
+
+[13]
+T. Wan, A. Wang, B. Ai, B. Wen, C. Mao, C. Xie, D. Chen, F. Yu, H. Zhao, J. Yang, J. Zeng, J. Wang, et al. (2025)
+
+Wan: open and advanced large-scale video generative models.
+
+arXiv preprint arXiv:2503.20314.
+
+Cited by: §1,
+§4.
+
+[14]
+B. Wu, C. Zou, C. Li, D. Huang, F. Yang, H. Tan, J. Peng, J. Wu, J. Xiong, J. Jiang, Linus, Patrol, et al. (2025)
+
+HunyuanVideo 1.5 technical report.
+
+arXiv preprint arXiv:2511.18870.
+
+Cited by: §1.
+
+[15]
+Z. Yang, J. Teng, W. Zheng, M. Ding, S. Huang, J. Xu, Y. Yang, W. Hong, X. Zhang, G. Feng, D. Yin, X. Gu, et al. (2025)
+
+CogVideoX: text-to-video diffusion models with an expert transformer.
+
+In ICLR,
+
+Cited by: §1.
+
+[16]
+S. ai, H. Teng, H. Jia, L. Sun, L. Li, M. Li, M. Tang, S. Han, T. Zhang, W. Q. Zhang, W. Luo, X. Kang, et al. (2025)
+
+MAGI-1: autoregressive video generation at scale.
+
+arXiv preprint arXiv:2505.13211.
+
+Cited by: §1.
+
+[17]
+X. Bai, G. He, Z. Li, E. Shechtman, X. Huang, and Z. Wu (2026)
+
+Causality in video diffusers is separable from denoising.
+
+arXiv preprint arXiv:2602.10095.
+
+Cited by: §1.
+
+[18]
+G. Chen, D. Lin, J. Yang, C. Lin, J. Zhu, M. Fan, H. Zhang, S. Chen, Z. Chen, C. Ma, W. Xiong, W. Wang, et al. (2025)
+
+SkyReels-v2: infinite-length film generative model.
+
+arXiv preprint arXiv:2504.13074.
+
+Cited by: §1.
+
+[19]
+H. Deng, T. Pan, H. Diao, Z. Luo, Y. Cui, H. Lu, S. Shan, Y. Qi, and X. Wang (2025)
+
+Autoregressive video generation without vector quantization.
+
+In ICLR,
+
+Cited by: §1.
+
+[20]
+Y. Guo, C. Yang, H. He, Y. Zhao, M. Wei, Z. Yang, W. Huang, and D. Lin (2025)
+
+End-to-end training for autoregressive video diffusion via self-resampling.
+
+arXiv preprint arXiv:2512.15702.
+
+Cited by: §1.
+
+[21]
+J. Huang, Z. Ye, X. Hu, T. He, G. Zhang, S. Shi, J. Bian, and L. Jiang (2026)
+
+LIVE: long-horizon interactive video world modeling.
+
+arXiv preprint arXiv:2602.03747.
+
+Cited by: §1.
+
+[22]
+Y. Jin, Z. Sun, N. Li, K. Xu, K. Xu, H. Jiang, N. Zhuang, Q. Huang, Y. Song, Y. Mu, and Z. Lin (2025)
+
+Pyramidal flow matching for efficient video generative modeling.
+
+In ICLR,
+
+Cited by: §1.
+
+[23]
+W. Li, W. Pan, P. Luan, Y. Gao, and A. Alahi (2026)
+
+Stable video infinity: infinite-length video generation with error recycling.
+
+In ICLR,
+
+Cited by: §1.
+
+[24]
+J. Liu, J. Han, B. Yan, H. Wu, F. Zhu, X. Wang, Y. Jiang, B. Peng, and Z. Yuan (2025)
+
+InfinityStar: unified spacetime autoregressive modeling for visual generation.
+
+In NeurIPS,
+
+Cited by: §1.
+
+[25]
+R. Po, E. R. Chan, C. Chen, and G. Wetzstein (2025)
+
+BAgger: backwards aggregation for mitigating drift in autoregressive video diffusion models.
+
+arXiv preprint arXiv:2512.12080.
+
+Cited by: §1.
+
+[26]
+X. Wu, G. Zhang, Z. Xu, Y. Zhou, Q. Lu, and X. He (2025)
+
+Pack and force your memory: long-form and consistent video generation.
+
+arXiv preprint arXiv:2510.01784.
+
+Cited by: §1.
+
+[27]
+X. Xiang, Y. Chen, G. Zhang, Z. Wang, Z. Gao, Q. Xiang, G. Shang, J. Liu, H. Huang, Y. Gao, C. Zhang, Q. Fan, et al. (2025)
+
+Macro-from-micro planning for high-quality and parallelized autoregressive long video generation.
+
+arXiv preprint arXiv:2508.03334.
+
+Cited by: §1.
+
+[28]
+S. Yuan, Y. Yin, Z. Li, X. Huang, X. Yang, and L. Yuan (2026)
+
+Helios: real real-time long video generation model.
+
+arXiv preprint arXiv:2603.04379.
+
+Cited by: §1.
+
+[29]
+Z. Zhang, S. Chang, Y. He, Y. Han, J. Tang, F. Wang, and B. Zhuang (2025)
+
+BlockVid: block diffusion for high-quality and consistent minute-long video generation.
+
+arXiv preprint arXiv:2511.22973.
+
+Cited by: §1.
+
+[30]
+L. Zhang, S. Cai, M. Li, C. Zeng, B. Lu, A. Rao, S. Han, G. Wetzstein, and M. Agrawala (2026)
+
+Pretraining frame preservation for lightweight autoregressive video history embedding.
+
+arXiv preprint arXiv:2512.23851.
+
+Cited by: §1.
+
+[31]
+X. Huang, Z. Li, G. He, M. Zhou, and E. Shechtman (2025)
+
+Self forcing: bridging the train-test gap in autoregressive video diffusion.
+
+In NeurIPS,
+
+Cited by: Appendix B,
+Appendix B,
+Appendix C,
+§1,
+§1,
+§3.1,
+Table 1.
+
+[32]
+K. Liu, W. Hu, J. Xu, Y. Shan, and S. Lu (2026)
+
+Rolling forcing: autoregressive long video diffusion in real time.
+
+In ICLR,
+
+Cited by: §1,
+§2,
+Table 1.
+
+[33]
+Y. Lu, Y. Zeng, H. Li, H. Ouyang, Q. Wang, K. L. Cheng, J. Zhu, H. Cao, Z. Zhang, X. Zhu, Y. Shen, and M. Zhang (2026)
+
+Reward forcing: efficient streaming video generation with rewarded distribution matching distillation.
+
+In CVPR,
+
+Cited by: Appendix C,
+§1,
+Table 1.
+
+[34]
+S. Yang, W. Huang, R. Chu, Y. Xiao, Y. Zhao, X. Wang, M. Li, E. Xie, Y. Chen, Y. Lu, S. Han, and Y. Chen (2026)
+
+LongLive: real-time interactive long video generation.
+
+In ICLR,
+
+Cited by: §1,
+§2,
+Table 1.
+
+[35]
+T. Yin, Q. Zhang, R. Zhang, W. T. Freeman, F. Durand, E. Shechtman, and X. Huang (2025)
+
+From slow bidirectional to fast autoregressive video diffusion models.
+
+In CVPR,
+
+Cited by: Appendix C,
+§1,
+§1,
+§3.1,
+§3.2,
+Table 1.
+
+[36]
+H. Zhu, M. Zhao, G. He, H. Su, C. Li, and J. Zhu (2026)
+
+Causal forcing: autoregressive diffusion distillation done right for high-quality real-time interactive video generation.
+
+In ICML,
+
+Cited by: Appendix B,
+Appendix C,
+§1,
+§4.1,
+Table 1,
+§4.
+
+[37]
+B. Chen, D. M. Monso, Y. Du, M. Simchowitz, R. Tedrake, and V. Sitzmann (2024)
+
+Diffusion forcing: next-token prediction meets full-sequence diffusion.
+
+In NeurIPS,
+
+Cited by: §1,
+§3.1.
+
+[38]
+K. Song, B. Chen, M. Simchowitz, Y. Du, R. Tedrake, and V. Sitzmann (2025)
+
+History-guided video diffusion.
+
+In ICML,
+
+Cited by: §1.
+
+[39]
+T. Yin, M. Gharbi, R. Zhang, E. Shechtman, F. Durand, W. T. Freeman, and T. Park (2024)
+
+One-step diffusion with distribution matching distillation.
+
+In CVPR,
+
+pp. 6613–6623.
+
+Cited by: §1.
+
+[40]
+T. Yin, M. Gharbi, T. Park, R. Zhang, E. Shechtman, F. Durand, and W. T. Freeman (2024)
+
+Improved distribution matching distillation for fast image synthesis.
+
+In NeurIPS,
+
+Cited by: Appendix B,
+§1,
+§3.1.
+
+[41]
+J. Liu, G. Liu, J. Liang, Y. Li, J. Liu, X. Wang, P. Wan, D. Zhang, and W. Ouyang (2025)
+
+Flow-grpo: training flow matching models via online rl.
+
+In NeurIPS,
+
+Cited by: §1,
+§2,
+§3.1,
+§3.3,
+§4.2.
+
+[42]
+S. Chen, C. Wei, S. Sun, P. Nie, K. Zhou, G. Zhang, M. Yang, and W. Chen (2026)
+
+Context forcing: consistent autoregressive video generation with long context.
+
+arXiv preprint arXiv:2602.06028.
+
+Cited by: §2.
+
+[43]
+J. Cui, J. Wu, M. Li, T. Yang, X. Li, R. Wang, A. Bai, Y. Ban, and C. Hsieh (2025)
+
+Self-forcing++: towards minute-scale high-quality video generation.
+
+arXiv preprint arXiv:2510.02283.
+
+Cited by: §2.
+
+[44]
+J. Liu, X. Liu, K. Mei, Y. Wen, M. Yang, and W. Liu (2026)
+
+Streaming autoregressive video generation via diagonal distillation.
+
+In ICLR,
+
+Cited by: §2.
+
+[45]
+K. Zou, D. Zheng, H. Liu, T. Hang, B. Liu, and N. Yu (2026)
+
+HiAR: efficient autoregressive long video generation via hierarchical denoising.
+
+arXiv preprint arXiv:2603.08703.
+
+Cited by: §2.
+
+[46]
+H. Chen, C. Xu, X. Yang, X. Chen, and C. Deng (2026)
+
+Past- and future-informed kv cache policy with salience estimation in autoregressive video diffusion.
+
+arXiv preprint arXiv:2601.21896.
+
+Cited by: §2.
+
+[47]
+S. Ji, X. Chen, S. Yang, X. Tao, P. Wan, and H. Zhao (2025)
+
+MemFlow: flowing adaptive memory for consistent and efficient long video narratives.
+
+arXiv preprint arXiv:2512.14699.
+
+Cited by: §2.
+
+[48]
+J. Shin, Z. Li, R. Zhang, J. Zhu, J. Park, E. Shechtman, and X. Huang (2026)
+
+MotionStream: real-time video generation with interactive motion controls.
+
+In ICLR,
+
+Cited by: §2.
+
+[49]
+Y. Yu, X. Wu, X. Hu, T. Hu, Y. Sun, X. Lyu, B. Wang, L. Ma, Y. Ma, Z. Wang, and X. Qi (2025)
+
+VideoSSM: autoregressive long video generation with hybrid state-space memory.
+
+arXiv preprint arXiv:2512.04519.
+
+Cited by: §2.
+
+[50]
+T. Zhu, S. Zhang, Z. Sun, J. Tian, and Y. Tang (2025)
+
+Memorize-and-generate: towards long-term consistency in real-time video generation.
+
+arXiv preprint arXiv:2512.18741.
+
+Cited by: §2.
+
+[51]
+J. Cui, J. Wu, M. Li, T. Yang, X. Li, R. Wang, A. Bai, Y. Ban, and C. Hsieh (2026)
+
+LoL: longer than longer, scaling video generation to hour.
+
+arXiv preprint arXiv:2601.16914.
+
+Cited by: §2.
+
+[52]
+J. Li, X. Fu, X. Peng, W. Chen, Y. Zheng, T. Zhao, J. Wang, F. Chen, X. Wang, and H. K. So (2026)
+
+Train short, inference long: training-free horizon extension for autoregressive video generation.
+
+arXiv preprint arXiv:2602.14027.
+
+Cited by: §2.
+
+[53]
+X. Xiang, Z. Duan, G. Zhang, H. Zhang, Z. Gao, J. Wu, S. Zhang, T. Wang, Q. Fan, and C. Guo (2026)
+
+Pathwise test-time correction for autoregressive long video generation.
+
+arXiv preprint arXiv:2602.05871.
+
+Cited by: §2.
+
+[54]
+H. Yesiltepe, T. H. S. Meral, A. K. Akan, K. Oktay, and P. Yanardag (2026)
+
+Infinity-rope: action-controllable infinite video generation emerges from autoregressive self-rollout.
+
+In CVPR,
+
+Cited by: §2.
+
+[55]
+J. Yi, W. Jang, P. H. Cho, J. Nam, H. Yoon, and S. Kim (2025)
+
+Deep forcing: training-free long video generation with deep sink and participative compression.
+
+arXiv preprint arXiv:2512.05081.
+
+Cited by: §2.
+
+[56]
+Z. Zhao, Y. Lu, Z. Liu, J. Song, J. Deng, and I. Patras (2026)
+
+Relax forcing: relaxed kv-memory for consistent long video generation.
+
+arXiv preprint arXiv:2603.21366.
+
+Cited by: §2.
+
+[57]
+K. Black, M. Janner, Y. Du, I. Kostrikov, and S. Levine (2024)
+
+Training diffusion models with reinforcement learning.
+
+In ICLR,
+
+Cited by: §2.
+
+[58]
+Y. Wang, Z. Li, Y. Zang, Y. Zhou, J. Bu, C. Wang, Q. Lu, C. Jin, and J. Wang (2026)
+
+Pref-grpo: pairwise preference reward-based grpo for stable text-to-image reinforcement learning.
+
+arXiv preprint arXiv:2508.20751.
+
+Cited by: §2.
+
+[59]
+J. Xu, X. Liu, Y. Wu, Y. Tong, Q. Li, M. Ding, J. Tang, and Y. Dong (2023)
+
+ImageReward: learning and evaluating human preferences for text-to-image generation.
+
+In NeurIPS,
+
+Cited by: §2.
+
+[60]
+K. Zheng, H. Chen, H. Ye, H. Wang, Q. Zhang, K. Jiang, H. Su, S. Ermon, J. Zhu, and M. Liu (2026)
+
+DiffusionNFT: online diffusion reinforcement with forward process.
+
+In ICLR,
+
+Cited by: §2.
+
+[61]
+X. Ma, H. Qiu, G. Zhang, Z. Zeng, S. Yang, L. Ma, and F. Zhao (2025)
+
+STAGE: stable and generalizable grpo for autoregressive image generation.
+
+arXiv preprint arXiv:2509.25027.
+
+Cited by: §2.
+
+[62]
+Z. Wang, T. Wang, H. Zhang, X. Zuo, J. Wu, H. Wang, W. Sun, Z. Wang, C. Cao, H. Zhao, C. Guo, and Z. Zhao (2026)
+
+WorldCompass: reinforcement learning for long-horizon world models.
+
+arXiv preprint arXiv:2602.09022.
+
+Cited by: §2.
+
+[63]
+J. Wu, S. Yin, N. Feng, and M. Long (2025)
+
+RLVR-world: training world models with reinforcement learning.
+
+In ICLR,
+
+Cited by: §2.
+
+[64]
+Y. Ye, T. He, S. Yang, and J. Bian (2025)
+
+Reinforcement learning with inverse rewards for world model post-training.
+
+arXiv preprint arXiv:2509.23958.
+
+Cited by: §2.
+
+[65]
+S. Zhang, Z. Xue, S. Fu, J. Huang, X. Kong, Y. Ma, H. Huang, N. Duan, and A. Rao (2026)
+
+Astrolabe: steering forward-process reinforcement learning for distilled autoregressive video models.
+
+arXiv preprint arXiv:2603.17051.
+
+Cited by: §2.
+
+[66]
+K. Zhao, J. Shi, B. Zhu, J. Zhou, X. Shen, Y. Zhou, Q. Sun, and H. Zhang (2026)
+
+Real-time motion-controllable autoregressive video diffusion.
+
+In ICLR,
+
+Cited by: §2.
+
+[67]
+G. Chen, S. Huang, K. Liu, J. Zhu, X. Qu, P. Chen, Y. Cheng, and Y. Sun (2025)
+
+Flash-dmd: towards high-fidelity few-step image generation with efficient distillation and joint reinforcement learning.
+
+arXiv preprint arXiv:2511.20549.
+
+Cited by: §2.
+
+[68]
+X. Guo, X. Ma, H. Ma, Z. Zhou, and D. Huang (2026)
+
+EruDiff: refactoring knowledge in diffusion models for advanced text-to-image synthesis.
+
+arXiv preprint arXiv:2603.20828.
+
+Cited by: §2.
+
+[69]
+Y. Luo, T. Hu, W. Luo, and J. Tang (2026)
+
+TDM-r1: reinforcing few-step diffusion models with non-differentiable reward.
+
+arXiv preprint arXiv:2603.07700.
+
+Cited by: §2.
+
+[70]
+H. He, Y. Ye, J. Liu, J. Liang, Z. Wang, Z. Yuan, X. Wang, H. Mao, P. Wan, and L. Pan (2025)
+
+GARDO: reinforcing diffusion models without reward hacking.
+
+arXiv preprint arXiv:2512.24138.
+
+Cited by: §2.
+
+[71]
+J. Liu, Z. Ye, L. Yuan, S. Zhu, Y. Gao, J. Wu, K. Li, X. Wang, X. Nie, W. Huang, and W. Ouyang (2026)
+
+UniGRPO: unified policy optimization for reasoning-driven visual generation.
+
+arXiv preprint arXiv:2603.23500.
+
+Cited by: §2.
+
+[72]
+H. Ye, K. Zheng, J. Xu, P. Li, H. Chen, J. Han, S. Liu, Q. Zhang, H. Mao, Z. Hao, P. Chattopadhyay, D. Yang, et al. (2025)
+
+Data-regularized reinforcement learning for diffusion models at scale.
+
+arXiv preprint arXiv:2512.04332.
+
+Cited by: §2.
+
+[73]
+Y. Zhu, X. Wang, S. Lathuilière, and V. Kalogeiton (2026)
+
+Diffusion reinforcement learning via centered reward distillation.
+
+arXiv preprint arXiv:2603.14128.
+
+Cited by: §2.
+
+[74]
+D. He, G. Feng, X. Ge, Y. Niu, Y. Zhang, B. Ma, G. Song, Y. Liu, and H. Li (2026)
+
+Neighbor grpo: contrastive ode policy optimization aligns flow models.
+
+In CVPR,
+
+Cited by: §2.
+
+[75]
+Y. Luo, T. Hu, and J. Tang (2026)
+
+Reinforcing diffusion models by direct group preference optimization.
+
+In ICLR,
+
+Cited by: §2.
+
+[76]
+J. Sheng, H. Zhao, H. Chen, D. D. Yao, and W. Tang (2025)
+
+Understanding sampler stochasticity in training diffusion models for rlhf.
+
+arXiv preprint arXiv:2510.10767.
+
+Cited by: §2.
+
+[77]
+F. Wang and Z. Yu (2025)
+
+Coefficients-preserving sampling for reinforcement learning with flow matching.
+
+arXiv preprint arXiv:2509.05952.
+
+Cited by: §2.
+
+[78]
+S. Wang, H. Wang, L. Dai, and J. Tang (2026)
+
+PC-flow: preference alignment in flow matching via classifier.
+
+In AAAI,
+
+Cited by: §2.
+
+[79]
+S. Zhang, Z. Zhang, C. Dai, and Y. Duan (2026)
+
+E-grpo: high entropy steps drive effective reinforcement learning for flow models.
+
+In CVPR Findings,
+
+Cited by: §2.
+
+[80]
+M. Zheng, W. Kong, Y. Wu, D. Jiang, Y. Ma, X. He, B. Lin, K. Gong, Z. Zhong, L. Bo, Q. Chen, and H. Yang (2026)
+
+Manifold-aware exploration for reinforcement learning in video generation.
+
+arXiv preprint arXiv:2603.21872.
+
+Cited by: §2.
+
+[81]
+K. Chen, Z. Xu, Y. Shen, Z. Lin, Y. Yao, and L. Huang (2026)
+
+SuperFlow: training flow matching models with rl on the fly.
+
+arXiv preprint arXiv:2512.17951.
+
+Cited by: §2.
+
+[82]
+Z. Ding and W. Ye (2026)
+
+TreeGRPO: tree-advantage grpo for online rl post-training of diffusion models.
+
+In ICLR,
+
+Cited by: §2.
+
+[83]
+X. Fu, L. Ma, Z. Guo, G. Zhou, C. Wang, S. Dong, S. Zhou, S. Zhou, X. Liu, J. Fu, T. L. Sin, Y. Shi, et al. (2025)
+
+Dynamic-treerpo: breaking the independent trajectory bottleneck with structured sampling.
+
+arXiv preprint arXiv:2509.23352.
+
+Cited by: §2.
+
+[84]
+X. He, S. Fu, Y. Zhao, W. Li, J. Yang, D. Yin, F. Rao, and B. Zhang (2026)
+
+TempFlow-grpo: when timing matters for grpo in flow models.
+
+In ICLR,
+
+Cited by: §2.
+
+[85]
+Y. Li, Y. Wang, Y. Zhu, Z. Zhao, M. Lu, Q. She, and S. Zhang (2026)
+
+BranchGRPO: stable and efficient grpo with structured branching in diffusion models.
+
+In ICLR,
+
+Cited by: §2.
+
+[86]
+Z. Liang, T. Yang, J. Wu, C. Feng, and L. Zheng (2026)
+
+LeapAlign: post-training flow matching models at any generation step by building two-step trajectories.
+
+arXiv preprint arXiv:2604.15311.
+
+Cited by: §2.
+
+[87]
+Y. Luo, P. Du, B. Li, S. Du, T. Zhang, Y. Chang, K. Wu, K. Gai, and X. Wang (2025)
+
+Sample by step, optimize by chunk: chunk-level grpo for text-to-image generation.
+
+arXiv preprint arXiv:2510.21583.
+
+Cited by: §2.
+
+[88]
+Q. Lyu, Z. Chen, C. Wang, H. Shi, S. Gao, R. Piao, Y. Zeng, J. Si, F. Ding, J. Li, C. P. Lau, and W. Wang (2025)
+
+Multi-grpo: multi-group advantage estimation for text-to-image generation with tree-based trajectories and multiple rewards.
+
+arXiv preprint arXiv:2512.00743.
+
+Cited by: §2.
+
+[89]
+D. McAllister, M. Aittala, T. Karras, J. Hellsten, A. Kanazawa, T. Aila, and S. Laine (2026)
+
+Finite difference flow optimization for rl post-training of text-to-image models.
+
+arXiv preprint arXiv:2603.12893.
+
+Cited by: §2.
+
+[90]
+Y. Savani, B. Kveton, Y. Liu, Y. Wang, J. Shi, S. Mukherjee, N. Vlassis, and K. K. Singh (2026)
+
+Stepwise credit assignment for grpo on flow-matching models.
+
+In CVPR,
+
+Cited by: §2.
+
+[91]
+Y. Shao, J. Xiao, K. Zhu, Y. Liu, W. Zhai, Y. Cao, and Z. Zha (2025)
+
+Anchoring values in temporal and group dimensions for flow matching model alignment.
+
+arXiv preprint arXiv:2512.12387.
+
+Cited by: §2.
+
+[92]
+S. Tang, Y. Zhu, M. Tao, and P. Chatterjee (2025)
+
+TR2-d2: tree search guided trajectory-aware fine-tuning for discrete diffusion.
+
+arXiv preprint arXiv:2509.25171.
+
+Cited by: §2.
+
+[93]
+Y. Tong, M. Liu, C. Zhao, W. He, S. Zhang, H. Zhang, P. Zhang, J. Liu, J. Huang, J. Wang, H. Jiang, and P. Huang (2026)
+
+Alleviating sparse rewards by modeling step-wise and long-term sampling effects in flow-based grpo.
+
+arXiv preprint arXiv:2602.06422.
+
+Cited by: §2.
+
+[94]
+J. Wang, J. Liang, J. Liu, H. Liu, G. Liu, J. Zheng, W. Pang, A. Ma, Z. Xie, X. Wang, M. Wang, P. Wan, et al. (2025)
+
+GRPO-guard: mitigating implicit over-optimization in flow matching via regulated clipping.
+
+arXiv preprint arXiv:2510.22319.
+
+Cited by: §2.
+
+[95]
+Z. Yue, Z. Ni, F. Ye, J. Zhang, S. Shen, and Z. Mi (2026)
+
+Know your step: faster and better alignment for flow matching models via step-aware advantages.
+
+arXiv preprint arXiv:2602.01591.
+
+Cited by: §2.
+
+[96]
+L. Zhang, K. Li, T. Han, T. Zhao, Y. Sheng, S. He, and C. Li (2026)
+
+OP-grpo: efficient off-policy grpo for flow-matching models.
+
+arXiv preprint arXiv:2604.04142.
+
+Cited by: §2.
+
+[97]
+Y. Zhou, P. Ling, J. Bu, Y. Wang, Y. Zang, J. Wang, L. Niu, and G. Zhai (2026)
+
+Fine-grained grpo for precise preference alignment in flow models.
+
+In CVPR,
+
+Cited by: §2.
+
+[98]
+S. Lin, A. Wang, and X. Yang (2024)
+
+SDXL-lightning: progressive adversarial diffusion distillation.
+
+arXiv preprint arXiv:2402.13929.
+
+Cited by: §3.1.
+
+[99]
+Y. Lu, X. Xia, M. Zhang, H. Kuang, J. Zheng, Y. Ren, and X. Xiao (2025)
+
+Hyper-bagel: a unified acceleration framework for multimodal understanding and generation.
+
+arXiv preprint arXiv:2509.18824.
+
+Cited by: §3.1.
+
+[100]
+Y. Lu, Y. Ren, X. Xia, S. Lin, X. Wang, X. Xiao, A. J. Ma, X. Xie, and J. Lai (2025)
+
+Adversarial distribution matching for diffusion distillation towards efficient image and video synthesis.
+
+In ICCV,
+
+Cited by: §3.1.
+
+[101]
+Y. Ren, X. Xia, Y. Lu, J. Zhang, J. Wu, P. Xie, X. Wang, and X. Xiao (2024)
+
+Hyper-sd: trajectory segmented consistency model for efficient image synthesis.
+
+In NeurIPS,
+
+Cited by: §3.1.
+
+[102]
+T. Salimans and J. Ho (2022)
+
+Progressive distillation for fast sampling of diffusion models.
+
+In ICLR,
+
+Cited by: §3.1.
+
+[103]
+F. Wang, Z. Huang, A. W. Bergman, D. Shen, P. Gao, M. Lingelbach, K. Sun, W. Bian, G. Song, Y. Liu, H. Li, and X. Wang (2024)
+
+Phased consistency model.
+
+In NeurIPS,
+
+Cited by: §3.1.
+
+[104]
+H. Yan, X. Liu, J. Pan, J. H. Liew, Q. Liu, and J. Feng (2024)
+
+PeRFlow: piecewise rectified flow as universal plug-and-play accelerator.
+
+In NeurIPS,
+
+Cited by: §3.1.
+
+[105]
+D. Kim, C. Lai, W. Liao, N. Murata, Y. Takida, T. Uesaka, Y. He, Y. Mitsufuji, and S. Ermon (2024)
+
+Consistency trajectory models: learning probability flow ode trajectory of diffusion.
+
+In ICLR,
+
+Cited by: §3.1.
+
+[106]
+S. Luo, Y. Tan, L. Huang, J. Li, and H. Zhao (2023)
+
+Latent consistency models: synthesizing high-resolution images with few-step inference.
+
+arXiv preprint arXiv:2310.04378.
+
+Cited by: §3.1.
+
+[107]
+S. Luo, Y. Tan, S. Patil, D. Gu, P. von Platen, A. Passos, L. Huang, J. Li, and H. Zhao (2023)
+
+LCM-lora: a universal stable-diffusion acceleration module.
+
+arXiv preprint arXiv:2311.05556.
+
+Cited by: §3.1.
+
+[108]
+W. Luo, Z. Huang, Z. Geng, J. Z. Kolter, and G. Qi (2024)
+
+One-step diffusion distillation through score implicit matching.
+
+In NeurIPS,
+
+Cited by: §3.1.
+
+[109]
+Y. Song, P. Dhariwal, M. Chen, and I. Sutskever (2023)
+
+Consistency models.
+
+In ICML,
+
+Cited by: §3.1.
+
+[110]
+J. Zheng, M. Hu, Z. Fan, C. Wang, C. Ding, D. Tao, and T. Cham (2024)
+
+Trajectory consistency distillation: improved latent consistency distillation by semi-linear consistency function with trajectory mapping.
+
+arXiv preprint arXiv:2402.19159.
+
+Cited by: §3.1.
+
+[111]
+M. Zhou, H. Zheng, Y. Gu, Z. Wang, and H. Huang (2025)
+
+Adversarial score identity distillation: rapidly surpassing the teacher in one step.
+
+In ICLR,
+
+Cited by: §3.1.
+
+[112]
+M. Zhou, H. Zheng, Z. Wang, M. Yin, and H. Huang (2024)
+
+Score identity distillation: exponentially fast distillation of pretrained diffusion models for one-step generation.
+
+In ICML,
+
+Cited by: §3.1.
+
+[113]
+Y. Li, F. Wei, C. Zhang, and H. Zhang (2025)
+
+EAGLE-3: scaling up inference acceleration of large language models via training-time test.
+
+In NeurIPS,
+
+Cited by: §3.2.
+
+[114]
+Z. Shao, P. Wang, Q. Zhu, R. Xu, J. Song, X. Bi, H. Zhang, M. Zhang, Y. K. Li, Y. Wu, and D. Guo (2024)
+
+DeepSeekMath: pushing the limits of mathematical reasoning in open language models.
+
+arXiv preprint arXiv:2402.03300.
+
+Cited by: §3.3.
+
+[115]
+J. Liu, G. Liu, J. Liang, Z. Yuan, X. Liu, M. Zheng, X. Wu, Q. Wang, M. Xia, X. Wang, X. Liu, F. Yang, et al. (2025)
+
+Improving video generation with human feedback.
+
+In NeurIPS,
+
+Cited by: Appendix B,
+§3.3.
+
+[116]
+Y. Wang, Y. Zang, H. Li, C. Jin, and J. Wang (2026)
+
+Unified reward model for multimodal understanding and generation.
+
+arXiv preprint arXiv:2503.05236.
+
+Cited by: §3.3,
+§4.
+
+[117]
+J. Ke, Q. Wang, Y. Wang, P. Milanfar, and F. Yang (2021)
+
+MUSIQ: multi-scale image quality transformer.
+
+In ICCV,
+
+pp. 5128–5137.
+
+Cited by: Appendix B,
+§3.3.
+
+[118]
+LAION-AI (2022)
+
+Aesthetic-predictor.
+
+Note: https://github.com/LAION-AI/aesthetic-predictor
+
+Cited by: Appendix B,
+§3.3.
+
+[119]
+Z. Li, Z. Zhu, L. Han, Q. Hou, C. Guo, and M. Cheng (2023)
+
+AMT: all-pairs multi-field transforms for efficient frame interpolation.
+
+In CVPR,
+
+pp. 9801–9810.
+
+Cited by: Appendix B,
+§3.3.
+
+[120]
+Z. Teed and J. Deng (2020)
+
+RAFT: recurrent all-pairs field transforms for optical flow.
+
+In ECCV,
+
+Vol. 12347, pp. 402–419.
+
+Cited by: Appendix B,
+§3.3,
+§4.
+
+[121]
+Z. Huang, Y. He, J. Yu, F. Zhang, C. Si, Y. Jiang, Y. Zhang, T. Wu, Q. Jin, N. Chanpaisit, Y. Wang, X. Chen, et al. (2024)
+
+VBench: comprehensive benchmark suite for video generative models.
+
+In CVPR,
+
+Cited by: §4,
+§4.
+
+[122]
+P. Esser, S. Kulal, A. Blattmann, R. Entezari, J. Müller, H. Saini, Y. Levi, D. Lorenz, A. Sauer, F. Boesel, D. Podell, T. Dockhorn, et al. (2024)
+
+Scaling rectified flow transformers for high-resolution image synthesis.
+
+In ICML,
+
+Cited by: §4.2.
+
+[123]
+S. McIntosh-Smith, S. Alam, and C. Woods (2024)
+
+Isambard-ai: a leadership-class supercomputer optimised specifically for artificial intelligence.
+
+arXiv preprint arXiv:2410.11199.
+
+Cited by: §6.
+
+[124]
+W. Wang and Y. Yang (2024)
+
+VidProM: a million-scale real prompt-gallery dataset for text-to-video diffusion models.
+
+In NeurIPS Datasets and Benchmarks Track,
+
+Cited by: Appendix B.
+
+[125]
+K. Nan, R. Xie, P. Zhou, T. Fan, Z. Yang, Z. Chen, X. Li, J. Yang, and Y. Tai (2025)
+
+OpenVid-1m: a large-scale high-quality dataset for text-to-video generation.
+
+In ICLR,
+
+Cited by: Appendix B.
+
+[126]
+Z. Huang, T. Zhang, W. Heng, B. Shi, and S. Zhou (2022)
+
+Real-time intermediate flow estimation for video frame interpolation.
+
+In ECCV,
+
+Cited by: Appendix B.
+
+[127]
+E. J. Hu, Y. Shen, P. Wallis, Z. Allen-Zhu, Y. Li, S. Wang, L. Wang, and W. Chen (2022)
+
+LoRA: low-rank adaptation of large language models.
+
+In ICLR,
+
+Cited by: Appendix B.
+
+[128]
+D. P. Kingma and J. Ba (2015)
+
+Adam: a method for stochastic optimization.
+
+In ICLR,
+
+Cited by: Appendix B.
+
+[129]
+I. Loshchilov and F. Hutter (2019)
+
+Decoupled weight decay regularization.
+
+In ICLR,
+
+Cited by: Appendix B.
+
+[130]
+P. Wang, S. Bai, S. Tan, S. Wang, Z. Fan, J. Bai, K. Chen, X. Liu, J. Wang, W. Ge, Y. Fan, K. Dang, et al. (2024)
+
+Qwen2-vl: enhancing vision-language model’s perception of the world at any resolution.
+
+arXiv preprint arXiv:2409.12191.
+
+Cited by: Appendix B.
+
+[131]
+R. Rafailov, A. Sharma, E. Mitchell, S. Ermon, C. D. Manning, and C. Finn (2023)
+
+Direct preference optimization: your language model is secretly a reward model.
+
+In NeurIPS,
+
+Cited by: Appendix B.
+
+## Appendix A Algorithm Formulations
+
+Algorithm 1 RAVEN training iteration
+
+ 1:
+
+ causal student $f_{\theta}$ , fake-score critic $f_{\phi}$ , bidirectional teacher $f_{\psi}$ 
+
+ 2:
+
+ text condition $c$ , chunk count $T$ , noise schedule $(\alpha_{n},\sigma_{n})$ 
+
+ 3:
+
+ sampling timesteps $\tau_{1}>\cdots>\tau_{K}=0$ 
+
+ 4:
+
+ chunk-wise weighting function $g_{\eta}$ , learning rates $\eta_{\theta}$ and $\eta_{\phi}$ 
+
+ 5:
+
+ iteration index $i$ , TTUR ratio $r$ (critic-to-generator update frequency)
+
+ 6:
+
+ Stage 1: Self Rollout no gradient through $f_{\theta}$ 
+
+ 7:
+
+ for $t=1,\ldots,T$ do
+
+ 8:
+
+   sample initial noisy state $\hat{z}_{t}^{(\tau_{1})}\sim\mathcal{N}(0,I)$ 
+
+ 9:
+
+   for $k=1,\ldots,K-1$ do
+
+ 10:
+
+    predict clean endpoint $\hat{x}_{t}^{(k)}\leftarrow\mathrm{Endpoint}\bigl(f_{\theta}(\hat{z}_{t}^{(\tau_{k})},\tau_{k},c,h_{t})\bigr)$ 
+
+ 11:
+
+    sample $\epsilon\sim\mathcal{N}(0,I)$ 
+
+ 12:
+
+    consistency transition $\hat{z}_{t}^{(\tau_{k+1})}\leftarrow\alpha_{\tau_{k+1}}\hat{x}_{t}^{(k)}+\sigma_{\tau_{k+1}}\epsilon$ $\triangleright$ Eq. (6)
+
+ 13:
+
+   end for
+
+ 14:
+
+   final endpoint $\hat{x}_{t}\leftarrow\mathrm{Endpoint}\bigl(f_{\theta}(\hat{z}_{t}^{(\tau_{K})},\tau_{K},c,h_{t})\bigr)$ 
+
+ 15:
+
+   update KV cache with $\hat{x}_{t}$ so that $h_{t+1}=\mathcal{H}(\hat{x}_{\leq t})$ 
+
+ 16:
+
+ end for
+
+ 17:
+
+ Stage 2: Fake-Score Step
+
+ 18:
+
+ concatenate the rollout endpoints into the full clean sequence $\hat{x}=(\hat{x}_{1},\ldots,\hat{x}_{T})$ 
+
+ 19:
+
+ sample $n\sim\mathcal{U}(0,1)$ and $\epsilon\sim\mathcal{N}(0,I)$ 
+
+ 20:
+
+ perturb $z^{(n)}\leftarrow\alpha_{n}\hat{x}+\sigma_{n}\epsilon$ 
+
+ 21:
+
+ bidirectional forward pass of $f_{\phi}$ on $z^{(n)}$ 
+
+ 22:
+
+ update critic $\phi\leftarrow\phi-\eta_{\phi}\nabla_{\phi}\bigl\|f_{\phi}(z^{(n)},n,c)-\mathrm{Target}(\hat{x})\bigr\|^{2}$ 
+
+ 23:
+
+ Stage 3: Generator Step on $\mathcal{I}_{u}$ runs only when $i\bmod r=0$ 
+
+ 24:
+
+ if $i\bmod r=0$ then
+
+ 25:
+
+   sample sampling level $u\in\{\tau_{1},\ldots,\tau_{K-1}\}$ 
+
+ 26:
+
+   sample score level $s\sim\mathcal{U}(0,u)$ 
+
+ 27:
+
+   assemble interleaved sequence $\mathcal{I}_{u}$ from the rollout $\triangleright$ Eq. (5)
+
+ 28:
+
+   causal forward of $f_{\theta}$ on $\mathcal{I}_{u}$ , yielding $\hat{x}_{\theta}$ 
+
+ 29:
+
+   sample $\epsilon\sim\mathcal{N}(0,I)$ 
+
+ 30:
+
+   consistency transition $\hat{z}^{(s)}\leftarrow\operatorname{sg}\bigl(\alpha_{s}\hat{x}_{\theta}+\sigma_{s}\epsilon\bigr)$ $\triangleright$ Eq. (6)
+
+ 31:
+
+   teacher endpoint $\hat{x}_{\psi}\leftarrow\mathrm{Endpoint}(f_{\psi}(\hat{z}^{(s)},s,c))$ 
+
+ 32:
+
+   critic endpoint $\hat{x}_{\phi}\leftarrow\mathrm{Endpoint}(f_{\phi}(\hat{z}^{(s)},s,c))$ 
+
+ 33:
+
+   per-element DMD loss $\ell\leftarrow\left\|\hat{x}_{\theta}-\operatorname{sg}\!\left(\hat{x}_{\theta}+\dfrac{\hat{x}_{\psi}-\hat{x}_{\phi}}{\|\hat{x}_{\theta}-\hat{x}_{\psi}\|_{1}}\right)\right\|^{2}$ 
+
+ 34:
+
+   split $\ell$ along the chunk axis into per-chunk losses $\ell_{t}$ 
+
+ 35:
+
+   compute future participation scores $p_{t}$ and chunk weights $w_{t}\propto g_{\eta}(p_{t})$ 
+
+ 36:
+
+   chunk-weighted DMD loss $\mathcal{L}_{\mathrm{DMD}}\leftarrow\dfrac{\sum_{t}w_{t}\ell_{t}}{\sum_{t}w_{t}m_{t}}$ 
+
+ 37:
+
+    $\theta\leftarrow\theta-\eta_{\theta}\nabla_{\theta}\mathcal{L}_{\mathrm{DMD}}$ 
+
+ 38:
+
+ end if
+
+Algorithm 1 formalizes one RAVEN training iteration.
+The iteration begins with a self rollout of $f_{\theta}$ under the consistency sampler, producing per-chunk denoising trajectories $\{\hat{z}_{t}^{(\tau_{k})}\}$ together with clean endpoints $\hat{x}_{t}=\hat{z}_{t}^{(0)}$ .
+The fake-score critic $f_{\phi}$ is updated on noised endpoints every iteration, whereas the generator $f_{\theta}$ is updated only once every $r$ iterations on the interleaved sequence $\mathcal{I}_{u}$ , with a reverse-KL score gradient defined by the teacher $f_{\psi}$ and the updated critic $f_{\phi}$ .
+A single causal forward pass over $\mathcal{I}_{u}$ then routes gradients from later chunks through the cached history $h_{t}^{\mathrm{RAVEN}}=\mathcal{H}(\hat{x}_{<t})$ used during extrapolation.
+
+Algorithm 2 CM-GRPO training iteration
+
+ 1:
+
+ consistency generator $f_{\theta}$ initialized from a RAVEN checkpoint, reward composition $\{R_{m}\}$ with weights $\{\lambda_{m}\}$ 
+
+ 2:
+
+ text condition $c$ , group size $G$ , chunk count $T$ , noise schedule $(\alpha_{n},\sigma_{n})$ 
+
+ 3:
+
+ sampling timesteps $\tau_{1}>\cdots>\tau_{K}=0$ 
+
+ 4:
+
+ chunk-wise weighting function $g_{\eta}$ , advantage clip $A_{\max}$ , learning rate $\eta_{\theta}$ 
+
+ 5:
+
+ normalization stabilization constant $\varepsilon$ 
+
+ 6:
+
+ Stage 1: Group Rollouts no gradient through $f_{\theta}$ 
+
+ 7:
+
+ for $i=1,\ldots,G$ do
+
+ 8:
+
+   for $t=1,\ldots,T$ do
+
+ 9:
+
+    sample initial noisy state $\tilde{z}_{i,t}^{(\tau_{1})}\sim\mathcal{N}(0,I)$ 
+
+ 10:
+
+    for $k=1,\ldots,K-1$ do
+
+ 11:
+
+      predict clean endpoint $\hat{x}_{i,t}^{(k)}\leftarrow\mathrm{Endpoint}\bigl(f_{\theta}(\tilde{z}_{i,t}^{(\tau_{k})},\tau_{k},c,h_{i,t})\bigr)$ 
+
+ 12:
+
+      sample $\epsilon\sim\mathcal{N}(0,I)$ 
+
+ 13:
+
+      consistency transition $\tilde{z}_{i,t}^{(\tau_{k+1})}\leftarrow\alpha_{\tau_{k+1}}\hat{x}_{i,t}^{(k)}+\sigma_{\tau_{k+1}}\epsilon$ $\triangleright$ Eq. (6)
+
+ 14:
+
+    end for
+
+ 15:
+
+    final endpoint $\hat{x}_{i,t}\leftarrow\mathrm{Endpoint}\bigl(f_{\theta}(\tilde{z}_{i,t}^{(\tau_{K})},\tau_{K},c,h_{i,t})\bigr)$ 
+
+ 16:
+
+    update KV cache so that $h_{i,t+1}=\mathcal{H}(\hat{x}_{i,\leq t})$ 
+
+ 17:
+
+   end for
+
+ 18:
+
+   trajectory endpoint $\hat{x}^{i}\leftarrow(\hat{x}_{i,1},\ldots,\hat{x}_{i,T})$ 
+
+ 19:
+
+ end for
+
+ 20:
+
+ Stage 2: Reward Evaluation and Group-Relative Advantages
+
+ 21:
+
+ for $i=1,\ldots,G$ do
+
+ 22:
+
+   evaluate each reward dimension $R_{m}^{i}\leftarrow R_{m}(\hat{x}^{i},c)$ 
+
+ 23:
+
+ end for
+
+ 24:
+
+ per-dimension group normalization $\bar{R}_{m}^{i}\leftarrow\bigl(R_{m}^{i}-\operatorname{mean}(\{R_{m}^{j}\}_{j=1}^{G})\bigr)\,/\,\bigl(\operatorname{std}(\{R_{m}^{j}\}_{j=1}^{G})+\varepsilon\bigr)$ 
+
+ 25:
+
+ composite reward $R^{i}\leftarrow\sum_{m}\lambda_{m}\bar{R}_{m}^{i}\,/\,\sum_{m}|\lambda_{m}|$ 
+
+ 26:
+
+ group-relative advantage $\hat{A}_{i}\leftarrow\bigl(R^{i}-\operatorname{mean}(\{R^{j}\}_{j=1}^{G})\bigr)\,/\,\bigl(\operatorname{std}(\{R^{j}\}_{j=1}^{G})+\varepsilon\bigr)$ 
+
+ 27:
+
+ clip advantage $\hat{A}_{i}\leftarrow\operatorname{clip}(\hat{A}_{i},-A_{\max},A_{\max})$ 
+
+ 28:
+
+ Stage 3: Policy Update on Sampled Transitions
+
+ 29:
+
+ for $i=1,\ldots,G$ do
+
+ 30:
+
+   sample $k_{i}\sim\mathcal{U}\{1,\ldots,K-1\}$ and let $u_{i}\leftarrow\tau_{k_{i}}$ , $s_{i}\leftarrow\tau_{k_{i}+1}$ 
+
+ 31:
+
+   retrieve $\tilde{z}_{i}^{(u_{i})},\tilde{z}_{i}^{(s_{i})}$ from the cached trajectory
+
+ 32:
+
+ end for
+
+ 33:
+
+ predict clean endpoint $\hat{x}_{\theta}^{i}\leftarrow\mathrm{Endpoint}\bigl(f_{\theta}(\tilde{z}_{i}^{(u_{i})},u_{i},c)\bigr)$ for all $i$ 
+
+ 34:
+
+ consistency kernel mean $\mu_{\theta}^{u_{i}\to s_{i}}\leftarrow\alpha_{s_{i}}\hat{x}_{\theta}^{i}$ $\triangleright$ Eq. (6)
+
+ 35:
+
+ per-trajectory stop-gradient regression loss
+
+ 36:
+
+      $\ell^{i}\leftarrow\left\|\hat{x}_{\theta}^{i}-\operatorname{sg}\!\left(\hat{x}_{\theta}^{i}+\dfrac{\hat{A}_{i}\,\alpha_{s_{i}}}{2\sigma_{s_{i}}^{2}}\bigl(\tilde{z}_{i}^{(s_{i})}-\mu_{\theta}^{u_{i}\to s_{i}}\bigr)\right)\right\|^{2}$ $\triangleright$ Eq. (9)
+
+ 37:
+
+ split each $\ell^{i}$ along the chunk axis into per-chunk losses $\ell^{i}_{t}$ 
+
+ 38:
+
+ compute future participation scores $p_{t}$ and chunk weights $w_{t}\propto g_{\eta}(p_{t})$ 
+
+ 39:
+
+ chunk-weighted CM-GRPO loss $\mathcal{L}_{\mathrm{CM\text{-}GRPO}}\leftarrow\dfrac{\sum_{i,t}w_{t}\ell^{i}_{t}}{\sum_{i,t}w_{t}m_{t}}$ 
+
+ 40:
+
+ $\theta\leftarrow\theta-\eta_{\theta}\nabla_{\theta}\mathcal{L}_{\mathrm{CM\text{-}GRPO}}$ 
+
+Building on the RAVEN checkpoint, Algorithm 2 formalizes one CM-GRPO training iteration.
+The iteration draws a group of $G$ independent consistency rollouts under a shared text condition $c$ , scores each rollout with the composite reward, and converts the endpoint scores into a group-relative advantage following Eq. (9).
+A single transition $u\to s$ is then sampled along each rollout, and the policy update is realized as the stop-gradient regression on the predicted clean endpoint of the consistency kernel, inheriting the chunk-wise weighting introduced by RAVEN so that supervision remains aligned with the autoregressive horizon.
+The transition index is restricted to $k_{i}\in\{1,\ldots,K-1\}$ rather than the full set of consistency steps, since the final transition lands at $\tau_{K}=0$ with $\sigma_{\tau_{K}}=0$ , where the kernel collapses to a Dirac delta and the policy log-probability is undefined.
+
+## Appendix B More Implementation Details
+
+Dataset.
+Both RAVEN and CM-GRPO are trained exclusively on text prompts drawn from VidProM [124], preprocessed through filtering and large language model extension, following the data protocol of Self Forcing [31].
+Ablation experiments that require real video data draw from OpenVidHD-0.4M [125], with all video clips temporally upsampled via RIFE [126] prior to use.
+
+Training Details.
+Most RAVEN training settings are inherited from Self Forcing [31] and Causal Forcing [36].
+We disable weight decay throughout and reduce the two-time-scale update rule (TTUR) [40] ratio between critic and generator updates from $5$ to $2$ .
+CM-GRPO is instead optimized in a parameter-efficient manner on top of the RAVEN checkpoint, applying LoRA [127] of rank $256$ to all linear layers under AdamW [128, 129] with learning rate $5\times 10^{-6}$ , zero weight decay, betas $(0.0,0.999)$ and epsilon $10^{-10}$ , where each policy update consumes a batch size of $8$ paired with a group size of $32$ .
+The training-time test framework and chunk-wise loss scaling introduced by RAVEN are carried over unchanged into the CM-GRPO stage, so that the policy update inherits the same alignment between training context and inference-time extrapolation.
+The Causal Forcing [36] + CM-GRPO entry in Table 1 does not utilize these two designs, so as to isolate the contribution of the policy objective from RAVEN itself.
+For this entry, the learning rate is lowered to $2\times 10^{-6}$ and weight decay is reinstated at $0.01$ , while the reward weight on the Dynamic Degree (DD) dimension is raised from $0.35$ to $2.35$ to compensate for the weaker motion of the Causal Forcing checkpoint.
+RAVEN and CM-GRPO consume training budgets of approximately $70$ and $170$ NVIDIA H200 GPU hours respectively.
+
+Reward Composition.
+Temporal dynamics are captured through dynamic degree and motion smoothness, where the former takes the top-5% mean of optical flow magnitudes estimated by RAFT [120] across consecutive frame pairs as an index of peak scene motion, and the latter is derived from the reconstruction error incurred when AMT [119] recovers artificially dropped frames from their temporal neighbors, with lower error reflecting greater temporal coherence.
+At the frame level, the LAION aesthetic predictor [118] applies a linear model on image embeddings to score each frame for compositional appeal and perceptual naturalness, while the multi-scale MUSIQ [117] evaluates low-level technical distortion.
+Text-video alignment is additionally assessed by VideoReward [115], a reward model built on Qwen2-VL [130] and trained via direct preference optimization [131] on 182K pairwise human preference annotations.
+
+## Appendix C User Study
+
+Figure 6: User study preference rates on Quality, Semantic, and Overall.
+
+Figure 7: User study instruction screenshot.
+
+We conduct a user study on $100$ long and detailed prompts drawn from the qualitative showcases of the existing baselines, generating $4$ samples per prompt for each method.
+The study covers the four baselines designed for $5$ -second short video generation, namely CausVid [35], Self Forcing [31], Reward Forcing [33], and Causal Forcing [36].
+For each sample pair, an individual user rates a RAVEN clip against its baseline counterpart presented in randomized order along Quality, Semantic, and Overall, following the instructions in Figure 7.
+Aggregate preference rates are reported in Figure 6, where RAVEN is preferred on every dimension against all four baselines, with a more pronounced lead on Semantic than on Quality and a clear margin on Overall.
+
+## Appendix D Discussion
+
+Although RAVEN and CM-GRPO are presented with concrete design choices tailored to causal autoregressive video distillation, both formulations admit broader scope than the setting evaluated in our experiments.
+The interleaved sequence construction underlying RAVEN currently treats clean chunks as historical context, yet the supervised forward pass does not restrict the form of cached history.
+Arbitrary representations derived from the rollout can be substituted in its place, including intermediate noisy states from preceding chunks, memory tokens specific to the underlying architecture, and cache management strategies such as sliding windows or attention sinks, provided the same representation is consumed by subsequent chunks during self rollout.
+These representations can in principle be instantiated inside the supervised forward pass and optimized end-to-end through downstream losses on later noisy states, which would turn history handling into a learnable rather than fixed element of the rollout.
+
+CM-GRPO admits an analogous extension along a different axis.
+Its policy interface depends only on the conditional Gaussian transition induced by the consistency sampler and is independent of the autoregressive structure of the generator on which it is applied.
+The same objective therefore applies to any few-step generator that draws samples through a stochastic consistency step, encompassing bidirectional video models as well as generators in other modalities that have been distilled through consistency training or distillation.
+Collectively, RAVEN constitutes a general training-time test interface for autoregressive few-step distillation, while CM-GRPO constitutes a general policy optimization interface for consistency generators, indicating that both contributions extend beyond the specific setting studied here.
+
+## Appendix E Prompts
+
+We list the text prompts behind the qualitative comparisons in the main text, indexed by their position within each figure grid.
+
+Figure 3 (qualitative comparison).
+
+• 
+
+Top-left. A cheerful, happy Corgi playing in a futuristic park during sunset, set in a cyberpunk style. The Corgi has a playful expression, wagging its tail and running around in the grass. The park is illuminated by neon lights and surrounded by towering skyscrapers with holographic advertisements flashing on their surfaces. The sky is a blend of orange and purple hues, creating a striking contrast against the dark cityscape. The Corgi is in the foreground, while the vibrant city lights and buildings create a dynamic background. The scene captures the essence of a cyberpunk world with natural elements intertwined. Medium close-up shot focusing on the Corgi’s joyful playfulness.
+
+• 
+
+Top-right. A majestic African lion with golden fur and piercing green eyes grabs a small antelope tightly in its powerful jaws. The lion’s mane flows gracefully as it crouches on all fours, muscles tense and alert. After a moment of contemplation, the lion releases the antelope, which quickly runs away. The scene takes place in a dense savanna with tall grass and scattered acacia trees. The lion remains still for a few moments before turning its gaze back to the fleeing antelope. Wide shot, with a focus on the lion’s expressions and movements.
+
+• 
+
+Bottom-left. A cheerful woman with a warm smile, standing outdoors under a clear blue sky. Her hair is flowing freely as she faces the wind, creating a gentle, swirling wind effect around her. She is wearing a light, flowy dress that moves gracefully with the breeze. The background includes green trees and blooming flowers, adding a vibrant and lively atmosphere. The scene captures a close-up of the woman, emphasizing her joyful expression and the dynamic wind movement around her.
+
+• 
+
+Bottom-right. On a rainy day, a young boy with tousled brown hair is sprinting away from the rain, his clothes slightly damp and clinging to his body. His face is animated with excitement and joy as he runs barefoot through puddles, splashing water everywhere. The sky is overcast, with heavy raindrops falling steadily. In the background, blurred figures of people walking with umbrellas can be seen. The scene is captured in a medium shot, focusing on the boy’s dynamic movements and expressions.
+
+Figure 4 (qualitative ablation).
+
+• 
+
+Left. A documentary-style nature photography shot from a camera truck moving to the left, capturing a crab quickly scurrying into its burrow. The crab has a hard, greenish-brown shell and long claws, moving with determined speed across the sandy ground. Its body is slightly arched as it burrows into the sand, leaving a small trail behind. The background shows a shallow beach with scattered rocks and seashells, and the horizon features a gentle curve of the coastline. The photo has a natural and realistic texture, emphasizing the crab’s natural movement and the texture of the sand. A close-up shot from a slightly elevated angle.
+
+• 
+
+Middle. A dynamic action shot of a surfer accelerating on a powerful wave, carving through the water with grace and agility. The surfer, with a tanned complexion and muscular build, rides the wave with one hand gripping the board while the other extends outwards for balance. The water splashes behind, creating a foamy trail, and the sun casts a golden glow over the scene. The background features a clear blue ocean and distant white-capped waves, with a few seagulls flying overhead. The surfer’s expression is one of exhilaration and focus. A mid-shot from a low-angle perspective capturing the surfer’s motion and the wave’s power.
+
+• 
+
+Right. A scenic photograph capturing the moment a steam train departs from the Glenfinnan Viaduct, a historic railway bridge in Scotland. The train moves gracefully over the arch-covered viaduct, its smoke billowing into the air. The landscape is lush with greenery, and towering rocky mountains frame the scene, creating a picturesque backdrop. The sky is a clear, bright blue with the sun shining down, casting a warm glow on the train and the surrounding scenery. The viaduct itself is a striking feature, with intricate ironwork and a verdant setting. The photo has a classic, nostalgic feel, emphasizing the natural beauty and historical charm of the location. A wide-angle shot from a slightly elevated angle, capturing both the train and the expansive landscape.
+
+## Appendix F Broader Impacts
+
+RAVEN and CM-GRPO advance the practical viability of real-time autoregressive video generation, which carries both positive and negative societal implications.
+On the positive side, real-time low-latency video synthesis can support creative tools, education, accessibility applications, and interactive simulation, while reducing the compute footprint of video generation pipelines and lowering the barrier for downstream research.
+On the negative side, more capable and more accessible video generators raise familiar misuse concerns, including the production of misleading or non-consensual synthetic media, identity impersonation, and content that could be used to spread misinformation.
+These risks are inherited from the underlying generative models rather than introduced by our contributions, but the gain in efficiency does broaden the population of users who can produce such content.
+We encourage downstream applications to combine model release with provenance tooling, watermarking, and content moderation, and to follow community norms for the responsible release of generative video models.
+
+ Experimental support, please
+ view the build logs
+ for errors. Generated by
+
+ L
+ A
+ T
+ E
+
+ xml
+
+ .
+
+## Instructions for reporting errors
+
+ We are continuing to improve HTML versions of papers, and your feedback helps enhance accessibility and mobile
+ support. To report errors in the HTML that will help us improve conversion and rendering, choose any of the
+ methods listed below:
+
+ Click the "Report Issue" (
+
+ ) button, located in the page header.
+
+ Tip: You can select the relevant text first, to include it in your report.
+
+ Our team has already identified the following issues. We appreciate your time reviewing and reporting rendering errors we
+ may not have found yet. Your efforts will help us improve the HTML versions for all readers, because disability
+ should not be a barrier to accessing research. Thank you for your continued support in championing open access for
+ all.
+
+ Have a free development cycle? Help support accessibility at arXiv! Our collaborators at LaTeXML maintain a list of packages that need conversion, and welcome developer contributions.
+
+ We gratefully acknowledge support from
+ our major funders,
+ member institutions, ,
+ and all contributors.
+
+ About
+ ·
+ Help
+ ·
+ Contact
+ ·
+ Subscribe
+ ·
+ Copyright
+ ·
+ Privacy
+ ·
+ Accessibility
+ ·
+ Operational Status (opens in new tab)
+
+ Major funding support from
+

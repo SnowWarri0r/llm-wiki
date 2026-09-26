@@ -1,7 +1,7 @@
 ---
 name: grpo
 type: concept
-sources: [fish-speech-s2-pro, ppo, krea-2, diffusionnft, longcat-video-avatar-1-5]
+sources: [fish-speech-s2-pro, ppo, krea-2, diffusionnft, longcat-video-avatar-1-5, raven]
 updated: 2026-08-05
 ---
 

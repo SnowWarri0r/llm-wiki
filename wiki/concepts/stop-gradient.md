@@ -1,7 +1,7 @@
 ---
 name: stop-gradient
 type: concept
-sources: [dmd, chunk-wise-self-forcing, avatar-forever]
+sources: [dmd, chunk-wise-self-forcing, avatar-forever, raven]
 updated: 2026-08-19
 ---
 

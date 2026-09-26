@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>流式 AR vs 双向视频扩散 · Concept</title>
+<title>一致性采样步当策略 · CM-GRPO 不借 SDE 也能做在线 RL · Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -53,48 +53,70 @@
 </style>
 <div class="wiki-nav">
   <span><a href="../index.html">← 个人 wiki / index</a></span>
-  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · autoregressive-vs-bidirectional-video-diffusion</span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · consistency-kernel-policy</span>
 </div>
 <!-- wiki-nav:end -->
 <div class="page concept" data-cat="concepts">
 
 <header class="concept-header">
   <span class="concept-badge cat-concept">Concept</span>
-  <h1>流式 AR vs 双向视频扩散</h1>
+  <h1>一致性采样步当策略 · CM-GRPO 不借 SDE 也能做在线 RL</h1>
 </header>
 
 <article class="concept-body">
 <h2>一句话</h2>
-<p>双向扩散让整段视频在每个去噪 step 互相修改，推理强但代价高；流式 AR 从左到右提交，延迟低但早期错误无法撤回。</p>
-<h2>双向扩散</h2>
-<p>一开始就建立固定长度的整段 noisy latent。每轮去噪时，任意时间位置都能和其他位置交换信息，所以终点约束能反过来修正开头。代价是每轮都处理整段序列，全局时间注意力约为 <span class="tex math-inline" data-display="false">O(KN^{2})</span>。</p>
-<h2>流式自回归扩散</h2>
-<p>按 <span class="tex math-inline" data-display="false">p(z_{1}|c)p(z_{2}|z_{1},c)…p(zN|z&lt;N,c)</span> 从左到右生成。过去的 K/V 可以缓存，新的 latent 生成后立即输出；但错误的 <span class="tex math-inline" data-display="false">z_{3}</span> 会成为 <span class="tex math-inline" data-display="false">z_{4},z_{5}…</span> 的固定条件。</p>
-<p>KV cache 减少了过去 token 的重复投影，不代表总 attention 变为线性：第 <code>i</code> 个 query 仍要读取 <code>i</code> 个历史 key，<code>1+2+…+N</code> 仍是平方级。</p>
-<h2>HDR 的折中</h2>
-<p>HDR 在输出最终细节点之前，先生成粗时间层。它把“整段可修改”压缩成少量上层节点，再用稀疏父子连接传给下层，目标是保留流式延迟，同时推迟早期决定。</p>
-<h2>Solaris 的 teacher → student 路线</h2>
-<p>Solaris 先训练能整段联合去噪的双向多人 teacher，再把中间 checkpoint 改成只能读取过去的因果 student。student 用 6 个 latent frame 的滚动窗口生成，最后在自己生成的历史上做 Checkpointed Self Forcing。这里“双向质量高、因果可部署”的分工非常直接。</p>
-<h2>minWM 的 teacher → student 路线</h2>
-<p>minWM 先把现成双向视频扩散模型训出相机控制，再用 teacher forcing 改成多步因果模型；随后用 causal ODE 或 causal consistency distillation 压成四步，最后让因果学生 self-rollout，并由双向 real/fake score 做 DMD。它把“高质量双向老师”和“低延迟因果学生”拆成一条可复现流水线。</p>
+<p>一致性采样每步是"预测干净端点、再按目标噪声级重新加噪"，本身就是一个高斯转移；直接把它当策略算 log 概率做 GRPO，不必像 Flow-GRPO 那样把 ODE 改成 SDE 再离散化。</p>
+<h2>直觉</h2>
+<p>做 RL 要有"策略的概率"，确定性 ODE 采样器没有概率可言（同一输入永远同一输出）。Flow-GRPO 的办法是训练时人为加噪：把 ODE 换成同边缘分布的 SDE，Euler-Maruyama 一步就是高斯核，比率和 KL 都能写出来——代价是这些随机转移推理时根本不用，训练在优化一个推理时不存在的过程。</p>
+<p>一致性采样器（少步蒸馏模型常用）不需要这套：每步先猜干净图 <span class="tex math-inline" data-display="false">\hat x_\theta</span>，再按下一噪声级 <code>s</code> 加噪 <span class="tex math-inline" data-display="false">\hat z^{(s)}=\alpha_s\hat x_\theta+\sigma_s\epsilon</span>。那个 ε 是推理本来就有的随机性，所以策略核 = 推理核，训练和推理走的是同一条转移。</p>
+<h2>怎么做的</h2>
+<pre><code>一步 u → s：
+  x̂_θ = f_θ(ẑ^(u), u, c)                      # 预测干净端点
+  ẑ^(s) = α_s x̂_θ + σ_s ε,  ε~N(0,I)           # 推理本来就这么采
+  ⇒ π_θ(ẑ^(s) | ẑ^(u), c) = N(α_s x̂_θ, σ_s² I)   # 策略核，均值 μ = α_s x̂_θ
+
+GRPO：同一 c 采 G 条轨迹，端点打分 R_i
+  Â_i = (R_i − mean R) / (std R + ε)，广播到该轨迹上的每个转移
+  log π = −‖ẑ^(s) − μ‖² / (2σ_s²)（去掉常数）
+  ∂(−Â log π)/∂x̂_θ = −Â α_s (ẑ^(s) − μ) / σ_s²
+
+实现：stop-gradient 回归
+  L = ‖ x̂_θ − sg( x̂_θ + Â α_s/(2σ_s²) · (ẑ^(s) − μ) ) ‖²
+  对 x̂_θ 求导恰是上面的梯度（与 DMD 的 score 梯度回归同一个模子）
+
+参考 KL（闭式，RAVEN 没用）：
+  KL(π_θ ‖ π_ref) = α_s² ‖x̂_θ − x̂_ref‖² / (2σ_s²)
+</code></pre>
+<p>读法：优势为正时，把 <span class="tex math-inline" data-display="false">\hat x_\theta</span> 往"使那次采样更可能"的方向推——采到的 <code>ẑ^(s)</code> 比均值高，就抬高 <span class="tex math-inline" data-display="false">\hat x_\theta</span>；优势为负反向。最后一步 <span class="tex math-inline" data-display="false">\tau_K=0</span> 时 <span class="tex math-inline" data-display="false">\sigma=0</span>，核塌成 Dirac、log 概率没定义，所以只在前 K−1 个转移上采。</p>
+<h2>数字例子（标量）</h2>
+<p><span class="tex math-inline" data-display="false">\alpha_s=0.6,\ \sigma_s=0.8</span>，模型预测 <span class="tex math-inline" data-display="false">\hat x_\theta=2.0</span> → 均值 <span class="tex math-inline" data-display="false">\mu=1.2</span>；采样 ε=0.5 → <span class="tex math-inline" data-display="false">\hat z^{(s)}=1.2+0.8\times0.5=1.6</span>。</p>
+<ul>
+<li>log π = −(1.6−1.2)²/(2×0.64) = −0.125</li>
+<li>优势 Â=+1：梯度 = −1×0.6×0.4/0.64 = <strong>−0.375</strong>（负梯度 ⇒ 沿梯度下降会把 x̂_θ 抬高——采到的比均值高，鼓励往高处走）</li>
+<li>回归目标 = 2.0 + 0.6/(2×0.64)×0.4 = 2.0 + 0.1875 = 2.1875；<span class="tex math-inline" data-display="false">L=(\hat x_\theta-2.1875)^2</span> 对 x̂_θ 求导 = 2×(2.0−2.1875) = <strong>−0.375</strong> ✓ 两条路一致</li>
+<li>Â=−1：目标变 1.8125，把 x̂_θ 往下压</li>
+<li>若参考模型给 x̂_ref=1.5：KL = 0.36×0.25/1.28 = 0.0703</li>
+</ul>
+<p>对照 Flow-GRPO 的 EM 核（τ=0.5, σ=0.4, y=1, v=−1）：漂移 <span class="tex math-inline" data-display="false">b=v+\tfrac{\sigma^2}{2\tau}(y+(1-\tau)v)=-1+0.16\times0.5=-0.92</span>，Δτ=0.25 一步后均值 0.77、噪声标准差 σ√Δτ=0.2——这 0.2 的噪声是训练时加的，推理 ODE 里没有。</p>
+<h2>消融（RAVEN 表 4，同起点同奖励）</h2>
+<p>EM 核 σ∈{.1,.4,.8} × KL 权重 β∈{0,.004} 六格总分 85.03–85.27；CM-GRPO 85.46。作者的结论：策略核一旦和推理采样器一致，辅助随机过程就没必要，也省掉 σ、β 两个要联调的旋钮。</p>
 <h2>链接</h2>
 <ul>
-<li><a href="../papers/hierarchical-denoising-visual-reasoning.html">hierarchical-denoising-visual-reasoning</a> · HDR 完整方案</li>
-<li><a href="../concepts/sparse-hierarchical-attention.html">sparse-hierarchical-attention</a> · 稀疏连接</li>
-<li><a href="../concepts/kv-cache.html">kv-cache</a> · 流式复用的基础</li>
-<li><a href="../papers/solaris-multiplayer-world-model.html">solaris-multiplayer-world-model</a> · 双向单人→双向多人→因果多人→Self Forcing</li>
-<li><a href="../papers/interactive-video-world-modeling-survey.html">interactive-video-world-modeling-survey</a> · 交互式世界模型为什么必须做因果 rollout</li>
-<li><a href="../papers/minwm.html">minwm</a> · 从双向 T2V/TI2V 到四步因果世界模型的完整工程配方</li>
+<li><a href="../papers/raven.html">raven</a> · 提出 CM-GRPO</li>
+<li><a href="../concepts/grpo.html">grpo</a> · 组内相对优势</li>
+<li><a href="../concepts/ode-vs-sde.html">ode-vs-sde</a> · Flow-GRPO 走的 ODE→SDE 那条路</li>
+<li><a href="../concepts/dmd-distillation.html">dmd-distillation</a> · stop-gradient 回归实现 score 梯度的同款写法</li>
+<li><a href="../concepts/per-frame-grpo.html">per-frame-grpo</a> · 优势按时间分区的另一路</li>
 </ul>
 </article>
 
 <div class="concept-backlinks">
-  <span class="label">引用此页的内容 · 13 处</span>
-  <ul><li><a href="../papers/causal-rcm.html"><span class="cat">paper</span>Causal-rCM · 把 rCM 的正反散度互补搬进自回归视频</a></li><li><a href="../papers/hierarchical-denoising-visual-reasoning.html"><span class="cat">paper</span>HDR · 先规划整段轨迹，再逐层生成每一步</a></li><li><a href="../papers/interactive-video-world-modeling-survey.html"><span class="cat">paper</span>交互式视频世界模型综述 · 不是“生成一段视频”，而是每次操作后都要继续维持同一个世界</a></li><li><a href="../papers/minwm.html"><span class="cat">paper</span>minWM · 把离线视频扩散模型改造成可操控、能逐段输出的世界模型</a></li><li><a href="../papers/raven.html"><span class="cat">paper</span>RAVEN · 把推理时的&quot;接龙&quot;搬进训练图，让历史也吃到梯度</a></li><li><a href="../papers/solaris-multiplayer-world-model.html"><span class="cat">paper</span>Solaris · 两个人同时行动时，视频世界模型怎样维护同一个 Minecraft</a></li><li><a href="../papers/waveforcing.html"><span class="cat">paper</span>Wave Forcing · 砍一条边，换一条流水线</a></li><li><a href="../papers/worldtrace.html"><span class="cat">paper</span>WorldTrace · 记忆明明还在，视频世界模型为什么还是认不出回家的路</a></li><li><a href="../concepts/causal-streaming-vae.html"><span class="cat">concept</span>因果流式 VAE · 压缩当前音视频时不偷看未来</a></li><li><a href="../concepts/rollout-aligned-causal-context-distillation.html"><span class="cat">concept</span>Rollout-aligned causal-context distillation · 用部署时会遇到的历史出题</a></li><li><a href="../concepts/spatio-temporal-cascade-avatar.html"><span class="cat">concept</span>时空级联数字人 · 先定长片骨架，再并行补高清细节</a></li><li><a href="../concepts/speculative-decoding.html"><span class="cat">concept</span>Speculative Decoding · 小模型先起草，大模型一次验一段</a></li><li><a href="../concepts/teacher-forcing-video-diffusion.html"><span class="cat">concept</span>视频扩散里的 Teacher Forcing · 训练时喂真历史</a></li></ul>
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/raven.html"><span class="cat">paper</span>RAVEN · 把推理时的&quot;接龙&quot;搬进训练图，让历史也吃到梯度</a></li></ul>
 </div>
 
 <div class="colophon">
-  <span>Auto-rendered from <code>wiki/concepts/autoregressive-vs-bidirectional-video-diffusion.md</code></span>
+  <span>Auto-rendered from <code>wiki/concepts/consistency-kernel-policy.md</code></span>
   <span>← <a href="../index.html">个人 wiki / index</a></span>
 </div>
 

@@ -1780,3 +1780,7 @@ arXiv 2609.02886（SolarWM，交互式视频世界模型全开源基建）。bes
 ## [2026-09-17] ingest | lynnreal-omni
 
 arXiv 2609.15863（LynnReal-Omni，agentic 视觉工作流的原生多模态视频生成）。bespoke 页 15 节 + 5 图（工作流全景 / 打包布局与正偏移 / Flash 三明治压缩 / 长视频接龙与紧凑上下文 / 解码器蒸馏框架）；公式逐符号（clean-time、logistic-normal 双钟——音频四时间步恰为视频时间步映射像已验算、guidance-aware fitting 最优解、残差回填、pseudo-Huber、cycle KL）；MSAVP 全量族表 + 累积延迟消融表（W8A8 不融合反而变慢）。新 concept：agentic-visual-creation、mid-stack-token-compression、lightweight-decoder-distillation；dmd-distillation、trajectory-distribution-matching、guidance-distillation、video-vae、chunk-wise-self-forcing 补 sources。
+
+## [2026-09-28] ingest | raven
+
+arXiv 2605.15190（RAVEN，实时自回归视频外推 + 一致性模型 GRPO）。bespoke 页 14 节 + 6 图（四种历史范式并排 / 一次迭代三步流水 / T=3 交错序列与 5×5 因果 mask / 三种 shift 权重柱 / EM 核 vs 一致性核并排 / VBench Total 放大条）；公式逐符号（历史表示与加噪、一致性一步、DMD sg 回归、交错序列、未来参与分数与归一化、shift 调度、一致性转移核、CM-GRPO 回归、KL 闭式）；手算例（J=4 三组权重、CM-GRPO 标量两条路对账 −0.375、EM 漂移、五维奖励组归一化）均 python 复核；四组消融全表 + 排雷（Dyn.Deg. 是 UnifiedReward 非 VBench 光流、training-time test 非 TTT、5 秒评测无长时程证据、KL 未用、α=0 字面退化）。新 concept：training-time-test、future-participation-loss-scaling、consistency-kernel-policy；dmd-distillation、grpo、chunk-wise-self-forcing、teacher-forcing-video-diffusion、kv-cache、stop-gradient、speculative-decoding、ode-vs-sde、autoregressive-vs-bidirectional-video-diffusion 补 sources。

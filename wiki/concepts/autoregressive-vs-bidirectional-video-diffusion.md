@@ -1,7 +1,7 @@
 ---
 name: autoregressive-vs-bidirectional-video-diffusion
 type: concept
-sources: [hierarchical-denoising-visual-reasoning, solaris-multiplayer-world-model, interactive-video-world-modeling-survey, minwm, causal-rcm, waveforcing]
+sources: [hierarchical-denoising-visual-reasoning, solaris-multiplayer-world-model, interactive-video-world-modeling-survey, minwm, causal-rcm, waveforcing, raven]
 updated: 2026-08-19
 ---
 
