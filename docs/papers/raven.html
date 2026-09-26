@@ -323,8 +323,14 @@
 </section>
 
 <section id="cmgrpo">
-<h2><span class="n">§ 07</span>CM-GRPO：一致性一步本来就是高斯策略</h2>
-<p class="lead">做在线 RL 要有"策略的概率"。Flow-GRPO<a class="jr" href="#g-15">15</a>面对确定性 ODE 采样器的办法是把它改成同边缘的 SDE，再 Euler-Maruyama 离散化，每步得到一个高斯核——比率和 KL 都能写。代价：这些随机转移<strong>推理时根本不用</strong>，训练在优化一个推理不存在的过程。</p>
+<h2><span class="n">§ 07</span>CM-GRPO：蒸馏完为什么还要 RL，RL 又卡在哪</h2>
+<p class="lead">这一节先不碰公式。按顺序回答四个问题：RL 来这里干什么、它需要一样蒸馏没有的东西、扩散模型为什么给不出、一致性采样为什么正好有。答完这四问，后面的公式只是把话翻译成符号。</p>
+<div class="calc">
+  <div class="step"><b>蒸馏只会说一句话："像老师"</b>DMD 的方向是"老师分布减学生分布"，它表达不了"动得再多一点""跟文字贴一点""别糊"——老师自己不知道这些，老师也是上限。想按这些标准往上推，就得换一种监督：给每条视频打分，分高的多来点，分低的少来点。这就是 RL 在这里的活。做法和 LLM 里的 GRPO<a class="jr" href="#g-17">17</a>一样：同一个 prompt 采 G 条，分数减组均值当优势，把好的那几条的"概率"抬高、坏的压低。</div>
+  <div class="step"><b>"抬高概率"得先有概率——LLM 白送，扩散没有</b>LLM 每个 token 有 softmax，"这条回答的概率"现成。扩散 / flow 模型的采样是确定性 ODE：起始噪声定了，输出就定了，根本不存在"这条视频的概率是多少"可以拿来抬。没有概率，优势没处乘，GRPO 那套算不了。</div>
+  <div class="step"><b>Flow-GRPO<a class="jr" href="#g-15">15</a>的补丁：训练时硬加噪声</b>把确定性 ODE 换成同分布的 SDE，每一步硬加一点高斯噪声——每步变成"均值 + 噪声"，概率能写了，GRPO 能跑了。代价有两条：这些噪声<strong>只在训练里有</strong>，推理照走确定性 ODE，你在优化一个推理时根本不跑的过程；另外多出两个要联调的旋钮，噪声大小 σ 和 KL 权重 β。</div>
+  <div class="step"><b>RAVEN 的观察：少步学生根本不是 ODE，它自带概率</b>一致性采样每一步是"猜一张干净图 <code class="m">\hat x_\theta</code> → 用新鲜的 ε 重新加噪到下一层"。那个"重新加噪"本来就是高斯：下一步 latent 服从 <code class="m">\mathcal N(\alpha_s\hat x_\theta,\ \sigma_s^2 I)</code>。概率白送，而且它就是推理时真跑的那条转移。直接在这上面做 GRPO，就是 CM-GRPO——不用造假的随机过程，σ、β 也不存在了。</div>
+</div>
 <figure id="fig-kernel">
 <figcaption><span>Fig 05 · 两种策略核</span><b>左：训练才加的噪声 · 右：推理本来就有的噪声</b></figcaption>
 <svg viewBox="0 0 1100 330" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
@@ -355,18 +361,27 @@
 <text x="820" y="296" text-anchor="middle" font-size="11" fill="#1e5a4c">例：α=.6, σ=.8, x̂=2 → μ=1.2，采到 1.6</text>
 </svg>
 </figure>
-<p>一致性采样器每步是"预测干净端点 → 重新加噪"，那个 ε 是推理自带的。于是一步 u→s 的转移就是一个高斯策略核<a class="jr" href="#g-16">16</a>：</p>
+<h3>"抬高概率"具体在改什么：挪瞄准点</h3>
+<p>这个高斯里模型唯一能动的是均值（通过 <code class="m">\hat x_\theta</code>）。打个比方：你瞄准 μ 投篮，手抖 ε 让球落在 ẑ。这一球算高分（优势为正），就把瞄准点往落点挪一点，下次更容易落到那儿；算低分就往反方向挪。一步 u→s 的转移写成高斯策略核<a class="jr" href="#g-16">16</a>：</p>
 <div class="formula">\pi_\theta\bigl(\tilde z^{(s)}\mid\tilde z^{(u)},c\bigr)=\mathcal N\bigl(\tilde z^{(s)};\ \mu_\theta^{u\to s},\ \sigma_s^2 I\bigr),\qquad \mu_\theta^{u\to s}=\alpha_s\hat x_\theta</div>
-<h3>从核到更新：四步路线</h3>
-<p>① 组内优势 → ② 去常数的 log 概率 → ③ 对端点求梯度 → ④ 写成 stop-gradient 回归。每步用一个标量例子跟着走：<code class="m">\alpha_s=0.6,\ \sigma_s=0.8</code>，模型预测 <code class="m">\hat x_\theta=2.0</code>，采样 ε=0.5。</p>
+<div class="vars">
+  <div><code class="m">\mu=\alpha_s\hat x_\theta</code>瞄准点：模型预测的干净端点按噪声级缩一下。模型只能通过它影响概率。</div>
+  <div><code class="m">\tilde z^{(s)}</code>落点：推理时真采到的下一步 latent，等于瞄准点加 <code class="m">\sigma_s\epsilon</code> 的手抖。</div>
+  <div><code class="m">\sigma_s</code>手抖幅度：噪声调度给的，模型不管。σ 越小，同样的偏离说明"你明明瞄得偏"，推得越狠。</div>
+  <div><code class="m">\hat A_i</code>这一球的优势：整条轨迹的端点视频打分，组内归一化，广播到这条轨迹上每一步。</div>
+</div>
+<h3>从"挪瞄准点"到损失：四步，每步带数字</h3>
+<p>标量例子贯穿：<code class="m">\alpha_s=0.6,\ \sigma_s=0.8</code>，模型预测 <code class="m">\hat x_\theta=2.0</code>，采样 ε=0.5。</p>
 <div class="calc">
-  <div class="step"><b>组内优势（GRPO<a class="jr" href="#g-17">17</a>）</b>同一 prompt 采 G 条一致性轨迹，端点打分 <code class="m">R_i</code>，<code class="m">\hat A_i=(R_i-\mathrm{mean})/(\mathrm{std}+\epsilon)</code>，广播到该轨迹上每个转移。例：奖励 (.8,.6,.9,.7) → 优势 (.447,−1.342,1.342,−.447)。</div>
-  <div class="step"><b>log 概率去常数</b>高斯核取对数、丢掉归一化常数和与 θ 无关项：<code class="m">\log\pi_\theta=-\|\tilde z^{(s)}-\mu\|^2/(2\sigma_s^2)</code>。例：μ=0.6×2=1.2，采到 ẑ=1.2+0.8×0.5=1.6，log π=−0.16/1.28=−0.125。</div>
-  <div class="step"><b>对端点求梯度</b>因为 <code class="m">\mu=\alpha_s\hat x_\theta</code>，链式法则给 <code class="m">\nabla_{\hat x_\theta}[-\hat A\log\pi]=-\hat A\,\alpha_s(\tilde z^{(s)}-\mu)/\sigma_s^2</code>。例：Â=+1 → −1×0.6×0.4/0.64 = <strong>−0.375</strong>。负梯度意味着梯度下降会<strong>抬高</strong> <code class="m">\hat x_\theta</code>：采到的比均值高且拿了正优势，就往高处走。</div>
-  <div class="step"><b>写成 sg 回归</b>目标 = <code class="m">\hat x_\theta+\hat A\alpha_s/(2\sigma_s^2)\cdot(\tilde z^{(s)}-\mu)</code> = 2 + 0.6/1.28×0.4 = 2.1875；损失 <code class="m">(\hat x_\theta-\mathrm{sg}(2.1875))^2</code> 对 <code class="m">\hat x_\theta</code> 求导 = 2×(2−2.1875) = <strong>−0.375</strong> ✓ 和第三步一致。Â=−1 时目标 1.8125，往下压。</div>
+  <div class="step"><b>组内优势</b>同一 prompt 采 G 条一致性轨迹，端点打分 <code class="m">R_i</code>，<code class="m">\hat A_i=(R_i-\mathrm{mean})/(\mathrm{std}+\epsilon)</code>。例：奖励 (.8,.6,.9,.7) → 优势 (.447,−1.342,1.342,−.447)。这一步和 LLM 的 GRPO 完全相同，只是"一条回答"换成"一条视频轨迹"。</div>
+  <div class="step"><b>写出"落点在瞄准点下的概率"</b>高斯取对数、丢掉与 θ 无关的常数：<code class="m">\log\pi_\theta=-\|\tilde z^{(s)}-\mu\|^2/(2\sigma_s^2)</code>——离瞄准点越远概率越低。例：μ=0.6×2=1.2，落点 ẑ=1.2+0.8×0.5=1.6，log π=−0.16/1.28=−0.125。</div>
+  <div class="step"><b>"优势 × 概率"对瞄准点求导 = 挪的方向</b>因为 <code class="m">\mu=\alpha_s\hat x_\theta</code>，<code class="m">\nabla_{\hat x_\theta}[-\hat A\log\pi]=-\hat A\,\alpha_s(\tilde z^{(s)}-\mu)/\sigma_s^2</code>：优势 × 落点偏离瞄准点的方向。例：Â=+1 → −1×0.6×0.4/0.64 = <strong>−0.375</strong>，负梯度意味着梯度下降会<strong>抬高</strong> <code class="m">\hat x_\theta</code>——落点比瞄准点高且拿了正优势，瞄准点往高处挪。</div>
+  <div class="step"><b>用 sg 回归的壳装进去</b>训练框架只认 MSE，所以把"想挪的方向"塞进一个 stop-gradient 目标：目标 = <code class="m">\hat x_\theta+\hat A\alpha_s/(2\sigma_s^2)\cdot(\tilde z^{(s)}-\mu)</code> = 2 + 0.6/1.28×0.4 = 2.1875；损失 <code class="m">(\hat x_\theta-\mathrm{sg}(2.1875))^2</code> 对 <code class="m">\hat x_\theta</code> 求导 = 2×(2−2.1875) = <strong>−0.375</strong> ✓ 和第三步一致。Â=−1 时目标 1.8125，往下压。</div>
 </div>
 <div class="formula">\mathcal L_{\mathrm{CM\text{-}GRPO}}=\mathbb E_{i,u,s}\Bigl[\Bigl\|\hat x_\theta-\mathrm{sg}\Bigl(\hat x_\theta+\frac{\hat A_i\alpha_s}{2\sigma_s^2}\bigl(\tilde z_i^{(s)}-\mu_\theta^{u\to s}\bigr)\Bigr)\Bigr\|^2\Bigr]</div>
-<p>和 § 03 的 DMD 回归是同一个模子：都是"把想要的方向塞进 sg 目标，用 MSE 的形状反传"。所以实现上 CM-GRPO 就是把 DMD 的方向换成优势加权的采样残差，交错序列、分块权重原样沿用。最后一步 <code class="m">\tau_K=0</code> 时 <code class="m">\sigma=0</code>，核塌成 Dirac、log 概率没定义，所以转移只在前 K−1 步里抽。</p>
+<p>和 § 03 的 DMD 回归是同一个壳：DMD 塞进去的方向是"老师减 critic"，CM-GRPO 塞进去的是"优势 × 采样残差"。所以实现上只是换了目标项，交错序列、分块权重原样沿用。最后一步 <code class="m">\tau_K=0</code> 时 <code class="m">\sigma=0</code>，没有手抖、高斯塌成一个点、概率没定义，所以转移只在前 K−1 步里抽。</p>
+<div class="truth"><span class="label">改进落在哪（表 4，§ 11 有全表）</span>同一个 RAVEN 起点、同一套奖励：Flow-GRPO 式的加噪核调了 σ∈{.1,.4,.8}×β∈{0,.004} 六组，总分全挤在 <strong>85.03–85.27</strong>，最好一组只比不做 RL 高 0.12；CM-GRPO 不调任何旋钮 <strong>85.46</strong>。另一条证据在表 1：同样的 CM-GRPO 叠在 RAVEN 上 +0.31、叠在 Causal Forcing 上只 +0.12——生成器先和推理对齐了，RL 的每一分才花得出去。</div>
+<div class="note"><span class="label">RL 在这里能做什么、不能做什么</span>能做的：把蒸馏够不到的标准（运动量、文本贴合、画质）当分数推上去，这是 DMD 说不出口的。不能做的：分数怎么打它不管——§ 08 会看到，画质和文本奖励一偏重视频就变静止，运动奖励一偏重画质语义就塌；五路奖励怎么配比是作者调出来的，不是 CM-GRPO 自带的。</div>
 </section>
 
 <section id="reward">
