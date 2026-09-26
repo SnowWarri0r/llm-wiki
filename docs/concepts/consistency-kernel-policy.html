@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>一致性采样步当策略 · CM-GRPO 不借 SDE 也能做在线 RL · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · consistency-kernel-policy</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>一致性采样步当策略 · CM-GRPO 不借 SDE 也能做在线 RL</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>一致性采样每步是"预测干净端点、再按目标噪声级重新加噪"，本身就是一个高斯转移；直接把它当策略算 log 概率做 GRPO，不必像 Flow-GRPO 那样把 ODE 改成 SDE 再离散化。</p>
+<h2>直觉</h2>
+<p>做 RL 要有"策略的概率"，确定性 ODE 采样器没有概率可言（同一输入永远同一输出）。Flow-GRPO 的办法是训练时人为加噪：把 ODE 换成同边缘分布的 SDE，Euler-Maruyama 一步就是高斯核，比率和 KL 都能写出来——代价是这些随机转移推理时根本不用，训练在优化一个推理时不存在的过程。</p>
+<p>一致性采样器（少步蒸馏模型常用）不需要这套：每步先猜干净图 <span class="tex math-inline" data-display="false">\hat x_\theta</span>，再按下一噪声级 <code>s</code> 加噪 <span class="tex math-inline" data-display="false">\hat z^{(s)}=\alpha_s\hat x_\theta+\sigma_s\epsilon</span>。那个 ε 是推理本来就有的随机性，所以策略核 = 推理核，训练和推理走的是同一条转移。</p>
+<h2>怎么做的</h2>
+<pre><code>一步 u → s：
+  x̂_θ = f_θ(ẑ^(u), u, c)                      # 预测干净端点
+  ẑ^(s) = α_s x̂_θ + σ_s ε,  ε~N(0,I)           # 推理本来就这么采
+  ⇒ π_θ(ẑ^(s) | ẑ^(u), c) = N(α_s x̂_θ, σ_s² I)   # 策略核，均值 μ = α_s x̂_θ
+
+GRPO：同一 c 采 G 条轨迹，端点打分 R_i
+  Â_i = (R_i − mean R) / (std R + ε)，广播到该轨迹上的每个转移
+  log π = −‖ẑ^(s) − μ‖² / (2σ_s²)（去掉常数）
+  ∂(−Â log π)/∂x̂_θ = −Â α_s (ẑ^(s) − μ) / σ_s²
+
+实现：stop-gradient 回归
+  L = ‖ x̂_θ − sg( x̂_θ + Â α_s/(2σ_s²) · (ẑ^(s) − μ) ) ‖²
+  对 x̂_θ 求导恰是上面的梯度（与 DMD 的 score 梯度回归同一个模子）
+
+参考 KL（闭式，RAVEN 没用）：
+  KL(π_θ ‖ π_ref) = α_s² ‖x̂_θ − x̂_ref‖² / (2σ_s²)
+</code></pre>
+<p>读法：优势为正时，把 <span class="tex math-inline" data-display="false">\hat x_\theta</span> 往"使那次采样更可能"的方向推——采到的 <code>ẑ^(s)</code> 比均值高，就抬高 <span class="tex math-inline" data-display="false">\hat x_\theta</span>；优势为负反向。最后一步 <span class="tex math-inline" data-display="false">\tau_K=0</span> 时 <span class="tex math-inline" data-display="false">\sigma=0</span>，核塌成 Dirac、log 概率没定义，所以只在前 K−1 个转移上采。</p>
+<h2>数字例子（标量）</h2>
+<p><span class="tex math-inline" data-display="false">\alpha_s=0.6,\ \sigma_s=0.8</span>，模型预测 <span class="tex math-inline" data-display="false">\hat x_\theta=2.0</span> → 均值 <span class="tex math-inline" data-display="false">\mu=1.2</span>；采样 ε=0.5 → <span class="tex math-inline" data-display="false">\hat z^{(s)}=1.2+0.8\times0.5=1.6</span>。</p>
+<ul>
+<li>log π = −(1.6−1.2)²/(2×0.64) = −0.125</li>
+<li>优势 Â=+1：梯度 = −1×0.6×0.4/0.64 = <strong>−0.375</strong>（负梯度 ⇒ 沿梯度下降会把 x̂_θ 抬高——采到的比均值高，鼓励往高处走）</li>
+<li>回归目标 = 2.0 + 0.6/(2×0.64)×0.4 = 2.0 + 0.1875 = 2.1875；<span class="tex math-inline" data-display="false">L=(\hat x_\theta-2.1875)^2</span> 对 x̂_θ 求导 = 2×(2.0−2.1875) = <strong>−0.375</strong> ✓ 两条路一致</li>
+<li>Â=−1：目标变 1.8125，把 x̂_θ 往下压</li>
+<li>若参考模型给 x̂_ref=1.5：KL = 0.36×0.25/1.28 = 0.0703</li>
+</ul>
+<p>对照 Flow-GRPO 的 EM 核（τ=0.5, σ=0.4, y=1, v=−1）：漂移 <span class="tex math-inline" data-display="false">b=v+\tfrac{\sigma^2}{2\tau}(y+(1-\tau)v)=-1+0.16\times0.5=-0.92</span>，Δτ=0.25 一步后均值 0.77、噪声标准差 σ√Δτ=0.2——这 0.2 的噪声是训练时加的，推理 ODE 里没有。</p>
+<h2>消融（RAVEN 表 4，同起点同奖励）</h2>
+<p>EM 核 σ∈{.1,.4,.8} × KL 权重 β∈{0,.004} 六格总分 85.03–85.27；CM-GRPO 85.46。作者的结论：策略核一旦和推理采样器一致，辅助随机过程就没必要，也省掉 σ、β 两个要联调的旋钮。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/raven.html">raven</a> · 提出 CM-GRPO</li>
+<li><a href="../concepts/grpo.html">grpo</a> · 组内相对优势</li>
+<li><a href="../concepts/ode-vs-sde.html">ode-vs-sde</a> · Flow-GRPO 走的 ODE→SDE 那条路</li>
+<li><a href="../concepts/dmd-distillation.html">dmd-distillation</a> · stop-gradient 回归实现 score 梯度的同款写法</li>
+<li><a href="../concepts/per-frame-grpo.html">per-frame-grpo</a> · 优势按时间分区的另一路</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 1 处</span>
+  <ul><li><a href="../papers/raven.html"><span class="cat">paper</span>RAVEN · 把推理时的&quot;接龙&quot;搬进训练图，让历史也吃到梯度</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/consistency-kernel-policy.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>

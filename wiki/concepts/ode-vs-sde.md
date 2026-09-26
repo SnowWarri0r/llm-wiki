@@ -1,7 +1,7 @@
 ---
 name: ode-vs-sde
 type: concept
-sources: [flow-matching, ode-sde]
+sources: [flow-matching, ode-sde, raven]
 updated: 2026-06-12
 ---
 

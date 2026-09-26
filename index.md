@@ -47,6 +47,7 @@
 - [Gander · 会插话的全能助手](wiki/papers/gander.md) — 腾讯混元语音的 Omni Interaction Agent：9B 全双工小脑按 1 秒 chunk 拍平音视频与文本、每窗先预测听/说/打断，免训练大脑（Codex）经 task_start/send/resolve 三工具接长活；InteractionSpeech 26 万条打断合成管线、FDB v3 时机双指标 100/8.0 全场唯一双赢、back-brain-only 消融定位瓶颈在路由与 ASR 通道。
 - [SolarWM · 世界模型的公共地基](wiki/papers/solarwm.md) — CUHK-SZ 等的全开源基建：1.43M clip 数据引擎（先全量标注后做决定、拒收 54.9 万条带原因留档、三命名空间分离、门限逐源不对称）+ 四条 5B–33B 异构骨干（Wan2.2×2/LTX-2.5/MiniMax-H3）共享相机接口 + 双向→TF-AnyFlow→DMD 三阶段配方；只训 5 秒无 attention sink 漫游 1 小时；实验全定性无数值表。
 - [LynnReal-Omni · agent 搭台，扩散唱戏](wiki/papers/lynnreal-omni.md) — 面向 agentic 视觉工作流的统一视频生成：32B 共享 DiT（MiniMax-H3 骨干）吃全部控制（T2V/参考/结构/编辑/长视频=不同打包布局）；4 步 TDM + Flash 三明治 token 压缩 + 轻量 VAE 解码器（少步化后瓶颈在解码）；warm 540p22帧 843/377ms；自建 MSAVP（冻结清单+盲评审）自家非第一。
+- [RAVEN · 把接龙搬进训练图](wiki/papers/raven.md) — 因果视频蒸馏的历史监督缺口：TF/DF 历史分布不像推理，Self Forcing 分布对了但 cache 是 sg；RAVEN 把 self rollout 拍成 2T−1 长的干净块/带噪块交错序列一次前向，后面块的 DMD 损失反传到历史编码 + 偏晚块的 shift α=−1 权重；CM-GRPO 把一致性一步当高斯策略做 GRPO，不借 Flow-GRPO 的 Euler-Maruyama；Wan2.1-1.3B VBench 84.96→85.15→85.46，动态度赢最多；消融「历史换自生成不给梯度」83.30 反而掉。
 - [Fish Audio S2 Pro](wiki/papers/fish-speech-s2-pro.md) — Dual-AR + RVQ + GRPO 的开源 TTS
 - [DuplexOmni · 边听边说时，后台还能继续想](wiki/papers/duplexomni.md) — 把实时交互 S1 与后台思考 S2 拆成并行线；交互模型内部再用 480 ms 时间片、Thinker–Talker 和 16 层 Mimi codec 生成语音。完整拆开控制标记闭环、两阶段交替冻结与交叉熵手算；ToR 72.6 最强，但 Daily-Omni 53.8、WER 11.92%，论文结果与至少 8×H20 的公开部署口径分开记录。
 - [PersonaPlex · 同一套实时语音模型，既能换声音，也能换身份](wiki/papers/personaplex.md) — 在 Moshi 的 80 ms 全双工骨干前拼入参考声音与角色文字，不改成 ASR–LLM–TTS 级联；完整拆开 17 路输入、Temporal–Depth、声学码延迟、prompt 缓存、加权 loss、2,250 小时合成数据、两套 duplex benchmark，并严格分开论文实验模型与公开 personaplex-7b-v1 的数据和评测口径。
@@ -211,6 +212,8 @@
 - [Sparse Reference Attention](wiki/concepts/sparse-reference-attention.md) — 目标视频内部仍全局互看，跨分支只读取同一时刻参考帧；连边从 T²SₜSᵣ 降到 TSₜSᵣ
 - [Error Buffer Training](wiki/concepts/error-buffer-training.md) — 缓存模型预测减真值的残差，再叠回干净历史，让训练提前见到推理时的小漂移
 - [Chunk-wise Self-Forcing](wiki/concepts/chunk-wise-self-forcing.md) — score 网络整段看全局，学生一次只重放一块建图，梯度累加后统一更新
+- [训练时测试 Training-Time Test](wiki/concepts/training-time-test.md) — 在模型推理时自己会遇到的上下文上训练，且上下文留在图里吃梯度；RAVEN 把 rollout 拍成干净块/带噪块交错序列，去掉 Self Forcing 的 sg；与测试时训练 TTT 相反
+- [未来参与分数 · 分块损失权重](wiki/concepts/future-participation-loss-scaling.md) — p_j=块 j 及之后的元素占比，套 shift π_α 出权重再归一化保平均为 1；偏晚块（α=−1）比均匀高 1.33，字面 α=0 退化只能当约定
 - [Causal Consistency Distillation](wiki/concepts/causal-consistency-distillation.md) — 老师在线走一小步，学生与 EMA 目标在相邻噪声时刻保持一致，省掉离线 ODE 轨迹存储
 
 ### CNN 基础
@@ -433,6 +436,7 @@
 - [on-policy vs off-policy](wiki/concepts/on-policy-vs-off-policy.md) — on-policy=学当前策略自己刚生成的(准但贵,旧数据即过期); off-policy=学别的策略/旧数据(省但分布错位); 重要性采样π/μ纠偏(裸平均5.5→纠偏2.8), 差太远比率爆方差→PPO clip限小步; SFT拿外部数据=off-policy, GRAPE选合身=拉回on-policy
 - [GRPO](wiki/concepts/grpo.md) — 不训 critic；同题采 G 条回答，用组内相对 reward 当 advantage，保留 PPO 的 token ratio 与 clip
 - [Per-Frame GRPO](wiki/concepts/per-frame-grpo.md) — 把组相对 reward 保留到视频时间分区；哪一秒坏手/不同步，哪一秒承担负 advantage，不再由整段平均分掩盖
+- [一致性采样步当策略 · CM-GRPO](wiki/concepts/consistency-kernel-policy.md) — 一致性一步"猜端点再加噪"天然是高斯核 N(α_s x̂_θ, σ_s²I)，直接当策略做 GRPO；梯度 −Âα_s(ẑ−μ)/σ_s² 用 sg 回归实现（与 DMD 同模子）；不用 Flow-GRPO 的 ODE→SDE 辅助噪声，σ/β 免调；KL 有闭式但本文未用
 - [Dr.GRPO](wiki/concepts/dr-grpo.md) — 保留减组均值，去掉除组标准差和除回答实际长度，修正题目难度与长度偏置
 - [DAPO](wiki/concepts/dapo.md) — 长 CoT 的四项配方：Clip-Higher、Dynamic Sampling、token 级 loss 汇总、超长软惩罚
 - [GSPO](wiki/concepts/gspo.md) — 沿用组相对 advantage，把重要性比率与 clip 从 token 级提升到整条序列，稳定 MoE RL

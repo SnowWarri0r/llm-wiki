@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RAVEN · 把接龙搬进训练图 — 个人 wiki</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,750;1,400;1,600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,700;1,6..72,400&family=JetBrains+Mono:wght@500;600;700;800&family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#eff3f1;--card:#f9fbfa;--ink:#141a18;--ink2:#354440;--muted:#6b7a76;--rule:#b3c2bd;--jade:#1e5a4c;--jade2:#d6e8e2;--rust:#a83b25;--rust2:#f4d8ce;--gold:#a46c08;--gold2:#f4e4b8;--green:#3f7354;--green2:#dfece3;--navy:#1a2b27;--navy2:#dce6e3;--blue:#1f4e79;--blue2:#d8e4ef;--accent:#1e5a4c}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:18px/1.76 'Newsreader','Noto Serif SC',serif;-webkit-font-smoothing:antialiased}body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.3;background-image:linear-gradient(rgba(30,90,76,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(30,90,76,.06) 1px,transparent 1px);background-size:32px 32px}.page{position:relative;max-width:1180px;margin:auto;padding:58px 38px 120px}.mast{display:flex;justify-content:space-between;border-top:4px double var(--ink);border-bottom:1px solid var(--rule);padding:12px 0;color:var(--muted);font:600 11px/1.5 'JetBrains Mono';letter-spacing:2px;text-transform:uppercase}.hero{padding:58px 0 32px}.issue{display:flex;gap:14px;align-items:center;color:var(--jade);font:700 11px/1.5 'JetBrains Mono';letter-spacing:3px;text-transform:uppercase}.issue:after{content:"";height:1px;background:var(--rule);flex:1}.hero h1{margin:18px 0 12px;font:750 clamp(46px,7.5vw,92px)/.92 'Fraunces','Noto Serif SC';letter-spacing:-.05em}.hero h1 em{color:var(--jade);font-weight:600}.byline{color:var(--muted);font:600 12px/1.5 'JetBrains Mono';letter-spacing:1px}.dek{max-width:900px;font:italic 400 clamp(21px,2.5vw,29px)/1.43 'Fraunces','Noto Serif SC';color:var(--ink2)}.tldr,.note,.warning,.truth{margin:24px 0;padding:18px 22px;background:var(--card);border:1px solid var(--rule);border-left:5px solid var(--navy)}.warning{border-left-color:var(--rust);background:#fdf0ec}.truth{border-left-color:var(--green);background:#f0f6f1}.label{display:block;margin-bottom:5px;color:var(--navy);font:700 10px/1.5 'JetBrains Mono';letter-spacing:2px;text-transform:uppercase}.warning .label{color:var(--rust)}.truth .label{color:var(--green)}nav.toc{position:sticky;top:35px;z-index:10;display:flex;gap:7px;overflow-x:auto;margin:0 -14px 50px;padding:10px 14px;background:rgba(239,243,241,.96);border-block:1px solid var(--rule);scrollbar-width:none}nav.toc a{flex:none;padding:6px 9px;border:1px solid var(--rule);color:var(--navy);background:var(--card);font:600 10px/1.2 'JetBrains Mono';text-decoration:none}nav.toc a:hover{background:var(--jade);color:#fff}h2{display:flex;gap:16px;align-items:baseline;margin:76px 0 20px;font:700 clamp(30px,4vw,43px)/1.1 'Fraunces','Noto Serif SC';letter-spacing:-.025em}h2 .n{min-width:55px;color:var(--jade);font:700 11px/1.4 'JetBrains Mono';letter-spacing:2px}h3{margin:34px 0 10px;font:700 23px/1.3 'Fraunces','Noto Serif SC'}p{margin:12px 0}a{color:#174a3e;text-decoration-thickness:1px;text-underline-offset:3px}strong{font-weight:700}.lead{font-size:22px;line-height:1.58;color:var(--ink2)}code{font:500 .88em/1.5 'JetBrains Mono';background:#eef4f2;border:1px solid var(--rule);border-radius:3px;padding:1px 5px}.jr{vertical-align:super;margin:0 2px;padding:1px 5px;border:1px solid var(--gold);border-radius:999px;background:var(--gold2);color:#563700;text-decoration:none;font:700 9px/1.2 'JetBrains Mono'}.jr:hover{background:#614000;color:#fff}.grid2,.grid3{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:18px 0}.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}.card{min-width:0;padding:20px;background:var(--card);border:1px solid var(--rule);box-shadow:5px 5px 0 rgba(30,90,76,.08)}.card h3{margin:8px 0 5px}.card p{font-size:16px;line-height:1.58}.tag{display:inline-block;padding:3px 8px;background:var(--navy2);color:var(--navy);font:700 10px/1.4 'JetBrains Mono';letter-spacing:1px;text-transform:uppercase}.tag.rust{background:var(--rust2);color:#7b291a}.tag.gold{background:var(--gold2);color:#634000}.tag.green{background:var(--green2);color:#285438}.tag.jade{background:var(--jade2);color:#164539}figure{margin:38px 0;padding:28px;background:rgba(249,251,250,.92);border:1px solid var(--rule);box-shadow:8px 8px 0 rgba(30,90,76,.09);overflow:hidden}figcaption{display:flex;justify-content:space-between;gap:16px;margin-bottom:22px;padding-bottom:12px;border-bottom:1px dashed var(--rule);color:var(--muted);font:600 11px/1.4 'JetBrains Mono';letter-spacing:1.3px;text-transform:uppercase}figcaption b{color:var(--rust)}.formula{margin:18px 0;padding:21px 16px;overflow-x:auto;text-align:center;background:#12302a;color:#fff;border-left:6px solid var(--gold);font-size:1.12em}.formula .katex{color:#fff}.vars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0}.vars>div{min-width:0;padding:10px 12px;background:var(--card);border:1px solid var(--rule);font-size:14px}.vars code{display:block;margin-bottom:4px;color:#174a3e}.calc{counter-reset:step;display:grid;gap:8px;margin:18px 0}.step{position:relative;padding:13px 14px 13px 56px;background:#fff;border:1px solid var(--rule);font-size:15px}.step:before{counter-increment:step;content:counter(step,decimal-leading-zero);position:absolute;left:16px;top:14px;color:var(--jade);font:700 11px/1.5 'JetBrains Mono'}.step b{display:block;color:var(--navy)}.scroll{overflow-x:auto;margin:18px 0;border:1px solid var(--rule)}table{width:100%;border-collapse:collapse;background:var(--card);font-size:14px;white-space:nowrap}th,td{padding:10px 12px;border-bottom:1px solid var(--rule);text-align:right}th:first-child,td:first-child{text-align:left}thead th{position:sticky;top:0;background:var(--navy);color:#fff;font:600 10px/1.4 'JetBrains Mono';letter-spacing:.7px}.win{background:var(--green2);color:#1f5237;font-weight:700}.lose{background:var(--rust2);color:#7c2b1d}.gloss{margin-top:76px;padding-top:30px;border-top:3px double var(--ink)}.gloss ol{list-style:none;padding:0;counter-reset:g}.gloss li{position:relative;padding:13px 10px 13px 48px;border-bottom:1px dashed var(--rule);font-size:15px}.gloss li:before{counter-increment:g;content:counter(g,decimal-leading-zero);position:absolute;left:7px;color:var(--jade);font:700 10px/1.8 'JetBrains Mono'}.gloss .term{font-weight:700;color:var(--navy)}.sources{margin-top:54px;padding:22px;background:var(--card);border:1px solid var(--rule);font-size:14px}.sources li{margin:7px 0}
+@media(max-width:850px){.page{padding:34px 18px 90px}.grid3{grid-template-columns:1fr}.vars{grid-template-columns:1fr}figcaption{display:block}figcaption b{display:block;margin-top:5px}}
+@media(max-width:520px){body{font-size:17px}.page{padding-inline:12px}.hero h1{font-size:46px}figure{padding:18px 12px}.grid2,.grid3{grid-template-columns:1fr}.mast .r{display:none}}
+</style>
+<!-- katex-head:start -->
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<!-- katex-head:end -->
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../papers.html" style="color:#b8841c;">papers</a> · raven</span>
+</div>
+<!-- wiki-nav:end -->
+<main class="page">
+<div class="mast"><span>AUTOREGRESSIVE VIDEO · DISTILLATION · ONLINE RL · FIELD NOTES</span><span class="r">ARXIV 2605.15190 · 2026-05</span></div>
+<header class="hero">
+  <div class="issue">历史也要吃梯度 · 一致性一步就是策略</div>
+  <h1>RAVEN<br><em>把接龙搬进训练图</em></h1>
+  <p class="byline">RAVEN 作者组（NVIDIA Academic Grant 资助）· arXiv 2605.15190 (2026-05) · 基座 Wan2.1-T2V-1.3B</p>
+  <p class="dek">实时视频生成靠"接龙"：每生成一块，就拿它当下一块的上下文。蒸馏出来的少步因果模型接得快，但训练时看到的历史和推理时自己接出来的历史不是一回事，越接越漂。Self Forcing 让模型在自己接出来的历史上练，可那段历史是复读机——后面出了错，前面的历史一个字不改。RAVEN 把每次自己接龙的结果重新拍成一条"干净历史块 / 带噪去噪块"交错的序列，一次前向，后面块的损失就能修前面块的历史编码。再加一个 CM-GRPO：一致性采样每一步本来就是"猜干净图、再加噪"的高斯转移，直接当策略做 RL，不用借 Flow-GRPO 那套训练才有的随机过程。</p>
+  <div class="tldr"><span class="label">先记这一句</span>因果视频蒸馏的四种历史范式，要么历史分布不像推理（Teacher / Diffusion Forcing），要么分布像了但历史是 stop-gradient 的死上下文（Self Forcing）。RAVEN 把 self rollout 拍成 <strong>2T−1 长的交错序列</strong>，带噪块被监督、前面的干净块当历史且<strong>留在图里</strong>；配一个偏向后面块的损失权重（shift α=−1）。VBench 总分 Causal Forcing 84.96 → RAVEN 85.15 → 再叠 CM-GRPO 85.46，动态度是最大赢面（2.669 → 2.951）。关键消融：只把历史换成自生成、不给梯度，分数反而掉（83.30）——<strong>分布对了不等于有监督</strong>。</div>
+</header>
+<nav class="toc"><a href="#misread">00 先排雷</a><a href="#pain">01 四种历史</a><a href="#overview">02 全景</a><a href="#prelim">03 预备</a><a href="#interleave">04 交错序列</a><a href="#eagle">05 血统与代价</a><a href="#scaling">06 分块权重</a><a href="#cmgrpo">07 CM-GRPO</a><a href="#reward">08 KL 与奖励</a><a href="#setup">09 训练配置</a><a href="#results">10 主结果</a><a href="#ablation">11 消融</a><a href="#limits">12 没说的事</a><a href="#verdict">13 定位</a></nav>
+
+<section id="misread">
+<h2><span class="n">§ 00</span>先纠正四个容易读错的点</h2>
+<div class="grid2">
+  <div class="card"><span class="tag rust">名字</span><h3>training-time test 不是 test-time training</h3><p>测试时训练（TTT）是推理时临时改参数。这里反过来：<strong>训练时模拟推理会遇到的上下文</strong>，推理时什么都不多做。名字来自 EAGLE-3 的推测解码训练法，§ 05 讲血统。</p></div>
+  <div class="card"><span class="tag rust">尺子</span><h3>表里的 Dyn. Deg. 不是 VBench 自带的动态度</h3><p>作者嫌 VBench 用 RAFT 光流幅度算动态度会把抖动、漂移也算成运动，于是在全部 6,220 条视频上改用 <strong>UnifiedReward-32B</strong> 打分（人类偏好训练的 VLM 奖励模型）。而训练奖励里的 DD 恰恰是 RAFT 光流——评测和奖励刻意错开，防 reward hacking；但两列数不是一个尺子。</p></div>
+  <div class="card"><span class="tag gold">量级</span><h3>增量都是零点几分</h3><p>Causal Forcing 84.96 → RAVEN 85.15（+0.19）→ +CM-GRPO 85.46（再 +0.31）。VBench 总分本来就挤在一条窄带里（表 1 前六名 83.01–84.96），看方向和一致性比看绝对差更有意义；动态度的 +0.282 是最实在的一笔。</p></div>
+  <div class="card"><span class="tag gold">边界</span><h3>"长时程"是动机，不是证据</h3><p>摘要说历史错位"限制长时程质量"，但所有评测都是 VBench 5 秒短视频（Wan 1.3B 81 帧 = 21 latent 帧，每块 3 帧，约 7 块——块数是推算，论文没明写）。没有一张长视频漂移曲线。</p></div>
+</div>
+<div class="note"><span class="label">第五点 · KL 是摆设</span>CM-GRPO 推了参考策略 KL 的闭式（§ 08），但双向老师没法从一致性接口采样、给不出参考端点，本文<strong>没有用</strong>它。表 4 里带 β 的行是 Euler-Maruyama 基线的 KL，不是 CM-GRPO 的。</div>
+</section>
+
+<section id="pain">
+<h2><span class="n">§ 01</span>四种历史范式：分布不对，或有分布没梯度</h2>
+<p class="lead">因果自回归视频扩散<a class="jr" href="#g-01">01</a>把视频切成块，第 <code class="m">t</code> 块的生成条件是前面所有块的历史表示 <code class="m">h_t=\mathcal H(x_{&lt;t})</code>——也就是 KV cache<a class="jr" href="#g-06">06</a>。从高保真双向老师往因果学生做非对称蒸馏<a class="jr" href="#g-02">02</a>时，训练范式的差别几乎全在"历史从哪来、历史吃不吃梯度"这两问上。</p>
+<figure id="fig-paradigms">
+<figcaption><span>Fig 01 · 四种历史范式</span><b>历史来源 × 后面块的梯度能不能到历史</b></figcaption>
+<svg viewBox="0 0 1100 330" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
+<defs><marker id="mJ" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#a83b25"/></marker></defs>
+<g>
+<rect x="10" y="12" width="260" height="300" rx="6" fill="#fff" stroke="#b3c2bd"/>
+<text x="140" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#1a2b27">(a) Teacher Forcing</text>
+<rect x="30" y="70" width="60" height="44" rx="4" fill="#dfece3" stroke="#3f7354"/><text x="60" y="97" text-anchor="middle" font-size="12">x<tspan dy="3" font-size="9">1</tspan></text>
+<rect x="100" y="70" width="60" height="44" rx="4" fill="#dfece3" stroke="#3f7354"/><text x="130" y="97" text-anchor="middle" font-size="12">x<tspan dy="3" font-size="9">2</tspan></text>
+<rect x="190" y="70" width="60" height="44" rx="4" fill="#fff" stroke="#1e5a4c" stroke-width="1.8" stroke-dasharray="5 3"/><text x="220" y="97" text-anchor="middle" font-size="12">z<tspan dy="3" font-size="9">3</tspan></text>
+<text x="95" y="140" text-anchor="middle" font-size="11" fill="#285438">真视频块</text>
+<text x="220" y="140" text-anchor="middle" font-size="11" fill="#1e5a4c">带噪当前块</text>
+<line x1="220" y1="200" x2="100" y2="200" stroke="#a83b25" stroke-width="2" stroke-dasharray="4 4"/>
+<text x="160" y="190" text-anchor="middle" font-size="12" fill="#a83b25">梯度到不了</text>
+<text x="140" y="240" text-anchor="middle" font-size="11.5" fill="#354440">训练看真历史</text>
+<text x="140" y="262" text-anchor="middle" font-size="11.5" fill="#354440">推理看自己的历史</text>
+<text x="140" y="292" text-anchor="middle" font-size="11" font-weight="700" fill="#a83b25">分布不对</text>
+</g>
+<g>
+<rect x="283" y="12" width="260" height="300" rx="6" fill="#fff" stroke="#b3c2bd"/>
+<text x="413" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#1a2b27">(b) Diffusion Forcing / CausVid</text>
+<rect x="303" y="70" width="60" height="44" rx="4" fill="#dfece3" stroke="#3f7354" stroke-dasharray="3 2"/><text x="333" y="97" text-anchor="middle" font-size="12">z<tspan dy="3" font-size="9">1</tspan><tspan dy="-9" font-size="8">(n1)</tspan></text>
+<rect x="373" y="70" width="60" height="44" rx="4" fill="#dfece3" stroke="#3f7354" stroke-dasharray="3 2"/><text x="403" y="97" text-anchor="middle" font-size="12">z<tspan dy="3" font-size="9">2</tspan><tspan dy="-9" font-size="8">(n2)</tspan></text>
+<rect x="463" y="70" width="60" height="44" rx="4" fill="#fff" stroke="#1e5a4c" stroke-width="1.8" stroke-dasharray="5 3"/><text x="493" y="97" text-anchor="middle" font-size="12">z<tspan dy="3" font-size="9">3</tspan></text>
+<text x="368" y="140" text-anchor="middle" font-size="11" fill="#285438">真块各自独立加噪</text>
+<line x1="493" y1="200" x2="373" y2="200" stroke="#a83b25" stroke-width="2" stroke-dasharray="4 4"/>
+<text x="433" y="190" text-anchor="middle" font-size="12" fill="#a83b25">梯度到不了</text>
+<text x="413" y="240" text-anchor="middle" font-size="11.5" fill="#354440">历史更"糙"了一点</text>
+<text x="413" y="262" text-anchor="middle" font-size="11.5" fill="#354440">但还是真视频不是自己的</text>
+<text x="413" y="292" text-anchor="middle" font-size="11" font-weight="700" fill="#a83b25">分布仍不对</text>
+</g>
+<g>
+<rect x="556" y="12" width="260" height="300" rx="6" fill="#fff" stroke="#b3c2bd"/>
+<text x="686" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#1a2b27">(c) Self Forcing</text>
+<rect x="576" y="70" width="60" height="44" rx="4" fill="#d6e8e2" stroke="#1e5a4c"/><text x="606" y="97" text-anchor="middle" font-size="12">x̂<tspan dy="3" font-size="9">1</tspan></text>
+<rect x="646" y="70" width="60" height="44" rx="4" fill="#d6e8e2" stroke="#1e5a4c"/><text x="676" y="97" text-anchor="middle" font-size="12">x̂<tspan dy="3" font-size="9">2</tspan></text>
+<rect x="736" y="70" width="60" height="44" rx="4" fill="#fff" stroke="#1e5a4c" stroke-width="1.8" stroke-dasharray="5 3"/><text x="766" y="97" text-anchor="middle" font-size="12">ẑ<tspan dy="3" font-size="9">3</tspan></text>
+<text x="641" y="140" text-anchor="middle" font-size="11" fill="#164539">自己 rollout 的块</text>
+<line x1="766" y1="200" x2="700" y2="200" stroke="#a83b25" stroke-width="2"/>
+<line x1="700" y1="190" x2="690" y2="210" stroke="#a83b25" stroke-width="2.5"/><line x1="694" y1="190" x2="684" y2="210" stroke="#a83b25" stroke-width="2.5"/>
+<text x="655" y="204" text-anchor="end" font-size="12" font-family="'JetBrains Mono',monospace" font-weight="700" fill="#a83b25">sg(·)</text>
+<text x="686" y="240" text-anchor="middle" font-size="11.5" fill="#354440">分布对了</text>
+<text x="686" y="262" text-anchor="middle" font-size="11.5" fill="#354440">历史 cache 是 detach 的复读机</text>
+<text x="686" y="292" text-anchor="middle" font-size="11" font-weight="700" fill="#a83b25">有分布没梯度</text>
+</g>
+<g>
+<rect x="829" y="12" width="260" height="300" rx="6" fill="#f0f6f1" stroke="#3f7354" stroke-width="1.8"/>
+<text x="959" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#1a2b27">(d) RAVEN</text>
+<rect x="849" y="70" width="60" height="44" rx="4" fill="#d6e8e2" stroke="#1e5a4c"/><text x="879" y="97" text-anchor="middle" font-size="12">x̂<tspan dy="3" font-size="9">1</tspan></text>
+<rect x="919" y="70" width="60" height="44" rx="4" fill="#d6e8e2" stroke="#1e5a4c"/><text x="949" y="97" text-anchor="middle" font-size="12">x̂<tspan dy="3" font-size="9">2</tspan></text>
+<rect x="1009" y="70" width="60" height="44" rx="4" fill="#fff" stroke="#1e5a4c" stroke-width="1.8" stroke-dasharray="5 3"/><text x="1039" y="97" text-anchor="middle" font-size="12">ẑ<tspan dy="3" font-size="9">3</tspan></text>
+<text x="914" y="140" text-anchor="middle" font-size="11" fill="#164539">同一次 rollout，在图里</text>
+<line x1="1039" y1="200" x2="885" y2="200" stroke="#a83b25" stroke-width="2.4" marker-end="url(#mJ)"/>
+<text x="962" y="190" text-anchor="middle" font-size="12" fill="#a83b25">梯度穿过历史编码</text>
+<text x="959" y="240" text-anchor="middle" font-size="11.5" fill="#354440">分布对了</text>
+<text x="959" y="262" text-anchor="middle" font-size="11.5" fill="#354440">后面块的损失修前面块的读法</text>
+<text x="959" y="292" text-anchor="middle" font-size="11" font-weight="700" fill="#285438">有分布也有梯度</text>
+</g>
+</svg>
+</figure>
+<div class="grid2">
+  <div class="card"><span class="tag rust">a · b</span><h3>Teacher Forcing<a class="jr" href="#g-03">03</a> / Diffusion Forcing<a class="jr" href="#g-04">04</a></h3><p>TF 喂真视频块当历史，监督干净但模型从没见过自己接出来的坏历史。DF（CausVid 用它配 DMD）把每个真块各自独立加噪再当历史，历史"糙"了一点，但来源仍是真视频——推理时哪有真视频给你接。两者训练的历史分布都不是推理的历史分布，误差沿着接龙累积。</p></div>
+  <div class="card"><span class="tag rust">c</span><h3>Self Forcing<a class="jr" href="#g-05">05</a></h3><p>训练时真的展开自回归生成，用自己 rollout 出来的块当历史：分布对上了。但 cache 是 <code class="m">h_t^{\mathrm{SF}}=\mathrm{sg}(\mathcal H(\hat x_{&lt;t}))</code>，stop-gradient<a class="jr" href="#g-07">07</a>把历史当固定上下文——后面块的损失到不了历史那一头。</p></div>
+</div>
+<div class="truth"><span class="label">RAVEN 要补的洞</span>论文管这叫<strong>历史监督缺口</strong>：现有方法"要么在不像推理的历史分布上优化，要么条件在 rollout 历史上但历史没有端到端监督"。RAVEN 的答案不是换散度、不是换架构，是把 rollout 拍成一条序列，让历史编码留在有梯度的那次前向里。</div>
+</section>
+
+<section id="overview">
+<h2><span class="n">§ 02</span>全景：一次迭代三步，rollout 用两遍</h2>
+<p class="lead">整套训练建在 CausVid 式非对称蒸馏上：冻结的双向老师、可学的双向 fake-score critic、因果学生。每次迭代先 rollout，再更新 critic，最后（每 r 次）在交错序列上更新生成器。RAVEN 的巧在于<strong>rollout 不丢</strong>：critic 用它的干净端点，生成器也用它的整条轨迹。</p>
+<figure id="fig-pipeline">
+<figcaption><span>Fig 02 · 一次 RAVEN 训练迭代</span><b>Stage 1 采出来的东西 · Stage 2 和 Stage 3 各用一遍</b></figcaption>
+<svg viewBox="0 0 1100 330" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
+<defs><marker id="mG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1e5a4c"/></marker></defs>
+<rect x="20" y="30" width="300" height="200" rx="6" fill="#fff" stroke="#1a2b27" stroke-width="1.6"/>
+<text x="170" y="58" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1a2b27">Stage 1 · Self rollout（无梯度）</text>
+<text x="170" y="84" text-anchor="middle" font-size="11" fill="#354440">冻结学生 f<tspan dy="3" font-size="8">θ</tspan><tspan dy="-3"> 按块接龙，复用 KV cache</tspan></text>
+<text x="170" y="110" text-anchor="middle" font-size="11" fill="#354440">每块走 K 步一致性采样</text>
+<rect x="40" y="128" width="260" height="44" rx="4" fill="#d6e8e2" stroke="#1e5a4c"/>
+<text x="170" y="147" text-anchor="middle" font-size="11" fill="#164539">去噪轨迹 ẑ<tspan dy="3" font-size="8">t</tspan><tspan dy="-9" font-size="8">(τ1)</tspan><tspan dy="6"> … ẑ</tspan><tspan dy="3" font-size="8">t</tspan><tspan dy="-9" font-size="8">(τK)</tspan></text>
+<text x="170" y="165" text-anchor="middle" font-size="11" fill="#164539">+ 干净端点 x̂<tspan dy="3" font-size="8">t</tspan><tspan dy="-3">（t = 1…T）</tspan></text>
+<text x="170" y="205" text-anchor="middle" font-size="10.5" font-family="'JetBrains Mono',monospace" font-weight="600" fill="#6b7a76">推理时接龙的原样复刻</text>
+<path d="M 320 100 L 380 100" stroke="#1e5a4c" stroke-width="2" marker-end="url(#mG)"/>
+<path d="M 320 170 C 350 170, 350 260, 380 260" stroke="#1e5a4c" stroke-width="2" fill="none" marker-end="url(#mG)"/>
+<rect x="384" y="40" width="330" height="120" rx="6" fill="#fff" stroke="#b3c2bd" stroke-width="1.4"/>
+<text x="549" y="66" text-anchor="middle" font-size="13" font-weight="700" fill="#1a2b27">Stage 2 · fake-score critic 更新（每次迭代）</text>
+<text x="549" y="92" text-anchor="middle" font-size="11" fill="#354440">干净端点拼成整段 x̂，随机 n 加噪 z<tspan dy="-6" font-size="8">(n)</tspan></text>
+<text x="549" y="114" text-anchor="middle" font-size="11" fill="#354440">双向 critic f<tspan dy="3" font-size="8">φ</tspan><tspan dy="-3"> 回归目标，学"学生现在的分布"</tspan></text>
+<text x="549" y="140" text-anchor="middle" font-size="10.5" font-family="'JetBrains Mono',monospace" font-weight="600" fill="#6b7a76">只用端点 · 不用轨迹</text>
+<rect x="384" y="200" width="330" height="120" rx="6" fill="#f0f6f1" stroke="#3f7354" stroke-width="1.8"/>
+<text x="549" y="226" text-anchor="middle" font-size="13" font-weight="700" fill="#1a2b27">Stage 3 · 生成器更新（每 r 次一次）</text>
+<text x="549" y="252" text-anchor="middle" font-size="11" fill="#354440">选层级 u，把轨迹拍成交错序列 I<tspan dy="3" font-size="8">u</tspan></text>
+<text x="549" y="274" text-anchor="middle" font-size="11" fill="#354440">因果 mask 一次前向 → x̂<tspan dy="3" font-size="8">θ</tspan></text>
+<text x="549" y="300" text-anchor="middle" font-size="10.5" font-family="'JetBrains Mono',monospace" font-weight="600" fill="#285438">轨迹 + 端点都用 · 历史在图里</text>
+<path d="M 714 260 L 770 260" stroke="#1e5a4c" stroke-width="2" marker-end="url(#mG)"/>
+<rect x="774" y="200" width="306" height="120" rx="6" fill="#fff" stroke="#b3c2bd" stroke-width="1.4"/>
+<text x="927" y="226" text-anchor="middle" font-size="13" font-weight="700" fill="#1a2b27">DMD score 梯度</text>
+<text x="927" y="252" text-anchor="middle" font-size="11" fill="#354440">x̂<tspan dy="3" font-size="8">θ</tspan><tspan dy="-3"> 加噪到 s → 老师端点 x̂</tspan><tspan dy="3" font-size="8">ψ</tspan><tspan dy="-3">、critic 端点 x̂</tspan><tspan dy="3" font-size="8">φ</tspan></text>
+<text x="927" y="274" text-anchor="middle" font-size="11" fill="#354440">逐块拆损失，按未来参与分数加权</text>
+<text x="927" y="300" text-anchor="middle" font-size="10.5" font-family="'JetBrains Mono',monospace" font-weight="600" fill="#6b7a76">反传穿过 x̂<tspan dy="3" font-size="8">&lt;t</tspan><tspan dy="-3"> 的 KV 投影</tspan></text>
+<path d="M 714 100 L 770 100" stroke="#1e5a4c" stroke-width="2" marker-end="url(#mG)"/>
+<rect x="774" y="40" width="306" height="120" rx="6" fill="#fff" stroke="#b3c2bd" stroke-width="1.4"/>
+<text x="927" y="66" text-anchor="middle" font-size="13" font-weight="700" fill="#1a2b27">更新后的 critic 进 Stage 3</text>
+<text x="927" y="92" text-anchor="middle" font-size="11" fill="#354440">TTUR：critic 每次更新、生成器每 r 次</text>
+<text x="927" y="114" text-anchor="middle" font-size="11" fill="#354440">本文 r 从 Self Forcing 的 5 降到 2</text>
+<text x="927" y="140" text-anchor="middle" font-size="10.5" font-family="'JetBrains Mono',monospace" font-weight="600" fill="#6b7a76">老师 f<tspan dy="3" font-size="8">ψ</tspan><tspan dy="-3"> 始终冻结</tspan></text>
+</svg>
+</figure>
+<p>三个角色和 DMD<a class="jr" href="#g-08">08</a>一样：老师给"数据该长什么样"的 score，critic 给"学生现在长什么样"的 score，两者之差就是学生要走的方向。RAVEN 没动这个方向，动的是<strong>学生在哪个输入上算这个方向</strong>。</p>
+</section>
+
+<section id="prelim">
+<h2><span class="n">§ 03</span>预备：记号、一致性采样、DMD 回归</h2>
+<p class="lead">记号先钉死：下标 <code class="m">t</code> 是块的位置，括号上标 <code class="m">(n)</code>、<code class="m">(u)</code>、<code class="m">(s)</code> 是噪声级；带帽 <code class="m">\hat x</code> 是学生生成的量。</p>
+<div class="formula">p_\theta(x_{1:T}\mid c)=\prod_{t=1}^{T}p_\theta(x_t\mid h_t,c),\qquad h_t=\mathcal H(x_{&lt;t}),\qquad z_t^{(n)}=\alpha_n x_t+\sigma_n\epsilon</div>
+<div class="vars">
+  <div><code class="m">\mathcal H(\cdot)</code>模型通过 cache 编出来的历史表示；不同范式的差别就在传给它的东西。</div>
+  <div><code class="m">\alpha_n,\ \sigma_n</code>噪声调度系数：级别 n 下干净信号留多少、噪声加多少。</div>
+  <div><code class="m">\tau_1&gt;\cdots&gt;\tau_K=0</code>少步一致性采样器的时间步，从最噪到干净。</div>
+  <div><code class="m">\mathrm{sg}(\cdot)</code>stop-gradient：数值照用，梯度到这里截断。</div>
+</div>
+<h3>一致性采样器每一步</h3>
+<p>一致性采样器<a class="jr" href="#g-09">09</a>一步做两件事：先由当前带噪块预测干净端点，再按下一噪声级把这个端点重新加噪，得到下一步的输入。</p>
+<div class="formula">\hat x_\theta=f_\theta(\tilde z^{(u)},u,c),\qquad \tilde z^{(s)}=\alpha_s\hat x_\theta+\sigma_s\epsilon,\ \ \epsilon\sim\mathcal N(0,I)</div>
+<p>注意那个 <code class="m">\epsilon</code>：推理时每步就有的随机性。§ 07 的 CM-GRPO 全靠它——它让每一步天然是一个高斯转移，不用另造随机过程。</p>
+<h3>DMD 的 stop-gradient 回归</h3>
+<p>生成器的损失（附录算法 1 第 33 行）写成一个"回归到 sg 目标"的形式，梯度就是老师 score 减 critic score 的归一化差：</p>
+<div class="formula">\ell=\Bigl\|\hat x_\theta-\mathrm{sg}\Bigl(\hat x_\theta+\frac{\hat x_\psi-\hat x_\phi}{\|\hat x_\theta-\hat x_\psi\|_1}\Bigr)\Bigr\|^2</div>
+<div class="vars">
+  <div><code class="m">\hat x_\psi</code>把 <code class="m">\hat x_\theta</code> 加噪到 s 后，冻结老师预测的干净端点——"数据分布觉得该往哪走"。</div>
+  <div><code class="m">\hat x_\phi</code>同一带噪输入下 fake critic 预测的端点——"学生分布现在在哪"。</div>
+  <div><code class="m">\|\cdot\|_1</code>用学生到老师的 L1 距离除一下，控制步长尺度（DMD 惯例）。</div>
+  <div><code>为什么写成回归</code><code class="m">\|\hat x-\mathrm{sg}(\hat x+d)\|^2</code> 对 <code class="m">\hat x</code> 求导得 <code class="m">-2d</code>——用 MSE 的形状把任意方向 d 灌进反传，§ 07 的 CM-GRPO 用同一个模子。</div>
+</div>
+</section>
+
+<section id="interleave">
+<h2><span class="n">§ 04</span>交错序列：带噪块被监督，干净块当历史，一次前向</h2>
+<p class="lead">生成器步取一个采样层级 <code class="m">u\in\{\tau_1,\dots,\tau_{K-1}\}</code>，从 rollout 轨迹里直接拿每块在 u 处的带噪状态，和每块的干净端点交错排成一条序列<a class="jr" href="#g-10">10</a>：</p>
+<div class="formula">\mathcal I_u=\bigl(\hat z_1^{(u)},\ \hat x_1,\ \hat z_2^{(u)},\ \hat x_2,\ \dots,\ \hat z_{T-1}^{(u)},\ \hat x_{T-1},\ \hat z_T^{(u)}\bigr),\qquad h_t^{\mathrm{RAVEN}}=\mathcal H(\hat x_{&lt;t})</div>
+<figure id="fig-interleave">
+<figcaption><span>Fig 03 · T=3 的交错序列与因果 mask</span><b>ẑ 是去噪目标 · x̂ 是历史 · 第三块的损失能反传到前两块的读法</b></figcaption>
+<svg viewBox="0 0 1100 420" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
+<defs><marker id="mK" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#a83b25"/></marker></defs>
+<text x="290" y="30" text-anchor="middle" font-size="13" font-weight="700" fill="#1a2b27">序列 I<tspan dy="3" font-size="9">u</tspan><tspan dy="-3">（长 2T−1 = 5）</tspan></text>
+<rect x="40" y="50" width="90" height="50" rx="4" fill="#fff" stroke="#1e5a4c" stroke-width="1.8" stroke-dasharray="5 3"/><text x="85" y="80" text-anchor="middle" font-size="13">ẑ<tspan dy="4" font-size="9">1</tspan><tspan dy="-12" font-size="9">(u)</tspan></text>
+<rect x="150" y="50" width="90" height="50" rx="4" fill="#d6e8e2" stroke="#1e5a4c" stroke-width="1.6"/><text x="195" y="80" text-anchor="middle" font-size="13">x̂<tspan dy="4" font-size="9">1</tspan></text>
+<rect x="260" y="50" width="90" height="50" rx="4" fill="#fff" stroke="#1e5a4c" stroke-width="1.8" stroke-dasharray="5 3"/><text x="305" y="80" text-anchor="middle" font-size="13">ẑ<tspan dy="4" font-size="9">2</tspan><tspan dy="-12" font-size="9">(u)</tspan></text>
+<rect x="370" y="50" width="90" height="50" rx="4" fill="#d6e8e2" stroke="#1e5a4c" stroke-width="1.6"/><text x="415" y="80" text-anchor="middle" font-size="13">x̂<tspan dy="4" font-size="9">2</tspan></text>
+<rect x="480" y="50" width="90" height="50" rx="4" fill="#fff" stroke="#1e5a4c" stroke-width="1.8" stroke-dasharray="5 3"/><text x="525" y="80" text-anchor="middle" font-size="13">ẑ<tspan dy="4" font-size="9">3</tspan><tspan dy="-12" font-size="9">(u)</tspan></text>
+<text x="85" y="122" text-anchor="middle" font-size="10.5" fill="#1e5a4c">被监督</text><text x="195" y="122" text-anchor="middle" font-size="10.5" fill="#164539">历史</text><text x="305" y="122" text-anchor="middle" font-size="10.5" fill="#1e5a4c">被监督</text><text x="415" y="122" text-anchor="middle" font-size="10.5" fill="#164539">历史</text><text x="525" y="122" text-anchor="middle" font-size="10.5" fill="#1e5a4c">被监督</text>
+<path d="M 558 104 L 558 150 L 165 150 L 165 108" stroke="#a83b25" stroke-width="2.2" fill="none" marker-end="url(#mK)"/>
+<path d="M 447 150 L 447 108" stroke="#a83b25" stroke-width="2.2" fill="none" marker-end="url(#mK)"/>
+<text x="360" y="172" text-anchor="middle" font-size="12" fill="#a83b25">ẑ<tspan dy="3" font-size="8">3</tspan><tspan dy="-3"> 的 DMD 损失反传，穿过 x̂</tspan><tspan dy="3" font-size="8">1</tspan><tspan dy="-3">、x̂</tspan><tspan dy="3" font-size="8">2</tspan><tspan dy="-3"> 的 KV 投影（Self Forcing 在这里被 sg 截断）</tspan></text>
+<text x="290" y="215" text-anchor="middle" font-size="12.5" fill="#354440">带噪块的历史只由前面的干净端点构成：h<tspan dy="3" font-size="8">3</tspan><tspan dy="-3"> = H(x̂</tspan><tspan dy="3" font-size="8">1</tspan><tspan dy="-3">, x̂</tspan><tspan dy="3" font-size="8">2</tspan><tspan dy="-3">)，正是推理时第三块接龙看的东西</tspan></text>
+<text x="290" y="240" text-anchor="middle" font-size="11" fill="#6b7a76">x̂ 的数值是采出来的常数，梯度改的是"模型怎么把它们编成 KV"，不是它们的内容</text>
+<text x="850" y="30" text-anchor="middle" font-size="13" font-weight="700" fill="#1a2b27">因果 mask（行看列）</text>
+<g font-size="11" font-family="'JetBrains Mono',monospace">
+<text x="720" y="70" text-anchor="middle" fill="#6b7a76">ẑ1</text><text x="770" y="70" text-anchor="middle" fill="#6b7a76">x̂1</text><text x="820" y="70" text-anchor="middle" fill="#6b7a76">ẑ2</text><text x="870" y="70" text-anchor="middle" fill="#6b7a76">x̂2</text><text x="920" y="70" text-anchor="middle" fill="#6b7a76">ẑ3</text>
+<text x="675" y="104" text-anchor="end" fill="#6b7a76">ẑ1</text><text x="675" y="154" text-anchor="end" fill="#6b7a76">x̂1</text><text x="675" y="204" text-anchor="end" fill="#6b7a76">ẑ2</text><text x="675" y="254" text-anchor="end" fill="#6b7a76">x̂2</text><text x="675" y="304" text-anchor="end" fill="#6b7a76">ẑ3</text>
+</g>
+<g stroke="#b3c2bd" fill="#fff">
+<rect x="695" y="80" width="50" height="50"/><rect x="745" y="80" width="50" height="50"/><rect x="795" y="80" width="50" height="50"/><rect x="845" y="80" width="50" height="50"/><rect x="895" y="80" width="50" height="50"/>
+<rect x="695" y="130" width="50" height="50"/><rect x="745" y="130" width="50" height="50"/><rect x="795" y="130" width="50" height="50"/><rect x="845" y="130" width="50" height="50"/><rect x="895" y="130" width="50" height="50"/>
+<rect x="695" y="180" width="50" height="50"/><rect x="745" y="180" width="50" height="50"/><rect x="795" y="180" width="50" height="50"/><rect x="845" y="180" width="50" height="50"/><rect x="895" y="180" width="50" height="50"/>
+<rect x="695" y="230" width="50" height="50"/><rect x="745" y="230" width="50" height="50"/><rect x="795" y="230" width="50" height="50"/><rect x="845" y="230" width="50" height="50"/><rect x="895" y="230" width="50" height="50"/>
+<rect x="695" y="280" width="50" height="50"/><rect x="745" y="280" width="50" height="50"/><rect x="795" y="280" width="50" height="50"/><rect x="845" y="280" width="50" height="50"/><rect x="895" y="280" width="50" height="50"/>
+</g>
+<g fill="#1e5a4c" opacity=".85">
+<rect x="695" y="80" width="50" height="50"/>
+<rect x="745" y="130" width="50" height="50"/>
+<rect x="745" y="180" width="50" height="50"/><rect x="795" y="180" width="50" height="50"/>
+<rect x="745" y="230" width="50" height="50"/><rect x="845" y="230" width="50" height="50"/>
+<rect x="745" y="280" width="50" height="50"/><rect x="845" y="280" width="50" height="50"/><rect x="895" y="280" width="50" height="50"/>
+</g>
+<g fill="#fff" font-size="14" font-weight="700" text-anchor="middle">
+<text x="720" y="110">✓</text><text x="770" y="160">✓</text><text x="770" y="210">✓</text><text x="820" y="210">✓</text><text x="770" y="260">✓</text><text x="870" y="260">✓</text><text x="770" y="310">✓</text><text x="870" y="310">✓</text><text x="920" y="310">✓</text>
+</g>
+<text x="820" y="362" text-anchor="middle" font-size="11" fill="#354440">带噪块看：前面的干净块 + 自己；干净块看：前面的干净块 + 自己</text>
+<text x="820" y="384" text-anchor="middle" font-size="10.5" fill="#6b7a76">按正文"历史 = 干净端点"画；精确 mask 以论文图 1(d) 为准</text>
+<text x="820" y="406" text-anchor="middle" font-size="10.5" fill="#6b7a76">注意力对数 15 vs Self Forcing 的 6（T=3）</text>
+</svg>
+</figure>
+<div class="calc">
+  <div class="step"><b>rollout 里每块是一条轨迹</b>T=3、K 步一致性采样：块 t 有 <code class="m">\hat z_t^{(\tau_1)}\to\cdots\to\hat z_t^{(\tau_K)}=\hat x_t</code>。fake-score 步只用三个端点 <code class="m">\hat x_1,\hat x_2,\hat x_3</code>；生成器步把轨迹也用上。</div>
+  <div class="step"><b>取一个层级 u，拍平</b>比如 <code class="m">u=\tau_2</code>：序列是 <code class="m">(\hat z_1^{(\tau_2)},\hat x_1,\hat z_2^{(\tau_2)},\hat x_2,\hat z_3^{(\tau_2)})</code>，5 个位置。所有块用<strong>同一个</strong> u，不像 Diffusion Forcing 每块各抽一个。</div>
+  <div class="step"><b>一次因果前向</b>学生在 5 个位置上跑一遍，输出三个带噪位置的干净端点预测 <code class="m">\hat x_\theta</code>。第三块的预测条件在 <code class="m">\mathcal H(\hat x_1,\hat x_2)</code>——这次 <code class="m">\mathcal H</code> 的计算在图里。</div>
+  <div class="step"><b>再加噪、算 DMD、按块加权</b>随机 <code class="m">s\sim\mathcal U(0,u)</code>，<code class="m">\hat z^{(s)}=\mathrm{sg}(\alpha_s\hat x_\theta+\sigma_s\epsilon)</code> 送老师和 critic，逐元素算 § 03 的回归损失，沿块轴拆成 <code class="m">\ell_1,\ell_2,\ell_3</code>，按 § 06 的权重合成 <code class="m">\mathcal L_{\mathrm{DMD}}</code> 反传。</div>
+</div>
+<div class="note"><span class="label">和 Self Forcing 的分块反传不是一回事</span>chunk-wise self-forcing 是"整段算 score 方向、逐块重放建图、块间 detach"——省显存，历史照样 sg。RAVEN 的交错序列是一张图，历史编码不 detach。两者解决的问题不同：一个是显存，一个是监督缺口。</div>
+</section>
+
+<section id="eagle">
+<h2><span class="n">§ 05</span>血统与代价：为什么不直接把接龙展开</h2>
+<p class="lead">"训练时测试"<a class="jr" href="#g-11">11</a>的说法来自 EAGLE-3<a class="jr" href="#g-12">12</a>：推测解码的草稿模型训练时不喂目标模型的真表示，而喂自己上一步的草稿表示——在自己推理时会遇到的上下文上训。语言里这只是把预测的 token 表示喂给下一步模拟草稿。</p>
+<div class="grid2">
+  <div class="card"><span class="tag rust">直接展开</span><h3>视频里贵得多</h3><p>每块不是一个 token，是一条 K 步去噪轨迹的终点；后面的块又依赖它写进 cache 的表示。忠实模拟要把整条自回归采样放进一张图，反传要穿过<strong>自回归递归 + 采样器动力学</strong>两层。</p></div>
+  <div class="card"><span class="tag green">RAVEN 的省法</span><h3>复用已经采好的 rollout</h3><p>fake-score 步本来就要 rollout（推理时定义未来上下文的正是这个过程）。把它的状态重排成交错序列，"训练时测试"就从一个额外机制退化成<strong>一次重排 + 一次前向</strong>，依赖结构照样保真。</p></div>
+</div>
+<div class="warning"><span class="label">论文没算的一笔账</span>交错序列长 2T−1，因果注意力的 pair 数从约 <code class="m">T^2/2</code> 变成约 <code class="m">2T^2</code>——量级上翻四倍（T=3 时 15 vs 6，T=7 时 91 vs 28）。生成器步的额外时间和显存论文没报，只给了总账 ≈70 H200 GPU 小时。要是 mask 让带噪块之间互不可见，实际开销会小一些，但精确 mask 只在图里。</div>
+<p>附录 D 还把这条路往外推：交错序列里当历史的不一定非得是干净块——前块的中间带噪状态、架构专属的记忆 token、滑窗或 attention sink 的 cache 管理，只要 self rollout 时后面块消费的是同一种表示，就都能放进这次有梯度的前向里，让"历史怎么管"从固定设计变成可学的东西。这是展望，本文只实现了干净块版本。</p>
+</section>
+
+<section id="scaling">
+<h2><span class="n">§ 06</span>分块权重：后面的块才是接龙的考场</h2>
+<p class="lead">交错序列里前面的块历史少、后面的块历史多，还得同时保持一致、压住误差传播。RAVEN 给每块一个<strong>未来参与分数</strong><a class="jr" href="#g-13">13</a>当坐标，套一个权重函数决定谁的损失更重。</p>
+<div class="formula">p_j=\frac{\sum_{k=j}^{J}m_k}{\sum_{k=1}^{J}m_k},\qquad \tilde w_{1:J}=g_\eta(\mathcal P),\qquad w_j=\tilde w_j\frac{\sum_k m_k}{\sum_k\tilde w_k m_k},\qquad \mathcal L_{\mathrm{chunk}}=\frac{\sum_j w_j\ell_j}{\sum_j w_j m_j}</div>
+<div class="vars">
+  <div><code class="m">m_j,\ \ell_j</code>块 j 的标量元素数、块 j 的损失总和。</div>
+  <div><code class="m">p_j</code>块 j 及之后占总元素的比例：<code class="m">p_1=1</code>，单调递减到最后一块。</div>
+  <div><code class="m">g_\eta</code>把 p 映成非负原始权重的函数，只管相对分配。</div>
+  <div><code>归一化</code>让元素平均权重恒为 1，总梯度尺度不随 g 变。</div>
+</div>
+<p>试过的 <code class="m">g_\eta</code>：SD3 的 mode 密度（s=−0.54 / 0.81）、logit-normal(0,1)，以及 flow-matching 时间步调度借来的 shift 家族<a class="jr" href="#g-14">14</a>：</p>
+<div class="formula">\pi_\alpha(p)=\frac{\alpha p}{1+(\alpha-1)p}\qquad \alpha=1\ \text{偏早块},\quad \alpha=0\ \text{均匀},\quad \alpha&lt;0:\ \pi_{|\alpha|}\bigl(p_J/p_j\bigr)\ \text{偏晚块}</div>
+<figure id="fig-weights">
+<figcaption><span>Fig 04 · J=4、各块等大时的归一化权重</span><b>α=−1 让最后一块吃到第一块 4 倍的权重 · 三组平均都是 1</b></figcaption>
+<svg viewBox="0 0 1100 330" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
+<g font-size="12" fill="#354440" text-anchor="middle">
+<text x="190" y="30" font-weight="700" fill="#a83b25">Shift α=1 · 偏早块</text>
+<text x="550" y="30" font-weight="700" fill="#6b7a76">α=0 · 均匀</text>
+<text x="910" y="30" font-weight="700" fill="#1e5a4c">Shift α=−1 · 偏晚块（采用）</text>
+</g>
+<line x1="40" y1="250" x2="340" y2="250" stroke="#b3c2bd"/><line x1="400" y1="250" x2="700" y2="250" stroke="#b3c2bd"/><line x1="760" y1="250" x2="1060" y2="250" stroke="#b3c2bd"/>
+<g fill="#a83b25" opacity=".85">
+<rect x="70" y="125" width="50" height="125"/><rect x="140" y="156" width="50" height="94"/><rect x="210" y="188" width="50" height="62"/><rect x="280" y="219" width="50" height="31"/>
+</g>
+<g fill="#6b7a76" opacity=".7">
+<rect x="430" y="172" width="50" height="78"/><rect x="500" y="172" width="50" height="78"/><rect x="570" y="172" width="50" height="78"/><rect x="640" y="172" width="50" height="78"/>
+</g>
+<g fill="#1e5a4c" opacity=".85">
+<rect x="790" y="213" width="50" height="37"/><rect x="860" y="200" width="50" height="50"/><rect x="930" y="175" width="50" height="75"/><rect x="1000" y="100" width="50" height="150"/>
+</g>
+<g font-size="12" font-family="'JetBrains Mono',monospace" font-weight="700" text-anchor="middle" fill="#141a18">
+<text x="95" y="115">1.60</text><text x="165" y="146">1.20</text><text x="235" y="178">0.80</text><text x="305" y="209">0.40</text>
+<text x="455" y="162">1.00</text><text x="525" y="162">1.00</text><text x="595" y="162">1.00</text><text x="665" y="162">1.00</text>
+<text x="815" y="203">0.48</text><text x="885" y="190">0.64</text><text x="955" y="165">0.96</text><text x="1025" y="90">1.92</text>
+</g>
+<g font-size="11" text-anchor="middle" fill="#6b7a76">
+<text x="95" y="270">块 1</text><text x="165" y="270">块 2</text><text x="235" y="270">块 3</text><text x="305" y="270">块 4</text>
+<text x="455" y="270">块 1</text><text x="525" y="270">块 2</text><text x="595" y="270">块 3</text><text x="665" y="270">块 4</text>
+<text x="815" y="270">块 1</text><text x="885" y="270">块 2</text><text x="955" y="270">块 3</text><text x="1025" y="270">块 4</text>
+</g>
+<text x="190" y="300" text-anchor="middle" font-size="11" fill="#354440">p = (1, .75, .5, .25) 直接当权重 → 归一化 ×1.6</text>
+<text x="550" y="300" text-anchor="middle" font-size="11" fill="#354440">VBench 总分 83.82</text>
+<text x="910" y="300" text-anchor="middle" font-size="11" fill="#354440">反向坐标 p₄/p = (.25, .33, .5, 1) → 归一化 ×1.92</text>
+<text x="190" y="320" text-anchor="middle" font-size="11" fill="#a83b25">总分 83.79 · 动态度最高 3.000 · 语义最低 79.46</text>
+<text x="910" y="320" text-anchor="middle" font-size="11" fill="#1e5a4c">总分 85.15 · 比均匀高 1.33</text>
+</svg>
+</figure>
+<div class="calc">
+  <div class="step"><b>算 p</b>J=4、每块 m=1：<code class="m">p=(4/4,3/4,2/4,1/4)=(1,.75,.5,.25)</code>。</div>
+  <div class="step"><b>α=1</b><code class="m">\pi_1(p)=p</code>，原始权重 (1,.75,.5,.25)；归一化因子 <code class="m">4/2.5=1.6</code> → <code class="m">w=(1.6,1.2,.8,.4)</code>，平均 1 ✓。</div>
+  <div class="step"><b>α=−1</b>反向坐标 <code class="m">p_4/p_j=(.25,.333,.5,1)</code>，套 <code class="m">\pi_1</code> 不变；归一化因子 <code class="m">4/2.0833=1.92</code> → <code class="m">w=(.48,.64,.96,1.92)</code>，平均 1 ✓。</div>
+  <div class="step"><b>套一组损失看效果</b><code class="m">\ell=(.4,.3,.5,.6)</code>：均匀平均 0.45；α=−1 得 <code class="m">(.48\times.4+.64\times.3+.96\times.5+1.92\times.6)/4=0.504</code>——后两块的 .5、.6 被放大。块不等大时 p 跟着变：m=(2,1,1,1) → p=(1,.6,.4,.2)。</div>
+</div>
+<div class="warning"><span class="label">α=0 按字面不成立</span><code class="m">\pi_0(p)=0\cdot p/(1-p)</code> 处处为 0、p=1 时 0/0。论文说 α=0 "恢复均匀调度"，只能当约定读——权重全相等，归一化后就是 1。</div>
+</section>
+
+<section id="cmgrpo">
+<h2><span class="n">§ 07</span>CM-GRPO：一致性一步本来就是高斯策略</h2>
+<p class="lead">做在线 RL 要有"策略的概率"。Flow-GRPO<a class="jr" href="#g-15">15</a>面对确定性 ODE 采样器的办法是把它改成同边缘的 SDE，再 Euler-Maruyama 离散化，每步得到一个高斯核——比率和 KL 都能写。代价：这些随机转移<strong>推理时根本不用</strong>，训练在优化一个推理不存在的过程。</p>
+<figure id="fig-kernel">
+<figcaption><span>Fig 05 · 两种策略核</span><b>左：训练才加的噪声 · 右：推理本来就有的噪声</b></figcaption>
+<svg viewBox="0 0 1100 330" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
+<defs><marker id="mE" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#354440"/></marker></defs>
+<rect x="20" y="20" width="520" height="290" rx="6" fill="#fff" stroke="#b3c2bd"/>
+<text x="280" y="48" text-anchor="middle" font-size="13.5" font-weight="700" fill="#a83b25">Flow-GRPO · Euler-Maruyama 核</text>
+<rect x="50" y="90" width="110" height="50" rx="4" fill="#dce6e3" stroke="#1a2b27"/><text x="105" y="120" text-anchor="middle" font-size="13">y<tspan dy="3" font-size="9">τ</tspan></text>
+<path d="M 160 115 L 220 115" stroke="#354440" stroke-width="2" marker-end="url(#mE)"/>
+<rect x="224" y="90" width="150" height="50" rx="4" fill="#fff" stroke="#354440"/><text x="299" y="110" text-anchor="middle" font-size="11.5">漂移 b<tspan dy="3" font-size="8">θ</tspan><tspan dy="-3">·Δτ</tspan></text><text x="299" y="128" text-anchor="middle" font-size="10" fill="#6b7a76">= v 加一项 σ²/(2τ) 修正</text>
+<path d="M 374 115 L 434 115" stroke="#354440" stroke-width="2" marker-end="url(#mE)"/>
+<rect x="438" y="90" width="80" height="50" rx="4" fill="#dce6e3" stroke="#1a2b27"/><text x="478" y="120" text-anchor="middle" font-size="13">y<tspan dy="3" font-size="9">τ+Δτ</tspan></text>
+<rect x="224" y="170" width="150" height="50" rx="4" fill="#fdf0ec" stroke="#a83b25" stroke-width="1.8"/><text x="299" y="190" text-anchor="middle" font-size="11.5" fill="#7c2b1d">+ σ<tspan dy="3" font-size="8">τ</tspan><tspan dy="-3">√Δτ · ε</tspan></text><text x="299" y="208" text-anchor="middle" font-size="10" fill="#a83b25">训练才有的噪声</text>
+<path d="M 299 170 L 299 146" stroke="#a83b25" stroke-width="2" marker-end="url(#mE)"/>
+<text x="280" y="252" text-anchor="middle" font-size="11.5" fill="#354440">推理走的是确定性 ODE：没有这项噪声</text>
+<text x="280" y="274" text-anchor="middle" font-size="11.5" fill="#354440">要联调 σ（辅助噪声）和 β（KL 权重）</text>
+<text x="280" y="296" text-anchor="middle" font-size="11" fill="#a83b25">例：τ=.5, σ=.4, y=1, v=−1 → 均值 .77，噪声 std .2</text>
+<rect x="560" y="20" width="520" height="290" rx="6" fill="#f0f6f1" stroke="#3f7354" stroke-width="1.8"/>
+<text x="820" y="48" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1e5a4c">CM-GRPO · 一致性转移核</text>
+<rect x="590" y="90" width="110" height="50" rx="4" fill="#d6e8e2" stroke="#1e5a4c"/><text x="645" y="120" text-anchor="middle" font-size="13">ẑ<tspan dy="-6" font-size="9">(u)</tspan></text>
+<path d="M 700 115 L 760 115" stroke="#354440" stroke-width="2" marker-end="url(#mE)"/>
+<rect x="764" y="90" width="150" height="50" rx="4" fill="#fff" stroke="#354440"/><text x="839" y="110" text-anchor="middle" font-size="11.5">预测端点 x̂<tspan dy="3" font-size="8">θ</tspan></text><text x="839" y="128" text-anchor="middle" font-size="10" fill="#6b7a76">均值 μ = α<tspan dy="3" font-size="7">s</tspan><tspan dy="-3"> x̂</tspan><tspan dy="3" font-size="7">θ</tspan></text>
+<path d="M 914 115 L 974 115" stroke="#354440" stroke-width="2" marker-end="url(#mE)"/>
+<rect x="978" y="90" width="80" height="50" rx="4" fill="#d6e8e2" stroke="#1e5a4c"/><text x="1018" y="120" text-anchor="middle" font-size="13">ẑ<tspan dy="-6" font-size="9">(s)</tspan></text>
+<rect x="764" y="170" width="150" height="50" rx="4" fill="#dfece3" stroke="#3f7354" stroke-width="1.8"/><text x="839" y="190" text-anchor="middle" font-size="11.5" fill="#285438">+ σ<tspan dy="3" font-size="8">s</tspan><tspan dy="-3"> · ε</tspan></text><text x="839" y="208" text-anchor="middle" font-size="10" fill="#3f7354">推理同款噪声</text>
+<path d="M 839 170 L 839 146" stroke="#3f7354" stroke-width="2" marker-end="url(#mE)"/>
+<text x="820" y="252" text-anchor="middle" font-size="11.5" fill="#354440">策略核 = 推理核：π(ẑ<tspan dy="-5" font-size="8">(s)</tspan><tspan dy="5">|ẑ</tspan><tspan dy="-5" font-size="8">(u)</tspan><tspan dy="5">) = N(α</tspan><tspan dy="3" font-size="8">s</tspan><tspan dy="-3">x̂</tspan><tspan dy="3" font-size="8">θ</tspan><tspan dy="-3">, σ</tspan><tspan dy="3" font-size="8">s</tspan><tspan dy="-3">²I)</tspan></text>
+<text x="820" y="274" text-anchor="middle" font-size="11.5" fill="#354440">没有辅助随机过程，σ、β 两个旋钮都不用调</text>
+<text x="820" y="296" text-anchor="middle" font-size="11" fill="#1e5a4c">例：α=.6, σ=.8, x̂=2 → μ=1.2，采到 1.6</text>
+</svg>
+</figure>
+<p>一致性采样器每步是"预测干净端点 → 重新加噪"，那个 ε 是推理自带的。于是一步 u→s 的转移就是一个高斯策略核<a class="jr" href="#g-16">16</a>：</p>
+<div class="formula">\pi_\theta\bigl(\tilde z^{(s)}\mid\tilde z^{(u)},c\bigr)=\mathcal N\bigl(\tilde z^{(s)};\ \mu_\theta^{u\to s},\ \sigma_s^2 I\bigr),\qquad \mu_\theta^{u\to s}=\alpha_s\hat x_\theta</div>
+<h3>从核到更新：四步路线</h3>
+<p>① 组内优势 → ② 去常数的 log 概率 → ③ 对端点求梯度 → ④ 写成 stop-gradient 回归。每步用一个标量例子跟着走：<code class="m">\alpha_s=0.6,\ \sigma_s=0.8</code>，模型预测 <code class="m">\hat x_\theta=2.0</code>，采样 ε=0.5。</p>
+<div class="calc">
+  <div class="step"><b>组内优势（GRPO<a class="jr" href="#g-17">17</a>）</b>同一 prompt 采 G 条一致性轨迹，端点打分 <code class="m">R_i</code>，<code class="m">\hat A_i=(R_i-\mathrm{mean})/(\mathrm{std}+\epsilon)</code>，广播到该轨迹上每个转移。例：奖励 (.8,.6,.9,.7) → 优势 (.447,−1.342,1.342,−.447)。</div>
+  <div class="step"><b>log 概率去常数</b>高斯核取对数、丢掉归一化常数和与 θ 无关项：<code class="m">\log\pi_\theta=-\|\tilde z^{(s)}-\mu\|^2/(2\sigma_s^2)</code>。例：μ=0.6×2=1.2，采到 ẑ=1.2+0.8×0.5=1.6，log π=−0.16/1.28=−0.125。</div>
+  <div class="step"><b>对端点求梯度</b>因为 <code class="m">\mu=\alpha_s\hat x_\theta</code>，链式法则给 <code class="m">\nabla_{\hat x_\theta}[-\hat A\log\pi]=-\hat A\,\alpha_s(\tilde z^{(s)}-\mu)/\sigma_s^2</code>。例：Â=+1 → −1×0.6×0.4/0.64 = <strong>−0.375</strong>。负梯度意味着梯度下降会<strong>抬高</strong> <code class="m">\hat x_\theta</code>：采到的比均值高且拿了正优势，就往高处走。</div>
+  <div class="step"><b>写成 sg 回归</b>目标 = <code class="m">\hat x_\theta+\hat A\alpha_s/(2\sigma_s^2)\cdot(\tilde z^{(s)}-\mu)</code> = 2 + 0.6/1.28×0.4 = 2.1875；损失 <code class="m">(\hat x_\theta-\mathrm{sg}(2.1875))^2</code> 对 <code class="m">\hat x_\theta</code> 求导 = 2×(2−2.1875) = <strong>−0.375</strong> ✓ 和第三步一致。Â=−1 时目标 1.8125，往下压。</div>
+</div>
+<div class="formula">\mathcal L_{\mathrm{CM\text{-}GRPO}}=\mathbb E_{i,u,s}\Bigl[\Bigl\|\hat x_\theta-\mathrm{sg}\Bigl(\hat x_\theta+\frac{\hat A_i\alpha_s}{2\sigma_s^2}\bigl(\tilde z_i^{(s)}-\mu_\theta^{u\to s}\bigr)\Bigr)\Bigr\|^2\Bigr]</div>
+<p>和 § 03 的 DMD 回归是同一个模子：都是"把想要的方向塞进 sg 目标，用 MSE 的形状反传"。所以实现上 CM-GRPO 就是把 DMD 的方向换成优势加权的采样残差，交错序列、分块权重原样沿用。最后一步 <code class="m">\tau_K=0</code> 时 <code class="m">\sigma=0</code>，核塌成 Dirac、log 概率没定义，所以转移只在前 K−1 步里抽。</p>
+</section>
+
+<section id="reward">
+<h2><span class="n">§ 08</span>KL 闭式、奖励组合、算法 2 的细节</h2>
+<h3>参考策略 KL（推了，没用）</h3>
+<p>同一带噪输入下若参考一致性模型给端点 <code class="m">\hat x_{\mathrm{ref}}</code>，两个高斯核的 KL 有闭式：</p>
+<div class="formula">D_{\mathrm{KL}}\bigl(\pi_\theta\,\|\,\pi_{\mathrm{ref}}\bigr)=\frac{\alpha_s^2\,\|\hat x_\theta-\hat x_{\mathrm{ref}}\|^2}{2\sigma_s^2}</div>
+<p>例：<code class="m">\hat x_{\mathrm{ref}}=1.5</code> → 0.36×0.25/1.28 = 0.0703。但双向老师不能从一致性接口采样、给不出 <code class="m">\hat x_{\mathrm{ref}}</code>，本文把它留给"有兼容参考一致性模型时"的未来工作。</p>
+<h3>奖励组合：五个维度各自组内归一化再加权</h3>
+<p>作者的经验：偏重视觉保真或语义对齐会把视频推向<strong>静止</strong>，运动奖励太强又伤另外两项；VLM 奖励模型的偏好数据来自高步数生成器，用在少步模型上有分布偏移。所以 VLM 奖励和表示模型奖励混用，每个维度先在组内归一化、再加权求和、再整体归一化并 clip：</p>
+<div class="scroll"><table>
+<thead><tr><th>维度</th><th>权重 λ</th><th>来源</th><th>量什么</th></tr></thead>
+<tbody>
+<tr><td>TA 文本对齐</td><td>2</td><td>VideoReward（Qwen2-VL + DPO，182K 人工偏好对）</td><td>视频跟 prompt 对不对</td></tr>
+<tr><td>DD 动态度</td><td>0.35</td><td>RAFT 光流幅度前 5% 均值</td><td>峰值运动量</td></tr>
+<tr><td>MS 运动平滑</td><td>0.75</td><td>AMT 补帧：抽掉帧再由邻帧恢复的误差</td><td>误差低 = 时间连贯</td></tr>
+<tr><td>AQ 美学</td><td>1</td><td>LAION 美学线性头（图像嵌入上）</td><td>构图与自然感</td></tr>
+<tr><td>IQ 成像质量</td><td>1</td><td>MUSIQ 多尺度</td><td>低层技术失真</td></tr>
+</tbody></table></div>
+<div class="calc">
+  <div class="step"><b>逐维归一化</b>G=4，TA 原始 (.8,.6,.9,.7) → (.447,−1.342,1.342,−.447)；DD 原始 (3,5,2,4) → (−.447,1.342,−1.342,.447)。两维恰好反相：动得多的对齐差。</div>
+  <div class="step"><b>加权合成</b><code class="m">R^i=\sum_m\lambda_m\bar R_m^i/\sum_m|\lambda_m|</code>，只用这两维时分母 2.35：(.314,−.942,.942,−.314)——TA 权重 2 压过 DD 的 .35，对齐好的样本赢。</div>
+  <div class="step"><b>再整体归一化 + clip</b>合成奖励再做一次组归一化得优势 (.447,−1.342,1.342,−.447)，按 <code class="m">A_{\max}</code> 截断。这一层保证任何单一指标都压不住组相对优势。</div>
+</div>
+<h3>算法 2 的其余细节</h3>
+<div class="grid3">
+  <div class="card"><span class="tag jade">采样</span><h3>每条轨迹只抽一个转移</h3><p>每条轨迹随机取 <code class="m">k_i\in\{1,\dots,K-1\}</code>，用缓存的 <code class="m">\tilde z^{(u_i)},\tilde z^{(s_i)}</code> 算损失。优势按轨迹广播，但单次更新不是全部转移。</p></div>
+  <div class="card"><span class="tag jade">继承</span><h3>交错序列 + 分块权重原样带进来</h3><p>CM-GRPO 阶段的损失也沿块轴拆、按未来参与分数加权——策略更新和自回归时程的对齐跟 RAVEN 阶段一样。</p></div>
+  <div class="card"><span class="tag jade">对照</span><h3>Causal Forcing + CM-GRPO 不带这两样</h3><p>表 1 里那一行刻意去掉交错序列和分块权重，只看策略目标本身的贡献；DD 权重从 .35 提到 2.35 补 Causal Forcing 偏弱的运动。</p></div>
+</div>
+</section>
+
+<section id="setup">
+<h2><span class="n">§ 09</span>训练配置</h2>
+<div class="grid2">
+  <div class="card"><span class="tag">基座与初始化</span><h3>Wan2.1-T2V-1.3B · 每块 3 latent 帧</h3><p>和所有基线一致。初始化沿用 Causal Forcing<a class="jr" href="#g-18">18</a>：先从自回归老师做 ODE 蒸馏把因果学生"落地"（论文说法：满足帧级单射性），RAVEN 从这个点起训，CM-GRPO 再从 RAVEN 的 checkpoint 起。</p></div>
+  <div class="card"><span class="tag">数据</span><h3>只用文本 prompt</h3><p>RAVEN 和 CM-GRPO 都只用 VidProM 的 prompt（按 Self Forcing 的协议过滤 + LLM 扩写），不用真视频。需要真视频的消融（TF / DF）用 OpenVidHD-0.4M，先经 RIFE 时间上采样。</p></div>
+  <div class="card"><span class="tag">RAVEN 阶段</span><h3>关 weight decay · TTUR<a class="jr" href="#g-19">19</a> 5→2</h3><p>其它设置继承 Self Forcing 与 Causal Forcing。critic 与生成器的更新频率比从 5 降到 2——生成器更新得更勤。</p></div>
+  <div class="card"><span class="tag">CM-GRPO 阶段</span><h3>LoRA<a class="jr" href="#g-20">20</a> rank 256 · AdamW lr 5e-6</h3><p>全部线性层加 LoRA；betas (0, 0.999)、eps 1e-10、零 weight decay；每次策略更新 batch 8 × group 32。Causal Forcing + CM-GRPO 那行 lr 降到 2e-6、weight decay 回到 0.01。</p></div>
+</div>
+<div class="note"><span class="label">算力账</span>RAVEN ≈ 70 H200 GPU 小时，CM-GRPO ≈ 170 H200 GPU 小时。RL 阶段比蒸馏阶段贵 2.4 倍——组大小 32 的 rollout 是大头。</div>
+</section>
+
+<section id="results">
+<h2><span class="n">§ 10</span>主结果：全维度领先，动态度赢最多</h2>
+<p class="lead">VBench<a class="jr" href="#g-21">21</a> 的 Total / Quality / Semantic 三分按各基线共享的协议报；动态度改用 UnifiedReward-32B 在 6,220 条视频上打分（§ 00 第二点）。</p>
+<div class="scroll"><table>
+<thead><tr><th>方法</th><th>Total</th><th>Quality</th><th>Semantic</th><th>Dyn. Deg.（UnifiedReward）</th></tr></thead>
+<tbody>
+<tr><td>CausVid</td><td>83.01</td><td>84.18</td><td>78.34</td><td>2.340</td></tr>
+<tr><td>LongLive</td><td>83.05</td><td>83.70</td><td>80.46</td><td>2.277</td></tr>
+<tr><td>Rolling Forcing</td><td>83.25</td><td>84.00</td><td>80.25</td><td>2.536</td></tr>
+<tr><td>Self Forcing</td><td>84.27</td><td>85.10</td><td>80.97</td><td>2.543</td></tr>
+<tr><td>Reward Forcing</td><td>84.39</td><td>85.27</td><td>80.87</td><td>2.508</td></tr>
+<tr><td>Causal Forcing</td><td>84.96</td><td>86.00</td><td>80.76</td><td>2.669</td></tr>
+<tr><td>Causal Forcing + CM-GRPO</td><td>85.08</td><td>86.12</td><td>80.96</td><td>2.829</td></tr>
+<tr><td>RAVEN</td><td>85.15</td><td>86.18</td><td>81.04</td><td>2.951</td></tr>
+<tr><td>RAVEN + CM-GRPO</td><td class="win">85.46</td><td class="win">86.54</td><td class="win">81.17</td><td class="win">2.962</td></tr>
+</tbody></table></div>
+<figure id="fig-total">
+<figcaption><span>Fig 06 · VBench Total（横轴从 82.5 起放大看差距）</span><b>前六名挤在两分带里 · RAVEN 系两行在最右</b></figcaption>
+<svg viewBox="0 0 1100 400" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
+<g font-size="12" fill="#354440" text-anchor="end">
+<text x="250" y="52">CausVid</text><text x="250" y="90">LongLive</text><text x="250" y="128">Rolling Forcing</text><text x="250" y="166">Self Forcing</text><text x="250" y="204">Reward Forcing</text><text x="250" y="242">Causal Forcing</text><text x="250" y="280">Causal Forcing + CM-GRPO</text><text x="250" y="318">RAVEN</text><text x="250" y="356">RAVEN + CM-GRPO</text>
+</g>
+<line x1="270" y1="30" x2="270" y2="370" stroke="#b3c2bd"/>
+<g fill="#6b7a76" opacity=".6">
+<rect x="270" y="36" width="87" height="24"/><rect x="270" y="74" width="94" height="24"/><rect x="270" y="112" width="129" height="24"/><rect x="270" y="150" width="303" height="24"/><rect x="270" y="188" width="324" height="24"/><rect x="270" y="226" width="422" height="24"/>
+</g>
+<rect x="270" y="264" width="442" height="24" fill="#3f7354" opacity=".6"/>
+<rect x="270" y="302" width="454" height="24" fill="#1e5a4c" opacity=".85"/>
+<rect x="270" y="340" width="507" height="24" fill="#1e5a4c"/>
+<g font-size="12" font-family="'JetBrains Mono',monospace" font-weight="700" fill="#141a18">
+<text x="365" y="53">83.01</text><text x="372" y="91">83.05</text><text x="407" y="129">83.25</text><text x="581" y="167">84.27</text><text x="602" y="205">84.39</text><text x="700" y="243">84.96</text><text x="720" y="281">85.08</text><text x="732" y="319">85.15</text><text x="785" y="357">85.46</text>
+</g>
+<g font-size="10.5" font-family="'JetBrains Mono',monospace" fill="#6b7a76" text-anchor="middle">
+<text x="270" y="390">82.5</text><text x="527" y="390">84.0</text><text x="784" y="390">85.5</text><text x="870" y="390">86.0</text>
+</g>
+<line x1="527" y1="30" x2="527" y2="372" stroke="#b3c2bd" stroke-dasharray="3 3"/><line x1="784" y1="30" x2="784" y2="372" stroke="#b3c2bd" stroke-dasharray="3 3"/>
+</svg>
+</figure>
+<div class="grid2">
+  <div class="card"><span class="tag green">读法一</span><h3>不是重新分配，是缓解取舍</h3><p>之前的基线在质量 / 语义上涨一点就在运动上掉一点，反之亦然。RAVEN 四维全部超过所有基线，动态度差距最大（对 Causal Forcing +0.282，对 Self Forcing +0.408）——历史进图治的是"为了稳而不敢动"。</p></div>
+  <div class="card"><span class="tag green">读法二</span><h3>两个贡献互补</h3><p>Causal Forcing 直接叠 CM-GRPO 只 +0.12，涨的集中在运动；RAVEN 叠 CM-GRPO +0.31，四维全涨。策略更新在"已经和推理对齐的生成器"上收益更大。</p></div>
+</div>
+<p>定性对比（四个 prompt：赛博公园的柯基、抓羚羊的狮子、风中转头发的女子、雨中奔跑的男孩）：Causal Forcing 在运动下结构崩——柯基身体被拉长、狮子头和身体分离、颜色过饱和；叠 CM-GRPO 修好结构崩和孩子的面部扭曲；RAVEN 从一开始就没这些问题，只在快速运动区域有轻微模糊；两者合起来最稳。用户研究：100 条长 prompt × 每法 4 样本，对 CausVid / Self Forcing / Reward Forcing / Causal Forcing 在 Quality / Semantic / Overall 全部胜出，语义上的领先比质量更明显——具体比例只画在论文图里，没给数字。<a href="https://arxiv.org/abs/2605.15190">↗ 样图与用户研究图见原文</a></p>
+</section>
+
+<section id="ablation">
+<h2><span class="n">§ 11</span>四组消融：历史范式、分块权重、奖励、策略接口</h2>
+<h3>历史范式（同 ODE 蒸馏初始化、同分块权重）</h3>
+<div class="scroll"><table>
+<thead><tr><th>历史怎么来</th><th>Total</th><th>Quality</th><th>Semantic</th><th>Dyn. Deg.</th></tr></thead>
+<tbody>
+<tr><td>Teacher Forcing</td><td class="lose">82.64</td><td>83.11</td><td>80.73</td><td class="win">3.000</td></tr>
+<tr><td>Diffusion Forcing</td><td>84.09</td><td>84.75</td><td>81.45</td><td>2.743</td></tr>
+<tr><td>Self Forcing</td><td>84.06</td><td>84.68</td><td class="win">81.56</td><td class="lose">2.347</td></tr>
+<tr><td>DF w/ Self Rollout（历史换自生成，不反传）</td><td>83.30</td><td>83.96</td><td>80.65</td><td>2.979</td></tr>
+<tr><td>RAVEN</td><td class="win">85.15</td><td class="win">86.18</td><td>81.04</td><td>2.951</td></tr>
+</tbody></table></div>
+<div class="truth"><span class="label">这张表最值钱的一行</span>TF 运动最强（3.000）但另两维最差；SF 语义最好但运动最弱（2.347）——detach 的 cache 扣住了历史的梯度，模型学会"少动为妙"。把 DF 的真前缀换成自 rollout 端点（仍不反传）：运动回到 TF 水平（2.979），质量语义却塌到 83.30——<strong>只对齐分布不给梯度，误差只是换个地方堆</strong>。RAVEN 把梯度接通，总分最高、运动接近 TF。</div>
+<h3>分块权重函数</h3>
+<div class="scroll"><table>
+<thead><tr><th>g_η</th><th>Total</th><th>Quality</th><th>Semantic</th><th>Dyn. Deg.</th></tr></thead>
+<tbody>
+<tr><td>Mode s=−0.54</td><td class="lose">82.58</td><td>82.86</td><td>81.43</td><td>2.996</td></tr>
+<tr><td>Mode s=0.81</td><td>83.08</td><td>83.74</td><td>80.47</td><td>2.971</td></tr>
+<tr><td>Logit-Normal (0,1)</td><td>83.31</td><td>83.97</td><td>80.65</td><td>2.963</td></tr>
+<tr><td>Shift α=1（偏早）</td><td>83.79</td><td>84.87</td><td class="lose">79.46</td><td class="win">3.000</td></tr>
+<tr><td>Shift α=0（均匀）</td><td>83.82</td><td>84.67</td><td>80.42</td><td>2.924</td></tr>
+<tr><td>Shift α=−1（偏晚，采用）</td><td class="win">85.15</td><td class="win">86.18</td><td>81.04</td><td>2.951</td></tr>
+</tbody></table></div>
+<p>中间峰或偏早的都不如均匀；偏早换来最高运动、最低语义；偏晚比均匀高 1.33，运动和语义都不吃亏。</p>
+<h3>奖励组合（围绕采用的 TA 2 / DD .35 / MS .75 / AQ 1 / IQ 1）</h3>
+<div class="scroll"><table>
+<thead><tr><th>TA</th><th>DD</th><th>MS</th><th>AQ</th><th>IQ</th><th>Total</th><th>Quality</th><th>Semantic</th><th>Dyn. Deg.</th></tr></thead>
+<tbody>
+<tr><td colspan="5">RAVEN（无 RL）</td><td>85.15</td><td>86.18</td><td>81.04</td><td>2.951</td></tr>
+<tr><td>1</td><td>0.35</td><td>0.75</td><td>1</td><td>1</td><td class="lose">84.82</td><td>85.77</td><td>80.99</td><td>2.913</td></tr>
+<tr><td>2</td><td>0.30</td><td>0.75</td><td>1</td><td>1</td><td>85.07</td><td>86.14</td><td>80.81</td><td>2.957</td></tr>
+<tr><td>2</td><td>0.35</td><td>1.00</td><td>1</td><td>1</td><td>85.24</td><td>86.27</td><td>81.14</td><td>2.936</td></tr>
+<tr><td>2</td><td>0.35</td><td>0.75</td><td>2</td><td>2</td><td>84.92</td><td>85.82</td><td class="win">81.33</td><td>2.914</td></tr>
+<tr><td>2</td><td>0.35</td><td>0.75</td><td>1</td><td>1</td><td class="win">85.46</td><td class="win">86.54</td><td>81.17</td><td class="win">2.962</td></tr>
+</tbody></table></div>
+<p>TA 减半：总分和质量掉、语义没涨。DD 降到 .30：总分和运动都掉——光流项才是运动监督的主力，不是 MS 的冗余。MS 提到 1.00：运动小幅回落。AQ/IQ 翻倍：语义最高（81.33）但运动最低。采用的配比三方面最平衡。</p>
+<h3>策略接口（同 RAVEN 起点、同奖励）</h3>
+<div class="scroll"><table>
+<thead><tr><th>策略核</th><th>Total</th><th>Quality</th><th>Semantic</th><th>Dyn. Deg.</th></tr></thead>
+<tbody>
+<tr><td>RAVEN（无 RL）</td><td>85.15</td><td>86.18</td><td>81.04</td><td>2.951</td></tr>
+<tr><td>EM σ=.1, β=0</td><td>85.06</td><td>86.10</td><td>80.92</td><td>2.949</td></tr>
+<tr><td>EM σ=.4, β=0</td><td>85.15</td><td>86.20</td><td>80.95</td><td>2.949</td></tr>
+<tr><td>EM σ=.8, β=0</td><td>85.22</td><td>86.31</td><td>80.84</td><td>2.951</td></tr>
+<tr><td>EM σ=.1, β=.004</td><td class="lose">85.03</td><td>86.07</td><td>80.86</td><td>2.947</td></tr>
+<tr><td>EM σ=.4, β=.004</td><td>85.14</td><td>86.16</td><td>81.09</td><td>2.950</td></tr>
+<tr><td>EM σ=.8, β=.004</td><td>85.27</td><td>86.26</td><td class="win">81.29</td><td>2.950</td></tr>
+<tr><td>CM-GRPO</td><td class="win">85.46</td><td class="win">86.54</td><td>81.17</td><td class="win">2.962</td></tr>
+</tbody></table></div>
+<p>六格 Euler-Maruyama 全在 85.03–85.27 的窄带里，最好一格只比无 RL 高 0.12；CM-GRPO 在总分、质量、运动上都高出每个 EM 变体，只在语义上让出 0.12。作者的结论：策略核和推理采样器一致后，辅助随机过程没必要，σ 和 β 也不用联调。</p>
+</section>
+
+<section id="limits">
+<h2><span class="n">§ 12</span>论文没有告诉我们的事</h2>
+<div class="grid2">
+  <div class="card"><span class="tag rust">缺</span><h3>长时程证据</h3><p>动机是长时程，评测全是 5 秒。没有帧数 vs 质量曲线，没有漂移指标。</p></div>
+  <div class="card"><span class="tag rust">缺</span><h3>交错序列的开销</h3><p>2T−1 长序列的生成器步时间、显存都没报；只有 ≈70 GPU 小时总账。</p></div>
+  <div class="card"><span class="tag rust">缺</span><h3>K 与 T 的明数</h3><p>少步采样步数 K、5 秒视频的块数 T 都没直接写；"每块 3 latent 帧"配 Wan 的 81 帧推出约 7 块，是推算。</p></div>
+  <div class="card"><span class="tag rust">缺</span><h3>精确的 mask 与用户研究数字</h3><p>mask 只在图 1(d)，正文只说"带噪块看干净历史"；用户研究偏好率只画图。α=0 的字面公式退化，"均匀"是约定。</p></div>
+</div>
+<div class="note"><span class="label">读表要带的两把尺子</span>Dyn. Deg. 列是 UnifiedReward-32B 的分，训练奖励里的 DD 是 RAFT 光流——同名不同尺。VBench 总分本身的分辨率有限（前六名 83.01–84.96），零点几分的差距要配合四维一致性和定性样图一起看。</div>
+</section>
+
+<section id="verdict">
+<h2><span class="n">§ 13</span>定位：不换散度不换架构，换"学生在哪个输入上算梯度"</h2>
+<p class="lead">因果视频蒸馏这条线上，前人各补一角：CausVid 把 DMD 搬进因果学生，Self Forcing 把历史换成自己的，Causal Forcing 修初始化，Reward Forcing 加奖励，LongLive / Rolling Forcing 做长视频。RAVEN 挑的是一个大家都绕过去的点——<strong>历史是死的</strong>——并且用一次重排、一次前向就把它接活。CM-GRPO 则是给一致性采样器量身做的策略接口，它的可移植性比 RAVEN 更大：任何用随机一致性步采样的少步生成器（双向视频、其它模态）都能套。</p>
+<div class="grid2">
+  <div class="card"><span class="tag green">能复现的</span><h3>方法本身</h3><p>交错序列、分块权重、CM-GRPO 的回归形式、奖励配比、优化器超参、算力都写清了；两份附录算法逐行可对照实现。基座和基线都是公开模型。</p></div>
+  <div class="card"><span class="tag gold">要留一分的</span><h3>增益的量级与外推</h3><p>零点几分的 VBench 差距、5 秒的评测、只画不报的用户研究；"历史可学"和"任意一致性生成器可用"都是附录 D 的展望，本文只验证了干净块历史 + 因果视频这一个组合。</p></div>
+</div>
+<div class="truth"><span class="label">带走的一句</span>对齐分布和给监督是两件事。Self Forcing 做到了前者，表 2 证明只做前者甚至可能倒退；RAVEN 用交错序列把后者补上，赢面主要落在"敢动"上。</div>
+</section>
+
+<section class="gloss" id="glossary">
+<h2><span class="n">术语</span>Glossary</h2>
+<ol>
+  <li id="g-01"><span class="term">因果自回归视频扩散</span> · 视频按块顺序生成，每块条件在前面块的历史上，可以边生成边输出（流式）；与一次看全片的双向模型相对。</li>
+  <li id="g-02"><span class="term">非对称蒸馏</span> · 老师是高步数双向模型、学生是少步因果模型，把前者的保真度转移给后者。</li>
+  <li id="g-03"><span class="term">Teacher Forcing</span> · 训练时用真视频块当历史；干净但和推理时"接自己的输出"分布不同。</li>
+  <li id="g-04"><span class="term">Diffusion Forcing</span> · 每个 token / 块各自独立抽噪声级的因果扩散训练；CausVid 拿它配 DMD 做蒸馏，历史仍来自真视频。</li>
+  <li id="g-05"><span class="term">Self Forcing</span> · 训练时真的自回归展开，用自己 rollout 的块当历史做 DMD；cache 是 stop-gradient 的。</li>
+  <li id="g-06"><span class="term">KV cache / 历史表示 <code class="m">\mathcal H(\cdot)</code></span> · 模型把过去块编成的 Key/Value，后面块的注意力直接读它；本文所有"历史"都指它。</li>
+  <li id="g-07"><span class="term">stop-gradient <code class="m">\mathrm{sg}(\cdot)</code></span> · 前向照常用数值，反向把梯度截断；Self Forcing 的历史、DMD 与 CM-GRPO 的回归目标都靠它。</li>
+  <li id="g-08"><span class="term">DMD / fake-score critic</span> · 分布匹配蒸馏：冻结老师给数据 score，可学的双向 critic 给学生分布 score，两者之差是学生的更新方向；critic 用 TTUR 更频繁地更新。</li>
+  <li id="g-09"><span class="term">一致性采样器</span> · 少步采样：每步预测干净端点，再按下一噪声级重新加噪；沿概率流 ODE 轨迹定义但每步带随机性。</li>
+  <li id="g-10"><span class="term">交错序列 <code class="m">\mathcal I_u</code></span> · RAVEN 把 rollout 拍成的序列：带噪块（层级 u）和干净端点交替，长 2T−1；带噪块被监督，干净块当历史。</li>
+  <li id="g-11"><span class="term">training-time test 训练时测试</span> · 在模型推理时自己会产生并遇到的上下文上训练，且这段上下文留在有梯度的前向里；不是测试时训练。</li>
+  <li id="g-12"><span class="term">EAGLE-3</span> · 推测解码的草稿模型训练法：草稿模型吃自己上一步的草稿表示训练，是 training-time test 的出处。</li>
+  <li id="g-13"><span class="term">未来参与分数 <code class="m">p_j</code></span> · 块 j 及之后的元素占总元素的比例，前大后小；分块损失权重的坐标。</li>
+  <li id="g-14"><span class="term">shift 调度 <code class="m">\pi_\alpha</code></span> · flow-matching 时间步调度借来的权重函数 <code class="m">\alpha p/(1+(\alpha-1)p)</code>；α=1 偏早、α=−1 套在反向坐标上偏晚（采用）。</li>
+  <li id="g-15"><span class="term">Flow-GRPO / Euler-Maruyama</span> · 把确定性 ODE 改成同边缘的 SDE 再离散化，得到高斯策略核做 RL；随机转移只在训练有。</li>
+  <li id="g-16"><span class="term">一致性转移核 <code class="m">\pi_\theta</code></span> · 一步 u→s 的高斯 <code class="m">\mathcal N(\alpha_s\hat x_\theta,\ \sigma_s^2 I)</code>，CM-GRPO 的策略接口，与推理采样同一条转移。</li>
+  <li id="g-17"><span class="term">GRPO 组内相对优势</span> · 同一条件采 G 条，奖励减组均值除组标准差当优势，不训 critic。</li>
+  <li id="g-18"><span class="term">Causal Forcing</span> · 被比较也被沿用的初始化：从自回归老师做 ODE 蒸馏得到因果学生（论文称为满足帧级单射性）。</li>
+  <li id="g-19"><span class="term">TTUR</span> · 两时间尺度更新：critic 与生成器的更新频率比，本文 5→2。</li>
+  <li id="g-20"><span class="term">LoRA</span> · 低秩适配：只训练每个线性层旁的低秩增量；CM-GRPO 阶段 rank 256。</li>
+  <li id="g-21"><span class="term">VBench / UnifiedReward-32B</span> · VBench 是视频生成多维基准（Total/Quality/Semantic）；UnifiedReward-32B 是人类偏好训练的 VLM 奖励模型，本文用它替代 VBench 的光流动态度。</li>
+</ol>
+</section>
+
+<div class="sources">
+<span class="label">来源与说明</span>
+<ul>
+  <li>论文：<a href="https://arxiv.org/abs/2605.15190">arXiv 2605.15190</a> · RAVEN: Real-time Autoregressive Video Extrapolation with Consistency-model GRPO（2026-05）。全部数字取自正文表 1–4、图 5 表格与附录 A–C。</li>
+  <li>本页所有图为按论文描述重绘的示意，不是原图；定性样图、用户研究偏好率、精确 attention mask 请看原文。</li>
+  <li>附录 E 列了定性图的全部 prompt，附录 F 的社会影响为模板式陈述（效率提升会扩大可滥用人群，建议配溯源与水印），本页不展开。</li>
+  <li>手算例（分块权重、CM-GRPO 标量、EM 漂移、组归一化）均经 python 复核；"约 7 块""注意力 pair 数翻四倍"是本页推算，论文未明写。</li>
+</ul>
+</div>
+</main>
+<script>
+function math(){if(!window.katex){setTimeout(math,40);return}document.querySelectorAll('.formula').forEach(function(el){if(el.dataset.done)return;var src=el.textContent;try{katex.render(src,el,{displayMode:true,throwOnError:true});el.dataset.done='1'}catch(e){el.setAttribute('data-katex-fail','1');console.error('formula',e)}})}
+math();
+</script>
+<!-- gloss-popover:start -->
+<style>
+.jr-pop{position:fixed;z-index:1002;right:20px;left:auto;top:50%;bottom:auto;transform:translateY(-50%);width:min(330px,86vw);max-height:78vh;overflow:auto;background:var(--paper-card,#f7f1de);color:var(--ink,#181410);border:1px solid var(--rule,#bfb398);border-left:4px solid var(--accent,#9b2c2c);border-radius:6px;box-shadow:0 10px 34px rgba(24,20,16,.20);padding:16px 20px 16px 18px;font-family:'Newsreader','Noto Serif SC',Georgia,serif;font-size:15px;line-height:1.62;opacity:1;pointer-events:auto;transition:none;display:none;}
+.jr-pop.show{display:block;transform:translateY(-50%);animation:jrPopIn .18s ease;}
+@keyframes jrPopIn{from{opacity:0;}to{opacity:1;}}
+.jr-pop .jr-pop-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent,#9b2c2c);font-weight:700;letter-spacing:1px;margin-right:4px;}
+.jr-pop .jr-pop-close{position:absolute;top:6px;right:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--muted,#7a6f5d);border:none;background:none;line-height:1;}
+.jr-pop .jr-pop-close:hover{color:var(--ink,#181410);}
+.jr-pop .term{font-family:'Fraunces',serif;font-weight:700;font-style:italic;}
+.jr-pop a{color:var(--accent,#9b2c2c);}
+a.jr.jr-active{background:var(--accent,#9b2c2c);border-color:var(--accent,#9b2c2c);color:var(--paper,#f0e9d6)!important;}
+a.jr:focus-visible{outline:2px solid var(--accent,#9b2c2c);outline-offset:2px;}
+@media(max-width:820px){.jr-pop,.jr-pop.show{right:0;left:0;bottom:0;top:auto;transform:none;width:auto;max-height:55vh;border-radius:12px 12px 0 0;border-left:1px solid var(--rule,#bfb398);border-top:4px solid var(--accent,#9b2c2c);}}
+@media print{.jr-pop{display:none!important;}}
+</style>
+<script>
+(function(){
+  // 不在这里快照：这段比 mathify 先跑，存下来的是没渲染的 LaTeX 源码，
+  // 浮卡里就会显示成 x=\mu +\sigma \epsilon。改成点开时现读 DOM。
+  if(!document.querySelector('.gloss ol li[id^="g-"]'))return;
+  var pop=document.createElement('div');pop.className='jr-pop';
+  pop.innerHTML='<button class="jr-pop-close" aria-label="close">✕</button><div class="jr-pop-body"></div>';
+  document.body.appendChild(pop);
+  var body=pop.querySelector('.jr-pop-body');var active=null;
+  function hide(){pop.classList.remove('show');if(active){active.classList.remove('jr-active');active=null;}}
+  pop.querySelector('.jr-pop-close').addEventListener('click',hide);
+  document.querySelectorAll('a.jr[href^="#g-"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1);
+      if(!document.getElementById(id))return;
+      e.preventDefault();
+      var li=document.getElementById(id); if(!li) return;
+      body.innerHTML='<span class="jr-pop-num">'+id.replace('g-','')+'</span> '+li.innerHTML;
+      pop.classList.add('show');
+      if(active)active.classList.remove('jr-active');active=a;a.classList.add('jr-active');
+    });
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+  document.addEventListener('click',function(e){
+    if(pop.classList.contains('show')&&!pop.contains(e.target)&&!(e.target.closest&&e.target.closest('a.jr')))hide();
+  });
+})();
+</script>
+<!-- gloss-popover:end -->
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>
