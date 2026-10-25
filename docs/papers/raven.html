@@ -181,10 +181,11 @@
 <div class="formula">p_\theta(x_{1:T}\mid c)=\prod_{t=1}^{T}p_\theta(x_t\mid h_t,c),\qquad h_t=\mathcal H(x_{&lt;t}),\qquad z_t^{(n)}=\alpha_n x_t+\sigma_n\epsilon</div>
 <div class="vars">
   <div><code class="m">\mathcal H(\cdot)</code>模型通过 cache 编出来的历史表示；不同范式的差别就在传给它的东西。</div>
+  <div><code class="m">h_t,\ x_{&lt;t}</code>第 t 块的历史、以及它之前的全部块；推理时 x 是自己生成的，训练时各范式不同。</div>
   <div><code class="m">\alpha_n,\ \sigma_n</code>噪声调度系数：级别 n 下干净信号留多少、噪声加多少。</div>
-  <div><code class="m">\tau_1&gt;\cdots&gt;\tau_K=0</code>少步一致性采样器的时间步，从最噪到干净。</div>
-  <div><code class="m">\mathrm{sg}(\cdot)</code>stop-gradient：数值照用，梯度到这里截断。</div>
+  <div><code class="m">z_t^{(n)},\ \epsilon</code>第 t 块加噪到级别 n 的状态；ε 是标准高斯噪声。</div>
 </div>
+<p>两个后面反复用到的记号先说一句：少步一致性采样器的时间步记作 <code class="m">\tau_1&gt;\cdots&gt;\tau_K=0</code>（从最噪到干净）；<code class="m">\mathrm{sg}(\cdot)</code> 是 stop-gradient，数值照用、梯度到这里截断。各自的公式出现时再展开。</p>
 <h3>一致性采样器每一步</h3>
 <p>一致性采样器<a class="jr" href="#g-09">09</a>一步做两件事：先由当前带噪块预测干净端点，再按下一噪声级把这个端点重新加噪，得到下一步的输入。</p>
 <div class="formula">\hat x_\theta=f_\theta(\tilde z^{(u)},u,c),\qquad \tilde z^{(s)}=\alpha_s\hat x_\theta+\sigma_s\epsilon,\ \ \epsilon\sim\mathcal N(0,I)</div>
@@ -369,8 +370,8 @@
   <div><code class="m">\mu=\alpha_s\hat x_\theta</code>瞄准点：模型预测的干净端点按噪声级缩一下。模型只能通过它影响概率。</div>
   <div><code class="m">\tilde z^{(s)}</code>落点：推理时真采到的下一步 latent，等于瞄准点加 <code class="m">\sigma_s\epsilon</code> 的手抖。</div>
   <div><code class="m">\sigma_s</code>手抖幅度：噪声调度给的，模型不管。σ 越小，同样的偏离说明"你明明瞄得偏"，推得越狠。</div>
-  <div><code class="m">\hat A_i</code>这一球的优势：整条轨迹的端点视频打分，组内归一化，广播到这条轨迹上每一步。</div>
 </div>
+<p>优势 <code class="m">\hat A_i</code> 还没出场：它来自整条轨迹的端点视频打分、组内归一化，再广播到这条轨迹上每一步——下面第一步就算它。</p>
 <figure id="fig-aim">
 <figcaption><span>Fig 06 · 一步 CM-GRPO 动起来：瞄准 → 手抖 → 打分 → 挪瞄准点</span><b>点步骤看单步 · 点优势按钮看反向 · 数字和下面四步手算一致</b></figcaption>
 <div class="aimctl">

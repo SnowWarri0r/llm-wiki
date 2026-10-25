@@ -142,17 +142,24 @@
 <p>骨干完全继承 DeepSeek-OCR → 一代那条线：DeepEncoder<a class="jr" href="#g-03">03</a>做 16× 光学压缩，3B 总参、激活 0.5B 的 MoE<a class="jr" href="#g-04">04</a>解码器。二代改的只有两件事：解码器里所有注意力换成 SR-SWA<a class="jr" href="#g-05">05</a>；推理时外面包一层分块解码。先把记号钉死：</p>
 <div class="formula">\mathbf X_t=\mathrm{Concat}(\mathbf V_1,\dots,\mathbf V_N,\ y_{&lt;t})</div>
 <div class="vars">
+  <div><code class="m">\mathbf X_t</code>第 t 步解码时模型面对的整条输入序列：所有页的视觉 token 接上已生成的文本。</div>
   <div><code class="m">\mathbf V_1\dots\mathbf V_N</code>N 页各自的视觉 token（每页 256 个）。一代每步全看；二代只看筛出来的。</div>
   <div><code class="m">y_{&lt;t}</code>已生成的转写；一代起就只看最近 n 个（滑窗）。</div>
-  <div><code class="m">\mathbf B_b</code>沿块稀疏注意力<a class="jr" href="#g-12">12</a>的惯例把 <code class="m">\mathbf X_t</code> 切成固定大小的块，路由以块为单位选。</div>
-  <div><code class="m">\mathcal L(q),\ \mathcal S(q)</code>query q 的固定局部窗 / 被选中的远程块集合；可见集 R(q) 就是两者之并。</div>
+  <div><code class="m">\mathrm{Concat}</code>直接拼接：视觉在前、文本在后，一条序列进解码器。</div>
 </div>
+<p>SR-SWA 沿块稀疏注意力<a class="jr" href="#g-12">12</a>的惯例把这条序列切成固定大小的块 <code class="m">\mathbf B_b</code>，路由以块为单位选；每个 query 还保留一个固定的局部窗。块、局部窗、选中块集合这些记号在下面两节各自的公式里再解释。</p>
 </section>
 
 <section id="gate">
 <h2><span class="n">§ 03</span>Page Gate：候选只留你在抄的那一页</h2>
 <p class="lead">Page Gate<a class="jr" href="#g-06">06</a>做的事最朴素：query 属于第 g(q) 页，候选块只保留"与这一页有交集"的块。块边界和页边界没对齐，所以一个块可能横跨两页——跨页块照样进候选，这正是跨页表格、续行需要的那一眼。</p>
 <div class="formula">\mathcal C_{\text{page}}(q)=\bigl\{\,b\ :\ \mathbf B_b\cap\mathbf V_{g(q)}\neq\varnothing\,\bigr\},\qquad \mathbf p_{i,j}=\bigl[\,p^{\text{page}}_i,\ p^{\text{intra}}_{i,j}\,\bigr]</div>
+<div class="vars">
+  <div><code class="m">\mathcal C_{\text{page}}(q)</code>query q 的候选块集合：Page Gate 的输出，交给 Token Sieve 继续筛。</div>
+  <div><code class="m">\mathbf B_b</code>第 b 个块：序列按固定长度切出来的一段 token；块边界和页边界无关。</div>
+  <div><code class="m">\mathbf V_{g(q)}</code>query 所在页 g(q) 的全部视觉 token；块只要和它有交集就留下。</div>
+  <div><code class="m">\mathbf p_{i,j}=[p^{\text{page}}_i,\ p^{\text{intra}}_{i,j}]</code>第 i 页第 j 个 token 的位置：页坐标按 0/1 交替（有界），页内坐标单调递增。</div>
+</div>
 <figure id="fig-gate">
 <figcaption><span>Fig 03 · 块和页不对齐</span><b>抄第 3 页时的候选块 · 每页 6 个 token、每块 4 个（示意）</b></figcaption>
 <svg viewBox="0 0 1100 300" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg" font-family="'Noto Sans SC',sans-serif">
@@ -190,6 +197,8 @@
 <div class="formula">\beta_b(q)=\log\pi_b(q)-\frac{1}{|\mathcal S(q)|}\sum_{b'\in\mathcal S(q)}\log\pi_{b'}(q),\qquad \mathcal R(q)=\mathcal L(q)\cup\bigcup_{b\in\mathcal S(q)}\mathbf B_b</div>
 <div class="formula">\alpha_j(q)=\mathrm{Softmax}_{j\in\mathcal R(q)}\Bigl(\frac{\mathbf q^{\top}\mathbf k_j}{\sqrt d}+\mathbb I\bigl[b(j)\in\mathcal S(q)\bigr]\,\beta_{b(j)}(q)\Bigr)</div>
 <div class="vars">
+  <div><code class="m">s_b(q),\ \boldsymbol\pi(q),\ \mathcal S(q)</code>块 b 对 query 的打分、过 entmax 后的路由分布、取 top-k 后的选中块集合。</div>
+  <div><code class="m">\mathcal L(q),\ \mathcal R(q)</code>固定的局部窗（最近的输出 token）；保留集 = 局部窗 ∪ 选中块里的全部 token，softmax 只在它上面做。</div>
   <div><code class="m">\bar{\mathbf k}_b</code>块 b 的摘要键：一个块压成一个向量，路由只在块级打分，便宜。</div>
   <div><code class="m">\alpha\text{-entmax}</code>softmax 的稀疏版：低分项概率恰好为 0。所以 top-k 之外的块真的是零概率，log 先验只在选中块上有定义。</div>
   <div><code class="m">\beta_b</code>偏置只表达选中块之间的相对偏好，不整体抬高或压低"远程块 vs 局部窗"。</div>
