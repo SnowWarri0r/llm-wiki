@@ -50,3 +50,4 @@ year: 2026
 - 2024 **GOT-OCR / dense OCR 兴起** · 端到端 VLM 把检测+识别合一，一次前向解析整页
 - 2025-10 **DeepSeek-OCR** · DeepEncoder 光学压缩（16×）+ 3B-MoE 解码器，OCR 翻红；但 KV cache 随输出线性涨
 - 2026-06 **Unlimited-OCR（本篇）** · 解码器全换 R-SWA，KV cache 恒定 → 一次前向解析几十页 + 顺手涨点 SOTA
+- 2026-10 [[unlimited-ocr-2]] · SR-SWA 把视觉参考也钉成固定容量（Page Gate + Token Sieve）+ 分块解码钉住显存 → 百页级；同一套多页评测下本篇在 MPDocBench 只有 61.89，MarathonDocBench 因 40 页输入上限未报

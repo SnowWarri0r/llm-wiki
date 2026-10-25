@@ -1,7 +1,7 @@
 ---
 name: moe
 type: concept
-sources: [interaction-models-tml, unlimited-ocr, cosmos-3, qwen3-vl-report]
+sources: [interaction-models-tml, unlimited-ocr, cosmos-3, qwen3-vl-report, unlimited-ocr-2]
 updated: 2026-07-22
 ---
 

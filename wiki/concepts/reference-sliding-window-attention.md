@@ -1,7 +1,7 @@
 ---
 name: reference-sliding-window-attention
 type: concept
-sources: [unlimited-ocr]
+sources: [unlimited-ocr, unlimited-ocr-2]
 updated: 2026-06-22
 ---
 

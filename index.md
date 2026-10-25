@@ -71,6 +71,7 @@
 - [Qwen3-ASR · 给 LLM 接个耳朵](wiki/papers/qwen3-asr.md) — 不从头训ASR: 预训练Qwen3当解码器+AuT音频编码器(8×下采样12.5Hz+动态窗口流式/离线)+projector; modality-projector生产级; prompt塞热词定制转写; RL用GSPO; 带口音英语完胜Whisper
 - [X-Vectors · 声纹身份证](wiki/papers/x-vector.md) — Kaldi 看家声纹模型(ECAPA祖宗): 训网络认人,训完扔分类头,中间512维向量就是声纹; statistics pooling(沿时间μ+σ)把变长语音塌成定长; TDNN膨胀上下文; 数据增强吃大数据,SRE16 EER 8.35%→4.89%完胜i-vector; 抽"谁"不抽"什么",跟ASR正交
 - [Unlimited OCR · 一口气抄完整本书](wiki/papers/unlimited-ocr.md) — 百度端到端OCR(接DeepSeek-OCR线): 解码器全换R-SWA(每token只看全图+最近128字)让KV cache恒定不增→几十页一次前向解析完(别人一页一页for-loop); DeepEncoder光学压缩1024²→256视觉token; 3B-A0.5B MoE; OmniDocBench 87→93.23 SOTA且长程不崩; R-SWA也能用于ASR/翻译
+- [Unlimited OCR 2 · 只看正在抄的那一页](wiki/papers/unlimited-ocr-2.md) — 百度一代续作(2026-10-27 仓库技术报告): 一代钉住"记多少字"(文本滑窗),二代钉住"看多少图"——SR-SWA = Page Gate(候选只留当前页涉及的块,页坐标 0/1 交替不爆位置)+ Token Sieve(块摘要打分→α-entmax→top-k,选中块 log 概率去均值当偏置加进 logit,路由器被认字损失端到端训);再配重叠一页分块预填+边界页 KV 复用钉住显存。百页级每步 7.0×/5.6×,峰值 KV 47→1.77GB;自建 MarathonDocBench(100 篇 103–300 页)77.06 vs 第二名 33.74,MPDocBench 84.59;单页持平、标题层级最弱、⚠️零消融零超参
 - [Generative Agents · Smallville](wiki/papers/generative-agents.md) — 给 LLM 加记忆流 + 反思 + 规划，25 个 agent 在虚拟小镇里自主生活
 - [MemGPT · LLMs as Operating Systems](wiki/papers/memgpt.md) — context 当 RAM、外部存储当硬盘，LLM 自己 function call 调度记忆
 - [Cosmos 3 · 把看懂、想象、行动装进一个世界模型](wiki/papers/cosmos-3.md) — 以“杯子放进托盘”贯穿五模态入口、MoT 双塔、联合注意力、任务 token 排列、rectified flow 手算、MRoPE 真实时间、数据清洗、Reasoner→Generator 训练接力（复制 QKV/MLP/Norm 当初始化，再换 latent、双向 mask、速度头和 MSE 把它训成去噪器）、真实 benchmark、四组消融与部署边界；统一的是架构和训练接口，不是一次前向或一套共享权重
@@ -193,6 +194,8 @@
 - [Multi-Head Attention](wiki/concepts/multi-head-attention.md) — 多个 head 学不同关系模式
 - [FlashAttention](wiki/concepts/flash-attention.md) — 普通注意力的三个 kernel 要靠 HBM 交接 S/P 两张 N×N 中间矩阵；分块本身不省 IO，关键是分块+融合+在线 softmax，让分数小块在片上算完即丢，完整 S/P 不再落入 HBM
 - [R-SWA · 参考滑窗注意力](wiki/concepts/reference-sliding-window-attention.md) — 每token只看「全部前缀(视觉+prompt,全局)+最近n个输出(滑窗)」, KV cache恒定L_m+n不随T涨; 视觉token不参与状态转移所以图不糊; Unlimited-OCR用它一口气抄几十页
+- [SR-SWA · 稀疏参考滑窗注意力](wiki/concepts/sparse-reference-sliding-window-attention.md) — R-SWA 之上把"全部视觉参考"换成"当前页候选块→top-k 块":Page Gate 按页缩候选(页坐标 0/1 交替有界)+ Token Sieve 按预算挑块;每 query 可见集与页数无关(200 页 51,328 vs 640)
+- [路由偏置稀疏路由 · Token Sieve](wiki/concepts/routing-bias-sparse-router.md) — 块摘要打分过 α-entmax(低分块概率恰为 0)取 top-k,选中块 log 概率去均值当偏置加进注意力 logit,解析损失梯度直通路由器,不用蒸馏;手算:偏置把块 1 总权重 .289→.553
 - [Cross-Attention](wiki/concepts/cross-attention.md) — decoder 用自己的 Q 去查 encoder 的 K/V
 - [Positional Encoding](wiki/concepts/positional-encoding.md) — 给无顺序的 attention 加位置
 - [Rotary Position Embedding](wiki/concepts/rotary-position-embedding.md) — 旋转 Q/K 让点积天然含相对位置，现代 LLM 事实标准
@@ -489,6 +492,7 @@
 - [量化 · WxAy](wiki/concepts/quantization.md) — 少比特存数字; W8A8(权重激活都INT8)让矩阵乘跑INT8提速; 激活离群值靠 SmoothQuant 搬给权重
 - [KV Cache](wiki/concepts/kv-cache.md) — 流式推理的内存账本
 - [Prefill / Decode](wiki/concepts/prefill-decode.md) — LLM 推理两阶段
+- [无限时程解码 · 分块预填+边界页 KV 复用](wiki/concepts/unlimited-horizon-decoding.md) — 每步算得省≠显存放得下:文档切重叠 1 页的 chunk 顺序跑,复用重叠页视觉 KV 和上一段末尾文本 KV 保续接,释放非活跃 chunk;百页级峰值 KV 47.00→1.77GB、吞吐 360→1,315 TPS
 - [VAD](wiki/concepts/vad.md) — 判断用户是否说完的传统语音启发式
 - [Bitter Lesson](wiki/concepts/bitter-lesson.md) — 可 scale 的学习系统长期吃掉手写规则
 

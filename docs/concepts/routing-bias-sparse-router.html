@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>路由偏置稀疏路由 · 把&quot;选哪些块&quot;的概率加进注意力 logit，让任务损失直接训路由器 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · routing-bias-sparse-router</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>路由偏置稀疏路由 · 把&quot;选哪些块&quot;的概率加进注意力 logit，让任务损失直接训路由器</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>块级路由分数过 α-entmax 得稀疏分布，取 top-k；选中块的 log 概率去均值后当偏置加到该块所有 token 的注意力 logit 上，于是解析损失的梯度能穿回路由器，不用辅助蒸馏损失。</p>
+<h2>直觉</h2>
+<p>稀疏注意力要有人决定"这个 query 该看哪几个块"。常见做法是让一个小路由器模仿全注意力的分布（蒸馏），问题是"像全注意力"和"把字认对"不是一回事。另一种硬 top-k 路由（CSA、MiniMax Sparse Attention）选完就断了梯度，只能靠辅助监督或 warmup。</p>
+<p>Unlimited OCR 2 的 Token Sieve 走 DashAttention / HiLS 那条路：路由分数不止用来<strong>选</strong>，还作为一个偏置<strong>参与</strong>最终的注意力 logit。这样"这个块该不该被重视"就和"下一个字预测得对不对"在同一个损失里，路由器直接被任务训。</p>
+<h2>怎么做的</h2>
+<pre><code>候选块 b ∈ C（Page Gate 给的）
+  s_b = q̃ᵀ k̄_b / √d                 # 块摘要键打分
+  π   = α-entmax(s)                  # 稀疏分布：低分块概率恰为 0
+  S   = TopK(π, k)
+  β_b = log π_b − (1/|S|) Σ_{b'∈S} log π_b'   # 去均值，只在选中块上
+
+注意力（在 局部窗 ∪ 选中块 上做 softmax）：
+  logit_j = qᵀk_j/√d + 1[b(j)∈S]·β_{b(j)}
+</code></pre>
+<p>去均值的用意：偏置只表达<strong>选中块之间的相对偏好</strong>，不整体抬高或压低远程块相对于局部窗的权重。</p>
+<h2>数字例子</h2>
+<p>4 个候选块打分 s = (2.0, 1.0, 0.5, −1.0)，k = 2。</p>
+<p><strong>α-entmax（α=1.5）vs softmax</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>块</th>
+<th>s</th>
+<th>softmax</th>
+<th>entmax-1.5</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>2.0</td>
+<td>.610</td>
+<td><strong>.815</strong></td>
+</tr>
+<tr>
+<td>2</td>
+<td>1.0</td>
+<td>.224</td>
+<td><strong>.162</strong></td>
+</tr>
+<tr>
+<td>3</td>
+<td>0.5</td>
+<td>.136</td>
+<td>.023</td>
+</tr>
+<tr>
+<td>4</td>
+<td>−1.0</td>
+<td>.030</td>
+<td><strong>0</strong></td>
+</tr>
+</tbody>
+</table>
+<p>entmax 把最差的块压到恰好 0，分布真稀疏；softmax 永远给每块留点概率。top-2 = 块 1、块 2。</p>
+<p><strong>去均值 log 先验</strong>：log π = (−0.205, −1.820)，均值 −1.012 → β = (<strong>+0.807</strong>, <strong>−0.807</strong>)。</p>
+<p><strong>偏置进 logit</strong>。保留集：局部窗 2 个 token（logit 1.0, 0.8）、块 1 两个 token（0.9, 0.3）、块 2 两个 token（1.2, 0.1）。</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>无偏置 softmax</th>
+<th>加 β 后</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>logit</td>
+<td>1.0, .8 ‖ .9, .3 ‖ 1.2, .1</td>
+<td>1.0, .8 ‖ 1.707, 1.107 ‖ .393, −.707</td>
+</tr>
+<tr>
+<td>块 1 总权重</td>
+<td>.289</td>
+<td><strong>.553</strong></td>
+</tr>
+<tr>
+<td>块 2 总权重</td>
+<td>.336</td>
+<td><strong>.128</strong></td>
+</tr>
+</tbody>
+</table>
+<p>没有偏置时块 2 里那个 1.2 的 token 单点最强，块 2 整体反而更重；加上路由偏置后，路由器"块 1 更相关"的判断把块 1 的总权重从 .289 抬到 .553。反传时 β 的梯度来自这些 logit，再传回 π、s、k̄_b——路由器就是这样被认字损失训的。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/unlimited-ocr-2.html">unlimited-ocr-2</a> · Token Sieve</li>
+<li><a href="../concepts/sparse-reference-sliding-window-attention.html">sparse-reference-sliding-window-attention</a> · 它所在的两级结构</li>
+<li><a href="../concepts/sparse-attention.html">sparse-attention</a> · 查询相关路由那一支</li>
+<li><a href="../concepts/moe.html">moe</a> · 同样是"打分 → top-k → 带权组合"，只是这里选的是 KV 块而不是专家</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/unlimited-ocr-2.html"><span class="cat">paper</span>Unlimited OCR 2 · 只看正在抄的那一页，几百页也不变慢</a></li><li><a href="../concepts/sparse-reference-sliding-window-attention.html"><span class="cat">concept</span>SR-SWA · 稀疏参考滑窗注意力 · 只看正在抄的那页，再按预算瞟几眼</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/routing-bias-sparse-router.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>
