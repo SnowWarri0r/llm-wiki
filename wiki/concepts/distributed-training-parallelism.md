@@ -1,7 +1,7 @@
 ---
 name: distributed-training-parallelism
 type: concept
-sources: [krea-2, cosmos-3, qwen3-vl-report, senseflow, wan-streamer-v02, wan-streamer-v03, rcm, waveforcing]
+sources: [krea-2, cosmos-3, qwen3-vl-report, senseflow, wan-streamer-v02, wan-streamer-v03, rcm, waveforcing, magi-2]
 updated: 2026-08-19
 ---
 

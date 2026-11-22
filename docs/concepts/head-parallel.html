@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Head Parallel · 按头分片交换激活，通信形状开训前就定死 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · head-parallel</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Head Parallel · 按头分片交换激活，通信形状开训前就定死</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>多头 MoE 里每张卡负责几个固定的头：跨卡只搬"这几个头的那段维度"，路由的不规则全关在卡内。</p>
+<h2>直觉</h2>
+<p>标准专家并行像快递按收件人分拣：每个 token 被复制 k 份、寄到 k 个专家所在的卡，哪张卡收多少件取决于今天大家选了谁——有的卡爆仓、有的卡闲着，全队等最慢的那张；接收缓冲大小每步都不一样，还得 CPU 先同步一下数量才能分配。</p>
+<p>Head Parallel 改成按工位分拣：第 1–2 个头永远归 0 号卡、第 3–4 个头永远归 1 号卡……每个 token 只是把对应维度那一截交过去，每张卡收到的形状永远是"token 数 × 自己负责的头数 × 头维度"。路由仍然随数据变，但只在卡内部决定"这截向量进哪个本地专家"。</p>
+<h2>怎么做的</h2>
+<pre><code>x_heads = x.view(N, M, head_dim)
+x_heads = head_dispatch_over_ib(x_heads)   # 按头归属交换，形状固定
+routes  = route_per_local_head(x_heads)    # 卡内路由，随数据变
+y_heads = grouped_expert_ffn(x_heads, routes)
+y = head_combine_over_ib(y_heads).view(N, M * head_dim)
+</code></pre>
+<p>通信量对比（忽略常数和回程）：</p>
+<div class="tex math-display" data-display="true">C_{\text{standard}}\propto N\,k\,H,\qquad C_{\text{head}}\propto N\,M\,H_{\mathrm{head}}=N\,H</div>
+<ul>
+<li><span class="tex math-inline" data-display="false">N</span>：序列 token 数；<span class="tex math-inline" data-display="false">k</span>：每 token 激活专家数；<span class="tex math-inline" data-display="false">H</span>：隐藏维。</li>
+<li><span class="tex math-inline" data-display="false">M</span>：头数；<span class="tex math-inline" data-display="false">H_{\mathrm{head}}</span>：每头维度，<span class="tex math-inline" data-display="false">H=M\,H_{\mathrm{head}}</span>。</li>
+</ul>
+<p><strong>分层（Hierarchical）</strong>：一个头的全部 256 个专家放不进一张卡。MAGI-2 把两件事交给两层网络——跨节点 InfiniBand 只做上面那种固定形状的头交换；节点内 NVLink 用 ZeRO/FSDP 把专家权重、梯度、优化器状态全分片，算到哪层再 gather 出来，算完 reshard。</p>
+<h2>数字例子</h2>
+<p>MAGI-2 preview 一条 10 秒视频：57,344 个视频 token，H=3,072，BF16 每数 2 字节。</p>
+<ul>
+<li>如果整 token 按 top-6 寄出去：<span class="tex math-inline" data-display="false">57{,}344\times6\times3{,}072\times2\approx2.11</span> GB（单程、单层）。</li>
+<li>按头分片：<span class="tex math-inline" data-display="false">57{,}344\times3{,}072\times2\approx0.35</span> GB，正好少 k=6 倍。</li>
+</ul>
+<p>更要紧的是形状。8 张卡、12 个头：12 除不尽 8，推理代码把头补到 16 个，每卡 2 个——0–5 号卡持有真头，6、7 号卡持有补出来的空头，在 MoE 层收发照做但算的是零。每张卡收到的永远是 <span class="tex math-inline" data-display="false">N\times2\times256</span>，可以预先分配；代价是推理时 MoE 层 8 张卡里有 2 张空转。</p>
+<h2>链接</h2>
+<ul>
+<li><a href="../concepts/multi-head-latent-moe.html">multi-head-latent-moe</a> · 它服务的架构</li>
+<li><a href="../concepts/distributed-training-parallelism.html">distributed-training-parallelism</a> · ZeRO/FSDP、上下文并行等基础切法</li>
+<li><a href="../concepts/moe.html">moe</a> · 标准专家并行的通信问题</li>
+<li><a href="../papers/magi-2.html">magi-2</a> · 114B 视频 MoE 的实际做法</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 2 处</span>
+  <ul><li><a href="../papers/magi-2.html"><span class="cat">paper</span>MAGI-2 Preview · 把视频模型做到 114B，每个 token 只走 6B</a></li><li><a href="../concepts/multi-head-latent-moe.html"><span class="cat">concept</span>Multi-Head LatentMoE · 把一个 token 切成小头，每个头自己挑专家</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/head-parallel.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>

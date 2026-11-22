@@ -1,7 +1,7 @@
 ---
 name: swiglu
 type: concept
-sources: [dit, krea-2, drifting-models]
+sources: [dit, krea-2, drifting-models, magi-2]
 updated: 2026-07-22
 ---
 

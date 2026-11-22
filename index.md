@@ -72,6 +72,7 @@
 - [X-Vectors · 声纹身份证](wiki/papers/x-vector.md) — Kaldi 看家声纹模型(ECAPA祖宗): 训网络认人,训完扔分类头,中间512维向量就是声纹; statistics pooling(沿时间μ+σ)把变长语音塌成定长; TDNN膨胀上下文; 数据增强吃大数据,SRE16 EER 8.35%→4.89%完胜i-vector; 抽"谁"不抽"什么",跟ASR正交
 - [Unlimited OCR · 一口气抄完整本书](wiki/papers/unlimited-ocr.md) — 百度端到端OCR(接DeepSeek-OCR线): 解码器全换R-SWA(每token只看全图+最近128字)让KV cache恒定不增→几十页一次前向解析完(别人一页一页for-loop); DeepEncoder光学压缩1024²→256视觉token; 3B-A0.5B MoE; OmniDocBench 87→93.23 SOTA且长程不崩; R-SWA也能用于ASR/翻译
 - [Unlimited OCR 2 · 只看正在抄的那一页](wiki/papers/unlimited-ocr-2.md) — 百度一代续作(2026-10-27 仓库技术报告): 一代钉住"记多少字"(文本滑窗),二代钉住"看多少图"——SR-SWA = Page Gate(候选只留当前页涉及的块,页坐标 0/1 交替不爆位置)+ Token Sieve(块摘要打分→α-entmax→top-k,选中块 log 概率去均值当偏置加进 logit,路由器被认字损失端到端训);再配重叠一页分块预填+边界页 KV 复用钉住显存。百页级每步 7.0×/5.6×,峰值 KV 47→1.77GB;自建 MarathonDocBench(100 篇 103–300 页)77.06 vs 第二名 33.74,MPDocBench 84.59;单页持平、标题层级最弱、⚠️零消融零超参
+- [MAGI-2 Preview · 114B 的身子，6B 的饭量](wiki/papers/magi-2.md) — Sand.ai 音画联合视频生成(2026-08 技术博客+开源推理代码): 单流三模态 Transformer + 多头 LatentMoE(每 token 切 12 个 256 维头,每头 256 窄专家选 6,每层 3,072 单元激活 72);头并行让跨卡通信形状静态(∝N·H 不随 k)、IB 只搬头切片 NVLink 全分片专家;MagiMoE 融合算子、MagiMuon 按头×专家分批正交化;数据从过滤转生产+精确标注。按配置复算 113.84B/5.92B(路由专家只占激活 2.55B);preview 100 步 + refiner 5 步窗口注意力到 1080p;⚠️零评测零消融
 - [Generative Agents · Smallville](wiki/papers/generative-agents.md) — 给 LLM 加记忆流 + 反思 + 规划，25 个 agent 在虚拟小镇里自主生活
 - [MemGPT · LLMs as Operating Systems](wiki/papers/memgpt.md) — context 当 RAM、外部存储当硬盘，LLM 自己 function call 调度记忆
 - [Cosmos 3 · 把看懂、想象、行动装进一个世界模型](wiki/papers/cosmos-3.md) — 以“杯子放进托盘”贯穿五模态入口、MoT 双塔、联合注意力、任务 token 排列、rectified flow 手算、MRoPE 真实时间、数据清洗、Reasoner→Generator 训练接力（复制 QKV/MLP/Norm 当初始化，再换 latent、双向 mask、速度头和 MSE 把它训成去噪器）、真实 benchmark、四组消融与部署边界；统一的是架构和训练接口，不是一次前向或一套共享权重
@@ -180,6 +181,8 @@
 - [Grouped GEMM vs GEMV](wiki/concepts/grouped-gemm-vs-gemv.md) — MoE 小 batch 推理的吞吐/延迟取舍
 - [NVLS](wiki/concepts/nvls.md) — NVIDIA 低延迟集合通信
 - [MoE](wiki/concepts/moe.md) — 稀疏激活，276B/12B
+- [Multi-Head LatentMoE](wiki/concepts/multi-head-latent-moe.md) — token 切成低维头,每头独立路由器+专家池各选 top-k;组合更多、通信形状固定;代价是专家视野窄
+- [无辅助损失负载均衡](wiki/concepts/aux-loss-free-load-balancing.md) — 每专家一个偏置只进 top-k 排序不进权重,按负载 ±γ 调;不碰主损失
 
 ### fish-speech
 - [Dual-AR](wiki/concepts/dual-ar.md) — 慢 AR 4B + 快 AR 400M 主从
@@ -469,6 +472,8 @@
 
 ### 共享基础设施
 - [分布式训练并行](wiki/concepts/distributed-training-parallelism.md) — FSDP2/HSDP切模型状态、TP切单层矩阵、CP/Ulysses切长序列；4卡数字例把三种切法和通信代价分开
+- [Head Parallel · 按头分片](wiki/concepts/head-parallel.md) — 每卡固定负责几个头,跨卡只换头切片(∝N·H、形状静态可预分配);分层版 IB 换激活、NVLink 全分片专家
+- [Muon 优化器](wiki/concepts/muon-optimizer.md) — 动量矩阵奇异值全拉成 1 再更新;切法决定结果,MagiMuon 按头×专家分批
 - [Activation Checkpointing](wiki/concepts/activation-checkpointing.md) — 少存中间激活、反向时重算；与写盘恢复 checkpoint 彻底分开
 - [GPU Kernel 与编译](wiki/concepts/gpu-kernels-and-compilation.md) — kernel启动、torch.compile融合、CUDA Graph重放、AOT预编译；cuDNN/Flash/Flex/NATTEN各在什么位置
 - [训练 Checkpoint 与恢复](wiki/concepts/training-checkpointing-and-recovery.md) — 权重+优化器+数据游标怎样存；异步保存、MTBF/MTTR与存档间隔的进度账

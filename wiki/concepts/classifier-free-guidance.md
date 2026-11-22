@@ -1,7 +1,7 @@
 ---
 name: classifier-free-guidance
 type: concept
-sources: [ideogram-4, flux-1, diffusionnft, viitorvoice, ltx-2, drifting-models, dmd, diffusion-unet, wan-streamer-v01, klingavatar-2, asyncpatch-diffusion, controlnet]
+sources: [ideogram-4, flux-1, diffusionnft, viitorvoice, ltx-2, drifting-models, dmd, diffusion-unet, wan-streamer-v01, klingavatar-2, asyncpatch-diffusion, controlnet, magi-2]
 updated: 2026-08-24
 ---
 

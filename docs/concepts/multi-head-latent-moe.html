@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Multi-Head LatentMoE · 把一个 token 切成小头，每个头自己挑专家 · Concept</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..900,0..100,0..1&family=Newsreader:opsz,wght@6..72,300..700&family=Noto+Serif+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="../vendor/katex/katex-swap.min.css" rel="stylesheet" />
+<script defer src="../vendor/katex/katex.min.js"></script>
+<style>
+.concept-body .math-inline {
+  color: var(--ink);
+  white-space: nowrap;
+}
+.concept-body .math-display {
+  max-width: 100%;
+  margin: 22px 0;
+  padding: 17px 20px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--moss);
+  border-radius: 3px;
+  background: var(--paper-3);
+  color: var(--ink);
+  text-align: center;
+  -webkit-overflow-scrolling: touch;
+}
+.page.concept[data-cat="topics"] .concept-body .math-display { border-left-color: var(--ochre); }
+.page.concept[data-cat="threads"] .concept-body .math-display { border-left-color: #6b4a8a; }
+.concept-body .math-display .katex-display { margin: 0; }
+.concept-body .tex-error { color: var(--brick); font-family: 'JetBrains Mono', monospace; }
+</style>
+<link rel="stylesheet" href="../style.css?v=43080b49" />
+</head>
+<body>
+<!-- wiki-nav:start -->
+<style>
+.wiki-nav {
+  background: #181410; color: #e8e0c8;
+  padding: 8px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #3a3128;
+  position: sticky; top: 0; z-index: 1001;
+}
+.wiki-nav a { color: #e8e0c8; text-decoration: none; border-bottom: none; }
+.wiki-nav a:hover { color: #efd6c8; }
+.wiki-nav .ws-r { color: #b8841c; }
+</style>
+<div class="wiki-nav">
+  <span><a href="../index.html">← 个人 wiki / index</a></span>
+  <span class="ws-r"><a href="../concepts.html" style="color:#b8841c;">concepts</a> · multi-head-latent-moe</span>
+</div>
+<!-- wiki-nav:end -->
+<div class="page concept" data-cat="concepts">
+
+<header class="concept-header">
+  <span class="concept-badge cat-concept">Concept</span>
+  <h1>Multi-Head LatentMoE · 把一个 token 切成小头，每个头自己挑专家</h1>
+</header>
+
+<article class="concept-body">
+<h2>一句话</h2>
+<p>不让整个 token 去选专家，而是先把它切成若干低维子向量，每个子向量有自己的路由器和专家池，各选各的再拼回来。</p>
+<h2>直觉</h2>
+<p>普通 MoE 像医院分诊：一个病人（token）整体被分到 2 个科室（专家），每个科室看完整的病人。多头 MoE 像体检中心：病人的血、眼、心电图这些"子项"各自排队，每一项都有自己那一层的一排小窗口，各挑最合适的几个窗口办完再汇总成一份报告。</p>
+<p>好处有两条：</p>
+<ol>
+<li><strong>组合更多</strong>：同一个 token 的不同子空间可以落到不同专家组合上。MAGI-2 每层 12 个头 × 256 个专家，一个头 top-6 就有 <span class="tex math-inline" data-display="false">C(256,6)\approx 3.7\times10^{11}</span> 种选法，12 个头各选各的。</li>
+<li><strong>通信形状固定</strong>：切分是按维度切的，每个头整块交给负责它的那张卡——发多少、收多少在开训前就算得出来，不随当前 batch 的路由结果抖动（见 <a href="../concepts/head-parallel.html">head-parallel</a>）。</li>
+</ol>
+<p>代价：每个专家只看 256 维的子空间，单个专家的"视野"窄了。和"整 token 路由的宽专家"相比效果差多少，MAGI-2 没给消融。</p>
+<h2>怎么做的</h2>
+<div class="tex math-display" data-display="true">\tilde x = W_{\mathrm{in}}x,\qquad \tilde x\to[x^{(1)},\dots,x^{(M)}],\qquad x^{(h)}\in\mathbb R^{H_{\mathrm{head}}}</div>
+<div class="tex math-display" data-display="true">I^{(h)}=\mathrm{TopK}_k\bigl(\sigma(G^{(h)}x^{(h)})+b^{(h)}\bigr),\qquad y^{(h)}=\sum_{e\in I^{(h)}}p^{(h)}_e\,E^{(h)}_e(x^{(h)})</div>
+<div class="tex math-display" data-display="true">y=W_{\mathrm{out}}\,\mathrm{Concat}(y^{(1)},\dots,y^{(M)})</div>
+<ul>
+<li><span class="tex math-inline" data-display="false">W_{\mathrm{in}}</span> / <span class="tex math-inline" data-display="false">W_{\mathrm{out}}</span>：split / merge 投影，把隐状态映射进、映射出"路由表示"。</li>
+<li><span class="tex math-inline" data-display="false">G^{(h)}</span>：第 h 个头自己的路由矩阵（256 个专家 × 256 维），打出 256 个分数。</li>
+<li><span class="tex math-inline" data-display="false">\sigma</span>：sigmoid，把每个分数压到 0–1，专家之间互不竞争（不是 softmax）。</li>
+<li><span class="tex math-inline" data-display="false">b^{(h)}</span>：负载均衡偏置，只影响"选谁"（见 <a href="../concepts/aux-loss-free-load-balancing.html">aux-loss-free-load-balancing</a>）。</li>
+<li><span class="tex math-inline" data-display="false">p^{(h)}_e</span>：被选中专家的权重——用<strong>不带偏置</strong>的 sigmoid 分数在选中的 k 个里归一化，MAGI-2 再乘常数 4.9。</li>
+<li><span class="tex math-inline" data-display="false">E^{(h)}_e</span>：一个 256 → 1,280 → 256 的 SwiGLU7 小 FFN。</li>
+</ul>
+<p>MAGI-2 配置：宽 3,072，M=12 个头、每头 256 维，每头 256 个专家、top-6。推理代码里 MoE 层还并联一个所有 token 都走的共享专家和一个按模态区分的共享专家；博客公式把 <span class="tex math-inline" data-display="false">b</span> 写在 <span class="tex math-inline" data-display="false">\sigma</span> 括号里，代码是在 <span class="tex math-inline" data-display="false">\sigma</span> 之后加、且只用于选择。</p>
+<h2>数字例子</h2>
+<p>一个头、4 个专家、top-2（真实是 256 选 6，算法一样）。</p>
+<ol>
+<li>路由打分 <span class="tex math-inline" data-display="false">G^{(h)}x^{(h)}=(1.2,\ 0.4,\ 0.9,\ -0.5)</span>。</li>
+<li>过 sigmoid：<span class="tex math-inline" data-display="false">\sigma(1.2)=0.769</span>，<span class="tex math-inline" data-display="false">\sigma(0.4)=0.599</span>，<span class="tex math-inline" data-display="false">\sigma(0.9)=0.711</span>，<span class="tex math-inline" data-display="false">\sigma(-0.5)=0.378</span>。</li>
+<li>加偏置 <span class="tex math-inline" data-display="false">b=(-0.2,\ +0.1,\ 0,\ 0)</span>（专家 1 最近太忙被压低、专家 2 太闲被抬高）：<span class="tex math-inline" data-display="false">(0.569,\ 0.699,\ 0.711,\ 0.378)</span>。top-2 = 专家 3、专家 2。不加偏置时会选专家 1、3。</li>
+<li>权重用<strong>原始</strong> sigmoid 分数在选中者里归一化：<span class="tex math-inline" data-display="false">0.711/(0.711+0.599)=0.543</span>，<span class="tex math-inline" data-display="false">0.599/1.310=0.457</span>，加起来 1 ✓。</li>
+<li>乘路由缩放 4.9：<span class="tex math-inline" data-display="false">2.66,\ 2.24</span>。输出 <span class="tex math-inline" data-display="false">y^{(h)}=2.66\,E_3(x^{(h)})+2.24\,E_2(x^{(h)})</span>。</li>
+</ol>
+<p><strong>规模账</strong>：每层 12×256 = 3,072 个专家单元，每 token 激活 12×6 = 72 个。一个专家 <span class="tex math-inline" data-display="false">256\times1280\times2+1280\times256=983{,}040</span> 个参数；一层激活的路由专家 <span class="tex math-inline" data-display="false">72\times983{,}040\approx70.8</span>M，36 层 ≈ 2.55B——只占 MAGI-2 约 5.92B 激活参数的 43%。</p>
+<h2>跟普通 MoE 的对照</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>token-choice MoE</th>
+<th>Multi-Head LatentMoE</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>谁去选专家</td>
+<td>整个 token（H 维）</td>
+<td>每个头的子向量（H/M 维）</td>
+</tr>
+<tr>
+<td>专家宽度</td>
+<td>宽（输入 H 维）</td>
+<td>窄（输入 H/M 维）</td>
+</tr>
+<tr>
+<td>跨卡通信</td>
+<td>∝ N·k·H，形状随路由变</td>
+<td>∝ N·H，形状按头静态确定</td>
+</tr>
+<tr>
+<td>组合方式</td>
+<td>每 token 一组 k 个</td>
+<td>每 token M 组、每组 k 个</td>
+</tr>
+</tbody>
+</table>
+<h2>链接</h2>
+<ul>
+<li><a href="../papers/magi-2.html">magi-2</a> · 把它放大到 114B 视频模型</li>
+<li><a href="../concepts/moe.html">moe</a> · 母概念</li>
+<li><a href="../concepts/head-parallel.html">head-parallel</a> · 这种切法带来的并行方式</li>
+<li><a href="../concepts/aux-loss-free-load-balancing.html">aux-loss-free-load-balancing</a> · 每个头独立的偏置均衡</li>
+<li><a href="../concepts/muon-optimizer.html">muon-optimizer</a> · 优化器按"头 × 专家"分批</li>
+<li><a href="../concepts/swiglu.html">swiglu</a> · 专家内部用 SwiGLU7</li>
+</ul>
+</article>
+
+<div class="concept-backlinks">
+  <span class="label">引用此页的内容 · 4 处</span>
+  <ul><li><a href="../papers/magi-2.html"><span class="cat">paper</span>MAGI-2 Preview · 把视频模型做到 114B，每个 token 只走 6B</a></li><li><a href="../concepts/aux-loss-free-load-balancing.html"><span class="cat">concept</span>无辅助损失负载均衡 · 给太忙的专家减分，但只在&quot;选谁&quot;时减</a></li><li><a href="../concepts/head-parallel.html"><span class="cat">concept</span>Head Parallel · 按头分片交换激活，通信形状开训前就定死</a></li><li><a href="../concepts/muon-optimizer.html"><span class="cat">concept</span>Muon · 把动量矩阵&quot;正交化&quot;再更新，所有方向迈同样大的步</a></li></ul>
+</div>
+
+<div class="colophon">
+  <span>Auto-rendered from <code>wiki/concepts/multi-head-latent-moe.md</code></span>
+  <span>← <a href="../index.html">个人 wiki / index</a></span>
+</div>
+
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.tex').forEach(function (el) {
+    try {
+      katex.render(el.textContent.trim(), el, {
+        displayMode: el.dataset.display === 'true',
+        throwOnError: false,
+        strict: false
+      });
+    } catch (e) { el.classList.add('tex-error'); }
+  });
+});
+</script>
+<script>
+// 滚动进视口 → 给 figure 加 .play（播一次就 disconnect），驱动 .reveal/.draw/.pulse
+(function () {
+  var figs = document.querySelectorAll('figure');
+  if (!('IntersectionObserver' in window) || !figs.length) {
+    figs.forEach(function (f) { f.classList.add('play'); });
+    return;
+  }
+  var obs = new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('play'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.25 });
+  figs.forEach(function (f) { obs.observe(f); });
+})();
+</script>
+<!-- mathify:start -->
+<script>
+// 把 <code class="m"> 里的 LaTeX 渲染成 KaTeX。就这一件事。
+//
+// 这里曾经有一层 toTex()：把 unicode 松散记号(θbase / xₜ / L_G^adv)在运行时"猜"成
+// LaTeX。猜错了不报错，只是渲染成别的东西——把函数名 max 吞成 θ 的下标、把 ^adv 读成
+// "^a 加正文 dv"、把 MemGPT 的 archival_memory_search() 当成公式。而且它跟 .formula
+// 那条"手写 LaTeX 原样渲染"的路径行为不一致，同一条式子在两处会长得不一样。
+//
+// 那套转换已搬到离线（tex_migrate.py）：跑一次、用真 KaTeX 逐条校验、写回源码。
+// 错误从此出现在校验里，不再藏在渲染结果里。运行时只剩"原样渲染"，零猜测。
+(function(){
+  function run(){
+    if(!window.katex) return;
+    document.querySelectorAll('code.m').forEach(function(el){
+      if(el.dataset.mathified) return;
+      if(el.closest('pre')) return;
+      try{
+        el.innerHTML = katex.renderToString((el.textContent||'').trim(),
+                                            {throwOnError:true, displayMode:false});
+        el.dataset.mathified='1';
+        el.classList.add('mathified');
+      }catch(e){
+        console.warn('[mathify] KaTeX 拒绝:', el.textContent, e.message);
+      }
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,0);});
+  else setTimeout(run,0);
+})();
+</script>
+<style>
+code.mathified{border:none;background:none;padding:0;font-size:1em}
+/* 很多页写过 `.某卡片 span{display:block}` 这类后代规则。KaTeX 内部全是 <span>，
+   会被整片顶成块级，公式就一个原子一行竖着排（krea-2 的 .lap-case、drift-ar 的
+   .recipe 都栽过）。这条特异度 (0,1,1) 压得住那些页面规则（同分但注入更靠后），
+   又低于 KaTeX 自己的 .katex .vlist>span 等 (0,2,x) 规则，不会破坏它的排版。 */
+.katex span{display:inline}
+.var code.mathified,.symbol code.mathified{color:#7e2e20}
+/* 符号格子里"开头那个 code 是标签、单独成行"的样式会连说明文字里的行内 code 一起顶成
+   块级，读起来像莫名其妙的断行。只有第一个 code 该是块级。 */
+.sym code:not(:first-child),.symbol code:not(:first-child),
+.var code:not(:first-child),.vars code:not(:first-child){display:inline;width:auto;margin-bottom:0}
+/* ……而这条只挡住了"别的 code 变块级"，从来没真的把第一个设成块级：各页 CSS 只给 <b>
+   写了 display:block。于是 code.m 当标签时会跟说明文字挤在同一行。缺的一半补在这里；
+   只认 .m —— 普通 <code> 还带着边框底色，撑成块级会变成一条通栏的框。 */
+.sym>code.m:first-child,.symbol>code.m:first-child,
+.var>code.m:first-child,.vars>code.m:first-child{display:block;margin-bottom:4px}
+</style>
+<!-- mathify:end -->
+</body>
+</html>
